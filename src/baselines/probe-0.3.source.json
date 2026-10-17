@@ -1,0 +1,166 @@
+{
+  "baseline": "probe-0.3",
+  "status": "accepted-for-this-experimental-probe-round",
+  "recordedAt": "2026-10-17T11:35:06+00:00",
+  "gitHead": "27edb71f8eb22fde4d48843372bb2bae927fdd3e",
+  "uncommittedWorkingTree": true,
+  "fingerprintAlgorithm": "sha256 of sorted UTF-8 path + NUL + file sha256 + LF",
+  "sourceFingerprint": "2d5b9999b64c002dbb85449e4a2de420f82e43c608ab256976e92d2ac7701f29",
+  "sharedFiles": {
+    "src/host/Cargo.lock": "c6cf17ee35e59dc14e60eb060b993396181ea65db819a47b81aaa0489c8ef88b",
+    "src/host/Cargo.toml": "574e9686d63e98b5b4a700809f1589671098d71470dcce88bba361d70e58e4d3",
+    "src/host/src/backend.rs": "c9cdd921ad99f5f50a5ae568a1445ba5ce23d55ce47c5c2204de8503f9d9e688",
+    "src/host/src/headless.rs": "02db8857593ffe9399abb9dda2ff0e92e72fc26c6853c288be1521788f2749fe",
+    "src/host/src/main.rs": "4c8beeed242ee24acd2167326bd503231804f2eb81d6bb83f7e8cfe57e4bd0b6",
+    "src/host/src/plugins.rs": "3501cfc113036b381efabbc2a402424ebb185b3d3302dca09eed2ae36105dc81",
+    "src/host/src/retirement.rs": "9cf737c6f5ca68b41fcf32a9b3dc7f3b46c5dc718a26547dd5ce03c69b2d3f49",
+    "src/host/src/scenario.rs": "70575bcecc2048953a9a8c5aa80bd7541e95800e9cf475423f818ee95b7cce82",
+    "src/host/src/services/assets.rs": "fd90f2a34dbc1cd94f53fdbb71d57c2bdb744d3ad3c3afc78a9eb8c5240d8281",
+    "src/host/src/services/effects.rs": "12048ebb908bbaa74b2b3776fd65e6e7fb53ca0059966ac56f3e86048ae86f85",
+    "src/host/src/services/jobs.rs": "131dabcc8929db897e6525de8b6bc1d73f73dc9c29412a7297511fad0a07224b",
+    "src/host/src/services/sources.rs": "84817a35895a22e7547ccd210edc5fa2c27035f2c7b70993cc2d79de36b9bfd1",
+    "src/host/src/services.rs": "d97c125c670049276e9ea0bf1f369721a78d6b03fc6a741147bb953001fafc85",
+    "src/host/src/ui.rs": "cd5287997778ddf3a066ba8335c9911093c224b18db286f807bf97fc9ad92ac9",
+    "src/package-lock.json": "e046ae8597a11ecfba525f895e5b5b42644248c6492fc3fe11aaa78b5031d925",
+    "src/package.json": "47b804081a622597fe72fa03a8aa5ff72d73a28953da26ab0c7713ec81d31237",
+    "src/runtime/plugin-host.ts": "8dac57c9f233c465ce2aa907b62e76c70f0fb896632a53e47d685ea83a1ab375",
+    "src/scripts/backend-test.rs": "35f25f24816489c86e473145e9be6072959ec333a5aa6c49dcea36cef1b8fd33",
+    "src/scripts/check.sh": "d6684ba7e582ae651495c53ced3d7d1fbe636ce79c57d00016b7df184016c241",
+    "src/scripts/env.sh": "9f5378c3d1eae82cbf8b099c79b39fd608b218fa2582da133bb130ec60fc3ae6",
+    "src/scripts/make-sample.sh": "079c857fc46c38fe0bdc8ae6d0ce2a38c10f0ffea771f8b2f1c1716a927abc02",
+    "src/scripts/playlist-experiment.sh": "4ec9ab6312804c3c7fef2e9ceb70a1b25836779dced02ae5fdcf3f015cd80b0d",
+    "src/scripts/run.sh": "6e8abd4759b7d6dc6f6ae55ae6061b4a913f9ed4b02d9af51010ec0b933fb791",
+    "src/scripts/setup.sh": "c57d3c3988332e6a44e803e64fcc0fb955dc249011606c20c5df974f276c48c6",
+    "src/sdk/context.ts": "93443d20869c1a6ee288f6b26b705ec3a373ea8444f19306acbecc4b9e25eb05",
+    "src/sdk/types.ts": "992ddabb2ec7fce52e7abe61f34f75ae9d6ccf2ea1ad35752fc3e7ae8e0bac5a",
+    "src/sdk/validation.ts": "f4ac2ad4732a5afcbf2087331fa0274689426e5cfcc81751fb25e5c9081cb9f7",
+    "src/tests/support/host.ts": "44935445818ebc93bbff10403e4dd57d8148db2abe130df9ca3c13acab132a06",
+    "src/tools/check-plugin-boundaries.ts": "2865d0fa9043ed43710a9cbbc19fe873ec88444aa949bf766dc1bbdcc115cc61",
+    "src/tools/probe-gui.ts": "2d4981352bdd2bb6e096121792b04482f5117916ecfb9e5ee62296c158b35765",
+    "src/tsconfig.json": "67d692704d01c6cc32cef4ee8457f144cca33d740ad551e716a92f4345b5d504"
+  },
+  "consumers": {
+    "audio-workbench": {
+      "target": "probe-0.2-compatible-subset",
+      "files": {
+        "src/plugins/audio-workbench/filter.ts": "bbe6c9be8e9661cf14c8f0d0d3414a30166ef4be3200d30c6f8dc457fca8bc7c",
+        "src/plugins/audio-workbench/index.ts": "bfc43cb2778870b990625bf1829e8c9dc0eeca9f485cdbc81b757d847a28c21f",
+        "src/plugins/audio-workbench/manifest.json": "e042cb8301d5f2edaca1527b05591032c02b5cf7c53674cb0cdbdee095342eaf",
+        "src/plugins/audio-workbench/parameters.ts": "81863ae40f491b35ccf0d2366e8044bd23c8a80caf353121199ae2b06237a907",
+        "src/plugins/audio-workbench/ui.slint": "bc6c737b05c610b235a25c0665d46c6da5e6adf3dca18055ce57db8793b524e2"
+      }
+    },
+    "capture-export": {
+      "target": "probe-0.2-compatible-subset",
+      "files": {
+        "src/plugins/capture-export/index.ts": "7fb4e6f03e199d0f0f75411ea961a3fbf9474aed974085a8ee6654b81ef7c99e",
+        "src/plugins/capture-export/manifest.json": "6a59cde3ae0ac16834e0f4b9efdf9fffe73c1dc4709eb4274a403df229c0a0bc",
+        "src/plugins/capture-export/snapshot.ts": "b94da4959e9d2b93659f64c4b58aa73c3a1a4544cd79d29a058f01a7b126d4e0",
+        "src/plugins/capture-export/ui.slint": "470e0bff002d957c17203bf993f65d0ace1b0b957201748fcc1da7aa3faea323"
+      }
+    },
+    "file-playback": {
+      "target": "legacy-experimental1",
+      "files": {
+        "src/plugins/file-playback/index.ts": "0beb788a6fbff088de096ce47f34496ebdf5a097bb4e8d68235b73bbb6bddc0e",
+        "src/plugins/file-playback/manifest.json": "05b0d23472e20f4719aaddc9672a350a22e6ca6d734b55f65e9324db4c2eab53",
+        "src/plugins/file-playback/ui.slint": "c4155c976b5fb6883a40bdc09fd91718db79ac8e71edcecc9c9adaa76ef9ea71"
+      }
+    },
+    "gaussian-blur": {
+      "target": "legacy-experimental1",
+      "files": {
+        "src/plugins/gaussian-blur/index.ts": "98e7a04f4b07b530d97ecabc2c66d000aeb4a3b814a5ad53b27bcd6cca6fa6cf",
+        "src/plugins/gaussian-blur/manifest.json": "290f0cd6e92b9a435cd048fd4a6d599291aa4cf15b110df0774929b1ed09420d",
+        "src/plugins/gaussian-blur/ui.slint": "a83455da083c3af78f645fd1724239d81d203c9b3893324a02626a9250672162"
+      }
+    },
+    "nes": {
+      "target": "probe-0.2-compatible-subset",
+      "files": {
+        "src/plugins/nes/engine.ts": "03599cb570f66e6fc16bdd600d7d6bacbb67c09bcb1e2032ecc31c322ca6b17a",
+        "src/plugins/nes/index.ts": "14c51cf11030d6ae7866ad239b7f24ce069716d9b46cb72ca79877e3fed0113b",
+        "src/plugins/nes/jsnes.d.ts": "698ea2b043a66ed64192f192bfa7a415bde73e68bc29cf087869b9ecf574cfeb",
+        "src/plugins/nes/manifest.json": "5743e16c8302d7df97df4483c5a20513bc5ff936514c07bfd09ba19bb35e2902",
+        "src/plugins/nes/package-lock.json": "0b4e69adf11f42a0096a448077612b3b320da0e99ddc68be8d917bf4257e52d7",
+        "src/plugins/nes/package.json": "2fb2f99ed7a88b9981553b0a8d3768f2919f239a6a2bc396ea276cda5d2ea6b4",
+        "src/plugins/nes/ui.slint": "3a07106815b0e25f91be8509b9bbae99ab149c2ed99529aa2180cd2c8a7de3fe"
+      }
+    },
+    "playlist": {
+      "target": "legacy-experimental1",
+      "files": {
+        "src/plugins/playlist/index.ts": "daf63f110fe9b128b493889330fa0591ad65d1d19d19d0116ce89e6e7c33aee7",
+        "src/plugins/playlist/manifest.json": "36c5ada9b6b016cf136d8f2fc1299488e2d799c590f50835780582d87d8242bd",
+        "src/plugins/playlist/ui.slint": "d47d085dfc793b301da46e78ef0c2e0a4d61dfc841c2b64f20d60992d87d8a31"
+      }
+    },
+    "plugin-workshop": {
+      "target": "probe-0.2-compatible-subset",
+      "files": {
+        "src/plugins/plugin-workshop/engine.ts": "4a92616091e570adc459af02857ba94031332c90aa04e70e99736b91ff621fff",
+        "src/plugins/plugin-workshop/index.ts": "e760e26948153b28f6d4f36a0842c6344a9e869898ba0a6eb0c634c5fcb99942",
+        "src/plugins/plugin-workshop/manifest.json": "a0452889f955cd9002483de2f15862e0ffb11b48f7624f65ff7ed3603dd8bdf0",
+        "src/plugins/plugin-workshop/model.ts": "4cc629e83cab8a4de022319ef05d3374c9882a0c24eed045a9e38c44296953ff",
+        "src/plugins/plugin-workshop/package-lock.json": "c0abd687040aee9abc07904a558f568831dd75f93430f85a96630c9580de3381",
+        "src/plugins/plugin-workshop/package.json": "e91d81d9cb7e9665ad5bd069dc42fcaf444b089a8c6aafbc77ec63c1215559ba",
+        "src/plugins/plugin-workshop/ui.slint": "72a9ab837b111e9c0d456d616eceffc33e757bd167f70472ae1a43e79d5ef7dc"
+      }
+    },
+    "subtitle-workbench": {
+      "target": "probe-0.3",
+      "files": {
+        "src/plugins/subtitle-workbench/index.ts": "8b46b5240ad68c9f7783d30a7a8f077835be64d57ea8a99743f6117d5e7a293e",
+        "src/plugins/subtitle-workbench/manifest.json": "4e0e4271b858ce333ec0cdc39edaaececaeae157bab6d3bb169ee8c6c1aa9b5a",
+        "src/plugins/subtitle-workbench/subtitles.ts": "415a94cc65265de0398468f1655b11da9c8a11b4195678a0568766a2011cc66d",
+        "src/plugins/subtitle-workbench/translation.ts": "c2178685dc63dadd7185145da45220105f257e523712bab3a826e5b8ef010d28",
+        "src/plugins/subtitle-workbench/ui.slint": "3ad623dd6aed82ea747d3d6b0502f5636fb3b64fc128681978b7f9c0e5b267cf"
+      }
+    },
+    "video-adjust": {
+      "target": "probe-0.2-compatible-subset",
+      "files": {
+        "src/plugins/video-adjust/index.ts": "23aead66dacf4e8ac623bef9ca02a07a58a596472988855939528eb84b1750b2",
+        "src/plugins/video-adjust/manifest.json": "92212b73700cd72a380718fce375952a6270bab69d8c9f81c8f487f2966f4d8b",
+        "src/plugins/video-adjust/settings.ts": "c70e62d4a5c3af6bf63193f7c7f251bb12e0d69a3fbb525c7125c70cda9af6d4",
+        "src/plugins/video-adjust/ui.slint": "613bc5ceb14f38a64dda40a453e5a224d48adcfb35ab315337ff2771fd2dc96e"
+      }
+    }
+  },
+  "evidence": {
+    "latestRevision": "16 targeted TS tests and 67-step real Slint GUI exit 0; final-lifecycle.log/final-gui.log",
+    "precedingFullRun": "52 TS tests, real backend test, 67-step GUI passed before final fatal cleanup/exit-status correction; not a replacement for independent full rerun",
+    "independent": "Passed: 52 TypeScript tests, 1 real Rust backend test, 67 real Slint GUI steps; owned temporary resources remaining=0. See doc/probe-review.md and doc/probe-evidence/2026-10-17."
+  },
+  "frozenContract": {
+    "probe-0.2.contract.md": "ea36676329bc1479a8dd704644e00053907f972831d585a51ffa4454160a2675",
+    "probe-0.3.contract.md": "f5d0a2f4c50079b5d69b4cf15de4883c7094e343dc8d52b4d646e99dc9852773"
+  },
+  "fingerprintCorrection": {
+    "previousValue": "8f82541db6eea8e90ed4163001956b708f42e94764d36130e1723be3006e47a7",
+    "reason": "Initial recorder sorted Path components, while documented canonical order is UTF-8 path strings; all per-file hashes were correct. Metadata corrected before acceptance; no source or API changed."
+  },
+  "statusHistory": [
+    {
+      "status": "maintainer-verified-awaiting-independent-acceptance",
+      "at": "2026-10-17T11:35:06+00:00"
+    },
+    {
+      "status": "accepted-for-this-experimental-probe-round",
+      "at": "2026-10-17T11:39:26+00:00"
+    }
+  ],
+  "independentAcceptance": {
+    "report": "doc/probe-review.md",
+    "summary": "doc/probe-evidence/2026-10-17/final-summary.json",
+    "log": "doc/probe-evidence/2026-10-17/final-check.log",
+    "sourceAudit": "doc/probe-evidence/2026-10-17/code-fingerprint.json",
+    "nodeTests": 52,
+    "rustBackendTests": 1,
+    "guiSteps": 67,
+    "sourceFilesStable": 95,
+    "baselineHashesVerified": 74,
+    "remainingOwnedTemporaryResources": 0,
+    "productionStabilityClaim": false
+  }
+}
