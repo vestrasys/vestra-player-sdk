@@ -1,6 +1,9 @@
 /** Trusted extraction providers. Declarations cross JSON; handler code stays in JS. */
 import type { Transport } from "./index.ts";
-export type ResolvedResource = { url: string; headers?: Record<string, string> };
+export type ResolvedResource = {
+  url: string;
+  headers?: Record<string, string>;
+};
 export type ResolvedMedia = {
   kind: "media";
   originalUrl: string;
@@ -22,46 +25,73 @@ export function sourceResolverClient(transport: Transport) {
      * maps fail explicitly. No header is silently discarded or made global. */
     async register(
       declaration: SourceResolverDeclaration,
-      handler: (request: { url: string; signal: AbortSignal }) => Promise<ResolvedMedia>,
+      handler: (request: {
+        url: string;
+        signal: AbortSignal;
+      }) => Promise<ResolvedMedia>,
     ) {
       const active = new Map<number, AbortController>();
       let disposed = false;
       const offRequest = transport.on("source.resolveRequest", (value) => {
-        const request = value as { requestId: number; resolverId: string; url: string };
+        const request = value as {
+          requestId: number;
+          resolverId: string;
+          url: string;
+        };
         if (request.resolverId !== declaration.id || disposed) return;
         const controller = new AbortController();
         active.set(request.requestId, controller);
         void (async () => {
           try {
-            const result = await handler({ url: request.url, signal: controller.signal });
-            if (!controller.signal.aborted && !disposed) {
-              await transport.request("sourceResolvers.respond", { requestId: request.requestId, result });
-            }
-          } catch (error) {
+            const result = await handler({
+              url: request.url,
+              signal: controller.signal,
+            });
             if (!controller.signal.aborted && !disposed) {
               await transport.request("sourceResolvers.respond", {
                 requestId: request.requestId,
-                error: String(error).slice(0, 2048),
-              }).catch(() => {});
+                result,
+              });
             }
-          } finally { active.delete(request.requestId); }
+          } catch (error) {
+            if (!controller.signal.aborted && !disposed) {
+              await transport
+                .request("sourceResolvers.respond", {
+                  requestId: request.requestId,
+                  error: String(error).slice(0, 2048),
+                })
+                .catch(() => {});
+            }
+          } finally {
+            active.delete(request.requestId);
+          }
         })();
       });
       const offCancel = transport.on("source.resolveCancel", (value) => {
         const request = value as { requestId: number; resolverId: string };
         if (request.resolverId === declaration.id) {
-          active.get(request.requestId)?.abort(); active.delete(request.requestId);
+          active.get(request.requestId)?.abort();
+          active.delete(request.requestId);
         }
       });
-      try { await transport.request("sourceResolvers.register", declaration); }
-      catch (error) { offRequest(); offCancel(); throw error; }
+      try {
+        await transport.request("sourceResolvers.register", declaration);
+      } catch (error) {
+        offRequest();
+        offCancel();
+        throw error;
+      }
       return {
         async dispose() {
           if (disposed) return;
           disposed = true;
           for (const controller of active.values()) controller.abort();
-          active.clear(); offRequest(); offCancel();
-          await transport.request("sourceResolvers.unregister", { id: declaration.id });
+          active.clear();
+          offRequest();
+          offCancel();
+          await transport.request("sourceResolvers.unregister", {
+            id: declaration.id,
+          });
         },
       };
     },

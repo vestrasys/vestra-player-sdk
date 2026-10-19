@@ -10,7 +10,12 @@ export type SourceTicket = {
   owner: number;
 };
 export type SourceIntent =
-  | {kind:"openProvider";producerId:number;startPaused:boolean;expected?:SourceStamp}
+  | {
+      kind: "openProvider";
+      producerId: number;
+      startPaused: boolean;
+      expected?: SourceStamp;
+    }
   | {
       kind: "open";
       source: string;
@@ -44,7 +49,15 @@ export interface SourceState {
   };
   audioTracks: SourceAudioTrack[] | null;
   controlPending?: boolean;
-  audioHealth?: {status: import("./producer.ts").ProducerState["health"];deviceErrors:number;xrunEvents:number;deviceChangeEvents:number;errorDetails:string[];errorOverflow:number;buffer:import("./producer.ts").ProducerState["buffer"]}|null;
+  audioHealth?: {
+    status: import("./producer.ts").ProducerState["health"];
+    deviceErrors: number;
+    xrunEvents: number;
+    deviceChangeEvents: number;
+    errorDetails: string[];
+    errorOverflow: number;
+    buffer: import("./producer.ts").ProducerState["buffer"];
+  } | null;
   stamp: SourceStamp;
   cycle: number;
   eventSequence: number;
