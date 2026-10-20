@@ -180,18 +180,26 @@ export class PlayerService {
       if (!uncertain(error)) throw error;
       result = await this.#query(id);
     }
+    let accepted: SourceTicket | undefined;
     for (
       let delay = 40;
       result.status === "pending";
       delay = Math.min(delay * 2, 500)
     ) {
+      accepted = result.ticket;
       options.accepted?.(result.ticket);
       if (options.signal?.aborted) throw abortError();
       await sleep(delay);
       result = await this.#query(id);
     }
     await this.refresh().catch(() => {});
-    if (result.status === "failed") throw sourceFailure(result.error);
+    if (result.status === "failed") {
+      // Accepted, then cancelled because another source took over (e.g. while
+      // a URL was still resolving): the same "replaced" as media.ready().
+      if (accepted && this.raw.stamp.generation !== accepted.stamp.generation)
+        throw failure("replaced", "另一个来源已替换此媒体");
+      throw sourceFailure(result.error);
+    }
     return result.ticket;
   }
   async #query(id: number): Promise<SourceOperation> {

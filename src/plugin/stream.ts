@@ -7,7 +7,12 @@ import { failure, sleep, toError } from "./runtime.ts";
 import { abortError } from "./player.ts";
 import type { PlayerService } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
-import type { PluginError, Stream, StreamOptions } from "./types.ts";
+import type {
+  PluginError,
+  Stream,
+  StreamOptions,
+  StreamStartError,
+} from "./types.ts";
 
 type Socket = Awaited<
   ReturnType<PlayerService["runtime"]["host"]["producer"]["connect"]>
@@ -143,6 +148,14 @@ class StreamHandle implements Stream {
   }
 }
 
+/** Start-up timeouts say which step ran out of time. */
+function timeout(
+  stage: StreamStartError["stage"],
+  message: string,
+): StreamStartError {
+  return Object.assign(failure("timeout", message), { stage });
+}
+
 type Clock = {
   sample: number;
   advance(n: number): void;
@@ -181,6 +194,8 @@ export async function openStream(
   let prepared: number | undefined;
   let socket: Socket | undefined;
   let generation: number | undefined;
+  /** The request selecting the stream, once sent. */
+  let opened: Promise<void> | undefined;
   try {
     check();
     const spec = await host.producer.prepare({
@@ -218,10 +233,10 @@ export async function openStream(
       if (state.acknowledged && state.receivedFrames >= 1024 && state.hasVideo)
         break;
       if (Date.now() >= deadline)
-        throw failure("timeout", "timed out preparing the first buffers");
+        throw timeout("prefill", "timed out preparing the first buffers");
     }
     let accepted = false;
-    const opened = service
+    opened = service
       .submit(
         { kind: "openProvider", producerId: prepared, startPaused: false },
         { accepted: (ticket) => (generation = ticket.stamp.generation) },
@@ -253,7 +268,7 @@ export async function openStream(
       )
         break;
       if (Date.now() >= deadline)
-        throw failure("timeout", "timed out waiting for stream activation");
+        throw timeout("activation", "timed out waiting for stream activation");
     }
     const handle = new StreamHandle(scope, service, {
       producer: prepared,
@@ -269,6 +284,9 @@ export async function openStream(
     return handle;
   } catch (error) {
     socket?.close();
+    // An abort can arrive before the host answered the selecting request: wait
+    // for that answer so a source selected afterwards is still closed.
+    if (opened && prepared !== undefined) await opened.catch(() => {});
     // A cancelled open may already have selected this producer: close only that source.
     if (generation !== undefined && prepared !== undefined)
       await service.closeIfCurrent(generation).catch(() => {});

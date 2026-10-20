@@ -7,6 +7,7 @@ import type {
 } from "../subtitles.ts";
 import type { SourceState } from "../source.ts";
 import { Latest, failure, sleep, uncertain } from "./runtime.ts";
+import { abortError } from "./player.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
@@ -97,6 +98,9 @@ class SubtitleService {
       const info: SubtitleTrack = Object.freeze({
         id: targetId(track.target),
         kind: track.target.kind,
+        ...(track.target.kind === "embedded"
+          ? { embeddedId: track.target.id }
+          : {}),
         title: track.title,
         language: track.language,
         styleSupported: track.styleSupported,
@@ -140,6 +144,10 @@ class SubtitleService {
   nextOperation() {
     return ++this.#operation;
   }
+  /**
+   * Upload ids only need to increase within this owner: the host gives every
+   * plugin load a new owner generation and drops its high-water mark on release.
+   */
   nextUpload() {
     return ++this.#upload;
   }
@@ -222,12 +230,20 @@ export function subtitles(scope: ScopeImpl): Subtitles {
       const resourceId = `external-${uploadId}`;
       let committing = false;
       try {
+        // Cancellation is honoured between chunks and before the commit; a
+        // commit already handed to the host may take effect, so it is final.
+        const check = () => {
+          if (options?.signal?.aborted) throw abortError();
+        };
+        check();
         await host().begin(uploadId, current.sourceId, srt.length);
         for (let offset = 0; offset < srt.length; offset += CHUNK) {
+          check();
           const chunk = Buffer.from(srt.subarray(offset, offset + CHUNK));
           await host().append(uploadId, offset, chunk.toString("base64"));
         }
         const sha256 = createHash("sha256").update(srt).digest("hex");
+        check();
         committing = true;
         svc.owned.add(resourceId);
         const state = await svc.mutate((operationId) =>

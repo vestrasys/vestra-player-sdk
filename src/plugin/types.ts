@@ -123,9 +123,15 @@ export interface View {
     callback: string,
     handler: (...args: A) => unknown,
   ): Disposable;
-  /** Set properties now. Unchanged values are not resent. */
+  /**
+   * Write properties now; each written value is sent once even if unchanged,
+   * so this also pulls a control the user moved back to the model value.
+   */
   set(props: Props): void;
-  /** Keep properties equal to `props()`; re-evaluated on every update pass. */
+  /**
+   * Keep properties equal to `props()`; re-evaluated on every update pass and
+   * sent only when the value changes, so user edits of in-out properties stay.
+   */
   bind(props: () => Props): Disposable;
 }
 
@@ -285,6 +291,14 @@ export interface StreamOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * `openStream` start-up timeouts: code `timeout` with the step that ran out
+ * of time, the first buffers (`prefill`) or the host's activation.
+ */
+export type StreamStartError = PluginError & {
+  stage: "prefill" | "activation";
+};
+
 export interface Stream extends Disposable {
   readonly running: boolean;
   /** `error` is null when another source replaced the stream or it was closed. */
@@ -355,6 +369,8 @@ export interface SubtitleTrack {
   /** Stable while the track exists; compare tracks by id. */
   id: string;
   kind: "embedded" | "external";
+  /** The container's subtitle track number, for embedded tracks only. */
+  embeddedId?: number;
   title: string;
   language: string | null;
   styleSupported: boolean;
@@ -390,8 +406,15 @@ export interface Subtitles {
     track: SubtitleTrack | null,
     options?: SubtitleConditional,
   ): Promise<SubtitlesState>;
-  /** Upload an SRT file's bytes for the current source and select it. */
-  load(srt: Uint8Array, options?: SubtitleConditional): Promise<SubtitleTrack>;
+  /**
+   * Upload an SRT file's bytes for the current source and select it. Aborting
+   * `signal` before the commit discards the upload (rejects with AbortError);
+   * once the commit was sent it completes.
+   */
+  load(
+    srt: Uint8Array,
+    options?: SubtitleConditional & { signal?: AbortSignal },
+  ): Promise<SubtitleTrack>;
   /** Remove a track this plugin loaded. */
   remove(
     track: SubtitleTrack,

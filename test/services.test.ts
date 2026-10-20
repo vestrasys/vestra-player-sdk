@@ -263,3 +263,100 @@ test("resolvers register and unregister with their scope", async () => {
   await stop();
   assert.equal(host.resolvers.has("demo"), false);
 });
+
+/** Hold the next replace until released, then fail it definitely. */
+function holdReplace(host: TestHost) {
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  host.handle("processing.replace", async () => {
+    host.reset("processing.replace");
+    await gate;
+    throw new HostError("backend", "old value failed");
+  });
+  return release;
+}
+
+test("a failure of a value superseded by set() does not stick", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { filter, stop } = await withFilter(host);
+  const release = holdReplace(host);
+  filter.set(eq(0.1));
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  filter.set(eq(0.2)); // supersedes the in-flight value
+  release();
+  await host.settle();
+  assert.equal(filter.status.state, "applied");
+  assert.deepEqual(
+    host.processing.resources.get("video:picture")?.nodes,
+    eq(0.2),
+  );
+  await stop();
+});
+
+test("a failure arriving after a source change does not stick", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { filter, stop } = await withFilter(host);
+  const release = holdReplace(host);
+  filter.set(eq(0.3));
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  host.openElsewhere("/b.mp4"); // new generation before the failure reply
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  release();
+  await host.settle();
+  assert.equal(filter.status.state, "applied");
+  const latest = host.sent("processing.replace").at(-1)!;
+  assert.equal(latest.expectedGeneration, 2);
+  assert.deepEqual(
+    host.processing.resources.get("video:picture")?.nodes,
+    eq(0.3),
+  );
+  await stop();
+});
+
+test("a failure of the current value is still reported", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { filter, stop } = await withFilter(host);
+  const release = holdReplace(host);
+  filter.set(eq(0.4));
+  release();
+  await host.settle();
+  assert.equal(filter.status.state, "failed");
+  await stop();
+});
+
+test("subtitles: aborting load between chunks discards the upload and never commits", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.subtitles.tracks.push({
+    target: { kind: "embedded", id: 4 },
+    title: "",
+    language: null,
+    styleSupported: true,
+    styleReason: null,
+  });
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["subtitles.read", "subtitles.control", "events"],
+    host,
+  });
+  const state = await plugin.subtitles.refresh();
+  assert.equal(state.tracks[0]!.embeddedId, 4);
+  const controller = new AbortController();
+  host.handle("subtitles.upload.append", (params) => {
+    host.reset("subtitles.upload.append");
+    controller.abort();
+    return host.request("subtitles.upload.append", params);
+  });
+  await assert.rejects(
+    plugin.subtitles.load(new Uint8Array(70 * 1024).fill(65), {
+      signal: controller.signal,
+    }),
+    { name: "AbortError" },
+  );
+  assert.equal(host.sent("subtitles.upload.discard").length, 1);
+  assert.equal(host.sent("subtitles.commit").length, 0);
+  assert.equal(host.uploads.size, 0);
+  await stop();
+});

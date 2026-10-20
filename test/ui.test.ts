@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
+import { HostError, startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
 import type { Plugin } from "../../sdk/plugin/index.ts";
 
 test("commands register once, follow bound state and dispatch run", async () => {
@@ -235,5 +235,63 @@ test("disposing a child scope releases only its handles", async () => {
   await keep.show();
   await feature.dispose();
   assert.deepEqual([...host.windows.keys()], ["keep"]);
+  await stop();
+});
+
+test("user edits of in-out properties survive other callbacks; set() pulls a control back", async () => {
+  let label = "a";
+  const { host, plugin, stop } = await startPlugin(() => {});
+  const window = plugin.windows.create("edit.slint");
+  window.bind(() => ({ label }));
+  window.set({ editorValue: "00:30" });
+  window.on("other", () => {
+    label = "b";
+  });
+  window.on("ping", () => {});
+  await window.show();
+  const fake = host.window("edit");
+  fake.props["editor-value"] = "1:05"; // the user types
+  fake.emit("other");
+  fake.emit("ping");
+  await host.settle();
+  assert.equal(
+    fake.props["editor-value"],
+    "1:05",
+    "an unchanged desired value is not resent",
+  );
+  assert.equal(fake.props.label, "b", "a changed bound value is sent");
+  window.set({ editorValue: "00:30" }); // the same value written again is sent
+  await host.settle();
+  assert.equal(fake.props["editor-value"], "00:30");
+  await stop();
+});
+
+test("a failing window write backs off instead of spinning through onError", async () => {
+  let status = "ok";
+  const { host, plugin, stop } = await startPlugin(() => {});
+  const window = plugin.windows.create("broken.slint");
+  window.bind(() => ({ status }));
+  const errors: string[] = [];
+  plugin.onError((error) => {
+    errors.push(error.message);
+    window.set({ status: `窗口更新失败：${error.message}` });
+  });
+  await window.show();
+  host.handle("ui.set", () => {
+    throw new HostError("ui", "view gone");
+  });
+  status = "changed";
+  plugin.update();
+  await host.settle(400);
+  const writes = host.sent("ui.set").length;
+  assert.ok(writes <= 4, `ui.set attempted ${writes} times`);
+  assert.equal(errors.length, 1, "the same failure is reported once");
+  await host.settle(300);
+  assert.ok(host.sent("ui.set").length <= writes + 2, "no tight retry loop");
+  host.reset("ui.set");
+  status = "recovered";
+  plugin.update();
+  await host.settle(1100);
+  assert.equal(host.window("broken").props.status, "recovered");
   await stop();
 });

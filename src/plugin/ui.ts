@@ -30,6 +30,14 @@ abstract class ViewBase implements View {
   readonly #binders = new Set<() => Props>();
   /** What the host currently shows, as far as this side knows. */
   #sent = new Map<string, string>();
+  /** Written by `set()`: sent even if equal to what was sent before. */
+  readonly #forced = new Set<string>();
+  /** The last value of each property whose write failed; not retried until it changes. */
+  readonly #failed = new Map<string, string>();
+  #backoff = 0;
+  /** A write failed and none succeeded since: further failures stay quiet. */
+  #broken = false;
+  #retry: ReturnType<typeof setTimeout> | undefined;
   #flushing = false;
   #binding: Disposable;
   protected closed = false;
@@ -47,8 +55,11 @@ abstract class ViewBase implements View {
     });
   }
   set(props: Props) {
-    for (const [key, value] of Object.entries(encode(props)))
+    for (const [key, value] of Object.entries(encode(props))) {
       this.#values.set(key, value);
+      this.#forced.add(key);
+      this.#failed.delete(key); // an explicit write is tried again (after any back-off)
+    }
     this.flush();
   }
   bind(props: () => Props) {
@@ -80,40 +91,74 @@ abstract class ViewBase implements View {
     this.#sent = new Map(
       Object.entries(values).map(([k, v]) => [k, JSON.stringify(v)]),
     );
+    this.#forced.clear();
+    this.#failed.clear();
   }
+  /**
+   * Send what changed. A bound value is sent when it differs from the last one
+   * sent; a `set()` value is always sent once. Nothing is resent merely
+   * because a callback arrived, so text the user typed into an in-out
+   * property survives other callbacks (call `set()` to pull a control back).
+   * A failed bound value is not repeated until it changes; an explicit `set()`
+   * is, after a back-off (0.25 s doubling to 30 s). Only the first failure of
+   * a failing streak is reported, so an error handler that writes a status to
+   * a broken view cannot spin.
+   */
   protected flush() {
-    if (this.#flushing || !this.live()) return;
+    if (this.#flushing || this.#retry || !this.live()) return;
     this.#flushing = true;
     void (async () => {
+      let failed = false;
+      let failure: unknown;
       try {
-        let changed: [string, Json][];
+        let pending: [string, Json][];
         do {
-          changed = [...this.#values].filter(
-            ([key, value]) => this.#sent.get(key) !== JSON.stringify(value),
-          );
-          for (const [key, value] of changed) {
+          pending = [...this.#values].filter(([key, value]) => {
+            const encoded = JSON.stringify(value);
+            if (this.#failed.get(key) === encoded) return false;
+            return this.#forced.has(key) || this.#sent.get(key) !== encoded;
+          });
+          for (const [key, value] of pending) {
             if (!this.live()) return;
-            await this.write(key, value);
-            this.#sent.set(key, JSON.stringify(value));
+            const encoded = JSON.stringify(value);
+            this.#forced.delete(key);
+            try {
+              await this.write(key, value);
+              this.#sent.set(key, encoded);
+              this.#failed.delete(key);
+              this.#backoff = 0;
+              this.#broken = false;
+            } catch (error) {
+              failed = true;
+              // Report the start of a failing streak only.
+              if (!this.#broken) failure ??= error;
+              this.#broken = true;
+              this.#failed.set(key, encoded);
+            }
           }
-        } while (changed.length && this.live());
-      } catch (error) {
-        this.scope.report(error);
+        } while (pending.length && !failed && this.live());
       } finally {
         this.#flushing = false;
       }
+      if (!failed) return;
+      this.#backoff = Math.min(Math.max(250, this.#backoff * 2), 30_000);
+      this.#retry = setTimeout(() => {
+        this.#retry = undefined;
+        this.flush();
+      }, this.#backoff);
+      this.#retry.unref?.();
+      if (failure !== undefined) this.scope.report(failure);
     })();
   }
-  /** A callback means the user may have moved an in-out property; resend all. */
   protected dispatch(callback: string, args: Json[]) {
     if (this.closed) return;
-    this.#sent.clear();
     const handler = this.handlers.get(callback);
     if (handler) this.scope.run(handler, ...args);
     else this.scope.update();
   }
   protected async release() {
     this.closed = true;
+    clearTimeout(this.#retry);
     await this.#binding.dispose();
   }
 }

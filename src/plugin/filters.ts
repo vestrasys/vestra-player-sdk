@@ -104,6 +104,7 @@ class FilterHandle {
   async #apply() {
     const host = this.#scope.runtime.host;
     const desired = this.#desired;
+    const source = this.#source;
     const wanted = JSON.stringify(desired);
     try {
       const state = await host.processing.state();
@@ -151,8 +152,14 @@ class FilterHandle {
           setTimeout(() => this.#kick(), 250).unref?.();
         return;
       }
-      this.#failed = true;
       this.#lost = 0;
+      // A failure of a value already replaced by `set()`, or of an attempt
+      // against an earlier source, says nothing about the current value.
+      if (this.#desired !== desired || this.#source !== source) {
+        this.#again = true;
+        return;
+      }
+      this.#failed = true;
       this.#report({ state: "failed", error: coded });
     }
   }
