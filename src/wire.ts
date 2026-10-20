@@ -89,6 +89,31 @@ export interface MountVisibility {
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
   overlay: boolean;
 }
+/** One position (bottom bar or sidebar) as `layout.state` reports it. */
+export interface LayoutSlot {
+  owner: number;
+  preferred: boolean;
+  effective: boolean;
+  reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
+  detached: boolean;
+}
+export interface PlaybackStats {
+  backend: string;
+  session: number;
+  framesShown: number;
+  framesDropped: number | null;
+  video: {
+    codec: string | null;
+    width: number | null;
+    height: number | null;
+    fps: number | null;
+  } | null;
+  audio: {
+    codec: string | null;
+    sampleRate: number | null;
+    channels: number | null;
+  } | null;
+}
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;
   on(event: string, listener: (data: unknown) => void): () => void;
@@ -122,6 +147,31 @@ export function createWire(transport: Transport) {
       /** Shared device output. Does not advance source intent. */
       set: (property: "volume" | "muted", value: number | boolean) =>
         transport.request<void>("playback.set", { property, value }),
+      stats: () => transport.request<PlaybackStats>("playback.stats"),
+    },
+    /** Shared next/previous; the host routes `sequence.step` events to the provider. */
+    sequence: {
+      set: (flags: { canNext: boolean; canPrevious: boolean } | null) =>
+        transport.request<void>("sequence.set", { flags }),
+      step: (direction: "next" | "previous") =>
+        transport.request<void>("sequence.step", { direction }),
+    },
+    osd: {
+      show: (text: string) => transport.request<void>("osd.show", { text }),
+      panel: (text: string | null) =>
+        transport.request<void>("osd.panel", { text }),
+    },
+    layout: {
+      state: () =>
+        transport.request<{
+          bottom: LayoutSlot | null;
+          sidebar: LayoutSlot | null;
+        }>("layout.state"),
+      set: (options: {
+        slot: "bottom" | "sidebar";
+        visible?: boolean;
+        detached?: boolean;
+      }) => transport.request<void>("layout.set", options),
     },
     events: {
       /** One `events.subscribe` per name however many listeners. */
@@ -164,6 +214,7 @@ export function createWire(transport: Transport) {
         file: string;
         component: string;
         global: string;
+        title?: string;
         properties?: Record<string, Json>;
       }) =>
         transport.request<{
@@ -183,6 +234,8 @@ export function createWire(transport: Transport) {
         popupOpen: boolean;
       }) => transport.request<void>("ui.interaction", locks),
       unmount: () => transport.request<void>("ui.unmount"),
+      menu: (items: (string | null)[], x: number, y: number) =>
+        transport.request<void>("ui.menu", { items, x, y }),
       open: (
         id: string,
         file: string,

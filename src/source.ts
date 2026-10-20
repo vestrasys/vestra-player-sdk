@@ -80,6 +80,8 @@ export interface SourceState {
   };
   output: { volume: number; muted: boolean };
   rate: number;
+  /** Merged by the host from the sequence provider (absent: none). */
+  sequence?: { next: boolean; previous: boolean };
 }
 export type SourceOperation =
   | { status: "pending" | "completed"; ticket: SourceTicket }

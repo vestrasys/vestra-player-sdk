@@ -38,6 +38,7 @@ export interface Scope extends Disposable {
   readonly media: MediaCapture;
   readonly resolvers: Resolvers;
   readonly packages: Packages;
+  readonly osd: Osd;
   /** A child scope; disposing it releases only what was created through it. */
   scope(): Scope;
   /** Adopt an existing handle or a cleanup function. */
@@ -80,11 +81,33 @@ export type Bindable<T> = T | (() => T);
 export interface CommandOptions {
   /** Local id, unique within the plugin. */
   id: string;
-  /** Full menu path including the leaf, e.g. `["视频", "画面调节…"]`. */
-  path: string[];
+  /**
+   * Menu path including the leaf, 1–8 segments, e.g. `["视频", "画面调节…"]`;
+   * one segment is a top-level item. Omit it for a command that is not in the
+   * main menu (bindings and panel menus only); `title` is then required.
+   */
+  path?: string[];
   /** Menu label; defaults to the last path segment. */
   title?: string;
-  /** `Space`, `ArrowLeft` and `ArrowRight` route canvas keys; others are display-only. */
+  /**
+   * Sibling order in the menu, ascending (integer, default 0). A submenu sits
+   * where its first command sits. Equal orders: plugin id, then declaration order.
+   */
+  order?: number;
+  /** Separator label: a line is drawn between adjacent items of different groups. Default `"domain"`. */
+  group?: string;
+  /** Draw `checked` as a radio dot instead of a check mark. */
+  radio?: boolean;
+  /**
+   * Default input bindings, e.g. `["Space"]`, `["Ctrl+O", "F3"]`, `["Mouse:WheelUp"]`.
+   * Syntax and conflict rules: API reference §4.
+   */
+  bindings?: string[];
+  /** `"panel"`: the bindings apply only while this plugin's panel has focus. */
+  focus?: "panel";
+  /** Fire again on keyboard auto-repeat while the key is held. Default false. */
+  repeat?: boolean;
+  /** @deprecated Migration window only (removed in P4): use `bindings`. */
   shortcut?: string;
   enabled?: Bindable<boolean>;
   checked?: Bindable<boolean | null>;
@@ -149,6 +172,7 @@ export interface Windows {
   create(file: string, options?: { id?: string }): Window;
 }
 
+/** @deprecated Migration window only (removed in P4): use `SlotState`. */
 export interface PanelVisibility {
   /** The user's choice (menu "show panel"). */
   preferred: boolean;
@@ -157,31 +181,74 @@ export interface PanelVisibility {
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
 }
 
+/** The state of the bottom bar or sidebar position, whoever mounted it. */
+export interface SlotState {
+  /** The user's choice (menu check mark). */
+  preferred: boolean;
+  /** Whether it is on screen right now (docked, or in its floating window). */
+  effective: boolean;
+  reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
+  /** The sidebar is a floating window; always false for the bottom bar. */
+  detached: boolean;
+}
+
+export interface PanelSlot {
+  /** `null` while no plugin has a panel there. */
+  readonly state: SlotState | null;
+  onChange(listener: (state: SlotState | null) => void): Disposable;
+  /** Set the user's preference. Rejects with `missing` when the position is empty. */
+  setVisible(visible: boolean): Promise<void>;
+  /** Flip the user's preference using the host's current value. */
+  toggle(): Promise<void>;
+}
+
+export interface SidebarSlot extends PanelSlot {
+  /** Float the sidebar panel in its own window, or attach it back. */
+  setDetached(detached: boolean): Promise<void>;
+}
+
 export interface Panel extends View, Disposable {
   /** Resolves once the host has mounted the panel. */
   readonly ready: Promise<void>;
+  /** @deprecated Migration window only (removed in P4): use `plugin.panels.<slot>.state`. */
   readonly visibility: PanelVisibility | null;
+  /** @deprecated Use `plugin.panels.<slot>.onChange`. */
   onVisibility(listener: (visibility: PanelVisibility) => void): Disposable;
+  /** @deprecated Use `plugin.panels.<slot>.setVisible`. */
   setVisible(visible: boolean): Promise<void>;
-  /** Flip the user's preference using the host's current value. */
+  /** @deprecated Use `plugin.panels.<slot>.toggle`. */
   toggle(): Promise<void>;
   /** Keep the panel from auto-hiding while the user works in it. Merged, last write wins. */
   setInteraction(
     locks: Partial<{ focused: boolean; dragging: boolean; popupOpen: boolean }>,
   ): void;
+  /**
+   * Pop up a one-level menu of this plugin's commands (`null` = separator) in
+   * the window that shows the panel, styled like the main menu. `at` is in
+   * window coordinates: in Slint, `self.absolute-position` plus the pointer.
+   */
+  showMenu(
+    items: (Command | null)[],
+    at: { x: number; y: number },
+  ): Promise<void>;
 }
 
 export interface Panels {
   /**
    * Dock a Slint component in the bottom bar or the sidebar. The component and
    * its bridge global are found from the file's `export component` and
-   * `export global`; pass them only if the file exports several.
+   * `export global`; pass them only if the file exports several. `title` names
+   * the floating window when the sidebar is detached.
    */
   mount(
     slot: "bottom" | "sidebar",
     file: string,
-    options?: { component?: string; global?: string },
+    options?: { component?: string; global?: string; title?: string },
   ): Panel;
+  /** The bottom bar position; any plugin may read and toggle it. */
+  readonly bottom: PanelSlot;
+  /** The sidebar position, including its floating state. */
+  readonly sidebar: SidebarSlot;
 }
 
 export interface Dialogs {
@@ -235,6 +302,9 @@ export interface PlayerState {
     restart: boolean;
     close: boolean;
     snapshot: boolean;
+    /** A sequence provider exists and can go forward / back (`player.next()`). */
+    next: boolean;
+    previous: boolean;
   };
   readonly audioTracks: AudioTrack[] | null;
 }
@@ -307,6 +377,34 @@ export interface Stream extends Disposable {
   stop(): Promise<void>;
 }
 
+/** The plugin that owns "next / previous" (a playlist). */
+export interface SequenceProvider {
+  next(): unknown;
+  previous(): unknown;
+  canNext: Bindable<boolean>;
+  canPrevious: Bindable<boolean>;
+}
+
+export interface PlaybackStats {
+  /** For example "libmpv · 软件渲染". */
+  backend: string;
+  session: number;
+  /** Frames the host has shown. */
+  framesShown: number;
+  framesDropped: number | null;
+  video: {
+    codec: string | null;
+    width: number | null;
+    height: number | null;
+    fps: number | null;
+  } | null;
+  audio: {
+    codec: string | null;
+    sampleRate: number | null;
+    channels: number | null;
+  } | null;
+}
+
 export interface Player {
   /** Latest state; always newer than anything delivered before. */
   readonly state: PlayerState;
@@ -336,6 +434,31 @@ export interface Player {
    * Resolves `true` when this request was applied, `false` if superseded.
    */
   setOutput(output: { volume?: number; muted?: boolean }): Promise<boolean>;
+  /**
+   * Become the sequence provider (one at a time; another provider rejects with
+   * `conflict` through the scope's `onError`, or fails activation). Dispose to stop.
+   */
+  provideSequence(provider: SequenceProvider): Disposable;
+  /** Ask the provider to go forward / back. Rejects `unavailable` when it cannot. */
+  next(): Promise<void>;
+  previous(): Promise<void>;
+  /** Codec, size, frame counts and backend of the current playback. */
+  stats(): Promise<PlaybackStats>;
+}
+
+// ---------------------------------------------------------------- on-screen display
+
+/** A read-only text block over the top-left of the video. */
+export interface OsdPanel extends Disposable {
+  /** Multi-line text; `null` hides it. Last write wins. */
+  set(text: string | null): void;
+}
+
+export interface Osd {
+  /** One line at the top-left of the video for 2 seconds; replaces the previous one. */
+  show(text: string): Promise<void>;
+  /** This plugin's information block (one per plugin). */
+  panel(): OsdPanel;
 }
 
 // ---------------------------------------------------------------- video and audio filters

@@ -10,7 +10,7 @@ import type {
   SourceState,
   SourceTicket,
 } from "../source.ts";
-import { Latest, failure, sleep, uncertain } from "./runtime.ts";
+import { Latest, failure, quiet, sleep, uncertain } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { openStream } from "./stream.ts";
@@ -22,6 +22,7 @@ import type {
   PlayerState,
   PluginError,
   Scrub,
+  SequenceProvider,
 } from "./types.ts";
 
 const raws = new WeakMap<PlayerState, SourceState>();
@@ -79,6 +80,8 @@ function view(raw: SourceState): PlayerState {
       restart: raw.capabilities.restart,
       close: raw.capabilities.close,
       snapshot: raw.capabilities.snapshotSource,
+      next: raw.sequence?.next ?? false,
+      previous: raw.sequence?.previous ?? false,
     }),
     audioTracks:
       raw.audioTracks?.map((track) =>
@@ -376,6 +379,59 @@ class ScrubHandle implements Scrub {
 }
 const superseded = new HostError("superseded", "gesture ended");
 
+const value = (item: boolean | (() => boolean)) =>
+  typeof item === "function" ? item() : item;
+
+/** The host routes `sequence.step` to exactly one provider per player. */
+function provideSequence(
+  scope: ScopeImpl,
+  provider: SequenceProvider,
+): Disposable {
+  const runtime = scope.runtime;
+  if (runtime.services.has("sequence.provider"))
+    throw new Error("this plugin already provides the sequence");
+  let disposed = false;
+  let last = "";
+  const pump = new Latest(
+    (flags: { canNext: boolean; canPrevious: boolean } | null) =>
+      runtime.host.sequence.set(flags),
+  );
+  const flags = () => ({
+    canNext: value(provider.canNext),
+    canPrevious: value(provider.canPrevious),
+  });
+  const first = flags();
+  last = JSON.stringify(first);
+  quiet(runtime.starting(pump.push(first), (error) => scope.report(error)));
+  const steps = runtime.raw("sequence.step", (data) => {
+    if (disposed) return;
+    const { direction } = data as { direction: "next" | "previous" };
+    scope.run(direction === "next" ? provider.next : provider.previous);
+  });
+  const binding = runtime.bind(() => {
+    if (disposed) return;
+    const next = flags();
+    const encoded = JSON.stringify(next);
+    if (encoded === last) return;
+    last = encoded;
+    pump.push(next).catch((error) => scope.report(error));
+  });
+  const handle: Disposable = {
+    dispose: async () => {
+      if (disposed) return;
+      disposed = true;
+      scope.forget(handle);
+      runtime.services.delete("sequence.provider");
+      await steps.dispose();
+      await binding.dispose();
+      await pump.push(null).catch(() => {});
+      pump.stop();
+    },
+  };
+  runtime.services.set("sequence.provider", handle);
+  return scope.add(handle);
+}
+
 export const playerOf = (runtime: Runtime) =>
   runtime.service("player", () => new PlayerService(runtime));
 
@@ -448,5 +504,9 @@ export function player(scope: ScopeImpl): Player {
     close: (options) => service().control({ kind: "close" }, options),
     scrub: () => new ScrubHandle(service()),
     setOutput: (output) => service().output.push({ ...output }),
+    provideSequence: (provider) => provideSequence(scope, provider),
+    next: () => scope.runtime.host.sequence.step("next"),
+    previous: () => scope.runtime.host.sequence.step("previous"),
+    stats: () => scope.runtime.host.playback.stats(),
   };
 }

@@ -16,7 +16,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
-import type { Json, MountVisibility, Transport } from "../wire.ts";
+import type {
+  Json,
+  LayoutSlot,
+  MountVisibility,
+  PlaybackStats,
+  Transport,
+} from "../wire.ts";
+import type {
+  CommandDeclaration,
+  LegacyCommandDeclaration,
+} from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
 import type { MediaJob } from "../media.ts";
@@ -39,7 +49,8 @@ export interface FakeWindow {
 }
 
 export interface FakeCommand {
-  declaration: { title: string; path: string[]; shortcut: string | null };
+  /** As sent: the full form, or the migration-window form `{ title, path, shortcut }`. */
+  declaration: CommandDeclaration | LegacyCommandDeclaration;
   state: {
     enabled: boolean;
     checked: boolean | null;
@@ -114,6 +125,28 @@ export class TestHost implements Transport {
       })
     | null = null;
   readonly commands = new Map<string, FakeCommand>();
+  /** Both panel positions as `layout.state` reports them. */
+  readonly layout: { bottom: LayoutSlot | null; sidebar: LayoutSlot | null } = {
+    bottom: null,
+    sidebar: null,
+  };
+  /** Every `osd.show` text, newest last. */
+  readonly osd: string[] = [];
+  /** The text of this plugin's osd panel, `null` when hidden. */
+  osdPanel: string | null = null;
+  /** The sequence provider's flags, `null` without a provider. */
+  sequence: { canNext: boolean; canPrevious: boolean } | null = null;
+  /** What `player.stats()` returns. */
+  stats: PlaybackStats = {
+    backend: "test",
+    session: 0,
+    framesShown: 0,
+    framesDropped: 0,
+    video: null,
+    audio: null,
+  };
+  /** Every `panel.showMenu`, newest last. */
+  readonly menus: { items: (string | null)[]; x: number; y: number }[] = [];
   readonly processing = {
     configurationRevision: 0,
     backendUncertain: {} as Partial<Record<"video" | "audio", string>>,
@@ -258,6 +291,48 @@ export class TestHost implements Transport {
   openElsewhere(source: string, phase: SourceState["phase"] = "ready") {
     this.#intent({ kind: "open", source, startPaused: false });
     this.setSource({ phase });
+  }
+  /**
+   * Press a binding like the host's table would: panel-focus bindings first
+   * when `panel` is true, then global ones; the earliest registration wins a
+   * conflict. Resolves after the command ran; rejects when nothing is bound
+   * or the command is disabled or busy.
+   */
+  async press(binding: string, options: { panel?: boolean } = {}) {
+    const claims = this.#claims();
+    const id =
+      (options.panel ? claims.get(`panel ${binding}`)?.[0] : undefined) ??
+      claims.get(`global ${binding}`)?.[0];
+    if (!id) throw new Error(`test host: nothing is bound to ${binding}`);
+    await this.command(id).run();
+  }
+  /** Bindings declared by more than one command: `[binding, winner, ...ignored]`. */
+  get conflicts(): string[][] {
+    return [...this.#claims()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([key, ids]) => [key.split(" ")[1]!, ...ids]);
+  }
+  #claims() {
+    const claims = new Map<string, string[]>();
+    for (const [id, { declaration }] of this.commands) {
+      const bindings =
+        "bindings" in declaration
+          ? declaration.bindings
+          : declaration.shortcut
+            ? [declaration.shortcut]
+            : [];
+      const scope =
+        "focus" in declaration && declaration.focus ? "panel" : "global";
+      for (const binding of bindings) {
+        const key = `${scope} ${binding}`;
+        claims.set(key, [...(claims.get(key) ?? []), id]);
+      }
+    }
+    return claims;
+  }
+  /** Simulate another plugin calling `player.next()` / `previous()`. */
+  step(direction: "next" | "previous") {
+    return this.request("sequence.step", { direction });
   }
   command(id: string): FakeCommand {
     const command = this.commands.get(id);
@@ -489,9 +564,78 @@ export class TestHost implements Transport {
           });
         },
       };
+      const slot = String(p.slot) as "bottom" | "sidebar";
+      this.layout[slot] = {
+        owner: 1,
+        preferred: true,
+        effective: true,
+        reason: null,
+        detached: false,
+      };
       return { status: "ready", prepareMs: 0, shellGeneration: 1 };
     },
-    "ui.unmount": () => void (this.panel = null),
+    "ui.unmount": () => {
+      if (this.panel)
+        this.layout[this.panel.slot as "bottom" | "sidebar"] = null;
+      this.panel = null;
+    },
+    "ui.menu": (p) => {
+      if (!this.panel) throw new HostError("unavailable", "panel not shown");
+      const items = p.items as (string | null)[];
+      for (const id of items)
+        if (id !== null && !this.commands.has(id))
+          throw new HostError("missing", `command ${id} not registered`);
+      this.menus.push({ items, x: Number(p.x), y: Number(p.y) });
+    },
+    "layout.state": () => this.layout,
+    "layout.set": (p) => {
+      const slot = String(p.slot) as "bottom" | "sidebar";
+      const state = this.layout[slot];
+      if (!state) throw new HostError("missing", "no panel at this position");
+      if (p.detached !== undefined && slot === "bottom")
+        throw new HostError("invalid", "the bottom bar cannot be detached");
+      if (typeof p.visible === "boolean") {
+        state.preferred = p.visible;
+        state.effective = p.visible;
+        state.reason = p.visible ? null : "userHidden";
+        if (this.panel?.slot === slot) {
+          this.panel.visible = p.visible;
+          this.panel.visibility = {
+            ...this.panel.visibility,
+            ...state,
+            overlay: false,
+          };
+        }
+      }
+      if (typeof p.detached === "boolean") state.detached = p.detached;
+    },
+    "osd.show": (p) => {
+      const text = String(p.text);
+      if (!text || [...text].length > 200)
+        throw new HostError("invalid", "osd text needs 1..200 characters");
+      this.osd.push(text);
+    },
+    "osd.panel": (p) =>
+      void (this.osdPanel = p.text === null ? null : String(p.text)),
+    "playback.stats": () => this.stats,
+    "sequence.set": (p) => {
+      this.sequence = p.flags as TestHost["sequence"];
+      this.setSource({
+        sequence: {
+          next: this.sequence?.canNext ?? false,
+          previous: this.sequence?.canPrevious ?? false,
+        },
+      });
+    },
+    "sequence.step": (p) => {
+      const direction = String(p.direction);
+      const can =
+        direction === "next"
+          ? this.sequence?.canNext
+          : this.sequence?.canPrevious;
+      if (!can) throw new HostError("unavailable", `cannot go ${direction}`);
+      this.emit("sequence.step", { direction });
+    },
     "ui.setMount": (p) =>
       void (this.mounted().props[String(p.property)] = p.value!),
     "ui.showMount": (p) => {
@@ -503,6 +647,13 @@ export class TestHost implements Transport {
         reason: p.visible ? null : "userHidden",
       };
       panel.visible = p.visible === true;
+      const state = this.layout[panel.slot as "bottom" | "sidebar"];
+      if (state)
+        Object.assign(state, {
+          preferred: panel.visibility.preferred,
+          effective: panel.visibility.effective,
+          reason: panel.visibility.reason,
+        });
     },
     "ui.mountState": () => this.mounted().visibility,
     "ui.interaction": (p) => void (this.mounted().locks = p),

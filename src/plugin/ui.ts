@@ -4,12 +4,18 @@ import { basename, extname, resolve } from "node:path";
 import { Latest, quiet } from "./runtime.ts";
 import type { Json } from "../wire.ts";
 import type { ScopeImpl } from "./scope.ts";
+import type { Runtime } from "./runtime.ts";
+import type { LayoutSlot } from "../wire.ts";
 import type {
+  Command,
   Dialogs,
   Disposable,
   Panel,
+  PanelSlot,
   PanelVisibility,
   Panels,
+  SidebarSlot,
+  SlotState,
   Props,
   View,
   Window,
@@ -263,7 +269,7 @@ class PanelHandle extends ViewBase implements Panel {
     scope: ScopeImpl,
     slot: "bottom" | "sidebar",
     file: string,
-    options: { component?: string; global?: string },
+    options: { component?: string; global?: string; title?: string },
   ) {
     if (scope.runtime.views.has("$mount"))
       throw new Error("a plugin can mount only one panel");
@@ -291,6 +297,7 @@ class PanelHandle extends ViewBase implements Panel {
             file,
             component,
             global,
+            ...(options.title === undefined ? {} : { title: options.title }),
             properties,
           });
           this.#mounted = true;
@@ -363,6 +370,14 @@ class PanelHandle extends ViewBase implements Panel {
       !(current?.preferred ?? this.#visibility?.preferred ?? true),
     );
   }
+  async showMenu(items: (Command | null)[], at: { x: number; y: number }) {
+    await this.ready;
+    await this.scope.runtime.host.ui.menu(
+      items.map((item) => item?.id ?? null),
+      at.x,
+      at.y,
+    );
+  }
   setInteraction(locks: Partial<Locks>) {
     Object.assign(this.#locks, locks);
     this.#interaction
@@ -386,9 +401,115 @@ export const windows = (scope: ScopeImpl): Windows => ({
     new WindowHandle(scope, file, options?.id ?? basename(file, extname(file))),
 });
 
+type Layout = { bottom: SlotState | null; sidebar: SlotState | null };
+
+/**
+ * Both positions, one per plugin: read with `layout.state` after every
+ * `window.state` event (one read in flight; events during it cause one more)
+ * and after this plugin's own changes. Started on first use.
+ */
+class LayoutService {
+  readonly #runtime: Runtime;
+  state: Layout = { bottom: null, sidebar: null };
+  readonly #listeners = new Set<(layout: Layout) => void>();
+  #started = false;
+  #reading = false;
+  #again = false;
+  constructor(runtime: Runtime) {
+    this.#runtime = runtime;
+  }
+  start() {
+    if (this.#started || !this.#runtime.can("ui.mount")) return;
+    this.#started = true;
+    this.#runtime.on("window.state", () => void this.read());
+    void this.read();
+  }
+  watch(listener: (layout: Layout) => void) {
+    this.start();
+    this.#listeners.add(listener);
+    return { dispose: async () => void this.#listeners.delete(listener) };
+  }
+  async read() {
+    if (this.#reading) {
+      this.#again = true;
+      return;
+    }
+    this.#reading = true;
+    try {
+      do {
+        this.#again = false;
+        // "pending" until the host confirmed the layout: keep the last value.
+        const raw = await this.#runtime.host.layout.state().catch(() => null);
+        if (!raw) continue;
+        const view = (slot: LayoutSlot | null): SlotState | null =>
+          slot && {
+            preferred: slot.preferred,
+            effective: slot.effective,
+            reason: slot.reason,
+            detached: slot.detached,
+          };
+        const next = { bottom: view(raw.bottom), sidebar: view(raw.sidebar) };
+        if (JSON.stringify(next) === JSON.stringify(this.state)) continue;
+        this.state = next;
+        for (const listener of [...this.#listeners]) listener(next);
+        this.#runtime.invalidate();
+      } while (this.#again);
+    } finally {
+      this.#reading = false;
+    }
+  }
+  async set(
+    slot: "bottom" | "sidebar",
+    change: { visible?: boolean; detached?: boolean },
+  ) {
+    this.start();
+    await this.#runtime.host.layout.set({ slot, ...change });
+    await this.read();
+  }
+}
+
+const layoutOf = (runtime: Runtime) =>
+  runtime.service("layout", () => new LayoutService(runtime));
+
+function slot(scope: ScopeImpl, name: "bottom"): PanelSlot;
+function slot(scope: ScopeImpl, name: "sidebar"): SidebarSlot;
+function slot(scope: ScopeImpl, name: "bottom" | "sidebar"): SidebarSlot {
+  const service = () => layoutOf(scope.runtime);
+  return {
+    get state() {
+      service().start();
+      return service().state[name];
+    },
+    onChange(listener) {
+      let last = JSON.stringify(service().state[name]);
+      const watch = service().watch((layout) => {
+        const next = JSON.stringify(layout[name]);
+        if (next === last) return;
+        last = next;
+        scope.run(listener, layout[name]);
+      });
+      return scope.add({
+        dispose: async () => {
+          scope.forget(watch);
+          await watch.dispose();
+        },
+      });
+    },
+    setVisible: (visible) => service().set(name, { visible }),
+    async toggle() {
+      await service().read();
+      const current = service().state[name];
+      await service().set(name, { visible: !(current?.preferred ?? true) });
+    },
+    setDetached: (detached) => service().set(name, { detached }),
+  };
+}
+
 export const panels = (scope: ScopeImpl): Panels => ({
-  mount: (slot, file, options = {}) =>
-    new PanelHandle(scope, slot, file, options),
+  mount: (position, file, options = {}) =>
+    new PanelHandle(scope, position, file, options),
+  bottom: slot(scope, "bottom"),
+  sidebar: slot(scope, "sidebar"),
 });
 
 export const dialogs = (scope: ScopeImpl): Dialogs => {

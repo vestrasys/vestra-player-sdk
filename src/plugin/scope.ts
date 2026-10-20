@@ -10,6 +10,7 @@ import { subtitles } from "./subtitles.ts";
 import { mediaCapture } from "./media.ts";
 import { resolvers } from "./resolvers.ts";
 import { packages } from "./packages.ts";
+import { osd } from "./osd.ts";
 
 export class ScopeImpl implements Plugin {
   readonly runtime: Runtime;
@@ -38,6 +39,7 @@ export class ScopeImpl implements Plugin {
   readonly media = mediaCapture(this);
   readonly resolvers = resolvers(this);
   readonly packages = packages(this);
+  readonly osd = osd(this);
   scope(): Scope {
     return this.add(new ScopeImpl(this.runtime, this));
   }
