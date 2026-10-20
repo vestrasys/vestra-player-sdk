@@ -80,9 +80,15 @@ class SubtitleService {
     const old = this.raw;
     if (old) {
       if (raw.source.generation < old.source.generation) return;
+      // While a new source loads, the host still reports the previous
+      // source's selection stamp; once it is ready the selection restarts at
+      // revision 0 of the new generation. Revisions compare within one
+      // selection generation only.
       if (
         raw.source.generation === old.source.generation &&
-        (raw.selection.stamp.revision < old.selection.stamp.revision ||
+        (raw.selection.stamp.generation < old.selection.stamp.generation ||
+          (raw.selection.stamp.generation === old.selection.stamp.generation &&
+            raw.selection.stamp.revision < old.selection.stamp.revision) ||
           raw.presentation.revision < old.presentation.revision)
       )
         return;

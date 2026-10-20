@@ -571,3 +571,28 @@ test("keypad names are bindable and distinct from main-keyboard keys", () => {
   assert.throws(() => canonical("NumpadAdd"));
   assert.throws(() => canonical("Numpad10"));
 });
+
+test("subtitle state of a new source is taken although its selection restarts at revision 0", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { plugin, stop } = await started(host);
+  // Source A after an external load: the selection is at revision 2.
+  host.subtitles.source = { generation: 1, phase: "ready" };
+  host.subtitles.selection.stamp = { generation: 1, revision: 2 };
+  assert.equal((await plugin.subtitles.refresh()).phase, "ready");
+  // Source B loading: the host still reports A's selection stamp.
+  host.subtitles.source = { generation: 2, phase: "loading" };
+  assert.equal((await plugin.subtitles.refresh()).phase, "loading");
+  // B ready: the selection restarts at B's generation, revision 0.
+  host.subtitles.source = { generation: 2, phase: "ready" };
+  host.subtitles.selection.stamp = { generation: 2, revision: 0 };
+  const state = await plugin.subtitles.refresh();
+  assert.equal(state.phase, "ready");
+  assert.equal(state.sourceId, 2);
+  await plugin.subtitles.select(null);
+  assert.deepEqual(host.sent("subtitles.select").at(-1)!.expected, {
+    generation: 2,
+    revision: 0,
+  });
+  await stop();
+});
