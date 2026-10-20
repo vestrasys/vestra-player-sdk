@@ -232,14 +232,7 @@ export class TestHost implements Transport {
   /** Deliver a host event (only if the plugin subscribed, like the real host). */
   emit(event: string, data: unknown) {
     if (
-      [
-        "source.state",
-        "playback.backend",
-        "window.state",
-        "playback.state",
-        "plugins.changed",
-        "host.error",
-      ].includes(event) &&
+      ["source.state", "playback.backend", "window.state"].includes(event) &&
       !this.subscriptions.has(event)
     )
       return;
@@ -407,12 +400,6 @@ export class TestHost implements Transport {
   }
 
   readonly #defaults: Record<string, Handler> = {
-    "host.capabilities": () => ({
-      apiVersion: "vestra.experimental/0.1",
-      capabilities: [],
-      backend: "test",
-      ui: true,
-    }),
     "events.subscribe": (p) => void this.subscriptions.add(String(p.event)),
     "events.unsubscribe": (p) =>
       void this.subscriptions.delete(String(p.event)),

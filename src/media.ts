@@ -182,7 +182,6 @@ export function mediaClients(transport: Transport) {
         }>("jobs.start", options),
       state: (jobId: number) =>
         transport.request<MediaJob>("jobs.state", { jobId }),
-      list: () => transport.request<MediaJob[]>("jobs.list"),
       cancel: (jobId: number, operationId: number) =>
         transport.request<{
           jobId: number;

@@ -112,10 +112,6 @@ export function subtitleClient(transport: Transport) {
         offset,
         base64,
       }),
-    uploadState: (uploadId: number) =>
-      transport.request<SubtitleUpload>("subtitles.upload.status", {
-        uploadId,
-      }),
     discard: (uploadId: number) =>
       transport.request<void>("subtitles.upload.discard", { uploadId }),
     /** Atomic registration plus selection. inputOrigin guards a translation's original content revision. */
