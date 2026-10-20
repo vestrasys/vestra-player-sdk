@@ -1,7 +1,7 @@
 /** Tool windows, docked panels and system dialogs. */
 import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
-import { Latest, quiet } from "./runtime.ts";
+import { failure, Latest, quiet } from "./runtime.ts";
 import type { Json } from "../wire.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
@@ -486,6 +486,38 @@ export const dialogs = (scope: ScopeImpl): Dialogs => {
     return result.cancelled ? [] : result.paths;
   };
   return {
+    async confirm(options) {
+      const { message, detail, confirm, cancel, destructive, checkbox } =
+        options ?? ({} as never);
+      const length = (text: unknown, min: number, max: number) =>
+        typeof text === "string" &&
+        [...text].length >= min &&
+        [...text].length <= max;
+      if (
+        !length(message, 1, 200) ||
+        !length(confirm, 1, 40) ||
+        (detail !== undefined && !length(detail, 0, 2000)) ||
+        (cancel !== undefined && !length(cancel, 1, 40)) ||
+        (checkbox !== undefined && !length(checkbox, 1, 40)) ||
+        (destructive !== undefined && typeof destructive !== "boolean")
+      )
+        throw failure(
+          "invalid",
+          "confirm needs message 1–200, confirm/cancel/checkbox 1–40, detail ≤ 2000 characters",
+        );
+      const answer = await scope.runtime.host.dialogs.confirm({
+        message,
+        confirm,
+        ...(detail === undefined ? {} : { detail }),
+        ...(cancel === undefined ? {} : { cancel }),
+        ...(destructive === undefined ? {} : { destructive }),
+        ...(checkbox === undefined ? {} : { checkbox }),
+      });
+      return {
+        confirmed: answer.confirmed === true,
+        checked: answer.checked === true,
+      };
+    },
     openFile: async (options) => (await open("openFile", options))[0] ?? null,
     openFiles: (options) => open("openFiles", options),
     openDirectory: async (options) =>

@@ -48,6 +48,10 @@ export interface Scope extends Disposable {
   readonly storage: Storage;
   /** Show or open files with the Finder. */
   readonly system: System;
+  /** The main window: fullscreen, video area, size, level, pointer hiding. */
+  readonly window: MainWindow;
+  /** The player's version and components, as the plugin process started. */
+  readonly app: AppInfo;
   /** A child scope; disposing it releases only what was created through it. */
   scope(): Scope;
   /** Adopt an existing handle or a cleanup function. */
@@ -257,7 +261,77 @@ export interface Panels {
   readonly sidebar: SidebarSlot;
 }
 
+/** The main window as `plugin.window.state` reports it (logical points). */
+export interface WindowState {
+  readonly fullscreen: boolean;
+  /** The video column, without the bottom bar, sidebar and splitter. */
+  readonly videoArea: { readonly width: number; readonly height: number };
+}
+
+/** The player's main window. Reading needs no capability; changes need `window.control`. */
+export interface MainWindow {
+  /** Latest state; zero video area without a native window. */
+  readonly state: WindowState;
+  onChange(listener: (state: WindowState) => void): Disposable;
+  /**
+   * Resize the window so the video column is `width`×`height` (the bottom bar
+   * and a docked sidebar are added), keeping the top-left corner, moved back
+   * inside the screen's visible area. Too large: scaled down keeping the
+   * aspect; too small: raised to the minimum; `clamped` then. Resolves with
+   * the video area applied. `unavailable` in fullscreen.
+   */
+  setVideoArea(size: {
+    width: number;
+    height: number;
+  }): Promise<{ width: number; height: number; clamped: boolean }>;
+  /** Float the player's windows above other applications. Newest call wins; reverts when this plugin stops. */
+  setAlwaysOnTop(onTop: boolean): Promise<void>;
+  /**
+   * `"playing"`: hide the pointer over the video after 3 idle seconds while
+   * playing, in a window too (not only fullscreen). Newest call wins;
+   * reverts to `"fullscreen"` when this plugin stops.
+   */
+  setCursorAutoHide(mode: "fullscreen" | "playing"): Promise<void>;
+}
+
+/** `plugin.app`: fixed for the life of the plugin process. */
+export interface AppInfo {
+  readonly version: string;
+  /** Short git hash of the build, `null` when unknown. */
+  readonly build: string | null;
+  readonly components: {
+    /** libmpv's `mpv-version`. */
+    readonly mpv: string | null;
+    /** `{ ffmpeg: <ffmpeg-version> }` (what libmpv reports). */
+    readonly libav: Readonly<Record<string, string>>;
+    readonly slint: string;
+  };
+}
+
+export interface ConfirmOptions {
+  /** 1–200 characters, shown in bold. */
+  message: string;
+  /** Up to 2000 characters under the message. */
+  detail?: string;
+  /** The default button, 1–40 characters. */
+  confirm: string;
+  /** 1–40 characters; default "取消". Escape picks it. */
+  cancel?: string;
+  /** Mark the confirm button as destructive (red). */
+  destructive?: boolean;
+  /** A checkbox under the text (1–40 characters); `checked` reports it. */
+  checkbox?: string;
+}
+
 export interface Dialogs {
+  /**
+   * A system alert as a sheet on the main window. `confirmed` is false for
+   * cancel; `checked` is the checkbox (false without one). `busy` while
+   * another dialog is open, `unavailable` without a user interface.
+   */
+  confirm(
+    options: ConfirmOptions,
+  ): Promise<{ confirmed: boolean; checked: boolean }>;
   /** `null` when cancelled. */
   openFile(options?: { title?: string }): Promise<string | null>;
   /** Empty when cancelled. */
@@ -313,6 +387,19 @@ export interface PlayerState {
     previous: boolean;
   };
   readonly audioTracks: AudioTrack[] | null;
+  /**
+   * The A-B loop (`setLoop`) as requested; `count` null = endless. Cleared by
+   * a new source. The SDK always sets it (`null` = no loop); it is optional
+   * only so hand-written test states without it still type-check.
+   */
+  readonly loop?: { a: number; b: number; count: number | null } | null;
+}
+
+/** One chapter of the current media. */
+export interface Chapter {
+  title: string | null;
+  /** Seconds. */
+  start: number;
 }
 
 /**
@@ -502,6 +589,22 @@ export interface Player {
    * plugin wins; it reverts when that plugin stops.
    */
   setStepSeek(options: { seconds: number }): Promise<void>;
+  /**
+   * The chapters of the current media (empty without media or chapters),
+   * read on demand; `sourceId` tells which source they belong to.
+   */
+  chapters(): Promise<{ sourceId: number; chapters: Chapter[] }>;
+  /**
+   * A-B loop: on reaching `b`, jump back to `a` (seconds, `0 ≤ a < b ≤
+   * duration`), `count` times (positive integer; omitted = endless); `null`
+   * stops it. After the last jump back `state.loop` becomes null.
+   * `invalid` out of range, `unsupported` for a source that cannot seek,
+   * `unavailable` without ready media. A new source clears it.
+   */
+  setLoop(
+    loop: { a: number; b: number; count?: number } | null,
+    options?: Conditional,
+  ): Promise<void>;
 }
 
 /** The core's basic playback actions (menu commands owned by the player). */

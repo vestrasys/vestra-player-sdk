@@ -261,8 +261,46 @@ export class TestHost implements Transport {
     }
   >();
   readonly resolvers = new Map<string, Json>();
-  /** Answers for `dialogs.open`, consumed in order; `null` means cancelled. */
-  readonly dialogAnswers: (string[] | null)[] = [];
+  /**
+   * Answers for `dialogs.open` (paths, `null` = cancelled) and
+   * `dialogs.confirm` (`{ confirmed, checked }`), consumed in order.
+   */
+  readonly dialogAnswers: (
+    string[] | null | { confirmed: boolean; checked: boolean }
+  )[] = [];
+  /** Every `dialogs.confirm` request (its options), newest last. */
+  readonly confirms: Record<string, Json>[] = [];
+  /**
+   * The main window as the player would show it. Change it with
+   * `setMainWindow` (the user resized it, entered fullscreen); `onTop` and
+   * `cursorAutoHide` record the plugin's `window.set…` calls.
+   */
+  readonly mainWindow = {
+    fullscreen: false,
+    videoArea: { width: 780, height: 609 },
+    onTop: false,
+    cursorAutoHide: "fullscreen" as "fullscreen" | "playing",
+  };
+  /** What `plugin.app` reports. Set it before `startPlugin`. */
+  app: {
+    version: string;
+    build: string | null;
+    components: {
+      mpv: string | null;
+      libav: Record<string, string>;
+      slint: string;
+    };
+  } = {
+    version: "0.1.0",
+    build: "test",
+    components: {
+      mpv: "mpv 0.41.0",
+      libav: { ffmpeg: "7.1" },
+      slint: "1.16.1",
+    },
+  };
+  /** What `player.chapters()` lists while media is ready. */
+  chapters: { title: string | null; start: number }[] = [];
   readonly #overrides = new Map<string, Handler>();
   readonly #listeners = new Map<string, Set<(data: unknown) => void>>();
   #inFlight = 0;
@@ -642,6 +680,22 @@ export class TestHost implements Transport {
     };
     this.emit("source.state", this.source);
   }
+  /** The user changed the main window (resized, fullscreen); broadcast it. */
+  setMainWindow(
+    patch: Partial<{
+      fullscreen: boolean;
+      videoArea: { width: number; height: number };
+    }>,
+  ) {
+    Object.assign(this.mainWindow, patch);
+    this.emit("window.state", this.#windowFacts());
+  }
+  #windowFacts() {
+    return {
+      fullscreen: this.mainWindow.fullscreen,
+      videoArea: { ...this.mainWindow.videoArea },
+    };
+  }
   /** Simulate another plugin opening a source. */
   openElsewhere(source: string, phase: SourceState["phase"] = "ready") {
     this.#intent({ kind: "open", source, startPaused: false });
@@ -750,6 +804,7 @@ export class TestHost implements Transport {
       next.duration = null;
       next.terminalReason = null;
       next.capabilities = { ...readyCapabilities };
+      next.loop = null; // a new source clears the A-B loop
     } else if (intent.kind === "close") {
       if (!this.source.source) throw new HostError("invalid", "noSource");
       Object.assign(next, {
@@ -1106,10 +1161,66 @@ export class TestHost implements Transport {
     "ui.setMount": (p) =>
       void (this.mounted().props[String(p.property)] = p.value!),
     "ui.interaction": (p) => void (this.mounted().locks = p),
+    "dialogs.confirm": (p) => {
+      this.confirms.push(p);
+      const answer = this.dialogAnswers.shift();
+      if (answer === undefined)
+        throw new Error("test host: no dialog answer queued");
+      if (answer === null || Array.isArray(answer))
+        throw new Error("test host: a file dialog answer was queued");
+      return { confirmed: answer.confirmed, checked: answer.checked };
+    },
+    "window.state": () => this.#windowFacts(),
+    "window.setVideoArea": (p) => {
+      if (this.mainWindow.fullscreen)
+        throw new HostError("unavailable", "全屏时不可用");
+      const width = Math.max(318, Number(p.width));
+      const height = Math.max(120, Number(p.height));
+      const clamped = width !== p.width || height !== p.height;
+      this.setMainWindow({ videoArea: { width, height } });
+      return { width, height, clamped };
+    },
+    "window.setAlwaysOnTop": (p) =>
+      void (this.mainWindow.onTop = p.onTop === true),
+    "window.setCursorAutoHide": (p) => {
+      if (p.mode !== "fullscreen" && p.mode !== "playing")
+        throw new HostError("invalid", "mode is fullscreen or playing");
+      this.mainWindow.cursorAutoHide = p.mode;
+    },
+    "player.chapters": () => ({
+      sourceId: this.source.stamp.generation,
+      chapters:
+        this.source.kind === "media" &&
+        ["ready", "ended"].includes(this.source.phase)
+          ? structuredClone(this.chapters)
+          : [],
+    }),
+    "player.setLoop": (p) => {
+      if (this.source.kind === "producer")
+        throw new HostError("unsupported", "a generated stream cannot loop");
+      this.#audioCondition(p.expected);
+      const loop = p.loop as { a: number; b: number; count?: number } | null;
+      if (loop && !this.source.capabilities.seek)
+        throw new HostError("unsupported", "the source cannot seek");
+      if (
+        loop &&
+        !(
+          loop.a >= 0 &&
+          loop.a < loop.b &&
+          loop.b <= (this.source.duration ?? 0)
+        )
+      )
+        throw new HostError("invalid", "loop needs 0 <= a < b <= duration");
+      this.setSource({
+        loop: loop && { a: loop.a, b: loop.b, count: loop.count ?? null },
+      });
+    },
     "dialogs.open": () => {
       const answer = this.dialogAnswers.shift();
       if (answer === undefined)
         throw new Error("test host: no dialog answer queued");
+      if (answer !== null && !Array.isArray(answer))
+        throw new Error("test host: a confirm answer was queued");
       return answer
         ? { cancelled: false, paths: answer }
         : { cancelled: true, paths: [] };
@@ -1520,7 +1631,13 @@ export async function startPlugin(
   host.manifestId = manifest.id;
   const data = options.dataDirectory ?? host.dataDirectory;
   mkdirSync(data, { recursive: true });
-  const instance = await createPlugin(host, manifest, directory, data);
+  const instance = await createPlugin(
+    host,
+    manifest,
+    directory,
+    data,
+    host.app,
+  );
   await activate(instance.plugin);
   await instance.activated();
   await host.settle();

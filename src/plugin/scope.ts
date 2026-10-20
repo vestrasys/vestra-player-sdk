@@ -11,6 +11,7 @@ import { mediaCapture } from "./media.ts";
 import { resolvers } from "./resolvers.ts";
 import { packages } from "./packages.ts";
 import { osd } from "./osd.ts";
+import { mainWindow } from "./window.ts";
 import { clipboard, host, power, storage, system, tools } from "./services.ts";
 
 export class ScopeImpl implements Plugin {
@@ -53,6 +54,10 @@ export class ScopeImpl implements Plugin {
   readonly tools = tools(this);
   readonly storage = storage(this);
   readonly system = system(this);
+  readonly window = mainWindow(this);
+  get app() {
+    return this.runtime.app;
+  }
   scope(): Scope {
     return this.add(new ScopeImpl(this.runtime, this));
   }

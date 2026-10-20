@@ -7,7 +7,7 @@ import type {
   UiCallback,
   Wire,
 } from "../wire.ts";
-import type { Disposable, PluginError } from "./types.ts";
+import type { AppInfo, Disposable, PluginError } from "./types.ts";
 
 export interface PluginManifest {
   id: string;
@@ -117,14 +117,18 @@ export class Runtime {
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
   readonly services = new Map<string, unknown>();
+  /** `plugin.app`, from the start-up handshake. */
+  readonly app: AppInfo;
   constructor(
     transport: Transport,
     manifest: PluginManifest,
     directory: string,
     dataDirectory?: string,
+    app?: unknown,
   ) {
     this.#transport = transport;
     this.dataDirectory = dataDirectory;
+    this.app = appInfo(app);
     this.local = transport.local;
     this.host = createWire(transport);
     this.manifest = manifest;
@@ -224,4 +228,23 @@ export class Runtime {
     const off = this.#transport.on(event, listener);
     return { dispose: async () => off() };
   }
+}
+
+/** `plugin.app` from the start-up handshake (the runner's environment). */
+export function appInfo(raw: unknown): AppInfo {
+  const info = (raw ?? {}) as Partial<AppInfo>;
+  const parts = (info.components ?? {}) as Partial<AppInfo["components"]>;
+  const text = (value: unknown) => (typeof value === "string" ? value : null);
+  const libav: Record<string, string> = {};
+  for (const [name, version] of Object.entries(parts.libav ?? {}))
+    if (typeof version === "string") libav[name] = version;
+  return Object.freeze({
+    version: text(info.version) ?? "0.0.0",
+    build: text(info.build),
+    components: Object.freeze({
+      mpv: text(parts.mpv),
+      libav: Object.freeze(libav),
+      slint: text(parts.slint) ?? "",
+    }),
+  });
 }
