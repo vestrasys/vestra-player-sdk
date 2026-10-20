@@ -97,6 +97,9 @@ function view(raw: SourceState): PlayerState {
       previous: raw.sequence?.previous ?? false,
     }),
     audioTracks: raw.audioTracks?.map(audioTrack) ?? null,
+    loop: raw.loop
+      ? Object.freeze({ a: raw.loop.a, b: raw.loop.b, count: raw.loop.count })
+      : null,
   });
   raws.set(state, raw);
   return state;
@@ -575,6 +578,37 @@ export function player(scope: ScopeImpl): Player {
       )
         throw failure("invalid", "seconds must be 0.1–3600 in tenths");
       await scope.runtime.host.step.setStepSeek(seconds);
+    },
+    async chapters() {
+      const { sourceId, chapters } = await scope.runtime.host.marks.chapters();
+      return {
+        sourceId,
+        chapters: chapters.map((c) => ({ title: c.title, start: c.start })),
+      };
+    },
+    async setLoop(loop, options = {}) {
+      if (loop !== null) {
+        const { a, b, count } = loop ?? {};
+        if (!Number.isFinite(a) || !Number.isFinite(b) || !(a >= 0 && a < b))
+          throw failure("invalid", "loop needs finite 0 <= a < b");
+        if (
+          count !== undefined &&
+          (!Number.isInteger(count) || count < 1 || count > 1_000_000)
+        )
+          throw failure("invalid", "count must be an integer 1–1000000");
+      }
+      const { expected } = service().expected(options.ifCurrent);
+      await scope.runtime.host.marks.setLoop(
+        loop && {
+          a: loop.a,
+          b: loop.b,
+          ...(loop.count === undefined ? {} : { count: loop.count }),
+        },
+        expected,
+      );
+      await service()
+        .refresh()
+        .catch(() => {});
     },
     async selectAudioTrack(id, options = {}) {
       const { expected } = service().expected(options.ifCurrent);

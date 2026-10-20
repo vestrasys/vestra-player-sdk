@@ -83,6 +83,11 @@ export class HostError extends Error {
     this.name = "HostError";
   }
 }
+/** `window.state`: the main window, in logical points (zero without one). */
+export interface WindowFacts {
+  fullscreen: boolean;
+  videoArea: { width: number; height: number };
+}
 /** One position (bottom bar or sidebar) as `layout.state` reports it. */
 export interface LayoutSlot {
   owner: number;
@@ -171,6 +176,40 @@ export function createWire(transport: Transport) {
           "dialogs.open",
           options,
         ),
+      confirm: (options: { [key: string]: Json }) =>
+        transport.request<{ confirmed: boolean; checked: boolean }>(
+          "dialogs.confirm",
+          options,
+        ),
+    },
+    /** The main window: its state, size, level and pointer hiding. */
+    window: {
+      state: () => transport.request<WindowFacts>("window.state"),
+      setVideoArea: (width: number, height: number) =>
+        transport.request<{ width: number; height: number; clamped: boolean }>(
+          "window.setVideoArea",
+          { width, height },
+        ),
+      setAlwaysOnTop: (onTop: boolean) =>
+        transport.request<void>("window.setAlwaysOnTop", { onTop }),
+      setCursorAutoHide: (mode: "fullscreen" | "playing") =>
+        transport.request<void>("window.setCursorAutoHide", { mode }),
+    },
+    /** Chapters and the A-B loop of the current media. */
+    marks: {
+      chapters: () =>
+        transport.request<{
+          sourceId: number;
+          chapters: { title: string | null; start: number }[];
+        }>("player.chapters"),
+      setLoop: (
+        loop: { a: number; b: number; count?: number } | null,
+        expected?: SourceStamp,
+      ) =>
+        transport.request<void>("player.setLoop", {
+          loop,
+          ...(expected ? { expected } : {}),
+        }),
     },
     playback: {
       /** Shared device output. Does not advance source intent. */

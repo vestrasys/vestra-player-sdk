@@ -11,6 +11,7 @@ import { Runtime } from "./runtime.ts";
 import type { PluginManifest } from "./runtime.ts";
 import { ScopeImpl } from "./scope.ts";
 import { playerOf } from "./player.ts";
+import { windowOf } from "./window.ts";
 import type { Plugin } from "./types.ts";
 
 export type * from "./types.ts";
@@ -28,10 +29,18 @@ export async function createPlugin(
   manifest: PluginManifest,
   directory: string,
   dataDirectory?: string,
+  /** `plugin.app` (the runner passes the player's `VESTRA_APP_INFO`). */
+  app?: unknown,
 ): Promise<PluginInstance> {
-  const runtime = new Runtime(transport, manifest, directory, dataDirectory);
-  // The player state is synchronous for plugins, so read it before activation.
-  await playerOf(runtime).init();
+  const runtime = new Runtime(
+    transport,
+    manifest,
+    directory,
+    dataDirectory,
+    app,
+  );
+  // Player and window state are synchronous for plugins: read them first.
+  await Promise.all([playerOf(runtime).init(), windowOf(runtime).init()]);
   const root = new ScopeImpl(runtime);
   return {
     plugin: root,

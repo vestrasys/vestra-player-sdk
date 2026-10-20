@@ -82,6 +82,8 @@ export interface SourceState {
   rate: number;
   /** A selected video track that is not cover art (frame stepping). */
   hasVideo?: boolean;
+  /** The A-B loop as requested (`player.setLoop`); absent or null: none. */
+  loop?: { a: number; b: number; count: number | null } | null;
   /** Merged by the host from the sequence provider (absent: none). */
   sequence?: { next: boolean; previous: boolean };
 }
