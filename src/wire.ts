@@ -138,6 +138,8 @@ export interface LocalServices {
   locate(tool: "ffmpeg" | "ffprobe"): Promise<string | null>;
   /** `/usr/bin/open -R paths…` (reveal) or `/usr/bin/open path`. */
   open(paths: string[], reveal: boolean): Promise<void>;
+  /** `/usr/bin/open <url>`: the default browser. */
+  openUrl(url: string): Promise<void>;
 }
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;

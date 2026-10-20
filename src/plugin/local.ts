@@ -121,4 +121,11 @@ export const systemServices: LocalServices = {
       signal: new AbortController().signal,
     });
   },
+  async openUrl(url) {
+    await run("/usr/bin/open", [url], {
+      timeoutMs: OPEN_TIMEOUT_MS,
+      maxOutput: 64 * 1024,
+      signal: new AbortController().signal,
+    });
+  },
 };

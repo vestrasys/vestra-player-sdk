@@ -121,6 +121,8 @@ export class TestHost implements Transport {
       })
     | null = null;
   readonly commands = new Map<string, FakeCommand>();
+  /** The player's 14 core actions (`host/<id>`), kept apart from the plugin's `commands`. */
+  readonly coreCommands = new Map<string, FakeCommand>();
   /** Both panel positions as `layout.state` reports them. */
   readonly layout: { bottom: LayoutSlot | null; sidebar: LayoutSlot | null } = {
     bottom: null,
@@ -184,7 +186,12 @@ export class TestHost implements Transport {
     },
   };
   /** Paths given to `system.reveal` / `system.openPath`, newest last. */
-  readonly system = { revealed: [] as string[], opened: [] as string[] };
+  readonly system = {
+    revealed: [] as string[],
+    opened: [] as string[],
+    /** `system.openUrl` addresses, newest last. */
+    urls: [] as string[],
+  };
   /** Local processes, faked: see `tools` and `system`. */
   readonly local: LocalServices = {
     locate: async (tool) =>
@@ -213,6 +220,9 @@ export class TestHost implements Transport {
     },
     open: async (paths, reveal) => {
       (reveal ? this.system.revealed : this.system.opened).push(...paths);
+    },
+    openUrl: async (url) => {
+      this.system.urls.push(url);
     },
   };
   /** Every `panel.showMenu`, newest last. */
@@ -261,7 +271,7 @@ export class TestHost implements Transport {
   readonly dataDirectory = join(this.#scratch, "data");
   manifestId = "test.plugin";
 
-  constructor(options: { coreActions?: boolean } = {}) {
+  constructor() {
     this.subtitles = {
       presentation: {
         revision: 1,
@@ -297,7 +307,8 @@ export class TestHost implements Transport {
       tracks: [],
       resources: [],
     };
-    if (options.coreActions) this.#registerCoreActions();
+    // The player always owns these, as `host/<id>` commands.
+    this.#registerCoreActions();
   }
 
   // ------------------------------------------------------------ core actions
@@ -309,9 +320,11 @@ export class TestHost implements Transport {
   /** Every core action run (`host.run`, a core command, a pressed core binding), newest last. */
   readonly coreRuns: string[] = [];
 
-  /** A core action registered with `new TestHost({ coreActions: true })`. */
+  /** One of the 14 core actions the test host registers like the player (`host/<id>`). */
   coreAction(id: string): FakeCommand {
-    return this.command(`host/${id}`);
+    const command = this.coreCommands.get(`host/${id}`);
+    if (!command) throw new Error(`no core action ${id}`);
+    return command;
   }
   #facts() {
     const s = this.source;
@@ -449,7 +462,7 @@ export class TestHost implements Transport {
           await host.settle();
         },
       };
-      this.commands.set(`host/${id}`, command);
+      this.coreCommands.set(`host/${id}`, command);
     }
   }
   #runCore(action: string) {
@@ -625,7 +638,7 @@ export class TestHost implements Transport {
       (options.panel ? claims.get(`panel ${binding}`)?.[0] : undefined) ??
       claims.get(`global ${binding}`)?.[0];
     if (!id) throw new Error(`test host: nothing is bound to ${binding}`);
-    await this.command(id).run();
+    await (this.coreCommands.get(id) ?? this.command(id)).run();
   }
   /** Bindings declared by more than one command: `[binding, winner, ...ignored]`. */
   get conflicts(): string[][] {
@@ -635,7 +648,11 @@ export class TestHost implements Transport {
   }
   #claims() {
     const claims = new Map<string, string[]>();
-    for (const [id, { declaration }] of this.commands) {
+    // The player's own commands win a conflict, as in the binding table.
+    for (const [id, { declaration }] of [
+      ...this.coreCommands,
+      ...this.commands,
+    ]) {
       const scope = declaration.focus ? "panel" : "global";
       for (const binding of declaration.bindings) {
         const key = `${scope} ${binding}`;

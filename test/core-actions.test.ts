@@ -90,8 +90,8 @@ test("setStepSeek and step validate their arguments; step needs video", async ()
   await stop();
 });
 
-test("coreActions: the core table with its bindings, states and conflicts", async () => {
-  const host = new TestHost({ coreActions: true });
+test("core actions: the core table with its bindings, states and conflicts", async () => {
+  const host = new TestHost();
   host.openElsewhere("/a.mp4");
   host.setSource({ position: 10, duration: 60 });
   let plugin!: Plugin;

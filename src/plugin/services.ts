@@ -237,6 +237,19 @@ export function system(scope: ScopeImpl): System {
         throw failure("missing", `${list.join(", ")} does not exist`);
       await (scope.runtime.local ?? systemServices).open(present, true);
     },
+    async openUrl(url) {
+      let parsed: URL;
+      try {
+        if (typeof url !== "string" || url.length > 8192) throw new Error();
+        parsed = new URL(url);
+      } catch {
+        throw failure("invalid", "url must be a well-formed http(s) address");
+      }
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+        throw failure("invalid", "only http and https addresses open");
+      // The normalized form starts with the scheme, never with `-`.
+      await (scope.runtime.local ?? systemServices).openUrl(parsed.href);
+    },
     async openPath(path) {
       if (!valid(path))
         throw failure("invalid", "path must be a non-empty string");

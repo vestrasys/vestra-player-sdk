@@ -449,6 +449,17 @@ test("system: reveal and open existing paths; missing ones are refused", async (
     "missing",
   );
   await rejects(plugin.system.reveal([]), "invalid");
+  await plugin.system.openUrl("https://example.com/字幕?q=1");
+  assert.deepEqual(host.system.urls, [
+    "https://example.com/%E5%AD%97%E5%B9%95?q=1",
+  ]);
+  for (const bad of [
+    "file:///etc/passwd",
+    "javascript:alert(1)",
+    "-a Safari",
+    "example.com",
+  ])
+    await rejects(plugin.system.openUrl(bad), "invalid");
   await stop();
 });
 

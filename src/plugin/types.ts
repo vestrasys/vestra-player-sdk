@@ -842,4 +842,9 @@ export interface System {
   reveal(paths: string | string[]): Promise<void>;
   /** Open the file or folder with its default application. `missing` if absent. */
   openPath(path: string): Promise<void>;
+  /**
+   * Open an http(s) address in the default browser. `invalid` for another
+   * protocol or a malformed address; `timeout` after 10 s, `failed` otherwise.
+   */
+  openUrl(url: string): Promise<void>;
 }
