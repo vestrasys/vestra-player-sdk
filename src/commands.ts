@@ -37,6 +37,9 @@ export function commandClient(transport: Transport) {
         declaration,
         state,
       }),
+    /** Remove the command from the menu and the binding table; the id is free again. */
+    unregister: (id: string) =>
+      transport.request<void>("commands.unregister", { id }),
     update: (id: string, revision: number, state: CommandState) =>
       transport.request<{ revision: number }>("commands.update", {
         id,

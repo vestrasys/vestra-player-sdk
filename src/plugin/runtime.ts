@@ -94,6 +94,8 @@ export class Runtime {
   readonly host: Wire;
   readonly manifest: PluginManifest;
   readonly directory: string;
+  /** Writable per-plugin data directory from the host, if it provided one. */
+  readonly dataDirectory: string | undefined;
   /** Registrations that activation must wait for before reporting ready. */
   readonly startup = new Set<Promise<unknown>>();
   #activating = true;
@@ -111,8 +113,10 @@ export class Runtime {
     transport: Transport,
     manifest: PluginManifest,
     directory: string,
+    dataDirectory?: string,
   ) {
     this.#transport = transport;
+    this.dataDirectory = dataDirectory;
     this.host = createWire(transport);
     this.manifest = manifest;
     this.directory = directory;

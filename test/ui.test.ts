@@ -45,11 +45,7 @@ test("commands register once, follow bound state and dispatch run", async () => 
   await host.settle();
   assert.equal(command.revision, 2, "unchanged state is not resent");
   await stop();
-  assert.equal(
-    command.state.enabled,
-    false,
-    "disposed commands stay listed but disabled",
-  );
+  assert.equal(host.commands.has("demo.open"), false, "stopping removes it");
 });
 
 test("a failed registration fails activation", async () => {

@@ -225,3 +225,63 @@ test("sequence provider flags follow bindings; next/previous route to it; stats"
   await stop();
   assert.equal(host.sequence, null, "the provider is released on stop");
 });
+
+test("dispose removes a command; a list rebuilt in a scope re-adds the same ids", async () => {
+  const { host, plugin, stop } = await startPlugin(() => {});
+  let tracks = plugin.scope();
+  const build = (titles: string[]) =>
+    titles.forEach((title, i) =>
+      tracks.commands.add({
+        id: `track.${i}`,
+        path: ["字幕", "选择字幕", title],
+        order: 300 + i,
+        run() {},
+      }),
+    );
+  build(["中文", "English"]);
+  await host.settle();
+  assert.deepEqual([...host.commands.keys()], ["track.0", "track.1"]);
+  await tracks.dispose();
+  tracks = plugin.scope();
+  build(["日本語"]);
+  await host.settle();
+  assert.deepEqual([...host.commands.keys()], ["track.0"]);
+  assert.deepEqual(host.command("track.0").declaration.path, [
+    "字幕",
+    "选择字幕",
+    "日本語",
+  ]);
+  assert.equal(host.sent("commands.unregister").length, 2);
+  // Dispose and re-add at once: the new registration waits for the removal.
+  const once = plugin.commands.add({ id: "once", title: "一次", run() {} });
+  await host.settle();
+  void once.dispose();
+  plugin.commands.add({ id: "once", title: "两次", run() {} });
+  await host.settle();
+  assert.equal(host.command("once").declaration.title, "两次");
+  await stop();
+});
+
+test("dataDirectory is a writable directory kept across restarts when passed again", async () => {
+  const { writeFileSync: write, readFileSync: read } = await import("node:fs");
+  const first = await startPlugin(() => {});
+  const directory = first.plugin.dataDirectory;
+  write(join(directory, "settings.json"), '{"folder":"/tmp"}');
+  const keep = mkdtempSync(join(tmpdir(), "vestra-data-"));
+  write(join(keep, "settings.json"), '{"folder":"/x"}');
+  await first.stop();
+  const again = await startPlugin(() => {}, { dataDirectory: keep });
+  assert.equal(
+    read(join(again.plugin.dataDirectory, "settings.json"), "utf8"),
+    '{"folder":"/x"}',
+  );
+  await again.stop();
+  const { createPlugin } = await import("../../sdk/plugin/index.ts");
+  const bare = await createPlugin(
+    new TestHost(),
+    { id: "x", capabilities: [] },
+    process.cwd(),
+  );
+  assert.throws(() => bare.plugin.dataDirectory, { code: "unavailable" });
+  await bare.dispose();
+});

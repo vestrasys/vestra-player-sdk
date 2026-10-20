@@ -42,6 +42,14 @@ function declare(options: CommandOptions): CommandDeclaration {
   };
 }
 
+/** Unregistrations in flight per plugin: re-adding an id waits for its removal. */
+const removals = new WeakMap<object, Map<string, Promise<void>>>();
+const removing = (runtime: object) => {
+  let map = removals.get(runtime);
+  if (!map) removals.set(runtime, (map = new Map()));
+  return map;
+};
+
 class CommandHandle implements Command {
   readonly id: string;
   readonly ready: Promise<void>;
@@ -50,6 +58,7 @@ class CommandHandle implements Command {
   #revision = 0;
   #last = "";
   #disposed = false;
+  #registered = false;
   readonly #pump: Latest<CommandState>;
   readonly #binding;
   constructor(scope: ScopeImpl, options: CommandOptions) {
@@ -67,11 +76,14 @@ class CommandHandle implements Command {
     const declaration = declare(options);
     // The host requires a strictly increasing revision per update; the
     // registration itself is revision 1, so every later state follows it.
+    const previous = removing(runtime).get(this.id);
     this.#pump = new Latest(async (state) => {
       const revision = ++this.#revision;
-      if (revision === 1)
+      if (revision === 1) {
+        await previous;
         await runtime.host.commands.register(this.id, 1, declaration, state);
-      else await runtime.host.commands.update(this.id, revision, state);
+        this.#registered = true;
+      } else await runtime.host.commands.update(this.id, revision, state);
     });
     const initial = this.#state();
     this.#last = JSON.stringify(initial);
@@ -110,13 +122,21 @@ class CommandHandle implements Command {
     if (this.#disposed) return;
     this.#disposed = true;
     this.#scope.forget(this);
-    this.#scope.runtime.commands.delete(this.id);
-    await this.#binding.dispose();
-    // The host has no unregister; a disposed command stays listed but disabled.
-    await this.#pump
-      .push({ enabled: false, checked: null, busy: false, reason: "已停用" })
-      .catch(() => {});
+    const runtime = this.#scope.runtime;
+    runtime.commands.delete(this.id);
     this.#pump.stop();
+    // Removed from the menu once registered. Recorded before any await, so an
+    // immediate re-add of the same id registers after this removal.
+    const pending = removing(runtime);
+    const removal = (async () => {
+      await this.#binding.dispose();
+      await this.ready.catch(() => {});
+      if (this.#registered)
+        await runtime.host.commands.unregister(this.id).catch(() => {});
+    })();
+    pending.set(this.id, removal);
+    await removal;
+    if (pending.get(this.id) === removal) pending.delete(this.id);
   }
 }
 

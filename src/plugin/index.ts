@@ -27,8 +27,9 @@ export async function createPlugin(
   transport: Transport,
   manifest: PluginManifest,
   directory: string,
+  dataDirectory?: string,
 ): Promise<PluginInstance> {
-  const runtime = new Runtime(transport, manifest, directory);
+  const runtime = new Runtime(transport, manifest, directory, dataDirectory);
   // The player state is synchronous for plugins, so read it before activation.
   await playerOf(runtime).init();
   const root = new ScopeImpl(runtime);

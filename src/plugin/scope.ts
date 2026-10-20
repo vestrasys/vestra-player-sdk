@@ -1,5 +1,5 @@
 /** Scopes own handles. Disposal runs newest first and never throws. */
-import { toError } from "./runtime.ts";
+import { failure, toError } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { Disposable, Plugin, PluginError, Scope } from "./types.ts";
 import { commands } from "./commands.ts";
@@ -24,6 +24,12 @@ export class ScopeImpl implements Plugin {
   }
   get id() {
     return this.runtime.manifest.id;
+  }
+  get dataDirectory(): string {
+    const directory = this.runtime.dataDirectory;
+    if (!directory)
+      throw failure("unavailable", "the player provided no data directory");
+    return directory;
   }
   get disposed(): boolean {
     return this.#disposed || (this.#parent?.disposed ?? false);

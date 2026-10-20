@@ -9,7 +9,7 @@
  *   await host.settle();
  */
 import { readFileSync } from "node:fs";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import type { Server } from "node:net";
 import { tmpdir } from "node:os";
@@ -176,6 +176,8 @@ export class TestHost implements Transport {
   #next = { snapshot: 0, job: 0, producer: 0, source: 0 };
   #sourceBook = new Map<number, Json>();
   readonly #scratch = mkdtempSync(join(tmpdir(), "vestra-test-host-"));
+  /** `plugin.dataDirectory`: empty, removed with the host on `stop()`. */
+  readonly dataDirectory = join(this.#scratch, "data");
   manifestId = "test.plugin";
 
   constructor() {
@@ -480,6 +482,10 @@ export class TestHost implements Transport {
         },
       });
       return { revision: 1 };
+    },
+    "commands.unregister": (p) => {
+      if (!this.commands.delete(String(p.id)))
+        throw new HostError("missing", `command ${p.id} is not registered`);
     },
     "commands.update": (p) => {
       const command = this.command(String(p.id));
@@ -957,6 +963,8 @@ export async function startPlugin(
     id?: string;
     capabilities?: string[];
     host?: TestHost;
+    /** Use an existing directory as `plugin.dataDirectory` (to test a restart). */
+    dataDirectory?: string;
   } = {},
 ) {
   const host = options.host ?? new TestHost();
@@ -975,7 +983,9 @@ export async function startPlugin(
     manifest = { id: read.id, capabilities: read.capabilities };
   }
   host.manifestId = manifest.id;
-  const instance = await createPlugin(host, manifest, directory);
+  const data = options.dataDirectory ?? host.dataDirectory;
+  mkdirSync(data, { recursive: true });
+  const instance = await createPlugin(host, manifest, directory, data);
   await activate(instance.plugin);
   await instance.activated();
   await host.settle();

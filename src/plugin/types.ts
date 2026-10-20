@@ -62,6 +62,13 @@ export interface Scope extends Disposable {
 export interface Plugin extends Scope {
   /** The manifest id. */
   readonly id: string;
+  /**
+   * A writable directory for this plugin's own files (settings, remembered
+   * folders). Kept across restarts, disabling and upgrades; a trial gets a
+   * temporary one. Write files atomically: to a temporary name, then rename.
+   * Throws `unavailable` when the player provided none.
+   */
+  readonly dataDirectory: string;
 }
 
 // ---------------------------------------------------------------- commands
@@ -125,7 +132,10 @@ export interface Command extends Disposable {
 }
 
 export interface Commands {
-  /** Declare a menu command. It is registered, kept in sync and disabled on dispose. */
+  /**
+   * Declare a command. It is registered and kept in sync; `dispose()` removes
+   * it from the menu and the binding table, and the id may be added again.
+   */
   add(options: CommandOptions): Command;
 }
 
