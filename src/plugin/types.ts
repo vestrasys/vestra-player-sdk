@@ -1,0 +1,519 @@
+/**
+ * SDK v2 public types. A plugin module default-exports
+ * `async function activate(plugin: Plugin)`; everything it creates is a
+ * handle owned by `plugin` (or a sub-scope) and is released automatically.
+ *
+ * Plugins import these names as types only. The runner supplies the object,
+ * so a production package has no runtime dependency on this repository.
+ */
+import type { Json } from "../index.ts";
+import type { AudioNode, VideoNode } from "../processing.ts";
+import type { SubtitleStyle } from "../subtitles.ts";
+import type { ResolvedMedia } from "../source-resolvers.ts";
+import type { MediaJob } from "../media.ts";
+
+export type { Json, AudioNode, VideoNode, SubtitleStyle, ResolvedMedia };
+
+/** Anything that owns host or local resources. Disposing twice is harmless. */
+export interface Disposable {
+  dispose(): Promise<void>;
+}
+
+/** Failures reject with an ordinary Error carrying a stable `code`. */
+export type PluginError = Error & { code: string };
+
+/**
+ * A group of handles released together. `Plugin` is the root scope; create a
+ * child with `scope()` for a feature that can be torn down on its own.
+ */
+export interface Scope extends Disposable {
+  readonly commands: Commands;
+  readonly windows: Windows;
+  readonly panels: Panels;
+  readonly dialogs: Dialogs;
+  readonly player: Player;
+  readonly video: { filter(id: string): VideoFilter };
+  readonly audio: { filter(id: string): AudioFilter };
+  readonly subtitles: Subtitles;
+  readonly media: MediaCapture;
+  readonly resolvers: Resolvers;
+  readonly packages: Packages;
+  /** A child scope; disposing it releases only what was created through it. */
+  scope(): Scope;
+  /** Adopt an existing handle or a cleanup function. */
+  add<T extends Disposable>(item: T): T;
+  onDispose(cleanup: () => void | Promise<void>): Disposable;
+  /**
+   * Errors thrown by handlers that the SDK invoked (command `run`, window and
+   * panel callbacks, `onChange` listeners) in this scope. Without a listener
+   * they go to the parent scope, and finally to the plugin log.
+   */
+  onError(listener: (error: PluginError) => void): Disposable;
+  /**
+   * Re-evaluate every bound value (`bind()` functions and command state
+   * functions) and send what changed. The SDK already does this after each
+   * handler it invokes and when that handler's promise settles; call it after
+   * changing state from your own timers or between awaits of a long task.
+   */
+  update(): void;
+}
+
+export interface Plugin extends Scope {
+  /** The manifest id. */
+  readonly id: string;
+}
+
+// ---------------------------------------------------------------- commands
+
+export interface CommandState {
+  enabled: boolean;
+  /** `null` means the menu item has no check mark. */
+  checked: boolean | null;
+  busy: boolean;
+  /** Shown when the command is disabled or busy. */
+  reason: string | null;
+}
+
+/** A value, or a function the SDK re-evaluates on every update pass. */
+export type Bindable<T> = T | (() => T);
+
+export interface CommandOptions {
+  /** Local id, unique within the plugin. */
+  id: string;
+  /** Full menu path including the leaf, e.g. `["视频", "画面调节…"]`. */
+  path: string[];
+  /** Menu label; defaults to the last path segment. */
+  title?: string;
+  /** `Space`, `ArrowLeft` and `ArrowRight` route canvas keys; others are display-only. */
+  shortcut?: string;
+  enabled?: Bindable<boolean>;
+  checked?: Bindable<boolean | null>;
+  busy?: Bindable<boolean>;
+  reason?: Bindable<string | null>;
+  run(): unknown;
+}
+
+export interface Command extends Disposable {
+  readonly id: string;
+  /** Replace some state fields (values or functions). Last write wins. */
+  set(
+    state: Partial<{ [K in keyof CommandState]: Bindable<CommandState[K]> }>,
+  ): void;
+  /** Resolves when the host has registered the command. */
+  readonly ready: Promise<void>;
+}
+
+export interface Commands {
+  /** Declare a menu command. It is registered, kept in sync and disabled on dispose. */
+  add(options: CommandOptions): Command;
+}
+
+// ---------------------------------------------------------------- windows and panels
+
+/** Property map using camelCase names; the SDK converts to Slint kebab-case. */
+export type Props = Record<string, Json>;
+
+/** Shared by tool windows and docked panels. */
+export interface View {
+  /**
+   * Handle a Slint callback (`toggle-effect` may be written `toggleEffect`).
+   * Window handlers must be bound before the first `show()`.
+   */
+  on<A extends Json[]>(
+    callback: string,
+    handler: (...args: A) => unknown,
+  ): Disposable;
+  /** Set properties now. Unchanged values are not resent. */
+  set(props: Props): void;
+  /** Keep properties equal to `props()`; re-evaluated on every update pass. */
+  bind(props: () => Props): Disposable;
+}
+
+export interface Window extends View, Disposable {
+  /** Open the window (first call) or bring it back. Concurrent calls share one open. */
+  show(): Promise<void>;
+  hide(): Promise<void>;
+  /** Close it; a later `show()` opens a fresh instance with the current properties. */
+  close(): Promise<void>;
+  readonly opened: boolean;
+}
+
+export interface Windows {
+  /** A tool window from a `.slint` file in the package. Nothing opens until `show()`. */
+  create(file: string, options?: { id?: string }): Window;
+}
+
+export interface PanelVisibility {
+  /** The user's choice (menu "show panel"). */
+  preferred: boolean;
+  /** Whether it is on screen right now. */
+  effective: boolean;
+  reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
+}
+
+export interface Panel extends View, Disposable {
+  /** Resolves once the host has mounted the panel. */
+  readonly ready: Promise<void>;
+  readonly visibility: PanelVisibility | null;
+  onVisibility(listener: (visibility: PanelVisibility) => void): Disposable;
+  setVisible(visible: boolean): Promise<void>;
+  /** Flip the user's preference using the host's current value. */
+  toggle(): Promise<void>;
+  /** Keep the panel from auto-hiding while the user works in it. Merged, last write wins. */
+  setInteraction(
+    locks: Partial<{ focused: boolean; dragging: boolean; popupOpen: boolean }>,
+  ): void;
+}
+
+export interface Panels {
+  /**
+   * Dock a Slint component in the bottom bar or the sidebar. The component and
+   * its bridge global are found from the file's `export component` and
+   * `export global`; pass them only if the file exports several.
+   */
+  mount(
+    slot: "bottom" | "sidebar",
+    file: string,
+    options?: { component?: string; global?: string },
+  ): Panel;
+}
+
+export interface Dialogs {
+  /** `null` when cancelled. */
+  openFile(options?: { title?: string }): Promise<string | null>;
+  /** Empty when cancelled. */
+  openFiles(options?: { title?: string }): Promise<string[]>;
+  openDirectory(options?: { title?: string }): Promise<string | null>;
+  saveFile(options?: {
+    title?: string;
+    fileName?: string;
+  }): Promise<string | null>;
+}
+
+// ---------------------------------------------------------------- player
+
+export interface AudioTrack {
+  id: number;
+  selected: boolean;
+  /** True for an external track; such tracks cannot be exported. */
+  external: boolean;
+  /** False when the track is not inside the source container. */
+  exportable: boolean;
+  codec: string | null;
+  title: string | null;
+  language: string | null;
+}
+
+/** An immutable view of the player. Keep one to make a later call conditional on it. */
+export interface PlayerState {
+  /** Changes every time a source is opened, even the same file again. */
+  readonly sourceId: number;
+  readonly kind: "media" | "stream";
+  readonly phase: "empty" | "loading" | "ready" | "ended" | "error";
+  /** Path or URL. */
+  readonly source: string | null;
+  readonly paused: boolean;
+  readonly position: number | null;
+  readonly duration: number | null;
+  readonly rate: number;
+  readonly volume: number;
+  readonly muted: boolean;
+  /** Why the last playthrough stopped. */
+  readonly endReason: "natural" | "stopped" | "replaced" | "unknown" | null;
+  /** Load failure text when `phase` is `error`. */
+  readonly error: string | null;
+  readonly can: {
+    pause: boolean;
+    seek: boolean;
+    rate: boolean;
+    restart: boolean;
+    close: boolean;
+    snapshot: boolean;
+  };
+  readonly audioTracks: AudioTrack[] | null;
+}
+
+/**
+ * Controls act on the state you are looking at: by default `player.state`.
+ * If another plugin or the user changed the source in between, the call fails
+ * with code `stale` and nothing happens. Pass `ifCurrent` to bind the call to
+ * an older snapshot instead (for example the state when a drag started).
+ */
+export interface Conditional {
+  ifCurrent?: PlayerState;
+}
+
+/** A source this plugin opened. */
+export interface Media {
+  /** Still the player's source (a restart keeps it current). */
+  readonly current: boolean;
+  /**
+   * Resolves when it is playing. Rejects with code `failed` (load error),
+   * `replaced` (another source took over) or `ended`; with `AbortError` when
+   * the signal aborts, after closing the media.
+   */
+  ready(options?: { signal?: AbortSignal }): Promise<void>;
+  /** Called once each time a playthrough of this media ends naturally. */
+  onEnd(listener: (state: PlayerState) => void): Disposable;
+  /** Close it if it is still the player's source; otherwise do nothing. */
+  close(): Promise<void>;
+}
+
+/** A drag gesture: each seek is conditional on the previous one, latest value wins. */
+export interface Scrub {
+  /**
+   * Resolves `true` when this exact target was applied, `false` when a newer
+   * target superseded it or the gesture ended. Rejects on a host failure.
+   */
+  seek(seconds: number): Promise<boolean>;
+  /** False once anyone else changed the source; later seeks are ignored. */
+  readonly active: boolean;
+  end(): void;
+}
+
+/** Frames a stream supplies on demand: RGBA pixels and 48 kHz stereo f32 PCM. */
+export interface StreamFrame {
+  video: Uint8Array;
+  audio: Float32Array;
+}
+
+export interface StreamOptions {
+  width: number;
+  height: number;
+  /** Produce the next frame. Never called concurrently or while paused. */
+  frame(): StreamFrame;
+  signal?: AbortSignal;
+}
+
+export interface Stream extends Disposable {
+  readonly running: boolean;
+  /** `error` is null when another source replaced the stream or it was closed. */
+  onStop(listener: (error: PluginError | null) => void): Disposable;
+  /** Stop producing and close the stream if it is still the player's source. */
+  stop(): Promise<void>;
+}
+
+export interface Player {
+  /** Latest state; always newer than anything delivered before. */
+  readonly state: PlayerState;
+  onChange(listener: (state: PlayerState) => void): Disposable;
+  refresh(): Promise<PlayerState>;
+  /** True if nothing changed the source since `state` was observed. */
+  isCurrent(state: PlayerState): boolean;
+  /**
+   * Open a path or URL, replacing the current source (unless `ifCurrent` no
+   * longer holds). Resolves when the host accepted the load.
+   */
+  open(
+    source: string,
+    options?: { paused?: boolean; signal?: AbortSignal } & Conditional,
+  ): Promise<Media>;
+  /** Start a source whose frames this plugin generates (`producer.av`). */
+  openStream(options: StreamOptions): Promise<Stream>;
+  setPaused(paused: boolean, options?: Conditional): Promise<void>;
+  seek(seconds: number, options?: Conditional): Promise<void>;
+  setRate(rate: number, options?: Conditional): Promise<void>;
+  restart(options?: Conditional): Promise<void>;
+  close(options?: Conditional): Promise<void>;
+  /** Start a drag gesture from the current state. */
+  scrub(): Scrub;
+  /**
+   * Device output; last write wins and volume is applied before mute.
+   * Resolves `true` when this request was applied, `false` if superseded.
+   */
+  setOutput(output: { volume?: number; muted?: boolean }): Promise<boolean>;
+}
+
+// ---------------------------------------------------------------- video and audio filters
+
+export type FilterStatus =
+  /** No ready media; the value is kept and applied when media is ready. */
+  | { state: "waiting" }
+  | { state: "applying" }
+  /** The backend accepted it (not a visible-frame guarantee). */
+  | { state: "applied" }
+  /** Not applied. `retry()` or the next `set()` tries again. */
+  | { state: "failed"; error: PluginError };
+
+interface Filter<T> extends Disposable {
+  /** Desired chain; last write wins. An empty chain removes this plugin's effect. */
+  set(value: T): void;
+  readonly status: FilterStatus;
+  onStatus(listener: (status: FilterStatus) => void): Disposable;
+  /** Re-check the host and apply the current value again. */
+  retry(): void;
+}
+
+/** This plugin's own video processing chain, re-applied for every new source. */
+export type VideoFilter = Filter<VideoNode[]>;
+/** This plugin's own audio chain plus its audio delay in 10 ms steps. */
+export type AudioFilter = Filter<{ nodes: AudioNode[]; delayMs?: number }>;
+
+// ---------------------------------------------------------------- subtitles
+
+export interface SubtitleTrack {
+  /** Stable while the track exists; compare tracks by id. */
+  id: string;
+  kind: "embedded" | "external";
+  title: string;
+  language: string | null;
+  styleSupported: boolean;
+  styleReason: string | null;
+  /** Loaded by this plugin, so `remove()` may delete it. */
+  owned: boolean;
+}
+
+export interface SubtitlesState {
+  readonly sourceId: number;
+  readonly phase: string;
+  readonly tracks: SubtitleTrack[];
+  readonly selected: SubtitleTrack | null;
+  readonly fonts: { id: string; family: string }[];
+  /** The effective style, from whichever plugin set it last. */
+  readonly style: SubtitleStyle | null;
+  readonly trackConfirmation: "waiting" | "applied" | "uncertain";
+  readonly styleConfirmation: "waiting" | "applied" | "uncertain";
+  readonly error: string | null;
+}
+
+/** Subtitle calls act on the selection you see; pass `ifCurrent` to pin an older one. */
+export interface SubtitleConditional {
+  ifCurrent?: SubtitlesState;
+}
+
+export interface Subtitles {
+  /** `null` until first read. */
+  readonly state: SubtitlesState | null;
+  onChange(listener: (state: SubtitlesState) => void): Disposable;
+  refresh(): Promise<SubtitlesState>;
+  select(
+    track: SubtitleTrack | null,
+    options?: SubtitleConditional,
+  ): Promise<SubtitlesState>;
+  /** Upload an SRT file's bytes for the current source and select it. */
+  load(srt: Uint8Array, options?: SubtitleConditional): Promise<SubtitleTrack>;
+  /** Remove a track this plugin loaded. */
+  remove(
+    track: SubtitleTrack,
+    options?: SubtitleConditional,
+  ): Promise<SubtitlesState>;
+  /** This plugin's style layer; `null` removes it. Last write wins. */
+  setStyle(
+    style: SubtitleStyle | null,
+    options?: SubtitleConditional,
+  ): Promise<SubtitlesState>;
+}
+
+// ---------------------------------------------------------------- capture and export
+
+export interface CaptureOptions extends Conditional {
+  /** Source time; defaults to the current position at the moment of capture. */
+  at?: number;
+  /** Include this plugin set's effects (and subtitles unless `subtitles: false`). */
+  processed?: boolean;
+  subtitles?: boolean;
+  /** Audio to freeze with the snapshot: the selected track, none, or a track id. */
+  audio?: "selected" | "none" | number;
+}
+
+/** A frozen, immutable input for exports. Dispose to release it. */
+export interface Snapshot extends Disposable {
+  readonly kind: "raw" | "processed";
+  readonly time: number;
+  readonly source: string;
+  readonly duration: number;
+  readonly audioTrack: number | null;
+  /** Processed snapshots: output size and the frozen processing revision. */
+  readonly presentation: { width: number; height: number } | null;
+  readonly processingRevision: number | null;
+  /** Start exporting; the job runs in the host's offline worker. */
+  export(
+    options:
+      | { format: "png"; destination: string; sampleTime?: number }
+      | { format: "mp4"; destination: string; end: number },
+  ): Promise<ExportJob>;
+}
+
+export type JobState = Omit<MediaJob, "jobId">;
+
+export interface ExportJob extends Disposable {
+  readonly state: JobState;
+  onChange(listener: (state: JobState) => void): Disposable;
+  /** Resolves with the terminal state (completed, failed or cancelled). */
+  readonly done: Promise<JobState>;
+  cancel(): Promise<"requested" | "tooLate" | "terminal">;
+  refresh(): Promise<JobState>;
+}
+
+export interface MediaCapture {
+  capture(options?: CaptureOptions): Promise<Snapshot>;
+}
+
+// ---------------------------------------------------------------- source resolvers
+
+export interface ResolverOptions {
+  id: string;
+  schemes: ("http" | "https")[];
+  /** Exact host names. */
+  hosts: string[];
+  /** Turn a page URL into playable stream URLs. */
+  resolve(url: string, signal: AbortSignal): Promise<ResolvedMedia>;
+}
+
+export interface Resolver extends Disposable {
+  readonly ready: Promise<void>;
+}
+
+export interface Resolvers {
+  add(options: ResolverOptions): Resolver;
+}
+
+// ---------------------------------------------------------------- packages (plugins.manage)
+
+export interface PackageManifest {
+  id: string;
+  version: string;
+  apiVersion: string;
+  entry: string;
+  capabilities: string[];
+}
+
+export interface PackageCandidate {
+  readonly directory: string;
+  readonly digest: string;
+  readonly manifest: PackageManifest;
+  readonly checks: string[];
+  /** Load it temporarily alongside the installed plugins. */
+  trial(): Promise<PackageTrial>;
+  /** Install it, replacing the installed version of the same id. */
+  install(): Promise<PackageChange>;
+}
+
+export interface PackageTrial extends Disposable {
+  readonly status: string;
+  /** Stop and wait until the host confirmed cleanup. */
+  stop(): Promise<void>;
+}
+
+export type PackageChangeStatus =
+  | "preparing"
+  | "activating"
+  | "restoring"
+  | "committed"
+  | "cancelled"
+  | "failed"
+  | "failedDegraded"
+  | "tooLate";
+
+export interface PackageChange {
+  readonly status: PackageChangeStatus;
+  readonly message: string | null;
+  onChange(listener: (status: PackageChangeStatus) => void): Disposable;
+  readonly done: Promise<PackageChangeStatus>;
+  cancel(): Promise<void>;
+}
+
+export interface Packages {
+  validate(directory: string): Promise<PackageCandidate>;
+  rollback(id: string): Promise<PackageChange>;
+}
