@@ -2,7 +2,7 @@
  * Source control. Stamps, cycles, event sequences and operation ids stay in
  * here; plugins see immutable states, conditional calls and media handles.
  */
-import { HostError } from "../index.ts";
+import { HostError } from "../wire.ts";
 import type {
   SourceIntent,
   SourceOperation,

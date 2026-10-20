@@ -6,7 +6,7 @@
  * Plugins import these names as types only. The runner supplies the object,
  * so a production package has no runtime dependency on this repository.
  */
-import type { Json } from "../index.ts";
+import type { Json } from "../wire.ts";
 import type { AudioNode, VideoNode } from "../processing.ts";
 import type { SubtitleStyle } from "../subtitles.ts";
 import type { ResolvedMedia } from "../source-resolvers.ts";
@@ -514,7 +514,11 @@ export interface PackageCandidate {
 
 export interface PackageTrial extends Disposable {
   readonly status: string;
-  /** Stop and wait until the host confirmed cleanup. */
+  /**
+   * Stop and wait until the host confirmed cleanup. Rejects with code
+   * `cleanup` when the host stopped the trial without confirming cleanup;
+   * calling `stop()` again then asks the host again.
+   */
   stop(): Promise<void>;
 }
 

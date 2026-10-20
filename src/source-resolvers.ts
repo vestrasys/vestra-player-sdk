@@ -1,5 +1,5 @@
 /** Trusted extraction providers. Declarations cross JSON; handler code stays in JS. */
-import type { Transport } from "./index.ts";
+import type { Transport } from "./wire.ts";
 export type ResolvedResource = {
   url: string;
   headers?: Record<string, string>;

@@ -1,7 +1,7 @@
 /** Finite Unix binary AV candidate. Trusted plugin data, not a security sandbox. */
 import { createConnection } from "node:net";
 import type { SourceStamp, SourceTicket } from "./source.ts";
-import type { Transport } from "./index.ts";
+import type { Transport } from "./wire.ts";
 export interface PreparedProducer {
   producerId: number;
   socket: string;

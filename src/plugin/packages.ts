@@ -1,9 +1,6 @@
 /** Package validation, trial loading and install/rollback (`plugins.manage`). */
 import { randomUUID } from "node:crypto";
-import type {
-  PackageOperation,
-  PackageTrial as TrialRecord,
-} from "../index.ts";
+import type { PackageOperation, PackageTrial as TrialRecord } from "../wire.ts";
 import { failure, sleep, uncertain } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
@@ -35,9 +32,15 @@ class TrialHandle implements PackageTrial {
   get status() {
     return this.#record.status;
   }
+  /**
+   * Concurrent calls share one stop; a confirmed stop is final. A failed one
+   * (code `cleanup`: the host did not confirm cleanup) is forgotten, so the
+   * next call sends a new stop to the host.
+   */
   stop() {
     const host = this.#scope.runtime.host.packages;
-    this.#stopped ??= (async () => {
+    if (this.#stopped) return this.#stopped;
+    const stopping = (async () => {
       this.#record = await host.stopTrial(this.#record.trialId);
       while (
         !this.#record.cleanupConfirmed &&
@@ -53,7 +56,11 @@ class TrialHandle implements PackageTrial {
           `trial cleanup not confirmed: ${this.#record.status}`,
         );
     })();
-    return this.#stopped;
+    this.#stopped = stopping;
+    stopping.catch(() => {
+      if (this.#stopped === stopping) this.#stopped = undefined;
+    });
+    return stopping;
   }
   async dispose() {
     this.#scope.forget(this);

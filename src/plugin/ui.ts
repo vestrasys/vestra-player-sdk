@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { Latest, quiet } from "./runtime.ts";
-import type { Json } from "../index.ts";
+import type { Json } from "../wire.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   Dialogs,

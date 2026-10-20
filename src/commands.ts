@@ -1,5 +1,5 @@
 /** Finite candidate command registry. Host authenticates owner; no plugin supplies an owner id. */
-import type { Transport, Json } from "./index.ts";
+import type { Transport } from "./wire.ts";
 export type CommandState = {
   enabled: boolean;
   checked: boolean | null;
@@ -16,7 +16,6 @@ export type CommandDeclaration = {
    * Other values are display-only. F11/Escape remain host controls. */
   shortcut: string | null;
 };
-export type CommandExecution = { id: string; revision: number };
 export function commandClient(transport: Transport) {
   return {
     register: (
@@ -37,12 +36,5 @@ export function commandClient(transport: Transport) {
         revision,
         state,
       }),
-    snapshot: () => transport.request<Json>("commands.snapshot"),
-    execute: (id: string) =>
-      transport.request<void>("commands.execute", { id }),
-    onExecute: (listener: (event: CommandExecution) => void) =>
-      transport.on("commands.execute", (data) =>
-        listener(data as CommandExecution),
-      ),
   };
 }

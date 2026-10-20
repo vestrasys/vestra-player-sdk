@@ -1,6 +1,6 @@
 /** Shared machinery behind every scope: invocation, update passes, events. */
-import { createSdk, HostError } from "../index.ts";
-import type { Host, Json, Transport, UiCallback } from "../index.ts";
+import { createWire, HostError } from "../wire.ts";
+import type { Json, Transport, UiCallback, Wire } from "../wire.ts";
 import type { Disposable, PluginError } from "./types.ts";
 
 export interface PluginManifest {
@@ -91,7 +91,7 @@ type Listener = (data: unknown) => void;
  * clients stay private here so protocol fields never reach plugin code.
  */
 export class Runtime {
-  readonly host: Host;
+  readonly host: Wire;
   readonly manifest: PluginManifest;
   readonly directory: string;
   /** Registrations that activation must wait for before reporting ready. */
@@ -113,7 +113,7 @@ export class Runtime {
     directory: string,
   ) {
     this.#transport = transport;
-    this.host = createSdk(transport);
+    this.host = createWire(transport);
     this.manifest = manifest;
     this.directory = directory;
     transport.on("ui.callback", (data) => {

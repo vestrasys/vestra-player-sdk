@@ -1,5 +1,5 @@
 /** Stage D candidate. Applied is backend acceptance, not a visible-frame fence. */
-import type { Transport } from "./index.ts";
+import type { Transport } from "./wire.ts";
 export type VideoNode =
   | {
       kind: "eq";

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HostError } from "../../sdk/index.ts";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
+import { HostError, startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
 import type { Plugin, PlayerState } from "../../sdk/plugin/index.ts";
 
 const capabilities = ["playback.read", "playback.control", "events"];

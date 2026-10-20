@@ -1,5 +1,5 @@
 /** Stage D candidate; source pixels and renderer confirmation remain distinct. */
-import type { Transport } from "./index.ts";
+import type { Transport } from "./wire.ts";
 export type SubtitleTrack =
   | { kind: "embedded"; id: number }
   | {

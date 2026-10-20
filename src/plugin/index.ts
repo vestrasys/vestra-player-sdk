@@ -6,7 +6,7 @@
  *
  * `createPlugin` is for the runner and the test host only.
  */
-import type { Transport } from "../index.ts";
+import type { Transport } from "../wire.ts";
 import { Runtime } from "./runtime.ts";
 import type { PluginManifest } from "./runtime.ts";
 import { ScopeImpl } from "./scope.ts";

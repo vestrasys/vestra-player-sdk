@@ -1,5 +1,5 @@
 /** Stage D candidate; additive discovery capability, not the shared release baseline. */
-import type { Transport } from "./index.ts";
+import type { Transport } from "./wire.ts";
 export type SourceStamp = {
   generation: number;
   intentVersion: number;
