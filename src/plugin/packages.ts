@@ -1,6 +1,10 @@
 /** Package validation, trial loading and install/rollback (`plugins.manage`). */
 import { randomUUID } from "node:crypto";
-import type { PackageOperation, PackageTrial as TrialRecord } from "../wire.ts";
+import type {
+  PackageInfo as WirePlugin,
+  PackageOperation,
+  PackageTrial as TrialRecord,
+} from "../wire.ts";
 import { failure, sleep, uncertain } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
@@ -9,6 +13,7 @@ import type {
   PackageChangeStatus,
   PackageTrial,
   Packages,
+  PluginInfo,
 } from "./types.ts";
 
 const TERMINAL: PackageChangeStatus[] = [
@@ -184,4 +189,47 @@ export const packages = (scope: ScopeImpl): Packages => ({
         scope.runtime.host.packages.rollback(id, revision, requestId),
       id,
     ),
+  list: async () => (await scope.runtime.host.packages.list()).map(info),
+  onChange(listener) {
+    const watch = scope.runtime.on(
+      "packages.changed",
+      (data) => scope.run(listener, (data as WirePlugin[]).map(info)),
+      null,
+    );
+    return scope.add({
+      dispose: async () => {
+        scope.forget(watch);
+        await watch.dispose();
+      },
+    });
+  },
+  async setEnabled(id, enabled) {
+    if (typeof id !== "string" || !id || typeof enabled !== "boolean")
+      throw failure("invalid", "setEnabled takes an id and a boolean");
+    await scope.runtime.host.packages.setEnabled(id, enabled);
+  },
+  uninstall: (id, options = {}) =>
+    change(
+      scope,
+      (requestId, revision) =>
+        scope.runtime.host.packages.uninstall(
+          id,
+          options.removeData === true,
+          revision,
+          requestId,
+        ),
+      id,
+    ),
 });
+
+const info = (plugin: WirePlugin): PluginInfo =>
+  Object.freeze({
+    id: plugin.id,
+    version: plugin.version,
+    origin: plugin.origin,
+    state: plugin.state,
+    error: plugin.error,
+    capabilities: [...plugin.capabilities],
+    directory: plugin.directory,
+    previousVersion: plugin.previousVersion,
+  });

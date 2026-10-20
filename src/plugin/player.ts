@@ -100,6 +100,10 @@ function view(raw: SourceState): PlayerState {
     loop: raw.loop
       ? Object.freeze({ a: raw.loop.a, b: raw.loop.b, count: raw.loop.count })
       : null,
+    audioOutput: Object.freeze({
+      requested: raw.audioOutput?.requested ?? null,
+      active: raw.audioOutput?.active ?? null,
+    }),
   });
   raws.set(state, raw);
   return state;
@@ -578,6 +582,18 @@ export function player(scope: ScopeImpl): Player {
       )
         throw failure("invalid", "seconds must be 0.1–3600 in tenths");
       await scope.runtime.host.step.setStepSeek(seconds);
+    },
+    async audioDevices() {
+      const devices = await scope.runtime.host.audioOutput.devices();
+      return devices.map((d) => ({ id: d.id, name: d.name }));
+    },
+    async setAudioDevice(id) {
+      if (id !== null && (typeof id !== "string" || !id || id.length > 512))
+        throw failure("invalid", "id must be a device id or null");
+      await scope.runtime.host.audioOutput.set(id);
+      await service()
+        .refresh()
+        .catch(() => {});
     },
     async chapters() {
       const { sourceId, chapters } = await scope.runtime.host.marks.chapters();

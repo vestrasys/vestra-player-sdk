@@ -7,6 +7,8 @@
  *   input    = key | "Mouse:" mouse
  */
 import { failure } from "./runtime.ts";
+import type { ScopeImpl } from "./scope.ts";
+import type { BindingRef, Bindings } from "./types.ts";
 
 const MODIFIERS = ["Ctrl", "Alt", "Shift", "Cmd"] as const;
 const NAMED = new Set([
@@ -36,6 +38,7 @@ const NAMED = new Set([
   "NumpadDecimal",
 ]);
 const MOUSE = new Set([
+  "LeftClick",
   "LeftDoubleClick",
   "LeftDoubleClick:LeftHalf",
   "LeftDoubleClick:RightHalf",
@@ -101,3 +104,64 @@ export function checkBindings(bindings: readonly string[]): string[] {
   }
   return [...bindings];
 }
+
+const reference = (ref: BindingRef): BindingRef => {
+  if (
+    typeof ref?.plugin !== "string" ||
+    typeof ref.command !== "string" ||
+    !ref.plugin ||
+    !ref.command
+  )
+    throw failure("invalid", "a binding ref names plugin and command");
+  return { plugin: ref.plugin, command: ref.command };
+};
+
+/** `plugin.bindings` (`bindings.manage`): the table and the user overlay. */
+export const bindingsApi = (scope: ScopeImpl): Bindings => ({
+  async list() {
+    const table = await scope.runtime.host.bindings.list();
+    return {
+      commands: table.commands.map((info) => ({
+        plugin: info.plugin,
+        command: info.command,
+        title: info.title,
+        path: info.path,
+        scope: info.scope,
+        defaults: info.defaults,
+        current: info.current,
+        overridden: info.overridden,
+        shadowed: info.shadowed,
+        labels: info.labels,
+      })),
+      orphans: table.orphans,
+    };
+  },
+  async set(ref, inputs) {
+    const { plugin, command } = reference(ref);
+    if (!Array.isArray(inputs) || inputs.length > 16)
+      throw failure("invalid", "inputs is a list of at most 16 bindings");
+    await scope.runtime.host.bindings.set(
+      plugin,
+      command,
+      checkBindings(inputs),
+    );
+  },
+  async reset(ref) {
+    await scope.runtime.host.bindings.reset(
+      ref === undefined ? undefined : reference(ref),
+    );
+  },
+  onChange(listener) {
+    const watch = scope.runtime.on(
+      "bindings.changed",
+      () => scope.run(listener),
+      "bindings.manage",
+    );
+    return scope.add({
+      dispose: async () => {
+        scope.forget(watch);
+        await watch.dispose();
+      },
+    });
+  },
+});

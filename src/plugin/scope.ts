@@ -12,6 +12,7 @@ import { resolvers } from "./resolvers.ts";
 import { packages } from "./packages.ts";
 import { osd } from "./osd.ts";
 import { mainWindow } from "./window.ts";
+import { bindingsApi } from "./bindings.ts";
 import { clipboard, host, power, storage, system, tools } from "./services.ts";
 
 export class ScopeImpl implements Plugin {
@@ -55,6 +56,7 @@ export class ScopeImpl implements Plugin {
   readonly storage = storage(this);
   readonly system = system(this);
   readonly window = mainWindow(this);
+  readonly bindings = bindingsApi(this);
   get app() {
     return this.runtime.app;
   }

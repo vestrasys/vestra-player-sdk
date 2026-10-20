@@ -151,7 +151,7 @@ export class TestHost implements Transport {
   readonly subtitleLoads: {
     format: "srt" | "ass";
     title: string | null;
-    select: "primary" | "none";
+    select: "primary" | "secondary" | "none";
     bytes: Buffer;
   }[] = [];
   /** The fake clipboard: preset `text` to test `readText`; written images by path. */
@@ -729,12 +729,83 @@ export class TestHost implements Transport {
       ...this.commands,
     ]) {
       const scope = declaration.focus ? "panel" : "global";
-      for (const binding of declaration.bindings) {
+      // The user overlay (`bindings.set`) replaces a command's own bindings.
+      const overridden = this.bindings.overlay.get(this.#bindingKey(id));
+      for (const binding of overridden ?? declaration.bindings) {
         const key = `${scope} ${binding}`;
         claims.set(key, [...(claims.get(key) ?? []), id]);
       }
     }
     return claims;
+  }
+  /** `host/<id>` for core commands, `<manifest id>/<id>` for the plugin's. */
+  #bindingKey(id: string) {
+    return this.coreCommands.has(id) ? id : `${this.manifestId}/${id}`;
+  }
+  /**
+   * The binding overlay `plugin.bindings.set` writes (`"<plugin>/<command>"`
+   * to inputs; preset it to simulate saved overrides). `press` honours it.
+   */
+  readonly bindings = { overlay: new Map<string, string[]>() };
+  /** What `packages.list` reports; `setEnabled` / `uninstall` update it. */
+  packages: {
+    id: string;
+    version: string | null;
+    origin: "installed" | "development" | "trial";
+    state: "starting" | "running" | "disabled" | "failed" | "stopped";
+    error: string | null;
+    capabilities: string[];
+    directory: string;
+    previousVersion: string | null;
+  }[] = [];
+  /** Every `packages.setEnabled` / `uninstall`, newest last. */
+  readonly packageCalls: {
+    method: "setEnabled" | "uninstall";
+    id: string;
+    enabled?: boolean;
+    removeData?: boolean;
+  }[] = [];
+  /** What `player.audioDevices()` lists. */
+  audioDevices: { id: string; name: string }[] = [];
+  /** Broadcast the plugin list (another plugin started or stopped). */
+  setPackages(list: TestHost["packages"]) {
+    this.packages = list;
+    this.emit("packages.changed", structuredClone(list));
+  }
+  #split(key: string) {
+    const at = key.indexOf("/");
+    return { plugin: key.slice(0, at), command: key.slice(at + 1) };
+  }
+  #bindingTable() {
+    const claims = this.#claims();
+    const commands = [...this.coreCommands, ...this.commands].map(
+      ([id, { declaration }]) => {
+        const key = this.#bindingKey(id);
+        const scope = declaration.focus ? "panel" : "global";
+        const current = this.bindings.overlay.get(key) ?? declaration.bindings;
+        return {
+          ...this.#split(key),
+          title: declaration.title,
+          path: declaration.path?.length ? declaration.path : null,
+          scope: scope as "panel" | "global",
+          defaults: declaration.bindings,
+          current,
+          overridden: this.bindings.overlay.has(key),
+          shadowed: current.flatMap((input) => {
+            const winner = claims.get(`${scope} ${input}`)?.[0];
+            return !winner || winner === id
+              ? []
+              : [{ input, by: this.#split(this.#bindingKey(winner)) }];
+          }),
+          labels: [...current],
+        };
+      },
+    );
+    const declared = new Set(commands.map((c) => `${c.plugin}/${c.command}`));
+    const orphans = [...this.bindings.overlay]
+      .filter(([key]) => !declared.has(key))
+      .map(([key, inputs]) => ({ ref: this.#split(key), inputs }));
+    return { commands, orphans };
   }
   /** Simulate another plugin calling `player.next()` / `previous()`. */
   step(direction: "next" | "previous") {
@@ -1338,10 +1409,93 @@ export class TestHost implements Transport {
       },
     "subtitles.state": () => structuredClone(this.subtitles),
     "subtitles.select": (p) => {
+      const target = p.target as SubtitleState["selection"]["target"];
+      const same = (a: unknown, b: unknown) =>
+        a != null && JSON.stringify(a) === JSON.stringify(b);
+      if (p.role === "secondary") {
+        if (same(target, this.subtitles.selection.target))
+          throw new HostError("invalid", "secondary equals the primary");
+        const track = this.subtitles.tracks.find((t) => same(t.target, target));
+        if (track && track.text === false)
+          throw new HostError(
+            "invalid",
+            "a bitmap subtitle cannot be secondary",
+          );
+        this.#subtitleChange(p.expected!);
+        this.subtitles.selection.secondary = target;
+        return structuredClone(this.subtitles);
+      }
+      if (same(target, this.subtitles.selection.secondary))
+        throw new HostError("invalid", "primary equals the secondary");
       this.#subtitleChange(p.expected!);
-      this.subtitles.selection.target =
-        p.target as SubtitleState["selection"]["target"];
+      this.subtitles.selection.target = target;
       return structuredClone(this.subtitles);
+    },
+    "bindings.list": () => this.#bindingTable(),
+    "bindings.set": (p) => {
+      const key = `${p.plugin}/${p.command}`;
+      const known = this.#bindingTable().commands.some(
+        (c) => `${c.plugin}/${c.command}` === key,
+      );
+      if (!known && !this.bindings.overlay.has(key))
+        throw new HostError("missing", `no command ${key}`);
+      this.bindings.overlay.set(key, [...(p.inputs as string[])]);
+      this.emit("bindings.changed", null);
+    },
+    "bindings.reset": (p) => {
+      if (p.plugin === undefined) this.bindings.overlay.clear();
+      else this.bindings.overlay.delete(`${p.plugin}/${p.command}`);
+      this.emit("bindings.changed", null);
+    },
+    "packages.list": () => structuredClone(this.packages),
+    "packages.setEnabled": (p) => {
+      const id = String(p.id);
+      if (id === this.manifestId && p.enabled === false)
+        throw new HostError("invalid", "a plugin cannot disable itself");
+      const entry = this.packages.find((each) => each.id === id);
+      if (!entry) throw new HostError("missing", `no plugin ${id}`);
+      if (entry.origin === "trial")
+        throw new HostError(
+          "unsupported",
+          "a trial is stopped with its handle",
+        );
+      this.packageCalls.push({
+        method: "setEnabled",
+        id,
+        enabled: p.enabled === true,
+      });
+      entry.state = p.enabled === true ? "running" : "disabled";
+      this.setPackages(this.packages);
+    },
+    "packages.uninstall": (p) => {
+      const id = String(p.id);
+      const entry = this.packages.find((each) => each.id === id);
+      if (!entry) throw new HostError("missing", `no plugin ${id}`);
+      if (entry.origin !== "installed")
+        throw new HostError(
+          "unsupported",
+          "only installed plugins can be uninstalled",
+        );
+      this.packageCalls.push({
+        method: "uninstall",
+        id,
+        removeData: p.removeData === true,
+      });
+      this.setPackages(this.packages.filter((each) => each.id !== id));
+      return { operationId: String(p.requestId), status: "committed" };
+    },
+    "packages.installed": (p) => ({
+      revision: this.packages.some((each) => each.id === p.id) ? 1 : 0,
+      current: null,
+      previous: null,
+    }),
+    "player.audioDevices": () => structuredClone(this.audioDevices),
+    "player.setAudioDevice": (p) => {
+      const requested = p.id === null ? null : String(p.id);
+      const present = this.audioDevices.some((d) => d.id === requested);
+      this.setSource({
+        audioOutput: { requested, active: present ? requested : null },
+      });
     },
     "subtitles.style": (p) => {
       this.#subtitleChange(p.expected!);
@@ -1382,7 +1536,12 @@ export class TestHost implements Transport {
       const upload = this.uploads.get(Number(p.uploadId));
       if (!upload) throw new HostError("missing", "upload");
       const format = p.format === "ass" ? "ass" : "srt";
-      const select = p.select === "none" ? "none" : "primary";
+      const select =
+        p.select === "none"
+          ? "none"
+          : p.select === "secondary"
+            ? "secondary"
+            : "primary";
       const title = typeof p.title === "string" ? p.title : null;
       if (title !== null && ([...title].length < 1 || [...title].length > 200))
         throw new HostError(
@@ -1419,6 +1578,7 @@ export class TestHost implements Transport {
         streamIndex: null,
       });
       if (select === "primary") this.subtitles.selection.target = target;
+      if (select === "secondary") this.subtitles.selection.secondary = target;
       this.subtitleLoads.push({ format, title, select, bytes });
       this.uploads.delete(Number(p.uploadId));
       return structuredClone(this.subtitles);

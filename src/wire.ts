@@ -83,6 +83,33 @@ export class HostError extends Error {
     this.name = "HostError";
   }
 }
+/** One plugin as `packages.list` reports it. */
+export interface PackageInfo {
+  id: string;
+  version: string | null;
+  origin: "installed" | "development" | "trial";
+  state: "starting" | "running" | "disabled" | "failed" | "stopped";
+  error: string | null;
+  capabilities: string[];
+  directory: string;
+  previousVersion: string | null;
+}
+/** `bindings.list`. */
+export interface BindingTable {
+  commands: {
+    plugin: string;
+    command: string;
+    title: string;
+    path: string[] | null;
+    scope: "global" | "panel";
+    defaults: string[];
+    current: string[];
+    overridden: boolean;
+    shadowed: { input: string; by: { plugin: string; command: string } }[];
+    labels: string[];
+  }[];
+  orphans: { ref: { plugin: string; command: string }; inputs: string[] }[];
+}
 /** `window.state`: the main window, in logical points (zero without one). */
 export interface WindowFacts {
   fullscreen: boolean;
@@ -195,6 +222,23 @@ export function createWire(transport: Transport) {
       setCursorAutoHide: (mode: "fullscreen" | "playing") =>
         transport.request<void>("window.setCursorAutoHide", { mode }),
     },
+    /** Output devices (mpv ids) and the one to play on. */
+    audioOutput: {
+      devices: () =>
+        transport.request<{ id: string; name: string }[]>(
+          "player.audioDevices",
+        ),
+      set: (id: string | null) =>
+        transport.request<void>("player.setAudioDevice", { id }),
+    },
+    /** The binding table: list, user overlay (`bindings.manage`). */
+    bindings: {
+      list: () => transport.request<BindingTable>("bindings.list"),
+      set: (plugin: string, command: string, inputs: string[]) =>
+        transport.request<void>("bindings.set", { plugin, command, inputs }),
+      reset: (ref?: { plugin: string; command: string }) =>
+        transport.request<void>("bindings.reset", ref ?? {}),
+    },
     /** Chapters and the A-B loop of the current media. */
     marks: {
       chapters: () =>
@@ -283,7 +327,12 @@ export function createWire(transport: Transport) {
     events: {
       /** One `events.subscribe` per name however many listeners. */
       async subscribe(
-        event: "source.state" | "playback.backend" | "window.state",
+        event:
+          | "source.state"
+          | "playback.backend"
+          | "window.state"
+          | "packages.changed"
+          | "bindings.changed",
         listener: (data: unknown) => void,
       ) {
         const off = transport.on(event, listener);
@@ -393,6 +442,21 @@ export function createWire(transport: Transport) {
         }),
       cancel: (operationId: string) =>
         transport.request<PackageOperation>("packages.cancel", { operationId }),
+      list: () => transport.request<PackageInfo[]>("packages.list"),
+      setEnabled: (id: string, enabled: boolean) =>
+        transport.request<void>("packages.setEnabled", { id, enabled }),
+      uninstall: (
+        id: string,
+        removeData: boolean,
+        expectedRevision: number,
+        requestId: string,
+      ) =>
+        transport.request<PackageOperation>("packages.uninstall", {
+          id,
+          removeData,
+          expectedRevision,
+          requestId,
+        }),
     },
   };
 }

@@ -122,11 +122,15 @@ class SubtitleService {
       return info;
     });
     const selected = targetId(raw.selection.target);
+    const secondary = targetId(raw.selection.secondary ?? null);
     const state: SubtitlesState = Object.freeze({
       sourceId: raw.source.generation,
       phase: raw.source.phase,
       tracks,
       selected: tracks.find((track) => track.id === selected) ?? null,
+      secondary: secondary
+        ? (tracks.find((track) => track.id === secondary) ?? null)
+        : null,
       fonts: raw.presentation.fonts.map((font) => ({
         id: font.id,
         family: font.family,
@@ -227,17 +231,25 @@ export function subtitles(scope: ScopeImpl): Subtitles {
     },
     refresh: () => service().refresh(),
     async select(track, options) {
+      const role = options?.role ?? "primary";
+      if (role !== "primary" && role !== "secondary")
+        throw failure("invalid", 'role must be "primary" or "secondary"');
       const expected = await service().expected(options);
       const chosen = track && target(track);
-      return service().mutate((id) => host().select(chosen, expected, id));
+      return service().mutate((id) =>
+        host().select(chosen, expected, id, role),
+      );
     },
     async load(srt, options) {
       const format = options?.format ?? "srt";
       if (format !== "srt" && format !== "ass")
         throw failure("invalid", "format must be srt or ass");
       const select = options?.select ?? "primary";
-      if (select !== "primary" && select !== "none")
-        throw failure("invalid", 'select must be "primary" or "none"');
+      if (select !== "primary" && select !== "secondary" && select !== "none")
+        throw failure(
+          "invalid",
+          'select must be "primary", "secondary" or "none"',
+        );
       const title = options?.title;
       if (
         title !== undefined &&

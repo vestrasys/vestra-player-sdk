@@ -182,3 +182,196 @@ test("chapters are read on demand; the A-B loop is state and a new source clears
   await rejects(plugin.player.setLoop({ a: 1, b: 2 }), "unsupported");
   await stop();
 });
+
+test("bindings: list, override, unbind, reset; press follows the overlay", async () => {
+  const host = new TestHost();
+  host.bindings.overlay.set("gone.plugin/x", ["Mouse:LeftClick"]);
+  let toggled = 0;
+  const { plugin, stop } = await startPlugin(
+    (p: Plugin) => {
+      p.commands.add({
+        id: "toggle",
+        path: ["播放", "切换"],
+        bindings: ["Space", "P"],
+        run: () => void toggled++,
+      });
+    },
+    {
+      capabilities: ["commands", "events", "bindings.manage", "playback.read"],
+      host,
+    },
+  );
+  let changes = 0;
+  plugin.bindings.onChange(() => void changes++);
+  const listed = await plugin.bindings.list();
+  const toggle = listed.commands.find((c) => c.command === "toggle")!;
+  assert.equal(toggle.plugin, "test.plugin");
+  assert.deepEqual(toggle.shadowed, [
+    { input: "Space", by: { plugin: "host", command: "play-pause" } },
+  ]);
+  assert.deepEqual(listed.orphans, [
+    {
+      ref: { plugin: "gone.plugin", command: "x" },
+      inputs: ["Mouse:LeftClick"],
+    },
+  ]);
+  await plugin.bindings.set({ plugin: "host", command: "play-pause" }, ["K"]);
+  await plugin.bindings.set({ plugin: "test.plugin", command: "toggle" }, [
+    "Space",
+    "Mouse:LeftClick",
+  ]);
+  await host.press("Space");
+  await host.press("Mouse:LeftClick");
+  assert.equal(toggled, 2, "Space now reaches the plugin; left click is bound");
+  await plugin.bindings.set({ plugin: "test.plugin", command: "toggle" }, []);
+  await assert.rejects(host.press("P"));
+  await rejects(
+    plugin.bindings.set({ plugin: "test.plugin", command: "toggle" }, [
+      "Shift+1",
+    ]),
+    "invalid",
+  );
+  await rejects(
+    plugin.bindings.set({ plugin: "nobody", command: "x" }, ["K"]),
+    "missing",
+  );
+  await plugin.bindings.reset({ plugin: "test.plugin", command: "toggle" });
+  assert.equal(
+    (await plugin.bindings.list()).commands.find((c) => c.command === "toggle")!
+      .overridden,
+    false,
+  );
+  await plugin.bindings.reset();
+  assert.equal(host.bindings.overlay.size, 0);
+  await host.settle();
+  assert.ok(changes >= 4);
+  await stop();
+});
+
+test("packages: list, follow, enable, disable and uninstall", async () => {
+  const host = new TestHost();
+  const entry = (id: string, origin: "installed" | "development") => ({
+    id,
+    version: "1.0.0",
+    origin,
+    state: "running" as const,
+    error: null,
+    capabilities: [],
+    directory: `/plugins/${id}`,
+    previousVersion: null,
+  });
+  host.packages = [
+    entry("a.video", "installed"),
+    entry("b.dev", "development"),
+  ];
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["plugins.manage"],
+    host,
+  });
+  assert.deepEqual(
+    (await plugin.packages.list()).map((p) => [p.id, p.state]),
+    [
+      ["a.video", "running"],
+      ["b.dev", "running"],
+    ],
+  );
+  const seen: string[][] = [];
+  plugin.packages.onChange((list) => seen.push(list.map((p) => p.state)));
+  await plugin.packages.setEnabled("a.video", false);
+  await host.settle();
+  assert.deepEqual(seen.at(-1), ["disabled", "running"]);
+  await rejects(plugin.packages.setEnabled("test.plugin", false), "invalid");
+  await rejects(plugin.packages.setEnabled("nobody", true), "missing");
+  const change = await plugin.packages.uninstall("a.video", {
+    removeData: true,
+  });
+  assert.equal(await change.done, "committed");
+  assert.deepEqual(host.packageCalls.at(-1), {
+    method: "uninstall",
+    id: "a.video",
+    removeData: true,
+  });
+  await rejects(plugin.packages.uninstall("b.dev"), "unsupported");
+  await host.settle();
+  assert.deepEqual(seen.at(-1), ["running"]);
+  await stop();
+});
+
+test("audio output: devices, the requested and the active device", async () => {
+  const host = new TestHost();
+  host.audioDevices = [
+    { id: "coreaudio/Speakers", name: "Speakers" },
+    { id: "coreaudio/Phones", name: "Headphones" },
+  ];
+  const { plugin, stop } = await started(host);
+  assert.deepEqual(plugin.player.state.audioOutput, {
+    requested: null,
+    active: null,
+  });
+  assert.deepEqual(
+    (await plugin.player.audioDevices()).map((d) => d.name),
+    ["Speakers", "Headphones"],
+  );
+  await plugin.player.setAudioDevice("coreaudio/Phones");
+  assert.deepEqual(plugin.player.state.audioOutput, {
+    requested: "coreaudio/Phones",
+    active: "coreaudio/Phones",
+  });
+  await plugin.player.setAudioDevice("coreaudio/Unplugged");
+  assert.deepEqual(plugin.player.state.audioOutput, {
+    requested: "coreaudio/Unplugged",
+    active: null,
+  });
+  await rejects(plugin.player.setAudioDevice("" as never), "invalid");
+  await plugin.player.setAudioDevice(null);
+  const { player } = plugin as Plugin;
+  assert.deepEqual(player.state.audioOutput, { requested: null, active: null });
+  await stop();
+});
+
+test("secondary subtitles: select by role, load as secondary, never the primary", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/movie.mkv");
+  host.subtitles.source = { generation: 1, phase: "ready" };
+  host.subtitles.selection.stamp = { generation: 1, revision: 0 };
+  for (const [id, title, text] of [
+    [1, "中文", true],
+    [2, "English", true],
+    [3, "PGS", false],
+  ] as const)
+    host.subtitles.tracks.push({
+      target: { kind: "embedded", id },
+      title,
+      language: null,
+      styleSupported: text,
+      styleReason: null,
+      codec: text ? "subrip" : "hdmv_pgs_subtitle",
+      text,
+      streamIndex: null,
+    });
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["subtitles.read", "subtitles.control", "playback.read"],
+    host,
+  });
+  let state = await plugin.subtitles.refresh();
+  const [zh, en, pgs] = state.tracks;
+  state = await plugin.subtitles.select(zh!);
+  state = await plugin.subtitles.select(en!, { role: "secondary" });
+  assert.equal(state.selected?.title, "中文");
+  assert.equal(state.secondary?.title, "English");
+  await rejects(plugin.subtitles.select(zh!, { role: "secondary" }), "invalid");
+  await rejects(
+    plugin.subtitles.select(pgs!, { role: "secondary" }),
+    "invalid",
+  );
+  await rejects(plugin.subtitles.select(en!), "invalid");
+  const loaded = await plugin.subtitles.load(
+    new TextEncoder().encode("1\n00:00:01,000 --> 00:00:02,000\nhi\n"),
+    { select: "secondary", title: "外挂" },
+  );
+  assert.equal(plugin.subtitles.state!.secondary?.id, loaded.id);
+  assert.equal(host.subtitleLoads.at(-1)!.select, "secondary");
+  state = await plugin.subtitles.select(null, { role: "secondary" });
+  assert.equal(state.secondary, null);
+  await stop();
+});

@@ -84,6 +84,8 @@ export interface SourceState {
   hasVideo?: boolean;
   /** The A-B loop as requested (`player.setLoop`); absent or null: none. */
   loop?: { a: number; b: number; count: number | null } | null;
+  /** `player.setAudioDevice` and the device in use (`null` = system default). */
+  audioOutput?: { requested: string | null; active: string | null };
   /** Merged by the host from the sequence provider (absent: none). */
   sequence?: { next: boolean; previous: boolean };
 }

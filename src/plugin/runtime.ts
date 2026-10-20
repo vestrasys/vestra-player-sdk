@@ -196,12 +196,17 @@ export class Runtime {
    * Host events with one `events.subscribe` per name, however many listeners.
    * Without the `events` capability the listener simply never fires.
    */
-  on(event: string, listener: Listener): Disposable {
+  on(
+    event: string,
+    listener: Listener,
+    /** The capability the event needs; `null`: none. */
+    needs: string | null = "events",
+  ): Disposable {
     let entry = this.#events.get(event);
     if (!entry) {
       entry = { listeners: new Set() };
       this.#events.set(event, entry);
-      if (this.can("events")) {
+      if (needs === null || this.can(needs)) {
         const group = entry;
         entry.off = this.host.events.subscribe(event as never, (data) => {
           for (const each of [...group.listeners]) each(data);

@@ -26,6 +26,8 @@ export type SubtitleStyle = {
   box?: number | null;
   /** `keep` (default): ASS scripts keep their own styling; `force`: this style replaces it. */
   assOverride?: "keep" | "force";
+  /** Where the secondary subtitle sits; default `top`. */
+  secondaryPosition?: "top" | "aboveMain";
 };
 export interface SubtitleState {
   presentation: {
@@ -66,7 +68,12 @@ export interface SubtitleState {
   source: { generation: number; phase: string };
   confirmation: "waiting" | "applied" | "uncertain";
   error: string | null;
-  selection: { stamp: SubtitleStamp; target: SubtitleTrack | null };
+  selection: {
+    stamp: SubtitleStamp;
+    target: SubtitleTrack | null;
+    /** The secondary subtitle (optional so older fixtures still type-check). */
+    secondary?: SubtitleTrack | null;
+  };
   tracks: {
     target: SubtitleTrack;
     title: string;
@@ -136,17 +143,20 @@ export function subtitleClient(transport: Transport) {
       inputOrigin?: SubtitleTrack;
       format?: "srt" | "ass";
       title?: string;
-      select?: "primary" | "none";
+      select?: "primary" | "secondary" | "none";
     }) => transport.request<SubtitleState>("subtitles.commit", options),
     select: (
       target: SubtitleTrack | null,
       expected: SubtitleStamp,
       operationId: number,
+      role: "primary" | "secondary" = "primary",
     ) =>
       transport.request<SubtitleState>("subtitles.select", {
         target,
         expected,
         operationId,
+        // The default is left out: the request stays what older hosts accept.
+        ...(role === "secondary" ? { role } : {}),
       }),
     remove: (
       resourceId: string,

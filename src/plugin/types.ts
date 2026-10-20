@@ -52,6 +52,8 @@ export interface Scope extends Disposable {
   readonly window: MainWindow;
   /** The player's version and components, as the plugin process started. */
   readonly app: AppInfo;
+  /** Every command's bindings and the user's overrides (`bindings.manage`). */
+  readonly bindings: Bindings;
   /** A child scope; disposing it releases only what was created through it. */
   scope(): Scope;
   /** Adopt an existing handle or a cleanup function. */
@@ -393,6 +395,20 @@ export interface PlayerState {
    * only so hand-written test states without it still type-check.
    */
   readonly loop?: { a: number; b: number; count: number | null } | null;
+  /**
+   * The output device `setAudioDevice` asked for and the one in use (`null`
+   * = system default). Always set by the SDK; optional for the same reason
+   * as `loop`.
+   */
+  readonly audioOutput?: { requested: string | null; active: string | null };
+}
+
+/** An audio output device (`player.audioDevices`). */
+export interface AudioDevice {
+  /** Stable id to pass to `setAudioDevice` (e.g. `coreaudio/<UID>`). */
+  id: string;
+  /** What the system calls it. */
+  name: string;
 }
 
 /** One chapter of the current media. */
@@ -605,6 +621,14 @@ export interface Player {
     loop: { a: number; b: number; count?: number } | null,
     options?: Conditional,
   ): Promise<void>;
+  /** The output devices present now (not the system default entry). `playback.read`. */
+  audioDevices(): Promise<AudioDevice[]>;
+  /**
+   * Play on this device while it is present, else on the system default
+   * (`null` = always the default). Generated streams follow too. Kept for
+   * this run only. `playback.control`.
+   */
+  setAudioDevice(id: string | null): Promise<void>;
 }
 
 /** The core's basic playback actions (menu commands owned by the player). */
@@ -704,6 +728,8 @@ export interface SubtitlesState {
   readonly phase: string;
   readonly tracks: SubtitleTrack[];
   readonly selected: SubtitleTrack | null;
+  /** The secondary subtitle, shown together with `selected`. */
+  readonly secondary: SubtitleTrack | null;
   readonly fonts: { id: string; family: string }[];
   /** The effective style, from whichever plugin set it last. */
   readonly style: SubtitleStyle | null;
@@ -722,9 +748,13 @@ export interface Subtitles {
   readonly state: SubtitlesState | null;
   onChange(listener: (state: SubtitlesState) => void): Disposable;
   refresh(): Promise<SubtitlesState>;
+  /**
+   * `role: "secondary"` sets the secondary subtitle: a text track that is not
+   * the primary one (`invalid` otherwise). A new source clears it.
+   */
   select(
     track: SubtitleTrack | null,
-    options?: SubtitleConditional,
+    options?: SubtitleConditional & { role?: "primary" | "secondary" },
   ): Promise<SubtitlesState>;
   /**
    * Upload a subtitle file's bytes (UTF-8 SRT, or ASS/SSA with
@@ -738,7 +768,7 @@ export interface Subtitles {
     options?: SubtitleConditional & {
       format?: "srt" | "ass";
       title?: string;
-      select?: "primary" | "none";
+      select?: "primary" | "secondary" | "none";
       signal?: AbortSignal;
     },
   ): Promise<SubtitleTrack>;
@@ -867,9 +897,85 @@ export interface PackageChange {
   cancel(): Promise<void>;
 }
 
+/** One plugin as the player knows it (`packages.list`). */
+export interface PluginInfo {
+  id: string;
+  version: string | null;
+  origin: "installed" | "development" | "trial";
+  state: "starting" | "running" | "disabled" | "failed" | "stopped";
+  /** Why it failed (`state: "failed"`). */
+  error: string | null;
+  capabilities: string[];
+  /** The package directory (its data directory is `<data root>/<id>`). */
+  directory: string;
+  previousVersion: string | null;
+}
+
 export interface Packages {
+  /** `plugins.manage`. */
   validate(directory: string): Promise<PackageCandidate>;
+  /** `plugins.manage`. */
   rollback(id: string): Promise<PackageChange>;
+  /** Every plugin: running, installed, and this run's development loads. No capability. */
+  list(): Promise<PluginInfo[]>;
+  /** The new list after any start, stop, failure, install or uninstall. No capability. */
+  onChange(listener: (plugins: PluginInfo[]) => void): Disposable;
+  /**
+   * Stop or start a plugin (`plugins.manage`). An installed plugin stays
+   * disabled across launches; a development load only for this run.
+   * `invalid` to disable oneself, `unsupported` for a trial, `missing` unknown.
+   */
+  setEnabled(id: string, enabled: boolean): Promise<void>;
+  /**
+   * Remove an installed plugin (`plugins.manage`); `removeData` also deletes
+   * its data directory. Its user bindings stay (as orphans).
+   */
+  uninstall(
+    id: string,
+    options?: { removeData?: boolean },
+  ): Promise<PackageChange>;
+}
+
+// ---------------------------------------------------------------- bindings (bindings.manage)
+
+/** A command: manifest id (`"host"` for the player's own) and command id. */
+export interface BindingRef {
+  plugin: string;
+  command: string;
+}
+
+export interface BindingInfo extends BindingRef {
+  title: string;
+  /** Menu path; `null` for a command outside the menu. */
+  path: string[] | null;
+  scope: "global" | "panel";
+  /** The command's own bindings. */
+  defaults: string[];
+  /** In effect for it: the user's override, else the defaults. */
+  current: string[];
+  overridden: boolean;
+  /** Inputs of `current` another command holds. */
+  shadowed: { input: string; by: BindingRef }[];
+  /** Menu text of each of `current` (`Ctrl+←`, `Num5`). */
+  labels: string[];
+}
+
+export interface Bindings {
+  list(): Promise<{
+    commands: BindingInfo[];
+    /** Overrides whose command is not declared now (plugin stopped or removed). */
+    orphans: { ref: BindingRef; inputs: string[] }[];
+  }>;
+  /**
+   * Override a command's bindings (`[]` unbinds it); saved across launches.
+   * `invalid` for a bad binding, `missing` for an unknown command that has
+   * no override either.
+   */
+  set(ref: BindingRef, inputs: string[]): Promise<void>;
+  /** Back to the defaults: one command, or every override when omitted. */
+  reset(ref?: BindingRef): Promise<void>;
+  /** Declarations or overrides changed (read `list()` again). */
+  onChange(listener: () => void): Disposable;
 }
 
 // ---------------------------------------------------------------- shared services
