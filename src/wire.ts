@@ -136,8 +136,8 @@ export interface LocalServices {
   ): Promise<{ stdout: Uint8Array; stderr: string }>;
   /** Where a tool's executable is, or null when it cannot be found. */
   locate(tool: "ffmpeg" | "ffprobe"): Promise<string | null>;
-  /** `/usr/bin/open -R path` (reveal) or `/usr/bin/open path`. */
-  open(path: string, reveal: boolean): Promise<void>;
+  /** `/usr/bin/open -R paths…` (reveal) or `/usr/bin/open path`. */
+  open(paths: string[], reveal: boolean): Promise<void>;
 }
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;
@@ -189,6 +189,20 @@ export function createWire(transport: Transport) {
           id,
           ...(expected ? { expected } : {}),
         }),
+    },
+    /** The core's own playback actions; resolves when the action finished. */
+    host: {
+      run: (action: string) => transport.request<void>("host.run", { action }),
+    },
+    step: {
+      step: (unit: string, direction: string, expected?: SourceStamp) =>
+        transport.request<void>("player.step", {
+          unit,
+          direction,
+          ...(expected ? { expected } : {}),
+        }),
+      setStepSeek: (seconds: number) =>
+        transport.request<void>("player.setStepSeek", { seconds }),
     },
     clipboard: {
       readText: () => transport.request<string | null>("clipboard.readText"),

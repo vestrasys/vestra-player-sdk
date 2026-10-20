@@ -80,6 +80,8 @@ export interface SourceState {
   };
   output: { volume: number; muted: boolean };
   rate: number;
+  /** A selected video track that is not cover art (frame stepping). */
+  hasVideo?: boolean;
   /** Merged by the host from the sequence provider (absent: none). */
   sequence?: { next: boolean; previous: boolean };
 }

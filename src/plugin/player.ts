@@ -555,6 +555,27 @@ export function player(scope: ScopeImpl): Player {
         .catch(() => {});
       return audioTrack(added);
     },
+    async step(unit, direction, options = {}) {
+      if (unit !== "frame" && unit !== "keyframe")
+        throw failure("invalid", "unit is frame or keyframe");
+      if (direction !== "backward" && direction !== "forward")
+        throw failure("invalid", "direction is backward or forward");
+      const { expected } = service().expected(options.ifCurrent);
+      await scope.runtime.host.step.step(unit, direction, expected);
+      await service()
+        .refresh()
+        .catch(() => {});
+    },
+    async setStepSeek({ seconds }) {
+      if (
+        !Number.isFinite(seconds) ||
+        seconds < 0.1 ||
+        seconds > 3600 ||
+        Math.abs(Math.round(seconds * 10) - seconds * 10) > 1e-9
+      )
+        throw failure("invalid", "seconds must be 0.1–3600 in tenths");
+      await scope.runtime.host.step.setStepSeek(seconds);
+    },
     async selectAudioTrack(id, options = {}) {
       const { expected } = service().expected(options.ifCurrent);
       await scope.runtime.host.audio.select(id, expected);

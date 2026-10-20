@@ -435,6 +435,20 @@ test("system: reveal and open existing paths; missing ones are refused", async (
   assert.deepEqual(host.system.revealed, [host.dataDirectory]);
   assert.deepEqual(host.system.opened, [host.dataDirectory]);
   await rejects(plugin.system.reveal("/nonexistent/vestra"), "missing");
+  await plugin.system.reveal([
+    host.dataDirectory,
+    "/nonexistent/vestra",
+    tmpdir(),
+  ]);
+  assert.deepEqual(host.system.revealed.slice(1), [
+    host.dataDirectory,
+    tmpdir(),
+  ]);
+  await rejects(
+    plugin.system.reveal(["/nonexistent/a", "/nonexistent/b"]),
+    "missing",
+  );
+  await rejects(plugin.system.reveal([]), "invalid");
   await stop();
 });
 

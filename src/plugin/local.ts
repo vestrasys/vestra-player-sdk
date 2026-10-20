@@ -114,8 +114,8 @@ export const systemServices: LocalServices = {
     }
     return null;
   },
-  async open(path, reveal) {
-    await run("/usr/bin/open", reveal ? ["-R", path] : [path], {
+  async open(paths, reveal) {
+    await run("/usr/bin/open", reveal ? ["-R", ...paths] : paths, {
       timeoutMs: OPEN_TIMEOUT_MS,
       maxOutput: 64 * 1024,
       signal: new AbortController().signal,

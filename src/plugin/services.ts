@@ -4,12 +4,14 @@
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { mkdir, rename, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { failure } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { systemServices } from "./local.ts";
+import { playerOf } from "./player.ts";
 import type {
   Clipboard,
+  Host,
   JsonStore,
   Power,
   Storage,
@@ -23,6 +25,36 @@ export const clipboard = (scope: ScopeImpl): Clipboard => ({
   readText: () => scope.runtime.host.clipboard.readText(),
   writeText: (text) => scope.runtime.host.clipboard.writeText(text),
   writeImage: (path) => scope.runtime.host.clipboard.writeImage(path),
+});
+
+const ACTIONS = new Set<string>([
+  "play-pause",
+  "stop",
+  "previous",
+  "next",
+  "frame-back",
+  "frame-forward",
+  "seek-backward",
+  "seek-forward",
+  "rate-down",
+  "rate-up",
+  "rate-normal",
+  "volume-up",
+  "volume-down",
+  "mute",
+]);
+
+export const host = (scope: ScopeImpl): Host => ({
+  async run(action) {
+    if (!ACTIONS.has(action))
+      throw failure("invalid", `unknown host action ${String(action)}`);
+    await scope.runtime.host.host.run(action);
+    // Like the player's own controls: `player.state` shows the result.
+    if (scope.runtime.can("playback.read"))
+      await playerOf(scope.runtime)
+        .refresh()
+        .catch(() => {});
+  },
 });
 
 export const power = (scope: ScopeImpl): Power => ({
@@ -177,18 +209,43 @@ export const storage = (scope: ScopeImpl): Storage => ({
 });
 
 export function system(scope: ScopeImpl): System {
-  const open = async (path: string, reveal: boolean) => {
-    if (typeof path !== "string" || !path)
-      throw failure("invalid", "path must be a non-empty string");
+  const exists = async (path: string) => {
     try {
       await stat(path);
+      return true;
     } catch {
-      throw failure("missing", `${path} does not exist`);
+      return false;
     }
-    await (scope.runtime.local ?? systemServices).open(path, reveal);
   };
+  const valid = (path: unknown): path is string =>
+    typeof path === "string" && path.length > 0;
   return {
-    reveal: (path) => open(path, true),
-    openPath: (path) => open(path, false),
+    async reveal(paths) {
+      const list = typeof paths === "string" ? [paths] : paths;
+      if (
+        !Array.isArray(list) ||
+        !list.length ||
+        list.length > 256 ||
+        !list.every(valid)
+      )
+        throw failure("invalid", "reveal takes 1–256 non-empty paths");
+      // Absolute, so no path can read as an option of `open`.
+      const present: string[] = [];
+      for (const path of list.map((each) => resolve(each)))
+        if ((await exists(path)) && !present.includes(path)) present.push(path);
+      if (!present.length)
+        throw failure("missing", `${list.join(", ")} does not exist`);
+      await (scope.runtime.local ?? systemServices).open(present, true);
+    },
+    async openPath(path) {
+      if (!valid(path))
+        throw failure("invalid", "path must be a non-empty string");
+      if (!(await exists(path)))
+        throw failure("missing", `${path} does not exist`);
+      await (scope.runtime.local ?? systemServices).open(
+        [resolve(path)],
+        false,
+      );
+    },
   };
 }

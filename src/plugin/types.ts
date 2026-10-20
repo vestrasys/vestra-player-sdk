@@ -39,6 +39,7 @@ export interface Scope extends Disposable {
   readonly resolvers: Resolvers;
   readonly packages: Packages;
   readonly osd: Osd;
+  readonly host: Host;
   readonly clipboard: Clipboard;
   readonly power: Power;
   /** ffmpeg / ffprobe, run by this plugin's process. */
@@ -479,6 +480,49 @@ export interface Player {
   ): Promise<AudioTrack>;
   /** Select one of `state.audioTracks` by id; `invalid` for an unknown id. */
   selectAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
+  /**
+   * One frame or to the next / previous keyframe (pauses for frames). Rejects
+   * `unsupported` without moving video (audio only, cover art, a generated
+   * stream) or when backwards needs a seekable source.
+   */
+  step(
+    unit: "frame" | "keyframe",
+    direction: "backward" | "forward",
+    options?: Conditional,
+  ): Promise<void>;
+  /**
+   * The core's first-tier relative seek (`seek-backward` / `seek-forward`,
+   * ← / →): 0.1–3600 seconds in tenths, default 5. The newest call of any
+   * plugin wins; it reverts when that plugin stops.
+   */
+  setStepSeek(options: { seconds: number }): Promise<void>;
+}
+
+/** The core's basic playback actions (menu commands owned by the player). */
+export type HostAction =
+  | "play-pause"
+  | "stop"
+  | "previous"
+  | "next"
+  | "frame-back"
+  | "frame-forward"
+  | "seek-backward"
+  | "seek-forward"
+  | "rate-down"
+  | "rate-up"
+  | "rate-normal"
+  | "volume-up"
+  | "volume-down"
+  | "mute";
+
+export interface Host {
+  /**
+   * Run a core action exactly like its menu item or key: same checks, same
+   * on-screen text. Resolves when it finished (or was dropped because the
+   * same action is still running). Rejects `unavailable` when disabled,
+   * `invalid` for an unknown id. Needs `commands`.
+   */
+  run(action: HostAction): Promise<void>;
 }
 
 // ---------------------------------------------------------------- on-screen display
@@ -790,8 +834,12 @@ export interface Storage {
 }
 
 export interface System {
-  /** Select the file or folder in a Finder window. `missing` if it does not exist. */
-  reveal(path: string): Promise<void>;
+  /**
+   * Select files or folders in the Finder (one `open -R` for all, so several
+   * files of one folder are all highlighted). Paths that do not exist are
+   * skipped; `missing` when none exists; at most 256.
+   */
+  reveal(paths: string | string[]): Promise<void>;
   /** Open the file or folder with its default application. `missing` if absent. */
   openPath(path: string): Promise<void>;
 }

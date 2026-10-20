@@ -211,8 +211,8 @@ export class TestHost implements Transport {
         );
       return { stdout, stderr: result.stderr ?? "" };
     },
-    open: async (path, reveal) => {
-      (reveal ? this.system.revealed : this.system.opened).push(path);
+    open: async (paths, reveal) => {
+      (reveal ? this.system.revealed : this.system.opened).push(...paths);
     },
   };
   /** Every `panel.showMenu`, newest last. */
@@ -261,7 +261,7 @@ export class TestHost implements Transport {
   readonly dataDirectory = join(this.#scratch, "data");
   manifestId = "test.plugin";
 
-  constructor() {
+  constructor(options: { coreActions?: boolean } = {}) {
     this.subtitles = {
       presentation: {
         revision: 1,
@@ -297,6 +297,255 @@ export class TestHost implements Transport {
       tracks: [],
       resources: [],
     };
+    if (options.coreActions) this.#registerCoreActions();
+  }
+
+  // ------------------------------------------------------------ core actions
+
+  /** The `player.setStepSeek` value in effect (default 5). */
+  stepSeek = 5;
+  /** Every `player.step`, newest last. */
+  readonly steps: { unit: string; direction: string }[] = [];
+  /** Every core action run (`host.run`, a core command, a pressed core binding), newest last. */
+  readonly coreRuns: string[] = [];
+
+  /** A core action registered with `new TestHost({ coreActions: true })`. */
+  coreAction(id: string): FakeCommand {
+    return this.command(`host/${id}`);
+  }
+  #facts() {
+    const s = this.source;
+    const ready = s.phase === "ready";
+    const ended = s.phase === "ended";
+    return {
+      ready,
+      ended,
+      toggle:
+        (s.capabilities.pause && ready) || (ended && s.capabilities.restart),
+      step: s.capabilities.seek && ready && s.position !== null,
+      rate: s.capabilities.rate && ready,
+      close: s.capabilities.close && s.phase !== "empty",
+      frame: ready && s.kind === "media" && s.hasVideo !== false,
+    };
+  }
+  /** The same enabled rules and reasons as the player's core actions. */
+  #coreState(action: string) {
+    const f = this.#facts();
+    const s = this.source;
+    const unsupported = "当前来源不支持此操作";
+    const rule: Record<string, [boolean, boolean | null, string]> = {
+      "play-pause": [f.toggle, f.ready ? s.paused : null, unsupported],
+      stop: [f.close, null, unsupported],
+      previous: [!!this.sequence?.canPrevious, null, "没有上一个"],
+      next: [!!this.sequence?.canNext, null, "没有下一个"],
+      "frame-back": [f.frame, null, unsupported],
+      "frame-forward": [f.frame, null, unsupported],
+      "seek-backward": [f.step, null, unsupported],
+      "seek-forward": [f.step, null, unsupported],
+      "rate-normal": [f.rate, s.rate === 1, unsupported],
+      "rate-down": [f.rate, null, unsupported],
+      "rate-up": [f.rate, null, unsupported],
+      "volume-up": [true, null, unsupported],
+      "volume-down": [true, null, unsupported],
+      mute: [true, s.output.muted, unsupported],
+    };
+    const [enabled, checked, reason] = rule[action]!;
+    return { enabled, checked, busy: false, reason: enabled ? null : reason };
+  }
+  #registerCoreActions() {
+    const table: [
+      string,
+      string[],
+      number,
+      string,
+      string[],
+      boolean,
+      boolean?,
+    ][] = [
+      ["stop", ["关闭"], 120, "open", ["F4"], false],
+      ["play-pause", ["播放", "播放/暂停"], 201, "domain", ["Space"], false],
+      [
+        "previous",
+        ["播放", "上一个"],
+        202,
+        "domain",
+        ["PageUp", "Mouse:X1"],
+        false,
+      ],
+      [
+        "next",
+        ["播放", "下一个"],
+        203,
+        "domain",
+        ["PageDown", "Mouse:X2"],
+        false,
+      ],
+      ["frame-back", ["播放", "跳转", "上一帧"], 204, "frame", ["D"], true],
+      ["frame-forward", ["播放", "跳转", "下一帧"], 205, "frame", ["F"], true],
+      [
+        "seek-backward",
+        ["播放", "跳转", "后退5秒"],
+        210,
+        "step",
+        ["ArrowLeft"],
+        true,
+      ],
+      [
+        "seek-forward",
+        ["播放", "跳转", "前进5秒"],
+        211,
+        "step",
+        ["ArrowRight"],
+        true,
+      ],
+      [
+        "rate-normal",
+        ["播放", "速度", "正常"],
+        220,
+        "domain",
+        ["Z"],
+        false,
+        true,
+      ],
+      ["rate-down", ["播放", "速度", "减速 0.1"], 221, "domain", ["X"], false],
+      ["rate-up", ["播放", "速度", "加速 0.1"], 222, "domain", ["C"], false],
+      [
+        "volume-up",
+        ["声音", "音量 +"],
+        501,
+        "domain",
+        ["ArrowUp", "Mouse:WheelUp"],
+        true,
+      ],
+      [
+        "volume-down",
+        ["声音", "音量 −"],
+        502,
+        "domain",
+        ["ArrowDown", "Mouse:WheelDown"],
+        true,
+      ],
+      ["mute", ["声音", "静音"], 503, "domain", ["M"], false],
+    ];
+    const host = this;
+    for (const [id, path, order, group, bindings, repeat, radio] of table) {
+      const command: FakeCommand = {
+        declaration: {
+          title: path.at(-1)!,
+          path,
+          order,
+          group,
+          radio: radio ?? false,
+          bindings,
+          repeat,
+        } as unknown as CommandDeclaration,
+        get state() {
+          return host.#coreState(id);
+        },
+        set state(_value) {},
+        revision: 1,
+        async run() {
+          await host.request("host.run", { action: id });
+          await host.settle();
+        },
+      };
+      this.commands.set(`host/${id}`, command);
+    }
+  }
+  #runCore(action: string) {
+    const state = this.#coreState(action);
+    if (!state.enabled)
+      throw new HostError("unavailable", state.reason ?? "unavailable");
+    this.coreRuns.push(action);
+    const s = this.source;
+    const time = (t: number | null) => {
+      if (t === null) return "--:--";
+      const w = Math.max(0, Math.floor(t));
+      const mm = String(Math.floor(w / 60) % 60).padStart(2, "0");
+      const ss = String(w % 60).padStart(2, "0");
+      return w >= 3600 ? `${Math.floor(w / 3600)}:${mm}:${ss}` : `${mm}:${ss}`;
+    };
+    const rateText = (r: number) => String(Math.round(r * 100) / 100);
+    switch (action) {
+      case "play-pause":
+        if (s.phase === "ended") this.#intent({ kind: "restart" });
+        else
+          this.#intent({
+            kind: "control",
+            control: { kind: "pause", paused: !s.paused },
+          });
+        this.osd.push(s.phase !== "ended" && !s.paused ? "已暂停" : "播放");
+        return;
+      case "stop":
+        this.#intent({ kind: "close" });
+        return;
+      case "previous":
+      case "next":
+        this.emit("sequence.step", { direction: action });
+        return;
+      case "frame-back":
+      case "frame-forward":
+        this.steps.push({
+          unit: "frame",
+          direction: action === "frame-back" ? "backward" : "forward",
+        });
+        return;
+      case "seek-backward":
+      case "seek-forward": {
+        const delta =
+          action === "seek-forward" ? this.stepSeek : -this.stepSeek;
+        const base = s.position ?? 0;
+        const target = Math.max(
+          0,
+          Math.min(s.duration ?? Infinity, base + delta),
+        );
+        this.#intent({
+          kind: "control",
+          control: { kind: "seek", seconds: target },
+        });
+
+        this.osd.push(
+          `${delta < 0 ? "后退" : "前进"} ${Math.abs(delta)}秒: ${time(target)} / ${time(s.duration)}`,
+        );
+        return;
+      }
+      case "rate-normal":
+      case "rate-down":
+      case "rate-up": {
+        const rate =
+          action === "rate-normal"
+            ? 1
+            : Math.max(
+                0.25,
+                Math.min(
+                  4,
+                  Math.round(
+                    (s.rate + (action === "rate-up" ? 0.1 : -0.1)) * 100,
+                  ) / 100,
+                ),
+              );
+        this.#intent({ kind: "control", control: { kind: "rate", rate } });
+        this.osd.push(`播放速度: ${rateText(rate)}x`);
+        return;
+      }
+      case "volume-up":
+      case "volume-down": {
+        const volume = Math.max(
+          0,
+          Math.min(
+            200,
+            Math.round(s.output.volume + (action === "volume-up" ? 5 : -5)),
+          ),
+        );
+        this.setSource({ output: { volume, muted: false } });
+        this.osd.push(`音量: ${volume}%`);
+        return;
+      }
+      case "mute":
+        this.setSource({ output: { ...s.output, muted: !s.output.muted } });
+        this.osd.push(s.output.muted ? "静音: 关" : "静音: 开");
+        return;
+    }
   }
 
   // ------------------------------------------------------------ transport
@@ -746,6 +995,42 @@ export class TestHost implements Transport {
       if (!/\.(png|jpe?g)$/i.test(path))
         throw new HostError("invalid", "image must be PNG or JPEG");
       this.clipboard.images.push(path);
+    },
+    "host.run": (p) => {
+      const actions = [
+        "play-pause",
+        "stop",
+        "previous",
+        "next",
+        "frame-back",
+        "frame-forward",
+        "seek-backward",
+        "seek-forward",
+        "rate-down",
+        "rate-up",
+        "rate-normal",
+        "volume-up",
+        "volume-down",
+        "mute",
+      ];
+      if (!actions.includes(String(p.action)))
+        throw new HostError("invalid", `unknown host action ${p.action}`);
+      this.#runCore(String(p.action));
+    },
+    "player.setStepSeek": (p) => {
+      const seconds = Number(p.seconds);
+      if (
+        !(seconds >= 0.1 && seconds <= 3600) ||
+        Math.abs(Math.round(seconds * 10) - seconds * 10) > 1e-9
+      )
+        throw new HostError("invalid", "seconds must be 0.1..3600 in tenths");
+      this.stepSeek = seconds;
+    },
+    "player.step": (p) => {
+      this.#audioCondition(p.expected);
+      if (!this.#facts().frame)
+        throw new HostError("unsupported", "this source cannot step");
+      this.steps.push({ unit: String(p.unit), direction: String(p.direction) });
     },
     "power.preventSleep": (p) => {
       if (p.mode !== "off" && p.mode !== "playing")
