@@ -371,6 +371,10 @@ test("secondary subtitles: select by role, load as secondary, never the primary"
   );
   assert.equal(plugin.subtitles.state!.secondary?.id, loaded.id);
   assert.equal(host.subtitleLoads.at(-1)!.select, "secondary");
+  // Removing the secondary's own track clears it, as in the player.
+  state = await plugin.subtitles.remove(loaded);
+  assert.equal(state.secondary, null);
+  state = await plugin.subtitles.select(en!, { role: "secondary" });
   state = await plugin.subtitles.select(null, { role: "secondary" });
   assert.equal(state.secondary, null);
   await stop();

@@ -1592,6 +1592,12 @@ export class TestHost implements Transport {
       const selected = this.subtitles.selection.target;
       if (selected?.kind === "external" && selected.resourceId === p.resourceId)
         this.subtitles.selection.target = null;
+      const secondary = this.subtitles.selection.secondary;
+      if (
+        secondary?.kind === "external" &&
+        secondary.resourceId === p.resourceId
+      )
+        this.subtitles.selection.secondary = null;
       return structuredClone(this.subtitles);
     },
     "subtitles.operation": () => ({ status: "unknown" }),
