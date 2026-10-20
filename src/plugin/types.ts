@@ -107,8 +107,6 @@ export interface CommandOptions {
   focus?: "panel";
   /** Fire again on keyboard auto-repeat while the key is held. Default false. */
   repeat?: boolean;
-  /** @deprecated Migration window only (removed in P4): use `bindings`. */
-  shortcut?: string;
   enabled?: Bindable<boolean>;
   checked?: Bindable<boolean | null>;
   busy?: Bindable<boolean>;
@@ -172,15 +170,6 @@ export interface Windows {
   create(file: string, options?: { id?: string }): Window;
 }
 
-/** @deprecated Migration window only (removed in P4): use `SlotState`. */
-export interface PanelVisibility {
-  /** The user's choice (menu "show panel"). */
-  preferred: boolean;
-  /** Whether it is on screen right now. */
-  effective: boolean;
-  reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
-}
-
 /** The state of the bottom bar or sidebar position, whoever mounted it. */
 export interface SlotState {
   /** The user's choice (menu check mark). */
@@ -210,14 +199,6 @@ export interface SidebarSlot extends PanelSlot {
 export interface Panel extends View, Disposable {
   /** Resolves once the host has mounted the panel. */
   readonly ready: Promise<void>;
-  /** @deprecated Migration window only (removed in P4): use `plugin.panels.<slot>.state`. */
-  readonly visibility: PanelVisibility | null;
-  /** @deprecated Use `plugin.panels.<slot>.onChange`. */
-  onVisibility(listener: (visibility: PanelVisibility) => void): Disposable;
-  /** @deprecated Use `plugin.panels.<slot>.setVisible`. */
-  setVisible(visible: boolean): Promise<void>;
-  /** @deprecated Use `plugin.panels.<slot>.toggle`. */
-  toggle(): Promise<void>;
   /** Keep the panel from auto-hiding while the user works in it. Merged, last write wins. */
   setInteraction(
     locks: Partial<{ focused: boolean; dragging: boolean; popupOpen: boolean }>,

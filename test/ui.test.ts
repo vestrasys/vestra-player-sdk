@@ -24,7 +24,12 @@ test("commands register once, follow bound state and dispatch run", async () => 
   assert.deepEqual(command.declaration, {
     title: "画面调节…",
     path: ["视频", "画面调节…"],
-    shortcut: null,
+    order: 0,
+    group: "domain",
+    radio: false,
+    bindings: [],
+    focus: null,
+    repeat: false,
   });
   assert.equal(command.state.enabled, false);
   await assert.rejects(command.run(), /disabled/);
@@ -147,7 +152,7 @@ test("a closed window reopens with the current properties", async () => {
   await stop();
 });
 
-test("panels infer component and bridge, sync props and visibility", async () => {
+test("panels infer component and bridge and sync props", async () => {
   const directory = mkdtempSync(join(tmpdir(), "panel-"));
   writeFileSync(
     join(directory, "bar.slint"),
@@ -182,7 +187,7 @@ test("panels infer component and bridge, sync props and visibility", async () =>
   await stop();
 });
 
-test("panel toggle reads the host preference and interaction locks merge", async () => {
+test("panel interaction locks merge", async () => {
   const directory = mkdtempSync(join(tmpdir(), "panel-"));
   writeFileSync(
     join(directory, "side.slint"),
@@ -200,9 +205,6 @@ test("panel toggle reads the host preference and interaction locks merge", async
     { directory },
   );
   const panel = panelHandle!;
-  assert.equal(panel.visibility?.preferred, true);
-  await panel.toggle();
-  assert.equal(panel.visibility?.preferred, false);
   panel.setInteraction({ focused: true });
   panel.setInteraction({ dragging: true });
   await host.settle();

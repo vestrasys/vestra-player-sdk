@@ -82,13 +82,6 @@ export class HostError extends Error {
     this.name = "HostError";
   }
 }
-export interface MountVisibility {
-  owner: number;
-  preferred: boolean;
-  effective: boolean;
-  reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
-  overlay: boolean;
-}
 /** One position (bottom bar or sidebar) as `layout.state` reports it. */
 export interface LayoutSlot {
   owner: number;
@@ -224,10 +217,6 @@ export function createWire(transport: Transport) {
         }>("ui.mount", options),
       setMount: (property: string, value: Json) =>
         transport.request<void>("ui.setMount", { property, value }),
-      showMount: (visible: boolean) =>
-        transport.request<void>("ui.showMount", { visible }),
-      mountState: () =>
-        transport.request<MountVisibility | null>("ui.mountState"),
       interaction: (locks: {
         focused: boolean;
         dragging: boolean;

@@ -1,10 +1,7 @@
 /** Menu commands: declaration, state sync (revisions hidden) and dispatch. */
 import { failure, Latest, quiet } from "./runtime.ts";
 import { checkBindings } from "./bindings.ts";
-import type {
-  CommandDeclaration,
-  LegacyCommandDeclaration,
-} from "../commands.ts";
+import type { CommandDeclaration } from "../commands.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   Bindable,
@@ -18,19 +15,8 @@ type Spec = { [K in keyof CommandState]: Bindable<CommandState[K]> };
 const value = <T>(item: Bindable<T>): T =>
   typeof item === "function" ? (item as () => T)() : item;
 
-const fresh = [
-  "order",
-  "group",
-  "radio",
-  "bindings",
-  "focus",
-  "repeat",
-] as const;
-
 /** Validate options and build the wire declaration. */
-function declare(
-  options: CommandOptions,
-): CommandDeclaration | LegacyCommandDeclaration {
+function declare(options: CommandOptions): CommandDeclaration {
   const path = options.path ?? [];
   const title = options.title ?? path.at(-1);
   if (!title)
@@ -43,13 +29,7 @@ function declare(
       "invalid",
       `command ${options.id}: order must be an integer within ±1000000`,
     );
-  // Migration window (P1b–P3, removed in P4): a command that uses none of the
-  // new fields keeps the old declaration shape, so unmigrated plugins and
-  // their tests see no change.
-  if (options.path && fresh.every((key) => options[key] === undefined))
-    return { title, path, shortcut: options.shortcut ?? null };
   const bindings = [...(options.bindings ?? [])];
-  if (options.shortcut !== undefined) bindings.push(options.shortcut);
   return {
     title,
     path,

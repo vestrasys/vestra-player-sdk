@@ -16,17 +16,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
-import type {
-  Json,
-  LayoutSlot,
-  MountVisibility,
-  PlaybackStats,
-  Transport,
-} from "../wire.ts";
-import type {
-  CommandDeclaration,
-  LegacyCommandDeclaration,
-} from "../commands.ts";
+import type { Json, LayoutSlot, PlaybackStats, Transport } from "../wire.ts";
+import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
 import type { MediaJob } from "../media.ts";
@@ -49,8 +40,7 @@ export interface FakeWindow {
 }
 
 export interface FakeCommand {
-  /** As sent: the full form, or the migration-window form `{ title, path, shortcut }`. */
-  declaration: CommandDeclaration | LegacyCommandDeclaration;
+  declaration: CommandDeclaration;
   state: {
     enabled: boolean;
     checked: boolean | null;
@@ -120,7 +110,6 @@ export class TestHost implements Transport {
     | (Omit<FakeWindow, "callbacks"> & {
         slot: string;
         component: string;
-        visibility: MountVisibility;
         locks: Json;
       })
     | null = null;
@@ -315,15 +304,8 @@ export class TestHost implements Transport {
   #claims() {
     const claims = new Map<string, string[]>();
     for (const [id, { declaration }] of this.commands) {
-      const bindings =
-        "bindings" in declaration
-          ? declaration.bindings
-          : declaration.shortcut
-            ? [declaration.shortcut]
-            : [];
-      const scope =
-        "focus" in declaration && declaration.focus ? "panel" : "global";
-      for (const binding of bindings) {
+      const scope = declaration.focus ? "panel" : "global";
+      for (const binding of declaration.bindings) {
         const key = `${scope} ${binding}`;
         claims.set(key, [...(claims.get(key) ?? []), id]);
       }
@@ -548,13 +530,6 @@ export class TestHost implements Transport {
         component: String(p.component),
         visible: true,
         props: { ...(p.properties as Record<string, Json>) },
-        visibility: {
-          owner: 1,
-          preferred: true,
-          effective: true,
-          reason: null,
-          overlay: false,
-        },
         locks: null,
         emit(callback, ...args) {
           host.emit("ui.callback", {
@@ -598,14 +573,7 @@ export class TestHost implements Transport {
         state.preferred = p.visible;
         state.effective = p.visible;
         state.reason = p.visible ? null : "userHidden";
-        if (this.panel?.slot === slot) {
-          this.panel.visible = p.visible;
-          this.panel.visibility = {
-            ...this.panel.visibility,
-            ...state,
-            overlay: false,
-          };
-        }
+        if (this.panel?.slot === slot) this.panel.visible = p.visible;
       }
       if (typeof p.detached === "boolean") state.detached = p.detached;
     },
@@ -638,24 +606,6 @@ export class TestHost implements Transport {
     },
     "ui.setMount": (p) =>
       void (this.mounted().props[String(p.property)] = p.value!),
-    "ui.showMount": (p) => {
-      const panel = this.mounted();
-      panel.visibility = {
-        ...panel.visibility,
-        preferred: p.visible === true,
-        effective: p.visible === true,
-        reason: p.visible ? null : "userHidden",
-      };
-      panel.visible = p.visible === true;
-      const state = this.layout[panel.slot as "bottom" | "sidebar"];
-      if (state)
-        Object.assign(state, {
-          preferred: panel.visibility.preferred,
-          effective: panel.visibility.effective,
-          reason: panel.visibility.reason,
-        });
-    },
-    "ui.mountState": () => this.mounted().visibility,
     "ui.interaction": (p) => void (this.mounted().locks = p),
     "dialogs.open": () => {
       const answer = this.dialogAnswers.shift();

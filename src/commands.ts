@@ -6,15 +6,6 @@ export type CommandState = {
   busy: boolean;
   reason: string | null;
 };
-/**
- * Migration-window form (P1b–P3): only `title`, `path` and the display-only
- * `shortcut`. Removed in P4; the host still accepts it until then.
- */
-export type LegacyCommandDeclaration = {
-  title: string;
-  path: string[];
-  shortcut: string | null;
-};
 export type CommandDeclaration = {
   title: string;
   /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. */
@@ -37,7 +28,7 @@ export function commandClient(transport: Transport) {
     register: (
       id: string,
       revision: number,
-      declaration: CommandDeclaration | LegacyCommandDeclaration,
+      declaration: CommandDeclaration,
       state: CommandState,
     ) =>
       transport.request<{ revision: number }>("commands.register", {

@@ -51,15 +51,9 @@ test("binding syntax follows the host rules", () => {
     assert.throws(() => canonical(bad), { code: "invalid" }, bad);
 });
 
-test("new command fields are sent in full; unmigrated commands keep the old shape", async () => {
+test("declarations are sent in full with defaults", async () => {
   const { host, plugin, stop } = await startPlugin((plugin: Plugin) => {
     plugin.commands.add({ id: "old", path: ["文件", "旧"], run() {} });
-    plugin.commands.add({
-      id: "legacy",
-      path: ["播放", "空格"],
-      shortcut: "Space",
-      run() {},
-    });
     plugin.commands.add({
       id: "new",
       path: ["打开文件…"],
@@ -80,12 +74,12 @@ test("new command fields are sent in full; unmigrated commands keep the old shap
   assert.deepEqual(host.command("old").declaration, {
     title: "旧",
     path: ["文件", "旧"],
-    shortcut: null,
-  });
-  assert.deepEqual(host.command("legacy").declaration, {
-    title: "空格",
-    path: ["播放", "空格"],
-    shortcut: "Space",
+    order: 0,
+    group: "domain",
+    radio: false,
+    bindings: [],
+    focus: null,
+    repeat: false,
   });
   assert.deepEqual(host.command("new").declaration, {
     title: "打开文件…",
@@ -107,7 +101,6 @@ test("new command fields are sent in full; unmigrated commands keep the old shap
     focus: "panel",
     repeat: false,
   });
-  await host.press("Space");
   await host.press("Ctrl+A", { panel: true });
   assert.throws(() => plugin.commands.add({ id: "x", run() {} }), {
     code: "invalid",

@@ -12,7 +12,6 @@ import type {
   Disposable,
   Panel,
   PanelSlot,
-  PanelVisibility,
   Panels,
   SidebarSlot,
   SlotState,
@@ -259,12 +258,8 @@ type Locks = { focused: boolean; dragging: boolean; popupOpen: boolean };
 class PanelHandle extends ViewBase implements Panel {
   readonly ready: Promise<void>;
   #mounted = false;
-  #visibility: PanelVisibility | null = null;
-  readonly #listeners = new Set<(visibility: PanelVisibility) => void>();
   readonly #locks = { focused: false, dragging: false, popupOpen: false };
   readonly #interaction: Latest<Locks>;
-  #reading = false;
-  #again = false;
   constructor(
     scope: ScopeImpl,
     slot: "bottom" | "sidebar",
@@ -303,72 +298,19 @@ class PanelHandle extends ViewBase implements Panel {
           this.#mounted = true;
           this.shown(properties);
           this.flush();
-          await this.#read();
+          // The position's state changed: refresh it if this plugin reads it.
+          await layoutOf(runtime).refresh();
         })(),
         (error) => scope.report(error),
       )
       .then(() => {});
     quiet(this.ready);
-    scope.add(runtime.on("window.state", () => void this.#read()));
-  }
-  get visibility() {
-    return this.#visibility;
   }
   protected live() {
     return this.#mounted && !this.closed;
   }
   protected write(property: string, value: Json) {
     return this.scope.runtime.host.ui.setMount(property, value);
-  }
-  /** One `ui.mountState` in flight; window events during it trigger one more. */
-  async #read() {
-    if (!this.#mounted || this.closed) return;
-    if (this.#reading) {
-      this.#again = true;
-      return;
-    }
-    this.#reading = true;
-    try {
-      do {
-        this.#again = false;
-        // The host answers "pending" until the layout is confirmed; keep the last value.
-        const state = await this.scope.runtime.host.ui
-          .mountState()
-          .catch(() => null);
-        if (!state || this.closed) continue;
-        const next = {
-          preferred: state.preferred,
-          effective: state.effective,
-          reason: state.reason,
-        };
-        if (JSON.stringify(next) === JSON.stringify(this.#visibility)) continue;
-        this.#visibility = next;
-        for (const listener of this.#listeners) this.scope.run(listener, next);
-        this.scope.update();
-      } while (this.#again);
-    } finally {
-      this.#reading = false;
-    }
-  }
-  onVisibility(listener: (visibility: PanelVisibility) => void) {
-    this.#listeners.add(listener);
-    return this.scope.onDispose(() => {
-      this.#listeners.delete(listener);
-    });
-  }
-  async setVisible(visible: boolean) {
-    await this.ready;
-    await this.scope.runtime.host.ui.showMount(visible);
-    await this.#read();
-  }
-  async toggle() {
-    await this.ready;
-    const current = await this.scope.runtime.host.ui
-      .mountState()
-      .catch(() => null);
-    await this.setVisible(
-      !(current?.preferred ?? this.#visibility?.preferred ?? true),
-    );
   }
   async showMenu(items: (Command | null)[], at: { x: number; y: number }) {
     await this.ready;
@@ -417,6 +359,10 @@ class LayoutService {
   #again = false;
   constructor(runtime: Runtime) {
     this.#runtime = runtime;
+  }
+  /** Read again, but only once something in this plugin uses the state. */
+  async refresh() {
+    if (this.#started) await this.read();
   }
   start() {
     if (this.#started || !this.#runtime.can("ui.mount")) return;
