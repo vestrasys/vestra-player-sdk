@@ -11,6 +11,7 @@ import { mediaClients } from "./media.ts";
 import { producerClient } from "./producer.ts";
 import { sourceClient } from "./source.ts";
 import { sourceResolverClient } from "./source-resolvers.ts";
+import type { SourceAudioTrack, SourceStamp } from "./source.ts";
 export type {
   ResolvedMedia,
   ResolvedResource,
@@ -100,16 +101,49 @@ export interface PlaybackStats {
     width: number | null;
     height: number | null;
     fps: number | null;
+    // Round 2 fields are optional on the wire so older test fixtures
+    // (`host.stats = {...}`) still type-check; the SDK fills in `null`.
+    decoder?: string | null;
+    pixelFormat?: string | null;
+    colorspace?: string | null;
+    displayWidth?: number | null;
+    displayHeight?: number | null;
+    displayFps?: number | null;
+    bitrate?: number | null;
   } | null;
   audio: {
     codec: string | null;
     sampleRate: number | null;
     channels: number | null;
+    decoder?: string | null;
+    format?: string | null;
+    channelLayout?: string | null;
+    bitrate?: number | null;
   } | null;
+  avSyncMs?: number | null;
+  cacheSeconds?: number | null;
+}
+/**
+ * Work the plugin process does itself (no host protocol): external tools
+ * and opening files in the Finder. The runner uses the real system; the
+ * test host supplies fakes.
+ */
+export interface LocalServices {
+  run(
+    path: string,
+    args: string[],
+    options: { timeoutMs: number; maxOutput: number; signal: AbortSignal },
+  ): Promise<{ stdout: Uint8Array; stderr: string }>;
+  /** Where a tool's executable is, or null when it cannot be found. */
+  locate(tool: "ffmpeg" | "ffprobe"): Promise<string | null>;
+  /** `/usr/bin/open -R path` (reveal) or `/usr/bin/open path`. */
+  open(path: string, reveal: boolean): Promise<void>;
 }
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;
   on(event: string, listener: (data: unknown) => void): () => void;
+  /** Replaces the real local services (test host). */
+  local?: LocalServices;
 }
 
 export function createWire(transport: Transport) {
@@ -141,6 +175,31 @@ export function createWire(transport: Transport) {
       set: (property: "volume" | "muted", value: number | boolean) =>
         transport.request<void>("playback.set", { property, value }),
       stats: () => transport.request<PlaybackStats>("playback.stats"),
+    },
+    /** External audio files and the selected audio track of the current media. */
+    audio: {
+      add: (path: string, select: boolean, expected?: SourceStamp) =>
+        transport.request<SourceAudioTrack>("audio.addTrack", {
+          path,
+          select,
+          ...(expected ? { expected } : {}),
+        }),
+      select: (id: number, expected?: SourceStamp) =>
+        transport.request<void>("audio.selectTrack", {
+          id,
+          ...(expected ? { expected } : {}),
+        }),
+    },
+    clipboard: {
+      readText: () => transport.request<string | null>("clipboard.readText"),
+      writeText: (text: string) =>
+        transport.request<void>("clipboard.writeText", { text }),
+      writeImage: (path: string) =>
+        transport.request<void>("clipboard.writeImage", { path }),
+    },
+    power: {
+      preventSleep: (mode: "off" | "playing") =>
+        transport.request<void>("power.preventSleep", { mode }),
     },
     /** Shared next/previous; the host routes `sequence.step` events to the provider. */
     sequence: {

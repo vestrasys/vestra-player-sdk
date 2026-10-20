@@ -4,6 +4,7 @@
  */
 import { HostError } from "../wire.ts";
 import type {
+  SourceAudioTrack,
   SourceIntent,
   SourceOperation,
   SourceStamp,
@@ -15,6 +16,7 @@ import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { openStream } from "./stream.ts";
 import type {
+  AudioTrack,
   Conditional,
   Disposable,
   Media,
@@ -53,6 +55,17 @@ const empty: SourceState = {
   rate: 1,
 };
 
+const audioTrack = (track: SourceAudioTrack): AudioTrack =>
+  Object.freeze({
+    id: track.trackId,
+    selected: track.selected,
+    external: track.external,
+    exportable: !track.external && track.streamIndex !== null,
+    codec: track.codec,
+    title: track.title,
+    language: track.language,
+  });
+
 function view(raw: SourceState): PlayerState {
   const reason = raw.terminalReason;
   const state: PlayerState = Object.freeze({
@@ -83,18 +96,7 @@ function view(raw: SourceState): PlayerState {
       next: raw.sequence?.next ?? false,
       previous: raw.sequence?.previous ?? false,
     }),
-    audioTracks:
-      raw.audioTracks?.map((track) =>
-        Object.freeze({
-          id: track.trackId,
-          selected: track.selected,
-          external: track.external,
-          exportable: !track.external && track.streamIndex !== null,
-          codec: track.codec,
-          title: track.title,
-          language: track.language,
-        }),
-      ) ?? null,
+    audioTracks: raw.audioTracks?.map(audioTrack) ?? null,
   });
   raws.set(state, raw);
   return state;
@@ -216,7 +218,7 @@ export class PlayerService {
       }
     }
   }
-  expected(state: PlayerState | undefined) {
+  expected(state: PlayerState | undefined): { expected?: SourceStamp } {
     const raw = raws.get(state ?? this.state);
     return raw && raw.eventSequence >= 0 ? { expected: raw.stamp } : {};
   }
@@ -507,6 +509,56 @@ export function player(scope: ScopeImpl): Player {
     provideSequence: (provider) => provideSequence(scope, provider),
     next: () => scope.runtime.host.sequence.step("next"),
     previous: () => scope.runtime.host.sequence.step("previous"),
-    stats: () => scope.runtime.host.playback.stats(),
+    async stats() {
+      const raw = await scope.runtime.host.playback.stats();
+      const n = <T>(value: T | undefined) => value ?? null;
+      return {
+        backend: raw.backend,
+        session: raw.session,
+        framesShown: raw.framesShown,
+        framesDropped: raw.framesDropped,
+        video: raw.video && {
+          codec: raw.video.codec,
+          width: raw.video.width,
+          height: raw.video.height,
+          fps: raw.video.fps,
+          decoder: n(raw.video.decoder),
+          pixelFormat: n(raw.video.pixelFormat),
+          colorspace: n(raw.video.colorspace),
+          displayWidth: n(raw.video.displayWidth),
+          displayHeight: n(raw.video.displayHeight),
+          displayFps: n(raw.video.displayFps),
+          bitrate: n(raw.video.bitrate),
+        },
+        audio: raw.audio && {
+          codec: raw.audio.codec,
+          sampleRate: raw.audio.sampleRate,
+          channels: raw.audio.channels,
+          decoder: n(raw.audio.decoder),
+          format: n(raw.audio.format),
+          channelLayout: n(raw.audio.channelLayout),
+          bitrate: n(raw.audio.bitrate),
+        },
+        avSyncMs: n(raw.avSyncMs),
+        cacheSeconds: n(raw.cacheSeconds),
+      };
+    },
+    async addAudioTrack(path, options = {}) {
+      const { expected } = service().expected(options.ifCurrent);
+      const added = await scope.runtime.host.audio.add(
+        path,
+        options.select ?? true,
+        expected,
+      );
+      await service()
+        .refresh()
+        .catch(() => {});
+      return audioTrack(added);
+    },
+    async selectAudioTrack(id, options = {}) {
+      const { expected } = service().expected(options.ifCurrent);
+      await scope.runtime.host.audio.select(id, expected);
+      return service().refresh();
+    },
   };
 }

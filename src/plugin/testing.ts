@@ -16,10 +16,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
-import type { Json, LayoutSlot, PlaybackStats, Transport } from "../wire.ts";
+import type {
+  Json,
+  LayoutSlot,
+  LocalServices,
+  PlaybackStats,
+  Transport,
+} from "../wire.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
+import { nodeProblem } from "../processing.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
 import type { Plugin } from "./types.ts";
@@ -133,6 +140,80 @@ export class TestHost implements Transport {
     framesDropped: 0,
     video: null,
     audio: null,
+    avSyncMs: null,
+    cacheSeconds: null,
+  };
+  /** Every `subtitles.load`: its options and bytes, newest last. */
+  readonly subtitleLoads: {
+    format: "srt" | "ass";
+    title: string | null;
+    select: "primary" | "none";
+    bytes: Buffer;
+  }[] = [];
+  /** The fake clipboard: preset `text` to test `readText`; written images by path. */
+  readonly clipboard: { text: string | null; images: string[] } = {
+    text: null,
+    images: [],
+  };
+  /** The effective `power.preventSleep` mode. */
+  power: "off" | "playing" = "off";
+  /**
+   * External tools: `handle("ffprobe", (args) => ({ stdout: "…" }))` makes the
+   * tool available and answers each run (throw a HostError to fail it);
+   * without a handler the tool is `unavailable`. `calls` records every run.
+   */
+  readonly tools = {
+    calls: [] as { tool: string; args: string[] }[],
+    handlers: new Map<
+      string,
+      (
+        args: string[],
+      ) =>
+        | { stdout?: Uint8Array | string; stderr?: string }
+        | Promise<{ stdout?: Uint8Array | string; stderr?: string }>
+    >(),
+    handle(
+      tool: "ffmpeg" | "ffprobe",
+      handler: (
+        args: string[],
+      ) =>
+        | { stdout?: Uint8Array | string; stderr?: string }
+        | Promise<{ stdout?: Uint8Array | string; stderr?: string }>,
+    ) {
+      this.handlers.set(tool, handler);
+    },
+  };
+  /** Paths given to `system.reveal` / `system.openPath`, newest last. */
+  readonly system = { revealed: [] as string[], opened: [] as string[] };
+  /** Local processes, faked: see `tools` and `system`. */
+  readonly local: LocalServices = {
+    locate: async (tool) =>
+      this.tools.handlers.has(tool) ? `/test-host/${tool}` : null,
+    run: async (path, args, options) => {
+      const tool = path.split("/").pop()!;
+      const handler = this.tools.handlers.get(tool);
+      if (!handler) throw new HostError("unavailable", `${tool} was not found`);
+      this.tools.calls.push({ tool, args });
+      if (options.signal.aborted) {
+        const error = new HostError("aborted", "aborted");
+        error.name = "AbortError";
+        throw error;
+      }
+      const result = await handler(args);
+      const stdout =
+        typeof result.stdout === "string"
+          ? new Uint8Array(Buffer.from(result.stdout))
+          : (result.stdout ?? new Uint8Array());
+      if (stdout.length > options.maxOutput)
+        throw new HostError(
+          "invalid",
+          `output exceeds ${options.maxOutput} bytes`,
+        );
+      return { stdout, stderr: result.stderr ?? "" };
+    },
+    open: async (path, reveal) => {
+      (reveal ? this.system.revealed : this.system.opened).push(path);
+    },
   };
   /** Every `panel.showMenu`, newest last. */
   readonly menus: { items: (string | null)[]; x: number; y: number }[] = [];
@@ -444,6 +525,23 @@ export class TestHost implements Transport {
     };
   }
 
+  /** Audio track calls need ready media and the source the caller saw. */
+  #audioCondition(expected: Json | undefined) {
+    const want = expected as SourceStamp | undefined;
+    const stamp = this.source.stamp;
+    if (
+      want &&
+      (want.generation !== stamp.generation ||
+        want.intentVersion !== stamp.intentVersion)
+    )
+      throw new HostError("stale", "source changed");
+    if (
+      this.source.kind !== "media" ||
+      !["ready", "ended"].includes(this.source.phase)
+    )
+      throw new HostError("unavailable", "audio tracks need ready media");
+  }
+
   #subtitleChange(expected: Json) {
     const stamp = this.subtitles.selection.stamp;
     const want = expected as { generation: number; revision: number };
@@ -592,6 +690,68 @@ export class TestHost implements Transport {
     "osd.panel": (p) =>
       void (this.osdPanel = p.text === null ? null : String(p.text)),
     "playback.stats": () => this.stats,
+    "audio.addTrack": (p) => {
+      this.#audioCondition(p.expected);
+      const path = String(p.path);
+      if (!path.startsWith("/") || path.includes("://"))
+        throw new HostError(
+          "invalid",
+          "path must be an existing absolute file",
+        );
+      const tracks = this.source.audioTracks ?? [];
+      const track = {
+        trackId: Math.max(0, ...tracks.map((t) => t.trackId)) + 1,
+        streamIndex: null,
+        selected: p.select !== false,
+        external: true,
+        codec: null,
+        title: path.split("/").pop() ?? null,
+        language: null,
+      };
+      this.setSource({
+        audioTracks: [
+          ...tracks.map((t) => ({
+            ...t,
+            selected: track.selected ? false : t.selected,
+          })),
+          track,
+        ],
+      });
+      return track;
+    },
+    "audio.selectTrack": (p) => {
+      this.#audioCondition(p.expected);
+      const tracks = this.source.audioTracks ?? [];
+      if (!tracks.some((t) => t.trackId === p.id))
+        throw new HostError("invalid", "no such audio track");
+      this.setSource({
+        audioTracks: tracks.map((t) => ({
+          ...t,
+          selected: t.trackId === p.id,
+        })),
+      });
+    },
+    "clipboard.readText": () => this.clipboard.text,
+    "clipboard.writeText": (p) => {
+      if (typeof p.text !== "string")
+        throw new HostError("invalid", "text requires a string");
+      if (Buffer.byteLength(p.text) > 1024 * 1024)
+        throw new HostError("invalid", "text must be at most 1 MiB");
+      this.clipboard.text = p.text;
+    },
+    "clipboard.writeImage": (p) => {
+      const path = String(p.path);
+      if (!path.startsWith("/"))
+        throw new HostError("invalid", "image path must be absolute");
+      if (!/\.(png|jpe?g)$/i.test(path))
+        throw new HostError("invalid", "image must be PNG or JPEG");
+      this.clipboard.images.push(path);
+    },
+    "power.preventSleep": (p) => {
+      if (p.mode !== "off" && p.mode !== "playing")
+        throw new HostError("invalid", 'mode must be "off" or "playing"');
+      this.power = p.mode;
+    },
     "sequence.set": (p) => {
       this.sequence = p.flags as TestHost["sequence"];
       this.setSource({
@@ -677,6 +837,24 @@ export class TestHost implements Transport {
             message: this.processing.backendUncertain[stage as "video"]!,
           },
         });
+      // The same node and delay rules as the player.
+      const problem = nodeProblem(
+        stage as "video" | "audio",
+        (p.nodes ?? []) as { kind: string }[],
+      );
+      const offset = Number(p.offsetMs ?? 0);
+      const delay =
+        stage === "audio" &&
+        (!Number.isInteger(offset) ||
+          Math.abs(offset) > 10_000 ||
+          offset % 10 !== 0)
+          ? "audio offsetMs must be -10000..10000 in 10ms increments"
+          : null;
+      if (problem || delay)
+        return finish({
+          status: "failed",
+          error: { code: "invalid", message: (problem ?? delay)! },
+        });
       if (this.source.phase !== "ready")
         return finish({
           status: "failed",
@@ -759,6 +937,26 @@ export class TestHost implements Transport {
     "subtitles.commit": (p) => {
       const upload = this.uploads.get(Number(p.uploadId));
       if (!upload) throw new HostError("missing", "upload");
+      const format = p.format === "ass" ? "ass" : "srt";
+      const select = p.select === "none" ? "none" : "primary";
+      const title = typeof p.title === "string" ? p.title : null;
+      if (title !== null && ([...title].length < 1 || [...title].length > 200))
+        throw new HostError(
+          "invalid",
+          "subtitle title needs 1..200 characters",
+        );
+      const bytes = Buffer.concat(upload.bytes);
+      if (
+        format === "ass" &&
+        !(
+          /\[Script Info\]/i.test(bytes.toString()) &&
+          /\[Events\]/i.test(bytes.toString())
+        )
+      )
+        throw new HostError(
+          "invalid",
+          "ASS requires [Script Info] and [Events] sections",
+        );
       this.#subtitleChange(p.expected!);
       const target = {
         kind: "external" as const,
@@ -768,12 +966,16 @@ export class TestHost implements Transport {
       };
       this.subtitles.tracks.push({
         target,
-        title: "外部 SRT",
+        title: title ?? (format === "ass" ? "外部 ASS" : "外部 SRT"),
         language: null,
         styleSupported: true,
         styleReason: null,
+        codec: format === "ass" ? "ass" : "webvtt",
+        text: true,
+        streamIndex: null,
       });
-      this.subtitles.selection.target = target;
+      if (select === "primary") this.subtitles.selection.target = target;
+      this.subtitleLoads.push({ format, title, select, bytes });
       this.uploads.delete(Number(p.uploadId));
       return structuredClone(this.subtitles);
     },

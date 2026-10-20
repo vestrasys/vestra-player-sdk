@@ -39,6 +39,14 @@ export interface Scope extends Disposable {
   readonly resolvers: Resolvers;
   readonly packages: Packages;
   readonly osd: Osd;
+  readonly clipboard: Clipboard;
+  readonly power: Power;
+  /** ffmpeg / ffprobe, run by this plugin's process. */
+  readonly tools: Tools;
+  /** JSON settings files in `dataDirectory`. */
+  readonly storage: Storage;
+  /** Show or open files with the Finder. */
+  readonly system: System;
   /** A child scope; disposing it releases only what was created through it. */
   scope(): Scope;
   /** Adopt an existing handle or a cleanup function. */
@@ -383,17 +391,41 @@ export interface PlaybackStats {
   /** Frames the host has shown. */
   framesShown: number;
   framesDropped: number | null;
+  /** Every field is the backend's own value, `null` when it has none. */
   video: {
     codec: string | null;
     width: number | null;
     height: number | null;
     fps: number | null;
+    /** Short decoder name, e.g. "h264". */
+    decoder: string | null;
+    /** e.g. "yuv420p". */
+    pixelFormat: string | null;
+    /** Colour matrix, e.g. "bt.709". */
+    colorspace: string | null;
+    /** Size after aspect correction and filters. */
+    displayWidth: number | null;
+    displayHeight: number | null;
+    /** Measured display refresh; only with display-synced output (usually null). */
+    displayFps: number | null;
+    /** Bits per second, updated per keyframe. */
+    bitrate: number | null;
   } | null;
   audio: {
     codec: string | null;
     sampleRate: number | null;
     channels: number | null;
+    decoder: string | null;
+    /** Sample format, e.g. "floatp". */
+    format: string | null;
+    /** Readable layout, e.g. "stereo", "5.1(side)". */
+    channelLayout: string | null;
+    bitrate: number | null;
   } | null;
+  /** Last audio/video difference in milliseconds (signed). */
+  avSyncMs: number | null;
+  /** Seconds of media buffered ahead by the demuxer. */
+  cacheSeconds: number | null;
 }
 
 export interface Player {
@@ -435,6 +467,18 @@ export interface Player {
   previous(): Promise<void>;
   /** Codec, size, frame counts and backend of the current playback. */
   stats(): Promise<PlaybackStats>;
+  /**
+   * Add an external audio file (absolute local path) to the current media and,
+   * unless `select: false`, select it. Resolves with the new track (`external`,
+   * not exportable). It stays until the source changes. Rejects `invalid` for a
+   * bad path, `unavailable` without ready media, `backend` when it cannot load.
+   */
+  addAudioTrack(
+    path: string,
+    options?: { select?: boolean } & Conditional,
+  ): Promise<AudioTrack>;
+  /** Select one of `state.audioTracks` by id; `invalid` for an unknown id. */
+  selectAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
 }
 
 // ---------------------------------------------------------------- on-screen display
@@ -491,6 +535,15 @@ export interface SubtitleTrack {
   styleReason: string | null;
   /** Loaded by this plugin, so `remove()` may delete it. */
   owned: boolean;
+  /** The backend's codec name, e.g. "subrip", "ass", "hdmv_pgs_subtitle". */
+  codec: string | null;
+  /** Text cues (subrip, ass, ssa, webvtt, mov_text, text), not bitmaps. */
+  text: boolean;
+  /**
+   * The container stream number (`ffmpeg -map 0:<n>`) of an embedded track,
+   * when the player can vouch for it; `null` for external tracks and network sources.
+   */
+  streamIndex: number | null;
 }
 
 export interface SubtitlesState {
@@ -521,13 +574,20 @@ export interface Subtitles {
     options?: SubtitleConditional,
   ): Promise<SubtitlesState>;
   /**
-   * Upload an SRT file's bytes for the current source and select it. Aborting
+   * Upload a subtitle file's bytes (UTF-8 SRT, or ASS/SSA with
+   * `format: "ass"`) for the current source; select it unless
+   * `select: "none"`. `title` (1–200 characters) names the track. Aborting
    * `signal` before the commit discards the upload (rejects with AbortError);
    * once the commit was sent it completes.
    */
   load(
-    srt: Uint8Array,
-    options?: SubtitleConditional & { signal?: AbortSignal },
+    bytes: Uint8Array,
+    options?: SubtitleConditional & {
+      format?: "srt" | "ass";
+      title?: string;
+      select?: "primary" | "none";
+      signal?: AbortSignal;
+    },
   ): Promise<SubtitleTrack>;
   /** Remove a track this plugin loaded. */
   remove(
@@ -657,4 +717,81 @@ export interface PackageChange {
 export interface Packages {
   validate(directory: string): Promise<PackageCandidate>;
   rollback(id: string): Promise<PackageChange>;
+}
+
+// ---------------------------------------------------------------- shared services
+
+/** The system clipboard (`clipboard`). Unavailable without a user interface. */
+export interface Clipboard {
+  /** Plain text on the clipboard; `null` when it holds none. */
+  readText(): Promise<string | null>;
+  /** Replace the clipboard with text (at most 1 MiB of UTF-8). */
+  writeText(text: string): Promise<void>;
+  /** Replace the clipboard with a PNG or JPEG file (absolute path, at most 16 MB). */
+  writeImage(path: string): Promise<void>;
+}
+
+/** Keeping the computer awake (`playback.control`). */
+export interface Power {
+  /**
+   * `"playing"`: while a source is ready and not paused, keep the display
+   * (video) or the system (audio only) from sleeping. Any plugin asking is
+   * enough; a stopped plugin's request is withdrawn.
+   */
+  preventSleep(mode: "off" | "playing"): Promise<void>;
+}
+
+export interface ToolResult {
+  stdout: Uint8Array;
+  stderr: string;
+}
+
+export interface Tools {
+  /**
+   * Run ffmpeg or ffprobe (found through `VESTRA_FFMPEG` / `VESTRA_FFPROBE`,
+   * then `PATH`) without a shell. Rejects `unavailable` (not found), `timeout`,
+   * `failed` (non-zero exit; `message` is the last stderr line), `invalid`
+   * (output over `maxOutput`, default 16 MiB), `aborted` (`signal`). Timeout,
+   * `signal` and disposing the scope end the process.
+   */
+  run(
+    tool: "ffmpeg" | "ffprobe",
+    args: string[],
+    options: { timeoutMs: number; maxOutput?: number; signal?: AbortSignal },
+  ): Promise<ToolResult>;
+  available(tool: "ffmpeg" | "ffprobe"): Promise<boolean>;
+}
+
+/** A JSON file `dataDirectory/<name>.json`, loaded once and saved debounced. */
+export interface JsonStore<T> extends Disposable {
+  /** The loaded value, or `defaults` when the file was missing or broken. */
+  readonly value: T;
+  /** Replace the value now and write it after `debounceMs`. */
+  save(next: T): void;
+  /** Write a pending save now. */
+  flush(): Promise<void>;
+}
+
+export interface Storage {
+  /**
+   * Open `<name>.json` (`name`: 1–64 of `a-z 0-9 -`). A file that cannot be
+   * parsed or fails `validate` is renamed `<name>.json.bad-<timestamp>` and
+   * `defaults` is used. Writes go to a temporary file, then a rename. Disposal
+   * (and stopping the plugin) flushes first.
+   */
+  json<T>(
+    name: string,
+    options: {
+      defaults: T;
+      validate?: (value: unknown) => value is T;
+      debounceMs?: number;
+    },
+  ): JsonStore<T>;
+}
+
+export interface System {
+  /** Select the file or folder in a Finder window. `missing` if it does not exist. */
+  reveal(path: string): Promise<void>;
+  /** Open the file or folder with its default application. `missing` if absent. */
+  openPath(path: string): Promise<void>;
 }

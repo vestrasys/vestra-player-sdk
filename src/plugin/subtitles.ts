@@ -108,6 +108,9 @@ class SubtitleService {
         owned:
           track.target.kind === "external" &&
           this.owned.has(track.target.resourceId),
+        codec: track.codec ?? null,
+        text: track.text ?? false,
+        streamIndex: track.streamIndex ?? null,
       });
       targets.set(info, track.target);
       return info;
@@ -223,6 +226,20 @@ export function subtitles(scope: ScopeImpl): Subtitles {
       return service().mutate((id) => host().select(chosen, expected, id));
     },
     async load(srt, options) {
+      const format = options?.format ?? "srt";
+      if (format !== "srt" && format !== "ass")
+        throw failure("invalid", "format must be srt or ass");
+      const select = options?.select ?? "primary";
+      if (select !== "primary" && select !== "none")
+        throw failure("invalid", 'select must be "primary" or "none"');
+      const title = options?.title;
+      if (
+        title !== undefined &&
+        (typeof title !== "string" ||
+          [...title].length < 1 ||
+          [...title].length > 200)
+      )
+        throw failure("invalid", "title needs 1–200 characters");
       const svc = service();
       const current = await svc.refresh();
       const expected = await svc.expected(options);
@@ -254,6 +271,10 @@ export function subtitles(scope: ScopeImpl): Subtitles {
             revision: 1,
             sha256,
             expected,
+            // Defaults are left out: the request stays what older hosts accept.
+            ...(format !== "srt" ? { format } : {}),
+            ...(title !== undefined ? { title } : {}),
+            ...(select !== "primary" ? { select } : {}),
           }),
         );
         const loaded = state.tracks.find(

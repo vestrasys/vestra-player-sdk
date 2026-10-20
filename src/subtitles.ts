@@ -19,6 +19,13 @@ export type SubtitleStyle = {
   outline: number;
   marginPercent: number;
   offsetMs: number;
+  bold?: boolean;
+  /** Shadow offset 0–4 at the 1080p reference height. */
+  shadow?: number;
+  /** Background box opacity 0–100; `null` or omitted: no box (the shadow applies). */
+  box?: number | null;
+  /** `keep` (default): ASS scripts keep their own styling; `force`: this style replaces it. */
+  assOverride?: "keep" | "force";
 };
 export interface SubtitleState {
   presentation: {
@@ -66,16 +73,20 @@ export interface SubtitleState {
     language: string | null;
     styleSupported: boolean;
     styleReason: string | null;
+    // Round 2; optional so older test fixtures still type-check.
+    codec?: string | null;
+    text?: boolean;
+    streamIndex?: number | null;
   }[];
   resources: {
     owner: number;
     resourceId: string;
     revision: number;
-    format: "srt";
+    format: "srt" | "ass";
     digest: string;
     sizeBytes: number;
     cues: number;
-    derived: { format: "webvtt"; digest: string };
+    derived: { format: "webvtt" | "ass"; digest: string };
   }[];
 }
 export interface SubtitleUpload {
@@ -123,6 +134,9 @@ export function subtitleClient(transport: Transport) {
       revision: number;
       expected: SubtitleStamp;
       inputOrigin?: SubtitleTrack;
+      format?: "srt" | "ass";
+      title?: string;
+      select?: "primary" | "none";
     }) => transport.request<SubtitleState>("subtitles.commit", options),
     select: (
       target: SubtitleTrack | null,

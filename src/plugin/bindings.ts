@@ -26,6 +26,14 @@ const NAMED = new Set([
   "ArrowUp",
   "ArrowDown",
   "Plus",
+  // Numeric keypad: never matched by the main keyboard keys, nor they by these.
+  ..."0123456789".split("").map((digit) => `Numpad${digit}`),
+  "NumpadPlus",
+  "NumpadMinus",
+  "NumpadMultiply",
+  "NumpadDivide",
+  "NumpadEnter",
+  "NumpadDecimal",
 ]);
 const MOUSE = new Set([
   "LeftDoubleClick",

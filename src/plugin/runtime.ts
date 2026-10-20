@@ -1,6 +1,12 @@
 /** Shared machinery behind every scope: invocation, update passes, events. */
 import { createWire, HostError } from "../wire.ts";
-import type { Json, Transport, UiCallback, Wire } from "../wire.ts";
+import type {
+  Json,
+  LocalServices,
+  Transport,
+  UiCallback,
+  Wire,
+} from "../wire.ts";
 import type { Disposable, PluginError } from "./types.ts";
 
 export interface PluginManifest {
@@ -96,6 +102,8 @@ export class Runtime {
   readonly directory: string;
   /** Writable per-plugin data directory from the host, if it provided one. */
   readonly dataDirectory: string | undefined;
+  /** Test doubles for local processes; the real system when absent. */
+  readonly local: LocalServices | undefined;
   /** Registrations that activation must wait for before reporting ready. */
   readonly startup = new Set<Promise<unknown>>();
   #activating = true;
@@ -117,6 +125,7 @@ export class Runtime {
   ) {
     this.#transport = transport;
     this.dataDirectory = dataDirectory;
+    this.local = transport.local;
     this.host = createWire(transport);
     this.manifest = manifest;
     this.directory = directory;
