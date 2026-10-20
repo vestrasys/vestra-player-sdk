@@ -132,3 +132,38 @@ test("core actions: the core table with its bindings, states and conflicts", asy
   void plugin;
   await stop();
 });
+
+test("frame steps: separate directions and B07 reasons", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { stop } = await started(host);
+  const reason = (id: string) => host.coreAction(id).state.reason;
+  host.setSource({ hasVideo: false });
+  assert.equal(reason("frame-forward"), "没有视频");
+  assert.equal(reason("frame-back"), "没有视频");
+  host.setSource({
+    hasVideo: true,
+    capabilities: {
+      pause: true,
+      seek: false,
+      rate: true,
+      restart: true,
+      close: true,
+      snapshotSource: false,
+    },
+  });
+  assert.equal(
+    host.coreAction("frame-forward").state.enabled,
+    true,
+    "a live stream steps forward",
+  );
+  assert.equal(reason("frame-back"), "当前来源不支持逐帧后退");
+  host.setSource({ phase: "ended" });
+  assert.equal(host.coreAction("frame-forward").state.enabled, false);
+  assert.equal(
+    host.coreAction("frame-back").state.enabled,
+    true,
+    "after the end, back works",
+  );
+  await stop();
+});

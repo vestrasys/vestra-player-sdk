@@ -44,6 +44,8 @@ export interface FakeWindow {
   callbacks: string[];
   /** Fire a Slint callback (kebab or camelCase name). */
   emit(callback: string, ...args: Json[]): void;
+  /** The user closes it with the title-bar button (`window.onClose`). */
+  userClose(): void;
 }
 
 export interface FakeCommand {
@@ -114,7 +116,7 @@ export class TestHost implements Transport {
   source: SourceState = initialSource();
   readonly windows = new Map<string, FakeWindow>();
   panel:
-    | (Omit<FakeWindow, "callbacks"> & {
+    | (Omit<FakeWindow, "callbacks" | "userClose"> & {
         slot: string;
         component: string;
         locks: Json;
@@ -338,8 +340,19 @@ export class TestHost implements Transport {
       step: s.capabilities.seek && ready && s.position !== null,
       rate: s.capabilities.rate && ready,
       close: s.capabilities.close && s.phase !== "empty",
-      frame: ready && s.kind === "media" && s.hasVideo !== false,
     };
+  }
+  /** Why one frame that way is impossible (B07), or null; the player's rules. */
+  #frameCheck(forward: boolean): string | null {
+    const s = this.source;
+    const unsupported = "当前来源不支持此操作";
+    const noBack = "当前来源不支持逐帧后退";
+    if (s.phase !== "ready" && s.phase !== "ended") return unsupported;
+    if (s.kind !== "media") return forward ? unsupported : noBack;
+    if (s.hasVideo === false) return "没有视频";
+    if (forward && s.phase !== "ready") return unsupported;
+    if (!forward && !s.capabilities.seek) return noBack;
+    return null;
   }
   /** The same enabled rules and reasons as the player's core actions. */
   #coreState(action: string) {
@@ -351,8 +364,16 @@ export class TestHost implements Transport {
       stop: [f.close, null, unsupported],
       previous: [!!this.sequence?.canPrevious, null, "没有上一个"],
       next: [!!this.sequence?.canNext, null, "没有下一个"],
-      "frame-back": [f.frame, null, unsupported],
-      "frame-forward": [f.frame, null, unsupported],
+      "frame-back": [
+        !this.#frameCheck(false),
+        null,
+        this.#frameCheck(false) ?? unsupported,
+      ],
+      "frame-forward": [
+        !this.#frameCheck(true),
+        null,
+        this.#frameCheck(true) ?? unsupported,
+      ],
       "seek-backward": [f.step, null, unsupported],
       "seek-forward": [f.step, null, unsupported],
       "rate-normal": [f.rate, s.rate === 1, unsupported],
@@ -869,6 +890,10 @@ export class TestHost implements Transport {
         visible: true,
         props: { ...(p.properties as Record<string, Json>) },
         callbacks: p.callbacks as string[],
+        userClose() {
+          host.windows.delete(id);
+          host.emit("ui.closed", { view: id });
+        },
         emit(callback, ...args) {
           const name = kebab(callback);
           if (!this.callbacks.includes(name))
@@ -1045,8 +1070,14 @@ export class TestHost implements Transport {
     },
     "player.step": (p) => {
       this.#audioCondition(p.expected);
-      if (!this.#facts().frame)
-        throw new HostError("unsupported", "this source cannot step");
+      const s = this.source;
+      const reason =
+        p.unit === "keyframe"
+          ? s.phase === "ready" && s.capabilities.seek && s.hasVideo !== false
+            ? null
+            : "当前来源不支持此操作"
+          : this.#frameCheck(p.direction === "forward");
+      if (reason) throw new HostError("unsupported", reason);
       this.steps.push({ unit: String(p.unit), direction: String(p.direction) });
     },
     "power.preventSleep": (p) => {

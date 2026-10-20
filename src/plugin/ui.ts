@@ -182,7 +182,24 @@ class WindowHandle extends ViewBase implements Window {
     scope.runtime.views.set(id, (callback, args) =>
       this.dispatch(callback, args),
     );
+    // The user closed it with the title bar: the host already dropped it.
+    this.#closedByUser = scope.runtime.raw("ui.closed", (data) => {
+      if ((data as { view?: string }).view !== this.#id || !this.#opened)
+        return;
+      this.#opened = false;
+      for (const listener of [...this.#closeListeners])
+        this.scope.run(listener);
+      this.scope.update();
+    });
     scope.add(this);
+  }
+  readonly #closeListeners = new Set<() => unknown>();
+  readonly #closedByUser: Disposable;
+  onClose(listener: () => unknown): Disposable {
+    this.#closeListeners.add(listener);
+    return this.scope.onDispose(() => {
+      this.#closeListeners.delete(listener);
+    });
   }
   get opened() {
     return this.#opened;
@@ -236,6 +253,8 @@ class WindowHandle extends ViewBase implements Window {
     this.scope.forget(this);
     await this.close().catch(() => {});
     await this.release();
+    await this.#closedByUser.dispose();
+    this.#closeListeners.clear();
     this.scope.runtime.views.delete(this.#id);
   }
 }

@@ -3,7 +3,7 @@
  * tools, settings files and the Finder run in this plugin's own process.
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
-import { mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { failure } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
@@ -182,7 +182,9 @@ class Store<T> implements JsonStore<T> {
       .then(async () => {
         const temporary = `${this.#path}.tmp-${process.pid}`;
         await mkdir(join(this.#path, ".."), { recursive: true });
-        await writeFile(temporary, text);
+        // Owner-only: settings can hold private paths and history.
+        await writeFile(temporary, text, { mode: 0o600 });
+        await chmod(temporary, 0o600);
         await rename(temporary, this.#path);
       });
     return this.#writing;

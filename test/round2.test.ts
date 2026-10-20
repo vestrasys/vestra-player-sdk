@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -425,6 +426,46 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
   } finally {
     rmSync(data, { recursive: true, force: true });
   }
+});
+
+test("storage files are owner-only (0600)", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  const store = plugin.storage.json("history", {
+    defaults: { recent: [] as string[] },
+  });
+  store.save({ recent: ["/Users/me/private.mkv"] });
+  await store.flush();
+  assert.equal(
+    statSync(join(host.dataDirectory, "history.json")).mode & 0o777,
+    0o600,
+  );
+  await stop();
+});
+
+test("a window the user closed reports onClose, is no longer opened, and reopens fresh", async () => {
+  const host = new TestHost();
+  let plugin!: Plugin;
+  const { stop } = await startPlugin((p: Plugin) => void (plugin = p), {
+    capabilities: ["ui.window"],
+    host,
+  });
+  const window = plugin.windows.create("info.slint");
+  let closed = 0;
+  window.onClose(() => closed++);
+  window.bind(() => ({ title: "播放属性" }));
+  await window.show();
+  host.window("info").userClose();
+  await host.settle();
+  assert.equal(closed, 1);
+  assert.equal(window.opened, false);
+  await window.show();
+  assert.equal(window.opened, true);
+  assert.equal(host.window("info").props.title, "播放属性");
+  assert.equal(host.sent("ui.open").length, 2);
+  await window.close();
+  assert.equal(closed, 1, "close() is not a user close");
+  await stop();
 });
 
 test("system: reveal and open existing paths; missing ones are refused", async () => {

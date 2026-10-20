@@ -181,7 +181,13 @@ export interface Window extends View, Disposable {
   hide(): Promise<void>;
   /** Close it; a later `show()` opens a fresh instance with the current properties. */
   close(): Promise<void>;
+  /** False before the first `show()`, after `close()`, and after the user closed it. */
   readonly opened: boolean;
+  /**
+   * The user closed the window (title-bar button). `opened` is already
+   * false; a later `show()` opens a fresh instance. Not called for `close()`.
+   */
+  onClose(listener: () => unknown): Disposable;
 }
 
 export interface Windows {
