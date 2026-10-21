@@ -28,4 +28,7 @@ jobs:
       - run: npm run format:check
       - run: npm run build
       - run: npm test
+      # API documentation: fails on undocumented exports and broken links.
+      - run: npm run docs
+        if: matrix.os == 'ubuntu-latest'
       - run: npm pack --dry-run

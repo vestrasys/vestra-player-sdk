@@ -1,0 +1,41 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "@vestra-player/sdk",
+  "entryPoints": ["src/index.ts", "src/plugin/testing.ts"],
+  "tsconfig": "tsconfig.json",
+  "out": "docs-site",
+  "readme": "README.md",
+  "projectDocuments": ["docs/getting-started.md"],
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "navigationLinks": {
+    "GitHub": "https://github.com/vestrasys/vestra-player-sdk",
+    "npm": "https://www.npmjs.com/package/@vestra-player/sdk"
+  },
+  "intentionallyNotExported": [
+    "Filter",
+    "MediaJob",
+    "ResolvedResource",
+    "Transport",
+    "Call",
+    "Handler",
+    "SourceState",
+    "PlaybackStats",
+    "SubtitleState",
+    "WireSystemInfo",
+    "CommandDeclaration",
+    "LayoutSlot"
+  ],
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "rewrittenLink": true,
+    "notDocumented": true,
+    "unusedMergeModuleWith": true
+  },
+  "treatWarningsAsErrors": true,
+  "treatValidationWarningsAsErrors": true,
+  "ignoredHighlightLanguages": ["slint"]
+}
