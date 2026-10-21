@@ -9,7 +9,7 @@
  *   await host.settle();
  */
 import { readFileSync } from "node:fs";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:net";
 import type { Server } from "node:net";
 import { tmpdir } from "node:os";
@@ -292,6 +292,90 @@ export class TestHost implements Transport {
           ref: Number((value as { ref?: number }).ref),
         });
     }
+  }
+  // ------------------------------------------------------------ round 3b batch 2
+
+  /** `drops.provide` registrations of this plugin, in order (`id` is the SDK's). */
+  readonly dropProviders: { id: string; extensions: string[] }[] = [];
+  /** The panel has an `onDrop` listener. */
+  panelDrops = false;
+  /**
+   * Drop files like the player: on a panel with an `onDrop` listener the
+   * whole list goes there; otherwise (and on the video area) grouped by
+   * extension to the first provider (`folder` for existing directories).
+   */
+  drop(
+    paths: string[],
+    options: {
+      target?: "video" | "panel";
+      at?: { x: number; y: number };
+      modifiers?: Partial<{ alt: boolean; shift: boolean; cmd: boolean }>;
+    } = {},
+  ) {
+    const modifiers = {
+      alt: false,
+      shift: false,
+      cmd: false,
+      ...options.modifiers,
+    };
+    if (options.target === "panel" && this.panelDrops) {
+      this.emit("drops.panel", {
+        paths,
+        at: options.at ?? { x: 0, y: 0 },
+        modifiers,
+      });
+      return this.settle();
+    }
+    const groups = new Map<string, string[]>();
+    for (const path of paths) {
+      const kind = statSync(path, { throwIfNoEntry: false })?.isDirectory()
+        ? "folder"
+        : (/\.([^./]+)$/.exec(path)?.[1]?.toLowerCase() ?? "");
+      const provider = this.dropProviders.find((p) =>
+        p.extensions.includes(kind),
+      );
+      if (provider)
+        groups.set(provider.id, [...(groups.get(provider.id) ?? []), path]);
+    }
+    for (const [id, group] of groups)
+      this.emit("drops.drop", { id, paths: group, modifiers });
+    return this.settle();
+  }
+  /** The palette (`plugin.appearance.theme`); `setAppearance` changes it elsewhere. */
+  appearance: "vestra" | "potplayer" = "vestra";
+  /** Another plugin switched the palette: pushed as `appearance.changed`. */
+  setAppearance(theme: "vestra" | "potplayer") {
+    this.appearance = theme;
+    this.emit("appearance.changed", { theme });
+  }
+  /**
+   * Settings pages by id (`plugin.settings.page`), every `show` (page id or
+   * null), and the page the options window shows.
+   */
+  readonly settings = {
+    pages: new Map<
+      string,
+      {
+        category: string;
+        title: string;
+        order: number;
+        file: string;
+        component: string;
+        global: string;
+        props: Record<string, Json>;
+        /** Fire one of the page's callbacks. */
+        emit(callback: string, ...args: Json[]): void;
+      }
+    >(),
+    shows: [] as (string | null)[],
+    current: null as string | null,
+    open: false,
+  };
+  /** One settings page (throws when it was never registered). */
+  settingsPage(id: string) {
+    const page = this.settings.pages.get(id);
+    if (!page) throw new Error(`settings page ${id} is not registered`);
+    return page;
   }
   /** The backdrop: who mounted it and whether it shows (`panels.backdrop.state`). */
   backdrop: { owner: string; effective: boolean } | null = null;
@@ -734,6 +818,7 @@ export class TestHost implements Transport {
         "playback.backend",
         "window.state",
         "timeline.changed",
+        "appearance.changed",
       ].includes(event) &&
       !this.subscriptions.has(event)
     )
@@ -770,6 +855,7 @@ export class TestHost implements Transport {
     return {
       fullscreen: this.mainWindow.fullscreen,
       videoArea: { ...this.mainWindow.videoArea },
+      appearance: this.appearance,
     };
   }
   /** Simulate another plugin opening a source. */
@@ -1330,6 +1416,70 @@ export class TestHost implements Transport {
       this.mounted().props[String(p.property)] = p.value!;
     },
     "timeline.marks": () => ({ marks: this.timeline.marks }),
+    "drops.provide": (p) => {
+      const id = String(p.id);
+      const index = this.dropProviders.findIndex((d) => d.id === id);
+      if (index >= 0) this.dropProviders.splice(index, 1);
+      this.dropProviders.push({ id, extensions: p.extensions as string[] });
+    },
+    "drops.withdraw": (p) => {
+      const index = this.dropProviders.findIndex((d) => d.id === String(p.id));
+      if (index >= 0) this.dropProviders.splice(index, 1);
+    },
+    "drops.listen": (p) => void (this.panelDrops = p.listen === true),
+    "appearance.set": (p) => {
+      if (p.theme !== "vestra" && p.theme !== "potplayer")
+        throw new HostError("invalid", "theme is vestra or potplayer");
+      if (p.theme !== this.appearance) this.setAppearance(p.theme);
+    },
+    "settings.register": (p) => {
+      const id = String(p.id);
+      if (this.settings.pages.has(id))
+        throw new HostError("invalid", `page ${id} already exists`);
+      if (this.settings.pages.size >= 8)
+        throw new HostError("invalid", "a plugin has at most 8 settings pages");
+      this.#seeImages(p.properties as Record<string, Json>);
+      const host = this;
+      this.settings.pages.set(id, {
+        category: String(p.category),
+        title: String(p.title),
+        order: Number(p.order ?? 0),
+        file: String(p.file),
+        component: String(p.component),
+        global: String(p.global),
+        props: { ...(p.properties as Record<string, Json>) },
+        emit(callback, ...args) {
+          host.emit("ui.callback", {
+            view: `$settings:${id}`,
+            callback: kebab(callback),
+            args,
+          });
+        },
+      });
+    },
+    "settings.set": (p) => {
+      const page = this.settings.pages.get(String(p.id));
+      if (!page) throw new HostError("missing", "page not registered");
+      this.#seeImages([p.value!]);
+      page.props[String(p.property)] = p.value!;
+    },
+    "settings.unregister": (p) => {
+      this.settings.pages.delete(String(p.id));
+      if (this.settings.current === String(p.id))
+        this.settings.current = [...this.settings.pages.keys()][0] ?? null;
+    },
+    "settings.show": (p) => {
+      const id = p.id === undefined ? null : String(p.id);
+      if (id !== null && !this.settings.pages.has(id))
+        throw new HostError("invalid", "not a settings page of this plugin");
+      this.settings.shows.push(id);
+      this.settings.open = true;
+      this.settings.current =
+        id ??
+        (this.settings.current && this.settings.pages.has(this.settings.current)
+          ? this.settings.current
+          : ([...this.settings.pages.keys()][0] ?? null));
+    },
     "timeline.set": (p) => {
       if (
         p.sourceId !== undefined &&

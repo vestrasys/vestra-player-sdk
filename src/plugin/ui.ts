@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { failure, Latest, quiet } from "./runtime.ts";
+import { dropsOf } from "./drops.ts";
 import type { Json } from "../wire.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
@@ -76,8 +77,8 @@ export const ui = (scope: ScopeImpl): Ui => ({
   },
 });
 
-/** Property and callback plumbing shared by windows and panels. */
-abstract class ViewBase implements View {
+/** Property and callback plumbing shared by windows, panels and settings pages. */
+export abstract class ViewBase implements View {
   protected readonly scope: ScopeImpl;
   protected readonly handlers = new Map<string, (...args: Json[]) => unknown>();
   readonly #values = new Map<string, PropValue>();
@@ -325,7 +326,7 @@ class WindowHandle extends ViewBase implements Window {
 }
 
 /** Find `export component X` / `export global Y` so most mounts need no names. */
-function exported(directory: string, file: string, kind: string) {
+export function exported(directory: string, file: string, kind: string) {
   const text = readFileSync(resolve(directory, file), "utf8");
   const names = [
     ...text.matchAll(new RegExp(`export\\s+${kind}\\s+([\\w-]+)`, "g")),
@@ -403,6 +404,12 @@ class PanelHandle extends ViewBase implements Panel {
       at.x,
       at.y,
     );
+  }
+  onDrop(listener: Parameters<Panel["onDrop"]>[0]) {
+    const watch = dropsOf(this.scope.runtime).listen(this.scope, (event) =>
+      this.scope.run(listener, event),
+    );
+    return this.scope.add({ dispose: () => watch.dispose() });
   }
   setInteraction(locks: Partial<Locks>) {
     Object.assign(this.#locks, locks);

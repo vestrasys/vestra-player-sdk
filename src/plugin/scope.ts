@@ -5,6 +5,9 @@ import type { Disposable, Plugin, PluginError, Scope } from "./types.ts";
 import { commands } from "./commands.ts";
 import { dialogs, panels, ui, windows } from "./ui.ts";
 import { timeline } from "./timeline.ts";
+import { drops } from "./drops.ts";
+import { appearance } from "./appearance.ts";
+import { settings } from "./settings.ts";
 import { player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { subtitles } from "./subtitles.ts";
@@ -60,6 +63,9 @@ export class ScopeImpl implements Plugin {
   readonly bindings = bindingsApi(this);
   readonly ui = ui(this);
   readonly timeline = timeline(this);
+  readonly drops = drops(this);
+  readonly appearance = appearance(this);
+  readonly settings = settings(this);
   get app() {
     return this.runtime.app;
   }
