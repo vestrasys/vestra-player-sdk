@@ -1,5 +1,5 @@
 /**
- * Wire clients for the `vestra.experimental/0.1` JSON-RPC protocol. Internal to
+ * Wire clients for the `vestra/1` JSON-RPC protocol. Internal to
  * SDK v2 (`sdk/plugin/`): plugins never receive these objects. Each method maps
  * one call to one request and adds nothing; revisions, operation ids,
  * conditional stamps and recovery live in `sdk/plugin/`.
@@ -18,7 +18,7 @@ export type {
   SourceResolverDeclaration,
 } from "./source-resolvers.ts";
 /** Working contract. Trusted plugin runtime, not a permissions sandbox. */
-export const API_VERSION = "vestra.experimental/0.1" as const;
+export const API_VERSION = "vestra/1" as const;
 export type Json =
   null | boolean | number | string | Json[] | { [key: string]: Json };
 export interface PluginInfo {
