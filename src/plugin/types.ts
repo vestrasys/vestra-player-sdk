@@ -40,6 +40,11 @@ export interface Scope extends Disposable {
      * owner disposes or stops. A second call in the same plugin throws.
      */
     view(): VideoView;
+    /**
+     * The GPU renderer's options (needs `processing.video`), owned like the
+     * display layer. `failed` with `unsupported` under software rendering.
+     */
+    render(): RenderOptions;
   };
   readonly audio: { filter(id: string): AudioFilter };
   readonly subtitles: Subtitles;
@@ -705,7 +710,7 @@ export interface SequenceProvider {
 }
 
 export interface PlaybackStats {
-  /** For example "libmpv · 软件渲染". */
+  /** "libmpv · GPU 渲染（OpenGL）" or "libmpv · 软件渲染". */
   backend: string;
   session: number;
   /** Frames the host has shown. */
@@ -730,6 +735,10 @@ export interface PlaybackStats {
     displayFps: number | null;
     /** Bits per second, updated per keyframe. */
     bitrate: number | null;
+    /** Hardware decoder in use, e.g. "videotoolbox"; "no" = software decoding. */
+    hwdec: string | null;
+    /** Transfer characteristic as mpv names it, e.g. "bt.1886", "pq", "hlg". */
+    transfer: string | null;
   } | null;
   audio: {
     codec: string | null;
@@ -923,6 +932,31 @@ export interface ViewSettings {
 export interface VideoView extends Disposable {
   /** Merged into the current settings; last write wins. */
   set(value: Partial<ViewSettings>): void;
+  readonly status: FilterStatus;
+  onStatus(listener: (status: FilterStatus) => void): Disposable;
+}
+
+/** GPU renderer options; not part of snapshots or exports. */
+export interface RenderSettings {
+  /** HDR → SDR: "auto" maps HDR sources only; "off" clips without a curve. */
+  toneMapping:
+    "auto" | "off" | "bt.2390" | "hable" | "mobius" | "reinhard" | "clip";
+  /** SDR display brightness in nits, 100–400. */
+  targetPeak: number;
+  /** Per-scene peak estimation (where the GPU supports it). */
+  peakDetect: boolean;
+  /** mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. */
+  shaders: string[];
+  /** Motion interpolation, resampled to the display's refresh rate. */
+  interpolation: boolean;
+}
+export interface RenderOptions extends Disposable {
+  /** Merged into the current settings; last write wins. */
+  set(value: Partial<RenderSettings>): void;
+  /**
+   * `failed` with `unsupported` while the player renders in software;
+   * `failed` with `failed` when mpv cannot compile a shader (pushed later).
+   */
   readonly status: FilterStatus;
   onStatus(listener: (status: FilterStatus) => void): Disposable;
 }

@@ -156,6 +156,8 @@ export interface PlaybackStats {
     displayHeight?: number | null;
     displayFps?: number | null;
     bitrate?: number | null;
+    hwdec?: string | null;
+    transfer?: string | null;
   } | null;
   audio: {
     codec: string | null;
@@ -315,6 +317,19 @@ export function createWire(transport: Transport) {
           values,
         }),
       viewRelease: () => transport.request<void>("video.view.release"),
+      /** The GPU renderer's options (`plugin.video.render()`). */
+      renderSet: (values: {
+        toneMapping: string;
+        targetPeak: number;
+        peakDetect: boolean;
+        shaders: string[];
+        interpolation: boolean;
+      }) =>
+        transport.request<{ state: "applied" | "waiting" }>(
+          "video.render.set",
+          { values },
+        ),
+      renderRelease: () => transport.request<void>("video.render.release"),
     },
     /** Mark layers on the seek bar (`plugin.timeline`). */
     timeline: {

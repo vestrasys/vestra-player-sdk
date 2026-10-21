@@ -8,7 +8,7 @@
  *   host.window("picture").emit("adjust", "brightness", 40);
  *   await host.settle();
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:net";
 import type { Server } from "node:net";
@@ -29,8 +29,13 @@ import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
 import { nodeProblem } from "../processing.ts";
-import { VIEW_DEFAULTS, viewProblem } from "./view.ts";
-import type { ViewSettings } from "./types.ts";
+import {
+  RENDER_DEFAULTS,
+  renderProblem,
+  VIEW_DEFAULTS,
+  viewProblem,
+} from "./view.ts";
+import type { RenderSettings, ViewSettings } from "./types.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
 import type { Plugin } from "./types.ts";
@@ -397,6 +402,34 @@ export class TestHost implements Transport {
   setVideoViewOwner(pluginId: string | null) {
     this.videoView.owner = pluginId;
     if (pluginId === null) this.videoView.values = { ...VIEW_DEFAULTS };
+  }
+  /**
+   * The render options (`plugin.video.render()`): who owns them, the values
+   * the player holds, and whether it renders on the GPU (`gpu: false` is
+   * software rendering, where every `set` fails with `unsupported`).
+   */
+  readonly videoRender: {
+    owner: string | null;
+    values: RenderSettings;
+    gpu: boolean;
+  } = { owner: null, values: { ...RENDER_DEFAULTS, shaders: [] }, gpu: true };
+  /** Another plugin took (or, with `null`, released) the render options. */
+  setVideoRenderOwner(pluginId: string | null) {
+    this.videoRender.owner = pluginId;
+    if (pluginId === null)
+      this.videoRender.values = { ...RENDER_DEFAULTS, shaders: [] };
+  }
+  /**
+   * What the player pushes when mpv cannot compile a shader (code `failed`)
+   * or switches to software rendering (`unsupported`); only to the owner.
+   */
+  failVideoRender(code: "failed" | "unsupported", message: string) {
+    if (code === "unsupported") this.videoRender.gpu = false;
+    if (this.videoRender.owner === this.manifestId)
+      this.emit("video.render.status", {
+        state: "failed",
+        error: { code, message },
+      });
   }
   readonly processing = {
     configurationRevision: 0,
@@ -1552,6 +1585,36 @@ export class TestHost implements Transport {
     "video.view.release": () => {
       if (this.videoView.owner === this.manifestId)
         this.setVideoViewOwner(null);
+      return null;
+    },
+    "video.render.set": (p) => {
+      if (!this.videoRender.gpu)
+        throw new HostError(
+          "unsupported",
+          "render options need GPU rendering; the player renders in software",
+        );
+      const owner = this.videoRender.owner;
+      if (owner !== null && owner !== this.manifestId)
+        throw new HostError(
+          "conflict",
+          "another plugin owns the render options",
+        );
+      const problem = renderProblem(p.values);
+      if (problem) throw new HostError("invalid", problem);
+      const values = p.values as Partial<RenderSettings>;
+      const missing = values.shaders?.find((path) => !existsSync(path));
+      if (missing !== undefined)
+        throw new HostError(
+          "invalid",
+          `shader file does not exist: ${missing}`,
+        );
+      this.videoRender.owner = this.manifestId;
+      this.videoRender.values = { ...this.videoRender.values, ...values };
+      return { state: this.source.phase === "ready" ? "applied" : "waiting" };
+    },
+    "video.render.release": () => {
+      if (this.videoRender.owner === this.manifestId)
+        this.setVideoRenderOwner(null);
       return null;
     },
     "timeline.set": (p) => {

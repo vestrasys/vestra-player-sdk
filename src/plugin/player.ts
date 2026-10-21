@@ -536,6 +536,8 @@ export function player(scope: ScopeImpl): Player {
           displayHeight: n(raw.video.displayHeight),
           displayFps: n(raw.video.displayFps),
           bitrate: n(raw.video.bitrate),
+          hwdec: n(raw.video.hwdec),
+          transfer: n(raw.video.transfer),
         },
         audio: raw.audio && {
           codec: raw.audio.codec,
