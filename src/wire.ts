@@ -181,15 +181,6 @@ export interface LocalServices {
   ): Promise<{ stdout: Uint8Array; stderr: string }>;
   /** Where a tool's executable is, or null when it cannot be found. */
   locate(tool: "ffmpeg" | "ffprobe"): Promise<string | null>;
-  /**
-   * @deprecated Test hook only, removed after the portability round: the
-   * player now shows and opens files (`system.reveal`, `system.openPath`).
-   * `TestHost` still routes those requests through it so existing fakes keep
-   * working; use `host.handle("system.openPath", …)` instead.
-   */
-  open?(paths: string[], reveal: boolean): Promise<void>;
-  /** @deprecated As `open`: the player opens links (`system.openUrl`). */
-  openUrl?(url: string): Promise<void>;
 }
 
 /** `app.system`: the operating system and the displays. */
