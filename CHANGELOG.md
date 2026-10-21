@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.2
+
+For the player's upgrade to Slint 1.18.1. No API change.
+
+- `slint/vestra/markdown.slint` (read-only copy of the player's): `ScrollView` uses `content-width`/`content-height` (Slint 1.18 renamed `viewport-*`; the old names warn); code blocks are drawn in `Theme.font-mono` as plain lines, inline code as one Slint code span (CJK inside falls back to a system font in Slint 1.18).
+- `TestHost`: `app.components.slint` defaults to `"1.18.1"`; `secrets.set` of a new name fails `limit` once 256 names are stored, as in the player.
+- `Secrets.set` documents the 256-name limit and that uninstalling with `removeData` deletes the secrets.
+- `TestHost.settle()` documents that it only waits for host calls, with a polling example for work the plugin does on its own.
+
 ## 1.1.1
 
 Fixes found in the player's GUI review of the Markdown view (player 0.2.0 with these fixes). No API change.

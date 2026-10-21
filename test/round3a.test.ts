@@ -81,14 +81,14 @@ test("plugin.app comes from the handshake; without one it is unknown", async () 
     components: {
       mpv: "mpv 0.41.0",
       libav: { ffmpeg: "7.1.1", bad: 3 as never },
-      slint: "1.16.1",
+      slint: "1.18.1",
     },
   };
   const { plugin, stop } = await started(host);
   assert.equal(plugin.app.version, "1.2.3");
   assert.equal(plugin.app.build, "abc1234");
   assert.deepEqual(plugin.app.components.libav, { ffmpeg: "7.1.1" });
-  assert.equal(plugin.scope().app.components.slint, "1.16.1");
+  assert.equal(plugin.scope().app.components.slint, "1.18.1");
   assert.ok(Object.isFrozen(plugin.app));
   await stop();
   const bare = await createPlugin(

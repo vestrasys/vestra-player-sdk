@@ -1026,7 +1026,8 @@ export class TestHost implements Transport {
   /**
    * The player's secret store for this plugin: name → value. Preset entries
    * to simulate stored secrets; inject failures with
-   * `host.handle("secrets.get", ...)`.
+   * `host.handle("secrets.get", ...)`. Like the player, `secrets.set` of a
+   * new name fails `limit` once 256 names are stored.
    */
   readonly secrets = new Map<string, string>();
   /** What `plugin.app.system()` reports. */
@@ -1072,7 +1073,7 @@ export class TestHost implements Transport {
     components: {
       mpv: "mpv 0.41.0",
       libav: { ffmpeg: "7.1" },
-      slint: "1.16.1",
+      slint: "1.18.1",
     },
   };
   /** What `player.chapters()` lists while media is ready. */
@@ -1897,12 +1898,25 @@ export class TestHost implements Transport {
    * fired. Call it after every action that makes the plugin talk to the host,
    * before asserting.
    *
+   * It only waits for host calls. Work the plugin does on its own (reading
+   * or parsing a file, a child process, a network request) is not waited
+   * for: on a loaded machine it can finish after `settle()` returns. Poll
+   * the result you assert on instead (second example).
+   *
    * @param ms - Extra time to wait, for debounces and timers (default 0).
    *
    * @example
    * ```ts
    * store.save({ step: 10 });
    * await host.settle(400); // past storage.json's 300 ms debounce
+   * ```
+   *
+   * @example
+   * ```ts
+   * window.emit("load-file"); // the plugin reads and parses the file itself
+   * for (let i = 0; i < 100 && window.props["status-text"] !== expected; i++)
+   *   await host.settle(20);
+   * assert.equal(window.props["status-text"], expected);
    * ```
    */
   async settle(ms = 0) {
@@ -2257,8 +2271,15 @@ export class TestHost implements Transport {
     "system.openPath": (p) => void this.system.opened.push(String(p.path)),
     "system.openUrl": (p) => void this.system.urls.push(String(p.url)),
     "secrets.get": (p) => this.secrets.get(String(p.name)) ?? null,
-    "secrets.set": (p) =>
-      void this.secrets.set(String(p.name), String(p.value)),
+    "secrets.set": (p) => {
+      const name = String(p.name);
+      if (!this.secrets.has(name) && this.secrets.size >= 256)
+        throw new HostError(
+          "limit",
+          "a plugin stores at most 256 secret names",
+        );
+      this.secrets.set(name, String(p.value));
+    },
     "secrets.delete": (p) => void this.secrets.delete(String(p.name)),
     "app.system": () => structuredClone(this.systemInfo),
     "clipboard.readText": () => this.clipboard.text,
