@@ -1,10 +1,17 @@
-/** Finite Unix binary AV candidate. Trusted plugin data, not a security sandbox. */
+/**
+ * Finite binary AV candidate over a local socket: a Unix socket path, or
+ * `tcp://127.0.0.1:<port>` plus a `token` the plugin sends first (Windows).
+ * Trusted plugin data, not a security sandbox.
+ */
 import { createConnection } from "node:net";
 import type { SourceStamp, SourceTicket } from "./source.ts";
 import type { Transport } from "./wire.ts";
 export interface PreparedProducer {
   producerId: number;
+  /** A Unix socket path, or `tcp://127.0.0.1:<port>` (loopback, with `token`). */
   socket: string;
+  /** Hex bytes to send before any packet (loopback TCP only). */
+  token?: string;
   epoch: number;
   sampleRate: 48000;
   channels: 2;
@@ -128,7 +135,7 @@ export function producerClient(transport: Transport) {
     async connect(prepared: PreparedProducer) {
       // Declaration dimensions stay with the caller; host validates exact payload
       // against its own accepted declaration before allocating a frame.
-      const socket = createConnection(prepared.socket);
+      const socket = connectTo(prepared);
       let failure: Error | undefined;
       socket.on("error", (error) => {
         failure = error;
@@ -137,6 +144,8 @@ export function producerClient(transport: Transport) {
         socket.once("connect", resolve);
         socket.once("error", reject);
       });
+      if (prepared.token !== undefined)
+        socket.write(Buffer.from(prepared.token, "hex"));
       let closed = false;
       let inFlight = false;
       function writable() {
@@ -201,4 +210,12 @@ export function producerClient(transport: Transport) {
       };
     },
   };
+}
+
+/** The host's transport address: loopback TCP or a Unix socket path. */
+export function connectTo(prepared: Pick<PreparedProducer, "socket">) {
+  const tcp = /^tcp:\/\/127\.0\.0\.1:(\d{1,5})$/.exec(prepared.socket);
+  return tcp
+    ? createConnection({ host: "127.0.0.1", port: Number(tcp[1]) })
+    : createConnection(prepared.socket);
 }

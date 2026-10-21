@@ -11,6 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:net";
+import { randomBytes } from "node:crypto";
 import type { Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -453,11 +454,18 @@ export class TestHost implements Transport {
   /** Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last. */
   readonly exports: Record<string, Json>[] = [];
   readonly jobs = new Map<number, MediaJob>();
+  /**
+   * `openStream`'s transport: a Unix socket (macOS, Linux) or, with `"tcp"`,
+   * loopback TCP where the plugin must send the token first (Windows).
+   */
+  producerTransport: "unix" | "tcp" = "unix";
   readonly producers = new Map<
     number,
     FakeProducer & {
       server: Server;
       path: string;
+      /** TCP: the connection sent the right token (always true for Unix). */
+      admitted: boolean;
       epoch: number;
       pending: Json | null;
       acknowledged: boolean;
@@ -2114,8 +2122,10 @@ export class TestHost implements Transport {
     "sourceResolvers.unregister": (p) =>
       void this.resolvers.delete(String(p.id)),
     "sourceResolvers.respond": () => null,
-    "producer.prepare": () => {
+    "producer.prepare": async () => {
       const id = ++this.#next.producer;
+      const tcp = this.producerTransport === "tcp";
+      const token = tcp ? randomBytes(32) : null;
       const path = join(this.#scratch, `producer-${id}.sock`);
       const producer = {
         id,
@@ -2123,6 +2133,7 @@ export class TestHost implements Transport {
         videoFrames: 0,
         released: false,
         path,
+        admitted: !tcp,
         epoch: 1,
         pending: null as Json | null,
         acknowledged: true,
@@ -2131,8 +2142,16 @@ export class TestHost implements Transport {
       };
       producer.server.on("connection", (socket) => {
         let buffer: Buffer = Buffer.alloc(0);
+        let admitted = !token;
         socket.on("data", (data: Buffer) => {
           buffer = Buffer.concat([buffer, data]);
+          if (!admitted && token) {
+            if (buffer.length < token.length) return;
+            if (!buffer.subarray(0, token.length).equals(token))
+              return void socket.destroy();
+            admitted = producer.admitted = true;
+            buffer = buffer.subarray(token.length);
+          }
           while (buffer.length >= 32) {
             const length = buffer.readUInt32LE(24);
             if (buffer.length < 32 + length) break;
@@ -2143,11 +2162,19 @@ export class TestHost implements Transport {
         });
         socket.on("error", () => {});
       });
-      producer.server.listen(path);
+      let socket = path;
+      if (tcp) {
+        await new Promise<void>((resolve) =>
+          producer.server.listen(0, "127.0.0.1", resolve),
+        );
+        const { port } = producer.server.address() as { port: number };
+        socket = `tcp://127.0.0.1:${port}`;
+      } else producer.server.listen(path);
       this.producers.set(id, producer);
       return {
         producerId: id,
-        socket: path,
+        socket,
+        ...(token ? { token: token.toString("hex") } : {}),
         epoch: 1,
         sampleRate: 48000,
         channels: 2,
