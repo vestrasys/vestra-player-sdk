@@ -12,6 +12,10 @@ const view = (facts: WindowFacts): WindowState =>
       width: Number(facts.videoArea?.width ?? 0),
       height: Number(facts.videoArea?.height ?? 0),
     }),
+    pictureInPicture: Object.freeze({
+      supported: facts.pictureInPicture?.supported === true,
+      active: facts.pictureInPicture?.active === true,
+    }),
   });
 
 /**
@@ -129,6 +133,12 @@ export function mainWindow(scope: ScopeImpl): MainWindow {
       if (mode !== "fullscreen" && mode !== "playing")
         throw failure("invalid", 'mode is "fullscreen" or "playing"');
       await host().setCursorAutoHide(mode);
+    },
+    async setPictureInPicture(on) {
+      if (typeof on !== "boolean")
+        throw failure("invalid", "on must be a boolean");
+      await host().setPictureInPicture(on);
+      await service().read();
     },
   };
 }
