@@ -241,3 +241,82 @@ test("ui.markdown: sent as a property value, refused after its scope is released
   assert.equal(existsSync(directory), true);
   await stop();
 });
+
+test("image downloads: user agent, https redirects only, HTTP errors and size caps", async () => {
+  const { httpsDownload, USER_AGENT } =
+    await import("../src/plugin/markdown.ts");
+  const seen: { url: string; agent: string | null; redirect?: string }[] = [];
+  const routes: Record<string, () => Response> = {
+    "https://a.example/ok.png": () => new Response(PNG, { status: 200 }),
+    "https://a.example/moved": () =>
+      new Response(null, { status: 302, headers: { location: "/ok.png" } }),
+    "https://a.example/to-http": () =>
+      new Response(null, {
+        status: 301,
+        headers: { location: "http://a.example/ok.png" },
+      }),
+    "https://a.example/loop": () =>
+      new Response(null, { status: 302, headers: { location: "/loop" } }),
+    "https://a.example/bad": () => new Response("Bad Request", { status: 400 }),
+    "https://a.example/big": () =>
+      new Response(new Uint8Array(100), {
+        status: 200,
+        headers: { "content-length": "100" },
+      }),
+    "https://a.example/stream": () =>
+      new Response(new Uint8Array(100), { status: 200 }),
+  };
+  const fake = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    seen.push({
+      url,
+      agent: new Headers(init?.headers).get("user-agent"),
+      ...(init?.redirect ? { redirect: init.redirect } : {}),
+    });
+    const route = routes[url];
+    if (!route) return new Response(null, { status: 404 });
+    return route();
+  }) as typeof fetch;
+  const options = () => ({ maxBytes: 50, signal: AbortSignal.timeout(1000) });
+  const ok = await httpsDownload(
+    "https://a.example/moved",
+    { ...options(), maxBytes: 1024 },
+    fake,
+  );
+  assert.deepEqual(Buffer.from(ok), PNG);
+  assert.deepEqual(
+    seen.map((s) => [s.url, s.agent, s.redirect]),
+    [
+      ["https://a.example/moved", USER_AGENT, "manual"],
+      ["https://a.example/ok.png", USER_AGENT, "manual"],
+    ],
+  );
+  await assert.rejects(
+    httpsDownload("https://a.example/bad", options(), fake),
+    /HTTP 400/,
+  );
+  await assert.rejects(
+    httpsDownload("https://a.example/missing", options(), fake),
+    /HTTP 404/,
+  );
+  await assert.rejects(
+    httpsDownload("https://a.example/to-http", options(), fake),
+    /only https/,
+  );
+  await assert.rejects(
+    httpsDownload("http://a.example/ok.png", options(), fake),
+    /only https/,
+  );
+  await assert.rejects(
+    httpsDownload("https://a.example/loop", options(), fake),
+    /too many redirects/,
+  );
+  await assert.rejects(
+    httpsDownload("https://a.example/big", options(), fake),
+    /too large/,
+  );
+  await assert.rejects(
+    httpsDownload("https://a.example/stream", options(), fake),
+    /too large/,
+  );
+});
