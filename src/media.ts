@@ -1,4 +1,4 @@
-/** Experimental finite media jobs. Native-subtitle freezing remains pending. */
+/** Finite media jobs. Native-subtitle freezing remains pending. */
 import type { Transport } from "./wire.ts";
 import type { SourceStamp, SourceAudioTrack } from "./source.ts";
 import type { VideoNode, AudioNode } from "./processing.ts";
