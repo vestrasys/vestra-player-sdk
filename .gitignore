@@ -1,0 +1,6 @@
+node_modules/
+# Compiled output: built by `prepare` (npm ci / install / pack / publish).
+dist/
+*.tgz
+*.tsbuildinfo
+.DS_Store

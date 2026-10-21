@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Plugin API types, test host and plugin CLI for Vestra Player (apiVersion vestra/1)",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vestrasys/vestra-player-sdk.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.18"
@@ -34,11 +38,19 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "tsc -p tsconfig.check.json",
-    "prepack": "node scripts/build.mjs",
+    "format": "prettier --write \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json",
+    "format:check": "prettier --check \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json",
+    "prepare": "node scripts/build.mjs",
     "test": "node --test test/"
   },
   "dependencies": {
     "@types/node": ">=22.18",
     "typescript": "^5.9.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
