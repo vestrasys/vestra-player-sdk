@@ -42,7 +42,7 @@
     "format": "prettier --write \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json",
     "format:check": "prettier --check \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json",
     "prepare": "node scripts/build.mjs",
-    "test": "node --test test/"
+    "test": "node --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@types/node": ">=22.18",
