@@ -838,13 +838,15 @@ export class TestHost implements Transport {
       }
       case "volume-up":
       case "volume-down": {
-        const volume = Math.max(
-          0,
-          Math.min(
-            200,
-            Math.round(s.output.volume + (action === "volume-up" ? 5 : -5)),
-          ),
-        );
+        // Like the player: up stops at 100 (a louder volume set through
+        // setOutput stays), down steps by 5 to 0.
+        const volume =
+          action === "volume-up"
+            ? Math.max(
+                s.output.volume,
+                Math.min(100, Math.round(s.output.volume + 5)),
+              )
+            : Math.max(0, Math.min(200, Math.round(s.output.volume - 5)));
         this.setSource({ output: { volume, muted: false } });
         this.osd.push(`音量: ${volume}%`);
         return;
@@ -921,6 +923,9 @@ export class TestHost implements Transport {
       phase: this.source.phase,
     };
     this.emit("source.state", this.source);
+    // Like the player (reference §6.3): loading shows the backdrop.
+    if (patch.phase === "loading" && this.backdrop && !this.backdrop.effective)
+      this.setBackdropEffective(true);
   }
   /** The user changed the main window (resized, fullscreen); broadcast it. */
   setMainWindow(
