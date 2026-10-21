@@ -3,9 +3,9 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import { canonical } from "../../sdk/plugin/bindings.ts";
-import type { Plugin } from "../../sdk/plugin/index.ts";
+import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { canonical } from "../src/plugin/bindings.ts";
+import type { Plugin } from "../src/plugin/index.ts";
 
 function packageWith(
   capabilities: string[],
@@ -318,7 +318,7 @@ test("dataDirectory is a writable directory kept across restarts when passed aga
     '{"folder":"/x"}',
   );
   await again.stop();
-  const { createPlugin } = await import("../../sdk/plugin/index.ts");
+  const { createPlugin } = await import("../src/plugin/index.ts");
   const bare = await createPlugin(
     new TestHost(),
     { id: "x", capabilities: [] },

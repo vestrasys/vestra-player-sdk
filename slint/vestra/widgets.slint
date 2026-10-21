@@ -1,0 +1,230 @@
+// PotPlayer-style controls built on the Vestra theme (core-ui-design.md §2.1):
+//   import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint";
+// Other controls come from std-widgets, which the host compiles as fluent-dark.
+import { TextEdit } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+
+// Hover for 600 ms to show `text` beside the pointer. The tip closes when
+// the pointer leaves or presses; it shows again on the next hover.
+export component ToolTipArea {
+    in property <string> text;
+    // The tip is showing (read-only).
+    out property <bool> showing;
+    // Shown (or pressed) during this hover: wait for the pointer to leave.
+    // (Never assign the timer's `running`: that drops its binding, and the
+    // tip would show only once.)
+    private property <bool> done;
+    area := TouchArea {
+        width: 100%; height: 100%;
+        @children
+        changed has-hover => {
+            if !self.has-hover {
+                root.done = false;
+                root.showing = false;
+                tip.close();
+            }
+        }
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.done = true;
+                root.showing = false;
+                tip.close();
+            }
+        }
+    }
+    Timer {
+        interval: 600ms;
+        running: area.has-hover && root.text != "" && !root.done;
+        triggered => {
+            root.done = true;
+            root.showing = true;
+            tip.show();
+        }
+    }
+    tip := PopupWindow {
+        x: area.mouse-x + 12px;
+        y: area.mouse-y + 16px;
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: Theme.bg-panel;
+            border-color: Theme.line;
+            border-width: 1px;
+            HorizontalLayout {
+                padding-left: 5px; padding-right: 5px; padding-top: 2px; padding-bottom: 2px;
+                Text { text: root.text; color: Theme.text; font-size: Theme.font-body; }
+            }
+        }
+    }
+}
+
+// Dialog button: text (21px, or 18px when `small`), or an icon button when
+// `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height
+// viewbox (filled, or 1.5px lines when `stroked`). The caller sizes icon buttons.
+export component Button {
+    in property <string> text;
+    in property <string> icon;
+    in property <length> icon-width: 14px;
+    in property <length> icon-height: 12px;
+    in property <bool> stroked;
+    in property <bool> enabled: true;
+    in property <bool> small;
+    // Icon buttons: the "on" state, drawn in the accent colour.
+    in property <bool> checked;
+    callback clicked();
+    private property <bool> icon-only: root.text == "" && root.icon != "";
+    private property <color> tint: !root.enabled ? Theme.icon-disabled
+        : touch.pressed ? Theme.accent-press
+        : (touch.has-hover || root.checked) ? Theme.accent : Theme.text-dim;
+    min-height: root.icon-only ? root.icon-height : root.small ? Theme.button-small-height : Theme.button-height;
+    min-width: root.icon-only ? root.icon-width : root.small ? Theme.button-small-min-width : Theme.button-min-width;
+    preferred-height: self.min-height;
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-checkable: root.icon-only;
+    accessible-checked: root.checked;
+    accessible-action-default => { if root.enabled { root.clicked(); } }
+    if !root.icon-only: Rectangle {
+        border-radius: Theme.radius-control;
+        background: !root.enabled ? Theme.button-disabled
+            : touch.pressed ? Theme.button-press
+            : touch.has-hover ? Theme.button-hover : Theme.button-bg;
+        HorizontalLayout {
+            padding-left: Theme.button-padding;
+            padding-right: Theme.button-padding;
+            alignment: center;
+            Text {
+                text: root.text;
+                color: root.enabled ? Theme.text-list : Theme.text-dim;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+        }
+    }
+    if root.icon-only: Path {
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        width: root.icon-width;
+        height: root.icon-height;
+        viewbox-width: root.icon-width / 1px;
+        viewbox-height: root.icon-height / 1px;
+        commands: root.icon;
+        fill: root.stroked ? transparent : root.tint;
+        stroke: root.stroked ? root.tint : transparent;
+        stroke-width: root.stroked ? 1.5px : 0px;
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+// 2px line slider. Bar style (default): 8px round thumb, accent fill.
+// Panel style (`panel: true`): 14×12 thumb, blue fill on a dark track.
+export component Slider {
+    in-out property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 1;
+    in property <bool> enabled: true;
+    in property <bool> panel;
+    callback changed(float);
+    callback released(float);
+    private property <length> thumb-width: root.panel ? 14px : 8px;
+    private property <length> thumb-height: root.panel ? 12px : 8px;
+    private property <float> span: max(0.000001, root.maximum - root.minimum);
+    private property <float> ratio: clamp((root.value - root.minimum) / root.span, 0, 1);
+    min-height: max(10px, self.thumb-height);
+    min-width: 20px;
+    accessible-role: slider;
+    accessible-value: root.value;
+    accessible-value-minimum: root.minimum;
+    accessible-value-maximum: root.maximum;
+    function set-from(x: length) {
+        root.value = root.minimum + clamp((x - root.thumb-width / 2) / max(1px, root.width - root.thumb-width), 0, 1) * root.span;
+        root.changed(root.value);
+    }
+    Rectangle {
+        y: (parent.height - 2px) / 2;
+        height: 2px;
+        background: root.panel ? Theme.bg-bar : Theme.line;
+    }
+    Rectangle {
+        y: (parent.height - 2px) / 2;
+        height: 2px;
+        width: root.thumb-width / 2 + root.ratio * (root.width - root.thumb-width);
+        x: 0;
+        border-radius: 1px;
+        background: !root.enabled ? Theme.icon-disabled : Theme.accent-fill;
+    }
+    Rectangle {
+        x: root.ratio * (root.width - root.thumb-width);
+        y: (parent.height - root.thumb-height) / 2;
+        width: root.thumb-width;
+        height: root.thumb-height;
+        border-radius: root.panel ? Theme.radius-control : self.height / 2;
+        background: !root.enabled ? Theme.icon-disabled
+            : root.panel ? Theme.text
+            : touch.pressed ? Theme.accent-press
+            : touch.has-hover ? Theme.accent : Theme.text;
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        pointer-event(event) => {
+            if event.button == PointerEventButton.left && event.kind == PointerEventKind.down { root.set-from(self.mouse-x); }
+            if event.button == PointerEventButton.left && event.kind == PointerEventKind.up { root.released(root.value); }
+        }
+        moved => { if self.pressed { root.set-from(self.mouse-x); } }
+    }
+}
+
+// Link input (UI-DLG-02): a multi-line input and [打开] [取消]. Enter or the
+// confirm button accepts (Shift+Enter starts a new line), Esc or 取消 cancels.
+// No validation here: the plugin checks the address.
+export component UrlInputRow {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <string> confirm-text: "打开";
+    in property <string> cancel-text: "取消";
+    in property <bool> enabled: true;
+    callback accepted(string);
+    callback cancelled();
+    public function focus-input() { input.focus(); }
+    public function select-all() { input.select-all(); }
+    min-width: 260px;
+    preferred-width: 397px;
+    VerticalLayout {
+        spacing: 6px;
+        input := TextEdit {
+            min-height: 68px;
+            font-size: Theme.font-body;
+            wrap: word-wrap;
+            enabled: root.enabled;
+            placeholder-text: root.placeholder;
+            text <=> root.text;
+            key-pressed(event) => {
+                if event.text == Key.Return && !event.modifiers.shift {
+                    if root.enabled { root.accepted(self.text); }
+                    return accept;
+                }
+                if event.text == Key.Escape {
+                    root.cancelled();
+                    return accept;
+                }
+                return reject;
+            }
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 6px;
+            Button {
+                text: root.confirm-text;
+                enabled: root.enabled;
+                clicked => { root.accepted(root.text); }
+            }
+            Button {
+                text: root.cancel-text;
+                clicked => { root.cancelled(); }
+            }
+        }
+    }
+}

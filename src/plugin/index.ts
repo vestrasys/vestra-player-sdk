@@ -1,10 +1,7 @@
 /**
- * SDK v2 entry. Plugins import types from here:
- *
- *   import type { Plugin } from "../../sdk/plugin/index.ts";
- *   export default async function activate(plugin: Plugin) { ... }
- *
- * `createPlugin` is for the runner and the test host only.
+ * Builds the `plugin` object. Plugins import the types from the package entry
+ * (`@vestra-player/sdk`, src/index.ts); `createPlugin` is for the player's
+ * runner (`@vestra-player/sdk/runtime`) and the test host only.
  */
 import type { Transport } from "../wire.ts";
 import { Runtime } from "./runtime.ts";

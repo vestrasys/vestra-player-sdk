@@ -43,6 +43,8 @@ import type { Plugin } from "./types.ts";
 
 /** Throw one of these from `host.handle(...)` to simulate a definite refusal. */
 export { HostError };
+/** The player's command caps, which the test host enforces as well. */
+export { COMMAND_LIMITS };
 
 type Handler = (params: Record<string, Json>) => unknown;
 type Call = { method: string; params: Record<string, Json> };

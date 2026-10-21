@@ -1,0 +1,27 @@
+// The player's colour palette (R-H6). Not part of the plugin library: the
+// player sets these `in` properties on every view; `Theme` in
+// @vestra/theme.slint reads them as `out` properties. Defaults: Vestra.
+export global VestraPalette {
+    in property <color> bg-bar: #17141c;
+    in property <color> bg-video: #0b0a0f;
+    in property <color> bg-list: #1c1922;
+    in property <color> bg-panel: #221e29;
+    in property <color> line: #07060a;
+    in property <color> hover-bg: #2a2533;
+    in property <color> press-bg: #120f16;
+    in property <color> selected-bg: #2f2938;
+    in property <color> text: #f2eff7;
+    in property <color> text-dim: #8a8496;
+    in property <color> text-list: #b8b2c4;
+    in property <color> text-played: #6f6a7a;
+    in property <color> accent: #fa139c;
+    in property <color> accent-press: #c40f7a;
+    in property <color> accent-disabled: #5c1a42;
+    in property <color> icon-disabled: #3a3542;
+    in property <color> playing: #a24bff;
+    in property <color> button-bg: #322c3b;
+    in property <color> button-hover: #3d3648;
+    in property <color> button-press: #26212e;
+    in property <color> button-disabled: #1d1a23;
+    in property <brush> accent-fill: @linear-gradient(90deg, #fdb506 0%, #fc6f3b 25%, #fa139c 60%, #911efc 100%);
+}

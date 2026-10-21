@@ -2,8 +2,8 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
 import test from "node:test";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import { connectTo } from "../../sdk/producer.ts";
+import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { connectTo } from "../src/producer.ts";
 
 const capabilities = [
   "playback.read",
