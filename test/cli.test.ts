@@ -96,7 +96,7 @@ test("check, build, test and pack a stand-alone plugin", () => {
     readFileSync(join(directory, "dist/manifest.json"), "utf8"),
   );
   assert.equal(manifest.entry, "main.js");
-  const zip = readFileSync(join(directory, "out/me.hello-1.2.3.zip"));
+  const zip = readFileSync(join(directory, "out/me.hello-1.2.3.vxp"));
   assert.equal(zip.readUInt32LE(0), 0x04034b50);
   const sha = createHash("sha256").update(zip).digest("hex");
   assert.match(packed.stdout, new RegExp(`sha256 ${sha}`));
@@ -104,7 +104,7 @@ test("check, build, test and pack a stand-alone plugin", () => {
   vestraPlugin(directory, "pack", "--out", "out");
   assert.equal(
     createHash("sha256")
-      .update(readFileSync(join(directory, "out/me.hello-1.2.3.zip")))
+      .update(readFileSync(join(directory, "out/me.hello-1.2.3.vxp")))
       .digest("hex"),
     sha,
   );
@@ -136,4 +136,84 @@ test("type errors, runtime SDK imports and unknown capabilities fail", () => {
   const refused = vestraPlugin(capability, "check");
   assert.equal(refused.status, 1);
   assert.match(refused.stderr, /unknown capabilities no\.such/);
+});
+
+const PNG_1x1 = Buffer.from(
+  "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
+    "1f15c4890000000d4944415478da63f8ffffff7f0009fb03fd2a86e38a0000000049454e44ae426082",
+  "hex",
+);
+
+test("display fields are checked and their files are packed", () => {
+  const directory = project(HELLO);
+  const manifest = {
+    id: "me.hello",
+    version: "1.2.3",
+    apiVersion: "vestra/1",
+    entry: "main.ts",
+    capabilities: ["commands", "ui.osd"],
+    name: "你好",
+    author: "me",
+    punchline: "Says hello",
+    tags: ["demo"],
+    icon: "assets/icon.png",
+    sourceUrl: "https://github.com/me/hello",
+    license: "MIT",
+    minPlayerVersion: "0.2.0",
+  };
+  writeFileSync(join(directory, "manifest.json"), JSON.stringify(manifest));
+  mkdirSync(join(directory, "assets"));
+  writeFileSync(join(directory, "assets/icon.png"), PNG_1x1);
+  writeFileSync(join(directory, "README.md"), "# Hello\n");
+  writeFileSync(join(directory, "NOTES.md"), "not packed");
+  const built = vestraPlugin(directory, "build");
+  assert.equal(built.status, 0, built.stdout + built.stderr);
+  assert.deepEqual(readdirSync(join(directory, "dist")).sort(), [
+    "README.md",
+    "assets",
+    "main.js",
+    "manifest.json",
+    "package.json",
+  ]);
+  for (const [field, value, message] of [
+    ["name", "", /name must have 1–64 characters/],
+    ["tags", ["a", "A"], /duplicate tag/],
+    ["icon", "missing.png", /icon file missing\.png is missing/],
+    ["icon", "../icon.png", /icon must be a relative path/],
+    ["readme", "README.txt", /readme must be a \.md file/],
+    ["sourceUrl", "http://x.example/", /sourceUrl must be an https: address/],
+    ["minPlayerVersion", "1.0", /minPlayerVersion must be MAJOR\.MINOR\.PATCH/],
+    ["homepage", "https://x.example/", /unknown field "homepage"/],
+  ] as const) {
+    writeFileSync(
+      join(directory, "manifest.json"),
+      JSON.stringify({ ...manifest, [field]: value }),
+    );
+    const result = vestraPlugin(directory, "check");
+    assert.equal(result.status, 1, `${field}: ${result.stdout}`);
+    assert.match(result.stderr, message);
+  }
+  writeFileSync(join(directory, "assets/icon.png"), "GIF89a");
+  writeFileSync(join(directory, "manifest.json"), JSON.stringify(manifest));
+  assert.match(
+    vestraPlugin(directory, "check").stderr,
+    /icon must be a PNG or JPEG/,
+  );
+});
+
+test("an id without a prefix is only a hint", () => {
+  const directory = project(HELLO);
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "hello",
+      version: "1.2.3",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands", "ui.osd"],
+    }),
+  );
+  const result = vestraPlugin(directory, "check");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /hint: id "hello" has no prefix/);
 });

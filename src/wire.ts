@@ -132,7 +132,18 @@ export interface PackageInfo {
   capabilities: string[];
   directory: string;
   previousVersion: string | null;
+  /** Player 0.2.0; absent from older players. */
+  builtin?: boolean;
+  source?: WireSource | null;
+  dataDirectory?: string | null;
 }
+/** Where an installed package came from (`packages.install` `source`). */
+export type WireSource =
+  | { kind: "repository"; url: string }
+  | { kind: "link"; url: string }
+  | { kind: "file" }
+  | { kind: "workshop" }
+  | { kind: "bundled" };
 /** `bindings.list`. */
 export interface BindingTable {
   commands: {
@@ -224,6 +235,14 @@ export interface LocalServices {
   ): Promise<{ stdout: Uint8Array; stderr: string }>;
   /** Where a tool's executable is, or null when it cannot be found. */
   locate(tool: "ffmpeg" | "ffprobe"): Promise<string | null>;
+  /**
+   * Fetch an image for a Markdown document (the test host's fake); the
+   * real one downloads over `https:`.
+   */
+  download?(
+    url: string,
+    options: { maxBytes: number; signal: AbortSignal },
+  ): Promise<Uint8Array>;
 }
 
 /** `app.system`: the operating system and the displays. */
@@ -536,6 +555,12 @@ export function createWire(transport: Transport) {
       },
     },
     ui: {
+      /** Player 0.2.0: the remote images a Markdown document shows. */
+      markdownScan: (text: string, base: string | null) =>
+        transport.request<{ images: string[] }>("ui.markdownScan", {
+          text,
+          base,
+        }),
       mount: (options: {
         slot: "bottom" | "sidebar" | "backdrop";
         file: string;
@@ -579,6 +604,11 @@ export function createWire(transport: Transport) {
           directory,
           apiVersion,
         }),
+      /** Player 0.2.0: a `.vxp` file. */
+      validateArchive: (file: string) =>
+        transport.request<PackageValidation>("packages.validateArchive", {
+          file,
+        }),
       /** `requestId` recovers a lost first reply in this owner session. */
       trial: (token: string, requestId: string) =>
         transport.request<PackageTrial>("packages.trial", {
@@ -595,11 +625,19 @@ export function createWire(transport: Transport) {
         transport.request<PackageTrial>("packages.stopTrial", { trialId }),
       installed: (id: string) =>
         transport.request<InstalledPackage>("packages.installed", { id }),
-      install: (token: string, expectedRevision: number, requestId: string) =>
+      /** `source` and `replace` are sent only when given (player 0.2.0). */
+      install: (
+        token: string,
+        expectedRevision: number,
+        requestId: string,
+        options: { source?: WireSource; replace?: boolean } = {},
+      ) =>
         transport.request<PackageOperation>("packages.install", {
           token,
           expectedRevision,
           requestId,
+          ...(options.source === undefined ? {} : { source: options.source }),
+          ...(options.replace ? { replace: true } : {}),
         }),
       rollback: (id: string, expectedRevision: number, requestId: string) =>
         transport.request<PackageOperation>("packages.rollback", {

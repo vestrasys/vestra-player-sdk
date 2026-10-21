@@ -70,8 +70,24 @@ my-plugin/
 | `apiVersion` | Always `"vestra/1"` for this major version of the SDK. |
 | `entry` | Relative path inside the package: `.ts` during development, `.js` after building. |
 | `capabilities` | Only names from the table below. |
+| `minPlayerVersion` | Optional `x.y.z`: the oldest player that can load the plugin. Older players refuse it with `versionMismatch` ("requires Vestra Player ≥ x.y.z"). Set it when you use API added after SDK 1.0 (see Versions). |
 
-Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected.
+Optional display fields (player 0.2.0), shown by the plugin store and plugin manager:
+
+| Field | Rule |
+| --- | --- |
+| `name` | 1–64 characters, one line. |
+| `author` | 1–64 characters, one line. |
+| `punchline` | One-line summary, 1–120 characters. |
+| `description` | Plain text, 1–2000 characters; line breaks allowed. |
+| `tags` | Up to 8 tags, 1–24 characters each, unique ignoring case. |
+| `icon` | Package path of a PNG or JPEG, at most 512 KB and 1024 pixels per side (256×256 recommended). |
+| `readme` | Package path of a UTF-8 `.md` file (≤ 256 KB). Default: `README.md` when present. |
+| `changelog` | Same, default `CHANGELOG.md` when present. |
+| `sourceUrl` | `https:` address of the source code. |
+| `license` | 1–64 characters, preferably an SPDX expression such as `MIT`. |
+
+Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`.
 
 | Capability | Opens |
 | --- | --- |
@@ -199,9 +215,9 @@ vestra-plugin build [plugin-dir...] [--version x.y.z]
 vestra-plugin pack  [plugin-dir...] [--version x.y.z] [--out dir]
 ```
 
-- `check`: strict type check of the plugin's `.ts` files and `tests/`. It extends the nearest `tsconfig.json` at or above the plugin directory, else built-in strict settings. It also checks the manifest's capability names.
-- `build`: checks, then writes `dist/`: `.ts` files with types stripped (relative imports rewritten to `.js`), `.slint`, `.mjs` and data files copied, `dist/manifest.json` with the version (from `--version`, else the manifest, else `package.json`). Tests, `node_modules/`, Markdown and `package*.json` are left out. A runtime import of `@vestra-player/sdk` fails the build.
-- `pack`: builds, then zips `dist/` as `<id>-<version>.zip` and prints its size and sha256.
+- `check`: checks the manifest (every rule above), then a strict type check of the plugin's `.ts` files and `tests/`. It extends the nearest `tsconfig.json` at or above the plugin directory, else built-in strict settings. Hints that do not fail the check (such as an id without an owner prefix) are printed.
+- `build`: checks, then writes `dist/`: `.ts` files with types stripped (relative imports rewritten to `.js`), `.slint`, `.mjs` and data files copied, the manifest's `icon`, `readme` and `changelog` (and `README.md` / `CHANGELOG.md` when present) copied, `dist/manifest.json` with the version (from `--version`, else the manifest, else `package.json`). Tests, `node_modules/`, other Markdown and `package*.json` are left out. A runtime import of `@vestra-player/sdk` fails the build.
+- `pack`: builds, then packs `dist/` as `<id>-<version>.vxp` (a zip with `manifest.json` at its root; the same input gives the same bytes) and prints its size and sha256. This is the file users install and repositories list.
 - Runtime npm dependencies must be bundled: set `"vestra": { "bundle": true }` (or `{ "bundle": { "external": [...] } }`) in the plugin's `package.json` and add `esbuild` as a dev dependency. `"vestra": { "assets": ["vendor"] }` copies extra files verbatim.
 
 During development no build is needed: start the player with `--plugin <plugin-dir>` (repeatable) to run `main.ts` directly.
@@ -211,6 +227,7 @@ During development no build is needed: start the player with `--plugin <plugin-d
 | SDK package | Plugin `apiVersion` | Notes |
 | --- | --- | --- |
 | `1.x` | `vestra/1` | Minor releases only add backwards-compatible API; patch releases fix documentation and bugs. |
+| `1.1` | `vestra/1` | The additions need player 0.2.0: set `"minPlayerVersion": "0.2.0"` when you use them. |
 
 A breaking change to the plugin API gets a new `apiVersion` and a new major version of this package. The `@vestra-player/sdk/runtime` entry is for the player only and is not covered by semver.
 

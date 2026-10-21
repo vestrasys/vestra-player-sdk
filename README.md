@@ -38,8 +38,10 @@ Plugins import the SDK with `import type` only: the player passes the `plugin` o
 vestra-plugin check [plugin-dir...]                              strict type check (including tests/)
 vestra-plugin test  [plugin-dir...]                              node --test tests/*.test.{ts,mjs}
 vestra-plugin build [plugin-dir...] [--version x.y.z]            write dist/ (types stripped, manifest versioned)
-vestra-plugin pack  [plugin-dir...] [--version x.y.z] [--out d]  build, then zip dist/ as <id>-<version>.zip
+vestra-plugin pack  [plugin-dir...] [--version x.y.z] [--out d]  build, then pack dist/ as <id>-<version>.vxp
 ```
+
+Every command checks `manifest.json` against the player's rules first; `check` also prints hints (for example an id without the `<owner>.` prefix the official plugin repository needs).
 
 ## Entry points
 
@@ -51,9 +53,12 @@ vestra-plugin pack  [plugin-dir...] [--version x.y.z] [--out d]  build, then zip
 
 ## Versions
 
-| SDK | Plugin `apiVersion` |
-| --- | --- |
-| `1.x` | `vestra/1` |
+| SDK | Plugin `apiVersion` | Needs player |
+| --- | --- | --- |
+| `1.0` | `vestra/1` | 0.1.0 |
+| `1.1` | `vestra/1` | 0.2.0 for the 1.1 additions: manifest display fields and `minPlayerVersion`, `packages.validateArchive`, install sources, `PluginInfo.builtin` / `source` / `dataDirectory`, `ui.markdown` and `@vestra/markdown.slint` |
+
+A plugin that uses an addition sets `"minPlayerVersion"` in its manifest so that older players refuse it with a clear message. Changes per release: [CHANGELOG.md](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md).
 
 Minor releases only add backwards-compatible API. A breaking change to the plugin API gets a new `apiVersion` and a new major version.
 
