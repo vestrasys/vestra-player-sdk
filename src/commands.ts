@@ -1,12 +1,32 @@
 /** Finite candidate command registry. Host authenticates owner; no plugin supplies an owner id. */
 import type { Transport } from "./wire.ts";
 /**
- * The player's command registry caps (host/src/commands.rs, reference.md §4).
- * Runaway guards, not product limits: past them `commands.register` fails
- * with code `limit`. `perPlugin` counts one plugin instance (a trial package
- * is its own instance); `total` counts every plugin plus the player's own.
+ * The player's command registry caps, the same values as the player's own
+ * table (the player's tests check that they agree). They are runaway guards,
+ * not product limits: a command added past them fails with code `limit`
+ * (its `ready` rejects; during activation, activation fails), commands
+ * already registered are unaffected, and disposing a command frees its slot
+ * at once. {@link TestHost} enforces the same caps.
+ *
+ * For menus built from media content (tracks, chapters, presets), set your
+ * own sensible display cap well below `perPlugin`.
+ *
+ * @example
+ * ```ts
+ * import { COMMAND_LIMITS } from "@vestra-player/sdk/testing";
+ *
+ * const shown = chapters.slice(0, Math.min(50, COMMAND_LIMITS.perPlugin - 20));
+ * ```
  */
-export const COMMAND_LIMITS = { perPlugin: 160, total: 1024 } as const;
+export const COMMAND_LIMITS = {
+  /**
+   * Commands one plugin instance may have at the same time (160). A trial
+   * package is its own instance.
+   */
+  perPlugin: 160,
+  /** Commands of every plugin plus the player's own, together (1024). */
+  total: 1024,
+} as const;
 export type CommandState = {
   enabled: boolean;
   checked: boolean | null;

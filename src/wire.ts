@@ -19,6 +19,10 @@ export type {
 } from "./source-resolvers.ts";
 /** Working contract. Trusted plugin runtime, not a permissions sandbox. */
 export const API_VERSION = "vestra/1" as const;
+/**
+ * A JSON value: what crosses the wire to the player. Slint property values,
+ * callback arguments and protocol parameters are all `Json`.
+ */
 export type Json =
   null | boolean | number | string | Json[] | { [key: string]: Json };
 export interface PluginInfo {
@@ -74,9 +78,44 @@ export interface UiCallback {
   callback: string;
   args: Json[];
 }
-/** A definite refusal from the host (or the runner): `code` is stable. */
+/**
+ * A definite refusal from the player (or the plugin runner), with a stable
+ * `code`. Plugin code sees it as a `PluginError` (an `Error` with `code`);
+ * branch on `code`, never on `message`.
+ *
+ * In tests, throw one from a {@link TestHost.handle} override to simulate the
+ * player refusing a request: the SDK treats it exactly like a real refusal
+ * (the call rejects with that `code`, nothing is retried). Throwing a plain
+ * `Error` instead simulates a lost reply, which makes the SDK run its
+ * recovery path (asking the host about the operation again).
+ *
+ * Common codes: `stale` (the condition no longer holds; nothing was done),
+ * `invalid` (bad argument), `missing` (unknown target), `capability`
+ * (undeclared capability), `busy`, `conflict`, `unavailable`, `unsupported`
+ * (refused, not executed), `backend` (load or parse failure), `failed`,
+ * `timeout`, `aborted`, `limit` (a player limit such as the command count),
+ * `disabled` (the plugin is stopping).
+ *
+ * @example
+ * ```ts
+ * import { HostError, startPlugin } from "@vestra-player/sdk/testing";
+ *
+ * const { host, plugin, stop } = await startPlugin(activate, { directory });
+ * host.handle("clipboard.writeText", () => {
+ *   throw new HostError("failed", "the system refused the write");
+ * });
+ * await assert.rejects(plugin.clipboard.writeText("x"), { code: "failed" });
+ * host.reset("clipboard.writeText");
+ * await stop();
+ * ```
+ */
 export class HostError extends Error {
+  /** The stable error code, e.g. `"invalid"`, `"stale"`, `"unavailable"`. */
   code: string;
+  /**
+   * @param code - The stable error code the caller will see as `error.code`.
+   * @param message - Human-readable detail (not for branching on).
+   */
   constructor(code: string, message: string) {
     super(message);
     this.code = code;

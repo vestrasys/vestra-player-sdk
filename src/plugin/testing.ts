@@ -1,12 +1,57 @@
 /**
- * An in-memory host for plugin tests. It speaks the real wire protocol, so the
- * SDK's own logic (revisions, CAS, recovery, coalescing) runs unchanged.
- * Semantics are simplified: no media decoding, no Slint, no native windows.
+ * Test tools for Vestra Player plugins: an in-memory fake player
+ * ({@link TestHost}) and {@link startPlugin}, which activates a plugin against
+ * it.
  *
- *   const { host } = await startPlugin(activate, { directory: new URL("..", import.meta.url) });
- *   await host.command("video.picture").run();
- *   host.window("picture").emit("adjust", "brightness", 40);
- *   await host.settle();
+ * `TestHost` speaks the real wire protocol, so the SDK's own logic (revisions,
+ * conditional commits, recovery after lost replies, coalescing of updates)
+ * runs exactly as it does inside the player. Only the player side is faked,
+ * and its semantics are simplified:
+ *
+ * - no media decoding: sources are facts you set with
+ *   {@link TestHost.setSource} or {@link TestHost.openElsewhere};
+ * - no Slint and no native windows: views are records of their properties
+ *   and callbacks ({@link FakeWindow}), and you fire callbacks yourself;
+ * - export jobs advance one step on every state query
+ *   (`queued` → `running` → `completed`);
+ * - video and audio processing nodes are validated with the player's own
+ *   value ranges (an out-of-range `filter.set` ends in `failed` with
+ *   `invalid`), and the command limits ({@link COMMAND_LIMITS}) are enforced.
+ *
+ * Typical workflow: start the plugin with {@link startPlugin} (it reads the
+ * plugin's `manifest.json`), drive it the way the user or another plugin
+ * would (run commands, press bindings, fire view callbacks, change the
+ * source), wait with {@link TestHost.settle}, assert on what the host
+ * recorded (`host.osd`, `host.window(id).props`, `host.sent(method)`, …), and
+ * finally call `stop()`.
+ *
+ * Use it from `node:test` (what `vestra-plugin test` runs). Each test should
+ * create its own host; `stop()` removes the host's temporary directories.
+ *
+ * @example
+ * ```ts
+ * // tests/main.test.ts
+ * import assert from "node:assert/strict";
+ * import test from "node:test";
+ * import { startPlugin } from "@vestra-player/sdk/testing";
+ * import activate from "../main.ts";
+ *
+ * test("the Hello command shows a message", async () => {
+ *   const { host, stop } = await startPlugin(activate, {
+ *     directory: new URL("..", import.meta.url),
+ *   });
+ *   try {
+ *     assert.equal(host.command("hello").state.enabled, true);
+ *     await host.command("hello").run();
+ *     assert.deepEqual(host.osd, ["Hello"]);
+ *   } finally {
+ *     await stop();
+ *   }
+ * });
+ * ```
+ *
+ * @packageDocumentation
+ * @module @vestra-player/sdk/testing
  */
 import { existsSync, readFileSync } from "node:fs";
 import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
@@ -49,34 +94,106 @@ export { COMMAND_LIMITS };
 type Handler = (params: Record<string, Json>) => unknown;
 type Call = { method: string; params: Record<string, Json> };
 
+/**
+ * A tool window as the test host keeps it: the record of a
+ * `plugin.windows.create(...)` window after its first `show()`. Get one with
+ * {@link TestHost.window}.
+ *
+ * @example
+ * ```ts
+ * await host.command("open-picture").run(); // the plugin calls window.show()
+ * const picture = host.window("picture");
+ * assert.equal(picture.visible, true);
+ * picture.emit("adjust", "brightness", 40); // fire a Slint callback
+ * await host.settle();
+ * assert.equal(picture.props["brightness"], 40);
+ * ```
+ */
 export interface FakeWindow {
+  /** The `.slint` file the window was created from (package-relative). */
   file: string;
+  /** Whether the window is shown (`show()`) or hidden (`hide()`). */
   visible: boolean;
+  /**
+   * The properties the plugin wrote, by their Slint (kebab-case) names:
+   * `canMark` is stored as `can-mark`. Runtime images appear in their wire
+   * form; read the path with {@link TestHost.imagePath}.
+   */
   props: Record<string, Json>;
+  /** The Slint callback names (kebab-case) the plugin bound with `on()`. */
   callbacks: string[];
-  /** Fire a Slint callback (kebab or camelCase name). */
+  /**
+   * Fire a Slint callback as if the user triggered it in the window. The
+   * name may be kebab-case or camelCase; `args` are the callback arguments.
+   * Follow it with `await host.settle()` before asserting.
+   */
   emit(callback: string, ...args: Json[]): void;
-  /** The user closes it with the title-bar button (`window.onClose`). */
+  /**
+   * The user closes the window with its title-bar button: the window closes
+   * and the plugin's `window.onClose` listeners run (unlike the plugin's own
+   * `close()`).
+   */
   userClose(): void;
 }
 
+/**
+ * A command the plugin registered with `plugin.commands.add`, as the test
+ * host keeps it. Get one with {@link TestHost.command} (the plugin's own) or
+ * {@link TestHost.coreAction} (the player's core actions).
+ *
+ * @example
+ * ```ts
+ * const toggle = host.command("toggle-loop");
+ * assert.deepEqual(toggle.declaration.path, ["Playback", "Loop"]);
+ * assert.equal(toggle.state.checked, false);
+ * await toggle.run();
+ * assert.equal(host.command("toggle-loop").state.checked, true);
+ * ```
+ */
 export interface FakeCommand {
+  /**
+   * What the plugin declared: id, menu path, title, order, group, default
+   * bindings, focus and repeat. Wire-level shape; it may gain fields in minor
+   * versions.
+   */
   declaration: CommandDeclaration;
+  /** The command state the player last received (after the update pass). */
   state: {
+    /** `false` when the plugin disabled the command. */
     enabled: boolean;
+    /** The check mark: `true`, `false`, or `null` for none. */
     checked: boolean | null;
+    /** `true` while the plugin reports the command as busy. */
     busy: boolean;
+    /** The reason shown when the command is disabled or busy. */
     reason: string | null;
   };
+  /**
+   * The state revision the player holds; increases with every state update
+   * the SDK sends.
+   */
   revision: number;
-  /** Execute it like the menu would (refused when disabled or busy). */
+  /**
+   * Execute the command the way the menu would, then wait until the host is
+   * idle. Rejects (with a {@link HostError}) when the command is disabled or
+   * busy, like the player, which does not call `run` then.
+   */
   run(): Promise<void>;
 }
 
+/**
+ * A generated stream (`plugin.player.openStream`) as the test host sees it:
+ * the fake player end of the frame connection. Assertion surface; see
+ * {@link TestHost.producers}.
+ */
 export interface FakeProducer {
+  /** The producer id the host assigned (`1`, `2`, … per host). */
   id: number;
+  /** Audio sample frames received so far (one stereo f32 pair = 1 frame). */
   receivedFrames: number;
+  /** Video frames received so far. */
   videoFrames: number;
+  /** `true` once the plugin released the producer (stream stopped or disposed). */
   released: boolean;
 }
 
@@ -121,24 +238,117 @@ const readyCapabilities = {
   snapshotSource: true,
 };
 
+/**
+ * An in-memory fake Vestra Player for plugin tests.
+ *
+ * The plugin under test talks to it over the real wire protocol (the host is
+ * the plugin's transport), so everything the SDK does runs unchanged. The
+ * host answers each request with simplified player behaviour, records what
+ * the plugin did, and lets the test act as the user or another plugin.
+ *
+ * Members fall into a few groups:
+ *
+ * - **Drive the plugin**: {@link TestHost.command}`(id).run()`,
+ *   {@link TestHost.press}, {@link TestHost.window}`(id).emit(...)`,
+ *   {@link TestHost.mounted}`().emit(...)`, {@link TestHost.drop},
+ *   {@link TestHost.step}, {@link TestHost.dialogAnswers}.
+ * - **Simulate the player and other plugins**: {@link TestHost.setSource},
+ *   {@link TestHost.openElsewhere}, {@link TestHost.setMainWindow},
+ *   {@link TestHost.setTimelineLayer}, {@link TestHost.setAppearance},
+ *   {@link TestHost.setPackages}, {@link TestHost.emit}.
+ * - **Preset data** the plugin reads: {@link TestHost.stats},
+ *   {@link TestHost.app}, {@link TestHost.systemInfo},
+ *   {@link TestHost.chapters}, {@link TestHost.audioDevices},
+ *   {@link TestHost.secrets}, {@link TestHost.clipboard},
+ *   {@link TestHost.tools}.
+ * - **Assert** on records: {@link TestHost.osd}, {@link TestHost.calls},
+ *   {@link TestHost.sent}, {@link TestHost.conflicts},
+ *   {@link TestHost.layout}, {@link TestHost.menus}, and many more.
+ * - **Inject failures**: {@link TestHost.handle} / {@link TestHost.reset}.
+ * - **Synchronise**: {@link TestHost.settle}.
+ *
+ * Usually created by {@link startPlugin}. Create one yourself only to preset
+ * data that the plugin reads during activation (`app`, `appearance`,
+ * `secrets`, ...), then pass it as `startPlugin(activate, { host })`.
+ *
+ * Fields that mirror player state at the wire level (`source`, `subtitles`,
+ * `processing`, `snapshots`, `jobs`, `producers`, `uploads`, `resolvers`,
+ * `calls`) use the protocol's shapes. They are fine for assertions but are
+ * not part of the plugin API: their shape may change in minor versions.
+ *
+ * @example
+ * ```ts
+ * import assert from "node:assert/strict";
+ * import test from "node:test";
+ * import { startPlugin, TestHost } from "@vestra-player/sdk/testing";
+ * import activate from "../main.ts";
+ *
+ * test("shows the playing file in the panel", async () => {
+ *   const host = new TestHost();
+ *   host.appearance = "potplayer"; // read during activation
+ *   const { stop } = await startPlugin(activate, {
+ *     directory: new URL("..", import.meta.url),
+ *     host,
+ *   });
+ *   host.openElsewhere("/media/clip.mp4"); // another plugin opened a file
+ *   await host.settle();
+ *   assert.equal(host.mounted().props["title"], "clip.mp4");
+ *   await stop();
+ * });
+ * ```
+ */
 export class TestHost implements Transport {
-  /** Every request in order, for assertions. */
+  /**
+   * Every request the plugin sent, in order: `{ method, params }`.
+   * Wire-level; prefer {@link TestHost.sent} for one method.
+   */
   readonly calls: Call[] = [];
+  /** The host events the plugin subscribed to (needs `events` etc.). */
   readonly subscriptions = new Set<string>();
+  /**
+   * The player's source facts (phase, position, duration, paused, rate,
+   * audio tracks, loop, ...). Wire-level shape; change it with
+   * {@link TestHost.setSource}, which also broadcasts it.
+   */
   source: SourceState = initialSource();
+  /** Tool windows by id (see {@link TestHost.window}). */
   readonly windows = new Map<string, FakeWindow>();
+  /**
+   * The plugin's mounted panel (bottom bar, sidebar or backdrop), or `null`.
+   * See {@link TestHost.mounted}.
+   */
   panel:
     | (Omit<FakeWindow, "callbacks" | "userClose"> & {
+        /** `"bottom"`, `"sidebar"` or `"backdrop"`. */
         slot: string;
+        /** The exported component the SDK found in the file. */
         component: string;
+        /** The last `panel.setInteraction(...)` locks, `null` before any. */
         locks: Json;
       })
     | null = null;
+  /** The plugin's commands by local id (see {@link TestHost.command}). */
   readonly commands = new Map<string, FakeCommand>();
   /** The player's 14 core actions (`host/<id>`), kept apart from the plugin's `commands`. */
   readonly coreCommands = new Map<string, FakeCommand>();
-  /** Both panel positions as `layout.state` reports them. */
-  readonly layout: { bottom: LayoutSlot | null; sidebar: LayoutSlot | null } = {
+  /**
+   * Both panel positions as the player reports them (`null` while no panel
+   * is mounted there). You may change a slot directly and then call
+   * `host.emit("window.state", {})` to simulate a change made elsewhere.
+   *
+   * @example
+   * ```ts
+   * assert.equal(host.layout.sidebar?.preferred, true);
+   * await plugin.panels.sidebar.toggle();
+   * assert.equal(host.layout.sidebar?.preferred, false);
+   * ```
+   */
+  readonly layout: {
+    /** The bottom bar position: `preferred`, `effective`, `reason`, `detached`. */
+    bottom: LayoutSlot | null;
+    /** The sidebar position: `preferred`, `effective`, `reason`, `detached`. */
+    sidebar: LayoutSlot | null;
+  } = {
     bottom: null,
     sidebar: null,
   };
@@ -147,8 +357,24 @@ export class TestHost implements Transport {
   /** The text of this plugin's osd panel, `null` when hidden. */
   osdPanel: string | null = null;
   /** The sequence provider's flags, `null` without a provider. */
-  sequence: { canNext: boolean; canPrevious: boolean } | null = null;
-  /** What `player.stats()` returns. */
+  sequence: {
+    /** The provider's `canNext`, as last evaluated. */
+    canNext: boolean;
+    /** The provider's `canPrevious`, as last evaluated. */
+    canPrevious: boolean;
+  } | null = null;
+  /**
+   * What `player.stats()` returns. Fields added in later rounds may be left
+   * out; the SDK fills them with `null`.
+   *
+   * @example
+   * ```ts
+   * host.stats = {
+   *   ...host.stats,
+   *   video: { codec: "h264", width: 1920, height: 1080, fps: 24 },
+   * } as typeof host.stats;
+   * ```
+   */
   stats: PlaybackStats = {
     backend: "test",
     session: 0,
@@ -161,25 +387,57 @@ export class TestHost implements Transport {
   };
   /** Every `subtitles.load`: its options and bytes, newest last. */
   readonly subtitleLoads: {
+    /** The `format` option (`"srt"` by default). */
     format: "srt" | "ass";
+    /** The `title` option, `null` when omitted. */
     title: string | null;
+    /** The `select` option (`"primary"` by default). */
     select: "primary" | "secondary" | "none";
+    /** The uploaded file bytes. */
     bytes: Buffer;
   }[] = [];
-  /** The fake clipboard: preset `text` to test `readText`; written images by path. */
-  readonly clipboard: { text: string | null; images: string[] } = {
+  /**
+   * The fake system clipboard. Preset `text` to test `readText`;
+   * `writeText` replaces it and `writeImage` appends the image path.
+   */
+  readonly clipboard: {
+    /** The clipboard's text, `null` when it holds none. */
+    text: string | null;
+    /** Paths given to `clipboard.writeImage`, newest last. */
+    images: string[];
+  } = {
     text: null,
     images: [],
   };
   /** The effective `power.preventSleep` mode. */
   power: "off" | "playing" = "off";
   /**
-   * External tools: `handle("ffprobe", (args) => ({ stdout: "…" }))` makes the
-   * tool available and answers each run (throw a HostError to fail it);
-   * without a handler the tool is `unavailable`. `calls` records every run.
+   * The fake `ffmpeg` / `ffprobe` behind `plugin.tools`. A tool without a
+   * handler is not found (`available()` is false, `run()` rejects with
+   * `unavailable`).
+   *
+   * @example
+   * ```ts
+   * host.tools.handle("ffprobe", (args) => {
+   *   assert.ok(args.includes("-show_streams"));
+   *   return { stdout: JSON.stringify({ streams: [] }) };
+   * });
+   * host.tools.handle("ffmpeg", () => {
+   *   throw new HostError("failed", "Invalid data found when processing input");
+   * });
+   * await host.command("probe").run();
+   * assert.equal(host.tools.calls[0]?.tool, "ffprobe");
+   * ```
    */
   readonly tools = {
-    calls: [] as { tool: string; args: string[] }[],
+    /** Every run: the tool name and its arguments, newest last. */
+    calls: [] as {
+      /** `"ffmpeg"` or `"ffprobe"`. */
+      tool: string;
+      /** The arguments, as passed to `tools.run`. */
+      args: string[];
+    }[],
+    /** @internal The installed handlers by tool; use `handle()`. */
     handlers: new Map<
       string,
       (
@@ -188,6 +446,12 @@ export class TestHost implements Transport {
         | { stdout?: Uint8Array | string; stderr?: string }
         | Promise<{ stdout?: Uint8Array | string; stderr?: string }>
     >(),
+    /**
+     * Make `tool` available and answer each run with `handler(args)`. Return
+     * `{ stdout?, stderr? }` (a string `stdout` is UTF-8 encoded), or throw a
+     * {@link HostError} to fail the run with that code. A later call
+     * replaces the handler.
+     */
     handle(
       tool: "ffmpeg" | "ffprobe",
       handler: (
@@ -204,12 +468,14 @@ export class TestHost implements Transport {
    * failures with `host.handle("system.openPath", …)`.
    */
   readonly system = {
+    /** Paths given to `system.reveal`, newest last. */
     revealed: [] as string[],
+    /** Paths given to `system.openPath`, newest last. */
     opened: [] as string[],
     /** `system.openUrl` addresses, newest last. */
     urls: [] as string[],
   };
-  /** Local processes, faked: see `tools`. */
+  /** @internal Local processes, faked: see {@link TestHost.tools}. */
   readonly local: LocalServices = {
     locate: async (tool) =>
       this.tools.handlers.has(tool) ? `/test-host/${tool}` : null,
@@ -237,7 +503,14 @@ export class TestHost implements Transport {
     },
   };
   /** Every `panel.showMenu`, newest last. */
-  readonly menus: { items: (string | null)[]; x: number; y: number }[] = [];
+  readonly menus: {
+    /** Command ids, `null` for a separator. */
+    items: (string | null)[];
+    /** `at.x`, in window coordinates. */
+    x: number;
+    /** `at.y`, in window coordinates. */
+    y: number;
+  }[] = [];
 
   // ------------------------------------------------------------ round 3b
 
@@ -246,19 +519,48 @@ export class TestHost implements Transport {
    * merged list `plugin.timeline.marks` reads. A new source clears them.
    */
   readonly timeline = {
+    /** Each plugin's layer by plugin id; layers with no marks are absent. */
     layers: new Map<
       string,
-      { time: number; kind: string; title: string | null }[]
+      {
+        /** Seconds from the start. */
+        time: number;
+        /** `"chapter"`, `"bookmark"` or `"marker"`. */
+        kind: string;
+        /** The mark's title, `null` without one. */
+        title: string | null;
+      }[]
     >(),
+    /** Every layer merged, sorted by time, with the publishing plugin's id. */
     get marks() {
       return [...this.layers]
         .flatMap(([plugin, marks]) =>
-          marks.map((mark) => ({ ...mark, plugin })),
+          marks.map((mark) => ({
+            ...mark,
+            /** The manifest id of the plugin that published the mark. */
+            plugin,
+          })),
         )
         .sort((a, b) => a.time - b.time);
     },
   };
-  /** Another plugin published (or, with `[]`, cleared) its layer. */
+  /**
+   * Simulate another plugin publishing its timeline layer (or clearing it
+   * with `[]`); pushes `timeline.changed` when the plugin subscribed.
+   *
+   * @param pluginId - The other plugin's manifest id.
+   * @param marks - Its whole layer.
+   *
+   * @example
+   * ```ts
+   * host.setTimelineLayer("community.chapters", [
+   *   { time: 0, kind: "chapter", title: "Intro" },
+   *   { time: 95, kind: "chapter", title: "Part 1" },
+   * ]);
+   * await host.settle();
+   * assert.equal(plugin.timeline.marks.length, 2);
+   * ```
+   */
   setTimelineLayer(
     pluginId: string,
     marks: { time: number; kind: string; title?: string | null }[],
@@ -282,8 +584,25 @@ export class TestHost implements Transport {
    * Runtime images written to views (`plugin.ui.image`), newest last. The
    * SDK refuses images of released scopes before anything is sent.
    */
-  readonly images: { path: string; ref: number }[] = [];
-  /** The file an image property shows (`host.window(id).props.cover`), or null. */
+  readonly images: {
+    /** The image file's path, as given to `ui.image`. */
+    path: string;
+    /** The SDK's reference number for that `ImageRef`. */
+    ref: number;
+  }[] = [];
+  /**
+   * The file an image property shows, or `null` when the value is not a
+   * runtime image. View properties hold images in their wire form; this
+   * reads the path back.
+   *
+   * @example
+   * ```ts
+   * assert.equal(
+   *   host.imagePath(host.window("cover").props["cover"]),
+   *   join(plugin.dataDirectory, "cover.png"),
+   * );
+   * ```
+   */
   imagePath(value: Json | undefined): string | null {
     const image = value as { $vestraImage?: unknown } | null | undefined;
     return image &&
@@ -305,13 +624,34 @@ export class TestHost implements Transport {
   // ------------------------------------------------------------ round 3b batch 2
 
   /** `drops.provide` registrations of this plugin, in order (`id` is the SDK's). */
-  readonly dropProviders: { id: string; extensions: string[] }[] = [];
+  readonly dropProviders: {
+    /** The SDK's provider id. */
+    id: string;
+    /** The extensions it takes (lower case, `"folder"` for directories). */
+    extensions: string[];
+  }[] = [];
   /** The panel has an `onDrop` listener. */
   panelDrops = false;
   /**
    * Drop files like the player: on a panel with an `onDrop` listener the
    * whole list goes there; otherwise (and on the video area) grouped by
    * extension to the first provider (`folder` for existing directories).
+   * Files nobody takes are ignored. Resolves once the host is idle again.
+   *
+   * @param paths - The dropped paths, in the order the file manager gives.
+   * @param options - `target`: `"video"` (default) or `"panel"`; `at`: the
+   *   drop point in panel coordinates (default `{ x: 0, y: 0 }`);
+   *   `modifiers`: keys held (default all `false`).
+   *
+   * @example
+   * ```ts
+   * await host.drop(["/media/a.srt", "/media/b.mkv"]);
+   * await host.drop(["/media/list.m3u"], {
+   *   target: "panel",
+   *   at: { x: 10, y: 48 },
+   *   modifiers: { alt: true },
+   * });
+   * ```
    */
   drop(
     paths: string[],
@@ -352,7 +692,10 @@ export class TestHost implements Transport {
   }
   /** The palette (`plugin.appearance.theme`); `setAppearance` changes it elsewhere. */
   appearance: "vestra" | "potplayer" = "vestra";
-  /** Another plugin switched the palette: pushed as `appearance.changed`. */
+  /**
+   * Simulate another plugin switching the palette: updates
+   * {@link TestHost.appearance} and pushes `appearance.changed`.
+   */
   setAppearance(theme: "vestra" | "potplayer") {
     this.appearance = theme;
     this.emit("appearance.changed", { theme });
@@ -362,33 +705,62 @@ export class TestHost implements Transport {
    * null), and the page the options window shows.
    */
   readonly settings = {
+    /** Registered pages by page id. */
     pages: new Map<
       string,
       {
+        /** The page's settings category. */
         category: string;
+        /** The page title. */
         title: string;
+        /** The page order within its category. */
         order: number;
+        /** The `.slint` file (package-relative). */
         file: string;
+        /** The exported component the SDK found. */
         component: string;
+        /** The exported global (the page's bridge) the SDK found. */
         global: string;
+        /** The page's properties by Slint (kebab-case) name. */
         props: Record<string, Json>;
         /** Fire one of the page's callbacks. */
         emit(callback: string, ...args: Json[]): void;
       }
     >(),
+    /** Every `settings.show(pageId)`: the page id, `null` when omitted. */
     shows: [] as (string | null)[],
+    /** The page the options window shows, `null` before any `show`. */
     current: null as string | null,
+    /** Whether the options window is open. */
     open: false,
   };
-  /** One settings page (throws when it was never registered). */
+  /**
+   * One settings page by id. Throws when it was never registered.
+   *
+   * @example
+   * ```ts
+   * const page = host.settingsPage("general");
+   * page.emit("setStep", 10);
+   * await host.settle();
+   * assert.equal(page.props["step"], 10);
+   * ```
+   */
   settingsPage(id: string) {
     const page = this.settings.pages.get(id);
     if (!page) throw new Error(`settings page ${id} is not registered`);
     return page;
   }
   /** The backdrop: who mounted it and whether it shows (`panels.backdrop.state`). */
-  backdrop: { owner: string; effective: boolean } | null = null;
-  /** The backdrop's `effective` changes (no video frame / video again); pushed. */
+  backdrop: {
+    /** The manifest id of the plugin that mounted it. */
+    owner: string;
+    /** Whether it shows now (no video frame). `true` when mounted. */
+    effective: boolean;
+  } | null = null;
+  /**
+   * Simulate the backdrop's `effective` changing (`false`: a video frame
+   * appeared; `true`: there is none again); pushed to the plugin.
+   */
   setBackdropEffective(effective: boolean) {
     if (this.backdrop) this.backdrop.effective = effective;
     this.emit("window.state", this.#windowFacts());
@@ -397,11 +769,20 @@ export class TestHost implements Transport {
    * The display layer (`plugin.video.view()`): who owns it (this plugin is
    * `manifestId`) and the values the player holds.
    */
-  readonly videoView: { owner: string | null; values: ViewSettings } = {
+  readonly videoView: {
+    /** The owning plugin's manifest id, `null` while nobody owns it. */
+    owner: string | null;
+    /** The values the player holds. */
+    values: ViewSettings;
+  } = {
     owner: null,
     values: { ...VIEW_DEFAULTS },
   };
-  /** Another plugin took (or, with `null`, released) the display layer. */
+  /**
+   * Simulate another plugin taking the display layer first (the plugin's
+   * `video.view()` then fails with `conflict`), or, with `null`, releasing
+   * it (values reset to the defaults).
+   */
   setVideoViewOwner(pluginId: string | null) {
     this.videoView.owner = pluginId;
     if (pluginId === null) this.videoView.values = { ...VIEW_DEFAULTS };
@@ -412,11 +793,18 @@ export class TestHost implements Transport {
    * software rendering, where every `set` fails with `unsupported`).
    */
   readonly videoRender: {
+    /** The owning plugin's manifest id, `null` while nobody owns them. */
     owner: string | null;
+    /** The values the player holds. */
     values: RenderSettings;
+    /** `true`: GPU rendering; `false`: software rendering (`unsupported`). */
     gpu: boolean;
   } = { owner: null, values: { ...RENDER_DEFAULTS, shaders: [] }, gpu: true };
-  /** Another plugin took (or, with `null`, released) the render options. */
+  /**
+   * Simulate another plugin owning the render options (the plugin's
+   * `video.render()` then fails with `conflict`), or, with `null`, releasing
+   * them (values reset to the defaults).
+   */
   setVideoRenderOwner(pluginId: string | null) {
     this.videoRender.owner = pluginId;
     if (pluginId === null)
@@ -424,7 +812,15 @@ export class TestHost implements Transport {
   }
   /**
    * What the player pushes when mpv cannot compile a shader (code `failed`)
-   * or switches to software rendering (`unsupported`); only to the owner.
+   * or switches to software rendering (`unsupported`, which also sets
+   * `videoRender.gpu` to false). Pushed only when this plugin is the owner.
+   *
+   * @example
+   * ```ts
+   * host.failVideoRender("failed", "shader compile failed: ERROR: 0:39: ...");
+   * await host.settle();
+   * assert.equal(render.status.state, "failed");
+   * ```
    */
   failVideoRender(code: "failed" | "unsupported", message: string) {
     if (code === "unsupported") this.videoRender.gpu = false;
@@ -434,53 +830,139 @@ export class TestHost implements Transport {
         error: { code, message },
       });
   }
+  /**
+   * The player's processing (filter) state. Wire-level; may change in minor
+   * versions. `resources` holds each `video.filter` / `audio.filter` chain the
+   * plugin applied, keyed by the SDK's resource id.
+   *
+   * @example
+   * ```ts
+   * const [chain] = [...host.processing.resources.values()];
+   * assert.deepEqual(chain?.nodes, [{ kind: "hue", degrees: 30 }]);
+   * ```
+   */
   readonly processing = {
+    /** Increases with every accepted change. */
     configurationRevision: 0,
+    /** Set a stage here to simulate a blocked backend (`backend-uncertain`). */
     backendUncertain: {} as Partial<Record<"video" | "audio", string>>,
+    /** Applied chains by resource id. */
     resources: new Map<
       string,
-      { stage: string; revision: number; nodes: Json; offsetMs?: number }
+      {
+        /** `"video"` or `"audio"`. */
+        stage: string;
+        /** The chain's revision. */
+        revision: number;
+        /** The applied nodes. */
+        nodes: Json;
+        /** The audio delay in milliseconds (audio chains only). */
+        offsetMs?: number;
+      }
     >(),
+    /** Outcomes of processing operations, for the SDK's recovery queries. */
     book: new Map<
       string,
       {
+        /** The operation's outcome. */
         status: "completed" | "failed";
+        /** The result of a completed operation. */
         result?: Json;
-        error?: { code: string; message: string };
+        /** The refusal of a failed operation. */
+        error?: {
+          /** The error code. */
+          code: string;
+          /** The error message. */
+          message: string;
+        };
       }
     >(),
   };
+  /**
+   * The player's subtitle state: tracks, selection, style layers, fonts and
+   * loaded resources. Wire-level shape (may change in minor versions); add
+   * tracks to `subtitles.tracks` (entries may carry `codec`, `text`,
+   * `streamIndex`) to simulate a source's subtitles.
+   */
   subtitles: SubtitleState;
-  readonly uploads = new Map<number, { bytes: Buffer[]; expected: number }>();
+  /** Subtitle uploads in progress, by upload id. Wire-level. */
+  readonly uploads = new Map<
+    number,
+    {
+      /** The chunks received so far. */
+      bytes: Buffer[];
+      /** The announced total size in bytes. */
+      expected: number;
+    }
+  >();
+  /** Snapshots taken with `media.capture`, by snapshot id. Wire-level. */
   readonly snapshots = new Map<number, Json>();
   /** Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last. */
   readonly exports: Record<string, Json>[] = [];
+  /**
+   * Export jobs by job id. Each state query advances a job one step
+   * (`queued` → `running` → `completed`; `cancelling` → `cancelled`).
+   * Wire-level.
+   */
   readonly jobs = new Map<number, MediaJob>();
   /**
    * `openStream`'s transport: a Unix socket (macOS, Linux) or, with `"tcp"`,
    * loopback TCP where the plugin must send the token first (Windows).
+   * Set it before the plugin calls `openStream`.
    */
   producerTransport: "unix" | "tcp" = "unix";
+  /**
+   * Generated streams (`player.openStream`) by producer id: the fake player
+   * end of each frame connection. Wire-level beyond the
+   * {@link FakeProducer} fields.
+   */
   readonly producers = new Map<
     number,
     FakeProducer & {
+      /** The listening server for the frame connection. */
       server: Server;
+      /** The Unix socket path (unused with TCP). */
       path: string;
       /** TCP: the connection sent the right token (always true for Unix). */
       admitted: boolean;
+      /** The current start/stop control epoch. */
       epoch: number;
+      /** A control waiting for the plugin's acknowledgement, or `null`. */
       pending: Json | null;
+      /** Whether the last control was acknowledged. */
       acknowledged: boolean;
+      /** Whether the stream is producing (selected and started). */
       active: boolean;
     }
   >();
+  /** Registered source resolvers (`resolvers.add`) by id: their declarations. */
   readonly resolvers = new Map<string, Json>();
   /**
    * Answers for `dialogs.open` (paths, `null` = cancelled) and
-   * `dialogs.confirm` (`{ confirmed, checked }`), consumed in order.
+   * `dialogs.confirm` (`{ confirmed, checked }`), consumed in order. A
+   * dialog with no queued answer, or with the wrong kind, fails the request
+   * (as a lost reply).
+   *
+   * For `openFile` / `openDirectory` / `saveFile` queue a one-path array;
+   * for `openFiles` any number of paths.
+   *
+   * @example
+   * ```ts
+   * host.dialogAnswers.push(["/media/movie.mkv"]); // openFile picks it
+   * host.dialogAnswers.push(null); // the next file dialog is cancelled
+   * host.dialogAnswers.push({ confirmed: true, checked: false }); // confirm
+   * await host.command("open").run();
+   * ```
    */
   readonly dialogAnswers: (
-    string[] | null | { confirmed: boolean; checked: boolean }
+    | string[]
+    | null
+    | {
+        /** The user clicked the confirm button. */
+        confirmed: boolean;
+        /** The checkbox state. */
+        checked: boolean;
+      }
   )[] = [];
   /** Every `dialogs.confirm` request (its options), newest last. */
   readonly confirms: Record<string, Json>[] = [];
@@ -492,13 +974,32 @@ export class TestHost implements Transport {
    * `pictureInPicture.supported: false` stands for Windows and Linux.
    */
   readonly mainWindow = {
+    /** Whether the main window is fullscreen. */
     fullscreen: false,
-    videoArea: { width: 780, height: 609 },
+    /** The video area in logical points (default 780×609). */
+    videoArea: {
+      /** Width in logical points. */
+      width: 780,
+      /** Height in logical points. */
+      height: 609,
+    },
+    /** The effective `window.setAlwaysOnTop` value. */
     onTop: false,
+    /** The effective `window.setCursorAutoHide` mode. */
     cursorAutoHide: "fullscreen" as "fullscreen" | "playing",
-    pictureInPicture: { supported: true, active: false },
+    /** Picture-in-picture: `supported` (preset) and `active`. */
+    pictureInPicture: {
+      /** Set to `false` to simulate Windows or Linux. */
+      supported: true,
+      /** Whether the picture-in-picture window shows the video. */
+      active: false,
+    },
   };
-  /** The player's secret store for this plugin: name → value. */
+  /**
+   * The player's secret store for this plugin: name → value. Preset entries
+   * to simulate stored secrets; inject failures with
+   * `host.handle("secrets.get", ...)`.
+   */
   readonly secrets = new Map<string, string>();
   /** What `plugin.app.system()` reports. */
   systemInfo: WireSystemInfo = {
@@ -519,13 +1020,22 @@ export class TestHost implements Transport {
       },
     ],
   };
-  /** What `plugin.app` reports. Set it before `startPlugin`. */
+  /**
+   * What `plugin.app` reports. Set it before {@link startPlugin}: the plugin
+   * receives it once at start-up.
+   */
   app: {
+    /** The player version. */
     version: string;
+    /** The short git hash of the build, `null` when unknown. */
     build: string | null;
+    /** Component versions. */
     components: {
+      /** libmpv's `mpv-version`. */
       mpv: string | null;
+      /** `{ ffmpeg: <version> }`. */
       libav: Record<string, string>;
+      /** The Slint version. */
       slint: string;
     };
   } = {
@@ -538,15 +1048,28 @@ export class TestHost implements Transport {
     },
   };
   /** What `player.chapters()` lists while media is ready. */
-  chapters: { title: string | null; start: number }[] = [];
+  chapters: {
+    /** The chapter title, `null` without one. */
+    title: string | null;
+    /** Start time in seconds. */
+    start: number;
+  }[] = [];
   readonly #overrides = new Map<string, Handler>();
   readonly #listeners = new Map<string, Set<(data: unknown) => void>>();
   #inFlight = 0;
   #next = { snapshot: 0, job: 0, producer: 0, source: 0 };
   #sourceBook = new Map<number, Json>();
   readonly #scratch = mkdtempSync(join(tmpdir(), "vestra-test-host-"));
-  /** `plugin.dataDirectory`: empty, removed with the host on `stop()`. */
+  /**
+   * `plugin.dataDirectory`: a fresh empty temporary directory, removed with
+   * the host on `stop()`. `plugin.storage.json` reads and writes real files
+   * here. Pass `startPlugin(..., { dataDirectory })` to use another one.
+   */
   readonly dataDirectory = join(this.#scratch, "data");
+  /**
+   * The manifest id of the plugin under test (set by {@link startPlugin};
+   * `"test.plugin"` by default).
+   */
   manifestId = "test.plugin";
 
   constructor() {
@@ -594,11 +1117,29 @@ export class TestHost implements Transport {
   /** The `player.setStepSeek` value in effect (default 5). */
   stepSeek = 5;
   /** Every `player.step`, newest last. */
-  readonly steps: { unit: string; direction: string }[] = [];
+  readonly steps: {
+    /** `"frame"` or `"keyframe"`. */
+    unit: string;
+    /** `"backward"` or `"forward"`. */
+    direction: string;
+  }[] = [];
   /** Every core action run (`host.run`, a core command, a pressed core binding), newest last. */
   readonly coreRuns: string[] = [];
 
-  /** One of the 14 core actions the test host registers like the player (`host/<id>`). */
+  /**
+   * One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...)
+   * that the test host registers like the player, as `host/<id>`. Throws for
+   * an unknown id. `run()` executes it with the player's checks and writes
+   * its on-screen text to {@link TestHost.osd}.
+   *
+   * @example
+   * ```ts
+   * host.setSource({ phase: "ready", duration: 100, position: 10 });
+   * await host.coreAction("play-pause").run();
+   * assert.equal(host.source.paused, true);
+   * assert.deepEqual(host.coreRuns, ["play-pause"]);
+   * ```
+   */
   coreAction(id: string): FakeCommand {
     const command = this.coreCommands.get(`host/${id}`);
     if (!command) throw new Error(`no core action ${id}`);
@@ -862,6 +1403,10 @@ export class TestHost implements Transport {
 
   // ------------------------------------------------------------ transport
 
+  /**
+   * @internal The transport side the SDK calls: answer one request with the
+   * override from {@link TestHost.handle} or the default behaviour.
+   */
   async request<T>(method: string, params: Json = {}): Promise<T> {
     const record = (params ?? {}) as Record<string, Json>;
     this.calls.push({ method, params: record });
@@ -876,6 +1421,7 @@ export class TestHost implements Transport {
       this.#inFlight--;
     }
   }
+  /** @internal The transport side the SDK calls: listen to a host event. */
   on(event: string, listener: (data: unknown) => void) {
     const group = this.#listeners.get(event) ?? new Set();
     group.add(listener);
@@ -887,15 +1433,48 @@ export class TestHost implements Transport {
 
   // ------------------------------------------------------------ test controls
 
-  /** Replace one method's behaviour (throw a HostError to simulate a refusal). */
+  /**
+   * Replace the host's behaviour for one wire method until
+   * {@link TestHost.reset}. The handler receives the request parameters and
+   * returns the reply (or a promise of it).
+   *
+   * Throw a {@link HostError} to simulate a definite refusal (the plugin's
+   * call rejects with that `code`); throw a plain `Error` to simulate a lost
+   * reply (the SDK then runs its recovery path). Method names are protocol
+   * names, e.g. `"clipboard.writeText"`, `"secrets.get"`,
+   * `"system.openPath"`, `"audio.addTrack"`; see {@link TestHost.sent} to
+   * find the one a call uses.
+   *
+   * @param method - The wire method name.
+   * @param handler - Produces the reply from the request parameters.
+   *
+   * @example
+   * ```ts
+   * host.handle("system.openPath", () => {
+   *   throw new HostError("missing", "no such file");
+   * });
+   * await host.command("open-folder").run();
+   * assert.deepEqual(host.osd, ["Folder not found"]);
+   * host.reset("system.openPath");
+   * ```
+   */
   handle(method: string, handler: Handler) {
     this.#overrides.set(method, handler);
   }
-  /** Restore the default behaviour of a method. */
+  /** Restore the default behaviour of a method replaced with {@link TestHost.handle}. */
   reset(method: string) {
     this.#overrides.delete(method);
   }
-  /** Deliver a host event (only if the plugin subscribed, like the real host). */
+  /**
+   * Deliver a host event to the plugin. Like the player, subscription-based
+   * events (`source.state`, `playback.backend`, `window.state`,
+   * `timeline.changed`, `appearance.changed`) are delivered only when the
+   * plugin subscribed (it declared `events` and listens). Most tests use the
+   * higher-level helpers (`setSource`, `setMainWindow`, ...) instead.
+   *
+   * @param event - The wire event name.
+   * @param data - The event payload (wire-level shape).
+   */
   emit(event: string, data: unknown) {
     if (
       [
@@ -911,7 +1490,25 @@ export class TestHost implements Transport {
     for (const listener of [...(this.#listeners.get(event) ?? [])])
       listener(data);
   }
-  /** Change source facts (e.g. `{ phase: "ready", duration: 60 }`) and broadcast them. */
+  /**
+   * Change the source facts and broadcast them, as if the player's state
+   * changed (the user paused, playback reached the end, a file finished
+   * loading). Any phase other than `empty` also turns on the source
+   * capabilities (pause, seek, rate, ...) unless the patch sets them.
+   * `phase: "loading"` makes a mounted backdrop effective, like the player.
+   *
+   * @param patch - Wire-level source fields, e.g. `phase`, `position`,
+   *   `duration`, `paused`, `audioTracks`.
+   *
+   * @example
+   * ```ts
+   * host.setSource({ phase: "ready", duration: 60, position: 0 });
+   * await host.settle();
+   * assert.equal(plugin.player.state.phase, "ready");
+   * host.setSource({ phase: "ended", terminalReason: "natural" });
+   * await host.settle();
+   * ```
+   */
   setSource(patch: Partial<SourceState>) {
     this.source = {
       ...this.source,
@@ -929,7 +1526,21 @@ export class TestHost implements Transport {
     if (patch.phase === "loading" && this.backdrop && !this.backdrop.effective)
       this.setBackdropEffective(true);
   }
-  /** The user changed the main window (resized, fullscreen); broadcast it. */
+  /**
+   * Simulate the user changing the main window (resizing it, entering or
+   * leaving fullscreen, closing the picture-in-picture window) and broadcast
+   * it. Like the player, entering fullscreen collapses an attached, visible
+   * sidebar (`effective: false`, `reason: "fullscreen"`) and leaving
+   * fullscreen docks it again.
+   *
+   * @example
+   * ```ts
+   * host.setMainWindow({ fullscreen: true, videoArea: { width: 1920, height: 1080 } });
+   * await host.settle();
+   * assert.equal(plugin.window.state.fullscreen, true);
+   * host.setMainWindow({ pictureInPicture: { supported: true, active: false } });
+   * ```
+   */
   setMainWindow(
     patch: Partial<{
       fullscreen: boolean;
@@ -971,7 +1582,22 @@ export class TestHost implements Transport {
       appearance: this.appearance,
     };
   }
-  /** Simulate another plugin opening a source. */
+  /**
+   * Simulate another plugin (or the user) opening a source: a new
+   * `sourceId`, then the given phase. Calls the plugin made against the old
+   * state now fail with `stale`.
+   *
+   * @param source - The path or URL.
+   * @param phase - The phase to end in (default `"ready"`).
+   *
+   * @example
+   * ```ts
+   * const before = plugin.player.state;
+   * host.openElsewhere("/media/other.mp4");
+   * await host.settle();
+   * assert.equal(plugin.player.isCurrent(before), false);
+   * ```
+   */
   openElsewhere(source: string, phase: SourceState["phase"] = "ready") {
     this.#intent({ kind: "open", source, startPaused: false });
     this.setSource({ phase });
@@ -980,7 +1606,15 @@ export class TestHost implements Transport {
    * Press a binding like the host's table would: panel-focus bindings first
    * when `panel` is true, then global ones; the earliest registration wins a
    * conflict. Resolves after the command ran; rejects when nothing is bound
-   * or the command is disabled or busy.
+   * or the command is disabled or busy. Bindings use the reference syntax
+   * (`"Space"`, `"Ctrl+O"`, `"Mouse:WheelUp"`); the player's core actions
+   * match first, and user overrides in `bindings.overlay` apply.
+   *
+   * @example
+   * ```ts
+   * await host.press("Ctrl+B"); // a global binding
+   * await host.press("Delete", { panel: true }); // while the panel has focus
+   * ```
    */
   async press(binding: string, options: { panel?: boolean } = {}) {
     const claims = this.#claims();
@@ -990,7 +1624,16 @@ export class TestHost implements Transport {
     if (!id) throw new Error(`test host: nothing is bound to ${binding}`);
     await (this.coreCommands.get(id) ?? this.command(id)).run();
   }
-  /** Bindings declared by more than one command: `[binding, winner, ...ignored]`. */
+  /**
+   * Bindings declared by more than one command, each as
+   * `[binding, winner, ...ignored]` (command ids; core actions as
+   * `host/<id>`). Empty when there are none.
+   *
+   * @example
+   * ```ts
+   * assert.deepEqual(host.conflicts, []);
+   * ```
+   */
   get conflicts(): string[][] {
     return [...this.#claims()]
       .filter(([, ids]) => ids.length > 1)
@@ -1021,28 +1664,54 @@ export class TestHost implements Transport {
    * The binding overlay `plugin.bindings.set` writes (`"<plugin>/<command>"`
    * to inputs; preset it to simulate saved overrides). `press` honours it.
    */
-  readonly bindings = { overlay: new Map<string, string[]>() };
+  readonly bindings = {
+    /** `"<plugin>/<command>"` → the user's inputs for it. */
+    overlay: new Map<string, string[]>(),
+  };
   /** What `packages.list` reports; `setEnabled` / `uninstall` update it. */
   packages: {
+    /** The plugin's manifest id. */
     id: string;
+    /** Its version, `null` when unknown. */
     version: string | null;
+    /** Where it was loaded from. */
     origin: "installed" | "development" | "trial";
+    /** Its run state. */
     state: "starting" | "running" | "disabled" | "failed" | "stopped";
+    /** Why it failed (`state: "failed"`). */
     error: string | null;
+    /** Its declared capabilities. */
     capabilities: string[];
+    /** The package directory. */
     directory: string;
+    /** The version a rollback would restore, `null` without one. */
     previousVersion: string | null;
   }[] = [];
   /** Every `packages.setEnabled` / `uninstall`, newest last. */
   readonly packageCalls: {
+    /** Which call. */
     method: "setEnabled" | "uninstall";
+    /** The target plugin id. */
     id: string;
+    /** `setEnabled`'s value. */
     enabled?: boolean;
+    /** `uninstall`'s `removeData` option. */
     removeData?: boolean;
   }[] = [];
-  /** What `player.audioDevices()` lists. */
-  audioDevices: { id: string; name: string }[] = [];
-  /** Broadcast the plugin list (another plugin started or stopped). */
+  /**
+   * What `player.audioDevices()` lists. `setAudioDevice` updates
+   * `host.source.audioOutput`.
+   */
+  audioDevices: {
+    /** The device id, e.g. `coreaudio/<UID>`. */
+    id: string;
+    /** The system's name for it. */
+    name: string;
+  }[] = [];
+  /**
+   * Replace the plugin list and push `packages.changed` (another plugin
+   * started, stopped, was installed or removed).
+   */
   setPackages(list: TestHost["packages"]) {
     this.packages = list;
     this.emit("packages.changed", structuredClone(list));
@@ -1082,31 +1751,84 @@ export class TestHost implements Transport {
       .map(([key, inputs]) => ({ ref: this.#split(key), inputs }));
     return { commands, orphans };
   }
-  /** Simulate another plugin calling `player.next()` / `previous()`. */
+  /**
+   * Simulate another plugin calling `player.next()` / `previous()`: the host
+   * asks this plugin's sequence provider. Rejects with `unavailable` when
+   * there is no provider or its flag is false.
+   */
   step(direction: "next" | "previous") {
     return this.request("sequence.step", { direction });
   }
+  /**
+   * The plugin's command with this local id. Throws when it is not
+   * registered (never added, or disposed).
+   */
   command(id: string): FakeCommand {
     const command = this.commands.get(id);
     if (!command) throw new Error(`command ${id} is not registered`);
     return command;
   }
+  /**
+   * The plugin's tool window with this id (by default the file name without
+   * extension: `ui/picture.slint` → `picture`). Throws when it was never
+   * opened with `show()`.
+   *
+   * @example
+   * ```ts
+   * host.window("picture").emit("reset");
+   * await host.settle();
+   * assert.equal(host.window("picture").props["brightness"], 0);
+   * ```
+   */
   window(id: string): FakeWindow {
     const window = this.windows.get(id);
     if (!window) throw new Error(`window ${id} was never opened`);
     return window;
   }
+  /**
+   * The plugin's mounted panel (bottom bar, sidebar or backdrop). Throws when
+   * none is mounted. Its `props` use Slint (kebab-case) names; `emit` fires a
+   * callback on the panel's global.
+   *
+   * @example
+   * ```ts
+   * const panel = host.mounted();
+   * assert.equal(panel.slot, "sidebar");
+   * panel.emit("select", 2);
+   * await host.settle();
+   * ```
+   */
   mounted() {
     if (!this.panel) throw new Error("no panel mounted");
     return this.panel;
   }
-  /** Calls of one method, newest last. */
+  /**
+   * The parameters of every request of one wire method, oldest first.
+   *
+   * @example
+   * ```ts
+   * assert.deepEqual(host.sent("osd.show").at(-1), { text: "Saved" });
+   * ```
+   */
   sent(method: string) {
     return this.calls
       .filter((call) => call.method === method)
       .map((call) => call.params);
   }
-  /** Wait until no request is in flight and timers due within `ms` have run. */
+  /**
+   * Wait until no request is in flight (and the SDK's follow-up passes ran),
+   * and at least `ms` milliseconds have passed so that timers due by then
+   * fired. Call it after every action that makes the plugin talk to the host,
+   * before asserting.
+   *
+   * @param ms - Extra time to wait, for debounces and timers (default 0).
+   *
+   * @example
+   * ```ts
+   * store.save({ step: 10 });
+   * await host.settle(400); // past storage.json's 300 ms debounce
+   * ```
+   */
   async settle(ms = 0) {
     const deadline = Date.now() + ms;
     for (let idle = 0; idle < 3;) {
@@ -1115,6 +1837,10 @@ export class TestHost implements Transport {
       idle = this.#inFlight === 0 && Date.now() >= deadline ? idle + 1 : 0;
     }
   }
+  /**
+   * Close the fake stream servers and delete the host's temporary
+   * directories. `stop()` from {@link startPlugin} calls it.
+   */
   close() {
     for (const producer of this.producers.values()) producer.server.close();
     rmSync(this.#scratch, { recursive: true, force: true });
@@ -2285,13 +3011,59 @@ export class TestHost implements Transport {
   };
 }
 
-/** Start a plugin's default-exported `activate` against a fresh test host. */
+/**
+ * Activate a plugin against a test host, the way the player's runner does:
+ * build the `plugin` object, call `activate(plugin)`, wait for every
+ * registration started during activation (commands, panels, resolvers, ...),
+ * then wait until the host is idle.
+ *
+ * The manifest id and capabilities come from `directory/manifest.json`
+ * unless `capabilities` is given; then `id` (default `"test.plugin"`) and
+ * `capabilities` are used and no manifest is read. Calls that need an
+ * undeclared capability fail with `capability`, as in the player.
+ *
+ * Rejects when `manifest.json` cannot be read or parsed, when `activate`
+ * throws, or when a registration made during activation fails (for example
+ * `limit`, `conflict`, `invalid`), which is when the player would fail the
+ * activation.
+ *
+ * @param activate - The plugin's default-exported `activate` function.
+ * @param options - Where the plugin lives and how to start it.
+ * @returns `host`: the {@link TestHost}; `plugin`: the object passed to
+ *   `activate` (call the plugin API on it directly); `stop()`: dispose the
+ *   plugin like the player stopping it (scopes released, stores flushed),
+ *   wait until the host is idle and remove the host's temporary files.
+ *
+ * @example
+ * ```ts
+ * test("remembers the step across restarts", async () => {
+ *   const directory = new URL("..", import.meta.url);
+ *   const first = await startPlugin(activate, { directory });
+ *   await first.host.command("step-10").run();
+ *   const data = mkdtempSync(join(tmpdir(), "data-"));
+ *   cpSync(first.host.dataDirectory, data, { recursive: true });
+ *   await first.stop();
+ *
+ *   const second = await startPlugin(activate, { directory, dataDirectory: data });
+ *   assert.equal(second.host.command("step-10").state.checked, true);
+ *   await second.stop();
+ * });
+ * ```
+ */
 export async function startPlugin(
   activate: (plugin: Plugin) => unknown,
   options: {
+    /**
+     * The plugin's package directory, as a path or a `file:` URL (e.g.
+     * `new URL("..", import.meta.url)` from `tests/`). Relative `.slint`
+     * files resolve against it. Default: the current working directory.
+     */
     directory?: string | URL;
+    /** The manifest id when `capabilities` is given. Default `"test.plugin"`. */
     id?: string;
+    /** Use these capabilities instead of reading `manifest.json`. */
     capabilities?: string[];
+    /** A host to use (to preset data before activation). Default: a new one. */
     host?: TestHost;
     /** Use an existing directory as `plugin.dataDirectory` (to test a restart). */
     dataDirectory?: string;
@@ -2326,8 +3098,11 @@ export async function startPlugin(
   await instance.activated();
   await host.settle();
   return {
+    /** The test host the plugin talks to. */
     host,
+    /** The `plugin` object passed to `activate`. */
     plugin: instance.plugin,
+    /** Stop the plugin, wait for the host, and remove temporary files. */
     async stop() {
       await instance.dispose();
       await host.settle();
