@@ -84,23 +84,28 @@ const isPng = (b: Uint8Array) =>
 const isJpeg = (b: Uint8Array) =>
   b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
 
-/** `https:` only, redirects followed by hand (≤ 5, all `https:`), size capped while reading. */
-async function httpsDownload(
+/** Sent with every image download (some hosts refuse anonymous clients). */
+export const USER_AGENT =
+  "VestraPlayer-Markdown/1.1 (+https://github.com/vestrasys/vestra-player-sdk)";
+
+/**
+ * `https:` only, redirects followed by hand (≤ 5, all `https:`), size capped
+ * while reading; an HTTP error status throws. `fetchImpl` is for tests.
+ */
+export async function httpsDownload(
   url: string,
   options: { maxBytes: number; signal: AbortSignal },
+  fetchImpl: typeof fetch = fetch,
 ): Promise<Uint8Array> {
   let address = url;
   for (let hop = 0; hop <= MARKDOWN_LIMITS.redirects; hop++) {
     if (!address.startsWith("https://"))
       throw new Error("only https: images are downloaded");
-    const response = await fetch(address, {
+    const response = await fetchImpl(address, {
       redirect: "manual",
       signal: options.signal,
       credentials: "omit",
-      headers: {
-        "user-agent":
-          "VestraPlayer-Markdown/1.1 (+https://github.com/vestrasys/vestra-player-sdk)",
-      },
+      headers: { "user-agent": USER_AGENT },
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");

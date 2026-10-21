@@ -24,8 +24,11 @@ export struct MarkdownBlock {
     indent: int,
     // Block quote depth, 0–4.
     quote: int,
-    // List marker ("•", "1.", "☐", "☑"); empty for a continuation paragraph.
+    // List marker ("•", "1."); empty for a continuation paragraph and for
+    // task items.
     marker: string,
+    // Task list item: 0 none, 1 open, 2 done (a drawn box, no font glyph).
+    task: int,
     text: styled-text,
     code: string,
     image: image,
@@ -34,6 +37,8 @@ export struct MarkdownBlock {
     image-height: int,
     alt: string,
     rows: [MarkdownRow],
+    // Table column alignment: "left", "center", "right" or "" (left).
+    aligns: [string],
 }
 
 component MarkdownBlockView {
@@ -66,12 +71,35 @@ component MarkdownBlockView {
             }
             if block.kind == "item": HorizontalLayout {
                 spacing: 2px;
-                Text {
+                if block.task == 0: Text {
                     width: 18px;
                     text: block.marker;
                     color: Theme.text-dim;
                     font-size: Theme.font-tab;
                     horizontal-alignment: right;
+                }
+                if block.task > 0: Rectangle {
+                    width: 18px;
+                    // The box sits on the first line of the item.
+                    box := Rectangle {
+                        x: parent.width - 13px;
+                        y: 3px;
+                        width: 11px;
+                        height: 11px;
+                        border-width: 1px;
+                        border-radius: 2px;
+                        border-color: Theme.text-dim;
+                        background: block.task == 2 ? Theme.accent : transparent;
+                        if block.task == 2: Path {
+                            width: 100%;
+                            height: 100%;
+                            viewbox-width: 11;
+                            viewbox-height: 11;
+                            commands: "M 2.5 5.5 L 4.5 7.5 L 8.5 3";
+                            stroke: Theme.text;
+                            stroke-width: 1.5px;
+                        }
+                    }
                 }
                 StyledText {
                     width: root.inner - 20px;
@@ -89,11 +117,12 @@ component MarkdownBlockView {
                 border-width: 1px;
                 VerticalLayout {
                     padding: 6px;
-                    Text {
-                        text: block.code;
-                        color: Theme.text;
-                        font-size: Theme.font-body;
-                        wrap: char-wrap;
+                    // ASCII in the monospace font, CJK in the body font.
+                    StyledText {
+                        width: root.inner - 12px;
+                        text: block.text;
+                        default-color: Theme.text;
+                        default-font-size: Theme.font-body;
                     }
                 }
             }
@@ -112,9 +141,11 @@ component MarkdownBlockView {
                 font-size: Theme.font-body;
                 wrap: word-wrap;
             }
-            if block.kind == "table": Rectangle {
+            if block.kind == "table": table := Rectangle {
                 border-color: Theme.line;
                 border-width: 1px;
+                property <int> columns: max(1, block.aligns.length);
+                property <length> column-width: (root.inner - 8px - (self.columns - 1) * 8px) / self.columns;
                 VerticalLayout {
                     for row in block.rows: Rectangle {
                         background: row.header ? Theme.bg-list : transparent;
@@ -124,9 +155,12 @@ component MarkdownBlockView {
                             padding-top: 2px;
                             padding-bottom: 2px;
                             spacing: 8px;
-                            for cell in row.cells: Text {
-                                horizontal-stretch: 1;
-                                min-width: 0px;
+                            alignment: start;
+                            // Equal columns in every row, aligned per the
+                            // table's delimiter row (header and body alike).
+                            for cell[i] in row.cells: Text {
+                                width: max(0px, table.column-width);
+                                horizontal-alignment: block.aligns[i] == "center" ? TextHorizontalAlignment.center : block.aligns[i] == "right" ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
                                 text: cell;
                                 color: Theme.text;
                                 font-size: Theme.font-body;
