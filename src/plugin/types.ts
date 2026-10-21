@@ -508,8 +508,41 @@ export interface ImageRef {
   readonly __vestraImage: true;
 }
 
-/** A property value: JSON, or an image as the whole value of an `image` property. */
-export type PropValue = Json | ImageRef;
+/**
+ * A Markdown document for a `[MarkdownBlock]` property of
+ * `@vestra/markdown.slint`'s `MarkdownView`, from {@link Ui.markdown}.
+ * Opaque, like {@link ImageRef}: the whole value of that property; it belongs
+ * to the scope that created it.
+ */
+export interface MarkdownRef {
+  /** The Markdown text. */
+  readonly text: string;
+  /** Brand that marks the value as a Markdown document; never construct one yourself. */
+  readonly __vestraMarkdown: true;
+}
+
+/** Options of {@link Ui.markdown}. */
+export interface MarkdownOptions {
+  /**
+   * What relative links and images resolve against: an `http(s)` address
+   * (such as the document's own URL) or an absolute directory. Without it
+   * relative links are reported as written and relative images show their
+   * alt text.
+   */
+  base?: string;
+  /**
+   * Download `https:` images (default `true`). Off: they show their alt
+   * text.
+   */
+  remoteImages?: boolean;
+}
+
+/**
+ * A property value: JSON, an image as the whole value of an `image`
+ * property, or a Markdown document as the whole value of a
+ * `[MarkdownBlock]` property.
+ */
+export type PropValue = Json | ImageRef | MarkdownRef;
 
 /**
  * Property map using camelCase names; the SDK converts to Slint kebab-case
@@ -518,7 +551,7 @@ export type PropValue = Json | ImageRef;
  */
 export type Props = Record<string, PropValue>;
 
-/** `plugin.ui`: runtime images. No capability. */
+/** `plugin.ui`: runtime images and Markdown documents. No capability. */
 export interface Ui {
   /**
    * A PNG or JPEG file (absolute path in this plugin's data or package
@@ -538,6 +571,41 @@ export interface Ui {
    * ```
    */
   image(path: string): ImageRef;
+  /**
+   * A Markdown document for `MarkdownView` (`@vestra/markdown.slint`).
+   * The player renders headings, paragraphs (bold, italic, strikethrough,
+   * inline code, links), lists and task lists, code blocks, block quotes,
+   * images, tables and rules; embedded HTML is not shown. Links report the
+   * view's `link-clicked(url)` callback; opening them is up to the plugin.
+   *
+   * Images: PNG or JPEG. Local ones follow {@link Ui.image}'s rules (this
+   * plugin's package or data directory). `https:` images are downloaded by
+   * this call into `<dataDirectory>/.vestra-cache/markdown/` (each ≤ 4 MB,
+   * 10 s, at most 64 per document; the cache keeps 32 MB and refreshes an
+   * address after 24 hours). A failed or unsupported image (SVG, GIF…)
+   * shows its alt text; the call itself does not fail for it.
+   *
+   * Text is at most 256 KB (`invalid` otherwise); very long documents are
+   * cut off after 4000 blocks.
+   *
+   * Requires player 0.2.0 (`minPlayerVersion`).
+   *
+   * @example
+   * ```ts
+   * // ui/readme.slint:
+   * // import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
+   * // export component Readme inherits Window {
+   * //   in property <[MarkdownBlock]> doc;
+   * //   callback open-link(string);
+   * //   MarkdownView { blocks: root.doc; link-clicked(url) => { root.open-link(url); } }
+   * // }
+   * const window = plugin.windows.create("ui/readme.slint");
+   * window.on("openLink", (url: string) => plugin.system.openUrl(url));
+   * window.set({ doc: await plugin.ui.markdown(text, { base: readmeUrl }) });
+   * await window.show();
+   * ```
+   */
+  markdown(text: string, options?: MarkdownOptions): Promise<MarkdownRef>;
 }
 
 /**
@@ -2282,7 +2350,11 @@ export interface Resolvers {
 
 // ---------------------------------------------------------------- packages (plugins.manage)
 
-/** The manifest of a package, as validated. */
+/**
+ * The manifest of a package, as validated. The display fields and
+ * `minPlayerVersion` are optional (player 0.2.0); see the API reference for
+ * their rules.
+ */
 export interface PackageManifest {
   /** Plugin id. */
   id: string;
@@ -2294,6 +2366,76 @@ export interface PackageManifest {
   entry: string;
   /** Declared capabilities. */
   capabilities: string[];
+  /** Display name, 1–64 characters. */
+  name?: string;
+  /** Author, 1–64 characters. */
+  author?: string;
+  /** One-line summary, 1–120 characters. */
+  punchline?: string;
+  /** Plain-text description, 1–2000 characters. */
+  description?: string;
+  /** Up to 8 tags of 1–24 characters. */
+  tags?: string[];
+  /** Package path of a PNG or JPEG icon (≤ 512 KB, sides ≤ 1024). */
+  icon?: string;
+  /** Package path of the README (`.md`, ≤ 256 KB); `README.md` when present. */
+  readme?: string;
+  /** Package path of the changelog (`.md`, ≤ 256 KB); `CHANGELOG.md` when present. */
+  changelog?: string;
+  /** `https:` address of the source code. */
+  sourceUrl?: string;
+  /** License, preferably an SPDX expression. */
+  license?: string;
+  /** The oldest player version that can load the package (`x.y.z`). */
+  minPlayerVersion?: string;
+}
+
+/**
+ * Where an installed plugin came from. Installs with the same source
+ * upgrade the plugin and keep its data; links and local files count as one
+ * source. `bundled` marks the player's built-in plugins (set by the player
+ * only).
+ */
+export type PackageSource =
+  | {
+      /** A repository. */
+      kind: "repository";
+      /** The full address of its `index.json`. */
+      url: string;
+    }
+  | {
+      /** A package link. */
+      kind: "link";
+      /** The package's address. */
+      url: string;
+    }
+  | {
+      /** A local `.vxp` file or package directory. */
+      kind: "file";
+    }
+  | {
+      /** Generated by the plugin workshop. */
+      kind: "workshop";
+    }
+  | {
+      /** Shipped with the player (built-in). */
+      kind: "bundled";
+    };
+
+/** Options of {@link PackageCandidate.install}. */
+export interface InstallOptions {
+  /**
+   * Where the package comes from (default `{ kind: "file" }`). Repository
+   * and link addresses must be `http(s)`. `bundled` is `invalid`.
+   */
+  source?: PackageSource;
+  /**
+   * Replace a plugin of the same id installed from another source (ask the
+   * user first). Without it such an install fails with `conflict`. The
+   * replaced plugin's data is kept; installing from its source again
+   * reconnects to it.
+   */
+  replace?: boolean;
 }
 
 /** A validated package directory, from {@link Packages.validate}. */
@@ -2308,8 +2450,13 @@ export interface PackageCandidate {
   readonly checks: string[];
   /** Load it temporarily alongside the installed plugins. */
   trial(): Promise<PackageTrial>;
-  /** Install it, replacing the installed version of the same id. */
-  install(): Promise<PackageChange>;
+  /**
+   * Install it. The same source upgrades the installed plugin (its data
+   * stays); another source fails with `conflict` unless `replace` is set;
+   * a built-in id fails with `unsupported` (built-ins update with the
+   * player).
+   */
+  install(options?: InstallOptions): Promise<PackageChange>;
 }
 
 /** A trial load of a package. Disposing it stops the trial and waits for cleanup. */
@@ -2366,10 +2513,22 @@ export interface PluginInfo {
   error: string | null;
   /** Declared capabilities. */
   capabilities: string[];
-  /** The package directory (its data directory is `<data root>/<id>`). */
+  /** The package directory (read its `manifest.json` for display fields). */
   directory: string;
   /** The version a rollback would restore, `null` without one. */
   previousVersion: string | null;
+  /**
+   * Shipped with the player: it can be disabled, not uninstalled or
+   * replaced. `false` from players before 0.2.0.
+   */
+  builtin: boolean;
+  /** Where an installed plugin came from; `null` for development loads and trials. */
+  source: PackageSource | null;
+  /**
+   * Its data directory (`plugin.dataDirectory` of that plugin); `null` when
+   * the player has none. The path's layout is not part of the API.
+   */
+  dataDirectory: string | null;
 }
 
 /**
@@ -2386,6 +2545,12 @@ export interface PluginInfo {
 export interface Packages {
   /** Validate a package directory (`plugins.manage`). */
   validate(directory: string): Promise<PackageCandidate>;
+  /**
+   * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the
+   * same checks as {@link Packages.validate} after unpacking. Check the
+   * file's sha256 yourself before calling when you know it.
+   */
+  validateArchive(file: string): Promise<PackageCandidate>;
   /** Restore a plugin's previous version (`plugins.manage`). */
   rollback(id: string): Promise<PackageChange>;
   /** Every plugin: running, installed, and this run's development loads. No capability. */
@@ -2401,9 +2566,10 @@ export interface Packages {
   setEnabled(id: string, enabled: boolean): Promise<void>;
   /**
    * Remove an installed plugin (`plugins.manage`); `removeData` also deletes
-   * its data directory. Its user bindings stay (as orphans).
-   * `unsupported` for development loads and trials, `missing` unknown,
-   * `invalid` for oneself.
+   * its data directory, otherwise reinstalling it from the same source
+   * reconnects to its data. Its user bindings stay (as orphans).
+   * `unsupported` for built-ins, development loads and trials, `missing`
+   * unknown, `invalid` for oneself.
    */
   uninstall(
     id: string,

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { failure, Latest, quiet } from "./runtime.ts";
 import { dropsOf } from "./drops.ts";
+import { MarkdownHandle, markdown } from "./markdown.ts";
 import type { Json } from "../wire.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
@@ -58,8 +59,16 @@ export class ImageHandle implements ImageRef {
   }
 }
 
-/** A property value as sent: images in wire form; released ones refused. */
+/** A property value as sent: images and documents in wire form; released ones refused. */
 function wireValue(value: PropValue): Json {
+  if (value instanceof MarkdownHandle) {
+    if (value.released)
+      throw failure(
+        "invalid",
+        "Markdown document was released with the scope that created it",
+      );
+    return value.toJSON();
+  }
   if (!(value instanceof ImageHandle)) return value as Json;
   if (value.released)
     throw failure(
@@ -75,6 +84,7 @@ export const ui = (scope: ScopeImpl): Ui => ({
       throw failure("invalid", "ui.image needs a file path");
     return new ImageHandle(scope, path);
   },
+  markdown: (text, options) => markdown(scope, text, options),
 });
 
 /** Property and callback plumbing shared by windows, panels and settings pages. */

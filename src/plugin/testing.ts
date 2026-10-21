@@ -62,6 +62,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
+import type { PackageManifest, PackageSource } from "./types.ts";
 import type {
   Json,
   LayoutSlot,
@@ -237,6 +238,16 @@ const readyCapabilities = {
   close: true,
   snapshotSource: true,
 };
+
+/** A Markdown document as {@link TestHost.markdown} reads it back. */
+export interface MarkdownWire {
+  /** The Markdown text. */
+  text: string;
+  /** The base given to `ui.markdown`, or `null`. */
+  base: string | null;
+  /** Remote image address → the file the SDK downloaded for it. */
+  images: Record<string, string>;
+}
 
 /**
  * An in-memory fake Vestra Player for plugin tests.
@@ -477,6 +488,11 @@ export class TestHost implements Transport {
   };
   /** @internal Local processes, faked: see {@link TestHost.tools}. */
   readonly local: LocalServices = {
+    download: async (url) => {
+      const file = this.remoteImages.get(url);
+      if (!file) throw new HostError("failed", `no test image for ${url}`);
+      return new Uint8Array(readFileSync(file));
+    },
     locate: async (tool) =>
       this.tools.handlers.has(tool) ? `/test-host/${tool}` : null,
     run: async (path, args, options) => {
@@ -610,6 +626,18 @@ export class TestHost implements Transport {
       typeof image.$vestraImage === "string"
       ? image.$vestraImage
       : null;
+  }
+  #validate(path: string) {
+    const manifest = this.candidates.get(path);
+    if (!manifest) throw new HostError("missing", `no test package at ${path}`);
+    return {
+      token: path,
+      digest: "0".repeat(64),
+      apiVersion: "vestra/1",
+      manifest: structuredClone(manifest),
+      checks: ["manifest", "digest", "productionJavaScript", "slintCompile"],
+      trustedExecution: true,
+    };
   }
   #seeImages(values: Record<string, Json> | Json[]) {
     for (const value of Object.values(values)) {
@@ -1668,7 +1696,11 @@ export class TestHost implements Transport {
     /** `"<plugin>/<command>"` → the user's inputs for it. */
     overlay: new Map<string, string[]>(),
   };
-  /** What `packages.list` reports; `setEnabled` / `uninstall` update it. */
+  /**
+   * What `packages.list` reports; `setEnabled`, `uninstall` and `install`
+   * update it. `builtin`, `source` and `dataDirectory` are optional here
+   * (default `false`, `null`, `null`).
+   */
   packages: {
     /** The plugin's manifest id. */
     id: string;
@@ -1686,18 +1718,62 @@ export class TestHost implements Transport {
     directory: string;
     /** The version a rollback would restore, `null` without one. */
     previousVersion: string | null;
+    /** Shipped with the player: `uninstall` and `install` are `unsupported`. */
+    builtin?: boolean;
+    /** Where it was installed from. */
+    source?: PackageSource | null;
+    /** Its data directory. */
+    dataDirectory?: string | null;
   }[] = [];
-  /** Every `packages.setEnabled` / `uninstall`, newest last. */
+  /** Every `packages.setEnabled` / `uninstall` / `install`, newest last. */
   readonly packageCalls: {
     /** Which call. */
-    method: "setEnabled" | "uninstall";
+    method: "setEnabled" | "uninstall" | "install";
     /** The target plugin id. */
     id: string;
     /** `setEnabled`'s value. */
     enabled?: boolean;
     /** `uninstall`'s `removeData` option. */
     removeData?: boolean;
+    /** `install`'s source (`{ kind: "file" }` when not given). */
+    source?: PackageSource;
+    /** `install`'s `replace` option. */
+    replace?: boolean;
   }[] = [];
+  /**
+   * Packages `validate` and `validateArchive` accept: path (directory or
+   * `.vxp` file) → its manifest. Other paths fail with `missing`. `install`
+   * adds or upgrades the entry in {@link TestHost.packages} following the
+   * player's source rules: the same source upgrades, another source needs
+   * `replace` (`conflict` otherwise), a built-in id is `unsupported`.
+   *
+   * @example
+   * ```ts
+   * host.candidates.set("/downloads/someone.demo-1.0.0.vxp", {
+   *   id: "someone.demo", version: "1.0.0", apiVersion: "vestra/1",
+   *   entry: "main.js", capabilities: [],
+   * });
+   * ```
+   */
+  readonly candidates = new Map<string, PackageManifest>();
+  /**
+   * Remote Markdown images (`plugin.ui.markdown`): address → a local PNG or
+   * JPEG file served for it, or `null` for a failing download. Nothing is
+   * fetched from the network in tests; unknown addresses fail.
+   */
+  readonly remoteImages = new Map<string, string | null>();
+  /**
+   * The Markdown document a property holds (its wire form read back), or
+   * `null` when the value is not one. `images` maps each remote address to
+   * the downloaded file.
+   */
+  markdown(value: Json | undefined): MarkdownWire | null {
+    const doc = (value as { $vestraMarkdown?: unknown } | null | undefined)
+      ?.$vestraMarkdown as MarkdownWire | undefined;
+    return doc && typeof doc === "object" && typeof doc.text === "string"
+      ? { text: doc.text, base: doc.base, images: { ...doc.images } }
+      : null;
+  }
   /**
    * What `player.audioDevices()` lists. `setAudioDevice` updates
    * `host.source.audioOutput`.
@@ -2686,10 +2762,71 @@ export class TestHost implements Transport {
       entry.state = p.enabled === true ? "running" : "disabled";
       this.setPackages(this.packages);
     },
+    "packages.validate": (p) => this.#validate(String(p.directory)),
+    "packages.validateArchive": (p) => this.#validate(String(p.file)),
+    "packages.install": (p) => {
+      const manifest = this.candidates.get(String(p.token));
+      if (!manifest) throw new HostError("stale", "unknown validation token");
+      const source = (p.source as PackageSource | undefined) ?? {
+        kind: "file",
+      };
+      if (source.kind === "bundled")
+        throw new HostError("invalid", "source bundled is reserved");
+      const replace = p.replace === true;
+      const entry = this.packages.find((each) => each.id === manifest.id);
+      if (entry?.builtin)
+        throw new HostError(
+          "unsupported",
+          "built-in plugins are updated with the player",
+        );
+      const identity = (s: PackageSource | null | undefined) =>
+        !s || s.kind === "link" || s.kind === "file"
+          ? "manual"
+          : s.kind === "repository"
+            ? `repository ${s.url}`
+            : s.kind;
+      if (entry && identity(entry.source) !== identity(source) && !replace)
+        throw new HostError(
+          "conflict",
+          `${manifest.id} is installed from another source`,
+        );
+      this.packageCalls.push({
+        method: "install",
+        id: manifest.id,
+        source,
+        replace,
+      });
+      const next = {
+        id: manifest.id,
+        version: manifest.version,
+        origin: "installed" as const,
+        state: "running" as const,
+        error: null,
+        capabilities: [...manifest.capabilities],
+        directory: `/test-host/packages/${manifest.id}`,
+        previousVersion:
+          entry && identity(entry.source) === identity(source)
+            ? entry.version
+            : null,
+        builtin: false,
+        source,
+        dataDirectory: entry?.dataDirectory ?? null,
+      };
+      this.setPackages([
+        ...this.packages.filter((each) => each.id !== manifest.id),
+        next,
+      ]);
+      return { operationId: String(p.requestId), status: "committed" };
+    },
     "packages.uninstall": (p) => {
       const id = String(p.id);
       const entry = this.packages.find((each) => each.id === id);
       if (!entry) throw new HostError("missing", `no plugin ${id}`);
+      if (entry.builtin)
+        throw new HostError(
+          "unsupported",
+          "built-in plugins can be disabled but not uninstalled",
+        );
       if (entry.origin !== "installed")
         throw new HostError(
           "unsupported",
@@ -2702,6 +2839,13 @@ export class TestHost implements Transport {
       });
       this.setPackages(this.packages.filter((each) => each.id !== id));
       return { operationId: String(p.requestId), status: "committed" };
+    },
+    "ui.markdownScan": (p) => {
+      const text = String(p.text);
+      const images = [
+        ...text.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g),
+      ].map((m) => m[1]!);
+      return { images: [...new Set(images)].slice(0, 64) };
     },
     "packages.installed": (p) => ({
       revision: this.packages.some((each) => each.id === p.id) ? 1 : 0,

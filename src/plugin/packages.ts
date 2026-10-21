@@ -1,16 +1,22 @@
 /** Package validation, trial loading and install/rollback (`plugins.manage`). */
 import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
 import type {
   PackageInfo as WirePlugin,
   PackageOperation,
   PackageTrial as TrialRecord,
+  PackageValidation,
+  WireSource,
 } from "../wire.ts";
 import { failure, sleep, uncertain } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
+  InstallOptions,
+  PackageCandidate,
   PackageChange,
   PackageChangeStatus,
+  PackageManifest,
   PackageTrial,
   Packages,
   PluginInfo,
@@ -163,24 +169,76 @@ async function trial(scope: ScopeImpl, runtime: Runtime, token: string) {
   return new TrialHandle(scope, record);
 }
 
+function installOptions(options: InstallOptions | undefined) {
+  if (options === undefined) return {};
+  if (typeof options !== "object" || options === null)
+    throw failure("invalid", "install options must be an object");
+  const { source, replace } = options;
+  if (replace !== undefined && typeof replace !== "boolean")
+    throw failure("invalid", "replace must be a boolean");
+  if (source !== undefined) {
+    const kinds = ["repository", "link", "file", "workshop"];
+    if (
+      typeof source !== "object" ||
+      source === null ||
+      !kinds.includes(source.kind)
+    )
+      throw failure(
+        "invalid",
+        "source.kind must be repository, link, file or workshop",
+      );
+    if (
+      (source.kind === "repository" || source.kind === "link") &&
+      !/^https?:\/\//i.test(String(source.url))
+    )
+      throw failure("invalid", "source.url must be an http(s) address");
+  }
+  return {
+    ...(source === undefined ? {} : { source: { ...source } as WireSource }),
+    ...(replace ? { replace: true } : {}),
+  };
+}
+
+function candidate(
+  scope: ScopeImpl,
+  directory: string,
+  checked: PackageValidation,
+): PackageCandidate {
+  const runtime = scope.runtime;
+  return {
+    directory,
+    digest: checked.digest,
+    manifest: checked.manifest as unknown as PackageManifest,
+    checks: checked.checks,
+    trial: () => trial(scope, runtime, checked.token),
+    install: async (options) => {
+      const wire = installOptions(options);
+      return change(
+        scope,
+        (requestId, revision) =>
+          runtime.host.packages.install(
+            checked.token,
+            revision,
+            requestId,
+            wire,
+          ),
+        checked.manifest.id,
+      );
+    },
+  };
+}
+
 export const packages = (scope: ScopeImpl): Packages => ({
   async validate(directory) {
-    const runtime = scope.runtime;
-    const checked = await runtime.host.packages.validate(directory);
-    return {
-      directory,
-      digest: checked.digest,
-      manifest: checked.manifest,
-      checks: checked.checks,
-      trial: () => trial(scope, runtime, checked.token),
-      install: () =>
-        change(
-          scope,
-          (requestId, revision) =>
-            runtime.host.packages.install(checked.token, revision, requestId),
-          checked.manifest.id,
-        ),
-    };
+    const checked = await scope.runtime.host.packages.validate(directory);
+    return candidate(scope, directory, checked);
+  },
+  async validateArchive(file) {
+    if (typeof file !== "string" || !file)
+      throw failure("invalid", "validateArchive needs a .vxp file path");
+    const path = resolve(file);
+    const checked = await scope.runtime.host.packages.validateArchive(path);
+    return candidate(scope, path, checked);
   },
   rollback: (id) =>
     change(
@@ -232,4 +290,7 @@ const info = (plugin: WirePlugin): PluginInfo =>
     capabilities: [...plugin.capabilities],
     directory: plugin.directory,
     previousVersion: plugin.previousVersion,
+    builtin: plugin.builtin === true,
+    source: plugin.source ? Object.freeze({ ...plugin.source }) : null,
+    dataDirectory: plugin.dataDirectory ?? null,
   });

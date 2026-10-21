@@ -1,0 +1,179 @@
+// Markdown display (store proposal §5):
+//   import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
+// Give `blocks` the value of `plugin.ui.markdown(text)`; the player parses
+// the Markdown and fills the rows. Links report `link-clicked(url)` with the
+// address resolved against the document's base; the plugin decides what to
+// open (usually `plugin.system.openUrl`).
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+
+// One table row (cells are plain text).
+export struct MarkdownRow {
+    cells: [string],
+    header: bool,
+}
+
+// One displayed block. Plugins only pass these through; the fields are
+// filled by the player.
+export struct MarkdownBlock {
+    // "heading", "paragraph", "item", "code", "image", "table" or "rule".
+    kind: string,
+    // Heading level 1–6.
+    level: int,
+    // List nesting, 0–3.
+    indent: int,
+    // Block quote depth, 0–4.
+    quote: int,
+    // List marker ("•", "1.", "☐", "☑"); empty for a continuation paragraph.
+    marker: string,
+    text: styled-text,
+    code: string,
+    image: image,
+    has-image: bool,
+    image-width: int,
+    image-height: int,
+    alt: string,
+    rows: [MarkdownRow],
+}
+
+component MarkdownBlockView {
+    in property <MarkdownBlock> block;
+    in property <length> available;
+    callback link-clicked(string);
+    private property <length> quote-indent: block.quote * 12px;
+    private property <length> list-indent: block.indent * 16px;
+    private property <length> inner: max(16px, root.available - root.quote-indent - root.list-indent);
+    private property <length> heading-size: block.level <= 1 ? 18px : block.level == 2 ? 15px : block.level == 3 ? Theme.font-title : Theme.font-tab;
+
+    HorizontalLayout {
+        padding-left: root.quote-indent + root.list-indent;
+        VerticalLayout {
+            if block.kind == "heading": StyledText {
+                width: root.inner;
+                text: block.text;
+                default-color: Theme.text;
+                default-font-size: root.heading-size;
+                link-color: Theme.accent;
+                link-clicked(url) => { root.link-clicked(url); }
+            }
+            if block.kind == "paragraph": StyledText {
+                width: root.inner;
+                text: block.text;
+                default-color: block.quote > 0 ? Theme.text-dim : Theme.text;
+                default-font-size: Theme.font-tab;
+                link-color: Theme.accent;
+                link-clicked(url) => { root.link-clicked(url); }
+            }
+            if block.kind == "item": HorizontalLayout {
+                spacing: 2px;
+                Text {
+                    width: 18px;
+                    text: block.marker;
+                    color: Theme.text-dim;
+                    font-size: Theme.font-tab;
+                    horizontal-alignment: right;
+                }
+                StyledText {
+                    width: root.inner - 20px;
+                    text: block.text;
+                    default-color: Theme.text;
+                    default-font-size: Theme.font-tab;
+                    link-color: Theme.accent;
+                    link-clicked(url) => { root.link-clicked(url); }
+                }
+            }
+            if block.kind == "code": Rectangle {
+                background: Theme.bg-list;
+                border-radius: Theme.radius-control;
+                border-color: Theme.line;
+                border-width: 1px;
+                VerticalLayout {
+                    padding: 6px;
+                    Text {
+                        text: block.code;
+                        color: Theme.text;
+                        font-size: Theme.font-body;
+                        wrap: char-wrap;
+                    }
+                }
+            }
+            if block.kind == "image" && block.has-image: HorizontalLayout {
+                alignment: start;
+                Image {
+                    source: block.image;
+                    width: min(root.inner, block.image-width * 1px);
+                    height: self.width * block.image-height / max(1, block.image-width);
+                    image-fit: contain;
+                }
+            }
+            if block.kind == "image" && !block.has-image: Text {
+                text: block.alt == "" ? "[图片]" : "[图片] " + block.alt;
+                color: Theme.text-dim;
+                font-size: Theme.font-body;
+                wrap: word-wrap;
+            }
+            if block.kind == "table": Rectangle {
+                border-color: Theme.line;
+                border-width: 1px;
+                VerticalLayout {
+                    for row in block.rows: Rectangle {
+                        background: row.header ? Theme.bg-list : transparent;
+                        HorizontalLayout {
+                            padding-left: 4px;
+                            padding-right: 4px;
+                            padding-top: 2px;
+                            padding-bottom: 2px;
+                            spacing: 8px;
+                            for cell in row.cells: Text {
+                                horizontal-stretch: 1;
+                                min-width: 0px;
+                                text: cell;
+                                color: Theme.text;
+                                font-size: Theme.font-body;
+                                font-weight: row.header ? 700 : 400;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+            if block.kind == "rule": Rectangle {
+                height: 1px;
+                background: Theme.line;
+            }
+        }
+    }
+    // Quote bars, one per level, at the left edge.
+    for level[i] in block.quote: Rectangle {
+        x: i * 12px + 2px;
+        y: 0px;
+        width: 3px;
+        height: root.height;
+        background: Theme.line;
+    }
+}
+
+// A scrolling Markdown document.
+export component MarkdownView inherits Rectangle {
+    in property <[MarkdownBlock]> blocks;
+    // Space around the document.
+    in property <length> inset: 10px;
+    callback link-clicked(string);
+    scroll := ScrollView {
+        width: 100%;
+        height: 100%;
+        viewport-width: self.visible-width;
+        viewport-height: column.preferred-height;
+        column := VerticalLayout {
+            width: scroll.visible-width;
+            padding: root.inset;
+            spacing: 8px;
+            alignment: start;
+            for block in root.blocks: MarkdownBlockView {
+                block: block;
+                available: scroll.visible-width - 2 * root.inset;
+                link-clicked(url) => { root.link-clicked(url); }
+            }
+        }
+    }
+}

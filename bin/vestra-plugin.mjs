@@ -11,8 +11,13 @@
  *   build   check, then write dist/: .ts → .js with types stripped, other
  *           package files copied, dist/manifest.json with `version`
  *   test    node --test on tests/*.test.{ts,mjs}
- *   pack    build, then dist/ → <out>/<id>-<version>.zip (default out: the
- *           current directory) with its sha256 and size
+ *   pack    build, then dist/ → <out>/<id>-<version>.vxp (a zip; default
+ *           out: the current directory) with its sha256 and size
+ *
+ * Every command first checks manifest.json against the player's rules
+ * (display fields, paths inside the package, unknown fields); `check` also
+ * prints hints, such as an id without the `<owner>.` prefix the official
+ * repository needs.
  *
  * Type checking extends the nearest tsconfig.json at or above the plugin
  * directory (up to the repository root), else built-in strict settings; only
@@ -22,8 +27,10 @@
  * Per-plugin options live in the plugin's package.json under "vestra":
  *   { "bundle": true | { "external": [...] }, "assets": ["vendor"] }
  * `bundle` bundles the entry with the plugin's own esbuild dependency;
- * `assets` copies extra files or directories verbatim. The version comes from
- * --version, else manifest.json, else package.json.
+ * `assets` copies extra files or directories verbatim. The manifest's `icon`,
+ * `readme` and `changelog` (and README.md / CHANGELOG.md when present) are
+ * copied into the package too. The version comes from --version, else
+ * manifest.json, else package.json.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -52,8 +59,8 @@ import { pathToFileURL } from "node:url";
 import { crc32, deflateRawSync } from "node:zlib";
 
 const sdkRoot = resolve(import.meta.dirname, "..");
-const { CAPABILITIES, API_VERSION } = await import(
-  pathToFileURL(join(sdkRoot, "dist/capabilities.js")).href
+const { manifestProblems } = await import(
+  pathToFileURL(join(sdkRoot, "dist/manifest.js")).href
 );
 const SDK = "@vestra-player/sdk";
 
@@ -72,7 +79,7 @@ const SKIP_FILES = new Set([
   "package.json",
   "package-lock.json",
 ]);
-const SKIP_EXTENSIONS = new Set([".md", ".log", ".zip"]);
+const SKIP_EXTENSIONS = new Set([".md", ".log", ".zip", ".vxp"]);
 const isTypeScript = (file) => file.endsWith(".ts") && !file.endsWith(".d.ts");
 const isDeclaration = (file) => /\.d\.(m|c)?ts$/.test(file);
 
@@ -135,23 +142,34 @@ async function plugin(path) {
   if (!existsSync(join(directory, "manifest.json")))
     fail(`${name}: no manifest.json in ${directory}`);
   const manifest = await json(join(directory, "manifest.json"));
-  const unknown = (manifest.capabilities ?? []).filter(
-    (capability) => !CAPABILITIES.includes(capability),
-  );
-  if (unknown.length)
-    fail(`${name}: unknown capabilities ${unknown.join(", ")}`);
-  if (manifest.apiVersion !== API_VERSION)
-    fail(
-      `${name}: manifest apiVersion is ${JSON.stringify(manifest.apiVersion)}; this SDK is ${API_VERSION}`,
-    );
+  const { problems, hints } = manifestProblems(manifest, directory);
+  if (problems.length) fail(`${name}: manifest.json: ${problems.join("; ")}`);
   const packageJson = await json(join(directory, "package.json"), {});
   return {
     name,
     directory,
     manifest,
+    hints,
     packageJson,
     options: packageJson.vestra ?? {},
   };
+}
+
+/** The documents and icon the manifest names (or the default README / CHANGELOG). */
+function displayFiles(target) {
+  const files = new Set();
+  for (const field of ["icon", "readme", "changelog"])
+    if (typeof target.manifest[field] === "string")
+      files.add(target.manifest[field].split("/").join(sep));
+  for (const name of ["README.md", "CHANGELOG.md"]) {
+    const field = name === "README.md" ? "readme" : "changelog";
+    if (
+      target.manifest[field] === undefined &&
+      existsSync(join(target.directory, name))
+    )
+      files.add(name);
+  }
+  return files;
 }
 
 async function files(root, directory = root, keep = () => false) {
@@ -238,6 +256,8 @@ function checkConfig(target, sources) {
 }
 
 async function check(target) {
+  for (const hint of target.hints ?? [])
+    console.log(`${target.name}: hint: ${hint}`);
   dependencies(target);
   const own = (await files(target.directory)).filter(
     (file) => isTypeScript(file) || file.endsWith(".mts"),
@@ -384,7 +404,9 @@ async function build(target, flag) {
   await mkdir(out, { recursive: true });
   const entry = entries(target);
   const assets = target.options.assets ?? [];
+  const display = displayFiles(target);
   const listed = (rel) =>
+    display.has(rel) ||
     assets.some((asset) => rel === asset || rel.startsWith(asset + sep));
   const bundled = !!target.options.bundle;
   if (bundled) await bundle(target, entry, out);
@@ -514,7 +536,7 @@ async function pack(target, flag, outDirectory) {
   );
   const destination = resolve(outDirectory ?? ".");
   await mkdir(destination, { recursive: true });
-  const file = join(destination, `${target.manifest.id}-${release}.zip`);
+  const file = join(destination, `${target.manifest.id}-${release}.vxp`);
   await writeFile(file, archive);
   const sha256 = createHash("sha256").update(archive).digest("hex");
   console.log(
