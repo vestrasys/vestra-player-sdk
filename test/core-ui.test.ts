@@ -163,6 +163,48 @@ test("slot state is shared and changes through the host; showMenu sends command 
   await stop();
 });
 
+test("fullscreen collapses the attached sidebar to the edge; the edge and setVisible pop it out", async () => {
+  const directory = packageWith(["ui.mount", "events"], panelFile);
+  let own: ReturnType<Plugin["panels"]["mount"]> | undefined;
+  const { host, plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      own = plugin.panels.mount("sidebar", "side.slint");
+      plugin.panels.sidebar.onChange(() => {});
+    },
+    { directory },
+  );
+  await own!.ready;
+  const sidebar = plugin.panels.sidebar;
+  host.setMainWindow({ fullscreen: true });
+  await host.settle();
+  assert.deepEqual(sidebar.state, {
+    preferred: true,
+    effective: false,
+    reason: "fullscreen",
+    detached: false,
+  });
+  host.popSidebar(true);
+  await host.settle();
+  assert.equal(sidebar.state?.effective, true);
+  assert.equal(sidebar.state?.reason, null);
+  host.popSidebar(false);
+  await sidebar.setVisible(false);
+  host.popSidebar(true); // Hidden by preference: the edge does nothing.
+  await host.settle();
+  assert.equal(sidebar.state?.reason, "userHidden");
+  await sidebar.setVisible(true); // F6 in fullscreen pops it out at once.
+  assert.equal(sidebar.state?.effective, true);
+  host.setMainWindow({ fullscreen: false });
+  await host.settle();
+  assert.deepEqual(sidebar.state, {
+    preferred: true,
+    effective: true,
+    reason: null,
+    detached: false,
+  });
+  await stop();
+});
+
 test("osd lines, one osd panel per plugin, cleared on dispose", async () => {
   const directory = packageWith(["ui.osd"]);
   const { host, plugin, stop } = await startPlugin(() => {}, { directory });
