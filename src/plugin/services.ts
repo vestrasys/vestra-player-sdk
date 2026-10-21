@@ -1,6 +1,7 @@
 /**
- * Shared services: the clipboard and sleep prevention go to the host; external
- * tools, settings files and the Finder run in this plugin's own process.
+ * Shared services: the clipboard, sleep prevention, showing and opening files
+ * and links, and secrets go to the host; external tools and settings files
+ * run in this plugin's own process.
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { chmod, mkdir, rename, stat, writeFile } from "node:fs/promises";
@@ -14,6 +15,7 @@ import type {
   Host,
   JsonStore,
   Power,
+  Secrets,
   Storage,
   System,
   Tools,
@@ -231,13 +233,13 @@ export function system(scope: ScopeImpl): System {
         !list.every(valid)
       )
         throw failure("invalid", "reveal takes 1–256 non-empty paths");
-      // Absolute, so no path can read as an option of `open`.
+      // Absolute: the player resolves nothing against this process's cwd.
       const present: string[] = [];
       for (const path of list.map((each) => resolve(each)))
         if ((await exists(path)) && !present.includes(path)) present.push(path);
       if (!present.length)
         throw failure("missing", `${list.join(", ")} does not exist`);
-      await (scope.runtime.local ?? systemServices).open(present, true);
+      await scope.runtime.host.system.reveal(present);
     },
     async openUrl(url) {
       let parsed: URL;
@@ -250,17 +252,43 @@ export function system(scope: ScopeImpl): System {
       if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
         throw failure("invalid", "only http and https addresses open");
       // The normalized form starts with the scheme, never with `-`.
-      await (scope.runtime.local ?? systemServices).openUrl(parsed.href);
+      await scope.runtime.host.system.openUrl(parsed.href);
     },
     async openPath(path) {
       if (!valid(path))
         throw failure("invalid", "path must be a non-empty string");
       if (!(await exists(path)))
         throw failure("missing", `${path} does not exist`);
-      await (scope.runtime.local ?? systemServices).open(
-        [resolve(path)],
-        false,
-      );
+      await scope.runtime.host.system.openPath(resolve(path));
     },
   };
 }
+
+const SECRET = /^[a-z0-9._-]{1,64}$/;
+
+export const secrets = (scope: ScopeImpl): Secrets => {
+  const named = (name: unknown) => {
+    if (!scope.runtime.can("secrets"))
+      throw failure("capability", "secrets must be declared in manifest");
+    if (typeof name !== "string" || !SECRET.test(name))
+      throw failure("invalid", "secret names are 1–64 of a-z, 0-9, ., _ and -");
+    return name;
+  };
+  return {
+    get: async (name) => scope.runtime.host.secrets.get(named(name)),
+    async set(name, value) {
+      if (
+        typeof value !== "string" ||
+        !value ||
+        value.includes("\0") ||
+        Buffer.byteLength(value) > 1024
+      )
+        throw failure(
+          "invalid",
+          "secret values are 1–1024 bytes of text; delete() removes one",
+        );
+      await scope.runtime.host.secrets.set(named(name), value);
+    },
+    delete: async (name) => scope.runtime.host.secrets.delete(named(name)),
+  };
+};

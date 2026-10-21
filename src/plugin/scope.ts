@@ -18,7 +18,15 @@ import { packages } from "./packages.ts";
 import { osd } from "./osd.ts";
 import { mainWindow } from "./window.ts";
 import { bindingsApi } from "./bindings.ts";
-import { clipboard, host, power, storage, system, tools } from "./services.ts";
+import {
+  clipboard,
+  host,
+  power,
+  secrets,
+  storage,
+  system,
+  tools,
+} from "./services.ts";
 
 export class ScopeImpl implements Plugin {
   readonly runtime: Runtime;
@@ -63,6 +71,7 @@ export class ScopeImpl implements Plugin {
   readonly tools = tools(this);
   readonly storage = storage(this);
   readonly system = system(this);
+  readonly secrets = secrets(this);
   readonly window = mainWindow(this);
   readonly bindings = bindingsApi(this);
   readonly ui = ui(this);

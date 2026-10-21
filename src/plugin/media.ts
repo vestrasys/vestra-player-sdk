@@ -12,6 +12,7 @@ import type { ScopeImpl } from "./scope.ts";
 import type {
   CaptureOptions,
   ExportJob,
+  ExportOptions,
   JobState,
   MediaCapture,
   Snapshot,
@@ -163,33 +164,54 @@ class SnapshotHandle implements Snapshot {
       ? this.#frozen.processing.revision
       : null;
   }
-  async export(
-    options:
-      | { format: "png"; destination: string; sampleTime?: number }
-      | { format: "mp4"; destination: string; end: number },
-  ) {
+  async export(options: ExportOptions) {
     if (this.#released) throw failure("released", "snapshot already released");
     const processed = this.#frozen.kind === "processed";
     const snapshotId = this.#frozen.snapshotId;
-    const job = await this.#service.mutate((operationId) =>
+    const mode = processed ? "processed" : "raw";
+    const frame = (sampleTime: number | undefined) =>
+      sampleTime === undefined ? {} : { sampleTime };
+    let job: { kind: string } & Record<string, unknown>;
+    switch (options.format) {
+      case "mp4":
+        job = { kind: `${mode}Mp4`, end: options.end };
+        break;
+      case "jpeg": {
+        const quality = options.quality;
+        if (
+          quality !== undefined &&
+          !(Number.isInteger(quality) && quality >= 1 && quality <= 100)
+        )
+          throw failure("invalid", "quality must be an integer 1–100");
+        job = {
+          kind: `${mode}Jpeg`,
+          ...frame(options.sampleTime),
+          ...(quality === undefined ? {} : { quality }),
+        };
+        break;
+      }
+      case "png":
+      case "bmp":
+        job = {
+          kind: `${mode}${options.format === "png" ? "Png" : "Bmp"}`,
+          ...frame(options.sampleTime),
+        };
+        break;
+      default:
+        throw failure(
+          "invalid",
+          `unknown export format ${String((options as { format: unknown }).format)}`,
+        );
+    }
+    const result = await this.#service.mutate((operationId) =>
       this.#service.runtime.host.jobs.start({
         operationId,
         snapshotId,
         destination: options.destination,
-        ...(options.format === "mp4"
-          ? {
-              kind: processed ? ("processedMp4" as const) : ("rawMp4" as const),
-              end: options.end,
-            }
-          : {
-              kind: processed ? ("processedPng" as const) : ("rawPng" as const),
-              ...(options.sampleTime === undefined
-                ? {}
-                : { sampleTime: options.sampleTime }),
-            }),
-      }),
+        ...job,
+      } as Parameters<Runtime["host"]["jobs"]["start"]>[0]),
     );
-    return new JobHandle(this.#scope, this.#service, job.jobId);
+    return new JobHandle(this.#scope, this.#service, result.jobId);
   }
   async dispose() {
     if (this.#released) return;
