@@ -1177,7 +1177,7 @@ export interface AppInfo {
     readonly mpv: string | null;
     /** `{ ffmpeg: <ffmpeg-version> }` (what libmpv reports). */
     readonly libav: Readonly<Record<string, string>>;
-    /** The linked Slint version, e.g. `"1.16.1"`. */
+    /** The linked Slint version, e.g. `"1.18.1"`. */
     readonly slint: string;
   };
 }
@@ -2826,7 +2826,11 @@ export interface System {
 export interface Secrets {
   /** The stored value, `null` when there is none. */
   get(name: string): Promise<string | null>;
-  /** Store or replace (`name`: 1–64 of `a-z 0-9 . _ -`; value 1–1024 bytes). */
+  /**
+   * Store or replace (`name`: 1–64 of `a-z 0-9 . _ -`; value 1–1024 bytes).
+   * At most 256 different names per plugin: a new name beyond that rejects
+   * `limit`. Uninstalling with `removeData` deletes them.
+   */
   set(name: string, value: string): Promise<void>;
   /** Remove; removing a missing secret is fine. */
   delete(name: string): Promise<void>;

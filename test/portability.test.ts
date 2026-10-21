@@ -82,6 +82,12 @@ test("secrets need the capability and are bounded", async () => {
   for (const value of ["", "a\0b", "x".repeat(1025), "密".repeat(342)])
     await assert.rejects(plugin.secrets.set("k", value), code("invalid"));
   await plugin.secrets.set("k", "x".repeat(1024));
+  // At most 256 names, as in the player; replacing one is fine.
+  for (let i = 1; i < 256; i++) host.secrets.set(`n${i}`, "v");
+  await assert.rejects(plugin.secrets.set("one-more", "v"), code("limit"));
+  await plugin.secrets.set("k", "replaced");
+  await plugin.secrets.delete("n1");
+  await plugin.secrets.set("one-more", "v");
   host.handle("secrets.get", () => {
     throw new HostError("unsupported", "secret storage is not supported");
   });

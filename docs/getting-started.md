@@ -202,7 +202,7 @@ test("shows the position", async () => {
 });
 ```
 
-Useful controls: `host.command(id).run()`, `host.press("Ctrl+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait for the plugin to go idle. See {@link "@vestra-player/sdk/testing"!TestHost | TestHost}.
+Useful controls: `host.command(id).run()`, `host.press("Ctrl+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait until the plugin's host calls are answered (it does not wait for the plugin's own file reads or child processes: poll the result you assert on, see `settle`). See {@link "@vestra-player/sdk/testing"!TestHost | TestHost}.
 
 Run them with `npm test` (`vestra-plugin test`, which is `node --test tests/*.test.{ts,mjs}`).
 
