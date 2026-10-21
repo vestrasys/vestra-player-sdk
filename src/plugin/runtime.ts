@@ -7,7 +7,7 @@ import type {
   UiCallback,
   Wire,
 } from "../wire.ts";
-import type { AppInfo, Disposable, PluginError } from "./types.ts";
+import type { App, Disposable, PluginError, SystemInfo } from "./types.ts";
 
 export interface PluginManifest {
   id: string;
@@ -117,8 +117,8 @@ export class Runtime {
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
   readonly services = new Map<string, unknown>();
-  /** `plugin.app`, from the start-up handshake. */
-  readonly app: AppInfo;
+  /** `plugin.app`, from the start-up handshake; `system()` asks the player. */
+  readonly app: App;
   constructor(
     transport: Transport,
     manifest: PluginManifest,
@@ -128,9 +128,10 @@ export class Runtime {
   ) {
     this.#transport = transport;
     this.dataDirectory = dataDirectory;
-    this.app = appInfo(app);
     this.local = transport.local;
     this.host = createWire(transport);
+    const host = this.host;
+    this.app = appInfo(app, () => host.app.system() as Promise<SystemInfo>);
     this.manifest = manifest;
     this.directory = directory;
     transport.on("ui.callback", (data) => {
@@ -236,14 +237,18 @@ export class Runtime {
 }
 
 /** `plugin.app` from the start-up handshake (the runner's environment). */
-export function appInfo(raw: unknown): AppInfo {
-  const info = (raw ?? {}) as Partial<AppInfo>;
-  const parts = (info.components ?? {}) as Partial<AppInfo["components"]>;
+export function appInfo(
+  raw: unknown,
+  system: () => Promise<SystemInfo> = () =>
+    Promise.reject(failure("unavailable", "no player to ask")),
+): App {
+  const info = (raw ?? {}) as Partial<App>;
+  const parts = (info.components ?? {}) as Partial<App["components"]>;
   const text = (value: unknown) => (typeof value === "string" ? value : null);
   const libav: Record<string, string> = {};
   for (const [name, version] of Object.entries(parts.libav ?? {}))
     if (typeof version === "string") libav[name] = version;
-  return Object.freeze({
+  const app = {
     version: text(info.version) ?? "0.0.0",
     build: text(info.build),
     components: Object.freeze({
@@ -251,5 +256,8 @@ export function appInfo(raw: unknown): AppInfo {
       libav: Object.freeze(libav),
       slint: text(parts.slint) ?? "",
     }),
-  });
+  };
+  // A method, not data: kept out of comparisons and JSON of the facts.
+  Object.defineProperty(app, "system", { value: system, enumerable: false });
+  return Object.freeze(app) as App;
 }

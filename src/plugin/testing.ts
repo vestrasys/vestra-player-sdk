@@ -22,6 +22,7 @@ import type {
   LocalServices,
   PlaybackStats,
   Transport,
+  WireSystemInfo,
 } from "../wire.ts";
 import { COMMAND_LIMITS } from "../commands.ts";
 import type { CommandDeclaration } from "../commands.ts";
@@ -190,7 +191,11 @@ export class TestHost implements Transport {
       this.handlers.set(tool, handler);
     },
   };
-  /** Paths given to `system.reveal` / `system.openPath`, newest last. */
+  /**
+   * Paths given to `system.reveal` / `system.openPath`, newest last. The
+   * player's `system.*` requests go through `local.open` / `local.openUrl`
+   * (kept for existing fakes; prefer `host.handle("system.openPath", …)`).
+   */
   readonly system = {
     revealed: [] as string[],
     opened: [] as string[],
@@ -198,7 +203,7 @@ export class TestHost implements Transport {
     urls: [] as string[],
   };
   /** Local processes, faked: see `tools` and `system`. */
-  readonly local: LocalServices = {
+  readonly local: Required<LocalServices> = {
     locate: async (tool) =>
       this.tools.handlers.has(tool) ? `/test-host/${tool}` : null,
     run: async (path, args, options) => {
@@ -419,6 +424,8 @@ export class TestHost implements Transport {
   subtitles: SubtitleState;
   readonly uploads = new Map<number, { bytes: Buffer[]; expected: number }>();
   readonly snapshots = new Map<number, Json>();
+  /** Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last. */
+  readonly exports: Record<string, Json>[] = [];
   readonly jobs = new Map<number, MediaJob>();
   readonly producers = new Map<
     number,
@@ -451,6 +458,27 @@ export class TestHost implements Transport {
     videoArea: { width: 780, height: 609 },
     onTop: false,
     cursorAutoHide: "fullscreen" as "fullscreen" | "playing",
+  };
+  /** The player's secret store for this plugin: name → value. */
+  readonly secrets = new Map<string, string>();
+  /** What `plugin.app.system()` reports. */
+  systemInfo: WireSystemInfo = {
+    os: "macos",
+    name: "macOS",
+    version: "26.2",
+    build: "25C56",
+    model: "Mac15,6",
+    arch: "aarch64",
+    displays: [
+      {
+        name: "Built-in Retina Display",
+        width: 3024,
+        height: 1964,
+        scale: 2,
+        refreshRate: 120,
+        primary: true,
+      },
+    ],
   };
   /** What `plugin.app` reports. Set it before `startPlugin`. */
   app: {
@@ -1352,6 +1380,15 @@ export class TestHost implements Transport {
         })),
       });
     },
+    // The player validates again; these mirror what reaches it.
+    "system.reveal": (p) => this.local.open(p.paths as string[], true),
+    "system.openPath": (p) => this.local.open([String(p.path)], false),
+    "system.openUrl": (p) => this.local.openUrl(String(p.url)),
+    "secrets.get": (p) => this.secrets.get(String(p.name)) ?? null,
+    "secrets.set": (p) =>
+      void this.secrets.set(String(p.name), String(p.value)),
+    "secrets.delete": (p) => void this.secrets.delete(String(p.name)),
+    "app.system": () => structuredClone(this.systemInfo),
     "clipboard.readText": () => this.clipboard.text,
     "clipboard.writeText": (p) => {
       if (typeof p.text !== "string")
@@ -1972,6 +2009,12 @@ export class TestHost implements Transport {
     "jobs.start": (p) => {
       if (!this.snapshots.has(Number(p.snapshotId)))
         throw new HostError("missing", "snapshot released");
+      if (
+        !/^(raw|processed)(Png|Jpeg|Bmp|Mp4)$/.test(String(p.kind)) ||
+        (p.quality !== undefined && !String(p.kind).endsWith("Jpeg"))
+      )
+        throw new HostError("invalid", `unknown job kind ${p.kind}`);
+      this.exports.push(structuredClone(p));
       const jobId = ++this.#next.job;
       this.jobs.set(jobId, {
         jobId,

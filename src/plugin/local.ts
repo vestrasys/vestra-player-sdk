@@ -1,6 +1,10 @@
 /**
  * The real local services: child processes of the plugin process itself.
  * No shell is involved; arguments go to the executable as they are.
+ *
+ * This is the SDK's one platform file (community workflow §1.5): what
+ * differs between systems on the Node side stays here. Showing and opening
+ * files and links is the player's (`system.*` requests), not this file's.
  */
 import { spawn } from "node:child_process";
 import { access, constants, stat } from "node:fs/promises";
@@ -11,7 +15,6 @@ import { abortError } from "./player.ts";
 
 /** SIGTERM first, SIGKILL if the process is still there after this long. */
 const KILL_AFTER_MS = 300;
-const OPEN_TIMEOUT_MS = 10_000;
 
 const lastLine = (text: string) =>
   text
@@ -19,6 +22,23 @@ const lastLine = (text: string) =>
     .map((line) => line.trim())
     .filter(Boolean)
     .at(-1) ?? "";
+
+/**
+ * The file names a tool can have: `ffmpeg` on macOS and Linux; on Windows
+ * `ffmpeg` with each `PATHEXT` extension (`ffmpeg.exe` first by default).
+ */
+export function executableNames(
+  tool: string,
+  platform: NodeJS.Platform = process.platform,
+  pathext = process.env.PATHEXT,
+): string[] {
+  if (platform !== "win32") return [tool];
+  const extensions = (pathext || ".EXE;.CMD;.BAT;.COM")
+    .split(";")
+    .map((extension) => extension.trim().toLowerCase())
+    .filter((extension) => extension.startsWith("."));
+  return [...new Set(extensions)].map((extension) => tool + extension);
+}
 
 async function executable(path: string) {
   try {
@@ -109,23 +129,11 @@ export const systemServices: LocalServices = {
         : null;
     for (const directory of (process.env.PATH ?? "").split(delimiter)) {
       if (!directory) continue;
-      const candidate = join(directory, tool);
-      if (await executable(candidate)) return candidate;
+      for (const name of executableNames(tool)) {
+        const candidate = join(directory, name);
+        if (await executable(candidate)) return candidate;
+      }
     }
     return null;
-  },
-  async open(paths, reveal) {
-    await run("/usr/bin/open", reveal ? ["-R", ...paths] : paths, {
-      timeoutMs: OPEN_TIMEOUT_MS,
-      maxOutput: 64 * 1024,
-      signal: new AbortController().signal,
-    });
-  },
-  async openUrl(url) {
-    await run("/usr/bin/open", [url], {
-      timeoutMs: OPEN_TIMEOUT_MS,
-      maxOutput: 64 * 1024,
-      signal: new AbortController().signal,
-    });
   },
 };

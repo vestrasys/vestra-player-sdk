@@ -54,12 +54,14 @@ export interface Scope extends Disposable {
   readonly tools: Tools;
   /** JSON settings files in `dataDirectory`. */
   readonly storage: Storage;
-  /** Show or open files with the Finder. */
+  /** Show files in the file manager, open files and links. */
   readonly system: System;
+  /** Small secrets in the system's secret store (`secrets`). */
+  readonly secrets: Secrets;
   /** The main window: fullscreen, video area, size, level, pointer hiding. */
   readonly window: MainWindow;
-  /** The player's version and components, as the plugin process started. */
-  readonly app: AppInfo;
+  /** The player's version and components, and the system it runs on. */
+  readonly app: App;
   /** Every command's bindings and the user's overrides (`bindings.manage`). */
   readonly bindings: Bindings;
   /** Runtime images for Slint `image` properties. */
@@ -478,6 +480,44 @@ export interface AppInfo {
     readonly libav: Readonly<Record<string, string>>;
     readonly slint: string;
   };
+}
+
+/** `plugin.app`: the fixed facts plus the system, read on request. */
+export interface App extends AppInfo {
+  /**
+   * The operating system and the displays, read when called (displays come
+   * and go). No capability. CPU and memory: Node's `os` module.
+   */
+  system(): Promise<SystemInfo>;
+}
+
+export interface SystemInfo {
+  readonly os: "macos" | "windows" | "linux" | "other";
+  /** Product name: `macOS`, `Windows 11`, … */
+  readonly name: string;
+  /** `26.2` (macOS), `23H2` (Windows); `null` when unknown. */
+  readonly version: string | null;
+  /** `25C56` (macOS), `22631.4460` (Windows); `null` when unknown. */
+  readonly build: string | null;
+  /** Hardware model (`Mac15,6`, the firmware's product name); `null` when unknown. */
+  readonly model: string | null;
+  /** CPU architecture of the player build: `aarch64`, `x86_64`, … */
+  readonly arch: string;
+  /** Primary display first; empty without a user interface. */
+  readonly displays: readonly DisplayInfo[];
+}
+
+export interface DisplayInfo {
+  /** The system's name for it, `null` when it has none. */
+  readonly name: string | null;
+  /** Pixels in the current mode. */
+  readonly width: number;
+  readonly height: number;
+  /** Pixels per logical point (2 on Retina, 1.5 at 150 %). */
+  readonly scale: number;
+  /** Hz, `null` when unknown. */
+  readonly refreshRate: number | null;
+  readonly primary: boolean;
 }
 
 export interface ConfirmOptions {
@@ -996,12 +1036,26 @@ export interface Snapshot extends Disposable {
   readonly presentation: { width: number; height: number } | null;
   readonly processingRevision: number | null;
   /** Start exporting; the job runs in the host's offline worker. */
-  export(
-    options:
-      | { format: "png"; destination: string; sampleTime?: number }
-      | { format: "mp4"; destination: string; end: number },
-  ): Promise<ExportJob>;
+  export(options: ExportOptions): Promise<ExportJob>;
 }
+
+/**
+ * One frame as PNG, JPEG (`quality` 1–100, default 90) or BMP (24-bit), or
+ * a clip as MP4.
+ */
+export type ExportOptions =
+  | {
+      format: "png" | "bmp";
+      destination: string;
+      sampleTime?: number;
+    }
+  | {
+      format: "jpeg";
+      destination: string;
+      sampleTime?: number;
+      quality?: number;
+    }
+  | { format: "mp4"; destination: string; end: number };
 
 export type JobState = Omit<MediaJob, "jobId">;
 
@@ -1239,9 +1293,10 @@ export interface Storage {
 
 export interface System {
   /**
-   * Select files or folders in the Finder (one `open -R` for all, so several
-   * files of one folder are all highlighted). Paths that do not exist are
-   * skipped; `missing` when none exists; at most 256.
+   * Select files or folders in the file manager (macOS: one Finder window
+   * for all, so several files of one folder are all highlighted; Windows:
+   * one Explorer window per folder, selecting its first path). Paths that do
+   * not exist are skipped; `missing` when none exists; at most 256.
    */
   reveal(paths: string | string[]): Promise<void>;
   /** Open the file or folder with its default application. `missing` if absent. */
@@ -1251,4 +1306,19 @@ export interface System {
    * protocol or a malformed address; `timeout` after 10 s, `failed` otherwise.
    */
   openUrl(url: string): Promise<void>;
+}
+
+/**
+ * Per-plugin secrets (API keys, passwords) in the system's secret store:
+ * the login keychain on macOS, the Credential Manager on Windows. Needs
+ * `secrets`. `unsupported` on systems without a store, `unavailable` when
+ * the store refuses access: keep a fallback (or ask again).
+ */
+export interface Secrets {
+  /** The stored value, `null` when there is none. */
+  get(name: string): Promise<string | null>;
+  /** Store or replace (`name`: 1–64 of `a-z 0-9 . _ -`; value 1–1024 bytes). */
+  set(name: string, value: string): Promise<void>;
+  /** Remove; removing a missing secret is fine. */
+  delete(name: string): Promise<void>;
 }

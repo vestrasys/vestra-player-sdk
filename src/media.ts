@@ -171,7 +171,16 @@ export function mediaClients(transport: Transport) {
           snapshotId: number;
           destination: string;
         } & (
-          | { kind: "rawPng" | "processedPng"; sampleTime?: number }
+          | {
+              kind: "rawPng" | "processedPng" | "rawBmp" | "processedBmp";
+              sampleTime?: number;
+            }
+          | {
+              kind: "rawJpeg" | "processedJpeg";
+              sampleTime?: number;
+              /** 1–100, default 90. */
+              quality?: number;
+            }
           | { kind: "rawMp4" | "processedMp4"; end: number }
         ),
       ) =>

@@ -170,9 +170,8 @@ export interface PlaybackStats {
   cacheSeconds?: number | null;
 }
 /**
- * Work the plugin process does itself (no host protocol): external tools
- * and opening files in the Finder. The runner uses the real system; the
- * test host supplies fakes.
+ * Work the plugin process does itself (no host protocol): external tools.
+ * The runner uses the real system; the test host supplies fakes.
  */
 export interface LocalServices {
   run(
@@ -182,10 +181,33 @@ export interface LocalServices {
   ): Promise<{ stdout: Uint8Array; stderr: string }>;
   /** Where a tool's executable is, or null when it cannot be found. */
   locate(tool: "ffmpeg" | "ffprobe"): Promise<string | null>;
-  /** `/usr/bin/open -R paths…` (reveal) or `/usr/bin/open path`. */
-  open(paths: string[], reveal: boolean): Promise<void>;
-  /** `/usr/bin/open <url>`: the default browser. */
-  openUrl(url: string): Promise<void>;
+  /**
+   * @deprecated Test hook only, removed after the portability round: the
+   * player now shows and opens files (`system.reveal`, `system.openPath`).
+   * `TestHost` still routes those requests through it so existing fakes keep
+   * working; use `host.handle("system.openPath", …)` instead.
+   */
+  open?(paths: string[], reveal: boolean): Promise<void>;
+  /** @deprecated As `open`: the player opens links (`system.openUrl`). */
+  openUrl?(url: string): Promise<void>;
+}
+
+/** `app.system`: the operating system and the displays. */
+export interface WireSystemInfo {
+  os: "macos" | "windows" | "linux" | "other";
+  name: string;
+  version: string | null;
+  build: string | null;
+  model: string | null;
+  arch: string;
+  displays: {
+    name: string | null;
+    width: number;
+    height: number;
+    scale: number;
+    refreshRate: number | null;
+    primary: boolean;
+  }[];
 }
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;
@@ -371,6 +393,27 @@ export function createWire(transport: Transport) {
         transport.request<void>("clipboard.writeText", { text }),
       writeImage: (path: string) =>
         transport.request<void>("clipboard.writeImage", { path }),
+    },
+    /** Files, folders and links shown or opened by the player. */
+    system: {
+      reveal: (paths: string[]) =>
+        transport.request<void>("system.reveal", { paths }),
+      openPath: (path: string) =>
+        transport.request<void>("system.openPath", { path }),
+      openUrl: (url: string) =>
+        transport.request<void>("system.openUrl", { url }),
+    },
+    /** The system's secret store, per plugin (`secrets`). */
+    secrets: {
+      get: (name: string) =>
+        transport.request<string | null>("secrets.get", { name }),
+      set: (name: string, value: string) =>
+        transport.request<void>("secrets.set", { name, value }),
+      delete: (name: string) =>
+        transport.request<void>("secrets.delete", { name }),
+    },
+    app: {
+      system: () => transport.request<WireSystemInfo>("app.system"),
     },
     power: {
       preventSleep: (mode: "off" | "playing") =>
