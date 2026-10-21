@@ -32,7 +32,15 @@ export interface Scope extends Disposable {
   readonly panels: Panels;
   readonly dialogs: Dialogs;
   readonly player: Player;
-  readonly video: { filter(id: string): VideoFilter };
+  readonly video: {
+    filter(id: string): VideoFilter;
+    /**
+     * The display layer (needs `processing.video`). The first plugin to call
+     * it owns the layer; another plugin's view fails with `conflict` until the
+     * owner disposes or stops. A second call in the same plugin throws.
+     */
+    view(): VideoView;
+  };
   readonly audio: { filter(id: string): AudioFilter };
   readonly subtitles: Subtitles;
   readonly media: MediaCapture;
@@ -859,6 +867,25 @@ interface Filter<T> extends Disposable {
 export type VideoFilter = Filter<VideoNode[]>;
 /** This plugin's own audio chain plus its audio delay in 10 ms steps. */
 export type AudioFilter = Filter<{ nodes: AudioNode[]; delayMs?: number }>;
+
+/** How the video sits in the video area; not part of snapshots or exports. */
+export interface ViewSettings {
+  /** Display aspect override 0.25–4; `null` = as the source. */
+  aspect: number | null;
+  /** keep: letterbox; stretch: fill, distorted; fill: fill, cropped. */
+  fit: "keep" | "stretch" | "fill";
+  /** 0.25–4 (1 = fit the area). */
+  zoom: number;
+  /** −1–1, in units of the shown video's width / height. */
+  panX: number;
+  panY: number;
+}
+export interface VideoView extends Disposable {
+  /** Merged into the current settings; last write wins. */
+  set(value: Partial<ViewSettings>): void;
+  readonly status: FilterStatus;
+  onStatus(listener: (status: FilterStatus) => void): Disposable;
+}
 
 // ---------------------------------------------------------------- subtitles
 

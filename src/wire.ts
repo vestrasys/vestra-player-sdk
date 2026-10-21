@@ -289,6 +289,20 @@ export function createWire(transport: Transport) {
           id === undefined ? {} : { id },
         ),
     },
+    /** The display layer (`plugin.video.view()`); the host checks ownership. */
+    video: {
+      viewSet: (values: {
+        aspect: number | null;
+        fit: "keep" | "stretch" | "fill";
+        zoom: number;
+        panX: number;
+        panY: number;
+      }) =>
+        transport.request<{ state: "applied" | "waiting" }>("video.view.set", {
+          values,
+        }),
+      viewRelease: () => transport.request<void>("video.view.release"),
+    },
     /** Mark layers on the seek bar (`plugin.timeline`). */
     timeline: {
       marks: () => transport.request<{ marks: WireMark[] }>("timeline.marks"),

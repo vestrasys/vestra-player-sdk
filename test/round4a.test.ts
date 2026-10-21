@@ -6,6 +6,8 @@ import { nodeProblem } from "../../sdk/processing.ts";
 
 const capabilities = ["playback.read", "events", "processing.video"];
 
+const state = (view: { status: { state: string } }) => view.status.state;
+
 async function started(host = new TestHost()) {
   let plugin!: Plugin;
   const result = await startPlugin(
@@ -61,5 +63,78 @@ test("frameBlend: integer 24–120, at most one across every chain", async () =>
   again.retry();
   await host.settle();
   assert.equal(again.status.state, "applied");
+  await stop();
+});
+
+test("video.view: owned by the first caller, merged writes, invalid stays local, dispose restores", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  const errors: string[] = [];
+  plugin.onError((error) => errors.push(error.code));
+  const view = plugin.video.view();
+  assert.throws(() => plugin.video.view(), /one display layer/);
+  await host.settle();
+  // No media yet: kept and written, reported as waiting.
+  assert.equal(state(view), "waiting");
+  assert.equal(host.videoView.owner, host.manifestId);
+  const states: string[] = [];
+  view.onStatus((status) => states.push(status.state));
+  host.openElsewhere("/a.mp4");
+  await host.settle();
+  assert.equal(state(view), "applied", "applied once media is ready");
+  view.set({ aspect: 4 / 3 });
+  view.set({ fit: "fill", zoom: 2 });
+  await host.settle();
+  assert.deepEqual(host.videoView.values, {
+    aspect: 4 / 3,
+    fit: "fill",
+    zoom: 2,
+    panX: 0,
+    panY: 0,
+  });
+  assert.equal(state(view), "applied");
+  // Out of range: failed at once with invalid, nothing sent, values kept.
+  const sent = host.sent("video.view.set").length;
+  view.set({ zoom: 5 });
+  assert.equal(state(view), "failed");
+  assert.deepEqual(errors, ["invalid"]);
+  view.set({ scaleX: 1 } as never);
+  assert.equal(host.sent("video.view.set").length, sent);
+  assert.equal(host.videoView.values.zoom, 2);
+  assert.ok(states.includes("applying"));
+  await view.dispose();
+  assert.equal(host.videoView.owner, null);
+  assert.equal(host.videoView.values.zoom, 1, "defaults back");
+  // Free again for this plugin.
+  const again = plugin.video.view();
+  await host.settle();
+  assert.equal(again.status.state, "applied");
+  await stop();
+});
+
+test("video.view: another owner means conflict until it lets go", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setVideoViewOwner("probe");
+  const { plugin, stop } = await started(host);
+  const errors: string[] = [];
+  plugin.onError((error) => errors.push(error.code));
+  const view = plugin.video.view();
+  await host.settle();
+  assert.equal(state(view), "failed");
+  assert.equal(
+    view.status.state === "failed" && view.status.error.code,
+    "conflict",
+  );
+  view.set({ aspect: 1.5 });
+  await host.settle();
+  assert.equal(state(view), "failed", "still held");
+  host.setVideoViewOwner(null);
+  view.set({ fit: "stretch" });
+  await host.settle();
+  assert.equal(state(view), "applied");
+  assert.equal(host.videoView.owner, host.manifestId);
+  assert.equal(host.videoView.values.aspect, 1.5, "the merged value");
+  assert.deepEqual(errors, ["conflict", "conflict"]);
   await stop();
 });

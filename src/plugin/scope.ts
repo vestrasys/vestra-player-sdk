@@ -10,6 +10,7 @@ import { appearance } from "./appearance.ts";
 import { settings } from "./settings.ts";
 import { player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
+import { videoView } from "./view.ts";
 import { subtitles } from "./subtitles.ts";
 import { mediaCapture } from "./media.ts";
 import { resolvers } from "./resolvers.ts";
@@ -46,7 +47,10 @@ export class ScopeImpl implements Plugin {
   readonly panels = panels(this);
   readonly dialogs = dialogs(this);
   readonly player = player(this);
-  readonly video = videoFilters(this);
+  readonly video = {
+    ...videoFilters(this),
+    view: () => videoView(this),
+  };
   readonly audio = audioFilters(this);
   readonly subtitles = subtitles(this);
   readonly media = mediaCapture(this);
