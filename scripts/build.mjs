@@ -3,8 +3,10 @@
  * src/*.ts → dist/*.js + dist/*.d.ts (tsconfig.json). The package publishes
  * the compiled files: Node does not strip types inside node_modules, and other
  * tool chains (bundlers, older TypeScript, editors) read .js + .d.ts directly.
- * Runs before `npm pack` / `npm publish` (`prepack`); in the player's
- * workspace on `npm install` (its root `prepare`) and before every check.
+ * Runs as `prepare`: on `npm ci` / `npm install` in this repository, before
+ * `npm pack` / `npm publish`, and when npm installs the package from a git
+ * URL (npm clones it, installs its dependencies and runs `prepare` before
+ * packing).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
