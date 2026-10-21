@@ -138,5 +138,10 @@ test("backdrop: one at a time, state follows the player", async () => {
   assert.deepEqual(plugin.panels.backdrop.state, { effective: false });
   assert.deepEqual(states, [true, false]);
   assert.deepEqual(host.backdrop, { owner: "test.r3b", effective: false });
+  // G-16a: opening the next source shows the backdrop while it loads.
+  host.openElsewhere("https://example.com/b.mp4", "loading");
+  await host.settle();
+  assert.deepEqual(plugin.panels.backdrop.state, { effective: true });
+  assert.deepEqual(states, [true, false, true]);
   await stop();
 });

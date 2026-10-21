@@ -59,6 +59,22 @@ test("host.run executes core actions with the playback OSD text", async () => {
   await stop();
 });
 
+test("volume-up stops at 100 like the player; a louder volume is kept", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({ output: { volume: 95, muted: false } });
+  const { plugin, stop } = await started(host);
+  await plugin.host.run("volume-up");
+  await plugin.host.run("volume-up");
+  assert.deepEqual(host.osd.slice(-2), ["音量: 100%", "音量: 100%"]);
+  host.setSource({ output: { volume: 150, muted: false } });
+  await plugin.host.run("volume-up");
+  assert.equal(host.osd.at(-1), "音量: 150%");
+  await plugin.host.run("volume-down");
+  assert.equal(host.osd.at(-1), "音量: 145%");
+  await stop();
+});
+
 test("setStepSeek and step validate their arguments; step needs video", async () => {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
