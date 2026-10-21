@@ -23,6 +23,7 @@ import type {
   PlaybackStats,
   Transport,
 } from "../wire.ts";
+import { COMMAND_LIMITS } from "../commands.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
@@ -1158,6 +1159,12 @@ export class TestHost implements Transport {
       const id = String(p.id);
       if (this.commands.has(id))
         throw new HostError("command", "owner/localId already registered");
+      // The player's caps (COMMAND_LIMITS): the total counts the core commands too.
+      if (
+        this.commands.size >= COMMAND_LIMITS.perPlugin ||
+        this.commands.size + this.coreCommands.size >= COMMAND_LIMITS.total
+      )
+        throw new HostError("limit", "command registry limit reached");
       const host = this;
       this.commands.set(id, {
         declaration: p.declaration as FakeCommand["declaration"],

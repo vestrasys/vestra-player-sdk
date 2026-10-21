@@ -3,6 +3,8 @@ import test from "node:test";
 import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
 import type { Plugin } from "../../sdk/plugin/index.ts";
 import { nodeProblem } from "../../sdk/processing.ts";
+import { COMMAND_LIMITS } from "../../sdk/commands.ts";
+import { readFileSync } from "node:fs";
 
 const capabilities = ["playback.read", "events", "processing.video"];
 
@@ -137,4 +139,34 @@ test("video.view: another owner means conflict until it lets go", async () => {
   assert.equal(host.videoView.values.aspect, 1.5, "the merged value");
   assert.deepEqual(errors, ["conflict", "conflict"]);
   await stop();
+});
+
+test("TestHost enforces the player's command limits", async () => {
+  const { host, plugin, stop } = await startPlugin(() => {});
+  const added = Array.from({ length: COMMAND_LIMITS.perPlugin }, (_, i) =>
+    plugin.commands.add({ id: `c${i}`, title: `C ${i}`, run() {} }),
+  );
+  await Promise.all(added.map((c) => c.ready));
+  assert.equal(host.commands.size, COMMAND_LIMITS.perPlugin);
+  const extra = plugin.commands.add({ id: "extra", title: "Extra", run() {} });
+  await assert.rejects(extra.ready, { code: "limit" });
+  assert.equal(host.commands.has("extra"), false);
+  // Disposing one frees its slot.
+  await added[0]!.dispose();
+  await extra.dispose();
+  const again = plugin.commands.add({ id: "again", title: "Again", run() {} });
+  await again.ready;
+  assert.equal(host.commands.size, COMMAND_LIMITS.perPlugin);
+  await stop();
+});
+
+test("COMMAND_LIMITS matches the player's registry", () => {
+  const rust = readFileSync(
+    new URL("../../host/src/commands.rs", import.meta.url),
+    "utf8",
+  );
+  const constant = (name: string) =>
+    Number(new RegExp(`const ${name}: usize = (\\d+);`).exec(rust)?.[1]);
+  assert.equal(constant("MAX_PER_OWNER"), COMMAND_LIMITS.perPlugin);
+  assert.equal(constant("MAX_COMMANDS"), COMMAND_LIMITS.total);
 });

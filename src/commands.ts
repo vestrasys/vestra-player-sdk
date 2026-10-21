@@ -1,5 +1,12 @@
 /** Finite candidate command registry. Host authenticates owner; no plugin supplies an owner id. */
 import type { Transport } from "./wire.ts";
+/**
+ * The player's command registry caps (host/src/commands.rs, reference.md §4).
+ * Runaway guards, not product limits: past them `commands.register` fails
+ * with code `limit`. `perPlugin` counts one plugin instance (a trial package
+ * is its own instance); `total` counts every plugin plus the player's own.
+ */
+export const COMMAND_LIMITS = { perPlugin: 160, total: 1024 } as const;
 export type CommandState = {
   enabled: boolean;
   checked: boolean | null;
