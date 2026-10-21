@@ -43,7 +43,12 @@ export type VideoNode =
       aspect: number;
       x: number;
       y: number;
-    };
+    }
+  /**
+   * Blended frame-rate conversion (FFmpeg `framerate`), an integer 24–120.
+   * At most one across all plugins; the player runs it after every chain.
+   */
+  | { kind: "frameBlend"; fps: number };
 export type AudioNode =
   | { kind: "volume"; gainDb: number }
   | { kind: "equalizer"; frequency: number; q: 1; gainDb: number }
@@ -79,6 +84,7 @@ const RULES: Record<string, Rule> = {
   transform: { rotate: [0, 90, 180, 270], flipH: BOOL, flipV: BOOL },
   deinterlace: { when: ["interlaced", "all"], output: ["frame", "field"] },
   reframe: { mode: ["crop", "pad"], aspect: [0.25, 4], x: [-1, 1], y: [-1, 1] },
+  frameBlend: { fps: [24, 120] },
   volume: { gainDb: [-60, 0] },
   equalizer: { frequency: [20, 20000], q: [1], gainDb: [-6, 6] },
   treble: { frequency: [3000], slope: [0.5], gainDb: [0, 6] },
@@ -96,6 +102,7 @@ const VIDEO = new Set([
   "transform",
   "deinterlace",
   "reframe",
+  "frameBlend",
 ]);
 
 /**
@@ -130,7 +137,14 @@ export function nodeProblem(
       !Number.isInteger((node as unknown as { range: number }).range)
     )
       return "deband.range must be an integer";
+    if (
+      node.kind === "frameBlend" &&
+      !Number.isInteger((node as unknown as { fps: number }).fps)
+    )
+      return "frameBlend.fps must be an integer";
   }
+  if (nodes.filter((node) => node.kind === "frameBlend").length > 1)
+    return "only one frameBlend node across all plugins";
   return null;
 }
 export type ProcessingChange = {

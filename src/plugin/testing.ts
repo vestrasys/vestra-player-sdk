@@ -1644,6 +1644,16 @@ export class TestHost implements Transport {
         stage as "video" | "audio",
         (p.nodes ?? []) as { kind: string }[],
       );
+      // frameBlend: at most one across every chain (this plugin's others too).
+      const blends = [...this.processing.resources]
+        .filter(([other]) => other !== key)
+        .flatMap(([, resource]) => resource.nodes as { kind: string }[])
+        .concat((p.nodes ?? []) as { kind: string }[])
+        .filter((node) => node.kind === "frameBlend").length;
+      const blend =
+        !problem && blends > 1
+          ? "only one frameBlend node across all plugins"
+          : null;
       const offset = Number(p.offsetMs ?? 0);
       const delay =
         stage === "audio" &&
@@ -1652,10 +1662,10 @@ export class TestHost implements Transport {
           offset % 10 !== 0)
           ? "audio offsetMs must be -10000..10000 in 10ms increments"
           : null;
-      if (problem || delay)
+      if (problem || blend || delay)
         return finish({
           status: "failed",
-          error: { code: "invalid", message: (problem ?? delay)! },
+          error: { code: "invalid", message: (problem ?? blend ?? delay)! },
         });
       if (this.source.phase !== "ready")
         return finish({
