@@ -1,14 +1,38 @@
 /** Trusted extraction providers. Declarations cross JSON; handler code stays in JS. */
 import type { Transport } from "./wire.ts";
+/** One stream of a {@link ResolvedMedia}. */
 export type ResolvedResource = {
+  /** The playable stream URL. */
   url: string;
+  /** HTTP headers for requests to `url` (e.g. a referer or cookie). */
   headers?: Record<string, string>;
 };
+/**
+ * What a resolver returns ({@link ResolverOptions.resolve}): the playable
+ * stream(s) behind a page URL. Both streams must use identical `headers`;
+ * different maps fail explicitly (nothing is dropped silently).
+ *
+ * @example
+ * ```ts
+ * const media: ResolvedMedia = {
+ *   kind: "media",
+ *   originalUrl: url,
+ *   title: "Talk",
+ *   primary: { url: videoUrl, headers: { Referer: url } },
+ *   audio: { url: audioUrl, headers: { Referer: url } },
+ * };
+ * ```
+ */
 export type ResolvedMedia = {
+  /** Always `"media"`. */
   kind: "media";
+  /** The page URL that was resolved. */
   originalUrl: string;
+  /** A title for the player to show. */
   title?: string;
+  /** The video (or combined) stream. */
   primary: ResolvedResource;
+  /** A separate audio stream, when audio and video are split. */
   audio?: ResolvedResource;
 };
 export type SourceResolverDeclaration = {

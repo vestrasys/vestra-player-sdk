@@ -1,4 +1,4 @@
-/** Stage D candidate; source pixels and renderer confirmation remain distinct. */
+/** Subtitle wire types; source pixels and renderer confirmation remain distinct. */
 import type { Transport } from "./wire.ts";
 export type SubtitleTrack =
   | { kind: "embedded"; id: number }
@@ -12,13 +12,40 @@ export type SubtitleStamp = {
   generation: number;
   revision: number;
 };
+/**
+ * A subtitle style layer ({@link Subtitles.setStyle}). Sizes are at the
+ * 1080p reference height and scale with the video. The effective style is
+ * the layer of the plugin that set one last; it also applies to the
+ * secondary subtitle.
+ *
+ * @example
+ * ```ts
+ * const style: SubtitleStyle = {
+ *   fontId: plugin.subtitles.state!.fonts[0]!.id,
+ *   fontSize: 44,
+ *   color: "yellow",
+ *   outline: 2,
+ *   marginPercent: 6,
+ *   offsetMs: -250,
+ *   box: 60,
+ * };
+ * await plugin.subtitles.setStyle(style);
+ * ```
+ */
 export type SubtitleStyle = {
+  /** A font id from {@link SubtitlesState.fonts}. */
   fontId: string;
+  /** 16–72. */
   fontSize: number;
+  /** Text colour. */
   color: "white" | "yellow" | "cyan";
+  /** Outline width 0–4. */
   outline: number;
+  /** Bottom margin 2–15 % of the video height. */
   marginPercent: number;
+  /** Timing offset −600000–600000 ms. */
   offsetMs: number;
+  /** Bold text; default false. */
   bold?: boolean;
   /** Shadow offset 0–4 at the 1080p reference height. */
   shadow?: number;

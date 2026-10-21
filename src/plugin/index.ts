@@ -2,6 +2,8 @@
  * Builds the `plugin` object. Plugins import the types from the package entry
  * (`@vestra-player/sdk`, src/index.ts); `createPlugin` is for the player's
  * runner (`@vestra-player/sdk/runtime`) and the test host only.
+ *
+ * @internal
  */
 import type { Transport } from "../wire.ts";
 import { Runtime } from "./runtime.ts";
