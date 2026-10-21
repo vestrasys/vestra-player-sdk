@@ -51,7 +51,10 @@ export class WindowService {
     });
     void this.read();
   }
+  /** The palette, as the `window.state` reply carried it (`plugin.appearance`). */
+  appearance: "vestra" | "classic" | undefined;
   accept(facts: WindowFacts) {
+    if (facts.appearance) this.appearance = facts.appearance;
     const next = view(facts);
     if (JSON.stringify(next) === JSON.stringify(this.state)) return;
     this.state = next;

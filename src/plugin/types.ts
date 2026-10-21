@@ -58,6 +58,12 @@ export interface Scope extends Disposable {
   readonly ui: Ui;
   /** Marks on the seek bar, merged from every plugin's layer. */
   readonly timeline: Timeline;
+  /** Files dropped on the video area, by extension (`ui.drop`). */
+  readonly drops: Drops;
+  /** The player's palette. */
+  readonly appearance: Appearance;
+  /** Pages in the player's options window (`ui.settings`). */
+  readonly settings: Settings;
   /** A child scope; disposing it releases only what was created through it. */
   scope(): Scope;
   /** Adopt an existing handle or a cleanup function. */
@@ -270,6 +276,88 @@ export interface Panel extends View, Disposable {
     items: (Command | null)[],
     at: { x: number; y: number },
   ): Promise<void>;
+  /**
+   * Files dropped on this panel (docked or floating), `at` in panel
+   * coordinates (top-left of the panel). While a listener exists, drops on
+   * the panel come here instead of the drop providers (`ui.drop`).
+   */
+  onDrop(
+    listener: (event: {
+      paths: string[];
+      at: { x: number; y: number };
+      modifiers: DropModifiers;
+    }) => unknown,
+  ): Disposable;
+}
+
+/** Keys held when the files were dropped. */
+export interface DropModifiers {
+  readonly alt: boolean;
+  readonly shift: boolean;
+  readonly cmd: boolean;
+}
+
+export interface DropHandler {
+  /** Lower case, without the dot; `"folder"` matches directories. */
+  extensions: string[];
+  /** The dropped paths with these extensions, in the order dropped. */
+  drop(event: { paths: string[]; modifiers: DropModifiers }): unknown;
+}
+
+export interface Drops {
+  /**
+   * Take files dropped on the video area. The first provider registered for
+   * an extension gets it; files nobody takes are ignored.
+   */
+  provide(handler: DropHandler): Disposable;
+}
+
+export type ThemeId = "vestra" | "classic";
+
+export interface Appearance {
+  /** The palette in use; no capability needed. */
+  readonly theme: ThemeId;
+  /** The palette changed (needs `events`). */
+  onChange(listener: (theme: ThemeId) => void): Disposable;
+  /** Switch every view's palette (`ui.theme`); kept across restarts. */
+  set(theme: ThemeId): Promise<void>;
+}
+
+export type SettingsCategory =
+  | "general"
+  | "playback"
+  | "subtitles"
+  | "video"
+  | "audio"
+  | "input"
+  | "appearance"
+  | "plugins"
+  | "other";
+
+/** A page of the options window: a View whose callbacks need no early binding. */
+export type SettingsPage = View &
+  Disposable & {
+    /** The player has registered the page. */
+    readonly ready: Promise<void>;
+  };
+
+export interface Settings {
+  /**
+   * Add a page (the file exports one component and one global, like a
+   * panel). `id` is unique in this plugin (1–64 of a–z 0–9 . - _), `title`
+   * 1–24 characters, at most 8 pages per plugin.
+   */
+  page(
+    file: string,
+    options: {
+      id: string;
+      category: SettingsCategory;
+      title: string;
+      order?: number;
+    },
+  ): SettingsPage;
+  /** Open the options window (or bring it front) at one of this plugin's pages; omitted: the last page. */
+  show(pageId?: string): Promise<void>;
 }
 
 /** The backdrop position (`panels.mount("backdrop")`). */

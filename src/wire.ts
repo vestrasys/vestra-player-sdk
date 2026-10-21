@@ -114,6 +114,8 @@ export interface BindingTable {
 export interface WindowFacts {
   fullscreen: boolean;
   videoArea: { width: number; height: number };
+  /** The palette (`plugin.appearance`), with the `window.state` reply. */
+  appearance?: "vestra" | "classic";
 }
 /** One timeline mark as the player merges them (`timeline.marks`). */
 export interface WireMark {
@@ -251,6 +253,42 @@ export function createWire(transport: Transport) {
       reset: (ref?: { plugin: string; command: string }) =>
         transport.request<void>("bindings.reset", ref ?? {}),
     },
+    /** File drops: providers by extension, panel listeners (`ui.drop`). */
+    drops: {
+      provide: (id: string, extensions: string[]) =>
+        transport.request<void>("drops.provide", { id, extensions }),
+      withdraw: (id: string) =>
+        transport.request<void>("drops.withdraw", { id }),
+      listen: (listen: boolean) =>
+        transport.request<void>("drops.listen", { listen }),
+    },
+    /** The palette (`ui.theme` to change it). */
+    appearance: {
+      set: (theme: string) =>
+        transport.request<void>("appearance.set", { theme }),
+    },
+    /** Settings pages in the player's options window (`ui.settings`). */
+    settings: {
+      register: (options: {
+        id: string;
+        category: string;
+        title: string;
+        order?: number;
+        file: string;
+        component: string;
+        global: string;
+        properties: Record<string, Json>;
+      }) => transport.request<void>("settings.register", options),
+      set: (id: string, property: string, value: Json) =>
+        transport.request<void>("settings.set", { id, property, value }),
+      unregister: (id: string) =>
+        transport.request<void>("settings.unregister", { id }),
+      show: (id?: string) =>
+        transport.request<void>(
+          "settings.show",
+          id === undefined ? {} : { id },
+        ),
+    },
     /** Mark layers on the seek bar (`plugin.timeline`). */
     timeline: {
       marks: () => transport.request<{ marks: WireMark[] }>("timeline.marks"),
@@ -358,7 +396,8 @@ export function createWire(transport: Transport) {
           | "window.state"
           | "packages.changed"
           | "bindings.changed"
-          | "timeline.changed",
+          | "timeline.changed"
+          | "appearance.changed",
         listener: (data: unknown) => void,
       ) {
         const off = transport.on(event, listener);
