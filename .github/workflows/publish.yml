@@ -10,6 +10,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # NPM_TOKEN lives in the "vestra" environment.
+    environment: vestra
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +24,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "$NPM_TOKEN" ]; then
-            echo "::error::Secret NPM_TOKEN is not set. Add an npm automation token as the repository secret NPM_TOKEN, then re-run this workflow."
+            echo "::error::Secret NPM_TOKEN is not set. Add an npm granular token (with 2FA bypass) as the secret NPM_TOKEN in the "vestra" environment, then re-run this workflow."
             exit 1
           fi
       - name: Tag matches package.json version
