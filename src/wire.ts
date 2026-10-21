@@ -114,6 +114,8 @@ export interface BindingTable {
 export interface WindowFacts {
   fullscreen: boolean;
   videoArea: { width: number; height: number };
+  /** System picture-in-picture (absent from older players: unsupported). */
+  pictureInPicture?: { supported: boolean; active: boolean };
   /** The palette (`plugin.appearance`), with the `window.state` reply. */
   appearance?: "vestra" | "classic";
 }
@@ -236,7 +238,7 @@ export function createWire(transport: Transport) {
           options,
         ),
     },
-    /** The main window: its state, size, level and pointer hiding. */
+    /** The main window: its state, size, level, pointer hiding and picture-in-picture. */
     window: {
       state: () => transport.request<WindowFacts>("window.state"),
       setVideoArea: (width: number, height: number) =>
@@ -248,6 +250,8 @@ export function createWire(transport: Transport) {
         transport.request<void>("window.setAlwaysOnTop", { onTop }),
       setCursorAutoHide: (mode: "fullscreen" | "playing") =>
         transport.request<void>("window.setCursorAutoHide", { mode }),
+      setPictureInPicture: (on: boolean) =>
+        transport.request<void>("window.setPictureInPicture", { on }),
     },
     /** Output devices (mpv ids) and the one to play on. */
     audioOutput: {

@@ -443,14 +443,17 @@ export class TestHost implements Transport {
   readonly confirms: Record<string, Json>[] = [];
   /**
    * The main window as the player would show it. Change it with
-   * `setMainWindow` (the user resized it, entered fullscreen); `onTop` and
-   * `cursorAutoHide` record the plugin's `window.set…` calls.
+   * `setMainWindow` (the user resized it, entered fullscreen, closed the
+   * picture-in-picture window); `onTop`, `cursorAutoHide` and
+   * `pictureInPicture.active` record the plugin's `window.set…` calls.
+   * `pictureInPicture.supported: false` stands for Windows and Linux.
    */
   readonly mainWindow = {
     fullscreen: false,
     videoArea: { width: 780, height: 609 },
     onTop: false,
     cursorAutoHide: "fullscreen" as "fullscreen" | "playing",
+    pictureInPicture: { supported: true, active: false },
   };
   /** The player's secret store for this plugin: name → value. */
   readonly secrets = new Map<string, string>();
@@ -883,6 +886,7 @@ export class TestHost implements Transport {
     patch: Partial<{
       fullscreen: boolean;
       videoArea: { width: number; height: number };
+      pictureInPicture: { supported: boolean; active: boolean };
     }>,
   ) {
     Object.assign(this.mainWindow, patch);
@@ -892,6 +896,7 @@ export class TestHost implements Transport {
     return {
       fullscreen: this.mainWindow.fullscreen,
       videoArea: { ...this.mainWindow.videoArea },
+      pictureInPicture: { ...this.mainWindow.pictureInPicture },
       appearance: this.appearance,
     };
   }
@@ -1618,6 +1623,22 @@ export class TestHost implements Transport {
       if (p.mode !== "fullscreen" && p.mode !== "playing")
         throw new HostError("invalid", "mode is fullscreen or playing");
       this.mainWindow.cursorAutoHide = p.mode;
+    },
+    "window.setPictureInPicture": (p) => {
+      if (typeof p.on !== "boolean")
+        throw new HostError("invalid", "on requires a boolean");
+      const pip = this.mainWindow.pictureInPicture;
+      if (p.on === pip.active) return;
+      if (p.on && !pip.supported)
+        throw new HostError("unsupported", "此系统不支持画中画");
+      const video =
+        this.source.phase !== "empty" && this.source.hasVideo !== false;
+      if (p.on && !video) throw new HostError("unavailable", "没有视频");
+      this.setMainWindow({
+        // The player leaves fullscreen before the window opens.
+        fullscreen: p.on ? false : this.mainWindow.fullscreen,
+        pictureInPicture: { ...pip, active: p.on },
+      });
     },
     "player.chapters": () => ({
       sourceId: this.source.stamp.generation,

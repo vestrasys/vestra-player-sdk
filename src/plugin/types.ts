@@ -440,6 +440,15 @@ export interface WindowState {
   readonly fullscreen: boolean;
   /** The video column, without the bottom bar, sidebar and splitter. */
   readonly videoArea: { readonly width: number; readonly height: number };
+  /**
+   * System picture-in-picture: `supported` on this system and build (macOS
+   * 14+; `false` on Windows, Linux and without a native window), `active`
+   * while its window shows the video.
+   */
+  readonly pictureInPicture: {
+    readonly supported: boolean;
+    readonly active: boolean;
+  };
 }
 
 /** The player's main window. Reading needs no capability; changes need `window.control`. */
@@ -466,6 +475,17 @@ export interface MainWindow {
    * reverts to `"fullscreen"` when this plugin stops.
    */
   setCursorAutoHide(mode: "fullscreen" | "playing"): Promise<void>;
+  /**
+   * Play the video in the system picture-in-picture window (`true`) or back
+   * in the main window. Resolves once the window has opened or closed and
+   * `state.pictureInPicture` shows it. From fullscreen the player leaves
+   * fullscreen first. `unsupported` where `supported` is false; `unavailable`
+   * without video; `busy` while the previous call is still switching;
+   * `failed` when the system refuses. The window's play/pause and skip
+   * buttons drive playback; its close button also pauses. It closes when
+   * this plugin stops or the video goes away.
+   */
+  setPictureInPicture(on: boolean): Promise<void>;
 }
 
 /** `plugin.app`: fixed for the life of the plugin process. */
