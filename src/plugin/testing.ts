@@ -192,9 +192,8 @@ export class TestHost implements Transport {
     },
   };
   /**
-   * Paths given to `system.reveal` / `system.openPath`, newest last. The
-   * player's `system.*` requests go through `local.open` / `local.openUrl`
-   * (kept for existing fakes; prefer `host.handle("system.openPath", …)`).
+   * Paths given to `system.reveal` / `system.openPath`, newest last; inject
+   * failures with `host.handle("system.openPath", …)`.
    */
   readonly system = {
     revealed: [] as string[],
@@ -202,8 +201,8 @@ export class TestHost implements Transport {
     /** `system.openUrl` addresses, newest last. */
     urls: [] as string[],
   };
-  /** Local processes, faked: see `tools` and `system`. */
-  readonly local: Required<LocalServices> = {
+  /** Local processes, faked: see `tools`. */
+  readonly local: LocalServices = {
     locate: async (tool) =>
       this.tools.handlers.has(tool) ? `/test-host/${tool}` : null,
     run: async (path, args, options) => {
@@ -227,12 +226,6 @@ export class TestHost implements Transport {
           `output exceeds ${options.maxOutput} bytes`,
         );
       return { stdout, stderr: result.stderr ?? "" };
-    },
-    open: async (paths, reveal) => {
-      (reveal ? this.system.revealed : this.system.opened).push(...paths);
-    },
-    openUrl: async (url) => {
-      this.system.urls.push(url);
     },
   };
   /** Every `panel.showMenu`, newest last. */
@@ -1381,9 +1374,10 @@ export class TestHost implements Transport {
       });
     },
     // The player validates again; these mirror what reaches it.
-    "system.reveal": (p) => this.local.open(p.paths as string[], true),
-    "system.openPath": (p) => this.local.open([String(p.path)], false),
-    "system.openUrl": (p) => this.local.openUrl(String(p.url)),
+    "system.reveal": (p) =>
+      void this.system.revealed.push(...(p.paths as string[])),
+    "system.openPath": (p) => void this.system.opened.push(String(p.path)),
+    "system.openUrl": (p) => void this.system.urls.push(String(p.url)),
     "secrets.get": (p) => this.secrets.get(String(p.name)) ?? null,
     "secrets.set": (p) =>
       void this.secrets.set(String(p.name), String(p.value)),

@@ -42,10 +42,9 @@ test("system.* are player requests with absolute, present paths", async () => {
   assert.deepEqual(host.system.revealed, [file]);
   assert.deepEqual(host.system.opened, [file]);
   assert.deepEqual(host.system.urls, ["https://example.com/a%20b"]);
-  // Existing fakes that replace `local.open` still see the requests.
-  host.local.open = async () => {
+  host.handle("system.openPath", () => {
     throw new HostError("failed", "open failed");
-  };
+  });
   await assert.rejects(plugin.system.openPath(file), code("failed"));
   host.handle("system.openUrl", () => {
     throw new HostError("unsupported", "opening links is not supported");
@@ -61,6 +60,7 @@ test("system.* are player requests with absolute, present paths", async () => {
   await assert.rejects(plugin.system.openUrl("file:///etc"), code("invalid"));
   // The real local services no longer open anything themselves.
   assert.equal("open" in systemServices, false);
+  assert.equal("open" in host.local, false);
   rmSync(dir, { recursive: true });
   await stop();
 });
