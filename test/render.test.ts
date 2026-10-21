@@ -3,9 +3,9 @@ import test from "node:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import type { Plugin } from "../../sdk/plugin/index.ts";
-import { renderProblem } from "../../sdk/plugin/view.ts";
+import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import type { Plugin } from "../src/plugin/index.ts";
+import { renderProblem } from "../src/plugin/view.ts";
 
 const capabilities = ["playback.read", "events", "processing.video"];
 const state = (handle: { status: { state: string } }) => handle.status.state;

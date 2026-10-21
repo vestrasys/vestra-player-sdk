@@ -1,0 +1,58 @@
+// Vestra theme tokens (doc/product/ui-alignment.md §2.1–2.3). Import from any
+// plugin or host Slint file:  import { Theme } from "@vestra/theme.slint";
+// Colours follow the player's palette (R-H6: Vestra or reference player, set on every
+// view through ../palette.slint, which is not part of this library). They are
+// `out` properties: Slint code reads them but cannot assign them. Corner
+// radii, fonts and sizes stay constants.
+
+import { VestraPalette } from "../palette.slint";
+
+export global Theme {
+    // Colours: Vestra identity drawn from the logo (amber → magenta → violet on a
+    // violet-tinted near-black). Sizes below keep the reference player-derived geometry
+    // (doc/product/ui-alignment.md §2.3); only the look differs (§1 D1, revised).
+    out property <color> bg-bar: VestraPalette.bg-bar;
+    out property <color> bg-video: VestraPalette.bg-video;
+    out property <color> bg-list: VestraPalette.bg-list;
+    out property <color> bg-panel: VestraPalette.bg-panel;
+    out property <color> line: VestraPalette.line;
+    out property <color> hover-bg: VestraPalette.hover-bg;
+    out property <color> press-bg: VestraPalette.press-bg;
+    out property <color> selected-bg: VestraPalette.selected-bg;
+    out property <color> text: VestraPalette.text;
+    out property <color> text-dim: VestraPalette.text-dim;
+    out property <color> text-list: VestraPalette.text-list;
+    out property <color> text-played: VestraPalette.text-played;
+    out property <color> accent: VestraPalette.accent;
+    out property <color> accent-press: VestraPalette.accent-press;
+    out property <color> accent-disabled: VestraPalette.accent-disabled;
+    out property <color> icon-disabled: VestraPalette.icon-disabled;
+    out property <color> playing: VestraPalette.playing;
+    out property <color> button-bg: VestraPalette.button-bg;
+    out property <color> button-hover: VestraPalette.button-hover;
+    out property <color> button-press: VestraPalette.button-press;
+    out property <color> button-disabled: VestraPalette.button-disabled;
+    // Brand gradient for "progress" fills (seek bar, volume, sliders).
+    out property <brush> accent-fill: VestraPalette.accent-fill;
+    // Soft corners echo the logo; reference player is square-cornered.
+    out property <length> radius-control: 3px;
+    out property <length> radius-panel: 6px;
+    // §2.2 fonts; the host sets each window's default-font-family to the system UI font.
+    out property <string> font-mono: "Menlo";
+    out property <length> font-xs: 9px;
+    out property <length> font-body: 11px;
+    out property <length> font-tab: 12px;
+    out property <length> font-title: 13px;
+    // §2.3 control sizes
+    out property <length> button-height: 21px;
+    out property <length> button-min-width: 66px;
+    out property <length> button-padding: 8px;
+    out property <length> button-primary-height: 24px;
+    out property <length> button-small-height: 18px;
+    out property <length> button-small-min-width: 41px;
+    out property <length> input-height: 21px;
+    out property <length> checkbox-row-height: 18px;
+    out property <length> label-height: 14px;
+    out property <length> form-row-gap: 26px;
+    out property <length> dialog-padding: 14px;
+}

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import type { Plugin, VideoFilter } from "../../sdk/plugin/index.ts";
-import type { VideoNode } from "../../sdk/processing.ts";
+import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import type { Plugin, VideoFilter } from "../src/plugin/index.ts";
+import type { VideoNode } from "../src/processing.ts";
 
 const capabilities = [
   "playback.read",

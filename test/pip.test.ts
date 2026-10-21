@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import type { Plugin, WindowState } from "../../sdk/plugin/index.ts";
+import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import type { Plugin, WindowState } from "../src/plugin/index.ts";
 
 const all = ["playback.read", "events", "window.control"];
 

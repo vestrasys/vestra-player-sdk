@@ -11,11 +11,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import type { Plugin } from "../../sdk/plugin/index.ts";
-import { systemServices } from "../../sdk/plugin/local.ts";
-import { canonical } from "../../sdk/plugin/bindings.ts";
-import { nodeProblem } from "../../sdk/processing.ts";
+import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import type { Plugin } from "../src/plugin/index.ts";
+import { systemServices } from "../src/plugin/local.ts";
+import { canonical } from "../src/plugin/bindings.ts";
+import { nodeProblem } from "../src/processing.ts";
 
 const all = [
   "playback.read",

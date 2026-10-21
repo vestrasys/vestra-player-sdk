@@ -1,0 +1,44 @@
+{
+  "name": "@vestra-player/sdk",
+  "version": "1.0.0",
+  "description": "Plugin API types, test host and plugin CLI for Vestra Player (apiVersion vestra/1)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/plugin/testing.d.ts",
+      "default": "./dist/plugin/testing.js"
+    },
+    "./runtime": {
+      "types": "./dist/player-runtime.d.ts",
+      "default": "./dist/player-runtime.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "vestra-plugin": "./bin/vestra-plugin.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "slint",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc -p tsconfig.check.json",
+    "prepack": "node scripts/build.mjs",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "@types/node": ">=22.18",
+    "typescript": "^5.9.0"
+  }
+}

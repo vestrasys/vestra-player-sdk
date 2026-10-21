@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin, TestHost } from "../../sdk/plugin/testing.ts";
-import type { Plugin } from "../../sdk/plugin/index.ts";
-import { nodeProblem } from "../../sdk/processing.ts";
-import { COMMAND_LIMITS } from "../../sdk/commands.ts";
-import { readFileSync } from "node:fs";
+import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import type { Plugin } from "../src/plugin/index.ts";
+import { nodeProblem } from "../src/processing.ts";
+import { COMMAND_LIMITS } from "../src/commands.ts";
 
 const capabilities = ["playback.read", "events", "processing.video"];
 
@@ -158,15 +157,4 @@ test("TestHost enforces the player's command limits", async () => {
   await again.ready;
   assert.equal(host.commands.size, COMMAND_LIMITS.perPlugin);
   await stop();
-});
-
-test("COMMAND_LIMITS matches the player's registry", () => {
-  const rust = readFileSync(
-    new URL("../../host/src/commands.rs", import.meta.url),
-    "utf8",
-  );
-  const constant = (name: string) =>
-    Number(new RegExp(`const ${name}: usize = (\\d+);`).exec(rust)?.[1]);
-  assert.equal(constant("MAX_PER_OWNER"), COMMAND_LIMITS.perPlugin);
-  assert.equal(constant("MAX_COMMANDS"), COMMAND_LIMITS.total);
 });
