@@ -115,6 +115,18 @@ export interface WindowFacts {
   fullscreen: boolean;
   videoArea: { width: number; height: number };
 }
+/** One timeline mark as the player merges them (`timeline.marks`). */
+export interface WireMark {
+  time: number;
+  kind: "chapter" | "bookmark" | "marker";
+  title: string | null;
+  plugin: string;
+}
+/** The backdrop as `layout.state` reports it; `null` without one. */
+export interface LayoutBackdrop {
+  owner: number;
+  effective: boolean;
+}
 /** One position (bottom bar or sidebar) as `layout.state` reports it. */
 export interface LayoutSlot {
   owner: number;
@@ -239,6 +251,18 @@ export function createWire(transport: Transport) {
       reset: (ref?: { plugin: string; command: string }) =>
         transport.request<void>("bindings.reset", ref ?? {}),
     },
+    /** Mark layers on the seek bar (`plugin.timeline`). */
+    timeline: {
+      marks: () => transport.request<{ marks: WireMark[] }>("timeline.marks"),
+      set: (
+        marks: { time: number; kind: string; title?: string }[],
+        sourceId?: number,
+      ) =>
+        transport.request<{ applied: boolean }>("timeline.set", {
+          marks,
+          ...(sourceId === undefined ? {} : { sourceId }),
+        }),
+    },
     /** Chapters and the A-B loop of the current media. */
     marks: {
       chapters: () =>
@@ -317,6 +341,7 @@ export function createWire(transport: Transport) {
         transport.request<{
           bottom: LayoutSlot | null;
           sidebar: LayoutSlot | null;
+          backdrop?: LayoutBackdrop | null;
         }>("layout.state"),
       set: (options: {
         slot: "bottom" | "sidebar";
@@ -332,7 +357,8 @@ export function createWire(transport: Transport) {
           | "playback.backend"
           | "window.state"
           | "packages.changed"
-          | "bindings.changed",
+          | "bindings.changed"
+          | "timeline.changed",
         listener: (data: unknown) => void,
       ) {
         const off = transport.on(event, listener);
@@ -366,7 +392,7 @@ export function createWire(transport: Transport) {
     },
     ui: {
       mount: (options: {
-        slot: "bottom" | "sidebar";
+        slot: "bottom" | "sidebar" | "backdrop";
         file: string;
         component: string;
         global: string;

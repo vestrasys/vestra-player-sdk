@@ -12,6 +12,7 @@ import type { PluginManifest } from "./runtime.ts";
 import { ScopeImpl } from "./scope.ts";
 import { playerOf } from "./player.ts";
 import { windowOf } from "./window.ts";
+import { timelineOf } from "./timeline.ts";
 import type { Plugin } from "./types.ts";
 
 export type * from "./types.ts";
@@ -39,8 +40,12 @@ export async function createPlugin(
     dataDirectory,
     app,
   );
-  // Player and window state are synchronous for plugins: read them first.
-  await Promise.all([playerOf(runtime).init(), windowOf(runtime).init()]);
+  // Player, window and timeline state are synchronous for plugins: read them first.
+  await Promise.all([
+    playerOf(runtime).init(),
+    windowOf(runtime).init(),
+    timelineOf(runtime).init(),
+  ]);
   const root = new ScopeImpl(runtime);
   return {
     plugin: root,

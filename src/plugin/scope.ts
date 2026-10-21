@@ -3,7 +3,8 @@ import { failure, toError } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { Disposable, Plugin, PluginError, Scope } from "./types.ts";
 import { commands } from "./commands.ts";
-import { dialogs, panels, windows } from "./ui.ts";
+import { dialogs, panels, ui, windows } from "./ui.ts";
+import { timeline } from "./timeline.ts";
 import { player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { subtitles } from "./subtitles.ts";
@@ -57,6 +58,8 @@ export class ScopeImpl implements Plugin {
   readonly system = system(this);
   readonly window = mainWindow(this);
   readonly bindings = bindingsApi(this);
+  readonly ui = ui(this);
+  readonly timeline = timeline(this);
   get app() {
     return this.runtime.app;
   }

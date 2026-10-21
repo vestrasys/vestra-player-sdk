@@ -229,6 +229,77 @@ export class TestHost implements Transport {
   };
   /** Every `panel.showMenu`, newest last. */
   readonly menus: { items: (string | null)[]; x: number; y: number }[] = [];
+
+  // ------------------------------------------------------------ round 3b
+
+  /**
+   * Timeline layers by plugin id (this plugin's is `manifestId`) and the
+   * merged list `plugin.timeline.marks` reads. A new source clears them.
+   */
+  readonly timeline = {
+    layers: new Map<
+      string,
+      { time: number; kind: string; title: string | null }[]
+    >(),
+    get marks() {
+      return [...this.layers]
+        .flatMap(([plugin, marks]) =>
+          marks.map((mark) => ({ ...mark, plugin })),
+        )
+        .sort((a, b) => a.time - b.time);
+    },
+  };
+  /** Another plugin published (or, with `[]`, cleared) its layer. */
+  setTimelineLayer(
+    pluginId: string,
+    marks: { time: number; kind: string; title?: string | null }[],
+  ) {
+    if (marks.length)
+      this.timeline.layers.set(
+        pluginId,
+        marks.map((m) => ({
+          time: m.time,
+          kind: m.kind,
+          title: m.title ?? null,
+        })),
+      );
+    else this.timeline.layers.delete(pluginId);
+    this.#timelineChanged();
+  }
+  #timelineChanged() {
+    this.emit("timeline.changed", { marks: this.timeline.marks });
+  }
+  /**
+   * Runtime images written to views (`plugin.ui.image`), newest last. The
+   * SDK refuses images of released scopes before anything is sent.
+   */
+  readonly images: { path: string; ref: number }[] = [];
+  /** The file an image property shows (`host.window(id).props.cover`), or null. */
+  imagePath(value: Json | undefined): string | null {
+    const image = value as { $vestraImage?: unknown } | null | undefined;
+    return image &&
+      typeof image === "object" &&
+      typeof image.$vestraImage === "string"
+      ? image.$vestraImage
+      : null;
+  }
+  #seeImages(values: Record<string, Json> | Json[]) {
+    for (const value of Object.values(values)) {
+      const path = this.imagePath(value);
+      if (path !== null)
+        this.images.push({
+          path,
+          ref: Number((value as { ref?: number }).ref),
+        });
+    }
+  }
+  /** The backdrop: who mounted it and whether it shows (`panels.backdrop.state`). */
+  backdrop: { owner: string; effective: boolean } | null = null;
+  /** The backdrop's `effective` changes (no video frame / video again); pushed. */
+  setBackdropEffective(effective: boolean) {
+    if (this.backdrop) this.backdrop.effective = effective;
+    this.emit("window.state", this.#windowFacts());
+  }
   readonly processing = {
     configurationRevision: 0,
     backendUncertain: {} as Partial<Record<"video" | "audio", string>>,
@@ -658,7 +729,12 @@ export class TestHost implements Transport {
   /** Deliver a host event (only if the plugin subscribed, like the real host). */
   emit(event: string, data: unknown) {
     if (
-      ["source.state", "playback.backend", "window.state"].includes(event) &&
+      [
+        "source.state",
+        "playback.backend",
+        "window.state",
+        "timeline.changed",
+      ].includes(event) &&
       !this.subscriptions.has(event)
     )
       return;
@@ -876,6 +952,10 @@ export class TestHost implements Transport {
       next.terminalReason = null;
       next.capabilities = { ...readyCapabilities };
       next.loop = null; // a new source clears the A-B loop
+      if (this.timeline.layers.size) {
+        this.timeline.layers.clear(); // and every timeline layer
+        queueMicrotask(() => this.#timelineChanged());
+      }
     } else if (intent.kind === "close") {
       if (!this.source.source) throw new HostError("invalid", "noSource");
       Object.assign(next, {
@@ -1010,6 +1090,7 @@ export class TestHost implements Transport {
       const id = String(p.id);
       if (this.windows.has(id))
         throw new HostError("conflict", "view already exists");
+      this.#seeImages(p.properties as Record<string, Json>);
       const host = this;
       this.windows.set(id, {
         file: String(p.file),
@@ -1031,6 +1112,7 @@ export class TestHost implements Transport {
     "ui.set": (p) => {
       const window = this.windows.get(String(p.id));
       if (!window) throw new HostError("missing", "view not found");
+      this.#seeImages([p.value!]);
       window.props[String(p.property)] = p.value!;
     },
     "ui.show": (p) => {
@@ -1044,6 +1126,9 @@ export class TestHost implements Transport {
     },
     "ui.mount": (p) => {
       if (this.panel) throw new HostError("conflict", "owner already mounted");
+      if (p.slot === "backdrop" && this.backdrop)
+        throw new HostError("conflict", "another plugin shows the backdrop");
+      this.#seeImages(p.properties as Record<string, Json>);
       const host = this;
       this.panel = {
         slot: String(p.slot),
@@ -1060,6 +1145,10 @@ export class TestHost implements Transport {
           });
         },
       };
+      if (p.slot === "backdrop") {
+        this.backdrop = { owner: this.manifestId, effective: true };
+        return { status: "ready", prepareMs: 0, shellGeneration: 1 };
+      }
       const slot = String(p.slot) as "bottom" | "sidebar";
       this.layout[slot] = {
         owner: 1,
@@ -1071,7 +1160,8 @@ export class TestHost implements Transport {
       return { status: "ready", prepareMs: 0, shellGeneration: 1 };
     },
     "ui.unmount": () => {
-      if (this.panel)
+      if (this.panel?.slot === "backdrop") this.backdrop = null;
+      else if (this.panel)
         this.layout[this.panel.slot as "bottom" | "sidebar"] = null;
       this.panel = null;
     },
@@ -1083,7 +1173,13 @@ export class TestHost implements Transport {
           throw new HostError("missing", `command ${id} not registered`);
       this.menus.push({ items, x: Number(p.x), y: Number(p.y) });
     },
-    "layout.state": () => this.layout,
+    "layout.state": () => ({
+      ...this.layout,
+      backdrop: this.backdrop && {
+        owner: 1,
+        effective: this.backdrop.effective,
+      },
+    }),
     "layout.set": (p) => {
       const slot = String(p.slot) as "bottom" | "sidebar";
       const state = this.layout[slot];
@@ -1229,8 +1325,49 @@ export class TestHost implements Transport {
       if (!can) throw new HostError("unavailable", `cannot go ${direction}`);
       this.emit("sequence.step", { direction });
     },
-    "ui.setMount": (p) =>
-      void (this.mounted().props[String(p.property)] = p.value!),
+    "ui.setMount": (p) => {
+      this.#seeImages([p.value!]);
+      this.mounted().props[String(p.property)] = p.value!;
+    },
+    "timeline.marks": () => ({ marks: this.timeline.marks }),
+    "timeline.set": (p) => {
+      if (
+        p.sourceId !== undefined &&
+        p.sourceId !== this.source.stamp.generation
+      )
+        return { applied: false };
+      const marks = p.marks as { time: Json; kind: Json; title?: Json }[];
+      const duration = this.source.duration;
+      if (!Array.isArray(marks) || marks.length > 1000)
+        throw new HostError("invalid", "a layer holds at most 1000 marks");
+      for (const mark of marks) {
+        const time = mark.time;
+        if (
+          typeof time !== "number" ||
+          !Number.isFinite(time) ||
+          time < 0 ||
+          (duration !== null && time > duration)
+        )
+          throw new HostError("invalid", `time ${time} is outside the media`);
+        if (!["chapter", "bookmark", "marker"].includes(String(mark.kind)))
+          throw new HostError("invalid", "kind is chapter, bookmark or marker");
+        if (
+          mark.title !== undefined &&
+          mark.title !== null &&
+          (typeof mark.title !== "string" || [...mark.title].length > 100)
+        )
+          throw new HostError("invalid", "title must be ≤ 100 characters");
+      }
+      this.setTimelineLayer(
+        this.manifestId,
+        marks.map((m) => ({
+          time: m.time as number,
+          kind: String(m.kind),
+          title: (m.title as string | undefined) ?? null,
+        })),
+      );
+      return { applied: true };
+    },
     "ui.interaction": (p) => void (this.mounted().locks = p),
     "dialogs.confirm": (p) => {
       this.confirms.push(p);

@@ -54,6 +54,10 @@ export interface Scope extends Disposable {
   readonly app: AppInfo;
   /** Every command's bindings and the user's overrides (`bindings.manage`). */
   readonly bindings: Bindings;
+  /** Runtime images for Slint `image` properties. */
+  readonly ui: Ui;
+  /** Marks on the seek bar, merged from every plugin's layer. */
+  readonly timeline: Timeline;
   /** A child scope; disposing it releases only what was created through it. */
   scope(): Scope;
   /** Adopt an existing handle or a cleanup function. */
@@ -156,8 +160,31 @@ export interface Commands {
 
 // ---------------------------------------------------------------- windows and panels
 
+/**
+ * An image file for a Slint `image` property, from `plugin.ui.image`. Opaque:
+ * pass it as a property value; it belongs to the scope that created it.
+ */
+export interface ImageRef {
+  /** The path given to `ui.image`. */
+  readonly path: string;
+  readonly __vestraImage: true;
+}
+
+/** A property value: JSON, or an image as the whole value of an `image` property. */
+export type PropValue = Json | ImageRef;
+
 /** Property map using camelCase names; the SDK converts to Slint kebab-case. */
-export type Props = Record<string, Json>;
+export type Props = Record<string, PropValue>;
+
+export interface Ui {
+  /**
+   * A PNG or JPEG file (absolute path in this plugin's data or package
+   * directory) for an `image` property. Checked when a view first uses it
+   * (≤ 16 MB, ≤ 4096×4096); failures reach `onError` as property writes
+   * (`invalid`, `missing`). Call again after the file changed.
+   */
+  image(path: string): ImageRef;
+}
 
 /** Shared by tool windows and docked panels. */
 export interface View {
@@ -245,6 +272,15 @@ export interface Panel extends View, Disposable {
   ): Promise<void>;
 }
 
+/** The backdrop position (`panels.mount("backdrop")`). */
+export interface BackdropSlot {
+  /** `null` while no plugin has a backdrop; `effective`: shown now (no video frame). */
+  readonly state: { readonly effective: boolean } | null;
+  onChange(
+    listener: (state: { readonly effective: boolean } | null) => void,
+  ): Disposable;
+}
+
 export interface Panels {
   /**
    * Dock a Slint component in the bottom bar or the sidebar. The component and
@@ -253,14 +289,52 @@ export interface Panels {
    * the floating window when the sidebar is detached.
    */
   mount(
-    slot: "bottom" | "sidebar",
+    slot: "bottom" | "sidebar" | "backdrop",
     file: string,
     options?: { component?: string; global?: string; title?: string },
   ): Panel;
+  /** Shown instead of the video while there is none; one plugin at a time. */
+  readonly backdrop: BackdropSlot;
   /** The bottom bar position; any plugin may read and toggle it. */
   readonly bottom: PanelSlot;
   /** The sidebar position, including its floating state. */
   readonly sidebar: SidebarSlot;
+}
+
+// ---------------------------------------------------------------- timeline
+
+export type MarkKind = "chapter" | "bookmark" | "marker";
+
+/** One mark on the seek bar. */
+export interface TimelineMark {
+  /** Seconds from the start. */
+  readonly time: number;
+  readonly kind: MarkKind;
+  readonly title: string | null;
+  /** The manifest id of the plugin that published it. */
+  readonly plugin: string;
+}
+
+/** This plugin's own marks; disposing it removes them. */
+export interface TimelineLayer extends Disposable {
+  /**
+   * Replace the layer (last write wins; `[]` clears it). At most 1000 marks,
+   * titles ≤ 100 characters, times within the media. Failures go to `onError`;
+   * with `ifCurrent`, a write for another source is dropped silently.
+   */
+  set(
+    marks: { time: number; kind: MarkKind; title?: string }[],
+    options?: { ifCurrent?: PlayerState },
+  ): void;
+}
+
+export interface Timeline {
+  /** Every layer merged, by time (`playback.read`). Empty on a new source. */
+  readonly marks: readonly TimelineMark[];
+  /** The merged list changed (needs `events`). */
+  onChange(listener: (marks: readonly TimelineMark[]) => void): Disposable;
+  /** This plugin's layer (`timeline.marks`); a second call throws. */
+  layer(): TimelineLayer;
 }
 
 /** The main window as `plugin.window.state` reports it (logical points). */

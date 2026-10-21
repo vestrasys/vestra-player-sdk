@@ -7,15 +7,19 @@ import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
 import type { LayoutSlot } from "../wire.ts";
 import type {
+  BackdropSlot,
   Command,
   Dialogs,
   Disposable,
+  ImageRef,
   Panel,
   PanelSlot,
   Panels,
+  PropValue,
   SidebarSlot,
   SlotState,
   Props,
+  Ui,
   View,
   Window,
   Windows,
@@ -27,11 +31,56 @@ export const kebab = (name: string) =>
 const encode = (props: Props) =>
   Object.fromEntries(Object.entries(props).map(([k, v]) => [kebab(k), v]));
 
+let images = 0;
+
+/**
+ * `plugin.ui.image`. The wire form (`{ $vestraImage: path, ref }`) is an
+ * internal detail; `ref` makes every call a new value, so a file rewritten
+ * under the same path is sent (and decoded) again. The player checks the
+ * path on every use, so a hand-made wire value gains nothing.
+ */
+export class ImageHandle implements ImageRef {
+  readonly path: string;
+  readonly __vestraImage = true as const;
+  readonly #scope: ScopeImpl;
+  readonly #ref = ++images;
+  constructor(scope: ScopeImpl, path: string) {
+    this.#scope = scope;
+    this.path = path;
+  }
+  /** Released with its scope: writing it is `invalid`. */
+  get released() {
+    return this.#scope.disposed;
+  }
+  toJSON(): Json {
+    return { $vestraImage: this.path, ref: this.#ref };
+  }
+}
+
+/** A property value as sent: images in wire form; released ones refused. */
+function wireValue(value: PropValue): Json {
+  if (!(value instanceof ImageHandle)) return value as Json;
+  if (value.released)
+    throw failure(
+      "invalid",
+      `image ${value.path} was released with the scope that created it`,
+    );
+  return value.toJSON();
+}
+
+export const ui = (scope: ScopeImpl): Ui => ({
+  image(path) {
+    if (typeof path !== "string" || !path)
+      throw failure("invalid", "ui.image needs a file path");
+    return new ImageHandle(scope, path);
+  },
+});
+
 /** Property and callback plumbing shared by windows and panels. */
 abstract class ViewBase implements View {
   protected readonly scope: ScopeImpl;
   protected readonly handlers = new Map<string, (...args: Json[]) => unknown>();
-  readonly #values = new Map<string, Json>();
+  readonly #values = new Map<string, PropValue>();
   readonly #binders = new Set<() => Props>();
   /** What the host currently shows, as far as this side knows. */
   #sent = new Map<string, string>();
@@ -52,6 +101,22 @@ abstract class ViewBase implements View {
   }
   protected abstract live(): boolean;
   protected abstract write(property: string, value: Json): Promise<void>;
+  /**
+   * Initial properties in wire form. A released image is left out (the
+   * property keeps its default) and reported, like a failed write.
+   */
+  protected wired(values: Record<string, PropValue>): Record<string, Json> {
+    const out: Record<string, Json> = {};
+    for (const [key, value] of Object.entries(values)) {
+      try {
+        out[key] = wireValue(value);
+      } catch (error) {
+        this.#failed.set(key, JSON.stringify(value));
+        this.scope.report(error);
+      }
+    }
+    return out;
+  }
   on<A extends Json[]>(callback: string, handler: (...args: A) => unknown) {
     const name = kebab(callback);
     this.handlers.set(name, handler as (...args: Json[]) => unknown);
@@ -75,7 +140,7 @@ abstract class ViewBase implements View {
     });
   }
   /** Current desired properties (bound values win over earlier `set`). */
-  protected snapshot(): Record<string, Json> {
+  protected snapshot(): Record<string, PropValue> {
     for (const binder of this.#binders) {
       try {
         for (const [key, value] of Object.entries(encode(binder())))
@@ -97,7 +162,7 @@ abstract class ViewBase implements View {
       Object.entries(values).map(([k, v]) => [k, JSON.stringify(v)]),
     );
     this.#forced.clear();
-    this.#failed.clear();
+    for (const key of Object.keys(values)) this.#failed.delete(key);
   }
   /**
    * Send what changed. A bound value is sent when it differs from the last one
@@ -116,7 +181,7 @@ abstract class ViewBase implements View {
       let failed = false;
       let failure: unknown;
       try {
-        let pending: [string, Json][];
+        let pending: [string, PropValue][];
         do {
           pending = [...this.#values].filter(([key, value]) => {
             const encoded = JSON.stringify(value);
@@ -128,7 +193,7 @@ abstract class ViewBase implements View {
             const encoded = JSON.stringify(value);
             this.#forced.delete(key);
             try {
-              await this.write(key, value);
+              await this.write(key, wireValue(value));
               this.#sent.set(key, encoded);
               this.#failed.delete(key);
               this.#backoff = 0;
@@ -229,7 +294,7 @@ class WindowHandle extends ViewBase implements Window {
       if (this.closed) return;
       const ui = this.scope.runtime.host.ui;
       if (this.#opened) return ui.show(this.#id, true);
-      const initial = this.snapshot();
+      const initial = this.wired(this.snapshot());
       await ui.open(this.#id, this.#file, initial, [...this.handlers.keys()]);
       this.#opened = true;
       this.shown(initial);
@@ -281,7 +346,7 @@ class PanelHandle extends ViewBase implements Panel {
   readonly #interaction: Latest<Locks>;
   constructor(
     scope: ScopeImpl,
-    slot: "bottom" | "sidebar",
+    slot: "bottom" | "sidebar" | "backdrop",
     file: string,
     options: { component?: string; global?: string; title?: string },
   ) {
@@ -305,7 +370,7 @@ class PanelHandle extends ViewBase implements Panel {
         (async () => {
           // Let handlers and bindings declared right after mount() join in.
           await Promise.resolve();
-          const properties = this.snapshot();
+          const properties = this.wired(this.snapshot());
           await runtime.host.ui.mount({
             slot,
             file,
@@ -362,7 +427,11 @@ export const windows = (scope: ScopeImpl): Windows => ({
     new WindowHandle(scope, file, options?.id ?? basename(file, extname(file))),
 });
 
-type Layout = { bottom: SlotState | null; sidebar: SlotState | null };
+type Layout = {
+  bottom: SlotState | null;
+  sidebar: SlotState | null;
+  backdrop: { readonly effective: boolean } | null;
+};
 
 /**
  * Both positions, one per plugin: read with `layout.state` after every
@@ -371,7 +440,7 @@ type Layout = { bottom: SlotState | null; sidebar: SlotState | null };
  */
 class LayoutService {
   readonly #runtime: Runtime;
-  state: Layout = { bottom: null, sidebar: null };
+  state: Layout = { bottom: null, sidebar: null, backdrop: null };
   readonly #listeners = new Set<(layout: Layout) => void>();
   #started = false;
   #reading = false;
@@ -413,7 +482,13 @@ class LayoutService {
             reason: slot.reason,
             detached: slot.detached,
           };
-        const next = { bottom: view(raw.bottom), sidebar: view(raw.sidebar) };
+        const next = {
+          bottom: view(raw.bottom),
+          sidebar: view(raw.sidebar),
+          backdrop: raw.backdrop
+            ? Object.freeze({ effective: raw.backdrop.effective === true })
+            : null,
+        };
         if (JSON.stringify(next) === JSON.stringify(this.state)) continue;
         this.state = next;
         for (const listener of [...this.#listeners]) listener(next);
@@ -470,11 +545,37 @@ function slot(scope: ScopeImpl, name: "bottom" | "sidebar"): SidebarSlot {
   };
 }
 
+function backdrop(scope: ScopeImpl): BackdropSlot {
+  const service = () => layoutOf(scope.runtime);
+  return {
+    get state() {
+      service().start();
+      return service().state.backdrop;
+    },
+    onChange(listener) {
+      let last = JSON.stringify(service().state.backdrop);
+      const watch = service().watch((layout) => {
+        const next = JSON.stringify(layout.backdrop);
+        if (next === last) return;
+        last = next;
+        scope.run(listener, layout.backdrop);
+      });
+      return scope.add({
+        dispose: async () => {
+          scope.forget(watch);
+          await watch.dispose();
+        },
+      });
+    },
+  };
+}
+
 export const panels = (scope: ScopeImpl): Panels => ({
   mount: (position, file, options = {}) =>
     new PanelHandle(scope, position, file, options),
   bottom: slot(scope, "bottom"),
   sidebar: slot(scope, "sidebar"),
+  backdrop: backdrop(scope),
 });
 
 export const dialogs = (scope: ScopeImpl): Dialogs => {
