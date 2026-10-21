@@ -27,6 +27,8 @@ import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
 import { nodeProblem } from "../processing.ts";
+import { VIEW_DEFAULTS, viewProblem } from "./view.ts";
+import type { ViewSettings } from "./types.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
 import type { Plugin } from "./types.ts";
@@ -383,6 +385,19 @@ export class TestHost implements Transport {
   setBackdropEffective(effective: boolean) {
     if (this.backdrop) this.backdrop.effective = effective;
     this.emit("window.state", this.#windowFacts());
+  }
+  /**
+   * The display layer (`plugin.video.view()`): who owns it (this plugin is
+   * `manifestId`) and the values the player holds.
+   */
+  readonly videoView: { owner: string | null; values: ViewSettings } = {
+    owner: null,
+    values: { ...VIEW_DEFAULTS },
+  };
+  /** Another plugin took (or, with `null`, released) the display layer. */
+  setVideoViewOwner(pluginId: string | null) {
+    this.videoView.owner = pluginId;
+    if (pluginId === null) this.videoView.values = { ...VIEW_DEFAULTS };
   }
   readonly processing = {
     configurationRevision: 0,
@@ -1479,6 +1494,27 @@ export class TestHost implements Transport {
         (this.settings.current && this.settings.pages.has(this.settings.current)
           ? this.settings.current
           : ([...this.settings.pages.keys()][0] ?? null));
+    },
+    "video.view.set": (p) => {
+      const owner = this.videoView.owner;
+      if (owner !== null && owner !== this.manifestId)
+        throw new HostError(
+          "conflict",
+          "another plugin owns the display layer",
+        );
+      const problem = viewProblem(p.values);
+      if (problem) throw new HostError("invalid", problem);
+      this.videoView.owner = this.manifestId;
+      this.videoView.values = {
+        ...this.videoView.values,
+        ...(p.values as Partial<ViewSettings>),
+      };
+      return { state: this.source.phase === "ready" ? "applied" : "waiting" };
+    },
+    "video.view.release": () => {
+      if (this.videoView.owner === this.manifestId)
+        this.setVideoViewOwner(null);
+      return null;
     },
     "timeline.set": (p) => {
       if (
