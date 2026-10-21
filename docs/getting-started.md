@@ -1,0 +1,222 @@
+---
+title: Getting started
+---
+
+# Getting started
+
+This guide walks through a complete Vestra Player plugin: the files it is made of, the manifest, a first command, a window, tests, and packaging. The API reference is split into {@link "@vestra-player/sdk" | @vestra-player/sdk} (the plugin API) and {@link "@vestra-player/sdk/testing" | @vestra-player/sdk/testing} (the test host); start from {@link "@vestra-player/sdk"!Plugin | Plugin} and {@link "@vestra-player/sdk"!Scope | Scope}.
+
+## How plugins run
+
+- Each plugin runs in its own Node.js process (Node 22.18 or newer) started by the player. It can use the Node standard library, the file system, the network and npm packages.
+- The player loads the entry module and calls its **default export** `activate(plugin)`. The `plugin` object is created by the player; the plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
+- Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle owned by `plugin` or a child scope, and is released automatically when the plugin stops. There is no cleanup function to return.
+- Plugins are trusted code. Manifest capabilities are a contract that the player enforces per call (a missing one fails with `code: "capability"`), not a security sandbox.
+- The API is the same on macOS and Windows. A feature a system cannot provide fails with `unsupported`; each method documents its platform differences.
+
+## Install
+
+```sh
+mkdir my-plugin && cd my-plugin
+npm init -y
+npm pkg set type=module
+npm i -D @vestra-player/sdk
+```
+
+The package brings its own TypeScript 5.x and `@types/node`, and the `vestra-plugin` command line tool.
+
+## Files
+
+```text
+my-plugin/
+  manifest.json        identity and capabilities
+  main.ts              the entry module
+  ui/hello.slint       optional: user interface
+  tests/main.test.ts   tests (node:test)
+  package.json         dev dependency and scripts
+```
+
+`package.json` scripts:
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "check": "vestra-plugin check",
+    "test": "vestra-plugin test",
+    "build": "vestra-plugin build",
+    "pack": "vestra-plugin pack"
+  },
+  "devDependencies": { "@vestra-player/sdk": "^1.0.1" }
+}
+```
+
+## The manifest
+
+```json
+{
+  "id": "me.hello",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "capabilities": ["commands", "ui.osd", "playback.read", "events"]
+}
+```
+
+| Field | Rule |
+| --- | --- |
+| `id` | Non-empty, globally unique identifier; use `author.plugin`. |
+| `version` | Three non-negative integers `x.y.z`. `vestra-plugin build` writes it into `dist/manifest.json`. |
+| `apiVersion` | Always `"vestra/1"` for this major version of the SDK. |
+| `entry` | Relative path inside the package: `.ts` during development, `.js` after building. |
+| `capabilities` | Only names from the table below. |
+
+Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected.
+
+| Capability | Opens |
+| --- | --- |
+| `commands` | `commands.add`, `host.run` |
+| `ui.window` | `windows.create` |
+| `ui.mount` | `panels.mount`, `panels.bottom` / `.sidebar` / `.backdrop` |
+| `ui.dialog` | `dialogs.*` |
+| `ui.osd` | `osd.show`, `osd.panel` |
+| `ui.drop` | `drops.provide`, `Panel.onDrop` |
+| `ui.theme` | `appearance.set` |
+| `ui.settings` | `settings.page`, `settings.show` |
+| `playback.read` | reading `player.state` at start, `refresh`, `stats`, `chapters`, `audioDevices`, `timeline.marks` |
+| `events` | live `player.state` / `onChange`, panel visibility, subtitle and window updates |
+| `playback.control` | `player.open`, `setPaused`, `seek`, `setRate`, … and `power.preventSleep` |
+| `producer.av` | `player.openStream` |
+| `processing.video` | `video.filter`, `video.view`, `video.render` (with `playback.read`) |
+| `processing.audio` | `audio.filter` (with `playback.read`) |
+| `subtitles.read` / `subtitles.control` | reading / changing subtitles |
+| `media.read` / `media.control` | `media.capture`, snapshot exports |
+| `source.resolve` | `resolvers.add` |
+| `plugins.manage` | `packages.validate`, `rollback`, `setEnabled`, `uninstall` |
+| `clipboard` | `clipboard.*` |
+| `window.control` | `window.setVideoArea`, `setAlwaysOnTop`, `setCursorAutoHide`, `setPictureInPicture` |
+| `bindings.manage` | `bindings.*` |
+| `timeline.marks` | `timeline.layer()` |
+| `secrets` | `secrets.*` |
+
+No capability is needed for `tools`, `storage`, `system`, `ui.image`, `plugin.app`, reading `window.state` and `appearance.theme`, and `packages.list`.
+
+## A first plugin
+
+```ts
+// main.ts
+import type { Plugin } from "@vestra-player/sdk";
+
+export default async function activate(plugin: Plugin) {
+  plugin.commands.add({
+    id: "where",
+    path: ["Tools", "Where am I?"],
+    bindings: ["Ctrl+W"],
+    enabled: () => plugin.player.state.phase === "ready",
+    run: () => {
+      const { position, duration } = plugin.player.state;
+      return plugin.osd.show(`${position?.toFixed(1)} s of ${duration?.toFixed(1)} s`);
+    },
+  });
+}
+```
+
+- `enabled` is a function: the SDK re-evaluates it after every handler and every state change it receives, and sends only changes. This needs `events` to follow outside changes.
+- `run` may return a promise. Errors thrown or rejected there go to `plugin.onError`, then to the plugin log.
+- Commands are registered in the background; activation succeeds once every registration made during `activate` succeeded.
+
+## A window
+
+User interfaces are Slint files in the package. The plugin writes properties and handles callbacks; property and callback names may be written in camelCase and are converted to Slint's kebab-case.
+
+```slint
+// ui/hello.slint
+import { Button } from "@vestra/widgets.slint";
+import { Theme } from "@vestra/theme.slint";
+
+export component Hello inherits Window {
+    title: "Hello";
+    in property <string> message;
+    in property <bool> can-seek;
+    callback jump(float);
+    background: Theme.bg-panel;
+    VerticalLayout {
+        Text { text: root.message; color: Theme.text; }
+        Button { text: "Back 10 s"; enabled: root.can-seek; clicked => { root.jump(-10); } }
+    }
+}
+```
+
+```ts
+const window = plugin.windows.create("ui/hello.slint");
+window.bind(() => ({
+  message: plugin.player.state.source ?? "Nothing is playing",
+  canSeek: plugin.player.state.can.seek,
+}));
+window.on("jump", (delta: number) =>
+  plugin.player.seek(Math.max(0, (plugin.player.state.position ?? 0) + delta)),
+);
+plugin.commands.add({ id: "hello", path: ["Tools", "Hello…"], run: () => window.show() });
+```
+
+This needs `ui.window`, `commands`, `playback.read`, `events` and `playback.control`. Bind callbacks before the first `show()`.
+
+`@vestra/theme.slint` and `@vestra/widgets.slint` come from the player at run time. For editor support, point the Slint language server's library path `vestra` at `node_modules/@vestra-player/sdk/slint/vestra` (a read-only copy that matches the player).
+
+## Testing
+
+`@vestra-player/sdk/testing` runs a plugin against `TestHost`, an in-memory player that speaks the real protocol, so the SDK's own logic runs unchanged. There is no decoding, Slint or native window.
+
+```ts
+// tests/main.test.ts
+import assert from "node:assert/strict";
+import test from "node:test";
+import { startPlugin } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+test("shows the position", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: new URL("..", import.meta.url), // reads manifest.json
+  });
+  host.setSource({ phase: "ready", position: 12, duration: 60 });
+  await host.settle();
+  await host.command("where").run();
+  assert.deepEqual(host.osd, ["12.0 s of 60.0 s"]);
+  await stop();
+});
+```
+
+Useful controls: `host.command(id).run()`, `host.press("Ctrl+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait for the plugin to go idle. See {@link "@vestra-player/sdk/testing"!TestHost | TestHost}.
+
+Run them with `npm test` (`vestra-plugin test`, which is `node --test tests/*.test.{ts,mjs}`).
+
+## Check, run, build and pack
+
+```text
+vestra-plugin check [plugin-dir...]
+vestra-plugin test  [plugin-dir...]
+vestra-plugin build [plugin-dir...] [--version x.y.z]
+vestra-plugin pack  [plugin-dir...] [--version x.y.z] [--out dir]
+```
+
+- `check`: strict type check of the plugin's `.ts` files and `tests/`. It extends the nearest `tsconfig.json` at or above the plugin directory, else built-in strict settings. It also checks the manifest's capability names.
+- `build`: checks, then writes `dist/`: `.ts` files with types stripped (relative imports rewritten to `.js`), `.slint`, `.mjs` and data files copied, `dist/manifest.json` with the version (from `--version`, else the manifest, else `package.json`). Tests, `node_modules/`, Markdown and `package*.json` are left out. A runtime import of `@vestra-player/sdk` fails the build.
+- `pack`: builds, then zips `dist/` as `<id>-<version>.zip` and prints its size and sha256.
+- Runtime npm dependencies must be bundled: set `"vestra": { "bundle": true }` (or `{ "bundle": { "external": [...] } }`) in the plugin's `package.json` and add `esbuild` as a dev dependency. `"vestra": { "assets": ["vendor"] }` copies extra files verbatim.
+
+During development no build is needed: start the player with `--plugin <plugin-dir>` (repeatable) to run `main.ts` directly.
+
+## Versions
+
+| SDK package | Plugin `apiVersion` | Notes |
+| --- | --- | --- |
+| `1.x` | `vestra/1` | Minor releases only add backwards-compatible API; patch releases fix documentation and bugs. |
+
+A breaking change to the plugin API gets a new `apiVersion` and a new major version of this package. The `@vestra-player/sdk/runtime` entry is for the player only and is not covered by semver.
+
+## Next
+
+- {@link "@vestra-player/sdk"!Scope | Scope}: every module available on `plugin`.
+- {@link "@vestra-player/sdk"!PluginError | PluginError}: error codes.
+- {@link "@vestra-player/sdk"!Player | Player}: playback state and conditional controls.
+- {@link "@vestra-player/sdk"!View | View}: windows, panels and settings pages.

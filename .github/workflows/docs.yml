@@ -1,0 +1,52 @@
+# Builds the API documentation (TypeDoc, `npm run docs`) and deploys it to
+# GitHub Pages: https://vestrasys.github.io/vestra-player-sdk/
+#
+# One-time repository setup: Settings → Pages → Source: "GitHub Actions".
+# GitHub Pages is not available for private repositories on the free
+# organization plan; if the deploy job fails while the repository is private,
+# make it public or upgrade the plan. The build job still checks the docs.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer run replaces a queued one, a running
+# deployment is allowed to finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      # Fails on any TypeDoc warning: undocumented exports, broken links.
+      - run: npm run docs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

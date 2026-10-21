@@ -4,3 +4,5 @@ dist/
 *.tgz
 *.tsbuildinfo
 .DS_Store
+# API documentation site: `npm run docs`.
+docs-site/
