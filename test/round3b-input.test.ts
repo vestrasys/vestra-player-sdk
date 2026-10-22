@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
-import type { Plugin, PluginError } from "../src/plugin/index.ts";
+import type { Plugin, PluginError, ThemeId } from "../src/plugin/index.ts";
 
 function packageDir(capabilities: string[]) {
   const directory = mkdtempSync(join(tmpdir(), "r3b-"));
@@ -54,8 +54,10 @@ test("drops: providers by extension, folders, panel onDrop first", async () => {
 });
 
 test("appearance: read before activation, set, follows other plugins", async () => {
+  // A palette this SDK does not list (a newer or an older player's).
+  const other = "light" as ThemeId;
   const host = new TestHost();
-  host.appearance = "potplayer";
+  host.appearance = other;
   let seen = "";
   const { plugin, stop } = await startPlugin(
     (p: Plugin) => {
@@ -63,17 +65,25 @@ test("appearance: read before activation, set, follows other plugins", async () 
     },
     { capabilities: ["events", "ui.theme"], host },
   );
-  assert.equal(seen, "potplayer");
+  assert.equal(seen, other);
   const changes: string[] = [];
   plugin.appearance.onChange((theme) => changes.push(theme));
   await host.settle();
   await plugin.appearance.set("vestra");
   assert.equal(host.appearance, "vestra");
-  host.setAppearance("potplayer");
+  host.setAppearance(other);
   await host.settle();
-  assert.equal(plugin.appearance.theme, "potplayer");
-  assert.deepEqual(changes, ["vestra", "potplayer"]);
-  await assert.rejects(plugin.appearance.set("dark" as never), /vestra/);
+  // Changes to a palette the SDK does not list are not followed.
+  assert.equal(plugin.appearance.theme, "vestra");
+  assert.deepEqual(changes, ["vestra"]);
+  await assert.rejects(
+    plugin.appearance.set("dark" as never),
+    /invalid|vestra/,
+  );
+  // The test host answers like the player: an unknown id selects vestra.
+  host.appearance = other;
+  await host.request("appearance.set", { theme: "dark" } as never);
+  assert.equal(host.appearance, "vestra");
   await stop();
 });
 
@@ -100,9 +110,9 @@ test("settings: pages register with bound properties, callbacks, show", async ()
     ["appearance", "外观", 10, "Page", "Art"],
   );
   assert.equal(page.props.caption, "A");
-  page.emit("pick", "potplayer");
+  page.emit("pick", "vestra");
   await host.settle();
-  assert.deepEqual(picked, ["potplayer"]);
+  assert.deepEqual(picked, ["vestra"]);
   caption = "B";
   plugin.update();
   await host.settle();

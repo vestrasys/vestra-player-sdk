@@ -5,7 +5,8 @@ import type { ScopeImpl } from "./scope.ts";
 import type { Appearance, ThemeId } from "./types.ts";
 import { windowOf } from "./window.ts";
 
-const THEMES: readonly ThemeId[] = ["vestra", "potplayer"];
+/** The palettes this SDK knows, the default first. */
+export const THEMES: readonly ThemeId[] = ["vestra"];
 
 /**
  * One per plugin: the value comes with the `window.state` read before
@@ -19,7 +20,8 @@ class AppearanceService {
   #started = false;
   constructor(runtime: Runtime) {
     this.#runtime = runtime;
-    this.theme = windowOf(runtime).appearance ?? "vestra";
+    this.theme =
+      (windowOf(runtime).appearance as ThemeId | undefined) ?? "vestra";
   }
   start() {
     if (this.#started) return;
@@ -63,7 +65,10 @@ export function appearance(scope: ScopeImpl): Appearance {
     },
     async set(theme) {
       if (!THEMES.includes(theme))
-        throw failure("invalid", 'theme is "vestra" or "potplayer"');
+        throw failure(
+          "invalid",
+          `theme is ${THEMES.map((t) => `"${t}"`).join(" or ")}`,
+        );
       await scope.runtime.host.appearance.set(theme);
       service().accept(theme);
     },

@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
 
-Documentation only; no API change.
+**One palette.** `ThemeId` is now `"vestra"` only: the second palette that earlier versions listed is gone from the player. This is a minor version although a type narrows, because the only plugins it affects compare `plugin.appearance.theme` with, or `set` the removed id:
+
+- TypeScript reports a comparison with the removed id as having no overlap, and `appearance.set` with it as a type error; delete that branch or menu item. `appearance.set` rejects anything other than `"vestra"` with `invalid`; `TestHost.appearance` and `setAppearance` take a `ThemeId`.
+- The player treats a palette id it does not have as `vestra`: plugins built with an older SDK that still ask for the removed palette keep working (no error, the palette stays Vestra), and a palette saved by an older player opens as Vestra. `TestHost` answers `appearance.set` the same way.
+- `Theme` tokens, sizes and `slint/` are otherwise unchanged (comments only). A later version may add palettes again (a light one, for example): read colours from `Theme` rather than branching on the id.
+
+Documentation:
 
 - New concept page **Windows, panels, settings pages, dialogs and the OSD**, and two how-to guides: **Keep a slider responsive while dragging** and **Remember a window's state between runs**.
 - The reference of the user interface API (`Windows`, `Window`, `View`, `Panels`, `Panel`, the panel positions, `Settings`, `SettingsPage`, `Dialogs`, `Osd`, `OsdPanel`, `Ui`, `Appearance` and their data types) is rewritten: background, life cycle, capability, parameters with units and ranges, every error code, compiling examples, `@since`, and the `UI` category in the navigation.
