@@ -19,13 +19,17 @@
  * It also compares the error codes of the `PluginError` table with the codes
  * the SDK itself throws (`failure("…")`).
  *
- * For now it only reports (exit 0); later documentation rounds tighten it.
- * `--strict` fails when a summary is missing. `--list <rule>` prints every
+ * The rules above are a report (exit 0). The categories listed in
+ * scripts/doc-standard.mjs are enforced: a symbol of such a category that
+ * misses part of the standard fails the run, and so does a declaration
+ * tagged with such a `@category` that the list does not name. `--strict`
+ * also fails when any summary is missing. `--list <rule>` prints every
  * symbol that misses that rule.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Application, ReflectionKind } from "typedoc";
+import { STRICT_CATEGORIES, strictDeclarations } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--strict");
@@ -124,6 +128,80 @@ for (const module of modules ?? []) {
   }
 }
 
+// Strict categories (scripts/doc-standard.mjs): the full standard, enforced.
+const isPromise = (type) =>
+  type?.type === "reference" && type.name === "Promise";
+const categoryOf = (comment) =>
+  comment?.blockTags
+    .find((block) => block.tag === "@category")
+    ?.content.map((part) => part.text)
+    .join("")
+    .trim();
+/** Own members, including those of an intersection's object part (`SettingsPage`). */
+const ownMembers = (declaration) => [
+  ...(declaration.children ?? []),
+  ...(declaration.type?.type === "intersection"
+    ? declaration.type.types.flatMap((part) =>
+        part.type === "reflection" ? (part.declaration.children ?? []) : [],
+      )
+    : []),
+];
+const strictReport = new Map(
+  Object.keys(STRICT_CATEGORIES).map((category) => [
+    category,
+    { symbols: 0, checks: 0, problems: [] },
+  ]),
+);
+const sdk = modules?.find((module) => module.name === "@vestra-player/sdk");
+for (const declaration of sdk?.children ?? []) {
+  const tagged = categoryOf(commentOf(declaration));
+  if (strictReport.has(tagged) && !strictDeclarations.has(declaration.name))
+    strictReport
+      .get(tagged)
+      .problems.push(
+        `${declaration.name}: tagged @category ${tagged} but not listed in scripts/doc-standard.mjs`,
+      );
+}
+for (const [name, { category, kind }] of strictDeclarations) {
+  const report = strictReport.get(category);
+  const need = (what, ok, label) => {
+    report.checks++;
+    if (!ok) report.problems.push(`${what}: ${label}`);
+  };
+  const declaration = sdk?.getChildByName(name);
+  if (!declaration) {
+    report.problems.push(
+      `${name}: listed in scripts/doc-standard.mjs but not exported`,
+    );
+    continue;
+  }
+  report.symbols++;
+  const comment = commentOf(declaration);
+  need(name, hasSummary(comment), "no summary");
+  need(name, categoryOf(comment) === category, `no @category ${category}`);
+  need(name, hasTag(comment, "@since"), "no @since");
+  if (kind === "full") {
+    need(name, hasTag(comment, "@remarks"), "no @remarks");
+    need(name, hasTag(comment, "@example"), "no @example");
+    need(name, hasTag(comment, "@capability"), "no @capability");
+  }
+  for (const member of ownMembers(declaration)) {
+    if (member.inheritedFrom) continue;
+    const memberName = `${name}.${member.name}`;
+    const memberComment = commentOf(member);
+    need(memberName, hasSummary(memberComment), "no summary");
+    if (kind !== "full") continue;
+    if (isMethod(member)) {
+      need(memberName, hasTag(memberComment, "@example"), "no @example");
+      need(memberName, hasTag(memberComment, "@capability"), "no @capability");
+      need(memberName, hasTag(memberComment, "@since"), "no @since");
+      if (returnsPromise(member))
+        need(memberName, hasTag(memberComment, "@throws"), "no @throws");
+    } else if (isPromise(member.type))
+      need(memberName, hasTag(memberComment, "@throws"), "no @throws");
+  }
+}
+
 // Error codes: the PluginError table against the codes the SDK throws.
 const types = readFileSync(join(root, "src/plugin/types.ts"), "utf8");
 const table = types.slice(
@@ -176,6 +254,18 @@ for (const code of undocumentedCodes)
     `warning: error code "${code}" is thrown (${[...thrown.get(code)].join(", ")}) but not in the PluginError table`,
   );
 
+console.log("\nEnforced categories (scripts/doc-standard.mjs):");
+let strictFailures = 0;
+for (const [category, report] of strictReport) {
+  const passed = report.checks - report.problems.length;
+  console.log(
+    `${category}: ${report.symbols} symbols, ${passed} / ${report.checks} checks pass`,
+  );
+  for (const text of report.problems)
+    console.log(`::error::${category}: ${text}`);
+  strictFailures += report.problems.length;
+}
+
 if (listRule) {
   if (!stats[listRule]) {
     console.error(`unknown rule ${listRule}; one of ${RULES.join(", ")}`);
@@ -191,3 +281,4 @@ if (stats.summary.missing.length) {
     console.log(`::${level}::no summary: ${name}`);
   if (strict) process.exit(1);
 }
+if (strictFailures) process.exit(1);

@@ -10,6 +10,7 @@ import type { Plugin } from "@vestra-player/sdk";
  * addresses open in the browser, `#anchors` only show an on-screen message.
  */
 export default async function activate(plugin: Plugin) {
+  // #region document
   const directory = fileURLToPath(new URL(".", import.meta.url));
   const window = plugin.windows.create("ui/document.slint");
   window.on("openLink", (url: string) => {
@@ -25,4 +26,5 @@ export default async function activate(plugin: Plugin) {
       await window.show();
     },
   });
+  // #endregion document
 }

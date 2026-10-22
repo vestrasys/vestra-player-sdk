@@ -34,12 +34,13 @@ jobs:
           cache: ${{ inputs.cache && 'npm' || '' }}
       - run: npm ci --ignore-scripts
       - run: npm run docs
-      # The ts code blocks in README.md and docs/ compile (@example blocks in
-      # src/ are reported as warnings for now); no drift from examples/hello,
-      # engines.node or the package version.
+      # The ts code blocks in README.md and docs/ compile, and so do the
+      # @example blocks of the enforced categories (scripts/doc-standard.mjs;
+      # the others are reported as warnings for now); no drift from
+      # examples/hello, engines.node or the package version.
       - run: npm run docs:check
-      # Coverage report (summaries, @throws, @example, @category, ...);
-      # warnings only until the documentation rounds tighten it.
+      # Coverage report (summaries, @throws, @example, @category, ...), and
+      # the enforced categories complete.
       - run: npm run doc-lint
       - if: inputs.pages
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

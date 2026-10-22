@@ -9,10 +9,12 @@ import type { Plugin } from "@vestra-player/sdk";
 export default async function activate(plugin: Plugin) {
   const items = ["First item", "Second item", "Third item"];
   let selected = 0;
+  // #region mount
   const panel = plugin.panels.mount("sidebar", "ui/panel.slint", {
     title: "Example list",
   });
   panel.bind(() => ({ rows: items, selected }));
+  // #endregion mount
   const move = (step: number) =>
     (selected = Math.max(0, Math.min(items.length - 1, selected + step)));
 
@@ -34,10 +36,12 @@ export default async function activate(plugin: Plugin) {
       move(0);
     },
   });
+  // #region menu
   panel.on("select", (index: number) => (selected = index));
   panel.on("contextMenu", (x: number, y: number) =>
     panel.showMenu([first, null, remove], { x, y }),
   );
+  // #endregion menu
 
   plugin.player.provideSequence({
     canNext: () => selected < items.length - 1,
