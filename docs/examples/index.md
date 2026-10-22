@@ -46,7 +46,7 @@ A plugin that generates its own video and audio — colour bars, a moving grid, 
 
 **You learn:** reading playback state · seeking · a tool window bound to plugin state.
 
-[Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark)
+[Walkthrough](bookmark.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark)
 
 ## Panel menu
 
@@ -56,7 +56,7 @@ A sidebar panel with its own right-click menu, keys that only work while the pan
 
 **You learn:** mounting a panel · panel context menus and panel-only bindings · providing next/previous.
 
-[Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu)
+[Walkthrough](panel-menu.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu)
 
 ## Core UI
 
@@ -66,7 +66,7 @@ The core user interface API in one **Examples** submenu.
 
 **You learn:** radio items, ordering and groups · a menu item whose title changes · a key binding that repeats while held · a command without a menu entry · on-screen messages · the shared sidebar (show, detach) · a tool window drawn with the `@vestra/` theme and widgets.
 
-[Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui)
+[Walkthrough](core-ui.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui)
 
 ## Markdown
 
@@ -76,7 +76,7 @@ The core user interface API in one **Examples** submenu.
 
 **You learn:** `plugin.ui.markdown` and `MarkdownView` · resolving relative images · the manifest's display fields (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `license`) and `minPlayerVersion`.
 
-[Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown)
+[Walkthrough](markdown.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown)
 
 ## Running an example
 
