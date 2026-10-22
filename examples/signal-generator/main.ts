@@ -70,11 +70,7 @@ export default async function activate(plugin: Plugin) {
     balance: controls.balance,
     balanceText: balanceText(controls.balance),
     filter: FILTERS.indexOf(controls.filter),
-    filterStatus: describeFilter(
-      controls.filter,
-      filter.status,
-      plugin.player.state,
-    ),
+    filterStatus: describeFilter(controls.filter, filter.status),
     running: stream !== undefined,
     starting: starting !== undefined,
     status,
@@ -172,7 +168,7 @@ export default async function activate(plugin: Plugin) {
   // #region command
   plugin.commands.add({
     id: "open",
-    path: ["Open", "Signal Generator…"],
+    path: ["@open", "Signal Generator…"], // the player's Open menu, in any language
     run: async () => {
       await window.show();
       await start();

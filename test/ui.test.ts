@@ -48,6 +48,57 @@ test("commands register once, follow bound state and dispatch run", async () => 
   assert.equal(host.commands.has("demo.open"), false, "stopping removes it");
 });
 
+test("menu ids put a command into a built-in menu", async () => {
+  const { host, plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.commands.add({ id: "blur", path: ["@video", "Blur"], run() {} });
+    },
+    { capabilities: ["commands"] },
+  );
+  // The declaration is what the plugin sent; the player stores the title (视频).
+  assert.deepEqual(host.command("blur").declaration.path, ["@video", "Blur"]);
+  assert.equal(host.command("blur").declaration.title, "Blur");
+  for (const path of [["@view", "X"], ["@video"]])
+    assert.throws(
+      () => plugin.commands.add({ id: "bad", path, run() {} }),
+      (error: { code?: string }) => error.code === "invalid",
+    );
+  // Only the first segment is an id.
+  plugin.commands.add({ id: "at", path: ["@audio", "@home"], run() {} });
+  await host.settle();
+  assert.deepEqual(host.command("at").declaration.path, ["@audio", "@home"]);
+  // The test host refuses a bad id on the wire too, like the player.
+  await assert.rejects(
+    host.request("commands.register", {
+      id: "wire",
+      revision: 1,
+      declaration: { title: "X", path: ["@nope", "X"] },
+      state: { enabled: true, checked: null, busy: false, reason: null },
+    }),
+    (error: { code?: string }) => error.code === "invalid",
+  );
+  await stop();
+});
+
+test("a duplicate command or window id throws conflict", async () => {
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.commands.add({ id: "one", title: "One", run() {} });
+      plugin.windows.create("ui/panel.slint");
+    },
+    { capabilities: ["commands", "ui.window"] },
+  );
+  assert.throws(
+    () => plugin.commands.add({ id: "one", title: "Again", run() {} }),
+    (error: { code?: string }) => error.code === "conflict",
+  );
+  assert.throws(
+    () => plugin.windows.create("other/panel.slint"),
+    (error: { code?: string }) => error.code === "conflict",
+  );
+  await stop();
+});
+
 test("a failed registration fails activation", async () => {
   const host = new TestHost();
   host.handle("commands.register", () => {

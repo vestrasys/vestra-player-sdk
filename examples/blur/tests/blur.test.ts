@@ -42,7 +42,8 @@ async function openWindow(host: TestHost) {
 test("Video ▸ Blur and Ctrl+Shift+B toggle the gblur node", async () => {
   const { host, stop } = await start();
   const toggle = host.command("toggle");
-  assert.deepEqual(toggle.declaration.path, ["Video", "Blur"]);
+  // "@video": the player's Video menu (视频), whatever its language.
+  assert.deepEqual(toggle.declaration.path, ["@video", "Blur"]);
   assert.equal(toggle.state.checked, false);
   assert.deepEqual(chain(host), []);
 
@@ -54,7 +55,14 @@ test("Video ▸ Blur and Ctrl+Shift+B toggle the gblur node", async () => {
   await host.press("Ctrl+Shift+B");
   assert.equal(host.command("toggle").state.checked, false);
   assert.deepEqual(chain(host), []);
+  assert.equal(host.processing.resources.size, 0, "off removes the chain");
   assert.equal(host.osd.at(-1), "Blur off");
+
+  // On again: applied, no failure on the way.
+  await toggle.run();
+  assert.deepEqual(chain(host), [{ kind: "gblur", sigma: 4, steps: 3 }]);
+  assert.equal(host.osd.at(-1), "Blur on (strength 4.0)");
+  assert.ok(!host.osd.some((line) => line.startsWith("Blur failed")));
   await stop();
 });
 // #endregion test-toggle
@@ -218,6 +226,26 @@ test("a failure is shown in the window and on screen; Retry applies again", asyn
   window.emit("retry");
   await host.settle();
   assert.equal(window.props["failed"], false);
+  assert.equal(window.props["status"], "Applied");
+  assert.deepEqual(chain(host), [{ kind: "gblur", sigma: 4, steps: 3 }]);
+  await stop();
+});
+
+test("a generated stream is not blurred; the blur returns with the next video", async () => {
+  const { host, stop } = await start();
+  await host.command("toggle").run();
+  const window = await openWindow(host);
+  host.setSource({ kind: "producer" }); // another plugin's openStream plays
+  await host.settle();
+  assert.equal(window.props["status"], "Not available for generated streams");
+  assert.equal(window.props["failed"], false, "nothing to retry");
+  assert.equal(
+    host.osd.at(-1),
+    "Blur works on videos, not on generated streams",
+  );
+
+  host.openElsewhere("/media/next.mp4");
+  await host.settle();
   assert.equal(window.props["status"], "Applied");
   assert.deepEqual(chain(host), [{ kind: "gblur", sigma: 4, steps: 3 }]);
   await stop();

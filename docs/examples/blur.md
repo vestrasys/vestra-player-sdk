@@ -25,7 +25,7 @@ The complete source is in [`examples/blur/`](https://github.com/vestrasys/vestra
 ## Prerequisites
 
 - Node.js 26 or newer and npm.
-- Vestra Player 0.2.0 or newer, to see the result.
+- Vestra Player 0.3.0 or newer, to see the result (the manifest says so with `minPlayerVersion`: the `@video` menu id, `Theme.danger` and removing a video chain with `[]` are new in 0.3.0).
 - You have read [Getting started](../tutorials/getting-started.md), or at least know that a plugin is a folder with a `manifest.json` and an entry module that default-exports `activate(plugin)`.
 
 ## File layout
@@ -51,6 +51,7 @@ examples/blur/
 
 - `id` is unique across all plugins. The official plugin repository expects `<owner>.<name>`.
 - `entry` is `main.ts`. The player runs TypeScript directly during development; `vestra-plugin build` rewrites it to `main.js` in `dist/manifest.json`.
+- `minPlayerVersion: "0.3.0"`: older players refuse to load the plugin with a clear "requires Vestra Player ≥ 0.3.0" instead of failing later.
 - `name`, `author`, `punchline`, `description` and `tags` are only shown by the plugin store and the plugin manager.
 
 Capabilities are a contract: the player refuses a call whose capability is missing, with `code: "capability"`. List exactly what you use:
@@ -99,7 +100,7 @@ A **filter chain** is a list of processing nodes that the player runs on every d
 {@includeCode ../../examples/blur/model.ts#chain}
 
 - `{ kind: "gblur", sigma, steps: 3 }` is FFmpeg's Gaussian blur. `sigma` is the radius of the blur, 0–10; `steps` must be 3 in this API version. A value out of range is refused with `invalid`, so `clampSigma` keeps it in range.
-- `[]` (blur off) is a valid chain: it withdraws this plugin's effect and leaves other plugins' filters alone.
+- `[]` (blur off) is a valid chain: it removes this plugin's chain and leaves other plugins' filters alone. If nothing was ever applied, `set([])` sends nothing at all.
 
 `main.ts` creates the filter, sends the first value and watches for failures:
 
@@ -109,6 +110,7 @@ A **filter chain** is a list of processing nodes that the player runs on every d
 - `set()` returns immediately. It does not throw for a bad value or a missing video; the outcome arrives as a **status** instead.
 - The SDK re-applies the chain for every new video. You call `set()` only when *your* value changes.
 - `say` is the on-screen message helper from Step 6.
+- `unsupported` is the one failure Blur words differently. It means the source is a **generated stream** (another plugin's `openStream`, such as the signal generator): its frames go straight to the screen without passing through the player's filters. Nothing needs to be retried: the SDK applies the chain again by itself when a video plays.
 
 ### Filter status
 
@@ -119,7 +121,7 @@ A **filter chain** is a list of processing nodes that the player runs on every d
 | `waiting` | There is no playing video. The value is kept and applied as soon as there is one. |
 | `applying` | A request is on its way to the player. |
 | `applied` | The player accepted the chain. (It does not guarantee that the next frame on screen already shows it.) |
-| `failed` | The player refused it; `status.error.code` and `status.error.message` say why. Nothing retries automatically until the next `set()`, `retry()` or a new video. `backend-uncertain` means the video backend temporarily blocked the stage: `retry()` is the right answer. |
+| `failed` | The player refused it; `status.error.code` and `status.error.message` say why. Nothing retries automatically until the next `set()`, `retry()` or a new video. `backend-uncertain` means the video backend temporarily blocked the stage: `retry()` is the right answer. `unsupported` means the source is a generated stream, which no filter reaches. |
 
 `model.ts` turns the status into the line the window shows:
 
@@ -143,7 +145,7 @@ Continuous `set()` suits `gblur` because `sigma` is a **live** field: the player
 
 {@includeCode ../../examples/blur/main.ts#commands}
 
-- `path: ["Video", "Blur"]` puts the item in the **Video** menu. Menu paths are matched by their exact text, so the player creates the **Video** menu if no menu with that title exists yet.
+- `path: ["@video", "Blur"]` puts the item in the player's own **Video** menu. Menu paths are matched by their exact text, and the player's menus are titled in its own language (视频 today), so `["Video", "Blur"]` would create a second top-level menu called "Video". A first segment that starts with `@` names a built-in menu instead: `@open`, `@playback`, `@subtitles`, `@video`, `@audio`, `@screen` and `@settings` (the list is `MENU_IDS`). Only the first segment is an id; "Blur" is the item's title.
 - `order` sorts siblings; 200–699 is the range for domain menus such as video and audio.
 - `bindings: ["Ctrl+Shift+B"]` is the default shortcut. On macOS a `Ctrl+…` binding fires for both ⌃ and ⌘. If another command already uses the key, that is not an error: the user's own assignments win, then the player's own commands, then the plugin that loaded first. The player's built-in video and subtitle plugins already use Ctrl+B and Alt+B, which is why Blur uses Ctrl+Shift+B. Users can reassign any binding in the player's shortcut settings.
 - `checked` is a function, not a value. The SDK calls it again after every handler it runs (menu, shortcut, window callback, settings page, filter status), and sends the check mark only when it changed. So when the window's switch turns blur off, the menu's check mark follows without any extra code.
@@ -200,7 +202,7 @@ A tool window is a `.slint` file in your package. The plugin writes **properties
 
 - Lines 77–78: the plugin supplies the list (`presets`) and the selected index.
 - Line 79: `selected` fires when the user picks an entry.
-- Line 87: the status line uses the accent colour after a failure.
+- Line 87: the status line uses `Theme.danger`, the player's colour for errors, after a failure. Like every `Theme` colour it follows the player's colour scheme.
 - Line 92: `if root.failed:` creates the **Retry** button only while there is a failure.
 
 ### The TypeScript side: properties
@@ -266,7 +268,7 @@ Three helpers keep the tests short:
 
 - `host.setSource({ phase: "ready" })` before starting simulates a video that is already playing.
 - `startPlugin` reads `manifest.json` from the directory, so the tests run with the same capabilities as the real plugin.
-- `host.processing.resources` is what the player currently holds for each chain.
+- `host.processing.resources` is what the player currently holds for each chain. An empty chain removes its entry, as in the player.
 
 **The command and the shortcut.** `host.command(id).run()` behaves like the menu, `host.press(binding)` like the keyboard:
 
@@ -286,7 +288,7 @@ Three helpers keep the tests short:
 
 {@includeCode ../../examples/blur/tests/blur.test.ts#test-persistence}
 
-**Status: waiting, failure, retry.** `host.handle(method, fn)` replaces how the fake player answers a request; throwing a `HostError` simulates a refusal. `host.reset(method)` restores the default:
+**Status: waiting, failure, retry, generated streams.** `host.handle(method, fn)` replaces how the fake player answers a request; throwing a `HostError` simulates a refusal. `host.reset(method)` restores the default. `host.setSource({ kind: "producer" })` makes the source a generated stream; the test host then answers a chain with `unsupported`, as the player does:
 
 {@includeCode ../../examples/blur/tests/blur.test.ts#test-status}
 

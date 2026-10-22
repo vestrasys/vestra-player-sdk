@@ -141,7 +141,95 @@ test("disposing a filter removes only its own contribution", async () => {
   filter.set(eq(0.1));
   await host.settle();
   await filter.dispose();
-  assert.deepEqual(host.processing.resources.get("video:picture")?.nodes, []);
+  assert.equal(host.processing.resources.has("video:picture"), false);
+  await stop();
+});
+
+const blur = (sigma: number): VideoNode[] => [
+  { kind: "gblur", sigma, steps: 3 },
+];
+
+test("an empty chain removes this plugin's chain; on, off, on again", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/four3.mp4");
+  const { filter, stop } = await withFilter(host);
+  // A getter, so that one assertion does not narrow the next one's type.
+  const state = () => filter.status.state as string;
+  filter.set([]); // never applied: nothing to send
+  await host.settle();
+  assert.equal(host.sent("processing.replace").length, 0);
+  assert.equal(state(), "applied");
+  filter.set(blur(4));
+  await host.settle();
+  assert.deepEqual(
+    host.processing.resources.get("video:picture")?.nodes,
+    blur(4),
+  );
+  filter.set([]);
+  await host.settle();
+  assert.equal(state(), "applied", "removal is not a failure");
+  assert.equal(host.processing.resources.has("video:picture"), false);
+  filter.set(blur(4));
+  await host.settle();
+  assert.equal(state(), "applied");
+  assert.deepEqual(
+    host.processing.resources.get("video:picture")?.nodes,
+    blur(4),
+  );
+  assert.equal(host.sent("processing.replace").length, 3);
+  await stop();
+});
+
+test("a chain on a generated stream fails unsupported until decoded media plays", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { filter, stop } = await withFilter(host);
+  // A getter, so that one assertion does not narrow the next one's type.
+  const state = () => filter.status.state as string;
+  filter.set(blur(4));
+  await host.settle();
+  assert.equal(state(), "applied");
+  // A plugin's openStream becomes the source: the kept chain cannot reach it.
+  host.setSource({ kind: "producer" });
+  await host.settle();
+  assert.equal(state(), "failed");
+  assert.equal(
+    filter.status.state === "failed" && filter.status.error.code,
+    "unsupported",
+  );
+  const sent = host.sent("processing.replace").length;
+  await host.settle(30);
+  assert.equal(host.sent("processing.replace").length, sent, "no polling");
+  // Removing it on the stream is fine.
+  filter.set([]);
+  await host.settle();
+  assert.equal(state(), "applied");
+  assert.equal(host.processing.resources.has("video:picture"), false);
+  filter.set(blur(2));
+  await host.settle();
+  assert.equal(state(), "failed");
+  // A decoded file again: applied without another call from the plugin.
+  host.openElsewhere("/b.mp4");
+  await host.settle();
+  assert.equal(state(), "applied");
+  assert.deepEqual(
+    host.processing.resources.get("video:picture")?.nodes,
+    blur(2),
+  );
+  await stop();
+});
+
+test("an audio chain with only a delay is not empty", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { plugin, stop } = await startPlugin(() => {}, { capabilities, host });
+  const filter = plugin.audio.filter("sync");
+  filter.set({ nodes: [], delayMs: 50 });
+  await host.settle();
+  assert.equal(host.processing.resources.get("audio:sync")?.offsetMs, 50);
+  filter.set({ nodes: [] });
+  await host.settle();
+  assert.equal(host.processing.resources.has("audio:sync"), false);
   await stop();
 });
 

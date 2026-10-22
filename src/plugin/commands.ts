@@ -1,6 +1,7 @@
 /** Menu commands: declaration, state sync (revisions hidden) and dispatch. */
 import { failure, Latest, quiet } from "./runtime.ts";
 import { checkBindings } from "./bindings.ts";
+import { MENU_IDS } from "../commands.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
@@ -23,6 +24,17 @@ function declare(options: CommandOptions): CommandDeclaration {
     throw failure("invalid", `command ${options.id}: title or path required`);
   if (path.length > 8)
     throw failure("invalid", `command ${options.id}: path has 1–8 segments`);
+  const menu = path[0]?.startsWith("@") ? path[0].slice(1) : null;
+  if (menu !== null && !(MENU_IDS as readonly string[]).includes(menu))
+    throw failure(
+      "invalid",
+      `command ${options.id}: unknown menu id @${menu}; the built-in menus are ${MENU_IDS.map((id) => `@${id}`).join(", ")}`,
+    );
+  if (menu !== null && path.length < 2)
+    throw failure(
+      "invalid",
+      `command ${options.id}: menu id @${menu} needs an item after it`,
+    );
   const order = options.order ?? 0;
   if (!Number.isInteger(order) || Math.abs(order) > 1_000_000)
     throw failure(
@@ -64,7 +76,7 @@ class CommandHandle implements Command {
   constructor(scope: ScopeImpl, options: CommandOptions) {
     const runtime = scope.runtime;
     if (runtime.commands.has(options.id))
-      throw new Error(`command ${options.id} is already declared`);
+      throw failure("conflict", `command ${options.id} is already declared`);
     this.id = options.id;
     this.#scope = scope;
     this.#spec = {

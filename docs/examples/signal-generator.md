@@ -58,7 +58,7 @@ When the division is not exact, rounding every frame the same way would drift: 1
 
 Everything the plugin computes (the waveform, its level, the balance) is part of the signal it hands over. The player can also process sound: {@link "@vestra-player/sdk"!Scope.audio | plugin.audio.filter()} declares a chain of audio nodes (volume, equalizer, treble, loudness normalisation, channel routing) that the player runs in its own audio pipeline. The plugin only says *which* nodes it wants; the player does the work, and re-applies the chain to every new source.
 
-That pipeline is the one that decodes media. A generated stream's audio goes from `frame()` to the sound card without passing through it, so **player filters do not change a generated stream**: the chain is kept and waits until the player plays a file. The example shows this on purpose: its filter status says "Waiting" while the tone plays, and the filter is audible as soon as you open a song.
+That pipeline is the one that decodes media. A generated stream's audio goes from `frame()` to the sound card without passing through it, so **player filters do not change a generated stream**: while one plays, the filter's status is `failed` with the code `unsupported`, and the SDK keeps the chain and applies it again by itself once the player plays a file. The example shows this on purpose: its filter status says "Not applied to this stream" while the tone plays, and the filter is audible as soon as you open a song. (Players before 0.3.0 left the status at "waiting" instead.)
 
 ## Step 1: The manifest
 
@@ -71,12 +71,12 @@ Each capability opens a part of the API:
 | `commands` | The menu command. |
 | `ui.window` | The control window. |
 | `producer.av` | `player.openStream`: producing the frames. |
-| `playback.control` | Making the stream the player's source, and closing it on Stop. Selecting a source is a playback control like opening a file. |
+| `playback.control` | Making the stream the player's source, and closing it on Stop. Selecting a source is a playback control like opening a file, so `openStream` needs it as well as `producer.av`. |
 | `playback.read` | Reading the player state, needed by `audio.filter` and by `Stream.stop()` to check that the stream is still the current source before closing it. |
 | `events` | Live player state: the window notices when another source replaces the stream, and the filter notices new sources. |
 | `processing.audio` | `plugin.audio.filter()`. |
 
-The display fields (`name`, `author`, `punchline`, `description`, `tags`, `sourceUrl`, `license`) are what the plugin manager and the store show; they need player 0.2.0, hence `minPlayerVersion`.
+The display fields (`name`, `author`, `punchline`, `description`, `tags`, `sourceUrl`, `license`) are what the plugin manager and the store show. `minPlayerVersion` is 0.3.0 because the menu command uses a menu id (`@open`, Step 10) and the window uses `Theme.danger`, both new in player 0.3.0.
 
 ## Step 2: The settings
 
@@ -231,7 +231,7 @@ Line by line:
 - `new SignalGenerator(controls)`: each run gets a fresh clock (the timecode starts at zero) but shares the one `controls` object with the window.
 - `openStream({ width, height, frame, signal })` resolves once the stream plays. Before that, the SDK has prepared the connection to the player, called `frame()` until the first buffers were full (prefill), and asked the player to make the stream its source (activation).
 - `if (attempt.signal.aborted)`: Stop was pressed just as `openStream` resolved. The stream is already playing, so stop it and leave.
-- `opened.onStop(...)` is called when the stream ends **without** this plugin stopping it: `error` is `null` when another source replaced it (the user opened a file), or a {@link "@vestra-player/sdk"!PluginError | PluginError} when the stream failed, for example because `frame()` threw. The check `stream !== opened` ignores the end of a stream that `stop()` has already forgotten.
+- `opened.onStop(...)` is called when the stream ends **without** this plugin stopping it: `error` is `null` when another source replaced it (the user opened a file), or a {@link "@vestra-player/sdk"!PluginError | PluginError} when the stream failed, for example because `frame()` threw (or returned a frame that breaks a limit: code `invalid`). It is never called for the plugin's own `stop()`. The check `stream !== opened` ignores the end of a stream that `stop()` has already forgotten.
 - `catch`: a cancelled start rejects with an `AbortError`, which is not a failure worth showing. Anything else is a start-up failure:
 
 {@includeCode ../../examples/signal-generator/main.ts#errors}
@@ -282,13 +282,13 @@ Its chain comes from the window's choice:
 
 - Every node is from the player's fixed list ({@link "@vestra-player/sdk"!AudioNode | AudioNode}); values outside their ranges fail with `invalid`. There is no low-pass node; `treble` is a high-shelf boost with a fixed 3 kHz corner and slope, and only `gainDb` (0–6 dB) can change.
 - `set()` keeps only the newest value and sends one request at a time, so it can be called on every change.
-- `[]` withdraws this plugin's effect; other plugins' chains are not affected.
+- `[]` removes this plugin's chain; other plugins' chains are not affected.
 
 The status line tells the user what the player did with it:
 
 {@includeCode ../../examples/signal-generator/filter.ts#status}
 
-To hear the difference between the two sides, choose **Swap left / right** while the tone plays with the balance at full left. The tone stays on the left: swapping is the player's job, and the player does not route a generated stream through its filters, so the status reads "Waiting: applies to media the player decodes, not to this stream". Now open any stereo music file: the SDK applies the waiting chain to the new source, the status changes to "Applied by the player", and the channels are swapped. Moving the balance slider, on the other hand, changes the tone immediately and shows on the oscilloscope: the balance is computed in the plugin.
+To hear the difference between the two sides, choose **Swap left / right** while the tone plays with the balance at full left. The tone stays on the left: swapping is the player's job, and the player does not route a generated stream through its filters, so the status reads "Not applied to this stream: the player filters media it decodes". Now open any stereo music file: the SDK applies the kept chain to the new source, the status changes to "Applied by the player", and the channels are swapped. Moving the balance slider, on the other hand, changes the tone immediately and shows on the oscilloscope: the balance is computed in the plugin.
 
 ## Step 10: Stopping and cleaning up
 
@@ -307,6 +307,8 @@ You do not need any of this when the plugin is disabled or the player quits. The
 Finally the menu command, which shows the window and starts the stream:
 
 {@includeCode ../../examples/signal-generator/main.ts#command}
+
+`path: ["@open", "Signal Generator…"]` puts it into the player's own Open menu. Menu paths are matched by their exact titles, and the player's menus are titled in its language (打开 today), so `["Open", …]` would add a second top-level menu; a first segment starting with `@` names a built-in menu whatever its title.
 
 `plugin.onError` collects errors thrown by callbacks and failed property writes, and shows them in the window instead of leaving them only in the plugin log.
 
@@ -339,7 +341,7 @@ Controls must reach the generator. After a change the test waits two frames (the
 
 {@includeCode ../../examples/signal-generator/tests/plugin.test.ts#controls-test}
 
-The filter test answers filter requests during the stream the way the player does, then checks that the chain is applied to a file and withdrawn with **Off**:
+The filter test checks that the chain is refused during the stream (the test host answers `unsupported`, like the player), applied to a file, and removed with **Off**:
 
 {@includeCode ../../examples/signal-generator/tests/plugin.test.ts#filter-test}
 
@@ -377,7 +379,8 @@ The packed `.vxp` is the file users install.
 - **Allocate nothing per frame.** No `new`, no array or object literals, no closures, no string building (template literals, `toFixed`, `padStart`), no `subarray` or `slice` in `frame()` and the code it calls. Allocate buffers once and overwrite them. Small allocations are cheap one by one, but 30 frames a second of them eventually make the garbage collector pause.
 - **Do the work once.** Static content (the colour bars, the font table, lookup tables) is computed once and copied per frame.
 - **Write pixels as 32-bit words**, and fill runs with `fill()` or copy blocks with `set()`, which are native memory operations.
-- **Mind the frame size.** The SDK copies every frame to send it to the player: 640×360 is 0.9 MB per frame, 27 MB/s at 30 fps. A frame can be at most 4 MiB, so the largest 16:9 size is about 1280×720 (3.5 MiB); 1920×1080 (8.3 MB) is refused. The player scales the picture to the window, so a test pattern rarely needs more than 640×360.
+- **Mind the frame size.** The SDK copies every frame once to send it to the player: 640×360 is 0.9 MB per frame, 27 MB/s at 30 fps. A frame can be at most 4 MiB, so the largest 16:9 size is about 1280×720 (3.5 MiB); 1920×1080 (8.3 MB) is refused. The player scales the picture to the window, so a test pattern rarely needs more than 640×360. Because of that copy, `frame()` may return the same buffers every time.
+- **Keep samples within ±1.** Every sample must be a finite number between −1 and 1; a `NaN` or an overflowing mix ends the stream with `invalid`. Clamp after mixing.
 - **Measure.** Time `frame()` in a loop outside the player (`performance.now()` around a few thousand calls) and run it with `node --trace-gc` to see whether it causes collections.
 
 ## Exercises

@@ -221,6 +221,63 @@ test("streams preroll, activate through the start control and stop cleanly", asy
   await stop();
 });
 
+test("a frame that breaks a limit ends the stream with invalid", async () => {
+  const { host, plugin, stop } = await startPlugin(() => {}, {
+    capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
+  });
+  // Wrong size during start-up: openStream rejects.
+  await assert.rejects(
+    plugin.player.openStream({
+      width: 2,
+      height: 2,
+      frame: () => ({
+        video: new Uint8Array(12),
+        audio: new Float32Array(1600),
+      }),
+    }),
+    (error: { code?: string }) => error.code === "invalid",
+  );
+  // A sample out of range while playing: onStop gets the error. The same
+  // buffers are reused for every frame (the SDK copies them once).
+  const video = new Uint8Array(16);
+  const audio = new Float32Array(1600);
+  let frames = 0;
+  const stream = await plugin.player.openStream({
+    width: 2,
+    height: 2,
+    frame: () => {
+      if (++frames === 12) audio[7] = 1.5;
+      return { video, audio };
+    },
+  });
+  const stopped = new Promise<{ code?: string } | null>((resolve) =>
+    stream.onStop(resolve),
+  );
+  const error = await stopped;
+  assert.equal(error?.code, "invalid");
+  assert.equal(stream.running, false);
+  assert.equal(host.source.phase, "empty");
+  await stop();
+});
+
+test("onStop is not called when the plugin stops its own stream", async () => {
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
+  });
+  const stream = await plugin.player.openStream({
+    width: 2,
+    height: 2,
+    frame: () => ({ video: new Uint8Array(16), audio: new Float32Array(1600) }),
+  });
+  let calls = 0;
+  stream.onStop(() => calls++);
+  await stream.stop();
+  assert.equal(calls, 0);
+  await stop();
+});
+
 /**
  * Start a stream whose `close` requests take 50 ms to answer, so a frame
  * connection closed before the source would be seen while it is selected.

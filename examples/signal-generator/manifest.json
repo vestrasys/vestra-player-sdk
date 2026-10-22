@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "minPlayerVersion": "0.2.0",
+  "minPlayerVersion": "0.3.0",
   "capabilities": [
     "commands",
     "ui.window",

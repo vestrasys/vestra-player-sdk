@@ -77,6 +77,8 @@ export function statusLine(
   enabled: boolean,
   status: FilterStatus,
 ): { status: string; failed: boolean } {
+  if (status.state === "failed" && status.error.code === "unsupported")
+    return { status: "Not available for generated streams", failed: false };
   if (status.state === "failed")
     return { status: `Failed: ${status.error.message}`, failed: true };
   if (status.state === "waiting")

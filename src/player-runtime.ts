@@ -12,6 +12,6 @@ export type { PluginInstance, PluginManifest } from "./plugin/index.ts";
 export { HostError } from "./wire.ts";
 export type { Json, Transport } from "./wire.ts";
 export { API_VERSION, CAPABILITIES } from "./capabilities.ts";
-export { COMMAND_LIMITS } from "./commands.ts";
+export { COMMAND_LIMITS, MENU_IDS } from "./commands.ts";
 export { MANIFEST_FIELDS, MANIFEST_LIMITS } from "./manifest.ts";
 export { MARKDOWN_LIMITS } from "./plugin/markdown.ts";
