@@ -51,7 +51,12 @@ export default async function activate(plugin: Plugin) {
   apply();
 
   blur.onStatus((status) => {
-    if (status.state === "failed") say(`Blur failed: ${status.error.message}`);
+    if (status.state !== "failed") return;
+    // A generated stream (another plugin's openStream) bypasses the player's
+    // filters; the blur comes back by itself when a video plays again.
+    if (status.error.code === "unsupported")
+      say("Blur works on videos, not on generated streams");
+    else say(`Blur failed: ${status.error.message}`);
   });
   // #endregion filter
 
@@ -68,7 +73,7 @@ export default async function activate(plugin: Plugin) {
   // #region commands
   plugin.commands.add({
     id: "toggle",
-    path: ["Video", "Blur"],
+    path: ["@video", "Blur"], // the player's Video menu, in any language
     order: 400,
     bindings: ["Ctrl+Shift+B"],
     checked: () => store.value.enabled,
@@ -76,7 +81,7 @@ export default async function activate(plugin: Plugin) {
   });
   plugin.commands.add({
     id: "controls",
-    path: ["Video", "Blur Controls…"],
+    path: ["@video", "Blur Controls…"],
     order: 401,
     run: () => controls.show(),
   });

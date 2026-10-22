@@ -35,6 +35,8 @@ class FilterHandle {
   #lost = 0;
   #disposed = false;
   #source = "";
+  /** The source is a generated stream, which no chain reaches. */
+  #generated = false;
   readonly #listeners = new Set<(status: FilterStatus) => void>();
   readonly #watch;
   constructor(
@@ -48,9 +50,10 @@ class FilterHandle {
     this.#id = id;
     // Only phase/source changes matter, not the 10 Hz position updates.
     this.#watch = player.watch((raw) => {
-      const source = `${raw.stamp.generation}:${raw.phase}`;
+      const source = `${raw.stamp.generation}:${raw.phase}:${raw.kind}`;
       if (source === this.#source) return;
       this.#source = source;
+      this.#generated = raw.kind === "producer";
       this.#failed = false;
       this.#kick();
     });
@@ -117,7 +120,12 @@ class FilterHandle {
         this.#report({ state: "waiting" });
         return;
       }
-      if (wanted === this.#applied) {
+      // On a generated stream the player answers a chain with `unsupported`,
+      // even one it still keeps for decoded media: ask it rather than
+      // reporting the kept chain as applied.
+      const kept =
+        this.#generated && (desired.nodes.length > 0 || desired.offsetMs !== 0);
+      if (wanted === this.#applied && !kept) {
         this.#report({ state: "applied" });
         return;
       }

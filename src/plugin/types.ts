@@ -58,17 +58,20 @@ export interface Disposable {
  * | code | meaning |
  * | --- | --- |
  * | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link Conditional}. |
+ * | `staleDigest` | {@link PackageCandidate.install}: the package's files changed after it was validated; validate it again. |
  * | `capability` | The manifest does not declare the capability the call needs. |
  * | `invalid` | A bad argument (out of range, malformed, unknown id). |
  * | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
  * | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
- * | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path). |
+ * | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path), or this plugin already uses the id (a window or command id). |
  * | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
- * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek). |
+ * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream). |
  * | `backend` | Loading or resolving failed; `message` is the backend's reason. |
  * | `failed` | The operation ran and failed (`media.ready()` load error, a non-zero `tools.run` exit, the system refused). |
  * | `replaced` | Accepted, but another source replaced it before it finished. |
  * | `ended` | {@link Media.ready}: the media already played to the end. |
+ * | `noSource` | {@link MediaCapture.capture}: nothing is playing to capture. |
+ * | `released`, `disposed` | A {@link Snapshot} used after `release()`; an {@link ExportJob} handle disposed while something still waited for it. |
  * | `aborted` | An `AbortSignal` fired (`error.name === "AbortError"`). |
  * | `timeout` | A time limit ran out (`openStream` start-up, `tools.run`, `system.*` after 10 s). |
  * | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
@@ -149,7 +152,8 @@ export interface Scope extends Disposable {
   /**
    * Video processing: this plugin's filter chain, the display layer and the
    * GPU render options. All three need `processing.video` and
-   * `playback.read`.
+   * `playback.read`; the filter chain also needs `events` (without it the
+   * SDK never sees the media become ready and the chain stays `waiting`).
    */
   readonly video: {
     /**
@@ -172,7 +176,11 @@ export interface Scope extends Disposable {
      */
     render(): RenderOptions;
   };
-  /** Audio processing: this plugin's filter chain and delay (`processing.audio`, `playback.read`). */
+  /**
+   * Audio processing: this plugin's filter chain and delay
+   * (`processing.audio`, `playback.read` and `events`, as for
+   * {@link VideoFilter}).
+   */
   readonly audio: {
     /**
      * This plugin's audio filter chain named `id` (unique within the
@@ -361,6 +369,15 @@ export interface CommandState {
 export type Bindable<T> = T | (() => T);
 
 /**
+ * A built-in top-level menu of the player, named in a command path as
+ * `@<id>` (see {@link CommandOptions.path}): Open (打开), Playback (播放),
+ * Subtitles (字幕), Video (视频), Audio (声音), Screen (屏幕), Settings (设置).
+ * The list is `MENU_IDS` in `@vestra-player/sdk/testing`.
+ */
+export type MenuId =
+  "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings";
+
+/**
  * The declaration passed to {@link Commands.add}.
  *
  * Menu order: siblings sort by `order` ascending; a submenu sits where its
@@ -378,9 +395,22 @@ export interface CommandOptions {
   /** Local id, unique within the plugin (the global id is `<manifest id>/<id>`). */
   id: string;
   /**
-   * Menu path including the leaf, 1–8 segments, e.g. `["Video", "Adjust picture…"]`;
+   * Menu path including the leaf, 1–8 segments, e.g. `["@video", "Adjust picture…"]`;
    * one segment is a top-level item. Omit it for a command that is not in the
    * main menu (bindings and panel menus only); `title` is then required.
+   *
+   * Segments are menu titles, matched exactly. The player's own menus have
+   * Chinese titles, so `["Video", "Blur"]` would add a second top-level menu
+   * "Video". To join a built-in menu, start the path with its id, `@` plus a
+   * {@link MenuId}: `@open`, `@playback`, `@subtitles`, `@video`, `@audio`,
+   * `@screen` or `@settings`. Only the first segment is read as an id; an
+   * unknown id, or an id with nothing after it, fails with `invalid`. Needs
+   * player 0.3.0 (set `"minPlayerVersion": "0.3.0"`).
+   *
+   * @example
+   * ```ts
+   * plugin.commands.add({ id: "blur", path: ["@video", "Blur"], run: toggle });
+   * ```
    */
   path?: string[];
   /** Menu label; defaults to the last path segment. */
@@ -476,8 +506,9 @@ export interface Commands {
    * Titles and paths cannot change in place: put changing items (track
    * lists, presets) in a child {@link Scope} and rebuild it.
    *
-   * @throws `invalid` synchronously for a malformed path, order, group or
-   *   binding.
+   * @throws `invalid` synchronously for a malformed path (including an
+   *   unknown `@` menu id), order, group or binding; `conflict` for an id this
+   *   plugin has already declared and not disposed.
    *
    * @example
    * ```ts
@@ -709,7 +740,8 @@ export interface Windows {
    * @param file - Path relative to the package directory, e.g. `"ui/picture.slint"`.
    * @param options - `id` defaults to the file name without extension
    *   (`ui/picture.slint` → `picture`); give one to open the same file
-   *   twice. A duplicate id throws.
+   *   twice. A duplicate id throws `conflict` (SDK 1.3; before, a plain
+   *   `Error` without `code`).
    */
   create(file: string, options?: { id?: string }): Window;
 }
@@ -1486,11 +1518,26 @@ export interface Scrub {
   end(): void;
 }
 
-/** Frames a stream supplies on demand: RGBA pixels and 48 kHz stereo f32 PCM. */
+/**
+ * Frames a stream supplies on demand: RGBA pixels and 48 kHz stereo f32 PCM.
+ *
+ * Limits: the picture is exactly `width × height × 4` bytes and at most
+ * 4 MiB (1280×720 fits, 1920×1080 does not: lower the resolution, the
+ * player scales it). Every sample is finite and within −1…1; clamp your
+ * own mix. A frame that breaks a limit ends the stream with `invalid`
+ * (`openStream` rejects, or {@link Stream.onStop} gets the error).
+ *
+ * The SDK copies the frame once before `frame()` is called again, so you
+ * may reuse the same buffers for every frame.
+ */
 export interface StreamFrame {
-  /** `width × height × 4` bytes of RGBA. */
+  /** `width × height × 4` bytes of RGBA, at most 4 MiB. */
   video: Uint8Array;
-  /** Interleaved stereo samples at 48 kHz for this frame's duration. */
+  /**
+   * Interleaved stereo samples at 48 kHz for this frame's duration (an even
+   * length, any number of frames; the SDK sends them in packets of at most
+   * 4800). Each sample finite, −1…1.
+   */
   audio: Float32Array;
 }
 
@@ -1520,7 +1567,13 @@ export type StreamStartError = PluginError & {
 export interface Stream extends Disposable {
   /** The stream is producing frames. */
   readonly running: boolean;
-  /** `error` is null when another source replaced the stream or it was closed. */
+  /**
+   * The stream stopped for a reason outside this plugin: `error` is null when
+   * another source replaced it or the user closed it, otherwise the failure
+   * (`stream`, `invalid` for a bad frame, …). Not called when the plugin
+   * itself stops it (`stop()`, `dispose()`, deactivation): the promise of
+   * `stop()` is that notification.
+   */
   onStop(listener: (error: PluginError | null) => void): Disposable;
   /**
    * Stop producing and close the stream if it is still the player's source.
@@ -1618,7 +1671,7 @@ export interface PlaybackStats {
  * Capabilities: reading (`state` at start, `refresh`, `stats`, `chapters`,
  * `audioDevices`) needs `playback.read`; live updates and `onChange` need
  * `events`; every control needs `playback.control`; `openStream` needs
- * `producer.av`.
+ * `producer.av` as well as `playback.control`.
  *
  * Controls are conditional (see {@link Conditional}): they fail with
  * `stale` and do nothing when the source changed since the state you saw.
@@ -1655,7 +1708,9 @@ export interface Player {
     options?: { paused?: boolean; signal?: AbortSignal } & Conditional,
   ): Promise<Media>;
   /**
-   * Start a source whose frames this plugin generates (`producer.av`).
+   * Start a source whose frames this plugin generates. Needs `producer.av`
+   * and `playback.control` (the stream becomes the player's source, like
+   * {@link Player.open}).
    *
    * The SDK calls `frame()` on the audio clock and handles prefill,
    * activation, pausing and acknowledgement. Frames travel over a local
@@ -1891,16 +1946,27 @@ export type FilterStatus =
       /** Accepted by the backend. */
       state: "applied";
     }
-  /** Not applied. `retry()` or the next `set()` tries again. */
+  /** Not applied. `retry()`, the next `set()` or a new source tries again. */
   | {
       /** Not applied. */
       state: "failed";
-      /** Why; `backend-uncertain` means the backend blocked the stage. */
+      /**
+       * Why. `backend-uncertain`: the backend blocked the stage.
+       * `unsupported`: the source is a generated stream
+       * ({@link Player.openStream}), whose frames and samples do not pass
+       * through the player's filters; the chain is applied again when the
+       * source changes to media the player decodes.
+       */
       error: PluginError;
     };
 
 interface Filter<T> extends Disposable {
-  /** Desired chain; last write wins. An empty chain removes this plugin's effect. */
+  /**
+   * Desired chain; last write wins. An empty chain (video `[]`; audio
+   * `nodes: []` with no delay) removes this chain, leaving other chains
+   * alone; nothing is sent if it was never applied. Players before 0.3.0
+   * refuse an empty video chain with `invalid`.
+   */
   set(value: T): void;
   /** Current status. */
   readonly status: FilterStatus;
@@ -1912,8 +1978,9 @@ interface Filter<T> extends Disposable {
 
 /**
  * This plugin's own video processing chain, re-applied for every new source.
- * From `plugin.video.filter(id)`; needs `processing.video` and
- * `playback.read`.
+ * From `plugin.video.filter(id)`; needs `processing.video`,
+ * `playback.read` and `events`. Without `events` the SDK does not see the
+ * source change: a value set before the media is ready stays `waiting`.
  *
  * Members: `set(nodes)` (desired chain, last write wins, `[]` withdraws
  * this plugin's effect), `status` ({@link FilterStatus}),
@@ -1921,7 +1988,9 @@ interface Filter<T> extends Disposable {
  * `dispose()` (withdraws the chain if it was applied).
  *
  * Each plugin's chain is joined with the others' in a stable order; at most
- * 64 nodes across all plugins. Calling `set` on every slider move is fine:
+ * 64 nodes across all plugins. A generated stream ({@link Player.openStream})
+ * bypasses the filters: while one plays, a non-empty chain is `failed` with
+ * `unsupported`, and it is applied again once a decoded file or URL plays. Calling `set` on every slider move is fine:
  * one request is in flight at a time and only the newest value is sent.
  * Values out of range fail with `invalid` (see {@link VideoNode}). The
  * same chain applies to processed snapshots and exports.
@@ -1936,8 +2005,9 @@ interface Filter<T> extends Disposable {
 export type VideoFilter = Filter<VideoNode[]>;
 /**
  * This plugin's own audio chain plus its audio delay in 10 ms steps.
- * From `plugin.audio.filter(id)`; needs `processing.audio` and
- * `playback.read`. Same members and rules as {@link VideoFilter}.
+ * From `plugin.audio.filter(id)`; needs `processing.audio`,
+ * `playback.read` and `events`. Same members and rules as
+ * {@link VideoFilter}.
  *
  * `delayMs` is −10000–10000 in multiples of 10; the positive and the
  * negative delays of all plugins each add up to at most 10000.
@@ -2305,7 +2375,7 @@ export interface MediaCapture {
   /**
    * Freeze the current source (and optionally this plugin set's effects)
    * as an input for exports. Fails `stale` when the source changed since
-   * `ifCurrent`; `unsupported` for an external ASS track with subtitles.
+   * `ifCurrent`; `unsupported` for an external ASS track with subtitles; `noSource` when nothing is playing.
    */
   capture(options?: CaptureOptions): Promise<Snapshot>;
 }

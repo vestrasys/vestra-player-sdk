@@ -16,7 +16,10 @@
  *   (`queued` → `running` → `completed`);
  * - video and audio processing nodes are validated with the player's own
  *   value ranges (an out-of-range `filter.set` ends in `failed` with
- *   `invalid`), and the command limits ({@link COMMAND_LIMITS}) are enforced.
+ *   `invalid`), an empty chain removes the plugin's chain, a chain on a
+ *   generated stream fails `unsupported` (the player's own conformance
+ *   cases check all three), and the command limits ({@link COMMAND_LIMITS})
+ *   and menu ids ({@link MENU_IDS}) are enforced.
  *
  * Typical workflow: start the plugin with {@link startPlugin} (it reads the
  * plugin's `manifest.json`), drive it the way the user or another plugin
@@ -71,7 +74,7 @@ import type {
   Transport,
   WireSystemInfo,
 } from "../wire.ts";
-import { COMMAND_LIMITS } from "../commands.ts";
+import { COMMAND_LIMITS, MENU_IDS } from "../commands.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
@@ -90,7 +93,7 @@ import type { Plugin } from "./types.ts";
 /** Throw one of these from `host.handle(...)` to simulate a definite refusal. */
 export { HostError };
 /** The player's command caps, which the test host enforces as well. */
-export { COMMAND_LIMITS };
+export { COMMAND_LIMITS, MENU_IDS };
 
 type Handler = (params: Record<string, Json>) => unknown;
 type Call = { method: string; params: Record<string, Json> };
@@ -880,7 +883,7 @@ export class TestHost implements Transport {
     configurationRevision: 0,
     /** Set a stage here to simulate a blocked backend (`backend-uncertain`). */
     backendUncertain: {} as Partial<Record<"video" | "audio", string>>,
-    /** Applied chains by resource id. */
+    /** Applied chains by resource id; an empty chain removes its entry, as in the player. */
     resources: new Map<
       string,
       {
@@ -2076,6 +2079,18 @@ export class TestHost implements Transport {
       void this.subscriptions.delete(String(p.event)),
     "commands.register": (p) => {
       const id = String(p.id);
+      // The player's built-in menu ids (MENU_IDS) in the first path segment.
+      const path = ((p.declaration as { path?: string[] })?.path ?? []).map(
+        String,
+      );
+      const menu = path[0]?.startsWith("@") ? path[0].slice(1) : null;
+      if (menu !== null && !(MENU_IDS as readonly string[]).includes(menu))
+        throw new HostError("invalid", `unknown menu id @${menu}`);
+      if (menu !== null && path.length < 2)
+        throw new HostError(
+          "invalid",
+          `menu id @${menu} needs an item after it`,
+        );
       if (this.commands.has(id))
         throw new HostError("command", "owner/localId already registered");
       // The player's caps (COMMAND_LIMITS): the total counts the core commands too.
@@ -2697,6 +2712,20 @@ export class TestHost implements Transport {
           status: "failed",
           error: { code: "unavailable", message: "source must be ready" },
         });
+      // An empty chain removes the resource (audio: with no delay either).
+      const removal =
+        ((p.nodes ?? []) as Json[]).length === 0 &&
+        (stage === "video" || offset === 0);
+      // A generated stream's frames never reach the player's filters.
+      if (this.source.kind === "producer" && !removal)
+        return finish({
+          status: "failed",
+          error: {
+            code: "unsupported",
+            message:
+              "generated streams (openStream) do not pass through the player's filters; the chain applies to the next media the player decodes",
+          },
+        });
       if (p.expectedGeneration !== this.source.stamp.generation)
         return finish({
           status: "failed",
@@ -2708,12 +2737,14 @@ export class TestHost implements Transport {
           status: "failed",
           error: { code: "stale", message: "resource revision must increase" },
         });
-      this.processing.resources.set(key, {
-        stage,
-        revision: Number(p.revision),
-        nodes: p.nodes!,
-        ...(stage === "audio" ? { offsetMs: Number(p.offsetMs ?? 0) } : {}),
-      });
+      if (removal) this.processing.resources.delete(key);
+      else
+        this.processing.resources.set(key, {
+          stage,
+          revision: Number(p.revision),
+          nodes: p.nodes!,
+          ...(stage === "audio" ? { offsetMs: Number(p.offsetMs ?? 0) } : {}),
+        });
       this.processing.configurationRevision++;
       return finish({
         status: "completed",

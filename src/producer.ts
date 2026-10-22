@@ -154,7 +154,17 @@ export function producerClient(transport: Transport) {
         if (inFlight)
           throw new Error("producer transport busy: await the previous packet");
       }
-      function write(kind: 1 | 2, time: PacketTime, payload: Buffer) {
+      /**
+       * One packet in one buffer: the 32-byte header, then `bytes` of payload
+       * that `fill` writes at offset 32. The payload is copied only there, so
+       * the caller may reuse its own buffers once this returns.
+       */
+      function write(
+        kind: 1 | 2,
+        time: PacketTime,
+        bytes: number,
+        fill: (packet: Buffer) => void,
+      ) {
         writable();
         integer(time.epoch, "epoch", 1);
         integer(time.sampleTime, "sampleTime");
@@ -163,16 +173,18 @@ export function producerClient(transport: Transport) {
           return Promise.reject(
             failure ?? new Error("producer transport closed"),
           );
-        const header = Buffer.alloc(32);
-        header.write("VAV1", 0, "ascii");
-        header[4] = kind;
-        header.writeBigUInt64LE(BigInt(time.epoch), 8);
-        header.writeBigUInt64LE(BigInt(time.sampleTime), 16);
-        header.writeUInt32LE(payload.length, 24);
-        header.writeUInt32LE(time.sequence, 28);
+        const packet = Buffer.allocUnsafe(32 + bytes);
+        packet.fill(0, 0, 32);
+        packet.write("VAV1", 0, "ascii");
+        packet[4] = kind;
+        packet.writeBigUInt64LE(BigInt(time.epoch), 8);
+        packet.writeBigUInt64LE(BigInt(time.sampleTime), 16);
+        packet.writeUInt32LE(bytes, 24);
+        packet.writeUInt32LE(time.sequence, 28);
+        fill(packet);
         inFlight = true;
         return new Promise<void>((resolve, reject) => {
-          socket.write(Buffer.concat([header, payload]), (error) => {
+          socket.write(packet, (error) => {
             inFlight = false;
             if (error) reject(error);
             else resolve();
@@ -189,20 +201,21 @@ export function producerClient(transport: Transport) {
           )
             throw new TypeError("audio must contain 1..4800 stereo frames");
           integer(time.sampleTime + samples.length / 2, "audio end sample");
-          const payload = Buffer.alloc(samples.length * 4);
-          for (let i = 0; i < samples.length; i++) {
-            const value = samples[i]!;
+          for (const value of samples)
             if (!Number.isFinite(value) || Math.abs(value) > 1)
               throw new TypeError("PCM sample is not finite normalized f32");
-            payload.writeFloatLE(value, i * 4);
-          }
-          return write(1, time, payload);
+          return write(1, time, samples.length * 4, (packet) => {
+            for (let i = 0; i < samples.length; i++)
+              packet.writeFloatLE(samples[i]!, 32 + i * 4);
+          });
         },
         video(time: PacketTime, rgba: Uint8Array) {
           writable();
           if (rgba.byteLength === 0 || rgba.byteLength > 4 * 1024 * 1024)
             throw new TypeError("RGBA frame exceeds the finite payload limit");
-          return write(2, time, Buffer.from(rgba));
+          return write(2, time, rgba.byteLength, (packet) =>
+            packet.set(rgba, 32),
+          );
         },
         close() {
           closed = true;
