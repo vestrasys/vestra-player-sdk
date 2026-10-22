@@ -21,6 +21,16 @@ export interface Frames {
  * SDK pulls passes through `frames`. `intercept` may delay or rewrite host
  * requests (behind `next()` the TestHost answers as usual).
  */
+/**
+ * A test host for streams. Windows has no Unix socket files, so the frame
+ * connection there is loopback TCP with a token, as in the player.
+ */
+export function streamHost() {
+  const host = new TestHost();
+  if (process.platform === "win32") host.producerTransport = "tcp";
+  return host;
+}
+
 export async function start(
   intercept?: (
     method: string,
@@ -28,7 +38,7 @@ export async function start(
     next: () => Promise<unknown>,
   ) => Promise<unknown>,
 ) {
-  const host = new TestHost();
+  const host = streamHost();
   if (intercept) {
     const request = host.request.bind(host);
     host.request = <T>(method: string, params: Json = {}) =>

@@ -8,7 +8,7 @@ import { startPlugin } from "@vestra-player/sdk/testing";
 import type { StreamStartError } from "@vestra-player/sdk";
 import { HEIGHT, WIDTH, positionOf } from "../controls.ts";
 import activate, { startFailure } from "../main.ts";
-import { pixel, rms, start, until } from "./harness.ts";
+import { pixel, rms, start, streamHost, until } from "./harness.ts";
 
 // #region start-test
 test("Open ▸ Signal Generator… shows the window and starts a 640×360 stream", async () => {
@@ -256,14 +256,22 @@ test("settings are saved and restored", async () => {
   const dataDirectory = await mkdtemp(join(tmpdir(), "signal-generator-"));
   const directory = new URL("..", import.meta.url);
   try {
-    const first = await startPlugin(activate, { directory, dataDirectory });
+    const first = await startPlugin(activate, {
+      directory,
+      dataDirectory,
+      host: streamHost(),
+    });
     await first.host.command("open").run();
     first.host.window("signal-generator").emit("waveformChosen", 1);
     first.host.window("signal-generator").emit("levelMoved", -30);
     await first.host.settle();
     await first.stop(); // stopping flushes the pending save
 
-    const again = await startPlugin(activate, { directory, dataDirectory });
+    const again = await startPlugin(activate, {
+      directory,
+      dataDirectory,
+      host: streamHost(),
+    });
     await again.host.command("open").run();
     const props = again.host.window("signal-generator").props;
     assert.equal(props["waveform"], 1);
