@@ -14,8 +14,6 @@
   <a href="https://github.com/vestrasys/vestra-player-sdk/tree/main/examples">Examples</a> ·
   <a href="https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md">Changelog</a>
 </p>
-<p align="center"><img src="https://raw.githubusercontent.com/vestrasys/vestra-player-sdk/main/.github/assets/screenshot.png" width="720" alt="An example plugin's window in Vestra Player"></p>
-
 ## Features
 
 - **One typed API** (`vestra/1`) for commands and menus, windows, panels, settings pages, on-screen messages, playback state and control, video and audio filters, and generated streams.
@@ -54,15 +52,17 @@ Run `npx vestra-plugin pack` to check and package it, or start the player with `
 
 ## Examples
 
-| Example | Shows |
+Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples). The [examples page](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html) shows each one with a screenshot and a step-by-step walkthrough.
+
+| Example | What you learn |
 | --- | --- |
-| [hello](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello) | The Quick start: one menu command and an on-screen message. |
-| [blur](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur) | Real-time Gaussian blur with a menu, a parameter window, a shortcut and remembered settings. |
-| [signal-generator](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator) | Generates its own video and audio (test patterns, oscilloscope, tones) with live controls and an audio filter. |
-| [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) | A tool window that remembers the playback position and jumps back to it. |
-| [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) | A sidebar panel with its own right-click menu and panel-only keys. |
-| [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) | Radio menu items, repeating key bindings, the shared sidebar and the theme widgets. |
-| [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown) | A Markdown document window with images, and the manifest's display fields. |
+| [hello](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello) | The smallest plugin: a manifest, one menu command, an on-screen message. |
+| [blur](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur) | Video filters, a tool window with live controls, a shortcut, a settings page, remembered state. |
+| [signal-generator](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator) | Generating video and audio frames yourself, phase-continuous audio, audio filters, stream lifecycle. |
+| [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) | Reading and controlling playback from a tool window. |
+| [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) | A sidebar panel with its own context menu, panel-only keys and next/previous. |
+| [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) | Menus (radio items, groups, changing titles), repeating keys, the shared sidebar, theme widgets. |
+| [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown) | The Markdown view with local and remote images; the manifest's display fields. |
 
 ## Command line
 
