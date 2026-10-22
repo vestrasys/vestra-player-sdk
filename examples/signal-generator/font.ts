@@ -64,7 +64,8 @@ const GLYPHS: Record<string, readonly number[]> = {
 
 /** The same table indexed by character code, so drawing never builds strings. */
 const FONT: (readonly number[] | undefined)[] = [];
-for (const [char, rows] of Object.entries(GLYPHS)) FONT[char.charCodeAt(0)] = rows;
+for (const [char, rows] of Object.entries(GLYPHS))
+  FONT[char.charCodeAt(0)] = rows;
 // #endregion glyphs
 
 /** Horizontal distance from one character to the next: glyph plus one column. */
@@ -130,7 +131,8 @@ export function drawNumber(
 ): number {
   let n = Math.max(0, Math.floor(value));
   let count = 1;
-  for (let rest = Math.floor(n / 10); rest > 0; rest = Math.floor(rest / 10)) count++;
+  for (let rest = Math.floor(n / 10); rest > 0; rest = Math.floor(rest / 10))
+    count++;
   count = Math.max(count, digits);
   // Right to left: the last digit is n % 10, then n / 10 % 10, …
   for (let i = count - 1; i >= 0; i--) {

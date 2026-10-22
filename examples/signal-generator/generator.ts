@@ -83,7 +83,12 @@ export class SignalGenerator {
     const audio = samples === this.#clock.min ? this.#short : this.#long;
     // Audio first: the oscilloscope draws the samples of this very frame.
     this.#oscillator.render(audio, samples, this.controls);
-    this.#renderer.draw(index, audio, this.controls, this.#oscillator.frequency);
+    this.#renderer.draw(
+      index,
+      audio,
+      this.controls,
+      this.#oscillator.frequency,
+    );
     this.#out.audio = audio;
     return this.#out;
   }
