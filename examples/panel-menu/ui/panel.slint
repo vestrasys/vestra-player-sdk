@@ -1,0 +1,36 @@
+import { Theme } from "@vestra/theme.slint";
+
+export global ListBridge {
+    in property <[string]> rows;
+    in property <int> selected;
+    callback select(int);
+    callback context-menu(float, float);
+}
+
+export component ListPanel inherits Rectangle {
+    background: Theme.bg-list;
+    min-width: 200px;
+    VerticalLayout {
+        for row[index] in ListBridge.rows: Rectangle {
+            height: 20px;
+            background: index == ListBridge.selected ? #2b2b2b : transparent;
+            Text {
+                x: 6px;
+                text: (index + 1) + ". " + row;
+                color: index == ListBridge.selected ? Theme.text : Theme.text-list;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+            TouchArea {
+                pointer-event(event) => {
+                    if event.kind != PointerEventKind.down { return; }
+                    ListBridge.select(index);
+                    if event.button == PointerEventButton.right {
+                        ListBridge.context-menu((self.absolute-position.x + self.mouse-x) / 1px,
+                            (self.absolute-position.y + self.mouse-y) / 1px);
+                    }
+                }
+            }
+        }
+    }
+}

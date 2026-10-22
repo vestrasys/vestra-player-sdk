@@ -75,6 +75,9 @@ export interface Disposable {
  * | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
  * | `cleanup` | {@link PackageTrial.stop} could not confirm cleanup; call it again. |
  * | `limit` | A player-wide limit was reached (for example the number of commands). |
+ * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`) or another `apiVersion`. |
+ * | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile); `message` has the diagnostics. |
+ * | `host` | Any other failure inside the player; `message` is the player's reason. |
  * | `disabled` | The plugin is being stopped; pending requests fail with it. |
  * | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
  *
