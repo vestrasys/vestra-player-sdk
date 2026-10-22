@@ -9,8 +9,8 @@ Complete plugins in the [`examples/`](https://github.com/vestrasys/vestra-player
 | Example | Shows | Walkthrough |
 | --- | --- | --- |
 | [hello](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello) | One menu command and an on-screen message: the Quick start, runnable. | [Hello](hello.md) |
-| [blur](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur) | Real-time Gaussian blur with a menu, a parameter window, a shortcut and remembered settings. | Blur |
-| [signal-generator](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator) | A plugin that generates its own video and audio (test patterns, oscilloscope, tones) with live controls and an audio filter. | Signal generator |
+| [blur](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur) | Real-time Gaussian blur with a menu, a parameter window, a shortcut and remembered settings. | [Blur](blur.md) |
+| [signal-generator](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator) | A plugin that generates its own video and audio (test patterns, oscilloscope, tones) with live controls and an audio filter. | [Signal generator](signal-generator.md) |
 | [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) | A tool window that remembers the playback position and jumps back to it. | |
 | [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) | A sidebar panel with its own right-click menu, panel-only keys and a next/previous sequence. | |
 | [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) | Menus (radio items, groups, changing titles), repeating key bindings, on-screen messages, the shared sidebar, theme widgets. | |

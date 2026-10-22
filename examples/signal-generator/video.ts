@@ -17,7 +17,8 @@ import type { Surface } from "./font.ts";
  * number, so a pixel is the number 0xAABBGGRR.
  */
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
-if (!LITTLE_ENDIAN) throw new Error("signal-generator expects a little-endian CPU");
+if (!LITTLE_ENDIAN)
+  throw new Error("signal-generator expects a little-endian CPU");
 
 /** An opaque pixel from 0–255 components. `>>> 0` keeps it an unsigned 32-bit number. */
 export const rgb = (r: number, g: number, b: number) =>
@@ -36,18 +37,34 @@ const WHITE = rgb(235, 235, 235);
  */
 function colourBars(width: number, height: number): Uint32Array {
   const top = [
-    rgb(191, 191, 191), rgb(191, 191, 0), rgb(0, 191, 191), rgb(0, 191, 0),
-    rgb(191, 0, 191), rgb(191, 0, 0), rgb(0, 0, 191),
+    rgb(191, 191, 191),
+    rgb(191, 191, 0),
+    rgb(0, 191, 191),
+    rgb(0, 191, 0),
+    rgb(191, 0, 191),
+    rgb(191, 0, 0),
+    rgb(0, 0, 191),
   ];
   const middle = [
-    rgb(0, 0, 191), BLACK, rgb(191, 0, 191), BLACK,
-    rgb(0, 191, 191), BLACK, rgb(191, 191, 191),
+    rgb(0, 0, 191),
+    BLACK,
+    rgb(191, 0, 191),
+    BLACK,
+    rgb(0, 191, 191),
+    BLACK,
+    rgb(191, 191, 191),
   ];
   // Bottom row in 1/12 bar widths: four blocks of 5/4 bar, three PLUGE
   // steps of 1/3 bar, then one bar of black (84 twelfths = 7 bars).
   const bottom: [number, number][] = [
-    [15, rgb(0, 33, 76)], [15, WHITE], [15, rgb(50, 0, 106)], [15, BLACK],
-    [4, rgb(7, 7, 7)], [4, BLACK], [4, rgb(25, 25, 25)], [12, BLACK],
+    [15, rgb(0, 33, 76)],
+    [15, WHITE],
+    [15, rgb(50, 0, 106)],
+    [15, BLACK],
+    [4, rgb(7, 7, 7)],
+    [4, BLACK],
+    [4, rgb(25, 25, 25)],
+    [12, BLACK],
   ];
   const bars = new Uint32Array(width * height);
   const topEnd = Math.round((height * 2) / 3);
@@ -103,7 +120,12 @@ export class Renderer implements Surface {
 
   // #region draw
   /** Draw frame number `frame`; `audio` is this frame's interleaved stereo audio. */
-  draw(frame: number, audio: Float32Array, controls: Controls, hz: number): void {
+  draw(
+    frame: number,
+    audio: Float32Array,
+    controls: Controls,
+    hz: number,
+  ): void {
     switch (controls.pattern) {
       case "bars":
         this.data.set(this.#bars); // one memcpy: by far the cheapest pattern
@@ -154,7 +176,8 @@ export class Renderer implements Surface {
     const { data, width, height } = this;
     data.fill(SCOPE_BG);
     // Graticule: 10 divisions across, centre lines brighter.
-    for (let i = 1; i < 10; i++) this.#column(Math.floor((i * width) / 10), 0, height - 1, SCOPE_GRID);
+    for (let i = 1; i < 10; i++)
+      this.#column(Math.floor((i * width) / 10), 0, height - 1, SCOPE_GRID);
     for (let eighth = 1; eighth < 8; eighth++) {
       const row = Math.floor((eighth * height) / 8) * width;
       // Rows 2/8 and 6/8 are the zero lines of the two traces.
@@ -184,7 +207,14 @@ export class Renderer implements Surface {
    * the lowest and highest sample that falls into it, which connects the
    * points and still shows a 5 kHz tone as a filled band.
    */
-  #trace(audio: Float32Array, channel: number, start: number, span: number, middle: number, color: number) {
+  #trace(
+    audio: Float32Array,
+    channel: number,
+    start: number,
+    span: number,
+    middle: number,
+    color: number,
+  ) {
     const { width, height } = this;
     const amplitude = height / 4 - 6;
     for (let x = 0; x < width; x++) {
@@ -197,7 +227,12 @@ export class Renderer implements Surface {
         if (value < low) low = value;
         if (value > high) high = value;
       }
-      this.#column(x, Math.round(middle - high * amplitude), Math.round(middle - low * amplitude), color);
+      this.#column(
+        x,
+        Math.round(middle - high * amplitude),
+        Math.round(middle - low * amplitude),
+        color,
+      );
     }
   }
   // #endregion scope
@@ -205,7 +240,8 @@ export class Renderer implements Surface {
   /** A vertical line from row `top` to row `bottom` (inclusive). */
   #column(x: number, top: number, bottom: number, color: number) {
     const { data, width, height } = this;
-    for (let y = Math.max(0, top); y <= Math.min(height - 1, bottom); y++) data[y * width + x] = color;
+    for (let y = Math.max(0, top); y <= Math.min(height - 1, bottom); y++)
+      data[y * width + x] = color;
   }
 
   /** Halve the brightness of a rectangle so text on it stays readable over any pattern. */
@@ -246,7 +282,15 @@ export class Renderer implements Surface {
     this.#shade(8, top, width - 8, height - 8);
     x = drawNumber(this, Math.floor(seconds / 3600), 2, 16, top + 4, 3, white);
     x = drawText(this, ":", x, top + 4, 3, white);
-    x = drawNumber(this, Math.floor(seconds / 60) % 60, 2, x, top + 4, 3, white);
+    x = drawNumber(
+      this,
+      Math.floor(seconds / 60) % 60,
+      2,
+      x,
+      top + 4,
+      3,
+      white,
+    );
     x = drawText(this, ":", x, top + 4, 3, white);
     x = drawNumber(this, seconds % 60, 2, x, top + 4, 3, white);
     x = drawText(this, ":", x, top + 4, 3, white);

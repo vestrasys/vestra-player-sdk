@@ -23,7 +23,11 @@ export function nodesFor(choice: FilterChoice): AudioNode[] {
 
 // #region status
 /** One line for the window: what the player did with the chain. */
-export function describeFilter(choice: FilterChoice, status: FilterStatus, state: PlayerState): string {
+export function describeFilter(
+  choice: FilterChoice,
+  status: FilterStatus,
+  state: PlayerState,
+): string {
   if (choice === "off") return "Off";
   switch (status.state) {
     case "waiting":

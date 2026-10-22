@@ -100,6 +100,11 @@ export const positionOf = (hz: number) =>
 // #endregion slider
 
 /** Clamp a window value into its range; NaN (a broken callback argument) keeps `fallback`. */
-export function bounded(value: number, min: number, max: number, fallback: number) {
+export function bounded(
+  value: number,
+  min: number,
+  max: number,
+  fallback: number,
+) {
   return Number.isFinite(value) ? clamp(value, min, max) : fallback;
 }

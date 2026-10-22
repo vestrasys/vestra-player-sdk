@@ -19,7 +19,7 @@ The complete, tested source is in [`examples/signal-generator`](https://github.c
 - A Stop button, and clear messages for every way the stream can fail or end.
 - Tests for all of it on the SDK's test host, with no player and no audio device.
 
-You should know the basics from [Getting started](../getting-started.md): the manifest, `activate`, commands and windows.
+You should know the basics from [Getting started](../tutorials/getting-started.md): the manifest, `activate`, commands and windows.
 
 ## Concepts
 
