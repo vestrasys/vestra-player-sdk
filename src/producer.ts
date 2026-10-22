@@ -174,7 +174,8 @@ export function producerClient(transport: Transport) {
         return new Promise<void>((resolve, reject) => {
           socket.write(Buffer.concat([header, payload]), (error) => {
             inFlight = false;
-            error ? reject(error) : resolve();
+            if (error) reject(error);
+            else resolve();
           });
         });
       }

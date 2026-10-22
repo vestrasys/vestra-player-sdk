@@ -9,6 +9,16 @@ const start = (
   host?: TestHost,
 ) => startPlugin(activate, { capabilities, ...(host ? { host } : {}) });
 
+/**
+ * A host for `openStream` tests. Windows has no Unix socket files, so the
+ * frame connection there is loopback TCP, as in the player.
+ */
+function streamHost() {
+  const host = new TestHost();
+  if (process.platform === "win32") host.producerTransport = "tcp";
+  return host;
+}
+
 test("state is read before activation and older events are dropped", async () => {
   const host = new TestHost();
   host.source = {
@@ -185,6 +195,7 @@ test("aborting ready() closes the media", async () => {
 test("streams preroll, activate through the start control and stop cleanly", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
     capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
   });
   let frames = 0;
   const stream = await plugin.player.openStream({
@@ -217,6 +228,7 @@ test("streams preroll, activate through the start control and stop cleanly", asy
 async function slowCloseStream() {
   const started = await startPlugin(() => {}, {
     capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
   });
   const { host, plugin } = started;
   const slow = async (params: Record<string, Json>): Promise<unknown> => {
@@ -313,6 +325,7 @@ test("an accepted open that fails on its own keeps the backend code", async () =
 test("aborting a stream before the host answered its selection still closes it", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
     capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
   });
   let release = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
@@ -348,6 +361,7 @@ test("aborting a stream before the host answered its selection still closes it",
 test("stream start-up timeouts name their stage", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
     capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
   });
   // The first buffers never arrive.
   host.handle("producer.state", () => ({

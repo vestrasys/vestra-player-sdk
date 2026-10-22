@@ -40,9 +40,12 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "tsc -p tsconfig.check.json",
+    "lint": "oxlint --deny-warnings",
     "docs": "typedoc",
-    "format": "prettier --write \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json",
-    "format:check": "prettier --check \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json",
+    "format": "prettier --write \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json",
+    "format:check": "prettier --check \"{src,test,bin,scripts}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json",
+    "pack:check": "node scripts/check-pack.mjs",
+    "pack:smoke": "node scripts/smoke-pack.mjs",
     "prepare": "node scripts/build.mjs",
     "test": "node --test \"test/**/*.test.ts\""
   },
@@ -51,7 +54,10 @@
     "typescript": "^5.9.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "oxlint": "1.89.0",
     "prettier": "^3.9.10",
+    "publint": "0.3.25",
     "typedoc": "0.28.20"
   },
   "publishConfig": {

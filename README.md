@@ -70,4 +70,4 @@ Minor releases only add backwards-compatible API. A breaking change to the plugi
 
 Building, testing, releasing and keeping the Slint copy in sync with the player: [CONTRIBUTING.md](https://github.com/vestrasys/vestra-player-sdk/blob/main/CONTRIBUTING.md).
 
-The documentation site is built by `npm run docs` (TypeDoc) and deployed by `.github/workflows/docs.yml` on pushes to `main` and on `v*` tags. One-time setup: in the repository's **Settings → Pages**, set **Source** to **GitHub Actions**. GitHub Pages is not available for private repositories on the free organization plan: if the deploy job fails while the repository is private, make the repository public or upgrade the plan.
+The documentation site is built by `npm run docs` (TypeDoc) and deployed to GitHub Pages by `.github/workflows/main.yml` on every push to `main`; CI and releases are described in CONTRIBUTING.md.

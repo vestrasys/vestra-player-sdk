@@ -1,0 +1,70 @@
+# Build dist/, pack the tarball and check it the way npm and consumers see it.
+# Uploads `dist` (for the test jobs) and `package` (the .tgz a release
+# publishes). Called by ci.yml, main.yml and release.yml.
+name: Build and package checks
+
+on:
+  workflow_call:
+    inputs:
+      cache:
+        description: Use the npm cache (off for releases).
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  build:
+    name: build · pack · publint · attw · smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: ${{ inputs.cache && 'npm' || '' }}
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: npm pack
+        id: pack
+        run: |
+          mkdir -p "$RUNNER_TEMP/package"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/package"
+          tgz="$(ls "$RUNNER_TEMP"/package/*.tgz)"
+          echo "tgz=$tgz" >> "$GITHUB_OUTPUT"
+          sha256sum "$tgz"
+      - name: Package contents (files allow list, exports and bin present)
+        run: npm run pack:check -- "$TGZ"
+        env:
+          TGZ: ${{ steps.pack.outputs.tgz }}
+      - name: publint
+        run: npx --no-install publint run "$TGZ" --strict
+        env:
+          TGZ: ${{ steps.pack.outputs.tgz }}
+      # ESM-only package (engines: node >= 22.18): node10 and require()
+      # resolution are not supported targets.
+      - name: Are the types wrong
+        run: npx --no-install attw "$TGZ" --profile esm-only
+        env:
+          TGZ: ${{ steps.pack.outputs.tgz }}
+      - name: Install smoke test (fresh project, tsc + vestra-plugin check/test)
+        run: npm run pack:smoke -- "$TGZ"
+        env:
+          TGZ: ${{ steps.pack.outputs.tgz }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 3
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: ${{ steps.pack.outputs.tgz }}
+          if-no-files-found: error
+          retention-days: 7
