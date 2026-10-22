@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { HostError, startPlugin } from "@vestra-player/sdk/testing";
+import { startPlugin } from "@vestra-player/sdk/testing";
 import type { StreamStartError } from "@vestra-player/sdk";
 import { HEIGHT, WIDTH, positionOf } from "../controls.ts";
 import activate, { startFailure } from "../main.ts";
@@ -15,7 +15,7 @@ test("Open ▸ Signal Generator… shows the window and starts a 640×360 stream
   const { host, stop, frames, window, props } = await start();
   try {
     assert.deepEqual(host.command("open").declaration.path, [
-      "Open",
+      "@open",
       "Signal Generator…",
     ]);
     await host.command("open").run();
@@ -96,20 +96,11 @@ test("window controls reach the generator on the next frame", async () => {
 // #endregion controls-test
 
 // #region filter-test
-test("the player filter waits during the stream and applies to decoded media", async () => {
+test("the player filter is not applied to the stream, then applies to decoded media", async () => {
   // The player runs plugin audio chains only on media it decodes; a generated
-  // stream's PCM goes straight to the device. The TestHost would accept the
-  // chain for a stream too, so answer the way the player does.
-  const { host, stop, window, props } = await start(
-    async (method, params, next) => {
-      if (method === "processing.replace" && host.source.kind === "producer")
-        throw new HostError(
-          "unavailable",
-          "current load processing is not yet confirmed",
-        );
-      return next();
-    },
-  );
+  // stream's PCM goes straight to the device, so the chain fails with
+  // `unsupported` (the TestHost answers like the player).
+  const { host, stop, window, props } = await start();
   try {
     await host.command("open").run();
     await until(() => props()["running"] === true, "running");
@@ -117,9 +108,9 @@ test("the player filter waits during the stream and applies to decoded media", a
     await until(
       () =>
         String(props()["filter-status"]).startsWith(
-          "Waiting: applies to media",
+          "Not applied to this stream",
         ),
-      "waiting",
+      "unsupported",
     );
 
     host.openElsewhere("/media/song.flac"); // the user plays a file
@@ -143,9 +134,7 @@ test("the player filter waits during the stream and applies to decoded media", a
 
     window().emit("filterChosen", 0);
     await until(
-      () =>
-        JSON.stringify(host.processing.resources.get("audio:tone")?.nodes) ===
-        "[]",
+      () => !host.processing.resources.has("audio:tone"),
       "withdrawn",
     );
     assert.equal(props()["filter-status"], "Off");

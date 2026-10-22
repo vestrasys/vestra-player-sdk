@@ -27,6 +27,32 @@ export const COMMAND_LIMITS = {
   /** Commands of every plugin plus the player's own, together (1024). */
   total: 1024,
 } as const;
+/**
+ * The player's built-in top-level menus, by id. Write `@<id>` as the first
+ * segment of a command path (`["@video", "Blur"]`, see `CommandOptions.path`) to put a
+ * command into that menu whatever language the player's menus are in. The
+ * player stores the menu's title (视频 today); later segments are titles.
+ * Needs player 0.3.0 (`"minPlayerVersion": "0.3.0"`); older players show
+ * `@video` as a menu of its own. The player's tests check that this list
+ * agrees with the player's.
+ *
+ * @example
+ * ```ts
+ * import { MENU_IDS } from "@vestra-player/sdk/testing";
+ *
+ * assert.ok(MENU_IDS.includes("video"));
+ * ```
+ */
+export const MENU_IDS = [
+  "open",
+  "playback",
+  "subtitles",
+  "video",
+  "audio",
+  "screen",
+  "settings",
+] as const;
+
 export type CommandState = {
   enabled: boolean;
   checked: boolean | null;

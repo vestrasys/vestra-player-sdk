@@ -1,12 +1,23 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
-Documentation only; no API change.
+Fixes and additions found by the blur and signal-generator examples (player 0.3.0). Nothing existing changed meaning; `apiVersion` stays `vestra/1`. Plugins that use the additions set `"minPlayerVersion": "0.3.0"`.
+
+- **Menu ids.** A command path may start with a built-in menu's id instead of its title: `["@video", "Blur"]` joins the player's Video menu (视频) whatever language its menus are in. Ids: `@open`, `@playback`, `@subtitles`, `@video`, `@audio`, `@screen`, `@settings`; type `MenuId`, constant `MENU_IDS` (from `@vestra-player/sdk/testing`). An unknown id, or an id with no item after it, throws `invalid`. Older players show `@video` as a menu of its own.
+- **`Theme.danger`**: the colour for errors and destructive actions (`slint/vestra/theme.slint`, `slint/palette.slint`, read-only copies of the player's).
+- **Empty video chain.** `video.filter(id).set([])` removes this plugin's chain in player 0.3.0 (older players refused it with `invalid`, which left the effect on screen). `TestHost` removes the resource for an empty chain (audio: with no delay) instead of keeping an empty one, as the player always did for audio: a test that reads `host.processing.resources.get(id)?.nodes` after turning a chain off now gets `undefined` (write `?.nodes ?? []`, `?.offsetMs ?? 0`).
+- **Filters on generated streams.** While a stream from `openStream` plays, a non-empty chain is `failed` with `unsupported` (player 0.3.0) and is applied again when decoded media plays; before, it stayed `waiting` and the SDK asked the player every 250 ms. The SDK also asks the player again when the source becomes a stream instead of reporting a kept chain as `applied`. `TestHost` answers like the player.
+- **Generated frames.** A frame whose picture is not `width × height × 4` bytes, or whose samples are not finite within ±1, ends the stream with code `invalid` (`openStream` rejects, or `onStop` gets the error); before, the code was `error` or `stream`. Each frame is copied once instead of twice.
+- **Error codes.** A duplicate window id (`windows.create`) or command id (`commands.add`) throws `conflict`; before, a plain `Error` without `code`.
+- **Documentation.** `VideoFilter`, `AudioFilter` and `Scope.video` / `Scope.audio` say that filters also need `events`. `Player.openStream` needs `playback.control` as well as `producer.av`. `StreamFrame` lists the limits (4 MiB per picture, samples within ±1); `Stream.onStop` is not called for the plugin's own `stop()`. `PluginError` lists `staleDigest`, `noSource`, `released` and `disposed`.
+- **Examples.** `blur` and `signal-generator` use `@video` / `@open`, `Theme.danger` and the `unsupported` filter status, and need player 0.3.0.
+
+Documentation:
 
 - New README (logo, badges, Quick start, examples, compatibility) and a contributor guide; the maintainers' handbook moved to `docs/maintaining.md`. Issue and pull request templates.
 - `examples/`: `hello` (the Quick start), and `bookmark` (id now `examples.bookmark`), `panel-menu`, `core-ui` and `markdown`, moved from the player repository and translated to English. CI checks, tests and packs every example on Linux, Windows and macOS.
-- The documentation site is organised as Tutorials, Concepts, How-to guides, Examples and API, with the GitHub theme, MDN links for Node and Web types, and search in documents and comments. Getting started names Node.js 26 and SDK 1.2.
+- The documentation site is organised as Tutorials, Concepts, How-to guides, Examples and API, with the GitHub theme, MDN links for Node and Web types, and search in documents and comments. Getting started names Node.js 26 and SDK 1.3.
 - The code blocks in the documents are type checked in CI (`npm run docs:check`); `npm run doc-lint` reports the documentation coverage.
 - `PluginError` lists the codes `versionMismatch`, `ui-prepare` and `host`, which the player returns.
 

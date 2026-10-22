@@ -47,7 +47,7 @@ my-plugin/
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.2.0" }
+  "devDependencies": { "@vestra-player/sdk": "^1.3.0" }
 }
 ```
 
@@ -102,9 +102,9 @@ Unknown fields, unknown capabilities and paths that leave the package directory 
 | `playback.read` | reading `player.state` at start, `refresh`, `stats`, `chapters`, `audioDevices`, `timeline.marks` |
 | `events` | live `player.state` / `onChange`, panel visibility, subtitle and window updates |
 | `playback.control` | `player.open`, `setPaused`, `seek`, `setRate`, … and `power.preventSleep` |
-| `producer.av` | `player.openStream` |
-| `processing.video` | `video.filter`, `video.view`, `video.render` (with `playback.read`) |
-| `processing.audio` | `audio.filter` (with `playback.read`) |
+| `producer.av` | `player.openStream` (with `playback.control`: the stream becomes the player's source) |
+| `processing.video` | `video.filter` (with `playback.read` and `events`), `video.view`, `video.render` (with `playback.read`) |
+| `processing.audio` | `audio.filter` (with `playback.read` and `events`) |
 | `subtitles.read` / `subtitles.control` | reading / changing subtitles |
 | `media.read` / `media.control` | `media.capture`, snapshot exports |
 | `source.resolve` | `resolvers.add` |
@@ -137,6 +137,7 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
+- `path` is the menu path, matched by exact titles. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id instead of its title, which depends on the player's language: `["@video", "Blur"]` (also `@open`, `@playback`, `@subtitles`, `@audio`, `@screen`, `@settings`; player 0.3.0).
 - `enabled` is a function: the SDK re-evaluates it after every handler and every state change it receives, and sends only changes. This needs `events` to follow outside changes.
 - `run` may return a promise. Errors thrown or rejected there go to `plugin.onError`, then to the plugin log.
 - Commands are registered in the background; activation succeeds once every registration made during `activate` succeeded.
@@ -228,6 +229,7 @@ During development no build is needed: start the player with `--plugin <plugin-d
 | --- | --- | --- |
 | `1.x` | `vestra/1` | Minor releases only add backwards-compatible API; patch releases fix documentation and bugs. |
 | `1.1` | `vestra/1` | The additions need player 0.2.0: set `"minPlayerVersion": "0.2.0"` when you use them. |
+| `1.3` | `vestra/1` | Menu ids (`@video`), `Theme.danger` and removing a video chain with `[]` need player 0.3.0: set `"minPlayerVersion": "0.3.0"` when you use them. |
 
 A breaking change to the plugin API gets a new `apiVersion` and a new major version of this package. The `@vestra-player/sdk/runtime` entry is for the player only and is not covered by semver.
 
