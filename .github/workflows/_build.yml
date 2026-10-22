@@ -46,7 +46,7 @@ jobs:
         run: npx --no-install publint run "$TGZ" --strict
         env:
           TGZ: ${{ steps.pack.outputs.tgz }}
-      # ESM-only package (engines: node >= 22.18): node10 and require()
+      # ESM-only package (engines: node >= 26): node10 and require()
       # resolution are not supported targets.
       - name: Are the types wrong
         run: npx --no-install attw "$TGZ" --profile esm-only

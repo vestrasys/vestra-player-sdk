@@ -6,3 +6,10 @@ dist/
 .DS_Store
 # API documentation site: `npm run docs`.
 docs-site/
+# Example plugins: installed with `npm install` (links the SDK), built by
+# `vestra-plugin build/pack`. No lock files: the only dependency is file:../..
+examples/*/dist/
+examples/*/package-lock.json
+*.vxp
+# Extracted documentation snippets (scripts/check-docs.mjs).
+.tmp/

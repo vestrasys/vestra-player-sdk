@@ -1,5 +1,5 @@
 # API documentation (TypeDoc; warnings are errors: undocumented exports,
-# broken links). With `pages: true` the site is uploaded as the GitHub Pages
+# broken links), documentation snippets and the coverage report. With `pages: true` the site is uploaded as the GitHub Pages
 # artifact for main.yml's deploy job. Called by ci.yml, main.yml, release.yml.
 name: Docs
 
@@ -34,6 +34,13 @@ jobs:
           cache: ${{ inputs.cache && 'npm' || '' }}
       - run: npm ci --ignore-scripts
       - run: npm run docs
+      # The ts code blocks in README.md and docs/ compile (@example blocks in
+      # src/ are reported as warnings for now); no drift from examples/hello,
+      # engines.node or the package version.
+      - run: npm run docs:check
+      # Coverage report (summaries, @throws, @example, @category, ...);
+      # warnings only until the documentation rounds tighten it.
+      - run: npm run doc-lint
       - if: inputs.pages
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
