@@ -34,13 +34,19 @@ test("frame(): RGBA of WIDTH × HEIGHT, 1600 stereo samples, the same buffers ev
   assert.equal(second.video, video, "video buffer reused");
   assert.equal(second.audio, audio, "audio buffer reused");
   assert.equal(generator.frames, 2);
-  for (let i = 3; i < video.length; i += 4) assert.equal(video[i], 255, "opaque");
+  for (let i = 3; i < video.length; i += 4)
+    assert.equal(video[i], 255, "opaque");
 });
 
 test("every pattern renders without touching the audio limits", () => {
   for (const pattern of ["bars", "grid", "scope"] as const)
     for (const waveform of ["sine", "square", "saw", "noise"] as const) {
-      const generator = new SignalGenerator({ ...DEFAULTS, pattern, waveform, levelDb: 0 });
+      const generator = new SignalGenerator({
+        ...DEFAULTS,
+        pattern,
+        waveform,
+        levelDb: 0,
+      });
       for (let i = 0; i < 5; i++) {
         const { audio } = generator.frame();
         // The SDK rejects samples outside −1…1 (or NaN) and ends the stream.

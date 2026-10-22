@@ -14,11 +14,17 @@ import { pixel, rms, start, until } from "./harness.ts";
 test("Open ▸ Signal Generator… shows the window and starts a 640×360 stream", async () => {
   const { host, stop, frames, window, props } = await start();
   try {
-    assert.deepEqual(host.command("open").declaration.path, ["Open", "Signal Generator…"]);
+    assert.deepEqual(host.command("open").declaration.path, [
+      "Open",
+      "Signal Generator…",
+    ]);
     await host.command("open").run();
     assert.equal(window().visible, true);
     // run() returns when the host is idle; the stream start-up polls, so wait for it.
-    await until(() => String(props()["status"]).startsWith("Running · 640×360 · 30 fps"), "running");
+    await until(
+      () => String(props()["status"]).startsWith("Running · 640×360 · 30 fps"),
+      "running",
+    );
     assert.equal(props()["running"], true);
     assert.equal(host.source.kind, "producer");
 
@@ -27,7 +33,10 @@ test("Open ▸ Signal Generator… shows the window and starts a 640×360 stream
     assert.equal(frames.last!.video.length, WIDTH * HEIGHT * 4);
     assert.equal(frames.last!.audio.length, 2 * 1600);
     // A/V: the player received exactly 1600 sample frames per video frame.
-    await until(() => producer.receivedFrames === producer.videoFrames * 1600, "whole frames");
+    await until(
+      () => producer.receivedFrames === producer.videoFrames * 1600,
+      "whole frames",
+    );
   } finally {
     await stop();
   }
@@ -48,12 +57,19 @@ test("window controls reach the generator on the next frame", async () => {
 
     window().emit("levelMoved", -20);
     await settled();
-    assert.ok(Math.abs(rms(frames.last!.audio, 0) - 0.1 * Math.SQRT1_2) < 1e-3, "−20 dB sine");
+    assert.ok(
+      Math.abs(rms(frames.last!.audio, 0) - 0.1 * Math.SQRT1_2) < 1e-3,
+      "−20 dB sine",
+    );
     assert.equal(props()["level-text"], "-20 dB");
 
     window().emit("balanceMoved", -1);
     await settled();
-    assert.equal(rms(frames.last!.audio, 1), 0, "balance hard left: right is silent");
+    assert.equal(
+      rms(frames.last!.audio, 1),
+      0,
+      "balance hard left: right is silent",
+    );
     assert.equal(props()["balance-text"], "L 100 %");
 
     window().emit("muteToggled", true);
@@ -66,7 +82,10 @@ test("window controls reach the generator on the next frame", async () => {
 
     window().emit("patternChosen", 0); // colour bars
     await settled();
-    assert.deepEqual(pixel(frames.last!.video, WIDTH, 20, 100), [191, 191, 191, 255]);
+    assert.deepEqual(
+      pixel(frames.last!.video, WIDTH, 20, 100),
+      [191, 191, 191, 255],
+    );
     window().emit("patternChosen", 2); // oscilloscope
     await settled();
     assert.deepEqual(pixel(frames.last!.video, WIDTH, 2, 2), [6, 14, 8, 255]);
@@ -81,30 +100,54 @@ test("the player filter waits during the stream and applies to decoded media", a
   // The player runs plugin audio chains only on media it decodes; a generated
   // stream's PCM goes straight to the device. The TestHost would accept the
   // chain for a stream too, so answer the way the player does.
-  const { host, stop, window, props } = await start(async (method, params, next) => {
-    if (method === "processing.replace" && host.source.kind === "producer")
-      throw new HostError("unavailable", "current load processing is not yet confirmed");
-    return next();
-  });
+  const { host, stop, window, props } = await start(
+    async (method, params, next) => {
+      if (method === "processing.replace" && host.source.kind === "producer")
+        throw new HostError(
+          "unavailable",
+          "current load processing is not yet confirmed",
+        );
+      return next();
+    },
+  );
   try {
     await host.command("open").run();
     await until(() => props()["running"] === true, "running");
     window().emit("filterChosen", 2); // swap left / right
-    await until(() => String(props()["filter-status"]).startsWith("Waiting: applies to media"), "waiting");
+    await until(
+      () =>
+        String(props()["filter-status"]).startsWith(
+          "Waiting: applies to media",
+        ),
+      "waiting",
+    );
 
     host.openElsewhere("/media/song.flac"); // the user plays a file
-    await until(() => props()["filter-status"] === "Applied by the player", "applied");
-    assert.deepEqual(host.processing.resources.get("audio:tone")?.nodes, [{ kind: "channels", mode: "swap" }]);
+    await until(
+      () => props()["filter-status"] === "Applied by the player",
+      "applied",
+    );
+    assert.deepEqual(host.processing.resources.get("audio:tone")?.nodes, [
+      { kind: "channels", mode: "swap" },
+    ]);
 
     window().emit("filterChosen", 3);
     await until(
-      () => JSON.stringify(host.processing.resources.get("audio:tone")?.nodes) ===
-        JSON.stringify([{ kind: "treble", frequency: 3000, slope: 0.5, gainDb: 6 }]),
+      () =>
+        JSON.stringify(host.processing.resources.get("audio:tone")?.nodes) ===
+        JSON.stringify([
+          { kind: "treble", frequency: 3000, slope: 0.5, gainDb: 6 },
+        ]),
       "treble",
     );
 
     window().emit("filterChosen", 0);
-    await until(() => JSON.stringify(host.processing.resources.get("audio:tone")?.nodes) === "[]", "withdrawn");
+    await until(
+      () =>
+        JSON.stringify(host.processing.resources.get("audio:tone")?.nodes) ===
+        "[]",
+      "withdrawn",
+    );
     assert.equal(props()["filter-status"], "Off");
   } finally {
     await stop();
@@ -121,8 +164,14 @@ test("Stop closes the source before the frame connection, then releases the prod
     window().emit("stop");
     const producer = host.producers.get(1)!;
     await until(() => producer.released, "released");
-    assert.equal(producer.droppedWhileSelected, false, "never cut off while it was the source");
-    const last = host.sent("source.submit").at(-1)!["intent"] as { kind: string };
+    assert.equal(
+      producer.droppedWhileSelected,
+      false,
+      "never cut off while it was the source",
+    );
+    const last = host.sent("source.submit").at(-1)!["intent"] as {
+      kind: string;
+    };
     assert.equal(last.kind, "close");
     assert.equal(host.source.phase, "empty");
     assert.equal(props()["running"], false);
@@ -136,10 +185,12 @@ test("Stop closes the source before the frame connection, then releases the prod
 test("Stop while starting: the stream is never selected", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => (release = resolve));
-  const { host, stop, window, props } = await start(async (method, _params, next) => {
-    if (method === "producer.prepare") await gate; // hold the start-up here
-    return next();
-  });
+  const { host, stop, window, props } = await start(
+    async (method, _params, next) => {
+      if (method === "producer.prepare") await gate; // hold the start-up here
+      return next();
+    },
+  );
   try {
     void host.command("open").run();
     await until(() => props()["starting"] === true, "starting");
@@ -147,7 +198,11 @@ test("Stop while starting: the stream is never selected", async () => {
     release();
     await until(() => host.producers.get(1)?.released === true, "released");
     await host.settle();
-    assert.equal(host.sent("source.submit").length, 0, "the stream was never selected");
+    assert.equal(
+      host.sent("source.submit").length,
+      0,
+      "the stream was never selected",
+    );
     assert.equal(props()["running"], false);
     assert.equal(props()["starting"], false);
     assert.equal(props()["problem"], "", "a cancelled start is not an error");
@@ -170,15 +225,24 @@ test("deactivating the plugin stops the stream in the same order", async () => {
 // #region errors-test
 test("start-up failures and replacement are shown in the window", async () => {
   let health = "deviceLost";
-  const { host, stop, window, props } = await start(async (method, _params, next) => {
-    const result = (await next()) as Record<string, unknown>;
-    return method === "producer.state" ? { ...result, health } : result;
-  });
+  const { host, stop, window, props } = await start(
+    async (method, _params, next) => {
+      const result = (await next()) as Record<string, unknown>;
+      return method === "producer.state" ? { ...result, health } : result;
+    },
+  );
   try {
     await host.command("open").run();
-    await until(() => props()["problem"] === "The audio output device is not ready.", "device error");
+    await until(
+      () => props()["problem"] === "The audio output device is not ready.",
+      "device error",
+    );
     assert.equal(props()["running"], false);
-    assert.equal(host.producers.get(1)!.released, true, "a failed start cleans up");
+    assert.equal(
+      host.producers.get(1)!.released,
+      true,
+      "a failed start cleans up",
+    );
 
     health = "ok";
     window().emit("start");

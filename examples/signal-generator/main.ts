@@ -4,7 +4,12 @@
  * "Open ▸ Signal Generator…" shows the control window and starts a 640×360,
  * 30 fps stream with a 48 kHz stereo test tone. Every control applies live.
  */
-import type { Plugin, PluginError, Stream, StreamStartError } from "@vestra-player/sdk";
+import type {
+  Plugin,
+  PluginError,
+  Stream,
+  StreamStartError,
+} from "@vestra-player/sdk";
 import {
   DEFAULTS,
   FILTERS,
@@ -49,7 +54,9 @@ export default async function activate(plugin: Plugin) {
   // #endregion filter
 
   // #region bind
-  const window = plugin.windows.create("ui/controls.slint", { id: "signal-generator" });
+  const window = plugin.windows.create("ui/controls.slint", {
+    id: "signal-generator",
+  });
   // Re-evaluated after every callback and state change; only changed values are sent.
   window.bind(() => ({
     pattern: PATTERNS.indexOf(controls.pattern),
@@ -63,7 +70,11 @@ export default async function activate(plugin: Plugin) {
     balance: controls.balance,
     balanceText: balanceText(controls.balance),
     filter: FILTERS.indexOf(controls.filter),
-    filterStatus: describeFilter(controls.filter, filter.status, plugin.player.state),
+    filterStatus: describeFilter(
+      controls.filter,
+      filter.status,
+      plugin.player.state,
+    ),
     running: stream !== undefined,
     starting: starting !== undefined,
     status,
@@ -84,7 +95,11 @@ export default async function activate(plugin: Plugin) {
     change({ waveform: WAVEFORMS[index] ?? controls.waveform }),
   );
   window.on("frequencyMoved", (position: number) =>
-    change({ frequency: frequencyAt(bounded(position, 0, 1, positionOf(controls.frequency))) }),
+    change({
+      frequency: frequencyAt(
+        bounded(position, 0, 1, positionOf(controls.frequency)),
+      ),
+    }),
   );
   window.on("sweepToggled", (on: boolean) => change({ sweep: on === true }));
   window.on("levelMoved", (db: number) =>
@@ -129,7 +144,9 @@ export default async function activate(plugin: Plugin) {
         if (stream !== opened) return; // our own stop(): nothing to report
         stream = undefined;
         status = "Stopped";
-        problem = error ? `The stream failed: ${error.message}` : "Another source replaced the stream.";
+        problem = error
+          ? `The stream failed: ${error.message}`
+          : "Another source replaced the stream.";
       });
     } catch (error) {
       if (attempt.signal.aborted) return; // cancelled by stop(): not a failure

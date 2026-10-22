@@ -22,7 +22,11 @@ export interface Frames {
  * requests (behind `next()` the TestHost answers as usual).
  */
 export async function start(
-  intercept?: (method: string, params: Json, next: () => Promise<unknown>) => Promise<unknown>,
+  intercept?: (
+    method: string,
+    params: Json,
+    next: () => Promise<unknown>,
+  ) => Promise<unknown>,
 ) {
   const host = new TestHost();
   if (intercept) {
