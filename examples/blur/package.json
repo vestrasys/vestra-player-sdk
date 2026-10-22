@@ -1,0 +1,14 @@
+{
+  "name": "vestra-example-blur",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "vestra-plugin check",
+    "build": "vestra-plugin build",
+    "test": "vestra-plugin test",
+    "pack": "vestra-plugin pack"
+  },
+  "devDependencies": {
+    "@vestra-player/sdk": "file:../.."
+  }
+}
