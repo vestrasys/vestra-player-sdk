@@ -9,11 +9,14 @@ import type { Plugin, Scope } from "@vestra-player/sdk";
  * detach/attach, and a tool window built from the theme and widgets.
  */
 export default async function activate(plugin: Plugin) {
+  // #region setup
   const { player, osd } = plugin;
   const sidebar = plugin.panels.sidebar;
   const menu = (title: string) => ["Examples", title];
   const say = (text: string) => osd.show(text);
+  // #endregion setup
 
+  // #region settings
   // plugin.dataDirectory: remembered across restarts; written atomically.
   const settings = join(plugin.dataDirectory, "settings.json");
   const load = () => {
@@ -30,7 +33,9 @@ export default async function activate(plugin: Plugin) {
     writeFileSync(`${settings}.tmp`, JSON.stringify({ speed: value }));
     renameSync(`${settings}.tmp`, settings);
   };
+  // #endregion settings
 
+  // #region title
   // A menu item whose title changes: dispose it (removed from the menu) and add it again.
   let last: Scope = plugin.scope();
   const remember = async (value: number) => {
@@ -45,7 +50,9 @@ export default async function activate(plugin: Plugin) {
       run() {},
     });
   };
+  // #endregion title
 
+  // #region radio
   // Menu: one top-level submenu in its own separator group, radio items.
   let speed = load();
   void remember(speed);
@@ -66,7 +73,9 @@ export default async function activate(plugin: Plugin) {
         await say(`Speed: ${rate}×`);
       },
     });
+  // #endregion radio
 
+  // #region bindings
   // Bindings: a held key repeats; a command with no menu entry.
   plugin.commands.add({
     id: "volume-up",
@@ -87,7 +96,9 @@ export default async function activate(plugin: Plugin) {
     bindings: ["Ctrl+Alt+W"],
     run: () => say(`Position: ${Math.round(player.state.position ?? 0)} s`),
   });
+  // #endregion bindings
 
+  // #region sequence
   // Next / previous through whichever plugin provides the sequence.
   for (const [id, title, key, step] of [
     ["next", "Next", "Ctrl+Alt+N", () => player.next()],
@@ -102,6 +113,7 @@ export default async function activate(plugin: Plugin) {
       enabled: () => player.state.can[id],
       run: step,
     });
+  // #endregion sequence
 
   // #region sidebar
   // The sidebar, whoever mounted it: show/hide and float/attach.
@@ -126,6 +138,7 @@ export default async function activate(plugin: Plugin) {
   });
   // #endregion sidebar
 
+  // #region window
   // A tool window drawn with @vestra/theme.slint and @vestra/widgets.slint.
   const window = plugin.windows.create("ui/theme.slint");
   let level = 0.5;
@@ -139,4 +152,5 @@ export default async function activate(plugin: Plugin) {
     group: "examples",
     run: () => window.show(),
   });
+  // #endregion window
 }
