@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@types/node": ">=22.18",
-    "typescript": "^5.9.0"
+    "typescript": "^7.0.2"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
