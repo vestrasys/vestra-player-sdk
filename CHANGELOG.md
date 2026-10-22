@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3
+
+For the player's switch to the system default font and standard close keys. No API change.
+
+- `slint/vestra/theme.slint` (read-only copy of the player's): the font comment now says what the player does: no window sets a default font family, every window uses the system default font and Slint falls back per character (CJK in `font-mono` included); Menlo ships with macOS only, elsewhere `font-mono` text uses the default font (not monospace).
+- Getting started: the example command binds `Ctrl+Alt+W` instead of `Ctrl+W`, which is now the standard close key of the player's tool windows, floating panels and options window on Windows and Linux (⌘W on macOS); a `Ctrl+W` binding still fires in the main window.
+
 ## 1.1.2
 
 For the player's upgrade to Slint 1.18.1. No API change.
