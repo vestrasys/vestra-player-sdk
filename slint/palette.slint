@@ -1,6 +1,7 @@
-// The player's colour palette (R-H6). Not part of the plugin library: the
-// player sets these `in` properties on every view; `Theme` in
-// @vestra/theme.slint reads them as `out` properties. Defaults: Vestra.
+// The player's colour palette (R-H6) and per-system fonts. Not part of the
+// plugin library: the player sets these `in` properties on every view;
+// `Theme` in @vestra/theme.slint reads them as `out` properties. Defaults:
+// Vestra colours, the macOS fonts.
 export global VestraPalette {
     in property <color> bg-bar: #17141c;
     in property <color> bg-video: #0b0a0f;
@@ -23,5 +24,7 @@ export global VestraPalette {
     in property <color> button-hover: #3d3648;
     in property <color> button-press: #26212e;
     in property <color> button-disabled: #1d1a23;
+    // The system's monospace family (platform::monospace_font).
+    in property <string> font-mono: "Menlo";
     in property <brush> accent-fill: @linear-gradient(90deg, #fdb506 0%, #fc6f3b 25%, #fa139c 60%, #911efc 100%);
 }

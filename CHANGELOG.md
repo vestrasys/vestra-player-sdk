@@ -2,9 +2,11 @@
 
 ## 1.1.3
 
-For the player's switch to the system default font and standard close keys. No API change.
+For the player's switch to the system default font, per-system monospace font and standard close keys. No API change.
 
-- `slint/vestra/theme.slint` (read-only copy of the player's): the font comment now says what the player does: no window sets a default font family, every window uses the system default font and Slint falls back per character (CJK in `font-mono` included); Menlo ships with macOS only, elsewhere `font-mono` text uses the default font (not monospace).
+- `Stream.stop()` (and `dispose()`, deactivation, a cancelled `openStream`) closes the source first, if it is still the player's, then the frame connection, then the producer. Before, the connection closed first and the player could report the stop as a load failure ("producer transport closed"). Plugins that close their own source before `stop()` keep working.
+- `TestHost`: each fake producer has `droppedWhileSelected` (the frame connection closed while its stream was still the source).
+- `slint/vestra/theme.slint`, `slint/palette.slint` (read-only copies of the player's): `Theme.font-mono` reads `VestraPalette.font-mono`, which the player sets per system (Menlo on macOS, Consolas on Windows, DejaVu Sans Mono on Linux; the copy's default is Menlo). The font comment says what the player does: no window sets a default font family, every window uses the system default font and Slint falls back per character (CJK in `font-mono` included).
 - Getting started: the example command binds `Ctrl+Alt+W` instead of `Ctrl+W`, which is now the standard close key of the player's tool windows, floating panels and options window on Windows and Linux (⌘W on macOS); a `Ctrl+W` binding still fires in the main window.
 
 ## 1.1.2

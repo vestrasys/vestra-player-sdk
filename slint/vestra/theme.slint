@@ -2,8 +2,9 @@
 // plugin or host Slint file:  import { Theme } from "@vestra/theme.slint";
 // Colours follow the player's palette (R-H6: Vestra or reference player, set on every
 // view through ../palette.slint, which is not part of this library). They are
-// `out` properties: Slint code reads them but cannot assign them. Corner
-// radii, fonts and sizes stay constants.
+// `out` properties: Slint code reads them but cannot assign them. So is
+// font-mono (set per system). Corner radii, font sizes and control sizes
+// stay constants.
 
 import { VestraPalette } from "../palette.slint";
 
@@ -39,9 +40,10 @@ export global Theme {
     out property <length> radius-panel: 6px;
     // §2.2 fonts. No default family: every window uses the system UI font,
     // and Slint falls back per character for scripts a font lacks (CJK in
-    // font-mono included). Menlo ships with macOS only; where it is missing
-    // the text uses the default font (not monospace).
-    out property <string> font-mono: "Menlo";
+    // font-mono included). font-mono is the system's own monospace family,
+    // set by the player on every view: Menlo (macOS), Consolas (Windows),
+    // DejaVu Sans Mono (Linux).
+    out property <string> font-mono: VestraPalette.font-mono;
     out property <length> font-xs: 9px;
     out property <length> font-body: 11px;
     out property <length> font-tab: 12px;

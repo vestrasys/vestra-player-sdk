@@ -1519,7 +1519,12 @@ export interface Stream extends Disposable {
   readonly running: boolean;
   /** `error` is null when another source replaced the stream or it was closed. */
   onStop(listener: (error: PluginError | null) => void): Disposable;
-  /** Stop producing and close the stream if it is still the player's source. */
+  /**
+   * Stop producing and close the stream if it is still the player's source.
+   * The source closes first, then the frame connection, then the producer,
+   * so stopping never shows as a playback failure. `dispose()` and
+   * deactivation do the same.
+   */
   stop(): Promise<void>;
 }
 

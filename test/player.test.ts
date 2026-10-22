@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
-import type { Plugin, PlayerState } from "../src/plugin/index.ts";
+import type { Json, Plugin, PlayerState } from "../src/plugin/index.ts";
 
 const capabilities = ["playback.read", "playback.control", "events"];
 const start = (
@@ -209,6 +209,61 @@ test("streams preroll, activate through the start control and stop cleanly", asy
   assert.equal(producer.released, true);
   await stop();
 });
+
+/**
+ * Start a stream whose `close` requests take 50 ms to answer, so a frame
+ * connection closed before the source would be seen while it is selected.
+ */
+async function slowCloseStream() {
+  const started = await startPlugin(() => {}, {
+    capabilities: [...capabilities, "producer.av"],
+  });
+  const { host, plugin } = started;
+  const slow = async (params: Record<string, Json>): Promise<unknown> => {
+    if ((params.intent as { kind: string }).kind === "close")
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    host.reset("source.submit"); // forward to the fake player…
+    try {
+      return await host.request("source.submit", params);
+    } finally {
+      host.handle("source.submit", slow); // …and keep slowing the next one
+    }
+  };
+  host.handle("source.submit", slow);
+  const stream = await plugin.player.openStream({
+    width: 2,
+    height: 2,
+    frame: () => ({ video: new Uint8Array(16), audio: new Float32Array(1600) }),
+  });
+  const producer = [...host.producers.values()][0]!;
+  return { ...started, stream, producer };
+}
+
+for (const how of ["stop", "dispose", "deactivate"] as const)
+  test(`${how}: the source closes before the frame connection and the producer`, async () => {
+    const { host, stream, producer, stop } = await slowCloseStream();
+    assert.equal(host.source.kind, "producer");
+    if (how === "stop") await stream.stop();
+    else if (how === "dispose") await stream.dispose();
+    if (how !== "deactivate") {
+      await host.settle();
+      await new Promise((resolve) => setTimeout(resolve, 20)); // the close event
+      assert.equal(host.source.phase, "empty");
+      assert.equal(producer.released, true);
+      assert.equal(producer.droppedWhileSelected, false);
+      assert.deepEqual(
+        host.calls
+          .map((c) => c.method)
+          .filter((m) => m === "source.submit" || m === "producer.release")
+          .slice(-2),
+        ["source.submit", "producer.release"],
+      );
+    }
+    await stop();
+    await new Promise((resolve) => setTimeout(resolve, 20)); // the close event
+    assert.equal(producer.released, true);
+    assert.equal(producer.droppedWhileSelected, false);
+  });
 
 /** The next open is accepted but stays pending (a URL still resolving) until `finish`. */
 function pendingOpen(host: TestHost) {
