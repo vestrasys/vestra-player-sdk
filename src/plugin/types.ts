@@ -1597,13 +1597,19 @@ export interface Drops {
 }
 
 /**
- * The player's two palettes: `vestra` (the default) and `potplayer`
- * (PotPlayer's colours, with a yellow accent).
+ * The player's palettes. Today there is one, `vestra` (the default); a later
+ * version may add more (a light palette, for example), so read colours from
+ * `Theme` instead of branching on the id.
+ *
+ * @remarks
+ * SDK 1.4.0 removed a second palette that earlier versions listed. The player
+ * treats an id it does not have as `vestra`, so plugins built with an older
+ * SDK that still ask for it keep working.
  *
  * @since 1.0.0
  * @category UI
  */
-export type ThemeId = "vestra" | "potplayer";
+export type ThemeId = "vestra";
 
 /**
  * The player's palette, which every view uses. `plugin.appearance`.
@@ -1614,7 +1620,7 @@ export type ThemeId = "vestra" | "potplayer";
  * and again when the palette changes. Slint code that reads its colours from
  * `Theme` (`import { Theme } from "@vestra/theme.slint"`) follows it with no
  * plugin code; hard-coded colours do not. Only colours change: corner radii,
- * font sizes and control sizes are the same in both palettes.
+ * font sizes and control sizes are the same in every palette.
  *
  * The player saves the choice; it stays after the plugin that set it stops.
  * Tell the user about a change yourself (for example with
@@ -1623,13 +1629,14 @@ export type ThemeId = "vestra" | "potplayer";
  * @capability None to read `theme`; `events` to follow changes; `ui.theme`
  *   to change it.
  *
- * @example A menu item that switches the palette
+ * @example A menu item that selects the palette
  * ```ts
  * plugin.commands.add({
- *   id: "potplayer-colours",
- *   path: ["@settings", "PotPlayer colours"],
- *   checked: () => plugin.appearance.theme === "potplayer",
- *   run: () => plugin.appearance.set(plugin.appearance.theme === "potplayer" ? "vestra" : "potplayer"),
+ *   id: "vestra-colours",
+ *   path: ["@settings", "Vestra colours"],
+ *   radio: true,
+ *   checked: () => plugin.appearance.theme === "vestra",
+ *   run: () => plugin.appearance.set("vestra"),
  * });
  * ```
  *
@@ -1681,12 +1688,12 @@ export interface Appearance {
    * @returns Resolves once the player has accepted the change;
    *   {@link Appearance.theme} has the new value.
    *
-   * @throws `invalid` (rejects) `theme` is not `"vestra"` or `"potplayer"`.
+   * @throws `invalid` (rejects) `theme` is not a {@link ThemeId}.
    * @throws `capability` (rejects) The manifest does not declare `ui.theme`.
    *
    * @example
    * ```ts
-   * await plugin.appearance.set("potplayer");
+   * await plugin.appearance.set("vestra");
    * ```
    *
    * @since 1.0.0

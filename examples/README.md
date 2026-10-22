@@ -21,4 +21,4 @@ npm install
 npm run check && npm test && npm run pack
 ```
 
-Each example is laid out the same way: `manifest.json` (id `examples.<name>`), `main.ts`, `ui/*.slint`, `tests/*.test.ts`, `package.json` (depends on `"@vestra-player/sdk": "file:../.."`), `README.md`. To start your own plugin from one, copy its folder and change the dependency to `"@vestra-player/sdk": "^1.3.0"` and the manifest `id`.
+Each example is laid out the same way: `manifest.json` (id `examples.<name>`), `main.ts`, `ui/*.slint`, `tests/*.test.ts`, `package.json` (depends on `"@vestra-player/sdk": "file:../.."`), `README.md`. To start your own plugin from one, copy its folder and change the dependency to `"@vestra-player/sdk": "^1.4.0"` and the manifest `id`.
