@@ -10,7 +10,7 @@ Types, an in-memory test host and the `vestra-plugin` command line tool for writ
 npm i -D @vestra-player/sdk
 ```
 
-Requires Node.js 22.18 or newer. The package brings its own TypeScript 5.x for `vestra-plugin`.
+Requires Node.js 26 or newer: the player runs plugins on the Node 26 it ships (its major version only goes up while the API is `vestra/1`), and the Node types are those of Node 26. The package brings its own TypeScript 5.x for `vestra-plugin`.
 
 ## A minimal plugin
 

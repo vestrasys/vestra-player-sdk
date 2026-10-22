@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0
+
+For the player's packaged builds, which ship their own Node 26 and run every plugin on it (users no longer install Node). No API change; `apiVersion` stays `vestra/1`.
+
+- `engines.node` is `>=26` (was `>=22.18`). The player's Node major version only goes up while the API is `vestra/1`, so code written for Node 26 keeps running. npm warns when you develop on an older Node; `vestra-plugin` and `TestHost` are tested on Node 26 only (CI: Linux, Windows and macOS × Node 26).
+- The `@types/node` dependency is `^26.0.0` (was `>=22.18`, which resolved to the newest types and offered Node APIs newer than the player's Node).
+- `plugin.tools.run` starts the tool with `windowsHide`: no console window on Windows.
+- In the player, `VESTRA_FFMPEG` / `VESTRA_FFPROBE` name the FFmpeg the player ships unless you set them yourself; `plugin.tools` reads them as before.
+
 ## 1.1.3
 
 For the player's switch to the system default font, per-system monospace font and standard close keys. No API change.
