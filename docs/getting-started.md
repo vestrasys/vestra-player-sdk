@@ -127,7 +127,7 @@ export default async function activate(plugin: Plugin) {
   plugin.commands.add({
     id: "where",
     path: ["Tools", "Where am I?"],
-    bindings: ["Ctrl+W"],
+    bindings: ["Ctrl+Alt+W"],
     enabled: () => plugin.player.state.phase === "ready",
     run: () => {
       const { position, duration } = plugin.player.state;
@@ -202,7 +202,7 @@ test("shows the position", async () => {
 });
 ```
 
-Useful controls: `host.command(id).run()`, `host.press("Ctrl+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait until the plugin's host calls are answered (it does not wait for the plugin's own file reads or child processes: poll the result you assert on, see `settle`). See {@link "@vestra-player/sdk/testing"!TestHost | TestHost}.
+Useful controls: `host.command(id).run()`, `host.press("Ctrl+Alt+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait until the plugin's host calls are answered (it does not wait for the plugin's own file reads or child processes: poll the result you assert on, see `settle`). See {@link "@vestra-player/sdk/testing"!TestHost | TestHost}.
 
 Run them with `npm test` (`vestra-plugin test`, which is `node --test tests/*.test.{ts,mjs}`).
 

@@ -37,7 +37,10 @@ export global Theme {
     // Soft corners echo the logo; reference player is square-cornered.
     out property <length> radius-control: 3px;
     out property <length> radius-panel: 6px;
-    // §2.2 fonts; the host sets each window's default-font-family to the system UI font.
+    // §2.2 fonts. No default family: every window uses the system UI font,
+    // and Slint falls back per character for scripts a font lacks (CJK in
+    // font-mono included). Menlo ships with macOS only; where it is missing
+    // the text uses the default font (not monospace).
     out property <string> font-mono: "Menlo";
     out property <length> font-xs: 9px;
     out property <length> font-body: 11px;
