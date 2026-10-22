@@ -428,20 +428,27 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
   }
 });
 
-test("storage files are owner-only (0600)", async () => {
-  const host = new TestHost();
-  const { plugin, stop } = await started(host);
-  const store = plugin.storage.json("history", {
-    defaults: { recent: [] as string[] },
-  });
-  store.save({ recent: ["/Users/me/private.mkv"] });
-  await store.flush();
-  assert.equal(
-    statSync(join(host.dataDirectory, "history.json")).mode & 0o777,
-    0o600,
-  );
-  await stop();
-});
+// Windows has no POSIX permission bits: Node reports 0o666 for any writable file.
+test(
+  "storage files are owner-only (0600)",
+  {
+    skip: process.platform === "win32" && "no POSIX file modes on Windows",
+  },
+  async () => {
+    const host = new TestHost();
+    const { plugin, stop } = await started(host);
+    const store = plugin.storage.json("history", {
+      defaults: { recent: [] as string[] },
+    });
+    store.save({ recent: ["/Users/me/private.mkv"] });
+    await store.flush();
+    assert.equal(
+      statSync(join(host.dataDirectory, "history.json")).mode & 0o777,
+      0o600,
+    );
+    await stop();
+  },
+);
 
 test("a window the user closed reports onClose, is no longer opened, and reopens fresh", async () => {
   const host = new TestHost();

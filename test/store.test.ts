@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type {
@@ -77,14 +77,14 @@ test("packages: .vxp install with a source, conflict, replace and built-ins", as
       dataDirectory: "/data/1",
     },
   ];
-  const first = "/downloads/someone.demo-1.0.0.vxp";
-  const second = "/downloads/someone.demo-1.1.0.vxp";
+  // validateArchive resolves the path (on Windows /downloads becomes
+  // D:\downloads), so the test packages are keyed by the resolved path.
+  const first = resolve("/downloads/someone.demo-1.0.0.vxp");
+  const second = resolve("/downloads/someone.demo-1.1.0.vxp");
+  const builtinArchive = resolve("/downloads/video.vxp");
   host.candidates.set(first, manifest("someone.demo", "1.0.0"));
   host.candidates.set(second, manifest("someone.demo", "1.1.0"));
-  host.candidates.set(
-    "/downloads/video.vxp",
-    manifest("vestra.video", "9.0.0"),
-  );
+  host.candidates.set(builtinArchive, manifest("vestra.video", "9.0.0"));
   const { plugin, stop } = await manager(host);
   const repo = {
     kind: "repository",
@@ -127,7 +127,7 @@ test("packages: .vxp install with a source, conflict, replace and built-ins", as
     kind: "file",
   });
   // Built-ins: never installed over, never uninstalled.
-  const video = await plugin.packages.validateArchive("/downloads/video.vxp");
+  const video = await plugin.packages.validateArchive(builtinArchive);
   await rejects(video.install({ replace: true }), "unsupported");
   await rejects(plugin.packages.uninstall("vestra.video"), "unsupported");
   assert.equal(list.find((p) => p.id === "vestra.video")?.builtin, true);

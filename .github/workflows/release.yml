@@ -1,0 +1,123 @@
+# Tag v<version>: re-run every check on the tagged commit (no npm cache), then
+# publish exactly the tarball the build job packed, smoke-tested and checked.
+#
+#   verify (tag == package.json version, not yet on npm)
+#     ─▶ static ─▶ build (pack · publint · attw · install smoke) ─┬─▶ test
+#                                                                └─▶ docs
+#     ─▶ publish  [environment: vestra]  npm publish <tgz> --provenance
+#
+# Publishing: npm Trusted Publishing (OIDC, `id-token: write`, npm >= 11.5)
+# once it is configured for this repository on npmjs.com (publisher:
+# GitHub Actions, workflow file `release.yml`, environment `vestra`). Until
+# then npm falls back to the NPM_TOKEN secret of the `vestra` environment.
+# See CONTRIBUTING.md, "Releasing".
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: tag matches package.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tag matches package.json version
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version} (expected v${version})."
+            exit 1
+          fi
+      - name: Version not yet published
+        run: |
+          spec="$(node -p 'const p = require("./package.json"); p.name + "@" + p.version')"
+          if npm view "$spec" version >/dev/null 2>&1; then
+            echo "::error::$spec is already on npm."
+            exit 1
+          fi
+
+  static:
+    needs: verify
+    uses: ./.github/workflows/_static.yml
+    with:
+      cache: false
+    permissions:
+      contents: read
+  build:
+    needs: static
+    uses: ./.github/workflows/_build.yml
+    with:
+      cache: false
+    permissions:
+      contents: read
+  test:
+    needs: build
+    uses: ./.github/workflows/_test.yml
+    with:
+      cache: false
+    permissions:
+      contents: read
+  docs:
+    needs: build
+    uses: ./.github/workflows/_docs.yml
+    with:
+      cache: false
+    permissions:
+      contents: read
+
+  publish:
+    needs: [build, test, docs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # NPM_TOKEN (fallback) lives in the "vestra" environment; the npm trusted
+    # publisher is bound to this workflow file and this environment.
+    environment: vestra
+    permissions:
+      contents: read
+      id-token: write # OIDC: trusted publishing and provenance
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      # Trusted publishing needs npm >= 11.5.1; Node 24 bundles npm 11.x.
+      - name: npm supports trusted publishing
+        run: |
+          npm --version
+          node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
+              console.error("::error::npm " + process.argv[1] + " is older than 11.5.1 (trusted publishing)");
+              process.exit(1);
+            }' "$(npm --version)"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: package
+      - name: Publish
+        env:
+          # Empty when the secret is gone: then only trusted publishing works.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          tgz="$(ls package/*.tgz)"
+          sha256sum "$tgz"
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "No NPM_TOKEN: publishing through npm trusted publishing (OIDC) only."
+          fi
+          # npm tries OIDC trusted publishing first and falls back to the token.
+          # Provenance is generated from this run's OIDC identity.
+          npm publish "$tgz" --access public --provenance

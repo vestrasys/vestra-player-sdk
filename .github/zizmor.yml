@@ -1,0 +1,5 @@
+rules:
+  # GitHub's `uses: $/...` self-repository syntax is not understood by
+  # actionlint yet (1.7.12); switch the reusable workflow calls once it is.
+  self-repository:
+    disable: true

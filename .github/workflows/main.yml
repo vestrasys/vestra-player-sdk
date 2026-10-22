@@ -1,0 +1,77 @@
+# Pushes to main: the CI checks, then the API documentation is deployed to
+# GitHub Pages (https://vestrasys.github.io/vestra-player-sdk/). The
+# github-pages environment only allows main, so tags never deploy.
+#
+#   static ─▶ build ─┬─▶ test
+#                    └─▶ docs (pages artifact) ─▶ deploy-docs (needs test too)
+#   ci-ok
+name: Main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+# One run of main at a time: a newer push waits, a running deployment is never
+# cancelled halfway.
+concurrency:
+  group: main
+  cancel-in-progress: false
+
+jobs:
+  static:
+    uses: ./.github/workflows/_static.yml
+    permissions:
+      contents: read
+  build:
+    needs: static
+    uses: ./.github/workflows/_build.yml
+    permissions:
+      contents: read
+  test:
+    needs: build
+    uses: ./.github/workflows/_test.yml
+    permissions:
+      contents: read
+  docs:
+    needs: build
+    uses: ./.github/workflows/_docs.yml
+    with:
+      pages: true
+    permissions:
+      contents: read
+
+  deploy-docs:
+    needs: [test, docs]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  ci-ok:
+    if: always()
+    needs: [static, build, test, docs, deploy-docs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: All required jobs passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              failure|cancelled) echo "::error::a required job ended with: $result"; exit 1 ;;
+            esac
+          done

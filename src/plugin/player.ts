@@ -327,11 +327,9 @@ class ScrubHandle implements Scrub {
   #active = true;
   #allowed: SourceStamp;
   #pending: SourceStamp | null = null;
-  readonly #service: PlayerService;
   readonly #watch: Disposable;
   readonly #queue: Latest<number>;
   constructor(service: PlayerService) {
-    this.#service = service;
     this.#allowed = { ...service.raw.stamp };
     this.#watch = service.watch((raw) => {
       if (
