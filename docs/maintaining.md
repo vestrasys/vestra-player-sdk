@@ -13,7 +13,7 @@ npm run build       # rebuild dist/ (compiled .js + .d.ts; comments are kept for
 npm test            # unit tests (run against src/)
 npm run docs        # API documentation site in docs-site/ (TypeDoc)
 npm run docs:check  # type check the ts code blocks in README.md, docs/ and @example comments; drift checks
-npm run doc-lint    # documentation coverage report (warnings only for now)
+npm run doc-lint    # documentation coverage report; fails when an enforced category is incomplete
 npm run examples    # every examples/<name>: npm install, vestra-plugin check, test, pack (needs dist/)
 npm pack --dry-run  # package contents: README.md, CHANGELOG.md, LICENSE, package.json, bin/, dist/, slint/
 npm pack && npm run pack:check -- vestra-player-sdk-<version>.tgz   # allow list, exports, bin
@@ -30,9 +30,36 @@ The package publishes compiled `.js` and `.d.ts` files, not `.ts` sources: Node 
 - Example walkthroughs (`docs/examples/<name>.md`) pull code from the example with `{@includeCode ../../examples/<name>/main.ts#region}` and `// #region name` / `// #endregion name` markers in the source; never paste example code into a page.
 - Theme: `typedoc-github-theme`; `typedoc-plugin-mdn-links` links Node and Web types to MDN. Search covers comments and documents. `tsdoc.json` declares the custom block tags `@capability` and `@player`.
 - `npm run docs` treats warnings as errors: every exported declaration and member must be documented, `{@link}` targets and relative links in documents must resolve, `{@includeCode}` regions must exist, and an internal type referenced by the public API must be listed in `intentionallyNotExported`. Mark members that only exist for the player with `@internal`.
-- `npm run docs:check` (`scripts/check-docs.mjs`) extracts every ` ```ts ` block from `README.md` and `docs/**/*.md` and every ` ```ts ` block in an `@example` of `src/` and type checks them against `src/` (a block without imports gets `plugin: Plugin` and the SDK's exported types in scope, and may use `await` and `return`). Markdown blocks must compile; `@example` blocks are reported only, until the reference rewrite fixes them (`--strict` makes them fail). Mark an intentionally incomplete block ` ```ts nocheck `. It also checks for drift: the README Quick start equals `examples/hello`, and the Node.js version in the documents equals `engines.node`.
-- `npm run doc-lint` (`scripts/doc-lint.mjs`) reports, per public declaration and member, a missing summary and the coverage of `@remarks`, `@example`, `@throws`, `@category`, `@since` and `@capability`, and compares the error codes in the `PluginError` table with the codes the SDK throws. It only warns; `--strict` fails on missing summaries. Later documentation rounds tighten it.
+- `npm run docs:check` (`scripts/check-docs.mjs`) extracts every ` ```ts ` block from `README.md` and `docs/**/*.md` and every ` ```ts ` block in an `@example` of `src/` and type checks them against `src/` (a block without imports gets `plugin: Plugin` and the SDK's exported types in scope, and may use `await` and `return`). Markdown blocks must compile, and so must the `@example` blocks of the categories listed in `scripts/doc-standard.mjs`; the other `@example` blocks are reported only, until the reference rewrite reaches them (`--strict` makes them fail). Mark an intentionally incomplete block ` ```ts nocheck `. It also checks for drift: the README Quick start equals `examples/hello`, and the Node.js version in the documents equals `engines.node`.
+- `npm run doc-lint` (`scripts/doc-lint.mjs`) reports, per public declaration and member, a missing summary and the coverage of `@remarks`, `@example`, `@throws`, `@category`, `@since` and `@capability`, and compares the error codes in the `PluginError` table with the codes the SDK throws. That report only warns (`--strict` fails on missing summaries). The categories listed in `scripts/doc-standard.mjs` (so far `UI`) are enforced: a symbol of such a category that misses part of the standard below fails the run, and so does a declaration tagged with such a `@category` that the list does not name.
 - The output directory `docs-site/` is ignored by git and not part of the npm package.
+- `typedoc.json` sets `jsDocCompatibility.exampleTag: false`: the first line of an `@example` is its title and the rest is Markdown, so an example may be a `{@includeCode}` of an example file. Every `@example` therefore needs a code fence or an `{@includeCode}`; plain code without a fence renders as text.
+
+### Reference comments
+
+The standard every category reaches in its documentation round (the `UI` category is the model: `Windows`, `Window`, `Panels`, `Settings`, `Dialogs`, `Osd`, `Ui` in `src/plugin/types.ts`). Facts come from the code: the SDK in `src/plugin/` and, for what the player does, the player repository (`src/host/src/`), never from older documents alone.
+
+```text
+Summary: one sentence, starting with a verb for methods; it is reused in lists and search.
+
+@remarks   What it is, when to use it and when to use something else; its life cycle;
+           limits; platform differences (**macOS:** / **Windows:**). Methods: only what
+           the summary and the tags below do not say. Long background goes to a concept page.
+@capability  The manifest capability ("None." when there is none).
+@player    The minimum player version, only when above the vestra/1 baseline.
+@param     Meaning, unit, range, default. Inline option objects: one @param for
+           `options`, and a summary on each field.
+@returns   When it resolves and what has taken effect by then.
+@throws    `code` (throws | rejects) Condition. One tag per code (or per condition);
+           only codes from the PluginError table; a plain Error is "`Error` without a code".
+@example   Title on the first line, then a ```ts block that compiles on its own
+           (`plugin` and every SDK type are in scope) or {@includeCode ../../examples/…#region}.
+@see       Related symbols and the concept page: [title](../../docs/concepts/<page>.md).
+@since     The SDK version that added it (git tags; CHANGELOG).
+@category  The API category (UI, Playback, …).
+```
+
+Modules and handles (`full` in `scripts/doc-standard.mjs`) carry all of it; their methods carry the summary, `@example`, `@capability`, `@since` and `@throws` (for a Promise). Data types (`data`) carry a summary, `@since`, `@category` and a summary per field with its unit and range. When a category is done, list its symbols in `scripts/doc-standard.mjs` so CI keeps it complete.
 
 ## Examples
 

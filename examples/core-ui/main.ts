@@ -103,6 +103,7 @@ export default async function activate(plugin: Plugin) {
       run: step,
     });
 
+  // #region sidebar
   // The sidebar, whoever mounted it: show/hide and float/attach.
   plugin.commands.add({
     id: "sidebar",
@@ -123,6 +124,7 @@ export default async function activate(plugin: Plugin) {
     enabled: () => sidebar.state !== null,
     run: () => sidebar.setDetached(!sidebar.state?.detached),
   });
+  // #endregion sidebar
 
   // A tool window drawn with @vestra/theme.slint and @vestra/widgets.slint.
   const window = plugin.windows.create("ui/theme.slint");
