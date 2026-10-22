@@ -113,7 +113,8 @@ jobs:
           # Empty when the secret is gone: then only trusted publishing works.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          tgz="$(ls package/*.tgz)"
+          # "./": npm reads "package/x.tgz" as GitHub shorthand (owner/repo).
+          tgz="./$(ls package/*.tgz)"
           sha256sum "$tgz"
           if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "No NPM_TOKEN: publishing through npm trusted publishing (OIDC) only."
