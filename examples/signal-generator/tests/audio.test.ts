@@ -32,25 +32,51 @@ const steady = (audio: Float32Array) => audio.subarray(2 * FRAME);
 test("a 1 kHz sine crosses zero upwards 1000 times a second at RMS 1/√2", () => {
   const audio = render(new Oscillator(), controls(), 1);
   let rising = 0;
-  for (let i = 2; i < audio.length; i += 2) if (audio[i - 2]! <= 0 && audio[i]! > 0) rising++;
+  for (let i = 2; i < audio.length; i += 2)
+    if (audio[i - 2]! <= 0 && audio[i]! > 0) rising++;
   assert.ok(Math.abs(rising - 1000) <= 1, `${rising} rising zero crossings`);
   assert.ok(Math.abs(rms(steady(audio), 0) - Math.SQRT1_2) < 1e-3);
-  assert.deepEqual(rms(steady(audio), 0), rms(steady(audio), 1), "centred: both channels equal");
+  assert.deepEqual(
+    rms(steady(audio), 0),
+    rms(steady(audio), 1),
+    "centred: both channels equal",
+  );
 });
 // #endregion waveform
 
 test("square, saw and noise have their textbook RMS and stay within ±1", () => {
-  const expected = { square: 1, saw: 1 / Math.sqrt(3), noise: 1 / Math.sqrt(3) };
+  const expected = {
+    square: 1,
+    saw: 1 / Math.sqrt(3),
+    noise: 1 / Math.sqrt(3),
+  };
   for (const [waveform, value] of Object.entries(expected)) {
-    const audio = steady(render(new Oscillator(), controls({ waveform: waveform as Controls["waveform"] }), 1));
-    assert.ok(Math.abs(rms(audio, 0) - value) < 0.01, `${waveform}: ${rms(audio, 0)}`);
-    assert.ok(audio.every((v) => Math.abs(v) <= 1), `${waveform} within ±1`);
+    const audio = steady(
+      render(
+        new Oscillator(),
+        controls({ waveform: waveform as Controls["waveform"] }),
+        1,
+      ),
+    );
+    assert.ok(
+      Math.abs(rms(audio, 0) - value) < 0.01,
+      `${waveform}: ${rms(audio, 0)}`,
+    );
+    assert.ok(
+      audio.every((v) => Math.abs(v) <= 1),
+      `${waveform} within ±1`,
+    );
   }
 });
 
 test("level is in dBFS, mute ramps to silence, balance attenuates the other side", () => {
-  const level = steady(render(new Oscillator(), controls({ levelDb: -20 }), 0.5));
-  assert.ok(Math.abs(rms(level, 0) - 0.1 * Math.SQRT1_2) < 1e-4, "−20 dB = 0.1 × amplitude");
+  const level = steady(
+    render(new Oscillator(), controls({ levelDb: -20 }), 0.5),
+  );
+  assert.ok(
+    Math.abs(rms(level, 0) - 0.1 * Math.SQRT1_2) < 1e-4,
+    "−20 dB = 0.1 × amplitude",
+  );
   assert.ok(Math.abs(gainOf(-6) - 0.501) < 1e-3);
 
   const muted = steady(render(new Oscillator(), controls({ mute: true }), 0.5));
@@ -84,7 +110,10 @@ test("changing frequency or level mid-stream never jumps (no clicks)", () => {
   run();
   // A 2 kHz sine at full scale moves at most 2π·2000/48000 ≈ 0.26 per sample.
   // A restarted phase or an instant gain change would jump by up to 2.
-  assert.ok(worst < (2 * Math.PI * 2000) / SAMPLE_RATE + 0.01, `largest step ${worst}`);
+  assert.ok(
+    worst < (2 * Math.PI * 2000) / SAMPLE_RATE + 0.01,
+    `largest step ${worst}`,
+  );
 });
 // #endregion continuity
 

@@ -26,7 +26,7 @@ The complete source is in [`examples/blur/`](https://github.com/vestrasys/vestra
 
 - Node.js 26 or newer and npm.
 - Vestra Player 0.2.0 or newer, to see the result.
-- You have read [Getting started](../getting-started.md), or at least know that a plugin is a folder with a `manifest.json` and an entry module that default-exports `activate(plugin)`.
+- You have read [Getting started](../tutorials/getting-started.md), or at least know that a plugin is a folder with a `manifest.json` and an entry module that default-exports `activate(plugin)`.
 
 ## File layout
 
@@ -340,7 +340,7 @@ Each of these is a small change that teaches one more part of the API.
 
 ## See also
 
-- [Getting started](../getting-started.md): the files of a plugin, the CLI and the manifest rules.
+- [Getting started](../tutorials/getting-started.md): the files of a plugin, the CLI and the manifest rules.
 - `Scope`: every module on `plugin`.
 - `VideoFilter`, `FilterStatus` and `VideoNode`: filters, their status and every node type with its ranges.
 - `View` and `Window`: properties, callbacks, `bind` and `set`.
