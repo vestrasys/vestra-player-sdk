@@ -1,7 +1,7 @@
 # Branches and pull requests. Pushes to main run main.yml (the same checks
 # plus the Pages deploy) instead. Only `ci-ok` needs to be a required check.
 #
-#   static ─▶ build ─┬─▶ test (ubuntu 22.18/24, windows, macos)
+#   static ─▶ build ─┬─▶ test, examples (ubuntu, windows, macos × node 26)
 #                    └─▶ docs
 #   ci-ok  (needs all; skipped counts as passed, failure/cancelled fails)
 name: CI

@@ -10,7 +10,7 @@
 # once it is configured for this repository on npmjs.com (publisher:
 # GitHub Actions, workflow file `release.yml`, environment `vestra`). Until
 # then npm falls back to the NPM_TOKEN secret of the `vestra` environment.
-# See CONTRIBUTING.md, "Releasing".
+# See docs/maintaining.md, "Releasing".
 name: Release
 
 on:

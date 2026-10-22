@@ -1,0 +1,17 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+export component BookmarkWindow inherits Window {
+    title: "Bookmark";
+    preferred-width: 320px;
+    in property <string> label: "No bookmark";
+    in property <bool> can-mark;
+    in property <bool> can-jump;
+    callback mark();
+    callback jump();
+    VerticalBox {
+        Text { text: root.label; }
+        HorizontalBox {
+            Button { text: "Mark this position"; enabled: root.can-mark; clicked => { root.mark(); } }
+            Button { text: "Jump to bookmark"; enabled: root.can-jump; clicked => { root.jump(); } }
+        }
+    }
+}
