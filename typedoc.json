@@ -52,6 +52,7 @@
   "treatWarningsAsErrors": true,
   "treatValidationWarningsAsErrors": true,
   "ignoredHighlightLanguages": ["slint"],
+  "jsDocCompatibility": { "exampleTag": false },
   "plugin": [
     "typedoc-github-theme",
     "typedoc-plugin-mdn-links",

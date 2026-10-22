@@ -17,9 +17,10 @@
  *   `return`.
  * - ```ts nocheck marks a block that is deliberately incomplete.
  *
- * Errors in Markdown blocks fail the check. Errors in `@example` blocks are
- * reported as warnings until the reference rewrite fixes them; `--strict`
- * makes them fail too.
+ * Errors in Markdown blocks fail the check, and so do errors in the
+ * `@example` blocks of the categories listed in scripts/doc-standard.mjs.
+ * Errors in other `@example` blocks are reported as warnings until the
+ * reference rewrite reaches them; `--strict` makes them fail too.
  *
  * Drift: the README Quick start equals examples/hello (main.ts verbatim,
  * manifest.json as JSON); every "Node N" / "Node.js N" in README.md and
@@ -36,6 +37,7 @@ import {
 } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
+import { strictDeclarations } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--strict");
@@ -91,10 +93,25 @@ for (const path of documents)
       });
   }
 
+/**
+ * Source ranges of the top-level declarations of the enforced categories
+ * (their doc comments and their members' doc comments).
+ */
+function strictRanges(path, text) {
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+  return file.statements
+    .filter((node) => node.name && strictDeclarations.has(node.name.text))
+    .map((node) => [node.getFullStart(), node.end]);
+}
+
 /** ```ts blocks inside the `@example` sections of /** comments. */
 for (const path of walk("src", (p) => p.endsWith(".ts"))) {
   const text = read(path);
+  const ranges = strictRanges(path, text);
   for (const comment of text.matchAll(/\/\*\*[\s\S]*?\*\//g)) {
+    const enforced = ranges.some(
+      ([start, end]) => comment.index >= start && comment.index < end,
+    );
     const startLine = text.slice(0, comment.index).split("\n").length;
     const lines = comment[0]
       .split("\n")
@@ -106,7 +123,7 @@ for (const path of walk("src", (p) => p.endsWith(".ts"))) {
         if (/^```\s*$/.test(line)) {
           if (inExample && fence.ts)
             snippets.push({
-              kind: "example",
+              kind: enforced ? "enforced" : "example",
               source: path,
               line: startLine + fence.start + 1,
               code: fence.lines.join("\n"),
@@ -213,7 +230,7 @@ const program = ts.createProgram([...files.keys()], {
   },
 });
 
-const failures = { markdown: [], example: [], other: [] };
+const failures = { markdown: [], enforced: [], example: [], other: [] };
 for (const diagnostic of ts.getPreEmitDiagnostics(program)) {
   const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
   const file = diagnostic.file && resolve(diagnostic.file.fileName);
@@ -283,7 +300,7 @@ for (const path of [...documents, "examples/README.md"]) {
 
 const count = (kind) => snippets.filter((s) => s.kind === kind).length;
 const failed = (kind) => new Set(failures[kind].map((f) => f.snippet)).size;
-for (const { at, message } of failures.markdown)
+for (const { at, message } of [...failures.markdown, ...failures.enforced])
   console.error(`::error file=${at}::${message}`);
 for (const line of failures.other) console.error(`::error::${line}`);
 for (const line of drift) console.error(`::error::drift: ${line}`);
@@ -308,7 +325,8 @@ else if (failures.example.length) {
 console.log(
   [
     `Markdown: ${count("markdown")} ts blocks, ${failed("markdown")} failing`,
-    `@example: ${count("example")} ts blocks, ${failed("example")} failing (${strict ? "errors" : "warnings only"})`,
+    `@example, enforced categories: ${count("enforced")} ts blocks, ${failed("enforced")} failing`,
+    `@example, other: ${count("example")} ts blocks, ${failed("example")} failing (${strict ? "errors" : "warnings only"})`,
     `nocheck blocks skipped: ${skipped}`,
     `drift problems: ${drift.length}`,
   ].join("\n"),
@@ -316,6 +334,7 @@ console.log(
 
 if (
   failures.markdown.length ||
+  failures.enforced.length ||
   failures.other.length ||
   drift.length ||
   (strict && failures.example.length)

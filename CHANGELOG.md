@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+Documentation only; no API change.
+
+- New concept page **Windows, panels, settings pages, dialogs and the OSD**, and two how-to guides: **Keep a slider responsive while dragging** and **Remember a window's state between runs**.
+- The reference of the user interface API (`Windows`, `Window`, `View`, `Panels`, `Panel`, the panel positions, `Settings`, `SettingsPage`, `Dialogs`, `Osd`, `OsdPanel`, `Ui`, `Appearance` and their data types) is rewritten: background, life cycle, capability, parameters with units and ranges, every error code, compiling examples, `@since`, and the `UI` category in the navigation.
+- `PluginError` lists the code `ui` (a property the player could not apply to a tool window or settings page).
+- `doc-lint` and `docs:check` enforce the documentation standard for the `UI` category (`scripts/doc-standard.mjs`).
+
 ## 1.3.0
 
 Fixes and additions found by the blur and signal-generator examples (player 0.3.0). Nothing existing changed meaning; `apiVersion` stays `vestra/1`. Plugins that use the additions set `"minPlayerVersion": "0.3.0"`.
