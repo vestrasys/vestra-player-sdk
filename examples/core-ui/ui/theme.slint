@@ -1,0 +1,38 @@
+import { Theme } from "@vestra/theme.slint";
+import { Button, Slider, ToolTipArea } from "@vestra/widgets.slint";
+
+export component ThemeDemo inherits Window {
+    title: "Theme widgets";
+    width: 301px;
+    background: Theme.bg-panel;
+    in-out property <float> level;
+    in property <string> label;
+    callback level-changed(float);
+    callback reset();
+    VerticalLayout {
+        padding: Theme.dialog-padding;
+        spacing: 12px;
+        HorizontalLayout {
+            spacing: 8px;
+            ToolTipArea {
+                text: "Drag the slider, or press Default to reset";
+                width: 65px;
+                Text { text: root.label; color: Theme.text; font-size: Theme.font-body; horizontal-alignment: right; vertical-alignment: center; }
+            }
+            Slider { panel: true; value <=> root.level; changed(value) => { root.level-changed(value); } }
+            Button { text: "Default"; small: true; clicked => { root.reset(); } }
+        }
+        Slider { value <=> root.level; changed(value) => { root.level-changed(value); } }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            // Icon buttons: Path data drawn in an icon-width × icon-height viewbox.
+            ToolTipArea {
+                text: "Reset";
+                Button { width: 25px; icon: "M 3 2.5 L 11 10.5 M 11 2.5 L 3 10.5"; stroked: true; clicked => { root.reset(); } }
+            }
+            Button { width: 25px; icon: "M 0 0 L 12 6 L 0 12 Z"; icon-width: 12px; checked: root.level > 0.5; }
+            Button { text: "OK"; clicked => { root.reset(); } }
+        }
+    }
+}

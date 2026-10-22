@@ -1,0 +1,15 @@
+{
+  "id": "examples.markdown",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "capabilities": ["commands", "ui.window", "ui.osd"],
+  "name": "Markdown example",
+  "author": "Vestra Player",
+  "punchline": "A demonstration of the core Markdown component",
+  "description": "Opens a window that shows a Markdown document: headings, paragraphs, lists, code blocks, quotes, tables, local and remote images, and links.",
+  "tags": ["Example", "Markdown"],
+  "icon": "assets/icon.png",
+  "license": "Apache-2.0",
+  "minPlayerVersion": "0.2.0"
+}

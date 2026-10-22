@@ -8,7 +8,7 @@ This guide walks through a complete Vestra Player plugin: the files it is made o
 
 ## How plugins run
 
-- Each plugin runs in its own Node.js process (Node 22.18 or newer) started by the player. It can use the Node standard library, the file system, the network and npm packages.
+- Each plugin runs in its own Node.js process (Node.js 26, which the player ships) started by the player. It can use the Node standard library, the file system, the network and npm packages.
 - The player loads the entry module and calls its **default export** `activate(plugin)`. The `plugin` object is created by the player; the plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
 - Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle owned by `plugin` or a child scope, and is released automatically when the plugin stops. There is no cleanup function to return.
 - Plugins are trusted code. Manifest capabilities are a contract that the player enforces per call (a missing one fails with `code: "capability"`), not a security sandbox.
@@ -47,7 +47,7 @@ my-plugin/
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.0.1" }
+  "devDependencies": { "@vestra-player/sdk": "^1.2.0" }
 }
 ```
 

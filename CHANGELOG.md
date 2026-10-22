@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Documentation only; no API change.
+
+- New README (logo, badges, Quick start, examples, compatibility) and a contributor guide; the maintainers' handbook moved to `docs/maintaining.md`. Issue and pull request templates.
+- `examples/`: `hello` (the Quick start), and `bookmark` (id now `examples.bookmark`), `panel-menu`, `core-ui` and `markdown`, moved from the player repository and translated to English. CI checks, tests and packs every example on Linux, Windows and macOS.
+- The documentation site is organised as Tutorials, Concepts, How-to guides, Examples and API, with the GitHub theme, MDN links for Node and Web types, and search in documents and comments. Getting started names Node.js 26 and SDK 1.2.
+- The code blocks in the documents are type checked in CI (`npm run docs:check`); `npm run doc-lint` reports the documentation coverage.
+- `PluginError` lists the codes `versionMismatch`, `ui-prepare` and `host`, which the player returns.
+
 ## 1.2.0
 
 For the player's packaged builds, which ship their own Node 26 and run every plugin on it (users no longer install Node). No API change; `apiVersion` stays `vestra/1`.

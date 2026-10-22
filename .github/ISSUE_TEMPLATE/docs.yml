@@ -1,0 +1,21 @@
+name: Documentation
+description: Something in the README, the guides, the API reference or an example is wrong, missing or unclear.
+labels: [documentation]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Page or symbol
+      description: A link to the page, or the name of the type or method.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording or example

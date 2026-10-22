@@ -1,0 +1,7 @@
+{
+  "id": "examples.panel-menu",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "capabilities": ["commands", "playback.read", "playback.control", "events", "ui.mount"]
+}

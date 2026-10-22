@@ -1,0 +1,52 @@
+name: Bug report
+description: The SDK, the test host or vestra-plugin does not behave as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Describe what you observed, not what you think the cause is. A failing test against `TestHost` is the best reproduction.
+  - type: input
+    id: sdk
+    attributes:
+      label: SDK version
+      description: "`npm ls @vestra-player/sdk`"
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: input
+    id: player
+    attributes:
+      label: Vestra Player version
+      description: Leave empty if the problem shows up in tests or vestra-plugin only.
+      placeholder: "0.2.0"
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      multiple: true
+      options: [macOS, Windows, Linux (tests and CLI only)]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The error message and its `code`, the output, what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: Link the documentation that describes the expected behaviour, if there is any.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Smallest reproduction
+      description: A manifest and the few lines of plugin or test code that show the problem.
+      render: ts
+    validations:
+      required: true

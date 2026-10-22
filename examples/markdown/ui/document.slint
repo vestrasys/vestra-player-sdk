@@ -1,0 +1,17 @@
+import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
+import { Theme } from "@vestra/theme.slint";
+
+export component Document inherits Window {
+    title: "Markdown example";
+    preferred-width: 520px;
+    preferred-height: 560px;
+    min-width: 280px;
+    min-height: 200px;
+    background: Theme.bg-panel;
+    in property <[MarkdownBlock]> doc;
+    callback open-link(string);
+    MarkdownView {
+        blocks: root.doc;
+        link-clicked(url) => { root.open-link(url); }
+    }
+}

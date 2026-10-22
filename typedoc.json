@@ -5,11 +5,25 @@
   "tsconfig": "tsconfig.json",
   "out": "docs-site",
   "readme": "README.md",
-  "projectDocuments": ["docs/getting-started.md"],
+  "projectDocuments": [
+    "docs/{tutorials,concepts,how-to,examples}/index.md",
+    "docs/{tutorials,concepts,how-to,examples}/!(index).md"
+  ],
+  "favicon": ".github/assets/logo.png",
   "excludeInternal": true,
   "excludePrivate": true,
   "includeVersion": true,
   "sort": ["source-order"],
+  "groupOrder": ["Tutorials", "Concepts", "How-to", "Examples", "API", "*"],
+  "categorizeByGroup": false,
+  "defaultCategory": "Other",
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true,
+    "includeFolders": false
+  },
+  "searchInComments": true,
+  "searchInDocuments": true,
   "navigationLinks": {
     "GitHub": "https://github.com/vestrasys/vestra-player-sdk",
     "npm": "https://www.npmjs.com/package/@vestra-player/sdk"
@@ -37,5 +51,10 @@
   },
   "treatWarningsAsErrors": true,
   "treatValidationWarningsAsErrors": true,
-  "ignoredHighlightLanguages": ["slint"]
+  "ignoredHighlightLanguages": ["slint"],
+  "plugin": [
+    "typedoc-github-theme",
+    "typedoc-plugin-mdn-links",
+    "./scripts/typedoc-plugin.mjs"
+  ]
 }

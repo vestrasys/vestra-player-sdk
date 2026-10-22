@@ -1,0 +1,7 @@
+{
+  "id": "examples.bookmark",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "capabilities": ["commands", "ui.window", "playback.read", "events", "playback.control"]
+}
