@@ -1,0 +1,111 @@
+// The Blur tool window. The plugin writes the properties, the user's actions
+// come back as callbacks. Walkthrough: docs/examples/blur.md.
+import { ComboBox, Switch } from "std-widgets.slint";
+import { Theme } from "@vestra/theme.slint";
+import { Button, Slider } from "@vestra/widgets.slint";
+
+export component BlurWindow inherits Window {
+    title: "Blur";
+    width: 320px;
+    background: Theme.bg-panel;
+
+    // Plugin → window. Controls the user changes are `in-out` and bound two-way.
+    in-out property <bool> enabled;
+    in-out property <float> strength: 4;
+    in property <[string]> presets;
+    in-out property <int> preset-index;
+    in property <string> status;
+    in property <bool> failed;
+
+    // Window → plugin.
+    callback enabled-toggled(bool);
+    callback strength-changed(float);
+    callback strength-released(float);
+    callback preset-chosen(int);
+    callback reset();
+    callback retry();
+    callback open-options();
+
+    VerticalLayout {
+        padding: Theme.dialog-padding;
+        spacing: 10px;
+
+        Switch {
+            text: "Blur the video";
+            checked <=> root.enabled;
+            toggled => { root.enabled-toggled(self.checked); }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                width: 60px;
+                text: "Strength";
+                color: Theme.text;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+            Slider {
+                minimum: 0;
+                maximum: 10;
+                enabled: root.enabled;
+                value <=> root.strength;
+                changed(value) => { root.strength-changed(value); }
+                released(value) => { root.strength-released(value); }
+            }
+            Text {
+                width: 30px;
+                text: round(root.strength * 10) / 10;
+                color: Theme.text;
+                font-size: Theme.font-body;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                width: 60px;
+                text: "Preset";
+                color: Theme.text;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+            ComboBox {
+                enabled: root.enabled;
+                model: root.presets;
+                current-index <=> root.preset-index;
+                selected => { root.preset-chosen(self.current-index); }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                text: root.status;
+                color: root.failed ? Theme.accent : Theme.text-dim;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+            if root.failed: Button {
+                text: "Retry";
+                clicked => { root.retry(); }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            Button {
+                text: "Options…";
+                clicked => { root.open-options(); }
+            }
+            Button {
+                text: "Reset";
+                clicked => { root.reset(); }
+            }
+        }
+    }
+}
