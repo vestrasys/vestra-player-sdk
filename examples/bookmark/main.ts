@@ -4,9 +4,11 @@ import type { Plugin } from "@vestra-player/sdk";
  * Remembers the current playback position and jumps back to it: a command,
  * a tool window, and reading and changing the playback state.
  */
+// #region state
 export default async function activate(plugin: Plugin) {
   const { player } = plugin;
   let mark: number | null = null;
+  // #endregion state
 
   // #region window
   const window = plugin.windows.create("ui/bookmark.slint");

@@ -1,6 +1,8 @@
+// #region imports
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "@vestra-player/sdk";
+// #endregion imports
 
 /**
  * Demonstrates the core Markdown component: a tool window with
