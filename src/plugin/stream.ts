@@ -126,15 +126,21 @@ class StreamHandle implements Stream {
     await this.stop();
     for (const listener of this.#listeners) this.#scope.run(listener, error);
   }
+  /**
+   * Close the source first (if it is still ours), while the frame connection
+   * is still up: a connection that drops under a selected source is a
+   * playback failure to the player ("producer transport closed"). Then the
+   * connection, then the producer.
+   */
   stop() {
     this.#stopping ??= (async () => {
       this.#running = false;
       clearTimeout(this.#timer);
       await this.#pumping.catch(() => {});
-      this.#socket.close();
       try {
         await this.#service.closeIfCurrent(this.#generation);
       } finally {
+        this.#socket.close();
         await this.#service.runtime.host.producer
           .release(this.#producer)
           .catch(() => {});
@@ -283,13 +289,14 @@ export async function openStream(
     socket = undefined;
     return handle;
   } catch (error) {
-    socket?.close();
     // An abort can arrive before the host answered the selecting request: wait
     // for that answer so a source selected afterwards is still closed.
     if (opened && prepared !== undefined) await opened.catch(() => {});
-    // A cancelled open may already have selected this producer: close only that source.
+    // A cancelled open may already have selected this producer: close only
+    // that source, before its frame connection (as in `stop`).
     if (generation !== undefined && prepared !== undefined)
       await service.closeIfCurrent(generation).catch(() => {});
+    socket?.close();
     if (prepared !== undefined)
       await host.producer.release(prepared).catch(() => {});
     throw error;

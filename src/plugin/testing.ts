@@ -196,6 +196,12 @@ export interface FakeProducer {
   videoFrames: number;
   /** `true` once the plugin released the producer (stream stopped or disposed). */
   released: boolean;
+  /**
+   * `true` if the frame connection closed while this stream was still the
+   * player's source: the player reports that as a playback failure
+   * ("producer transport closed"). `stop()` closes the source first.
+   */
+  droppedWhileSelected: boolean;
 }
 
 const kebab = (name: string) =>
@@ -3074,6 +3080,7 @@ export class TestHost implements Transport {
         receivedFrames: 0,
         videoFrames: 0,
         released: false,
+        droppedWhileSelected: false,
         path,
         admitted: !tcp,
         epoch: 1,
@@ -3103,6 +3110,13 @@ export class TestHost implements Transport {
           }
         });
         socket.on("error", () => {});
+        socket.on("close", () => {
+          if (
+            this.source.kind === "producer" &&
+            this.source.source === `producer://${producer.id}`
+          )
+            producer.droppedWhileSelected = true;
+        });
       });
       let socket = path;
       if (tcp) {
