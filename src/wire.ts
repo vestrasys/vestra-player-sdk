@@ -166,8 +166,8 @@ export interface WindowFacts {
   videoArea: { width: number; height: number };
   /** System picture-in-picture (absent from older players: unsupported). */
   pictureInPicture?: { supported: boolean; active: boolean };
-  /** The palette (`plugin.appearance`), with the `window.state` reply. */
-  appearance?: "vestra" | "classic";
+  /** The palette (`plugin.appearance`), with the `window.state` reply; a newer player may name a palette this SDK does not list. */
+  appearance?: string;
 }
 /** One timeline mark as the player merges them (`timeline.marks`). */
 export interface WireMark {

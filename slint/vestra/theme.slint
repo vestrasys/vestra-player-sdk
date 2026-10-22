@@ -1,6 +1,6 @@
-// Vestra theme tokens (doc/product/ui-alignment.md §2.1–2.3). Import from any
+// Vestra theme tokens (doc/product/ui-spec.md §2.1–2.3). Import from any
 // plugin or host Slint file:  import { Theme } from "@vestra/theme.slint";
-// Colours follow the player's palette (R-H6: Vestra or reference player, set on every
+// Colours follow the player's palette (R-H6: Vestra, set on every
 // view through ../palette.slint, which is not part of this library). They are
 // `out` properties: Slint code reads them but cannot assign them. So is
 // font-mono (set per system). Corner radii, font sizes and control sizes
@@ -10,8 +10,8 @@ import { VestraPalette } from "../palette.slint";
 
 export global Theme {
     // Colours: Vestra identity drawn from the logo (amber → magenta → violet on a
-    // violet-tinted near-black). Sizes below keep the reference player-derived geometry
-    // (doc/product/ui-alignment.md §2.3); only the look differs (§1 D1, revised).
+    // violet-tinted near-black). Sizes below are the player's control geometry
+    // (doc/product/ui-spec.md §2.3), the same whatever the palette.
     out property <color> bg-bar: VestraPalette.bg-bar;
     out property <color> bg-video: VestraPalette.bg-video;
     out property <color> bg-list: VestraPalette.bg-list;
@@ -37,7 +37,7 @@ export global Theme {
     out property <color> danger: VestraPalette.danger;
     // Brand gradient for "progress" fills (seek bar, volume, sliders).
     out property <brush> accent-fill: VestraPalette.accent-fill;
-    // Soft corners echo the logo; reference player is square-cornered.
+    // Soft corners echo the logo.
     out property <length> radius-control: 3px;
     out property <length> radius-panel: 6px;
     // §2.2 fonts. No default family: every window uses the system UI font,

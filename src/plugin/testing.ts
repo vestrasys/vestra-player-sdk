@@ -88,7 +88,8 @@ import {
 import type { RenderSettings, ViewSettings } from "./types.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
-import type { Plugin } from "./types.ts";
+import { THEMES } from "./appearance.ts";
+import type { Plugin, ThemeId } from "./types.ts";
 
 /** Throw one of these from `host.handle(...)` to simulate a definite refusal. */
 export { HostError };
@@ -305,7 +306,7 @@ export interface MarkdownWire {
  *
  * test("shows the playing file in the panel", async () => {
  *   const host = new TestHost();
- *   host.appearance = "classic"; // read during activation
+ *   host.appearance = "vestra"; // read during activation
  *   const { stop } = await startPlugin(activate, {
  *     directory: new URL("..", import.meta.url),
  *     host,
@@ -728,12 +729,12 @@ export class TestHost implements Transport {
     return this.settle();
   }
   /** The palette (`plugin.appearance.theme`); `setAppearance` changes it elsewhere. */
-  appearance: "vestra" | "classic" = "vestra";
+  appearance: ThemeId = "vestra";
   /**
    * Simulate another plugin switching the palette: updates
    * {@link TestHost.appearance} and pushes `appearance.changed`.
    */
-  setAppearance(theme: "vestra" | "classic") {
+  setAppearance(theme: ThemeId) {
     this.appearance = theme;
     this.emit("appearance.changed", { theme });
   }
@@ -2401,9 +2402,10 @@ export class TestHost implements Transport {
     },
     "drops.listen": (p) => void (this.panelDrops = p.listen === true),
     "appearance.set": (p) => {
-      if (p.theme !== "vestra" && p.theme !== "classic")
-        throw new HostError("invalid", "theme is vestra or classic");
-      if (p.theme !== this.appearance) this.setAppearance(p.theme);
+      // Like the player: an id it does not have selects the default (the
+      // SDK's own `set` refuses one before it gets here).
+      const theme = THEMES.find((t) => t === p.theme) ?? THEMES[0]!;
+      if (theme !== this.appearance) this.setAppearance(theme);
     },
     "settings.register": (p) => {
       const id = String(p.id);
