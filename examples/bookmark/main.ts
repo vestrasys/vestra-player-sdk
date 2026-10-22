@@ -22,7 +22,7 @@ export default async function activate(plugin: Plugin) {
   // #region command
   plugin.commands.add({
     id: "bookmark.open",
-    path: ["Playback", "Bookmark…"],
+    path: ["@playback", "Bookmark…"],
     order: 270,
     run: () => window.show(),
   });
