@@ -1,0 +1,185 @@
+// Signal Generator control window. The plugin writes the properties and
+// handles the callbacks (main.ts); this file only lays them out.
+import { Theme } from "@vestra/theme.slint";
+import { Button, Slider } from "@vestra/widgets.slint";
+import { CheckBox, ComboBox } from "std-widgets.slint";
+
+component Label inherits Text {
+    width: 76px;
+    color: Theme.text;
+    font-size: Theme.font-body;
+    horizontal-alignment: right;
+    vertical-alignment: center;
+}
+
+component Value inherits Text {
+    width: 64px;
+    color: Theme.text-list;
+    font-size: Theme.font-body;
+    vertical-alignment: center;
+}
+
+export component SignalGeneratorWindow inherits Window {
+    title: "Signal Generator";
+    width: 380px;
+    background: Theme.bg-panel;
+
+    // Values the user edits are in-out: the controls write them, and the
+    // plugin writes them back from its model (two-way bindings below).
+    in-out property <int> pattern;
+    in-out property <int> waveform;
+    in-out property <float> frequency; // slider position 0–1 (logarithmic)
+    in-out property <bool> sweep;
+    in-out property <float> level; // dBFS
+    in-out property <bool> mute;
+    in-out property <float> balance; // −1 left … 1 right
+    in-out property <int> filter;
+    // Display only.
+    in property <string> frequency-text;
+    in property <string> level-text;
+    in property <string> balance-text;
+    in property <string> filter-status;
+    in property <bool> running;
+    in property <bool> starting;
+    in property <string> status;
+    in property <string> problem;
+
+    callback pattern-chosen(int);
+    callback waveform-chosen(int);
+    callback frequency-moved(float);
+    callback sweep-toggled(bool);
+    callback level-moved(float);
+    callback mute-toggled(bool);
+    callback balance-moved(float);
+    callback filter-chosen(int);
+    callback start();
+    callback stop();
+
+    VerticalLayout {
+        padding: Theme.dialog-padding;
+        spacing: 8px;
+
+        // Picture
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: "Picture"; }
+            ComboBox {
+                model: ["Colour bars", "Moving grid", "Oscilloscope"];
+                current-index <=> root.pattern;
+                selected => { root.pattern-chosen(self.current-index); }
+            }
+        }
+
+        // Tone
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: "Waveform"; }
+            ComboBox {
+                model: ["Sine", "Square", "Saw", "Noise"];
+                current-index <=> root.waveform;
+                selected => { root.waveform-chosen(self.current-index); }
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: "Frequency"; }
+            Slider {
+                enabled: !root.sweep;
+                value <=> root.frequency;
+                changed(position) => { root.frequency-moved(position); }
+            }
+            Value { text: root.frequency-text; }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: ""; }
+            CheckBox {
+                text: "Sweep 20 Hz – 5 kHz (10 s)";
+                checked <=> root.sweep;
+                toggled => { root.sweep-toggled(self.checked); }
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: "Level"; }
+            Slider {
+                minimum: -60;
+                maximum: 0;
+                enabled: !root.mute;
+                value <=> root.level;
+                changed(db) => { root.level-moved(db); }
+            }
+            Value { text: root.level-text; }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: ""; }
+            CheckBox {
+                text: "Mute";
+                checked <=> root.mute;
+                toggled => { root.mute-toggled(self.checked); }
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: "Balance"; }
+            Slider {
+                minimum: -1;
+                maximum: 1;
+                value <=> root.balance;
+                changed(value) => { root.balance-moved(value); }
+            }
+            Value { text: root.balance-text; }
+        }
+
+        // Player-side processing
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: "Player filter"; }
+            ComboBox {
+                model: ["Off", "Mono", "Swap left / right", "Treble +6 dB"];
+                current-index <=> root.filter;
+                selected => { root.filter-chosen(self.current-index); }
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Label { text: ""; }
+            Text {
+                text: root.filter-status;
+                color: Theme.text-dim;
+                font-size: Theme.font-body;
+                wrap: word-wrap;
+            }
+        }
+
+        Rectangle { height: 1px; background: Theme.line; }
+
+        // Run state and errors
+        Text {
+            text: root.status;
+            color: Theme.text-list;
+            font-size: Theme.font-body;
+        }
+        if root.problem != "": Text {
+            text: root.problem;
+            color: #ff6b6b;
+            font-size: Theme.font-body;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: end;
+            Button {
+                text: "Start";
+                enabled: !root.running && !root.starting;
+                clicked => { root.start(); }
+            }
+            Button {
+                text: "Stop";
+                enabled: root.running || root.starting;
+                clicked => { root.stop(); }
+            }
+        }
+    }
+}
