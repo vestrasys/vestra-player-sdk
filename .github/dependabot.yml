@@ -18,3 +18,9 @@ updates:
     groups:
       dev-tools:
         dependency-type: development
+    ignore:
+      # TypeScript ships to plugin authors (a runtime dependency: `vestra-plugin
+      # check` type-checks with it), and typedoc supports only up to 6.0. A new
+      # major is an SDK decision with its own release, not a bot bump.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
