@@ -42,7 +42,7 @@ The entry workflows only orchestrate; every check is written once in a reusable 
 
 ```
 ci.yml / main.yml
-  static ─────▶ build ─────┬─▶ test   ubuntu × node 22.18, 24 · windows × 24 · macos × 24
+  static ─────▶ build ─────┬─▶ test   ubuntu, windows, macos × node 26
   _static.yml   _build.yml │   _test.yml (uses the dist artifact)
                            └─▶ docs   _docs.yml ──▶ deploy-docs (main.yml only, needs test)
   ci-ok   needs all; fails if any needed job failed or was cancelled
@@ -53,7 +53,7 @@ release.yml (tag v*)
 ```
 
 - `_static.yml`: `tsc` (src + test), Prettier, oxlint, typos; actionlint and zizmor on `.github/`.
-- `_build.yml`: `npm run build`, `npm pack`, the tarball's allow list (`scripts/check-pack.mjs`), publint, `attw --profile esm-only` (the package is ESM only, Node >= 22.18), the install smoke test (`scripts/smoke-pack.mjs`). Uploads `dist` and `package` (the .tgz a release publishes unchanged).
+- `_build.yml`: `npm run build`, `npm pack`, the tarball's allow list (`scripts/check-pack.mjs`), publint, `attw --profile esm-only` (the package is ESM only, Node >= 26), the install smoke test (`scripts/smoke-pack.mjs`). Uploads `dist` and `package` (the .tgz a release publishes unchanged).
 - `_test.yml`: `npm test` on the matrix above.
 - `_docs.yml`: TypeDoc with warnings as errors; on `main` also the Pages artifact.
 - Make **`ci-ok`** the only required status check for `main` (branch protection or a ruleset).

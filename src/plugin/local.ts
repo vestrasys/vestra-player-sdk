@@ -57,7 +57,12 @@ function run(
 ): Promise<{ stdout: Uint8Array; stderr: string }> {
   return new Promise((resolve, reject) => {
     if (options.signal.aborted) return reject(abortError());
-    const child = spawn(path, args, { stdio: ["ignore", "pipe", "pipe"] });
+    // windowsHide: no console window for the tool on Windows, whatever
+    // started the plugin (the player starts it without one).
+    const child = spawn(path, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
     const out: Buffer[] = [];
     const err: Buffer[] = [];
     let size = 0;
