@@ -174,6 +174,21 @@ async function writeFrame(
   clock: Clock,
   epoch: number,
 ) {
+  try {
+    await sendFrame(socket, frame, clock, epoch);
+  } catch (error) {
+    // The frame broke a limit (size, sample range): the plugin's mistake.
+    if (error instanceof TypeError) throw failure("invalid", error.message);
+    throw error;
+  }
+}
+
+async function sendFrame(
+  socket: Socket,
+  frame: { video: Uint8Array; audio: Float32Array },
+  clock: Clock,
+  epoch: number,
+) {
   await socket.video(
     { epoch, sampleTime: clock.sample, sequence: clock.nextSequence() },
     frame.video,
@@ -202,6 +217,17 @@ export async function openStream(
   let generation: number | undefined;
   /** The request selecting the stream, once sent. */
   let opened: Promise<void> | undefined;
+  const bytes = options.width * options.height * 4;
+  /** The plugin's frame, checked against the declared size. */
+  const frame = () => {
+    const next = options.frame();
+    if (next?.video?.byteLength !== bytes)
+      throw failure(
+        "invalid",
+        `frame().video must be ${options.width}×${options.height}×4 = ${bytes} bytes of RGBA`,
+      );
+    return next;
+  };
   try {
     check();
     const spec = await host.producer.prepare({
@@ -226,7 +252,7 @@ export async function openStream(
     // enough contiguous PCM before asking the host to select it.
     while (sample < PREROLL) {
       check();
-      await writeFrame(socket, options.frame(), clock, epoch);
+      await writeFrame(socket, frame(), clock, epoch);
     }
     for (const deadline = Date.now() + 10_000; ; await sleep(10)) {
       check();
@@ -280,7 +306,7 @@ export async function openStream(
       producer: prepared,
       socket,
       generation: generation!,
-      frame: options.frame,
+      frame,
       epoch,
       sample,
       sequence,

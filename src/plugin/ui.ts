@@ -251,7 +251,10 @@ class WindowHandle extends ViewBase implements Window {
   #queue: Promise<unknown> = Promise.resolve();
   constructor(scope: ScopeImpl, file: string, id: string) {
     if (scope.runtime.views.has(id))
-      throw new Error(`window ${id} already exists; pass a distinct id`);
+      throw failure(
+        "conflict",
+        `window ${id} already exists; pass a distinct id`,
+      );
     super(scope);
     this.#file = file;
     this.#id = id;

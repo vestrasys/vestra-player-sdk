@@ -2,7 +2,7 @@
  * The player-side audio filter: a chain of nodes the player runs inside its
  * own audio pipeline, in contrast to the tone this plugin computes itself.
  */
-import type { AudioNode, FilterStatus, PlayerState } from "@vestra-player/sdk";
+import type { AudioNode, FilterStatus } from "@vestra-player/sdk";
 import type { FilterChoice } from "./controls.ts";
 
 // #region nodes
@@ -26,22 +26,22 @@ export function nodesFor(choice: FilterChoice): AudioNode[] {
 export function describeFilter(
   choice: FilterChoice,
   status: FilterStatus,
-  state: PlayerState,
 ): string {
   if (choice === "off") return "Off";
   switch (status.state) {
     case "waiting":
-      // The chain runs in the pipeline that decodes media. A generated
-      // stream's audio goes from frame() straight to the audio device, so
-      // the chain waits (and is kept) until the player plays a file.
-      return state.kind === "stream"
-        ? "Waiting: applies to media the player decodes, not to this stream"
-        : "Waiting for media";
+      return "Waiting for media";
     case "applying":
       return "Applying…";
     case "applied":
       return "Applied by the player";
     case "failed":
+      // The chain runs in the pipeline that decodes media. A generated
+      // stream's audio goes from frame() straight to the audio device, so
+      // the player answers `unsupported`; the SDK applies the kept chain
+      // again by itself once the player plays a file.
+      if (status.error.code === "unsupported")
+        return "Not applied to this stream: the player filters media it decodes";
       return `Failed (${status.error.code}): ${status.error.message}`;
   }
 }
