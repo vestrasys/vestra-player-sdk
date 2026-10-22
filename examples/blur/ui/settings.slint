@@ -1,0 +1,36 @@
+// Options ▸ Video ▸ Blur. A settings page exports one global (the bridge the
+// plugin talks to) and one component (the layout). Walkthrough: docs/examples/blur.md.
+import { CheckBox } from "std-widgets.slint";
+import { Theme } from "@vestra/theme.slint";
+
+export global BlurPage {
+    in-out property <bool> restore-on-start;
+    in-out property <bool> messages: true;
+    callback restore-toggled(bool);
+    callback messages-toggled(bool);
+}
+
+export component BlurSettings inherits Rectangle {
+    VerticalLayout {
+        padding: Theme.dialog-padding;
+        spacing: 6px;
+        alignment: start;
+
+        CheckBox {
+            text: "Turn blur back on when the player starts";
+            checked <=> BlurPage.restore-on-start;
+            toggled => { BlurPage.restore-toggled(self.checked); }
+        }
+        CheckBox {
+            text: "Show on-screen messages";
+            checked <=> BlurPage.messages;
+            toggled => { BlurPage.messages-toggled(self.checked); }
+        }
+        Text {
+            text: "The strength is always remembered. Change it in Video ▸ Blur Controls….";
+            color: Theme.text-dim;
+            font-size: Theme.font-body;
+            wrap: word-wrap;
+        }
+    }
+}
