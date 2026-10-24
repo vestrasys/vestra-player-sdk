@@ -202,6 +202,13 @@ export interface FakeProducer {
   /** `true` once the plugin released the producer (stream stopped or disposed). */
   released: boolean;
   /**
+   * `true` once the player retired the producer, as the real player does at
+   * once: another source replaced it (`open`, another stream, a resolved
+   * file), the source was closed, or {@link TestHost.failStream} failed it.
+   * A retired producer's `producer.state` answers `unavailable`.
+   */
+  retired: boolean;
+  /**
    * `true` if the frame connection closed while this stream was still the
    * player's source: the player reports that as a playback failure
    * ("producer transport closed"). `stop()` closes the source first.
@@ -1814,6 +1821,31 @@ export class TestHost implements Transport {
     if (this.#resolve(source, false) === null) this.setSource({ phase });
   }
   /**
+   * Simulate a generated stream failing in the player (its audio device
+   * lost, its frame connection broken), like the player: the source fails
+   * with `message` (`phase: "error"`) and the producer is retired at once.
+   * The stream's `onStop` listeners get a `stream` error with `message`.
+   *
+   * @param producerId - The producer, from {@link TestHost.producers}.
+   * @param message - The player's failure text.
+   *
+   * @example
+   * ```ts
+   * const [producer] = host.producers.values();
+   * host.failStream(producer.id, "producer transport closed");
+   * ```
+   */
+  failStream(producerId: number, message: string) {
+    const producer = this.producers.get(producerId);
+    if (!producer || !this.#current(producerId))
+      throw new Error(`producer ${producerId} is not the player's source`);
+    this.setSource({
+      phase: "error",
+      terminalReason: { failed: message },
+    } as Partial<SourceState>);
+    producer.retired = true;
+  }
+  /**
    * Press a binding like the host's table would: panel-focus bindings first
    * when `panel` is true, then global ones; the earliest registration wins a
    * conflict. Resolves after the command ran; rejects when nothing is bound
@@ -2184,6 +2216,12 @@ export class TestHost implements Transport {
       if (control.kind === "seek") next.position = Number(control.seconds);
       if (control.kind === "rate") next.rate = Number(control.rate);
     }
+    // Like the player: the selected producer is retired as soon as another
+    // source replaces it or the source closes.
+    if (["open", "openProvider", "close"].includes(String(intent.kind)))
+      this.#retireSelected(
+        intent.kind === "openProvider" ? Number(intent.producerId) : null,
+      );
     if (intent.kind === "openProvider")
       this.#selected = Number(intent.producerId);
     if (intent.kind === "open" || intent.kind === "close")
@@ -2208,6 +2246,16 @@ export class TestHost implements Transport {
       if (extensions?.includes(extension)) return id;
     }
     return null;
+  }
+  /** Retire the producer that is the player's source, unless it is `keep`. */
+  #retireSelected(keep: number | null) {
+    for (const producer of this.producers.values())
+      if (
+        producer.id !== keep &&
+        !producer.retired &&
+        this.#current(producer.id)
+      )
+        producer.retired = true;
   }
   /** Whether producer `id` is the player's source. */
   #current(id: number) {
@@ -2338,8 +2386,10 @@ export class TestHost implements Transport {
     const result = (p.result ?? {}) as { kind?: string; producerId?: number };
     const producer = this.producers.get(Number(result.producerId));
     if (result.kind !== "stream") fail("invalid resolved stream descriptor");
-    if (!producer || producer.released) fail("unavailable: producer absent");
+    if (!producer || producer.released || producer.retired)
+      fail("unavailable: producer absent");
     // Like openProvider, but the source keeps the path and `startPaused`.
+    this.#retireSelected(producer!.id);
     this.#selected = producer!.id;
     producer!.active = true;
     producer!.acknowledged = false;
@@ -3508,6 +3558,7 @@ export class TestHost implements Transport {
         receivedFrames: 0,
         videoFrames: 0,
         released: false,
+        retired: false,
         droppedWhileSelected: false,
         path,
         admitted: !tcp,
@@ -3568,6 +3619,8 @@ export class TestHost implements Transport {
     "producer.state": (p) => {
       const producer = this.producers.get(Number(p.producerId));
       if (!producer) throw new HostError("missing", "producer");
+      if (producer.retired || producer.released)
+        throw new HostError("unavailable", "producer absent");
       const current = this.#current(producer.id);
       return {
         input: null,
@@ -3596,6 +3649,8 @@ export class TestHost implements Transport {
       const control = (p.control ?? {}) as Record<string, Json>;
       const producer = this.producers.get(Number(control.producerId));
       if (!producer) throw new HostError("missing", "producer");
+      if (producer.retired || producer.released)
+        throw new HostError("stale", "producer control changed");
       producer.pending = null;
       producer.acknowledged = true;
       producer.epoch = Number(control.epoch);

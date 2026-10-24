@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.7
+
+**Replaced or closed streams stop with `null`.** A fix; no API change, `apiVersion` stays `vestra/1`, any player.
+
+- **`Stream.onStop(null)` when another source replaced the stream or it was closed**, as documented. The player retires a stream's producer at once in both cases, and the SDK then passed the player's answer (`unavailable`, "producer absent") to `onStop` as an error. The SDK now reads the player's state to tell the two apart: replaced or closed is `null`; a failure is a `stream` error with the player's text (also when the player retired the producer right after failing it, which used to give "producer absent" too).
+- The same in the start-up paths: `openStream` replaced or closed before it ran rejects with `replaced` (was `unavailable`); a file resolver's stream replaced after the player selected it is a cancellation and no longer reaches `onError`.
+- **A file resolver's stream that cannot start after `resolve` returned** fails the open with Chinese text instead of the SDK's English (`"audio device is not ready: deviceLost"`): `device` "音频输出设备不可用", `timeout` "启动超时", `busy` "播放器正忙，请稍后重试", other start-up failures "无法启动播放"; the English detail goes to the plugin's log. The plugin never saw these errors, so the user read the SDK's words. An error thrown by `frame()` keeps its message; text for a file the plugin can judge (a bad header) belongs in `resolve`.
+- **`TestHost` retires producers like the player**: on `open`, `close`, another `openProvider` or resolved stream, a retired producer's `producer.state` answers `unavailable` and `producer.ack` `stale`. New `FakeProducer.retired`, and **`host.failStream(producerId, message)`** to fail the playing stream the way the player does (`phase: "error"` with `message`, producer retired). Tests that replaced a stream used to pass where the player failed.
+
 ## 1.5.6
 
 **A reference for AI assistants.** Documentation and packaging only; no API change, `apiVersion` stays `vestra/1`. (1.5.5 was not published to npm; this release includes its changes.)

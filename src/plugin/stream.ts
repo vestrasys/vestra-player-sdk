@@ -106,7 +106,8 @@ class StreamHandle implements Stream {
           this.#pumping = this.#pump();
         }, 5);
     } catch (error) {
-      void this.#end(toError(error));
+      const retired = await retirement(this.#service, this.#generation, error);
+      void this.#end(retired === undefined ? toError(error) : retired);
     }
   }
   async #render() {
@@ -154,6 +155,30 @@ class StreamHandle implements Stream {
     this.#scope.forget(this);
     await this.stop().catch(() => {});
   }
+}
+
+/**
+ * The player retires a producer the moment another source replaces it or
+ * the source closes, and after it failed, so its `producer.state` then
+ * answers `unavailable` (and `producer.ack` `stale`). The player's state
+ * says which: `null` (replaced or closed), the failure with the player's
+ * words, or `undefined` when the error is not a retirement.
+ */
+async function retirement(
+  service: PlayerService,
+  generation: number,
+  error: unknown,
+): Promise<PluginError | null | undefined> {
+  const code = (error as PluginError | undefined)?.code;
+  if (code !== "unavailable" && code !== "stale") return undefined;
+  const readable = service.runtime.can("playback.read");
+  if (readable) await service.refresh().catch(() => {});
+  const raw = service.raw;
+  if (raw.stamp.generation !== generation || raw.phase === "empty") return null;
+  if (raw.phase === "error")
+    return failure("stream", service.state.error ?? "无法打开此媒体");
+  // Without `playback.read` the state may be behind: no failure was seen.
+  return readable ? undefined : null;
 }
 
 /** Start-up timeouts say which step ran out of time. */
@@ -398,9 +423,42 @@ export async function openStream(
     // An abort can arrive before the host answered the selecting request: wait
     // for that answer so a source selected afterwards is still closed.
     await opened?.catch(() => {});
+    // Read before closing: replaced during activation is not a failure.
+    const retired =
+      generation === undefined
+        ? undefined
+        : await retirement(service, generation, error);
     await abandon(service, p, generation);
-    throw error;
+    if (retired === null) throw failure("replaced", "另一个来源已替换此媒体");
+    throw retired ?? error;
   }
+}
+
+/**
+ * What the user reads when a file resolver's stream cannot start. The
+ * player shows the answer as the open's failure, and the plugin never sees
+ * these errors: they happen after `resolve` returned. The SDK's and the
+ * player's own codes get the player's words; the detail goes to the log.
+ * An error the plugin threw from `frame()` keeps its own words.
+ */
+const START_TEXT: Readonly<Record<string, string>> = {
+  device: "音频输出设备不可用",
+  timeout: "启动超时",
+  busy: "播放器正忙，请稍后重试",
+  stream: "无法启动播放",
+  producer: "无法启动播放",
+  unavailable: "无法启动播放",
+  invalid: "无法启动播放",
+};
+function startFailure(scope: ScopeImpl, error: unknown): unknown {
+  const code = (error as PluginError | undefined)?.code;
+  const text = code === undefined ? undefined : START_TEXT[code];
+  if (text === undefined) return error;
+  console.error(
+    `[${scope.id}] file resolver stream did not start:`,
+    (error as Error).message,
+  );
+  return Object.assign(failure(code!, text), { cause: error });
 }
 
 /**
@@ -420,6 +478,8 @@ export async function resolvedStream(
   const host = service.runtime.host;
   const p = await prepare(host, stream, () => {
     if (signal.aborted || scope.disposed) throw abortError();
+  }).catch((error: unknown) => {
+    throw startFailure(scope, error);
   });
   return {
     kind: "stream",
@@ -438,8 +498,12 @@ export async function resolvedStream(
         // Replaced before it ran: the source is no longer this stream.
         if (service.raw.stamp.generation > stamp.generation) throw abortError();
       } catch (error) {
+        // Replaced or closed before it ran is a cancellation, not a failure.
+        const retired = await retirement(service, stamp.generation, error);
         await abandon(service, p, stamp.generation);
-        if ((error as PluginError).code !== "aborted") scope.report(error);
+        const reported = retired === undefined ? error : retired;
+        if (reported && (reported as PluginError).code !== "aborted")
+          scope.report(reported);
         return;
       }
       const handle = handleOf(scope, service, p, stamp.generation);

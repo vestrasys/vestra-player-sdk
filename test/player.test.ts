@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
-import type { Json, Plugin, PlayerState } from "../src/plugin/index.ts";
+import type {
+  Json,
+  Plugin,
+  PlayerState,
+  PluginError,
+} from "../src/plugin/index.ts";
 
 const capabilities = ["playback.read", "playback.control", "events"];
 const start = (
@@ -275,6 +280,81 @@ test("onStop is not called when the plugin stops its own stream", async () => {
   stream.onStop(() => calls++);
   await stream.stop();
   assert.equal(calls, 0);
+  await stop();
+});
+
+test("onStop gets null when the player retires a replaced or closed stream, the failure otherwise", async () => {
+  const { host, plugin, stop } = await startPlugin(() => {}, {
+    capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
+  });
+  const errors: PluginError[] = [];
+  plugin.onError((error) => errors.push(error));
+  const open = async () => {
+    const stream = await plugin.player.openStream({
+      width: 2,
+      height: 2,
+      frame: () => ({
+        video: new Uint8Array(16),
+        audio: new Float32Array(1600),
+      }),
+    });
+    const producer = [...host.producers.values()].at(-1)!;
+    const stopped = new Promise<PluginError | null>((resolve) =>
+      stream.onStop(resolve),
+    );
+    return { stream, producer, stopped };
+  };
+  // Replaced by media: the player retires the producer at once.
+  const first = await open();
+  host.openElsewhere("/movie.mp4");
+  assert.equal(first.producer.retired, true);
+  assert.equal(await first.stopped, null);
+  assert.equal(first.stream.running, false);
+  assert.equal(first.producer.released, true);
+  assert.equal(host.source.source, "/movie.mp4", "the new source is kept");
+  // Replaced by another stream.
+  const second = await open();
+  const third = await open();
+  assert.equal(second.producer.retired, true);
+  assert.equal(await second.stopped, null);
+  assert.equal(third.stream.running, true);
+  // Closed by the user.
+  await plugin.player.close();
+  assert.equal(await third.stopped, null);
+  // A real failure still arrives, with the player's words.
+  const fourth = await open();
+  host.failStream(fourth.producer.id, "producer transport closed");
+  const error = await fourth.stopped;
+  assert.equal(error?.code, "stream");
+  assert.equal(error?.message, "producer transport closed");
+  assert.deepEqual(errors, []);
+  await stop();
+});
+
+test("openStream replaced while it starts rejects with replaced", async () => {
+  const { host, plugin, stop } = await startPlugin(() => {}, {
+    capabilities: [...capabilities, "producer.av"],
+    host: streamHost(),
+  });
+  host.handle("producer.ack", (params) => {
+    host.reset("producer.ack");
+    host.openElsewhere("/movie.mp4");
+    return host.request("producer.ack", params);
+  });
+  await assert.rejects(
+    plugin.player.openStream({
+      width: 2,
+      height: 2,
+      frame: () => ({
+        video: new Uint8Array(16),
+        audio: new Float32Array(1600),
+      }),
+    }),
+    (error: PluginError) => error.code === "replaced",
+  );
+  assert.equal(host.source.source, "/movie.mp4");
+  assert.ok([...host.producers.values()].every((p) => p.released));
   await stop();
 });
 
