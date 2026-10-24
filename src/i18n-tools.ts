@@ -82,7 +82,7 @@ const CJK =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 
 const COMPOSED =
-  'user-visible text composed in TypeScript: pass a template with args (osd.show("Speed {}×", [rate])) or move it into Slint';
+  'user-visible text composed in TypeScript: pass a template with args (osd.show("Speed {}×", [rate]), plugin.i18n.text("Track {}", [n])) or move it into Slint';
 const DYNAMIC = (what: string) =>
   `${what} is not a literal; its text cannot be extracted (use a string literal or an \`as const\` table)`;
 
@@ -106,6 +106,9 @@ const SITES: Record<string, Site> = {
   "Dialogs.openFiles": { object: 0, fields: ["title"] },
   "Dialogs.openDirectory": { object: 0, fields: ["title"] },
   "Dialogs.saveFile": { object: 0, fields: ["title"] },
+  "I18n.text": { argument: 0 },
+  "I18n.error": { argument: 0 },
+  "I18n.resolve": { argument: 0 },
 };
 
 /** Without the SDK's types: the module property names in front of the method. */
@@ -119,6 +122,9 @@ const BY_NAME: Record<string, string> = {
   "dialogs.openFiles": "Dialogs.openFiles",
   "dialogs.openDirectory": "Dialogs.openDirectory",
   "dialogs.saveFile": "Dialogs.saveFile",
+  "i18n.text": "I18n.text",
+  "i18n.error": "I18n.error",
+  "i18n.resolve": "I18n.resolve",
 };
 
 /** The value(s) an expression can have, as far as the source tells. */
@@ -187,6 +193,9 @@ class Extractor {
   }
 
   add(file: string, line: number, message: Omit<Message, "references">) {
+    // Only placeholders and punctuation (`"{}\n{}"`, `"· {}"`): nothing to
+    // translate; the player formats it as it is.
+    if (!/\p{L}/u.test(message.id.replace(/\{[^{}]*\}/g, ""))) return;
     this.found.push({ ...message, file, line, references: [] });
   }
 
@@ -206,6 +215,13 @@ class Extractor {
     const parts = type.isUnion() ? type.types : [type];
     for (const part of parts) {
       if (part.isStringLiteral()) result.values.push(part.value);
+      // A text value (`plugin.i18n.text(…)`): its source is extracted where
+      // it is made.
+      else if (
+        part.getProperty("$vestraText") ||
+        part.getProperty("$vestraList")
+      )
+        continue;
       else if (
         part.flags &
         (ts.TypeFlags.Null |
@@ -362,9 +378,26 @@ class Extractor {
   /** `Interface.method` of a call to the SDK, if it is one of `SITES`. */
   #site(call: ts.CallExpression): string | undefined {
     const callee = call.expression;
-    if (!ts.isPropertyAccessExpression(callee)) return undefined;
-    const method = callee.name.text;
     const declaration = this.#checker?.getResolvedSignature(call)?.declaration;
+    if (!ts.isPropertyAccessExpression(callee)) {
+      // `const { text } = plugin.i18n; text("…")`: by the declaration.
+      if (
+        declaration &&
+        !ts.isJSDocSignature(declaration) &&
+        declaration.parent &&
+        ts.isInterfaceDeclaration(declaration.parent) &&
+        declaration.name &&
+        ts.isIdentifier(declaration.name) &&
+        /\/plugin\/types\.(d\.)?ts$/.test(
+          slash(declaration.getSourceFile().fileName),
+        )
+      ) {
+        const name = `${declaration.parent.name.text}.${declaration.name.text}`;
+        return name in SITES ? name : undefined;
+      }
+      return undefined;
+    }
+    const method = callee.name.text;
     if (
       declaration &&
       !ts.isJSDocSignature(declaration) &&
@@ -392,6 +425,23 @@ class Extractor {
     const text = source.text;
     const visit = (node: ts.Node) => {
       if (ts.isCallExpression(node)) this.#call(node, file, source, text);
+      // A text value written as data: `{ $vestraText: "…" }`.
+      if (
+        ts.isPropertyAssignment(node) &&
+        (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) &&
+        node.name.text === "$vestraText" &&
+        !ignored(node, text) &&
+        !ignored(statementOf(node), text)
+      )
+        this.#emit(
+          this.values(node.initializer),
+          node.initializer,
+          file,
+          source,
+          "the source of a text",
+          () => true,
+          [...notesOf(statementOf(node), text), ...notesOf(node, text)],
+        );
       if (
         (ts.isStringLiteral(node) ||
           ts.isNoSubstitutionTemplateLiteral(node)) &&
@@ -465,6 +515,52 @@ class Extractor {
       return;
     }
     for (const property of object.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        // `{ ...extra }`: the spread object's fields, by their types; a
+        // field that is not a literal (or a text value) is reported.
+        const checker = this.#checker;
+        const at =
+          source.getLineAndCharacterOfPosition(property.getStart(source)).line +
+          1;
+        if (!checker) {
+          this.finding(
+            file,
+            at,
+            "dynamic",
+            `fields spread into ${name} cannot be read without types; write ${fields.join(", ")} explicitly`,
+          );
+          continue;
+        }
+        if (ignored(property, text)) continue;
+        const type = checker.getTypeAtLocation(property.expression);
+        for (const field of fields) {
+          const symbol = type.getProperty(field);
+          if (!symbol) continue;
+          if (field === "path") {
+            this.finding(
+              file,
+              at,
+              "dynamic",
+              `a path spread into ${name} cannot be extracted; write path explicitly`,
+            );
+            continue;
+          }
+          const fieldType = checker.getTypeOfSymbolAtLocation(
+            symbol,
+            property.expression,
+          );
+          this.#emit(
+            this.#fromType(fieldType),
+            property,
+            file,
+            source,
+            `${field} spread into ${name}`,
+            () => true,
+            statementNotes,
+          );
+        }
+        continue;
+      }
       const key =
         property.name &&
         (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))

@@ -12,6 +12,7 @@ import { producerClient } from "./producer.ts";
 import { sourceClient } from "./source.ts";
 import { sourceResolverClient } from "./source-resolvers.ts";
 import type { SourceAudioTrack, SourceStamp } from "./source.ts";
+import type { ArgJson, ListJson, TextJson } from "./i18n.ts";
 export type {
   ResolvedMedia,
   ResolvedResource,
@@ -154,6 +155,8 @@ export interface BindingTable {
     command: string;
     title: string;
     path: string[] | null;
+    /** The path's keys (player 0.4.3). */
+    key?: string[] | null;
     scope: "global" | "panel";
     defaults: string[];
     current: string[];
@@ -282,9 +285,13 @@ export interface WireSystemInfo {
     primary: boolean;
   }[];
 }
-/** Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`). */
-export type TemplateArgsJson =
-  (string | number)[] | { [name: string]: string | number };
+/**
+ * Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`,
+ * a text's `args`): data, or text values (player 0.4.3).
+ */
+export type TemplateArgsJson = ArgJson[] | { [name: string]: ArgJson };
+/** A text the player shows: source text, or a text value (player 0.4.3). */
+export type TextValueJson = string | TextJson | ListJson;
 
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;
@@ -314,8 +321,8 @@ export function createWire(transport: Transport) {
     dialogs: {
       open: (options: {
         kind: "openFile" | "openFiles" | "openDirectory" | "saveFile";
-        title?: string;
-        fileName?: string;
+        title?: TextValueJson;
+        fileName?: TextValueJson;
       }) =>
         transport.request<{ cancelled: boolean; paths: string[] }>(
           "dialogs.open",
@@ -430,7 +437,7 @@ export function createWire(transport: Transport) {
     timeline: {
       marks: () => transport.request<{ marks: WireMark[] }>("timeline.marks"),
       set: (
-        marks: { time: number; kind: string; title?: string }[],
+        marks: { time: number; kind: string; title?: string | TextJson }[],
         sourceId?: number,
       ) =>
         transport.request<{ applied: boolean }>("timeline.set", {
@@ -529,15 +536,20 @@ export function createWire(transport: Transport) {
     },
     /** `text` is a template in the plugin's catalog, formatted with `args` (player 0.4.3). */
     osd: {
-      show: (text: string, args?: TemplateArgsJson) =>
+      show: (text: TextValueJson, args?: TemplateArgsJson) =>
         transport.request<void>("osd.show", {
           text,
           ...(args === undefined ? {} : { args }),
         }),
-      panel: (text: string | null, args?: TemplateArgsJson) =>
+      panel: (
+        text: TextValueJson | null,
+        args?: TemplateArgsJson,
+        maxColumns?: number,
+      ) =>
         transport.request<void>("osd.panel", {
           text,
           ...(args === undefined ? {} : { args }),
+          ...(maxColumns === undefined ? {} : { maxColumns }),
         }),
     },
     layout: {

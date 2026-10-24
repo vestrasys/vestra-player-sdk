@@ -1,5 +1,6 @@
 /** Finite candidate command registry. Host authenticates owner; no plugin supplies an owner id. */
 import type { Transport } from "./wire.ts";
+import type { ListJson, TextJson } from "./i18n.ts";
 /**
  * The player's command registry caps, the same values as the player's own
  * table (the player's tests check that they agree). They are runaway guards,
@@ -56,12 +57,14 @@ export type CommandState = {
   enabled: boolean;
   checked: boolean | null;
   busy: boolean;
-  reason: string | null;
+  /** Source text, or a text value (player 0.4.3). */
+  reason: string | TextJson | ListJson | null;
 };
 export type CommandDeclaration = {
-  title: string;
-  /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. */
-  path: string[];
+  /** Source text, or a text value (player 0.4.3). */
+  title: string | TextJson;
+  /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. Segments may be text values (player 0.4.3). */
+  path: (string | TextJson)[];
   /** Sibling order, ascending; a submenu takes its first command's order (a built-in menu keeps a fixed one). */
   order: number;
   /** Separator label: adjacent siblings of different groups get a line. */

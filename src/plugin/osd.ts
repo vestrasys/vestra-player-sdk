@@ -2,38 +2,58 @@
 import { Latest } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { failure } from "./runtime.ts";
-import type { Osd, OsdPanel, TemplateArgs } from "./types.ts";
-import type { TemplateArgsJson } from "../wire.ts";
+import type {
+  Osd,
+  OsdPanel,
+  OsdPanelOptions,
+  TemplateArgs,
+  TextValue,
+} from "./types.ts";
+import type { TemplateArgsJson, TextValueJson } from "../wire.ts";
+import { isTextValue, textProblem } from "../i18n.ts";
+import type { ArgJson } from "../i18n.ts";
 
-/** Copy and check template arguments: an array or object of ≤ 16 strings and numbers. */
+/**
+ * Copy and check template arguments: an array or object of at most 16
+ * strings, finite numbers, texts and lists (`TEXT_LIMITS`).
+ */
 export function templateArgs(args: unknown): TemplateArgsJson | undefined {
   if (args === undefined || args === null) return undefined;
-  const values = Array.isArray(args)
-    ? args
-    : typeof args === "object"
-      ? Object.values(args)
-      : null;
-  if (
-    !values ||
-    values.length > 16 ||
-    values.some(
-      (value) =>
-        !(
-          (typeof value === "number" && Number.isFinite(value)) ||
-          typeof value === "string"
-        ),
-    )
-  )
-    throw failure(
-      "invalid",
-      "args is an array or object of at most 16 strings and finite numbers",
-    );
+  const problem = textProblem(args, "args");
+  if (problem) throw failure("invalid", problem);
   return Array.isArray(args)
-    ? [...(args as (string | number)[])]
-    : { ...(args as Record<string, string | number>) };
+    ? [...(args as ArgJson[])]
+    : { ...(args as Record<string, ArgJson>) };
 }
 
-type PanelText = { text: string | null; args?: TemplateArgsJson };
+/**
+ * Check a shown text (`osd.show`, dialogs): source text, or a text value
+ * that carries its own arguments (then `args` is not given).
+ */
+export function shownText(
+  text: unknown,
+  args: unknown,
+  what = "text",
+): TextValueJson {
+  if (typeof text === "string") return text;
+  if (isTextValue(text)) {
+    const problem = textProblem(text);
+    if (problem) throw failure("invalid", `${what}: ${problem}`);
+    if (args !== undefined && args !== null)
+      throw failure(
+        "invalid",
+        `${what} is a text value: its args go inside it, not in args`,
+      );
+    return text;
+  }
+  throw failure("invalid", `${what} is a string or a text value`);
+}
+
+type PanelText = {
+  text: TextValueJson | null;
+  args?: TemplateArgsJson;
+  maxColumns?: number;
+};
 
 class PanelHandle implements OsdPanel {
   readonly #scope: ScopeImpl;
@@ -46,20 +66,31 @@ class PanelHandle implements OsdPanel {
       throw new Error("a plugin can have only one osd panel");
     scope.runtime.services.set("osd.panel", this);
     this.#scope = scope;
-    this.#pump = new Latest(({ text, args }) =>
-      scope.runtime.host.osd.panel(text, args),
+    this.#pump = new Latest(({ text, args, maxColumns }) =>
+      scope.runtime.host.osd.panel(text, args, maxColumns),
     );
     scope.add(this);
   }
-  set(text: string | null, args?: TemplateArgs) {
+  set(
+    text: TextValue | null,
+    args?: TemplateArgs | null,
+    options: OsdPanelOptions = {},
+  ) {
     if (this.#disposed) return;
     let value: PanelText;
     try {
+      const max = options?.maxColumns;
+      if (
+        max !== undefined &&
+        !(Number.isInteger(max) && max >= 8 && max <= 1000)
+      )
+        throw failure("invalid", "maxColumns is an integer from 8 to 1000");
       value = {
-        text,
-        ...(text === null || args === undefined
+        text: text === null ? null : shownText(text, args),
+        ...(text === null || args === undefined || args === null
           ? {}
           : { args: templateArgs(args)! }),
+        ...(text === null || max === undefined ? {} : { maxColumns: max }),
       };
     } catch (error) {
       this.#scope.report(error);
@@ -83,6 +114,6 @@ class PanelHandle implements OsdPanel {
 
 export const osd = (scope: ScopeImpl): Osd => ({
   show: async (text, args) =>
-    scope.runtime.host.osd.show(text, templateArgs(args)),
+    scope.runtime.host.osd.show(shownText(text, args), templateArgs(args)),
   panel: () => new PanelHandle(scope),
 });

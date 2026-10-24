@@ -1,4 +1,6 @@
 /** Trusted extraction providers. Declarations cross JSON; handler code stays in JS. */
+import { isTextValue, textProblem } from "./i18n.ts";
+import type { ListJson, TextJson } from "./i18n.ts";
 import type { Transport } from "./wire.ts";
 /** One stream of a {@link ResolvedMedia}. */
 export type ResolvedResource = {
@@ -68,8 +70,16 @@ export type ResolvedProducer = {
 const isProducer = (result: unknown): result is ResolvedProducer =>
   (result as ResolvedProducer | null)?.kind === "stream";
 /** The words of a failure, as the user will read them. */
-const reason = (error: unknown) =>
-  (error instanceof Error ? error.message : String(error)).slice(0, 2048);
+const reason = (error: unknown): string | TextJson | ListJson => {
+  // `plugin.i18n.error(…)`: the player shows the text translated.
+  const text = (error as { text?: unknown } | null)?.text;
+  if (error instanceof Error && isTextValue(text) && !textProblem(text))
+    return text;
+  return (error instanceof Error ? error.message : String(error)).slice(
+    0,
+    2048,
+  );
+};
 export function sourceResolverClient(transport: Transport) {
   return {
     /** Requires source.resolve. One registered host/scheme pair, and one file

@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.5.10: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. llms-full.txt, next to this file, has every declaration, the guides and the examples; L<n> below are its line numbers.
+> @vestra-player/sdk 1.5.11: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. llms-full.txt, next to this file, has every declaration, the guides and the examples; L<n> below are its line numbers.
 
 **How plugins run**
 
@@ -152,56 +152,56 @@ test("shows the position", async () => {
 - [Concept: Windows, panels, settings pages, dialogs and the OSD](https://vestrasys.github.io/vestra-player-sdk/documents/Windows__panels__settings_pages__dialogs_and_the_OSD.html): L281–626
 - [How-to: Keep a slider responsive while dragging](https://vestrasys.github.io/vestra-player-sdk/documents/Keep_a_slider_responsive_while_dragging.html): L627–801
 - [How-to: Remember a window's state between runs](https://vestrasys.github.io/vestra-player-sdk/documents/Remember_a_window_s_state_between_runs.html): L802–931
-- [API: @vestra-player/sdk](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html): L932–4268
-- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html) (TestHost, startPlugin): L4269–5324
+- [API: @vestra-player/sdk](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html): L932–4427
+- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html) (TestHost, startPlugin): L4428–5536
 
 ## API
 
 Where each module of `plugin` is declared:
 
 - Plugin L1153, Scope L1022, PluginError L974, Disposable L947
-- plugin.commands: Commands L1356
-- plugin.windows: Windows L1561
-- plugin.panels: Panels L2070
-- plugin.dialogs: Dialogs L2356
-- plugin.player: Player L2795
-- plugin.video: VideoFilter L3046, VideoView L3109, RenderOptions L3151
-- plugin.audio: AudioFilter L3070
-- plugin.subtitles: Subtitles L3249
-- plugin.media: MediaCapture L3407
-- plugin.resolvers: Resolvers L3512
-- plugin.packages: Packages L3752
-- plugin.osd: Osd L2982
-- plugin.host: Host L2944
-- plugin.clipboard: Clipboard L3865
-- plugin.power: Power L3885
-- plugin.tools: Tools L3918
-- plugin.storage: Storage L3961
-- plugin.system: System L3984
-- plugin.secrets: Secrets L4002
-- plugin.window: MainWindow L2193
-- plugin.app: App L2274
-- plugin.bindings: Bindings L3835
-- plugin.ui: Ui L1448
-- plugin.timeline: Timeline L2150
-- plugin.drops: Drops L1858
-- plugin.appearance: Appearance L1887
-- plugin.i18n: I18n L1959
-- plugin.settings: Settings L2003
+- plugin.commands: Commands L1361
+- plugin.windows: Windows L1566
+- plugin.panels: Panels L2207
+- plugin.dialogs: Dialogs L2493
+- plugin.player: Player L2934
+- plugin.video: VideoFilter L3199, VideoView L3262, RenderOptions L3304
+- plugin.audio: AudioFilter L3223
+- plugin.subtitles: Subtitles L3402
+- plugin.media: MediaCapture L3562
+- plugin.resolvers: Resolvers L3667
+- plugin.packages: Packages L3907
+- plugin.osd: Osd L3135
+- plugin.host: Host L3083
+- plugin.clipboard: Clipboard L4024
+- plugin.power: Power L4044
+- plugin.tools: Tools L4077
+- plugin.storage: Storage L4120
+- plugin.system: System L4143
+- plugin.secrets: Secrets L4161
+- plugin.window: MainWindow L2330
+- plugin.app: App L2411
+- plugin.bindings: Bindings L3994
+- plugin.ui: Ui L1453
+- plugin.timeline: Timeline L2287
+- plugin.drops: Drops L1863
+- plugin.appearance: Appearance L1892
+- plugin.i18n: I18n L2034
+- plugin.settings: Settings L2140
 
 ## Examples
 
 Complete plugins with tests, in [examples/](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples) and in llms-full.txt:
 
-- hello: The README Quick start: one menu command and an on-screen message. L5740–5829
-- blur: A tool window with one slider that blurs the playing video. L5830–6091
-- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L6092–6424
-- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L6425–6609
-- panel-menu: A sidebar panel with its own right-click menu. L6610–6815
-- menus: Radio menu items, separator groups and a menu item whose title changes. L6816–6975
-- theme-widgets: A tool window drawn with the player's theme and widgets. L6976–7139
-- markdown: A window that shows a Markdown document. L7140–7333
-- i18n: A plugin in the player's language: English source text, a Chinese translation. L7334–7501
+- hello: The README Quick start: one menu command and an on-screen message. L5953–6042
+- blur: A tool window with one slider that blurs the playing video. L6043–6304
+- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L6305–6637
+- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L6638–6822
+- panel-menu: A sidebar panel with its own right-click menu. L6823–7028
+- menus: Radio menu items, separator groups and a menu item whose title changes. L7029–7188
+- theme-widgets: A tool window drawn with the player's theme and widgets. L7189–7352
+- markdown: A window that shows a Markdown document. L7353–7546
+- i18n: A plugin in the player's language: English source text, a Chinese translation. L7547–7714
 
 ## Optional
 

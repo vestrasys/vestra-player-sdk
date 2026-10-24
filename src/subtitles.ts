@@ -1,4 +1,5 @@
 /** Subtitle wire types; source pixels and renderer confirmation remain distinct. */
+import type { TextJson } from "./i18n.ts";
 import type { Transport } from "./wire.ts";
 export type SubtitleTrack =
   | { kind: "embedded"; id: number }
@@ -169,7 +170,8 @@ export function subtitleClient(transport: Transport) {
       expected: SubtitleStamp;
       inputOrigin?: SubtitleTrack;
       format?: "srt" | "ass";
-      title?: string;
+      /** Source text is data; a text value is shown translated (player 0.4.3). */
+      title?: string | TextJson;
       select?: "primary" | "secondary" | "none";
     }) => transport.request<SubtitleState>("subtitles.commit", options),
     select: (
