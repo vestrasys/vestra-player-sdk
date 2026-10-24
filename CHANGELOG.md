@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.5
+
+**Reserved `vestra.` ids** (player 0.4.1). Documentation only; no API change, `apiVersion` stays `vestra/1`.
+
+- Only the plugins built into the player are official plugins; the ids `vestra` and `vestra.*` (any case) are reserved for them. Every other plugin is a third-party plugin, including those hosted in the official plugin repository, and uses `<GitHub user or organization>.<plugin name>`.
+- `PluginError` lists the code `reserved`: `packages.validate`, `packages.validateArchive`, `PackageCandidate.trial` and `PackageCandidate.install` refuse a package with a reserved id. Development loads (`vestra-player --plugin DIR`) still accept one, with a warning, so built-in plugins can be developed; they are never installed.
 ## 1.5.4
 
 **Markdown in list rows** (the player after 0.4.0). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.3 need no change.

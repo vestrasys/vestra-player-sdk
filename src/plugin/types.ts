@@ -78,6 +78,7 @@ export interface Disposable {
  * | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
  * | `cleanup` | {@link PackageTrial.stop} could not confirm cleanup; call it again. |
  * | `limit` | A player-wide limit was reached (for example the number of commands). |
+ * | `reserved` | {@link Packages.validate}, {@link PackageCandidate.trial}, {@link PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use (player 0.4.1). |
  * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`) or another `apiVersion`. |
  * | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
  * | `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. |
@@ -4244,13 +4245,18 @@ export interface PackageCandidate {
   readonly manifest: PackageManifest;
   /** The checks the player ran. */
   readonly checks: string[];
-  /** Load it temporarily alongside the installed plugins. */
+  /**
+   * Load it temporarily alongside the installed plugins. A reserved id
+   * (`vestra.*`) fails with `reserved`.
+   */
   trial(): Promise<PackageTrial>;
   /**
    * Install it. The same source upgrades the installed plugin (its data
    * stays); another source fails with `conflict` unless `replace` is set;
    * a built-in id fails with `unsupported` (built-ins update with the
-   * player).
+   * player). A reserved id (`vestra` or `vestra.*`, which every built-in
+   * uses) fails with `reserved` (player 0.4.1; already when validated), as
+   * only the player installs built-in plugins.
    */
   install(options?: InstallOptions): Promise<PackageChange>;
 }
@@ -4372,12 +4378,17 @@ export interface PluginWarning {
  * ```
  */
 export interface Packages {
-  /** Validate a package directory (`plugins.manage`). */
+  /**
+   * Validate a package directory (`plugins.manage`). A package whose id is
+   * reserved for the built-in plugins (`vestra` or `vestra.*`) fails with
+   * `reserved` (player 0.4.1).
+   */
   validate(directory: string): Promise<PackageCandidate>;
   /**
    * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the
    * same checks as {@link Packages.validate} after unpacking. Check the
-   * file's sha256 yourself before calling when you know it.
+   * file's sha256 yourself before calling when you know it. A reserved id
+   * fails with `reserved`, as in {@link Packages.validate}.
    */
   validateArchive(file: string): Promise<PackageCandidate>;
   /** Restore a plugin's previous version (`plugins.manage`). */
