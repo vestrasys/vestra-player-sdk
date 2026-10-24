@@ -62,7 +62,7 @@ import { createServer } from "node:net";
 import { randomBytes } from "node:crypto";
 import type { Server } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { extname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
 import type { PackageManifest, PackageSource } from "./types.ts";
@@ -260,7 +260,10 @@ export interface MarkdownWire {
   images: Record<string, string>;
 }
 
-/** Refusals for a position another plugin holds: not activation failures (`startPlugin`). */
+/**
+ * Refusals for a position or resolver another plugin holds: not activation
+ * failures (`startPlugin`).
+ */
 const takenErrors = new WeakSet<Error>();
 const taken = (message: string) => {
   const error = new HostError("conflict", message);
@@ -1098,6 +1101,37 @@ export class TestHost implements Transport {
   /** Registered source resolvers (`resolvers.add`) by id: their declarations. */
   readonly resolvers = new Map<string, Json>();
   /**
+   * Resolvers other plugins hold, as `resolvers.add` declares them plus the
+   * holder's id: a registration of this plugin that claims one of their
+   * extensions (or scheme + host pairs) is refused with `conflict`, which
+   * does not fail activation, like the player.
+   *
+   * @example
+   * ```ts
+   * const host = new TestHost();
+   * host.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+   * ```
+   */
+  readonly otherResolvers: {
+    owner: string;
+    extensions?: string[];
+    schemes?: string[];
+    hosts?: string[];
+  }[] = [];
+  /**
+   * File opens waiting for this plugin's file resolver (`extensions`), by
+   * request id: the path and how it was opened. Opening a matching path
+   * (`player.open`, {@link TestHost.openElsewhere}) sends
+   * `source.resolveRequest`; the answer selects the stream, fails the open
+   * or, once the source changed, is `stale`. Any later source change
+   * cancels it (`source.resolveCancel`). Web resolvers are not simulated:
+   * emit `source.resolveRequest` yourself.
+   */
+  readonly resolutions = new Map<
+    number,
+    { resolverId: string; source: string; paused: boolean }
+  >();
+  /**
    * Answers for `dialogs.open` (paths, `null` = cancelled) and
    * `dialogs.confirm` (`{ confirmed, checked }`), consumed in order. A
    * dialog with no queued answer, or with the wrong kind, fails the request
@@ -1218,8 +1252,12 @@ export class TestHost implements Transport {
   readonly #overrides = new Map<string, Handler>();
   readonly #listeners = new Map<string, Set<(data: unknown) => void>>();
   #inFlight = 0;
-  #next = { snapshot: 0, job: 0, producer: 0, source: 0 };
+  #next = { snapshot: 0, job: 0, producer: 0, source: 0, resolution: 0 };
   #sourceBook = new Map<number, Json>();
+  /** The pending resolutions' stamps and operations (beside `resolutions`). */
+  #resolving = new Map<number, { stamp: SourceStamp; operation?: number }>();
+  /** The producer the source is (`openProvider`, a resolved stream). */
+  #selected: number | null = null;
   readonly #scratch = mkdtempSync(join(tmpdir(), "vestra-test-host-"));
   /**
    * `plugin.dataDirectory`: a fresh empty temporary directory, removed with
@@ -1761,7 +1799,8 @@ export class TestHost implements Transport {
    */
   openElsewhere(source: string, phase: SourceState["phase"] = "ready") {
     this.#intent({ kind: "open", source, startPaused: false });
-    this.setSource({ phase });
+    // A file this plugin's file resolver claims waits for its answer.
+    if (this.#resolve(source, false) === null) this.setSource({ phase });
   }
   /**
    * Press a binding like the host's table would: panel-focus bindings first
@@ -2127,13 +2166,186 @@ export class TestHost implements Transport {
       if (control.kind === "seek") next.position = Number(control.seconds);
       if (control.kind === "rate") next.rate = Number(control.rate);
     }
+    if (intent.kind === "openProvider")
+      this.#selected = Number(intent.producerId);
+    if (intent.kind === "open" || intent.kind === "close")
+      this.#selected = null;
     this.source = next;
     this.subtitles.source = {
       generation: next.stamp.generation,
       phase: next.phase,
     };
     this.emit("source.state", this.source);
+    this.#cancelResolutions();
     return { ticket: { stamp: next.stamp, cycle: next.cycle, owner: 1 } };
+  }
+
+  /** The file resolver of this plugin that claims `source`, if any. */
+  #fileResolver(source: string): string | null {
+    if (source.includes("://") || !isAbsolute(source)) return null;
+    const extension = extname(source).slice(1).toLowerCase();
+    if (!extension) return null;
+    for (const [id, declaration] of this.resolvers) {
+      const extensions = (declaration as { extensions?: string[] }).extensions;
+      if (extensions?.includes(extension)) return id;
+    }
+    return null;
+  }
+  /** Whether producer `id` is the player's source. */
+  #current(id: number) {
+    return (
+      this.source.kind === "producer" &&
+      (this.#selected === id || this.source.source === `producer://${id}`)
+    );
+  }
+  /** Start resolving `source` for the open just made; its request id, or null. */
+  #resolve(source: string, paused: boolean, operation?: number): number | null {
+    const resolverId = this.#fileResolver(source);
+    if (resolverId === null) return null;
+    const requestId = ++this.#next.resolution;
+    this.resolutions.set(requestId, { resolverId, source, paused });
+    this.#resolving.set(requestId, {
+      stamp: { ...this.source.stamp },
+      ...(operation === undefined ? {} : { operation }),
+    });
+    this.emit("source.resolveRequest", { requestId, resolverId, url: source });
+    return requestId;
+  }
+  /** Settle a resolution's open; `error` fails it. */
+  #settle(requestId: number, error?: string) {
+    const operation = this.#resolving.get(requestId)?.operation;
+    this.resolutions.delete(requestId);
+    this.#resolving.delete(requestId);
+    if (operation === undefined) return;
+    const entry = this.#sourceBook.get(operation) as
+      { ticket?: Json } | undefined;
+    this.#sourceBook.set(
+      operation,
+      error === undefined
+        ? { status: "completed", ticket: entry?.ticket ?? null }
+        : { status: "failed", error: { backend: error } },
+    );
+  }
+  /** Resolutions whose open is no longer the source (or whose resolver left). */
+  #cancelResolutions() {
+    const stamp = this.source.stamp;
+    for (const [requestId, resolution] of [...this.resolutions]) {
+      const pending = this.#resolving.get(requestId)!;
+      if (
+        pending.stamp.generation === stamp.generation &&
+        pending.stamp.intentVersion === stamp.intentVersion &&
+        this.resolvers.has(resolution.resolverId)
+      )
+        continue;
+      this.#settle(
+        requestId,
+        "source resolution cancelled, expired or superseded",
+      );
+      this.emit("source.resolveCancel", {
+        requestId,
+        resolverId: resolution.resolverId,
+      });
+    }
+  }
+  /** `sourceResolvers.register`: the player's rules for both forms. */
+  #register(p: Record<string, Json>) {
+    const id = String(p.id);
+    const extensions = p.extensions as string[] | undefined;
+    if (this.resolvers.has(id))
+      throw new HostError("conflict", "resolver id already registered");
+    if (extensions !== undefined) {
+      if (
+        p.schemes !== undefined ||
+        p.hosts !== undefined ||
+        !Array.isArray(extensions) ||
+        extensions.length < 1 ||
+        extensions.length > 16 ||
+        extensions.some(
+          (e) =>
+            typeof e !== "string" ||
+            !/^[a-z0-9]{1,16}$/.test(e) ||
+            e === "folder",
+        )
+      )
+        throw new HostError(
+          "invalid",
+          "file resolvers take 1–16 file extensions (lower case, no dot, not folder)",
+        );
+    }
+    const claims = (other: {
+      extensions?: string[];
+      schemes?: string[];
+      hosts?: string[];
+    }) =>
+      extensions?.find((e) => other.extensions?.includes(e)) ??
+      (other.hosts?.some((h) =>
+        (p.hosts as string[] | undefined)?.includes(h),
+      ) &&
+      other.schemes?.some((x) =>
+        (p.schemes as string[] | undefined)?.includes(x),
+      )
+        ? "host"
+        : undefined);
+    for (const own of this.resolvers.values())
+      if (claims(own as never))
+        throw new HostError("conflict", "already registered by this plugin");
+    for (const other of this.otherResolvers) {
+      const what = claims(other);
+      if (what) {
+        const target = what === "host" ? "这个网站" : `文件类型 .${what}`;
+        throw taken(`${target} 已由 ${other.owner} 解析`);
+      }
+    }
+    this.resolvers.set(id, p);
+  }
+  /** `sourceResolvers.respond` for a simulated file resolution. */
+  #respond(p: Record<string, Json>) {
+    const requestId = Number(p.requestId);
+    const resolution = this.resolutions.get(requestId);
+    if (!resolution) {
+      // Web resolutions are not simulated: their answers are only recorded.
+      if (requestId > this.#next.resolution) return null;
+      throw new HostError("stale", "resolution no longer pending");
+    }
+    const fail = (message: string): never => {
+      this.#settle(requestId, message);
+      this.setSource({
+        phase: "error",
+        terminalReason: { failed: message },
+      } as Partial<SourceState>);
+      throw new HostError("resolution", message);
+    };
+    if (typeof p.error === "string")
+      fail(p.error.trim() ? p.error.slice(0, 2048) : "resolver failed");
+    const result = (p.result ?? {}) as { kind?: string; producerId?: number };
+    const producer = this.producers.get(Number(result.producerId));
+    if (result.kind !== "stream") fail("invalid resolved stream descriptor");
+    if (!producer || producer.released) fail("unavailable: producer absent");
+    // Like openProvider, but the source keeps the path and `startPaused`.
+    this.#selected = producer!.id;
+    producer!.active = true;
+    producer!.acknowledged = false;
+    producer!.pending = {
+      producerId: producer!.id,
+      epoch: producer!.epoch + 1,
+      baseSample: producer!.receivedFrames,
+      paused: resolution.paused,
+    };
+    this.#settle(requestId);
+    this.setSource({
+      kind: "producer",
+      phase: "ready",
+      paused: resolution.paused,
+      capabilities: {
+        pause: true,
+        seek: false,
+        rate: false,
+        restart: false,
+        close: true,
+        snapshotSource: false,
+      },
+    } as Partial<SourceState>);
+    return { stamp: { ...this.source.stamp } };
   }
 
   #processingState() {
@@ -2776,8 +2988,23 @@ export class TestHost implements Transport {
     "source.state": () => this.source,
     "source.submit": (p) => {
       const intent = p.intent as Record<string, Json>;
-      const result = { status: "completed", ...this.#intent(intent) };
-      this.#sourceBook.set(Number(p.operationId), result);
+      const ticket = this.#intent(intent);
+      const operation = Number(p.operationId);
+      // A file this plugin's file resolver claims: pending until it answers.
+      if (
+        intent.kind === "open" &&
+        this.#resolve(
+          String(intent.source),
+          intent.startPaused === true,
+          operation,
+        ) !== null
+      ) {
+        const pending = { status: "pending", ...ticket };
+        this.#sourceBook.set(operation, pending);
+        return pending;
+      }
+      const result = { status: "completed", ...ticket };
+      this.#sourceBook.set(operation, result);
       // Selecting a provider asks it to acknowledge a start control.
       const producer = this.producers.get(Number(intent.producerId));
       if (intent.kind === "openProvider" && producer) {
@@ -3247,10 +3474,12 @@ export class TestHost implements Transport {
       return { jobId: job.jobId, cancel: "requested" };
     },
     "jobs.operation": () => ({ status: "unknown" }),
-    "sourceResolvers.register": (p) => void this.resolvers.set(String(p.id), p),
-    "sourceResolvers.unregister": (p) =>
-      void this.resolvers.delete(String(p.id)),
-    "sourceResolvers.respond": () => null,
+    "sourceResolvers.register": (p) => void this.#register(p),
+    "sourceResolvers.unregister": (p) => {
+      this.resolvers.delete(String(p.id));
+      this.#cancelResolutions();
+    },
+    "sourceResolvers.respond": (p) => this.#respond(p),
     "producer.prepare": async () => {
       const id = ++this.#next.producer;
       const tcp = this.producerTransport === "tcp";
@@ -3292,11 +3521,7 @@ export class TestHost implements Transport {
         });
         socket.on("error", () => {});
         socket.on("close", () => {
-          if (
-            this.source.kind === "producer" &&
-            this.source.source === `producer://${producer.id}`
-          )
-            producer.droppedWhileSelected = true;
+          if (this.#current(producer.id)) producer.droppedWhileSelected = true;
         });
       });
       let socket = path;
@@ -3325,9 +3550,7 @@ export class TestHost implements Transport {
     "producer.state": (p) => {
       const producer = this.producers.get(Number(p.producerId));
       if (!producer) throw new HostError("missing", "producer");
-      const current =
-        this.source.kind === "producer" &&
-        this.source.source === `producer://${producer.id}`;
+      const current = this.#current(producer.id);
       return {
         input: null,
         pendingControl: producer.pending,
@@ -3455,7 +3678,8 @@ export async function startPlugin(
     host.app,
   );
   await activate(instance.plugin);
-  // Like the player: a position another plugin holds is not an activation failure.
+  // Like the player: a position or resolver another plugin holds is not an
+  // activation failure.
   for (;;) {
     try {
       await instance.activated();
