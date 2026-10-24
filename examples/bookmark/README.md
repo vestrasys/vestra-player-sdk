@@ -19,4 +19,4 @@ npm run pack                # build dist/ and pack examples.bookmark-0.1.0.vxp
 
 In the player: start it with `--plugin <path to examples/bookmark>` to run `main.ts` directly, no build needed.
 
-More examples: [Examples](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html).
+Walkthrough: [Bookmark](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Bookmark.html).

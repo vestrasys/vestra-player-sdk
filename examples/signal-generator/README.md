@@ -1,51 +1,30 @@
 # Signal Generator
 
-A Vestra Player plugin that generates its own video and audio and plays them in the player like any other source.
+A plugin that generates its own video and audio: **Open ▸ Signal generator** plays colour bars with a 1 kHz sine tone, and choosing it again stops them.
 
-![Signal Generator: colour bars with the timecode overlay, and the control window](screenshot.png)
+![Colour bars from the signal generator](screenshot.png)
 
-- **Picture**: SMPTE-style colour bars, a moving grid, or an oscilloscope of the plugin's own audio, with a timecode and frame counter drawn by a built-in 5×7 bitmap font.
-- **Tone**: sine, square, saw or noise; 20 Hz – 5 kHz (or a 10 s sweep), level in dBFS, mute, balance. Every change applies live, without clicks.
-- **Player filter**: an audio chain (mono, swap left/right, treble boost) that the player applies to the media it decodes. It shows where plugin-side generation ends and player-side processing begins.
-
-Open it from **Open ▸ Signal Generator…**.
-
-## What it shows
-
-| API | Used for |
+| Capabilities | API |
 | --- | --- |
-| `player.openStream` | The generated 640×360, 30 fps source with 48 kHz stereo audio |
-| `Stream.onStop`, `Stream.stop`, `StreamStartError` | Stop button, replacement by another source, start-up errors |
-| `audio.filter` | The player-side audio chain and its status |
-| `windows.create`, `bind`, `on` | The control window |
-| `commands.add` | The menu entry |
-| `storage.json` | Remembering the controls |
-| `update` | Showing "Starting…" while a handler is still running |
-
-The step-by-step walkthrough is in [docs/examples/signal-generator.md](../../docs/examples/signal-generator.md).
+| `commands`, `producer.av`, `playback.control`, `playback.read` | `player.openStream` with a `frame()` callback, `Stream.stop` and `onStop`, a checkable command in the `@open` menu; tests with `startPlugin` |
 
 ## Files
 
 ```text
-manifest.json    id, display fields, capabilities (producer.av …)
-main.ts          activate(): menu, window, stream life cycle, filter
-controls.ts      the settings, their ranges and defaults
-generator.ts     frame(): the frame clock and the per-frame work
-audio.ts         the phase-accumulator oscillator
-video.ts         test patterns, oscilloscope and overlay
-font.ts          the 5×7 bitmap font
-filter.ts        the player-side audio chain
-ui/controls.slint  the control window
-tests/           node:test suites against the SDK's TestHost
+manifest.json                   id and capabilities
+main.ts                         the picture, the tone, frame(), start and stop, the command
+tests/signal-generator.test.ts  tests of frame() and of the stream on the in-memory test host
 ```
 
 ## Run it
 
 ```sh
+cd examples/signal-generator
 npm install
-npm run check   # manifest and strict type check
-npm test        # unit tests and TestHost tests
-npm run pack    # examples.signal-generator-1.0.0.vxp
+npm run check && npm test   # type check, then the tests
+npm run pack                # build dist/ and pack examples.signal-generator-1.0.0.vxp
 ```
 
-During development, start the player with `--plugin <path to this directory>`; no build is needed.
+In the player: start it with `--plugin <path to examples/signal-generator>` to run `main.ts` directly, no build needed. Choose **Open ▸ Signal generator**.
+
+Walkthrough: [Example: Signal generator](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Signal_generator.html).

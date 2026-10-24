@@ -2,15 +2,16 @@
 
 Complete Vestra Player plugins, each with a manifest, its source, Slint files, tests and a README. CI checks, tests and packs every one of them against the SDK in this repository. The [Examples](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html) page of the documentation lists them with their walkthroughs.
 
-| Example | Shows |
-| --- | --- |
-| [hello](hello) | The README Quick start: one menu command and an on-screen message. |
-| [blur](blur) | Real-time Gaussian blur with a menu, a parameter window, a shortcut and remembered settings. |
-| [signal-generator](signal-generator) | Generates its own video and audio (test patterns, oscilloscope, tones) with live controls and an audio filter. |
-| [bookmark](bookmark) | A tool window that remembers the playback position and jumps back to it. |
-| [panel-menu](panel-menu) | A sidebar panel with its own right-click menu and panel-only keys. |
-| [core-ui](core-ui) | Radio menu items, repeating key bindings, the shared sidebar and the theme widgets. |
-| [markdown](markdown) | A Markdown document window with images, and the manifest's display fields. |
+| Example                              | Shows                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------- |
+| [hello](hello)                       | The README Quick start: one menu command and an on-screen message.                    |
+| [blur](blur)                         | A tool window with one slider that blurs the playing video.                           |
+| [signal-generator](signal-generator) | Generates its own video and audio: colour bars and a 1 kHz tone.                      |
+| [bookmark](bookmark)                 | A tool window bound to the playback state: remember the position and jump back to it. |
+| [panel-menu](panel-menu)             | A sidebar panel with its own right-click menu.                                        |
+| [menus](menus)                       | Radio menu items, separator groups and a menu item whose title changes.               |
+| [theme-widgets](theme-widgets)       | A tool window drawn with the player's theme and widgets.                              |
+| [markdown](markdown)                 | A window that shows a Markdown document.                                              |
 
 Run one (the SDK is linked from this repository, so build it first):
 

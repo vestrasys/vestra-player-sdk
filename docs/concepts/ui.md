@@ -28,7 +28,7 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 
 **① On-screen display** ({@link "@vestra-player/sdk"!Osd | plugin.osd}, capability `ui.osd`). Text the player draws over the top-left of the video: a one-line message that disappears after 2 seconds ({@link "@vestra-player/sdk"!Osd.show | osd.show}), and one multi-line information block per plugin that stays until you clear it ({@link "@vestra-player/sdk"!Osd.panel | osd.panel}). It takes no input and needs no Slint.
 
-**② Panels** ({@link "@vestra-player/sdk"!Panels | plugin.panels}, `ui.mount`). A Slint component the player places *inside its main window*: in the **bottom bar** under the video, in the **sidebar** on the right (which the user can detach into a floating window of its own), or as the **backdrop** drawn over the video area while there is no video picture. A panel is part of the player's layout: it moves, resizes, hides in fullscreen and auto-hides with the player's own controls. Each plugin mounts at most one panel.
+**② Panels** ({@link "@vestra-player/sdk"!Panels | plugin.panels}, `ui.mount`). A Slint component the player places _inside its main window_: in the **bottom bar** under the video, in the **sidebar** on the right (which the user can detach into a floating window of its own), or as the **backdrop** drawn over the video area while there is no video picture. A panel is part of the player's layout: it moves, resizes, hides in fullscreen and auto-hides with the player's own controls. Each plugin mounts at most one panel.
 
 **③ Tool windows** ({@link "@vestra-player/sdk"!Windows | plugin.windows}, `ui.window`). A separate, top-level operating-system window owned by the plugin: it has its own title bar, the user can move it, resize it (if the Slint file allows) and close it, and it is not modal: the main window keeps playing and keeps taking input while it is open. A plugin can have any number of them.
 
@@ -38,16 +38,16 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 
 ## Choosing a surface
 
-| You want to… | Use | Why not the others |
-| --- | --- | --- |
-| Confirm that something happened ("Bookmark added", "Speed 1.5×") | OSD message | A window or dialog would interrupt; the message vanishes by itself. |
-| Show a few live numbers while playing (bitrate, A/B loop points) | OSD info block | Needs no Slint and no focus; drawn over the video, also in fullscreen. |
-| Content that belongs to the player and stays visible: a playlist, chapters, a custom seek bar | Panel (sidebar or bottom bar) | It follows the main window's layout and fullscreen; a tool window would float elsewhere. |
-| Cover art or an idle screen while nothing is playing | Panel in the `backdrop` slot | It replaces the black video area; one plugin at a time. |
-| A tool the user opens, uses and closes: picture adjustments, an inspector, an editor | Tool window | It has its own title bar and size and does not take space from the video. |
-| Preferences that rarely change | Settings page | Users look for preferences in Options; the player keeps the window and its navigation. |
-| A yes/no question before something destructive | {@link "@vestra-player/sdk"!Dialogs.confirm dialogs.confirm} | Native look and keyboard handling (Enter, Escape); no Slint file. |
-| A file or folder from the user | {@link "@vestra-player/sdk"!Dialogs.openFile dialogs.openFile} and friends | The system dialog is the only one users trust with paths. |
+| You want to…                                                                                  | Use                                                                        | Why not the others                                                                       |
+| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Confirm that something happened ("Bookmark added", "Speed 1.5×")                              | OSD message                                                                | A window or dialog would interrupt; the message vanishes by itself.                      |
+| Show a few live numbers while playing (bitrate, A/B loop points)                              | OSD info block                                                             | Needs no Slint and no focus; drawn over the video, also in fullscreen.                   |
+| Content that belongs to the player and stays visible: a playlist, chapters, a custom seek bar | Panel (sidebar or bottom bar)                                              | It follows the main window's layout and fullscreen; a tool window would float elsewhere. |
+| Cover art or an idle screen while nothing is playing                                          | Panel in the `backdrop` slot                                               | It replaces the black video area; one plugin at a time.                                  |
+| A tool the user opens, uses and closes: picture adjustments, an inspector, an editor          | Tool window                                                                | It has its own title bar and size and does not take space from the video.                |
+| Preferences that rarely change                                                                | Settings page                                                              | Users look for preferences in Options; the player keeps the window and its navigation.   |
+| A yes/no question before something destructive                                                | {@link "@vestra-player/sdk"!Dialogs.confirm dialogs.confirm}               | Native look and keyboard handling (Enter, Escape); no Slint file.                        |
+| A file or folder from the user                                                                | {@link "@vestra-player/sdk"!Dialogs.openFile dialogs.openFile} and friends | The system dialog is the only one users trust with paths.                                |
 
 Two rules of thumb:
 
@@ -131,10 +131,10 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
 
 The plugin process and the user interface run in different processes: your TypeScript runs in the plugin's Node.js process, the Slint files run inside the player. They exchange exactly two kinds of messages:
 
-| Direction | Slint side | TypeScript side |
-| --- | --- | --- |
-| plugin → UI | `in property` or `in-out property` | {@link "@vestra-player/sdk"!View.set set()} or {@link "@vestra-player/sdk"!View.bind bind()} |
-| UI → plugin | `callback name(args);` returning nothing | {@link "@vestra-player/sdk"!View.on on("name", handler)} |
+| Direction   | Slint side                               | TypeScript side                                                                              |
+| ----------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| plugin → UI | `in property` or `in-out property`       | {@link "@vestra-player/sdk"!View.set set()} or {@link "@vestra-player/sdk"!View.bind bind()} |
+| UI → plugin | `callback name(args);` returning nothing | {@link "@vestra-player/sdk"!View.on on("name", handler)}                                     |
 
 A tool window ({@link "@vestra-player/sdk"!Window | Window}), a panel ({@link "@vestra-player/sdk"!Panel | Panel}) and a settings page ({@link "@vestra-player/sdk"!SettingsPage | SettingsPage}) all share this {@link "@vestra-player/sdk"!View | View} surface. Nothing else crosses: the plugin cannot call Slint functions or read a property back; a value the user changes reaches the plugin only through a callback.
 
@@ -155,14 +155,14 @@ Helper components without `export` are allowed in every file. The player appends
 
 ### set, bind and the update pass
 
-`set(props)` writes now. `bind(() => props)` declares that properties should *always* equal a function of your state; the SDK re-evaluates every bound function in an **update pass** and sends only the values that changed.
+`set(props)` writes now. `bind(() => props)` declares that properties should _always_ equal a function of your state; the SDK re-evaluates every bound function in an **update pass** and sends only the values that changed.
 
-| | `set({ x })` | `bind(() => ({ x }))` |
-| --- | --- | --- |
-| When it is sent | Immediately (in the next write). | In every update pass, if `x` differs from the last value sent. |
+|                  | `set({ x })`                                                                            | `bind(() => ({ x }))`                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| When it is sent  | Immediately (in the next write).                                                        | In every update pass, if `x` differs from the last value sent.                        |
 | Same value again | Sent again. Use this to pull a control back to the model value after the user moved it. | Not sent. A field the user edited stays as the user left it until your value changes. |
-| Write fails | Retried with back-off (0.25 s doubling up to 30 s). | Not repeated until the value changes. |
-| Typical use | One-off values: a document, a reset. | Everything derived from plugin state: labels, enabled flags, lists, status lines. |
+| Write fails      | Retried with back-off (0.25 s doubling up to 30 s).                                     | Not repeated until the value changes.                                                 |
+| Typical use      | One-off values: a document, a reset.                                                    | Everything derived from plugin state: labels, enabled flags, lists, status lines.     |
 
 Update passes run:
 
@@ -172,7 +172,7 @@ Update passes run:
 
 Several requests in the same microtask are merged into one pass, and each view has at most one write in flight: values that change meanwhile are merged into the next write. So binding a value that changes 60 times a second costs at most one write per round trip, never a queue.
 
-The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md) and the signal generator's [Step 7](../examples/signal-generator.md)).
+The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md)).
 
 ### Two-way controls
 
@@ -213,16 +213,16 @@ import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
 
 All sizes are logical pixels (Slint's `px`): one logical pixel is two physical pixels on a Retina display or at 200 % scaling.
 
-| Surface | Width | Height |
-| --- | --- | --- |
-| Tool window | The `Window` component's `width` (fixed, not resizable), or `preferred-width` (initial) within `min-width`/`max-width`. | Same with `height`. The title is the component's `title`. |
-| Bottom bar | The video column's width. | The component's preferred height (within its minimum and maximum). It may draw above its slot into the video area (negative `y`); the player does not clip it. |
-| Sidebar | Set by the user with the splitter (at least 317; the video keeps at least 318). | The window's full height. |
-| Floating sidebar | 300 by default, at least 300. | 408 by default, at least 250. |
-| Backdrop | The whole video area. | The whole video area. |
-| Settings page | 440. | The component's height; the Options window scrolls taller pages. |
+| Surface          | Width                                                                                                                   | Height                                                                                                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool window      | The `Window` component's `width` (fixed, not resizable), or `preferred-width` (initial) within `min-width`/`max-width`. | Same with `height`. The title is the component's `title`.                                                                                                      |
+| Bottom bar       | The video column's width.                                                                                               | The component's preferred height (within its minimum and maximum). It may draw above its slot into the video area (negative `y`); the player does not clip it. |
+| Sidebar          | Set by the user with the splitter (at least 317; the video keeps at least 318).                                         | The window's full height.                                                                                                                                      |
+| Floating sidebar | 300 by default, at least 300.                                                                                           | 408 by default, at least 250.                                                                                                                                  |
+| Backdrop         | The whole video area.                                                                                                   | The whole video area.                                                                                                                                          |
+| Settings page    | 440.                                                                                                                    | The component's height; the Options window scrolls taller pages.                                                                                               |
 
-The operating system places a tool window when it opens; the player does not remember tool window positions or sizes, and the API cannot read or set them. To keep a tool window's *content* across runs, see [Remember a window's state between runs](../how-to/window-state.md).
+The operating system places a tool window when it opens; the player does not remember tool window positions or sizes, and the API cannot read or set them. To keep a tool window's _content_ across runs, see [Remember a window's state between runs](../how-to/window-state.md).
 
 ## Focus and keyboard
 
@@ -233,12 +233,12 @@ The operating system places a tool window when it opens; the player does not rem
 
 ## Platform differences
 
-| | macOS | Windows |
-| --- | --- | --- |
-| Close a tool window, floating sidebar, Options | ⌘W | Ctrl+W, Ctrl+F4 |
-| `dialogs.confirm` | An `NSAlert` sheet on the active player window (the tool window that asked, usually). | A task dialog owned by the active player window, titled "Vestra Player"; `destructive` shows a warning icon; a `checkbox` is asked as a second yes/no dialog after the user confirms. |
-| `Theme.font-mono` | Menlo | Consolas |
-| `DropModifiers.cmd` | ⌘ | Ctrl |
+|                                                | macOS                                                                                 | Windows                                                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Close a tool window, floating sidebar, Options | ⌘W                                                                                    | Ctrl+W, Ctrl+F4                                                                                                                                                                       |
+| `dialogs.confirm`                              | An `NSAlert` sheet on the active player window (the tool window that asked, usually). | A task dialog owned by the active player window, titled "Vestra Player"; `destructive` shows a warning icon; a `checkbox` is asked as a second yes/no dialog after the user confirms. |
+| `Theme.font-mono`                              | Menlo                                                                                 | Consolas                                                                                                                                                                              |
+| `DropModifiers.cmd`                            | ⌘                                                                                     | Ctrl                                                                                                                                                                                  |
 
 The API is the same on both systems. Other systems answer `dialogs.confirm` with `unsupported`. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
 
@@ -294,4 +294,4 @@ test("the label counts clicks", async () => {
 - On-screen display: {@link "@vestra-player/sdk"!Osd | Osd}, {@link "@vestra-player/sdk"!OsdPanel | OsdPanel}
 - Palette: {@link "@vestra-player/sdk"!Appearance | Appearance}, {@link "@vestra-player/sdk"!ThemeId | ThemeId}
 
-Examples that use them: [blur](../examples/blur.md) (tool window, settings page, OSD), [signal-generator](../examples/signal-generator.md) (a live control window), [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) (sidebar panel with a context menu), [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) (theme widgets, the shared sidebar), [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) and [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown).
+Examples that use them: [blur](../examples/blur.md) (a tool window with a live slider), [bookmark](../examples/bookmark.md) (a tool window bound to playback state), [panel-menu](../examples/panel-menu.md) (a sidebar panel with a context menu), [theme-widgets](../examples/theme-widgets.md) (the theme and widgets) and [markdown](../examples/markdown.md) (the Markdown view).

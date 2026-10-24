@@ -13,7 +13,7 @@ export component ListPanel inherits Rectangle {
     VerticalLayout {
         for row[index] in ListBridge.rows: Rectangle {
             height: 20px;
-            background: index == ListBridge.selected ? #2b2b2b : transparent;
+            background: index == ListBridge.selected ? Theme.selected-bg : transparent;
             Text {
                 x: 6px;
                 text: (index + 1) + ". " + row;
@@ -23,9 +23,10 @@ export component ListPanel inherits Rectangle {
             }
             TouchArea {
                 pointer-event(event) => {
-                    if event.kind != PointerEventKind.down { return; }
-                    ListBridge.select(index);
-                    if event.button == PointerEventButton.right {
+                    if event.kind == PointerEventKind.down {
+                        ListBridge.select(index);
+                    }
+                    if event.kind == PointerEventKind.up && event.button == PointerEventButton.right {
                         ListBridge.context-menu((self.absolute-position.x + self.mouse-x) / 1px,
                             (self.absolute-position.y + self.mouse-y) / 1px);
                     }

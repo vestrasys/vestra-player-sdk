@@ -39,7 +39,7 @@ The package publishes compiled `.js` and `.d.ts` files, not `.ts` sources: Node 
 
 The standard every category reaches in its documentation round (the `UI` category is the model: `Windows`, `Window`, `Panels`, `Settings`, `Dialogs`, `Osd`, `Ui` in `src/plugin/types.ts`). Facts come from the code: the SDK in `src/plugin/` and, for what the player does, the player repository (`src/host/src/`), never from older documents alone.
 
-```text
+````text
 Summary: one sentence, starting with a verb for methods; it is reused in lists and search.
 
 @remarks   What it is, when to use it and when to use something else; its life cycle;
@@ -57,7 +57,7 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 @see       Related symbols and the concept page: [title](../../docs/concepts/<page>.md).
 @since     The SDK version that added it (git tags; CHANGELOG).
 @category  The API category (UI, Playback, …).
-```
+````
 
 Modules and handles (`full` in `scripts/doc-standard.mjs`) carry all of it; their methods carry the summary, `@example`, `@capability`, `@since` and `@throws` (for a Promise). Data types (`data`) carry a summary, `@since`, `@category` and a summary per field with its unit and range. When a category is done, list its symbols in `scripts/doc-standard.mjs` so CI keeps it complete.
 
@@ -81,11 +81,11 @@ One-time setup: in the repository's **Settings → Pages**, set **Source** to **
 
 The entry workflows only orchestrate; every check is written once in a reusable workflow (`_*.yml`) and runs the same way for branches, `main` and releases.
 
-| Workflow | Trigger | Runs |
-| --- | --- | --- |
-| `ci.yml` | push to any branch except `main`, pull request, manual | checks, `ci-ok` |
-| `main.yml` | push to `main`, manual | checks, Pages deploy, `ci-ok` |
-| `release.yml` | tag `v*` | tag check, checks without npm cache, `npm publish` |
+| Workflow      | Trigger                                                | Runs                                               |
+| ------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| `ci.yml`      | push to any branch except `main`, pull request, manual | checks, `ci-ok`                                    |
+| `main.yml`    | push to `main`, manual                                 | checks, Pages deploy, `ci-ok`                      |
+| `release.yml` | tag `v*`                                               | tag check, checks without npm cache, `npm publish` |
 
 ```
 ci.yml / main.yml
