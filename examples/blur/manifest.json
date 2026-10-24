@@ -7,15 +7,13 @@
   "capabilities": [
     "commands",
     "ui.window",
-    "ui.settings",
-    "ui.osd",
     "processing.video",
     "playback.read",
     "events"
   ],
   "name": "Blur",
-  "author": "Vestra Player",
+  "author": "Vestra Player SDK examples",
   "punchline": "A live Gaussian blur over the video that is playing",
-  "description": "Turn a Gaussian blur on and off from Video ▸ Blur or with Ctrl+Shift+B, and adjust its strength in the Blur window while the video plays. The strength is remembered; Options ▸ Video ▸ Blur decides whether blur comes back on at startup.\nThis is the Vestra Player SDK's flagship example: commands, a tool window, a settings page, on-screen messages, a video filter and plugin storage.",
+  "description": "Video ▸ Blur… opens a small window with one slider: move it to blur the video, set it to 0 to turn the blur off.\nSDK example: a menu command, a tool window and a video filter.",
   "tags": ["video", "filter", "blur", "example"]
 }

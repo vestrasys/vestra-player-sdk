@@ -1759,12 +1759,59 @@ export type SettingsCategory =
  *
  * @capability ui.settings
  *
- * @example Two preferences on a page (examples/blur)
- * {@includeCode ../../examples/blur/main.ts#settings-page}
+ * @example Two preferences on a page, kept in a store
+ * ```ts
+ * const store = plugin.storage.json("blur", {
+ *   defaults: { restoreOnStart: false, messages: true },
+ * });
+ * const page = plugin.settings.page("ui/settings.slint", {
+ *   id: "blur",
+ *   category: "video",
+ *   title: "Blur",
+ * });
+ * page.bind(() => ({
+ *   restoreOnStart: store.value.restoreOnStart,
+ *   messages: store.value.messages,
+ * }));
+ * page.on("restoreToggled", (on: boolean) =>
+ *   store.save({ ...store.value, restoreOnStart: on }),
+ * );
+ * page.on("messagesToggled", (on: boolean) =>
+ *   store.save({ ...store.value, messages: on }),
+ * );
+ * ```
  *
- * `ui/settings.slint`:
+ * `ui/settings.slint` exports the bridge global and the layout:
  *
- * {@includeCode ../../examples/blur/ui/settings.slint}
+ * ```slint
+ * import { CheckBox } from "std-widgets.slint";
+ * import { Theme } from "@vestra/theme.slint";
+ *
+ * export global BlurPage {
+ *     in-out property <bool> restore-on-start;
+ *     in-out property <bool> messages: true;
+ *     callback restore-toggled(bool);
+ *     callback messages-toggled(bool);
+ * }
+ *
+ * export component BlurSettings inherits Rectangle {
+ *     VerticalLayout {
+ *         padding: Theme.dialog-padding;
+ *         spacing: 6px;
+ *         alignment: start;
+ *         CheckBox {
+ *             text: "Turn blur back on when the player starts";
+ *             checked <=> BlurPage.restore-on-start;
+ *             toggled => { BlurPage.restore-toggled(self.checked); }
+ *         }
+ *         CheckBox {
+ *             text: "Show on-screen messages";
+ *             checked <=> BlurPage.messages;
+ *             toggled => { BlurPage.messages-toggled(self.checked); }
+ *         }
+ *     }
+ * }
+ * ```
  *
  * @see {@link Settings.page}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
  * @since 1.0.0
@@ -1904,7 +1951,7 @@ export interface Settings {
    * @throws `capability` (rejects) The manifest does not declare
    *   `ui.settings`.
    *
-   * @example An "Options…" button in a tool window (examples/blur)
+   * @example An "Options…" button in a tool window
    * ```ts
    * const controls = plugin.windows.create("ui/window.slint");
    * controls.on("openOptions", () => plugin.settings.show("blur"));
@@ -3148,8 +3195,14 @@ export interface OsdPanel extends Disposable {
  *
  * @capability ui.osd
  *
- * @example On-screen messages that the user can turn off (examples/blur)
- * {@includeCode ../../examples/blur/main.ts#osd}
+ * @example On-screen messages that the user can turn off
+ * ```ts
+ * const store = plugin.storage.json("prefs", { defaults: { messages: true } });
+ * const say = (text: string) => {
+ *   if (store.value.messages) void plugin.osd.show(text);
+ * };
+ * say("Blur on");
+ * ```
  *
  * @see {@link OsdPanel}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
  * @since 1.0.0

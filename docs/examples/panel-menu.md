@@ -4,7 +4,7 @@ title: "Example: Panel menu"
 
 # Example: Panel menu
 
-A list in the player's sidebar with its own right-click menu. It shows the two things that make a panel different from a tool window: its properties live on a Slint *global*, and its menu is made of the plugin's commands.
+A list in the player's sidebar with its own right-click menu. It shows the two things that make a panel different from a tool window: its properties live on a Slint _global_, and its menu is made of the plugin's commands.
 
 ## What you'll build
 

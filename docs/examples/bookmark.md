@@ -4,7 +4,7 @@ title: "Example: Bookmark"
 
 # Example: Bookmark
 
-A tool window whose buttons follow the playback state: **Mark** remembers where playback is, **Jump** goes back there. It shows the pattern most plugins with a window use: the window's properties are *bound* to state, and its buttons call back into the plugin.
+A tool window whose buttons follow the playback state: **Mark** remembers where playback is, **Jump** goes back there. It shows the pattern most plugins with a window use: the window's properties are _bound_ to state, and its buttons call back into the plugin.
 
 ## What you'll build
 
@@ -29,13 +29,13 @@ examples/bookmark/
 
 {@includeCode ../../examples/bookmark/manifest.json}
 
-| Capability | Used for |
-| --- | --- |
-| `commands` | the menu item |
-| `ui.window` | the window |
-| `playback.read` | reading the position and whether the video can seek |
-| `events` | keeping that state up to date while the plugin runs |
-| `playback.control` | the seek |
+| Capability         | Used for                                            |
+| ------------------ | --------------------------------------------------- |
+| `commands`         | the menu item                                       |
+| `ui.window`        | the window                                          |
+| `playback.read`    | reading the position and whether the video can seek |
+| `events`           | keeping that state up to date while the plugin runs |
+| `playback.control` | the seek                                            |
 
 `minPlayerVersion` is 0.3.0 because the menu path uses the `@playback` menu id, which is new in that version.
 
@@ -103,6 +103,6 @@ Start the player with `--plugin <path to examples/bookmark>`, open a video, choo
 
 ## Try next
 
-1. **Keep the bookmark after a restart** with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage}`.json("bookmark", { defaults: { mark: null } })`. The [Blur](blur.md) walkthrough shows the store.
+1. **Keep the bookmark after a restart** with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage}`.json("bookmark", { defaults: { mark: null } })`. See [Remember a window's state between runs](../how-to/window-state.md).
 2. **Show it on the seek bar** with a mark of kind `"bookmark"` from `plugin.timeline.layer()` (capability `timeline.marks`).
 3. **A shortcut to jump**: a command with `title: "Jump to bookmark"`, `bindings: ["Ctrl+Alt+J"]` and `enabled: () => mark !== null`.
