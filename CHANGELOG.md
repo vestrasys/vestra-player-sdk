@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1
+
+Documentation only; no code or type changes.
+
+- **Built-in menus keep their place** (player 0.3.0). `CommandOptions` and `CommandOptions.order` document the player's menu rule: the seven built-in top-level menus (`@open` … `@settings`) sit at fixed orders (Open 110, Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings 830), whether a path names them by id or by title, so a plugin's item never moves them. Directly inside a built-in menu, `order` 0 (the default) sorts after every other order, so an item without `order` goes at the end. Players before 0.3.0 move the whole menu to the top for such an item; give it an order in the menu's range there.
+- The Blur walkthrough explains `order` inside the Video menu accordingly.
+
 ## 1.4.0
 
 **One palette.** `ThemeId` is now `"vestra"` only: the second palette that earlier versions listed is gone from the player. This is a minor version although a type narrows, because the only plugins it affects compare `plugin.appearance.theme` with, or `set` the removed id:
