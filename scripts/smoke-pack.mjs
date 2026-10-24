@@ -7,7 +7,7 @@
  *
  * 1. `npm install <tgz>` (registry dependencies only: typescript, @types/node),
  * 2. import every public entry point from plain Node (ESM resolution of the
- *    published dist/),
+ *    published dist/) and resolve the llms.txt / llms-full.txt exports,
  * 3. `tsc --noEmit` on a tiny plugin with the installed types,
  * 4. `vestra-plugin check` and `vestra-plugin test` on that plugin.
  */
@@ -57,6 +57,11 @@ try {
     'const testing = await import("@vestra-player/sdk/testing");',
     'await import("@vestra-player/sdk/runtime");',
     'if (typeof testing.startPlugin !== "function") throw new Error("startPlugin missing");',
+    'import { readFileSync } from "node:fs";',
+    'for (const name of ["llms.txt", "llms-full.txt"]) {',
+    '  const text = readFileSync(new URL(import.meta.resolve(`@vestra-player/sdk/${name}`)), "utf8");',
+    '  if (!text.startsWith("# ")) throw new Error(`${name}: not an llms.txt file`);',
+    "}",
     'console.log("imports ok");',
   ]);
   run(process.execPath, ["imports.mjs"]);

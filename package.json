@@ -1,6 +1,6 @@
 {
   "name": "@vestra-player/sdk",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "description": "Plugin API types, test host and plugin CLI for Vestra Player (apiVersion vestra/1)",
   "license": "Apache-2.0",
   "repository": {
@@ -24,6 +24,8 @@
       "types": "./dist/player-runtime.d.ts",
       "default": "./dist/player-runtime.js"
     },
+    "./llms.txt": "./llms.txt",
+    "./llms-full.txt": "./llms-full.txt",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -35,7 +37,9 @@
     "slint",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -43,6 +47,7 @@
     "doc-lint": "node scripts/doc-lint.mjs",
     "docs": "typedoc",
     "docs:check": "node scripts/check-docs.mjs",
+    "docs:llms": "node scripts/llms.mjs",
     "examples": "node scripts/check-examples.mjs",
     "format": "prettier --write \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
     "format:check": "prettier --check \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
