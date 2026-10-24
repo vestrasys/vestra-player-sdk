@@ -28,7 +28,7 @@ The code below is pulled from these files, so it is exactly what CI builds and t
 
 {@includeCode ../../examples/hello/manifest.json}
 
-- `id` names the plugin, as `<owner>.<name>`.
+- `id` names the plugin, as `<owner>.<name>` (your GitHub user or organization). `vestra.` ids are reserved for the player's built-in plugins.
 - `entry` is the module the player loads: the TypeScript file itself during development.
 - `capabilities` lists what the plugin may do. `commands` lets it add a menu command, `ui.osd` lets it show a message over the video. A call without its capability fails with `code: "capability"`.
 

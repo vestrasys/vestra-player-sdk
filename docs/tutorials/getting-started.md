@@ -87,7 +87,7 @@ Optional display fields (player 0.2.0), shown by the plugin store and plugin man
 | `sourceUrl`   | `https:` address of the source code.                                                          |
 | `license`     | 1–64 characters, preferably an SPDX expression such as `MIT`.                                 |
 
-Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`.
+Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`. The `vestra.` prefix (and the id `vestra`, in any case) is reserved for the plugins built into the player: from player 0.4.1 the player refuses to install or trial such a package (`reserved`). Every other plugin is a third-party plugin, including those hosted in the official repository.
 
 | Capability                             | Opens                                                                                                   |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
