@@ -183,14 +183,14 @@ export component Slider {
     }
 }
 
-// Link input (UI-DLG-02): a multi-line input and [打开] [取消]. Enter or the
-// confirm button accepts (Shift+Enter starts a new line), Esc or 取消 cancels.
+// Link input (UI-DLG-02): a multi-line input and [Open] [Cancel]. Enter or the
+// confirm button accepts (Shift+Enter starts a new line), Esc or Cancel cancels.
 // No validation here: the plugin checks the address.
 export component UrlInputRow {
     in-out property <string> text;
     in property <string> placeholder;
-    in property <string> confirm-text: "打开";
-    in property <string> cancel-text: "取消";
+    in property <string> confirm-text: @tr("Open");
+    in property <string> cancel-text: @tr("Cancel");
     in property <bool> enabled: true;
     callback accepted(string);
     callback cancelled();

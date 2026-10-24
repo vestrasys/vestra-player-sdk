@@ -7,7 +7,14 @@ import type {
   UiCallback,
   Wire,
 } from "../wire.ts";
-import type { App, Disposable, PluginError, SystemInfo } from "./types.ts";
+import type {
+  App,
+  Disposable,
+  Locale,
+  PluginError,
+  SystemInfo,
+} from "./types.ts";
+import { LOCALES } from "../i18n.ts";
 
 export interface PluginManifest {
   id: string;
@@ -119,6 +126,8 @@ export class Runtime {
   readonly services = new Map<string, unknown>();
   /** `plugin.app`, from the start-up handshake; `system()` asks the player. */
   readonly app: App;
+  /** `plugin.i18n.locale`, from the start-up handshake; English when unknown. */
+  readonly locale: Locale;
   constructor(
     transport: Transport,
     manifest: PluginManifest,
@@ -132,6 +141,11 @@ export class Runtime {
     this.host = createWire(transport);
     const host = this.host;
     this.app = appInfo(app, () => host.app.system() as Promise<SystemInfo>);
+    this.locale = (LOCALES as readonly string[]).includes(
+      transport.locale ?? "",
+    )
+      ? (transport.locale as Locale)
+      : "en";
     this.manifest = manifest;
     this.directory = directory;
     transport.on("ui.callback", (data) => {

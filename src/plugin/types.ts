@@ -228,8 +228,10 @@ export interface Scope extends Disposable {
   readonly timeline: Timeline;
   /** Files dropped on the video area, by extension (`ui.drop`). */
   readonly drops: Drops;
-  /** The player's palette. */
+  /** The player's palette and the saved interface language. */
   readonly appearance: Appearance;
+  /** The interface language of this run (read-only). */
+  readonly i18n: I18n;
   /** Pages in the player's options window (`ui.settings`). */
   readonly settings: Settings;
   /**
@@ -370,9 +372,9 @@ export type Bindable<T> = T | (() => T);
 
 /**
  * A built-in top-level menu of the player, named in a command path as
- * `@<id>` (see {@link CommandOptions.path}): Open (打开), Playback (播放),
- * Subtitles (字幕), Video (视频), Audio (声音), Screen (屏幕), Settings (设置).
- * The list is `MENU_IDS` in `@vestra-player/sdk/testing`.
+ * `@<id>` or by its English key (see {@link CommandOptions.path}): Open,
+ * Playback, Subtitles, Video, Audio, Screen, Settings. The list is
+ * `MENU_IDS` in `@vestra-player/sdk/testing`.
  */
 export type MenuId =
   "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings";
@@ -391,7 +393,7 @@ export type MenuId =
  * ({@link MenuId}) sit at fixed orders, whatever is inside them: Open 110,
  * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings
  * 830 (player 0.3.0). This holds whether the path names the menu by id
- * (`["@video", "Blur"]`) or by its title (`["视频", "Blur"]`), so a plugin's
+ * (`["@video", "Blur"]`) or by its key (`["Video", "Blur"]`), so a plugin's
  * item never moves the player's menu. Directly inside a built-in menu,
  * `order` 0 (the default) sorts after every other order: an item without
  * `order` goes at the end, after the player's own items (which all use 100
@@ -414,13 +416,20 @@ export interface CommandOptions {
    * one segment is a top-level item. Omit it for a command that is not in the
    * main menu (bindings and panel menus only); `title` is then required.
    *
-   * Segments are menu titles, matched exactly. The player's own menus have
-   * Chinese titles, so `["Video", "Blur"]` would add a second top-level menu
-   * "Video". To join a built-in menu, start the path with its id, `@` plus a
-   * {@link MenuId}: `@open`, `@playback`, `@subtitles`, `@video`, `@audio`,
-   * `@screen` or `@settings`. Only the first segment is read as an id; an
-   * unknown id, or an id with nothing after it, fails with `invalid`. Needs
-   * player 0.3.0 (set `"minPlayerVersion": "0.3.0"`).
+   * Segments are English source text, and menus merge by them: commands
+   * of different plugins with the same leading segments share a submenu.
+   * The player shows each segment and the title in the interface language
+   * from the declaring plugin's catalog (`locales/<lang>.po`, see the
+   * [i18n guide](../../docs/how-to/i18n.md)); the player's own menus
+   * (Open, Playback, Subtitles, Video, Audio, Screen, Settings, and
+   * Playback ▸ Speed, Playback ▸ Seek) always show the player's words.
+   * A built-in menu can also be named by its id, `@` plus a {@link MenuId}:
+   * `@open`, `@playback`, `@subtitles`, `@video`, `@audio`, `@screen` or
+   * `@settings`. Only the first segment is read as an id; an unknown id, or
+   * an id with nothing after it, fails with `invalid`. Players up to 0.4.2
+   * titled their menus in Chinese (视频…): there `["Video", "Blur"]` is a
+   * menu of its own, so plugins for those players write `@video`; player
+   * 0.4.3 still accepts the old Chinese titles of its own menus.
    *
    * @example
    * ```ts
@@ -428,7 +437,10 @@ export interface CommandOptions {
    * ```
    */
   path?: string[];
-  /** Menu label; defaults to the last path segment. */
+  /**
+   * Menu label (English source text, shown translated); defaults to the
+   * last path segment.
+   */
   title?: string;
   /**
    * Sibling order in the menu, ascending (integer, default 0). A submenu sits
@@ -1984,6 +1996,126 @@ export interface Appearance {
    * @since 1.0.0
    */
   set(theme: ThemeId): Promise<void>;
+  /**
+   * The saved interface language: `"system"` (follow the system's
+   * languages, the default) or a {@link Locale}.
+   *
+   * @remarks
+   * This is the choice for the next start. The language of this run is
+   * {@link I18n.locale} and never changes while the player runs. Read before
+   * activation; with `events` it follows other plugins' changes, without it
+   * only this plugin's own. Players before 0.4.3 report `"system"`.
+   *
+   * @since 1.5.9
+   */
+  readonly language: LanguagePreference;
+  /**
+   * Save the interface language for the next start.
+   *
+   * @remarks
+   * The player keeps the choice in its interface state; the language
+   * changes when the player starts again (tell the user, for example "Takes
+   * effect after restart"). Every plugin with `events` hears the change in
+   * {@link Appearance.language}.
+   *
+   * @capability ui.theme
+   * @player 0.4.3
+   *
+   * @param language - `"system"` or a {@link Locale}.
+   * @returns Resolves once the player saved it; {@link Appearance.language}
+   *   has the new value.
+   *
+   * @throws `invalid` (rejects) `language` is not `"system"` or a {@link Locale}.
+   * @throws `capability` (rejects) The manifest does not declare `ui.theme`.
+   * @throws `unsupported` (rejects) A player before 0.4.3.
+   *
+   * @example
+   * ```ts
+   * await plugin.appearance.setLanguage("de");
+   * await plugin.osd.show("Takes effect after restart");
+   * ```
+   *
+   * @since 1.5.9
+   */
+  setLanguage(language: LanguagePreference): Promise<void>;
+}
+
+/**
+ * An interface language of the player: English (`en`, the source language
+ * of every plugin text) or a translation. The list is `LOCALES` in
+ * `@vestra-player/sdk/testing`.
+ *
+ * @remarks
+ * Simplified Chinese is `zh-Hans`. There is no Traditional Chinese: a
+ * system set to Traditional Chinese (Taiwan, Hong Kong, Macao) gets English.
+ *
+ * @since 1.5.9
+ * @category UI
+ */
+export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
+
+/**
+ * The saved interface language ({@link Appearance.language}): follow the
+ * system, or one {@link Locale}.
+ *
+ * @since 1.5.9
+ * @category UI
+ */
+export type LanguagePreference = "system" | Locale;
+
+/**
+ * Arguments of a template sentence ({@link Osd.show},
+ * {@link OsdPanel.set}, {@link ConfirmOptions.args}): an array for `{}` and
+ * `{0}`, `{1}` placeholders, or an object for `{name}` placeholders. At most
+ * 16 strings and finite numbers; whole numbers print without a fraction.
+ *
+ * @since 1.5.9
+ * @category UI
+ */
+export type TemplateArgs =
+  readonly (string | number)[] | Readonly<Record<string, string | number>>;
+
+/**
+ * The interface language of this run. `plugin.i18n`.
+ *
+ * @remarks
+ * Plugins write no translation code. Every user-visible text is English
+ * source text in one of three places, and the player translates it with
+ * the plugin's own catalog (`locales/<lang>.po`, compiled into the package
+ * by `vestra-plugin build`):
+ *
+ * 1. declarations: command titles and paths, settings page and panel
+ *    titles, the manifest's `name`, `punchline`, `description` and `tags`;
+ * 2. Slint: `@tr("…")` in the plugin's `.slint` files;
+ * 3. sentences the plugin hands the player: {@link Osd.show},
+ *    {@link OsdPanel.set} and {@link Dialogs.confirm} take a template and
+ *    its arguments (`osd.show("Speed {}×", [rate])`), never a sentence
+ *    composed in TypeScript.
+ *
+ * The language is fixed when the player starts: {@link I18n.locale} never
+ * changes during a run. Read it for what is not text, such as the order of
+ * names or a date format. `vestra-plugin i18n extract` collects the texts
+ * into `locales/messages.pot`; see the
+ * [i18n guide](../../docs/how-to/i18n.md).
+ *
+ * @capability None.
+ *
+ * @example Format a date the way the interface language writes it
+ * ```ts
+ * const day = new Date().toLocaleDateString(plugin.i18n.locale);
+ * await plugin.osd.show("Today is {}", [day]);
+ * ```
+ *
+ * @since 1.5.9
+ * @category UI
+ */
+export interface I18n {
+  /**
+   * The interface language of this run, chosen at start-up from the saved
+   * {@link Appearance.language} or the system's languages; English when
+   * neither names a {@link Locale}. Players before 0.4.3 report `"en"`.
+   */
+  readonly locale: Locale;
 }
 
 /**
@@ -2653,6 +2785,16 @@ export interface ConfirmOptions {
   destructive?: boolean;
   /** A checkbox under the text, such as "Don't ask again"; 1–40 characters. */
   checkbox?: string;
+  /**
+   * Values for the placeholders of `message` and `detail` (player 0.4.3).
+   * Every text of the dialog is English source text that the player shows
+   * translated from the plugin's catalog; `message` and `detail` are
+   * templates like {@link Osd.show}'s. The length limits apply to the shown
+   * text.
+   *
+   * @since 1.5.9
+   */
+  args?: TemplateArgs;
 }
 
 /**
@@ -3455,18 +3597,20 @@ export interface OsdPanel extends Disposable {
    * @capability ui.osd
    *
    * @param text - The text, with `\n` between lines: at most 32 lines and
-   *   4096 bytes. `null` hides the block.
+   *   4096 bytes once translated and formatted. `null` hides the block. A
+   *   template, like {@link Osd.show}'s.
+   * @param args - Values for its placeholders (player 0.4.3).
    *
    * @example
    * ```ts
    * const info = plugin.osd.panel();
-   * info.set("A: 12.0 s\nB: 18.5 s");
+   * info.set("A: {} s\nB: {} s", ["12.0", "18.5"]);
    * info.set(null); // hide it
    * ```
    *
    * @since 1.0.0
    */
-  set(text: string | null): void;
+  set(text: string | null, args?: TemplateArgs): void;
 }
 
 /**
@@ -3505,24 +3649,35 @@ export interface Osd {
    * Replaces the message on screen, whichever plugin showed it. A message
    * that is on screen when the plugin stops still disappears on time.
    *
+   * The text is a template in English: the player shows its translation
+   * from the plugin's catalog, with the placeholders (`{}`, `{0}`, `{name}`;
+   * `{{` and `}}` for braces) filled from `args`. Without `args` the text
+   * shows as it is (braces included). Untranslated, the English template is
+   * formatted. Never compose the sentence in TypeScript
+   * (`` `Speed ${rate}×` ``): translators can only translate whole templates.
+   *
    * @capability ui.osd
    *
-   * @param text - 1–200 characters; line breaks become spaces.
+   * @param text - The template, 1–200 characters once translated and
+   *   formatted; line breaks become spaces.
+   * @param args - Values for its placeholders (player 0.4.3; older players
+   *   show the template as it is).
    * @returns Resolves once the message is on screen.
    *
-   * @throws `invalid` (rejects) `text` is empty, only white space, or longer
-   *   than 200 characters.
+   * @throws `invalid` (rejects) The shown text is empty, only white space,
+   *   or longer than 200 characters, or `args` is not a {@link TemplateArgs}.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.osd`.
    *
    * @example
    * ```ts
    * await plugin.osd.show("Bookmark added");
+   * await plugin.osd.show("Speed {}×", [plugin.player.state.rate]);
    * ```
    *
    * @since 1.0.0
    */
-  show(text: string): Promise<void>;
+  show(text: string, args?: TemplateArgs): Promise<void>;
   /**
    * Create this plugin's information block.
    *
@@ -4379,6 +4534,31 @@ export interface PluginInfo {
    * @since 1.5.2
    */
   warnings?: readonly PluginWarning[];
+  /**
+   * The manifest's display texts in the interface language, translated
+   * with that package's catalog; absent from players before 0.4.3 (read
+   * `manifest.json` there).
+   *
+   * @since 1.5.9
+   */
+  display?: PluginDisplay;
+}
+
+/**
+ * {@link PluginInfo.display}: a package's `name`, `punchline`,
+ * `description` and `tags` as the player shows them.
+ *
+ * @since 1.5.9
+ */
+export interface PluginDisplay {
+  /** `name`, translated; `null` when the manifest has none. */
+  readonly name: string | null;
+  /** `punchline`, translated; `null` when the manifest has none. */
+  readonly punchline: string | null;
+  /** `description`, translated; `null` when the manifest has none. */
+  readonly description: string | null;
+  /** `tags`, each translated. */
+  readonly tags: readonly string[];
 }
 
 /**

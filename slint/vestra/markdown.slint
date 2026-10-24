@@ -7,7 +7,7 @@
 // `MarkdownView` scrolls one document. `MarkdownBlocks` does not scroll and
 // is as tall as its content: put it in your own layout or in a `ListView`
 // row (a chat message: a `[MarkdownBlock]` field of the row's struct).
-// `code-copy: true` adds a 复制 button to code blocks that reports
+// `code-copy: true` adds a Copy button to code blocks that reports
 // `copy-code(code)`; the plugin copies it (`plugin.clipboard`).
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
@@ -139,7 +139,7 @@ component MarkdownBlockView {
                     border-radius: Theme.radius-control;
                     background: copy-touch.pressed ? Theme.button-press : copy-touch.has-hover ? Theme.button-hover : Theme.button-bg;
                     copy-label := Text {
-                        text: "复制";
+                        text: @tr("Copy");
                         color: copy-touch.has-hover ? Theme.text : Theme.text-dim;
                         font-size: Theme.font-body;
                         vertical-alignment: center;
@@ -160,7 +160,7 @@ component MarkdownBlockView {
                 }
             }
             if block.kind == "image" && !block.has-image: Text {
-                text: block.alt == "" ? "[图片]" : "[图片] " + block.alt;
+                text: block.alt == "" ? @tr("[Image]") : @tr("[Image] {}", block.alt);
                 color: Theme.text-dim;
                 font-size: Theme.font-body;
                 wrap: word-wrap;
@@ -214,7 +214,7 @@ component MarkdownBlockView {
 // Markdown blocks without scrolling, as tall as their content.
 export component MarkdownBlocks inherits Rectangle {
     in property <[MarkdownBlock]> blocks;
-    // A 复制 button on code blocks, reporting `copy-code(code)`.
+    // A Copy button on code blocks, reporting `copy-code(code)`.
     in property <bool> code-copy: false;
     callback link-clicked(string);
     callback copy-code(string);
@@ -239,7 +239,7 @@ export component MarkdownView inherits Rectangle {
     in property <[MarkdownBlock]> blocks;
     // Space around the document.
     in property <length> inset: 10px;
-    // A 复制 button on code blocks, reporting `copy-code(code)`.
+    // A Copy button on code blocks, reporting `copy-code(code)`.
     in property <bool> code-copy: false;
     callback link-clicked(string);
     callback copy-code(string);

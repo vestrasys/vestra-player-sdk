@@ -13,5 +13,15 @@ export { HostError } from "./wire.ts";
 export type { Json, Transport } from "./wire.ts";
 export { API_VERSION, CAPABILITIES } from "./capabilities.ts";
 export { COMMAND_LIMITS, MENU_IDS } from "./commands.ts";
+export {
+  Catalog,
+  HOST_ZH_HANS,
+  LOCALES,
+  MENU_KEYS,
+  matchLocale,
+  parsePo,
+  rewriteSlint,
+  scanSlint,
+} from "./i18n.ts";
 export { MANIFEST_FIELDS, MANIFEST_LIMITS } from "./manifest.ts";
 export { MARKDOWN_LIMITS } from "./plugin/markdown.ts";

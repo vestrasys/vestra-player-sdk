@@ -72,6 +72,7 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 | [menus](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/menus)                       | Radio items, separator groups and a menu item whose title changes.       | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Menus.html)            |
 | [theme-widgets](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/theme-widgets)       | A tool window drawn with the player's theme and widgets.                 | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Theme_widgets.html)    |
 | [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown)                 | A window that shows a Markdown document.                                 | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Markdown.html)         |
+| [i18n](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/i18n)                         | A plugin in the player's language: English source text, a translation.  | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Counter__i18n_.html)            |
 
 ## Command line
 
@@ -81,6 +82,8 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 | `vestra-plugin test [dir...]`                               | Runs `node --test` on `tests/*.test.{ts,mjs}`.                             |
 | `vestra-plugin build [dir...] [--version x.y.z]`            | Writes `dist/`: types stripped, files copied, manifest versioned.          |
 | `vestra-plugin pack [dir...] [--version x.y.z] [--out dir]` | Builds, then packs `dist/` as `<id>-<version>.vxp`.                        |
+| `vestra-plugin i18n extract [dir...] [--locale lang]`       | Collects the texts to translate into `locales/`, keeping translations.     |
+| `vestra-plugin i18n check [dir...]`                         | Translation coverage and untranslatable text (warnings only).              |
 
 ## Compatibility
 
@@ -91,7 +94,7 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 | 1.2 | `vestra/1` | 0.2 or newer                                                                              | 26 (shipped with the player) |
 | 1.3 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions (menu ids, `Theme.danger`, empty video chains)    | 26 (shipped with the player) |
 | 1.4 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions. `ThemeId` is `"vestra"` only (see the CHANGELOG) | 26 (shipped with the player) |
-| 1.5 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions; 0.4 for the 1.5 additions (`vestra-light`, `@vestra/icons.slint`) | 26 (shipped with the player) |
+| 1.5 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions; 0.4 for the 1.5 additions (`vestra-light`, `@vestra/icons.slint`); 0.4.3 for translations (1.5.9) | 26 (shipped with the player) |
 
 Minor releases only add backwards-compatible API; a breaking change gets a new `apiVersion` and a new major version. `@vestra-player/sdk/runtime` is for the player only and not covered by semver.
 

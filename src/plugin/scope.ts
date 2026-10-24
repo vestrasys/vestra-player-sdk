@@ -8,6 +8,7 @@ import { timeline } from "./timeline.ts";
 import { drops } from "./drops.ts";
 import { appearance } from "./appearance.ts";
 import { settings } from "./settings.ts";
+import { i18n } from "./language.ts";
 import { player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { videoRender, videoView } from "./view.ts";
@@ -80,6 +81,7 @@ export class ScopeImpl implements Plugin {
   readonly drops = drops(this);
   readonly appearance = appearance(this);
   readonly settings = settings(this);
+  readonly i18n = i18n(this);
   get app() {
     return this.runtime.app;
   }

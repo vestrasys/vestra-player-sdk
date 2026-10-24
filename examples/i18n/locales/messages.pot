@@ -1,0 +1,45 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: examples.i18n 0.1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: main.ts:20
+msgid "Count: {}"
+msgstr ""
+
+#: main.ts:28
+msgid "Tools"
+msgstr ""
+
+#: main.ts:28
+msgid "Counter…"
+msgstr ""
+
+#: manifest.json ui/counter.slint:8
+msgid "Counter"
+msgstr ""
+
+#: manifest.json
+msgid "A click counter in the player's language"
+msgstr ""
+
+#: manifest.json
+msgid ""
+"Tools ▸ Counter… opens a window with one button that counts clicks.\n"
+"SDK example: a plugin translated into Simplified Chinese."
+msgstr ""
+
+#: manifest.json
+msgid "example"
+msgstr ""
+
+#: ui/counter.slint:20
+msgid "{n} click"
+msgid_plural "{n} clicks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ui/counter.slint:25
+msgid "Add one"
+msgstr ""

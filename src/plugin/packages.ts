@@ -232,4 +232,14 @@ const info = (plugin: WirePlugin): PluginInfo =>
         }),
       ),
     ),
+    ...(plugin.display
+      ? {
+          display: Object.freeze({
+            name: plugin.display.name ?? null,
+            punchline: plugin.display.punchline ?? null,
+            description: plugin.display.description ?? null,
+            tags: Object.freeze([...(plugin.display.tags ?? [])]),
+          }),
+        }
+      : {}),
   });
