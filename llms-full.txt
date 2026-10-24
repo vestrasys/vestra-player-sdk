@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.6: full reference
+# @vestra-player/sdk 1.5.7: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -2616,7 +2616,17 @@ interface Stream extends Disposable {
   /** The stream is producing frames. */
   readonly running: boolean;
   /**
-   * The stream stopped for a reason outside this plugin: `error` is null when another source replaced it or the user closed it, otherwise the failure (`stream`, `invalid` for a bad frame, …). Not called when the plugin itself stops it (`stop()`, `dispose()`, deactivation): the promise of `stop()` is that notification.
+   * The stream stopped for a reason outside this plugin: `error` is null when
+   * another source replaced it or the user closed it, otherwise the failure
+   * (`stream` with the player's text, `invalid` for a bad frame, …). Not
+   * called when the plugin itself stops it (`stop()`, `dispose()`,
+   * deactivation): the promise of `stop()` is that notification.
+   *
+   * The player retires a stream's producer as soon as it is replaced or
+   * closed; the SDK reads the player's state to tell that from a failure
+   * (before 1.5.7 a replaced or closed stream could get `unavailable`
+   * "producer absent"). Without `playback.read` a failure the SDK has not
+   * seen yet is reported as null.
    */
   onStop(listener: (error: PluginError | null) => void): Disposable;
   /**
@@ -2758,7 +2768,8 @@ interface Player {
    * activation, pausing and acknowledgement. Frames travel over a local
    * connection the SDK sets up: a Unix socket on macOS and Linux, loopback
    * TCP with a token on Windows. Rejects with a StreamStartError
-   * (`timeout`), `stream` or `device`.
+   * (`timeout`), `stream`, `device`, or `replaced` when another source
+   * replaced it (or it was closed) before it ran.
    */
   openStream(options: StreamOptions): Promise<Stream>;
   /** Pause or resume. */
@@ -3388,6 +3399,14 @@ interface FileResolverOptions {
 
 What a file resolver returns: a stream, with the same frame contract as
 StreamOptions (size limits, `frame()` on the audio clock).
+
+After `resolve` returns, the SDK starts the stream while the open waits.
+If that fails, the open fails with the player's words instead of the
+SDK's (the detail goes to the log): `device` "音频输出设备不可用",
+`timeout` "启动超时", `busy` "播放器正忙，请稍后重试", other start-up
+failures "无法启动播放". An error thrown by `frame()` keeps its message.
+To give your own text for a file you can tell is unusable (a bad header),
+check it in `resolve` and throw there.
 
 ```ts
 interface ResolvedStream {
@@ -4261,6 +4280,10 @@ interface FakeProducer {
   /** `true` once the plugin released the producer (stream stopped or disposed). */
   released: boolean;
   /**
+   * `true` once the player retired the producer, as the real player does at once: another source replaced it (`open`, another stream, a resolved file), the source was closed, or TestHost.failStream failed it. A retired producer's `producer.state` answers `unavailable`.
+   */
+  retired: boolean;
+  /**
    * `true` if the frame connection closed while this stream was still the player's source: the player reports that as a playback failure ("producer transport closed"). `stop()` closes the source first.
    */
   droppedWhileSelected: boolean;
@@ -4854,6 +4877,12 @@ class TestHost implements Transport {
    * @param phase - The phase to end in (default `"ready"`).
    */
   openElsewhere(source: string, phase?: SourceState["phase"]): void;
+  /**
+   * Simulate a generated stream failing in the player (its audio device lost, its frame connection broken), like the player: the source fails with `message` (`phase: "error"`) and the producer is retired at once. The stream's `onStop` listeners get a `stream` error with `message`.
+   * @param producerId - The producer, from TestHost.producers.
+   * @param message - The player's failure text.
+   */
+  failStream(producerId: number, message: string): void;
   /**
    * Press a binding like the host's table would: panel-focus bindings first when `panel` is true, then global ones; the earliest registration wins a conflict. Resolves after the command ran; rejects when nothing is bound or the command is disabled or busy. Bindings use the reference syntax (`"Space"`, `"Ctrl+O"`, `"Mouse:WheelUp"`); the player's core actions match first, and user overrides in `bindings.overlay` apply.
    */

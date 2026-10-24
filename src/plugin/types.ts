@@ -3087,9 +3087,15 @@ export interface Stream extends Disposable {
   /**
    * The stream stopped for a reason outside this plugin: `error` is null when
    * another source replaced it or the user closed it, otherwise the failure
-   * (`stream`, `invalid` for a bad frame, …). Not called when the plugin
-   * itself stops it (`stop()`, `dispose()`, deactivation): the promise of
-   * `stop()` is that notification.
+   * (`stream` with the player's text, `invalid` for a bad frame, …). Not
+   * called when the plugin itself stops it (`stop()`, `dispose()`,
+   * deactivation): the promise of `stop()` is that notification.
+   *
+   * The player retires a stream's producer as soon as it is replaced or
+   * closed; the SDK reads the player's state to tell that from a failure
+   * (before 1.5.7 a replaced or closed stream could get `unavailable`
+   * "producer absent"). Without `playback.read` a failure the SDK has not
+   * seen yet is reported as null.
    */
   onStop(listener: (error: PluginError | null) => void): Disposable;
   /**
@@ -3235,7 +3241,8 @@ export interface Player {
    * activation, pausing and acknowledgement. Frames travel over a local
    * connection the SDK sets up: a Unix socket on macOS and Linux, loopback
    * TCP with a token on Windows. Rejects with a {@link StreamStartError}
-   * (`timeout`), `stream` or `device`.
+   * (`timeout`), `stream`, `device`, or `replaced` when another source
+   * replaced it (or it was closed) before it ran.
    *
    * @example
    * ```ts
@@ -4085,6 +4092,14 @@ export interface FileResolverOptions {
 /**
  * What a file resolver returns: a stream, with the same frame contract as
  * {@link StreamOptions} (size limits, `frame()` on the audio clock).
+ *
+ * After `resolve` returns, the SDK starts the stream while the open waits.
+ * If that fails, the open fails with the player's words instead of the
+ * SDK's (the detail goes to the log): `device` "音频输出设备不可用",
+ * `timeout` "启动超时", `busy` "播放器正忙，请稍后重试", other start-up
+ * failures "无法启动播放". An error thrown by `frame()` keeps its message.
+ * To give your own text for a file you can tell is unusable (a bad header),
+ * check it in `resolve` and throw there.
  */
 export interface ResolvedStream {
   /** Always `"stream"`. */

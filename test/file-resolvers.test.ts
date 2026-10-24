@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type {
   Json,
   Plugin,
@@ -186,6 +186,8 @@ test("cancelled after resolve but before activation: released, started never cal
   const second = await emulator(async () =>
     stream({ started: () => void started++ }),
   );
+  const errors: PluginError[] = [];
+  second.plugin.onError((error) => errors.push(error));
   second.host.handle("producer.ack", (params) => {
     second.host.reset("producer.ack");
     second.host.openElsewhere("/movies/b.mp4");
@@ -198,7 +200,94 @@ test("cancelled after resolve but before activation: released, started never cal
   );
   assert.equal(started, 0);
   assert.equal(second.host.source.source, "/movies/b.mp4");
+  assert.deepEqual(errors, [], "a cancellation, not a failure");
   await second.stop();
+});
+
+test("the running stream's onStop: null when replaced or closed, the player's failure otherwise", async () => {
+  const stops: (PluginError | null)[] = [];
+  const { host, plugin, stop } = await emulator(async () =>
+    stream({ started: (s) => s.onStop((error) => stops.push(error)) }),
+  );
+  const errors: PluginError[] = [];
+  plugin.onError((error) => errors.push(error));
+  const play = async (path: string) => {
+    const before = host.producers.size;
+    const media = await plugin.player.open(path);
+    await media.ready({ signal: AbortSignal.timeout(5000) });
+    const latest = () => [...host.producers.values()].at(-1)!;
+    await until(
+      () => host.producers.size > before && latest().active,
+      `${path} started`,
+    );
+    return latest();
+  };
+  // Replaced by another file (the playlist's next item).
+  const first = await play("/roms/a.nes");
+  host.openElsewhere("/movies/a.mp4");
+  await until(() => stops.length === 1, "first stopped");
+  assert.equal(stops[0], null);
+  assert.equal(first.retired, true);
+  assert.equal(host.source.source, "/movies/a.mp4");
+  // Replaced by another ROM: the next resolved stream retires this one.
+  const second = await play("/roms/b.nes");
+  await play("/roms/c.nes");
+  await until(() => stops.length === 2, "second stopped");
+  assert.equal(stops[1], null);
+  assert.equal(second.retired, true);
+  // Closed (F4).
+  await plugin.player.close();
+  await until(() => stops.length === 3, "third stopped");
+  assert.equal(stops[2], null);
+  // A failure in the player keeps its words.
+  const fourth = await play("/roms/d.nes");
+  host.failStream(fourth.id, "producer audio DeviceLost");
+  await until(() => stops.length === 4, "fourth stopped");
+  assert.equal(stops[3]?.code, "stream");
+  assert.equal(stops[3]?.message, "producer audio DeviceLost");
+  assert.deepEqual(errors, []);
+  await stop();
+});
+
+test("a stream that cannot start after resolve returned fails the open in the player's words", async () => {
+  const { host, plugin, stop } = await emulator(async () => stream());
+  // The player has no room for another stream.
+  host.handle("producer.prepare", () => {
+    throw new HostError("busy", "producer capacity reached");
+  });
+  await assert.rejects(plugin.player.open("/roms/a.nes"));
+  assert.equal(plugin.player.state.error, "播放器正忙，请稍后重试");
+  host.reset("producer.prepare");
+  // The audio device went away while the first buffers were prepared.
+  host.handle("producer.state", async (params) => {
+    host.reset("producer.state");
+    const state = (await host.request("producer.state", params)) as Record<
+      string,
+      Json
+    >;
+    return { ...state, health: "deviceLost" };
+  });
+  await assert.rejects(plugin.player.open("/roms/b.nes"));
+  assert.equal(plugin.player.state.error, "音频输出设备不可用");
+  assert.deepEqual(
+    host
+      .sent("sourceResolvers.respond")
+      .map((p) => (p as { error: Json }).error),
+    ["播放器正忙，请稍后重试", "音频输出设备不可用"],
+  );
+  assert.ok([...host.producers.values()].every((p) => p.released));
+  // The plugin's own failure in frame() keeps its words.
+  const own = await emulator(async () =>
+    stream({
+      frame: () => {
+        throw new Error("ROM 映射器不支持");
+      },
+    }),
+  );
+  await assert.rejects(own.plugin.player.open("/roms/c.nes"));
+  assert.equal(own.plugin.player.state.error, "ROM 映射器不支持");
+  await own.stop();
+  await stop();
 });
 
 test("another plugin's extension is a conflict that does not fail activation", async () => {
