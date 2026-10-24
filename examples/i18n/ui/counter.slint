@@ -1,0 +1,29 @@
+// The Counter window. Every text is @tr("English"): the player puts the
+// translation in its place when it loads the file. Walkthrough:
+// docs/examples/i18n.md.
+import { Theme } from "@vestra/theme.slint";
+import { Button } from "@vestra/widgets.slint";
+
+export component CounterWindow inherits Window {
+    title: @tr("Counter");
+    width: 240px;
+    background: Theme.bg-panel;
+
+    in property <int> count;
+    callback add();
+
+    VerticalLayout {
+        padding: Theme.dialog-padding;
+        spacing: 8px;
+        Text {
+            // One form for 1, the other for every other number.
+            text: @tr("{n} click" | "{n} clicks" % root.count);
+            color: Theme.text;
+            font-size: Theme.font-body;
+        }
+        Button {
+            text: @tr("Add one");
+            clicked => { root.add(); }
+        }
+    }
+}

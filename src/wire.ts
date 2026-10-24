@@ -132,6 +132,13 @@ export interface PackageInfo {
   dataDirectory?: string | null;
   /** What the plugin was refused because another plugin holds it (player 0.4.x, after 0.4.0). */
   warnings?: { code: string; slot?: string; owner?: string }[];
+  /** The manifest's display texts in the interface language (player 0.4.3). */
+  display?: {
+    name: string | null;
+    punchline: string | null;
+    description: string | null;
+    tags: string[];
+  };
 }
 /** Where an installed package came from (`packages.install` `source`). */
 export type WireSource =
@@ -166,6 +173,10 @@ export interface WindowFacts {
   appearance?: string;
   /** The file resolvers' extensions (`plugin.resolvers.fileTypes`; player 0.4.2). */
   fileTypes?: string[];
+  /** The saved interface language, `"system"` or a locale (player 0.4.3). */
+  language?: string;
+  /** The interface language of this run (player 0.4.3). */
+  locale?: string;
 }
 /** One timeline mark as the player merges them (`timeline.marks`). */
 export interface WireMark {
@@ -271,11 +282,20 @@ export interface WireSystemInfo {
     primary: boolean;
   }[];
 }
+/** Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`). */
+export type TemplateArgsJson =
+  (string | number)[] | { [name: string]: string | number };
+
 export interface Transport {
   request<T>(method: string, params?: Json): Promise<T>;
   on(event: string, listener: (data: unknown) => void): () => void;
   /** Replaces the real local services (test host). */
   local?: LocalServices;
+  /**
+   * The interface language of this run (`plugin.i18n.locale`): the runner
+   * passes the player's `VESTRA_LOCALE`, the test host its `locale`.
+   */
+  locale?: string;
 }
 
 export function createWire(transport: Transport) {
@@ -301,6 +321,7 @@ export function createWire(transport: Transport) {
           "dialogs.open",
           options,
         ),
+      /** Message and detail are templates formatted with `args` (player 0.4.3). */
       confirm: (options: { [key: string]: Json }) =>
         transport.request<{ confirmed: boolean; checked: boolean }>(
           "dialogs.confirm",
@@ -352,6 +373,9 @@ export function createWire(transport: Transport) {
     appearance: {
       set: (theme: string) =>
         transport.request<void>("appearance.set", { theme }),
+      /** The interface language for the next start (player 0.4.3). */
+      setLanguage: (language: string) =>
+        transport.request<void>("appearance.setLanguage", { language }),
     },
     /** Settings pages in the player's options window (`ui.settings`). */
     settings: {
@@ -503,10 +527,18 @@ export function createWire(transport: Transport) {
       step: (direction: "next" | "previous") =>
         transport.request<void>("sequence.step", { direction }),
     },
+    /** `text` is a template in the plugin's catalog, formatted with `args` (player 0.4.3). */
     osd: {
-      show: (text: string) => transport.request<void>("osd.show", { text }),
-      panel: (text: string | null) =>
-        transport.request<void>("osd.panel", { text }),
+      show: (text: string, args?: TemplateArgsJson) =>
+        transport.request<void>("osd.show", {
+          text,
+          ...(args === undefined ? {} : { args }),
+        }),
+      panel: (text: string | null, args?: TemplateArgsJson) =>
+        transport.request<void>("osd.panel", {
+          text,
+          ...(args === undefined ? {} : { args }),
+        }),
     },
     layout: {
       state: () =>

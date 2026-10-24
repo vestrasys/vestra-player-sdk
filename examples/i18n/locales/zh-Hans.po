@@ -1,0 +1,47 @@
+msgid ""
+msgstr ""
+"Language: zh-Hans\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: main.ts:20
+msgid "Count: {}"
+msgstr "计数：{}"
+
+#: main.ts:28
+msgid "Tools"
+msgstr "工具"
+
+#: main.ts:28
+msgid "Counter…"
+msgstr "计数器…"
+
+#: manifest.json ui/counter.slint:8
+msgid "Counter"
+msgstr "计数器"
+
+#: manifest.json
+msgid "A click counter in the player's language"
+msgstr "用播放器的界面语言显示的点击计数器"
+
+#: manifest.json
+msgid ""
+"Tools ▸ Counter… opens a window with one button that counts clicks.\n"
+"SDK example: a plugin translated into Simplified Chinese."
+msgstr ""
+"「工具 ▸ 计数器…」打开一个只有一个按钮的窗口，统计点击次数。\n"
+"SDK 示例：翻译成简体中文的插件。"
+
+#: manifest.json
+msgid "example"
+msgstr "示例"
+
+#: ui/counter.slint:20
+msgid "{n} click"
+msgid_plural "{n} clicks"
+msgstr[0] "{n} 次点击"
+
+#: ui/counter.slint:25
+msgid "Add one"
+msgstr "加一"

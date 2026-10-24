@@ -1,0 +1,294 @@
+{
+  "about": "Slint @tr scanning and rewriting, shared by the player (src/host/src/i18n/tests.rs) and the SDK (vestra-plugin i18n extract; tests/sdk/host-agreement.test.ts). catalog: msgid (or msgctxt U+0004 msgid) -> translation or [one, other]; messages: what extract finds, in order.",
+  "cases": [
+    {
+      "name": "plain literal",
+      "source": "Text { text: @tr(\"Hello\"); }",
+      "catalog": {
+        "Hello": "你好"
+      },
+      "messages": [
+        {
+          "id": "Hello"
+        }
+      ],
+      "output": "Text { text: @tr(\"你好\"); }"
+    },
+    {
+      "name": "arguments stay",
+      "source": "text: @tr(\"Speed {}×\", root.rate);",
+      "catalog": {
+        "Speed {}×": "倍速 {}×"
+      },
+      "messages": [
+        {
+          "id": "Speed {}×"
+        }
+      ],
+      "output": "text: @tr(\"倍速 {}×\", root.rate);"
+    },
+    {
+      "name": "positional arguments may move",
+      "source": "text: @tr(\"{0} of {1}\", a, b);",
+      "catalog": {
+        "{0} of {1}": "共 {1} 个中的第 {0} 个"
+      },
+      "messages": [
+        {
+          "id": "{0} of {1}"
+        }
+      ],
+      "output": "text: @tr(\"共 {1} 个中的第 {0} 个\", a, b);"
+    },
+    {
+      "name": "plural",
+      "source": "text: @tr(\"{n} file\" | \"{n} files\" % count);",
+      "catalog": {
+        "{n} file": [
+          "{n} 个文件",
+          "{n} 个文件"
+        ]
+      },
+      "messages": [
+        {
+          "id": "{n} file",
+          "plural": "{n} files"
+        }
+      ],
+      "output": "text: @tr(\"{n} 个文件\" | \"{n} 个文件\" % count);"
+    },
+    {
+      "name": "plural with arguments",
+      "source": "text: @tr(\"{n} item in {}\" | \"{n} items in {}\" % n, name);",
+      "catalog": {
+        "{n} item in {}": [
+          "{1} 里有 {n} 项",
+          "{1} 里有 {n} 项"
+        ]
+      },
+      "messages": [
+        {
+          "id": "{n} item in {}",
+          "plural": "{n} items in {}"
+        }
+      ],
+      "output": "text: @tr(\"{1} 里有 {n} 项\" | \"{1} 里有 {n} 项\" % n, name);"
+    },
+    {
+      "name": "context",
+      "source": "text: @tr(\"Menu\" => \"Open\");",
+      "catalog": {
+        "Menu\u0004Open": "打开"
+      },
+      "messages": [
+        {
+          "context": "Menu",
+          "id": "Open"
+        }
+      ],
+      "output": "text: @tr(\"Menu\" => \"打开\");"
+    },
+    {
+      "name": "context is part of the key",
+      "source": "text: @tr(\"Menu\" => \"Open\"); other: @tr(\"Open\");",
+      "catalog": {
+        "Open": "开"
+      },
+      "messages": [
+        {
+          "context": "Menu",
+          "id": "Open"
+        },
+        {
+          "id": "Open"
+        }
+      ],
+      "output": "text: @tr(\"Menu\" => \"Open\"); other: @tr(\"开\");"
+    },
+    {
+      "name": "untranslated stays English",
+      "source": "text: @tr(\"Unknown\");",
+      "catalog": {
+        "Hello": "你好"
+      },
+      "messages": [
+        {
+          "id": "Unknown"
+        }
+      ],
+      "output": "text: @tr(\"Unknown\");"
+    },
+    {
+      "name": "escapes in the source",
+      "source": "text: @tr(\"Say \\\"hi\\\"\\nnow \\\\ \\u{263A}\");",
+      "catalog": {
+        "Say \"hi\"\nnow \\ ☺": "说“嗨”"
+      },
+      "messages": [
+        {
+          "id": "Say \"hi\"\nnow \\ ☺"
+        }
+      ],
+      "output": "text: @tr(\"说“嗨”\");"
+    },
+    {
+      "name": "escapes in the translation",
+      "source": "text: @tr(\"Quote\");",
+      "catalog": {
+        "Quote": "引号 \"x\" \\ 换\n行\t制表"
+      },
+      "messages": [
+        {
+          "id": "Quote"
+        }
+      ],
+      "output": "text: @tr(\"引号 \\\"x\\\" \\\\ 换\\n行\\u{9}制表\");"
+    },
+    {
+      "name": "braces in the translation are literal",
+      "source": "text: @tr(\"Set\");",
+      "catalog": {
+        "Set": "集合 {{a}}"
+      },
+      "messages": [
+        {
+          "id": "Set"
+        }
+      ],
+      "output": "text: @tr(\"集合 {{a}}\");"
+    },
+    {
+      "name": "comments are skipped",
+      "source": "// @tr(\"Line\")\n/* @tr(\"Block\") /* nested @tr(\"Deep\") */ still */ text: @tr(\"Real\");",
+      "catalog": {
+        "Line": "行",
+        "Block": "块",
+        "Deep": "深",
+        "Real": "真"
+      },
+      "messages": [
+        {
+          "id": "Real"
+        }
+      ],
+      "output": "// @tr(\"Line\")\n/* @tr(\"Block\") /* nested @tr(\"Deep\") */ still */ text: @tr(\"真\");"
+    },
+    {
+      "name": "inside a string literal",
+      "source": "text: \"not @tr(\\\"This\\\")\"; t2: @tr(\"That\");",
+      "catalog": {
+        "This": "这",
+        "That": "那"
+      },
+      "messages": [
+        {
+          "id": "That"
+        }
+      ],
+      "output": "text: \"not @tr(\\\"This\\\")\"; t2: @tr(\"那\");"
+    },
+    {
+      "name": "inside string interpolation",
+      "source": "text: \"a \\{ @tr(\"Inner\") } b @tr(\\\"no\\\")\";",
+      "catalog": {
+        "Inner": "内",
+        "no": "否"
+      },
+      "messages": [
+        {
+          "id": "Inner"
+        }
+      ],
+      "output": "text: \"a \\{ @tr(\"内\") } b @tr(\\\"no\\\")\";"
+    },
+    {
+      "name": "white space and comments inside the call",
+      "source": "text: @tr ( /* c */ \"Spaced\" // x\n , a);",
+      "catalog": {
+        "Spaced": "空"
+      },
+      "messages": [
+        {
+          "id": "Spaced"
+        }
+      ],
+      "output": "text: @tr ( /* c */ \"空\" // x\n , a);"
+    },
+    {
+      "name": "a call in the arguments",
+      "source": "text: @tr(\"Outer {}\", @tr(\"Inner\"));",
+      "catalog": {
+        "Outer {}": "外 {}",
+        "Inner": "内"
+      },
+      "messages": [
+        {
+          "id": "Outer {}"
+        },
+        {
+          "id": "Inner"
+        }
+      ],
+      "output": "text: @tr(\"外 {}\", @tr(\"内\"));"
+    },
+    {
+      "name": "not tr",
+      "source": "text: @translate(\"x\"); img: @image-url(\"a.png\"); t: @tr2(\"y\");",
+      "catalog": {
+        "x": "X",
+        "y": "Y"
+      },
+      "messages": [],
+      "output": "text: @translate(\"x\"); img: @image-url(\"a.png\"); t: @tr2(\"y\");"
+    },
+    {
+      "name": "plural entry for a singular call is ignored",
+      "source": "text: @tr(\"Files\");",
+      "catalog": {
+        "Files": [
+          "文件",
+          "文件们"
+        ]
+      },
+      "messages": [
+        {
+          "id": "Files"
+        }
+      ],
+      "output": "text: @tr(\"Files\");"
+    },
+    {
+      "name": "several on several lines",
+      "source": "a: @tr(\"One\");\nb: @tr(\"Two\");\nc: @tr(\"One\");",
+      "catalog": {
+        "One": "一",
+        "Two": "二"
+      },
+      "messages": [
+        {
+          "id": "One"
+        },
+        {
+          "id": "Two"
+        },
+        {
+          "id": "One"
+        }
+      ],
+      "output": "a: @tr(\"一\");\nb: @tr(\"二\");\nc: @tr(\"一\");"
+    },
+    {
+      "name": "CJK and emoji keep their bytes",
+      "source": "a: @tr(\"Café ☕ 你好\");",
+      "catalog": {
+        "Café ☕ 你好": "咖啡 ☕"
+      },
+      "messages": [
+        {
+          "id": "Café ☕ 你好"
+        }
+      ],
+      "output": "a: @tr(\"咖啡 ☕\");"
+    }
+  ]
+}

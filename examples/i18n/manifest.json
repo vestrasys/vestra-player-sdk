@@ -1,0 +1,13 @@
+{
+  "id": "examples.i18n",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.4.3",
+  "capabilities": ["commands", "ui.window", "ui.osd"],
+  "name": "Counter",
+  "author": "Vestra Player SDK examples",
+  "punchline": "A click counter in the player's language",
+  "description": "Tools ▸ Counter… opens a window with one button that counts clicks.\nSDK example: a plugin translated into Simplified Chinese.",
+  "tags": ["example"]
+}

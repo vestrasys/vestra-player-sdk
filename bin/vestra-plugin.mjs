@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /**
- * vestra-plugin: check, build, test and pack a Vestra Player plugin.
+ * vestra-plugin: check, build, test and pack a Vestra Player plugin, and
+ * keep its translations up to date.
  *
  *   vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]
+ *   vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...
+ *   vestra-plugin i18n check [plugin-dir...]
  *
  * A plugin directory holds manifest.json; the default is the current
  * directory. Works in any project that depends on @vestra-player/sdk.
@@ -13,6 +16,24 @@
  *   test    node --test on tests/*.test.{ts,mjs}
  *   pack    build, then dist/ → <out>/<id>-<version>.vxp (a zip; default
  *           out: the current directory) with its sha256 and size
+ *
+ * Translations (docs/how-to/i18n.md). English is the source text; each
+ * language is a gettext file locales/<lang>.po:
+ *
+ *   i18n extract  find the texts to translate (@tr in .slint files, the
+ *                 texts handed to commands.add, osd.show, dialogs, settings
+ *                 and panel titles, the manifest's display fields), write
+ *                 locales/messages.pot and merge it into every
+ *                 locales/<lang>.po (translations kept, vanished ones marked
+ *                 obsolete); --locale <lang> starts a new language
+ *   i18n check    coverage per language, placeholder and plural problems, a
+ *                 stale messages.pot, and texts that cannot be translated
+ *                 (composed in TypeScript, not literals, not English, Slint
+ *                 text without @tr); warnings only, an unreadable .po fails
+ *
+ * `check` prints the same i18n warnings when the plugin has locales/;
+ * `build` compiles locales/<lang>.po to dist/locales/<lang>.json (the .po
+ * files themselves are not packed).
  *
  * Every command first checks manifest.json against the player's rules
  * (display fields, paths inside the package, unknown fields); `check` also
@@ -62,6 +83,10 @@ const sdkRoot = resolve(import.meta.dirname, "..");
 const { manifestProblems } = await import(
   pathToFileURL(join(sdkRoot, "dist/manifest.js")).href
 );
+const i18n = await import(pathToFileURL(join(sdkRoot, "dist/i18n.js")).href);
+const i18nTools = await import(
+  pathToFileURL(join(sdkRoot, "dist/i18n-tools.js")).href
+);
 const SDK = "@vestra-player/sdk";
 
 /** Never part of a production package. */
@@ -79,7 +104,8 @@ const SKIP_FILES = new Set([
   "package.json",
   "package-lock.json",
 ]);
-const SKIP_EXTENSIONS = new Set([".md", ".log", ".zip", ".vxp"]);
+// Translation sources: build packs the compiled dist/locales/<lang>.json.
+const SKIP_EXTENSIONS = new Set([".md", ".log", ".zip", ".vxp", ".po", ".pot"]);
 const isTypeScript = (file) => file.endsWith(".ts") && !file.endsWith(".d.ts");
 const isDeclaration = (file) => /\.d\.(m|c)?ts$/.test(file);
 
@@ -299,6 +325,113 @@ async function check(target) {
     await rm(scratch, { recursive: true, force: true });
   }
   console.log(`${target.name}: type check passed (${sources.length} files)`);
+  // Translation warnings never fail the check.
+  if (present(join(target.directory, "locales"))) {
+    try {
+      const { warnings, errors } = await i18nReport(target);
+      for (const line of [...warnings, ...errors])
+        console.log(`${target.name}: i18n: ${line}`);
+    } catch (error) {
+      console.log(`${target.name}: i18n: ${error.message}`);
+    }
+  }
+}
+
+/** The plugin's own production .ts / .mts and .slint files. */
+async function sourceFiles(target) {
+  const all = await files(target.directory);
+  return {
+    typescript: all.filter(
+      (file) =>
+        (isTypeScript(file) || file.endsWith(".mts")) && !isDeclaration(file),
+    ),
+    slint: all.filter((file) => file.endsWith(".slint")),
+  };
+}
+
+/** Compiler options of the type check (its tsconfig), for extraction. */
+async function extraction(target) {
+  const ts = await typescript();
+  const { typescript: sources, slint } = await sourceFiles(target);
+  const config = checkConfig(
+    target,
+    sources.map((file) => join(target.directory, file)),
+  );
+  const parsed = ts.parseJsonConfigFileContent(
+    config,
+    ts.sys,
+    target.directory,
+  );
+  return i18nTools.extract({
+    directory: target.directory,
+    manifest: target.manifest,
+    slint,
+    typescript: sources,
+    compilerOptions: parsed.options,
+  });
+}
+
+async function i18nReport(target) {
+  const { messages, findings } = await extraction(target);
+  return i18nTools.checkCatalogs(target.directory, messages, findings);
+}
+
+async function i18nExtract(target, locales) {
+  for (const locale of locales) {
+    if (locale === "en")
+      fail("--locale en: English is the source language, it has no .po file");
+    if (!i18n.LOCALES.includes(locale))
+      fail(
+        `--locale ${locale}: the player's languages are ${i18n.LOCALES.filter((l) => l !== "en").join(", ")}`,
+      );
+  }
+  dependencies(target);
+  const { messages, findings } = await extraction(target);
+  const directory = join(target.directory, "locales");
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, "messages.pot"),
+    i18nTools.template(target.manifest, messages),
+  );
+  console.log(
+    `${target.name}: locales/messages.pot: ${messages.length} messages`,
+  );
+  const languages = new Set(locales);
+  for (const name of await readdir(directory))
+    if (name.endsWith(".po")) languages.add(name.slice(0, -3));
+  for (const language of [...languages].sort()) {
+    if (language === "en" || !i18n.LOCALES.includes(language)) {
+      console.log(
+        `${target.name}: locales/${language}.po: skipped (not a player language)`,
+      );
+      continue;
+    }
+    const file = join(directory, `${language}.po`);
+    let existing = null;
+    if (present(file)) existing = await readFile(file, "utf8");
+    let merged;
+    try {
+      merged = i18nTools.merge(existing, language, messages);
+    } catch (error) {
+      fail(`${target.name}: locales/${language}.po: ${error.message}`);
+    }
+    await writeFile(file, merged.text);
+    console.log(
+      `${target.name}: locales/${language}.po: ${merged.translated}/${merged.total} translated, ${merged.added} new, ${merged.obsolete} obsolete${existing === null ? " (created)" : ""}`,
+    );
+  }
+  for (const finding of findings)
+    console.log(
+      `${target.name}: i18n: ${finding.file}:${finding.line}: ${finding.message}`,
+    );
+}
+
+async function i18nCheck(target) {
+  dependencies(target);
+  const { warnings, errors } = await i18nReport(target);
+  for (const line of warnings) console.log(`${target.name}: i18n: ${line}`);
+  if (errors.length) fail(`${target.name}: ${errors.join("; ")}`);
+  if (!warnings.length) console.log(`${target.name}: i18n: no problems`);
 }
 
 function version(target, flag) {
@@ -455,6 +588,14 @@ async function build(target, flag) {
       entry.built,
       await readFile(join(out, entry.built), "utf8"),
     );
+  let localeWarnings;
+  try {
+    localeWarnings = i18nTools.compileLocales(target.directory, out);
+  } catch (error) {
+    fail(`${target.name}: ${error.message}`);
+  }
+  for (const line of localeWarnings)
+    console.log(`${target.name}: warning: ${line}`);
   await writeFile(join(out, "package.json"), '{"type":"module"}\n');
   await writeFile(
     join(out, "manifest.json"),
@@ -558,8 +699,11 @@ async function pack(target, flag, outDirectory) {
   );
 }
 
-const USAGE =
-  "usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]";
+const USAGE = [
+  "usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]",
+  "       vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...",
+  "       vestra-plugin i18n check [plugin-dir...]",
+].join("\n");
 
 async function main() {
   const args = process.argv.slice(2);
@@ -575,10 +719,25 @@ async function main() {
     console.log(USAGE);
     return;
   }
-  if (!["check", "build", "test", "pack"].includes(command)) {
+  let subcommand = null;
+  if (command === "i18n") {
+    subcommand = args.shift();
+    if (!["extract", "check"].includes(subcommand)) {
+      console.error(USAGE);
+      process.exit(2);
+    }
+  } else if (!["check", "build", "test", "pack"].includes(command)) {
     console.error(USAGE);
     process.exit(2);
   }
+  const locales = [];
+  for (let index; (index = args.indexOf("--locale")) >= 0;) {
+    const [, value] = args.splice(index, 2);
+    if (value === undefined) fail("--locale needs a value");
+    locales.push(value);
+  }
+  if (locales.length && subcommand !== "extract")
+    fail("--locale applies to i18n extract");
   const flag = option("--version");
   const out = option("--out");
   const directories = args.length ? args : ["."];
@@ -588,7 +747,9 @@ async function main() {
   for (const directory of directories) {
     try {
       const target = await plugin(directory);
-      if (command === "check") await check(target);
+      if (subcommand === "extract") await i18nExtract(target, locales);
+      else if (subcommand === "check") await i18nCheck(target);
+      else if (command === "check") await check(target);
       else if (command === "build") await build(target, flag);
       else if (command === "pack") await pack(target, flag, out);
       else await test(target);
@@ -599,7 +760,9 @@ async function main() {
     }
   }
   if (failed.length) {
-    console.error(`${command} failed for: ${failed.join(", ")}`);
+    console.error(
+      `${subcommand ? `i18n ${subcommand}` : command} failed for: ${failed.join(", ")}`,
+    );
     process.exit(1);
   }
 }

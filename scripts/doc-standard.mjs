@@ -35,6 +35,7 @@ export const STRICT_CATEGORIES = {
       "Dialogs",
       "OsdPanel",
       "Osd",
+      "I18n",
     ],
     data: [
       "ImageRef",
@@ -49,6 +50,9 @@ export const STRICT_CATEGORIES = {
       "SlotPanel",
       "PanelState",
       "ConfirmOptions",
+      "Locale",
+      "LanguagePreference",
+      "TemplateArgs",
     ],
   },
 };

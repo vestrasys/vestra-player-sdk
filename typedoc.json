@@ -52,7 +52,7 @@
   },
   "treatWarningsAsErrors": true,
   "treatValidationWarningsAsErrors": true,
-  "ignoredHighlightLanguages": ["slint"],
+  "ignoredHighlightLanguages": ["slint", "po"],
   "jsDocCompatibility": { "exampleTag": false },
   "plugin": [
     "typedoc-github-theme",

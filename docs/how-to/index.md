@@ -18,6 +18,18 @@ A tool window keeps nothing by itself: closing it destroys it, and the plugin pr
 
 [Read the guide](window-state.md)
 
+## Translate a plugin
+
+The player shows its interface in seven languages, chosen at start-up. A plugin writes every text in English (menu paths and titles, `@tr("…")` in its Slint files, templates such as `osd.show("Speed {}×", [rate])`) and ships one gettext file per language in `locales/`; the player translates, and the plugin contains no translation code. The guide covers the three places text lives, `vestra-plugin i18n extract` and `check`, and testing in another language.
+
+[Read the guide](i18n.md)
+
+## Migrate a plugin to English source text
+
+The checklist for a plugin written in one language before SDK 1.5.9: English menu paths, `@tr` in Slint, sentences moved out of TypeScript into Slint or templates, `zh-Hans.po` written from the old texts, and tests.
+
+[Read the guide](i18n-migration.md)
+
 ## Guides being written
 
 - Show "Starting…" while a callback awaits something slow (`plugin.update()` sends bound properties before the callback returns; see the signal generator, Step 7).

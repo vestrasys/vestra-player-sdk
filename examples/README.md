@@ -12,6 +12,7 @@ Complete Vestra Player plugins, each with a manifest, its source, Slint files, t
 | [menus](menus)                       | Radio menu items, separator groups and a menu item whose title changes.               |
 | [theme-widgets](theme-widgets)       | A tool window drawn with the player's theme and widgets.                              |
 | [markdown](markdown)                 | A window that shows a Markdown document.                                              |
+| [i18n](i18n)                         | A plugin in the player's language: English source text, a Chinese translation.       |
 
 Run one (the SDK is linked from this repository, so build it first):
 

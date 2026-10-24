@@ -127,7 +127,14 @@ test("core actions: the core table with its bindings, states and conflicts", asy
       host,
     },
   );
+  // Keys are English like the player's (1.5.9); without a locale the menu
+  // shows the player's Chinese, as before.
   assert.deepEqual(host.coreAction("seek-forward").declaration.path, [
+    "Playback",
+    "Seek",
+    "Forward 5 s",
+  ]);
+  assert.deepEqual(host.coreAction("seek-forward").display.path, [
     "播放",
     "跳转",
     "前进5秒",

@@ -88,6 +88,16 @@ A tool window drawn with the player's own theme and controls: sliders, buttons, 
 
 [Walkthrough](markdown.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown)
 
+## Counter (i18n)
+
+![Counter in Vestra Player](../../examples/i18n/screenshot.png)
+
+**Tools → Counter…** counts clicks in a small window, in the player's language: every text is English in the source and `locales/zh-Hans.po` translates it.
+
+**You learn:** English source text in declarations, Slint (`@tr`, plural forms) and OSD templates · `vestra-plugin i18n extract` and `check` · testing with `startPlugin({ locale })`.
+
+[Walkthrough](i18n.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/i18n)
+
 ## Running an example
 
 ```sh

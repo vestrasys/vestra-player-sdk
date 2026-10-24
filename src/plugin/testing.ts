@@ -90,12 +90,45 @@ import type { RenderSettings, ViewSettings } from "./types.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
 import { THEMES } from "./appearance.ts";
-import type { Plugin, ThemeId } from "./types.ts";
+import type {
+  LanguagePreference,
+  Locale,
+  Plugin,
+  TemplateArgs,
+  ThemeId,
+} from "./types.ts";
+import {
+  Catalog,
+  compileCatalog,
+  format as formatTemplate,
+  HOST_GROUPS,
+  HOST_ZH_HANS,
+  LOCALES,
+  menuKeys,
+  parsePo,
+} from "../i18n.ts";
+import type { CompiledMessage } from "../i18n.ts";
 
 /** Throw one of these from `host.handle(...)` to simulate a definite refusal. */
 export { HostError };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
+/**
+ * The player's interface languages, English (the source) first, as the
+ * player's own table: `["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]`.
+ *
+ * @example
+ * ```ts
+ * import { LOCALES } from "@vestra-player/sdk/testing";
+ *
+ * for (const locale of LOCALES.slice(1)) {
+ *   const { host, stop } = await startPlugin(activate, { directory, locale });
+ *   assert.notEqual(host.command("open").display.title, "Open…");
+ *   await stop();
+ * }
+ * ```
+ */
+export { LOCALES };
 
 type Handler = (params: Record<string, Json>) => unknown;
 type Call = { method: string; params: Record<string, Json> };
@@ -163,6 +196,20 @@ export interface FakeCommand {
    * versions.
    */
   declaration: CommandDeclaration;
+  /**
+   * What the menu shows, as the player shows it in the test host's
+   * {@link TestHost.locale}: the title and each path segment translated with
+   * the plugin's catalog (the player's own menus in the player's words), the
+   * keys normalized (`@video` is "Video").
+   *
+   * @since 1.5.9
+   */
+  readonly display: {
+    /** The menu text of the item. */
+    title: string;
+    /** Each segment of the path as shown; empty without a path. */
+    path: string[];
+  };
   /** The command state the player last received (after the update pass). */
   state: {
     /** `false` when the plugin disabled the command. */
@@ -278,9 +325,15 @@ const taken = (message: string) => {
   return error;
 };
 const SLOT_LABELS: Record<string, string> = {
-  bottom: "底栏",
-  sidebar: "侧栏",
-  backdrop: "视频背景",
+  bottom: "bottom bar",
+  sidebar: "sidebar",
+  backdrop: "video backdrop",
+};
+/** Texts only the test host uses, with their Chinese of SDK 1.5.8. */
+const TEST_ZH_HANS: Readonly<Record<string, string>> = {
+  "this site": "这个网站",
+  "External SRT": "外部 SRT",
+  "External ASS": "外部 ASS",
 };
 /** The player's limit of sidebar tabs. */
 const MAX_SIDEBAR_TABS = 8;
@@ -406,10 +459,151 @@ export class TestHost implements Transport {
     bottom: null,
     sidebar: null,
   };
-  /** Every `osd.show` text, newest last. */
+  /**
+   * Every `osd.show` text as the player shows it (translated with the
+   * plugin's catalog and formatted with its args), newest last. The
+   * template and args the plugin sent are in `host.sent("osd.show")`.
+   */
   readonly osd: string[] = [];
-  /** The text of this plugin's osd panel, `null` when hidden. */
+  /** The text of this plugin's osd panel as shown, `null` when hidden. */
   osdPanel: string | null = null;
+  #locale: Locale | undefined;
+  /**
+   * The interface language the test host plays (`plugin.i18n.locale`), `"en"`
+   * by default. Set it before {@link startPlugin} (or pass its `locale`
+   * option): the plugin's catalog for it is read from the package's
+   * `locales/` then, and the menus ({@link FakeCommand.display}), OSD
+   * messages, dialog texts, settings page and panel titles show its
+   * translations, the way the player shows them.
+   *
+   * The player's own texts (core actions' messages and menus, its
+   * refusals) are English, or the player's Simplified Chinese for
+   * `"zh-Hans"`. While `locale` was never set they stay in Chinese, as
+   * players up to 0.4.2 showed them, so tests written for SDK 1.5.8 keep
+   * passing; set `locale` to test what a user sees now.
+   *
+   * @example
+   * ```ts
+   * const { host, stop } = await startPlugin(activate, { directory, locale: "zh-Hans" });
+   * assert.deepEqual(host.command("blur").display.path, ["视频", "模糊…"]);
+   * await stop();
+   * ```
+   *
+   * @since 1.5.9
+   */
+  get locale(): Locale {
+    return this.#locale ?? "en";
+  }
+  set locale(locale: Locale) {
+    if (!(LOCALES as readonly string[]).includes(locale))
+      throw new Error(`test host: unknown locale ${locale}`);
+    this.#locale = locale;
+  }
+  /** The plugin's translations for `locale` (see `loadCatalog`). */
+  #catalog: Catalog = new Catalog();
+  /**
+   * Read the plugin's translations for {@link TestHost.locale} from a
+   * package directory, as the player would (`locales/<locale>.json` of a
+   * built package, else the source `locales/<locale>.po`); `startPlugin`
+   * does this. None for English; a missing file means none; a broken `.po`
+   * throws.
+   *
+   * @param directory - The package directory (holding `locales/`).
+   * @since 1.5.9
+   */
+  loadCatalog(directory: string) {
+    this.#catalog = new Catalog();
+    if (this.locale === "en") return;
+    const base = join(directory, "locales", this.locale);
+    if (existsSync(`${base}.json`)) {
+      const compiled = JSON.parse(readFileSync(`${base}.json`, "utf8")) as {
+        messages?: Record<string, CompiledMessage>;
+      };
+      this.#catalog = new Catalog(compiled.messages ?? {});
+    } else if (existsSync(`${base}.po`))
+      this.#catalog = new Catalog(
+        compileCatalog(
+          this.locale,
+          parsePo(readFileSync(`${base}.po`, "utf8")).entries,
+        ).messages,
+      );
+  }
+  /**
+   * A text of the plugin as the player shows it: translated with the
+   * plugin's catalog ({@link TestHost.loadCatalog}), then formatted with
+   * `args` when given.
+   *
+   * @param text - English source text or template.
+   * @param args - Values for its placeholders.
+   * @returns The shown text.
+   *
+   * @example
+   * ```ts
+   * assert.equal(host.translate("Speed {}×", [2]), "倍速 2×");
+   * ```
+   *
+   * @since 1.5.9
+   */
+  translate(text: string, args?: TemplateArgs): string {
+    return this.#catalog.template(text, args ?? null);
+  }
+  /** A text of the player itself, in the player's language (see `locale`). */
+  #hostText(text: string, args?: TemplateArgs): string {
+    const zh = this.#locale === undefined || this.#locale === "zh-Hans";
+    const shown = (zh && (HOST_ZH_HANS[text] ?? TEST_ZH_HANS[text])) || text;
+    return args === undefined ? shown : formatTemplate(shown, args);
+  }
+  /** A declared menu path and title as the player shows them. */
+  #display(path: readonly string[], title: string) {
+    const keys = menuKeys(path);
+    return {
+      title: this.translate(title),
+      // The player's submenus by key, everything else as declared.
+      path: keys.map((segment, index) =>
+        index < keys.length - 1 &&
+        HOST_GROUPS.includes(keys.slice(0, index + 1).join("/"))
+          ? this.#hostText(segment)
+          : this.translate(path[index] ?? segment),
+      ),
+    };
+  }
+  /**
+   * The saved interface language (`plugin.appearance.language`), changed by
+   * `appearance.setLanguage` or {@link TestHost.setLanguage}.
+   *
+   * @since 1.5.9
+   */
+  language: LanguagePreference = "system";
+  /**
+   * Simulate another plugin (or the user) saving the interface language:
+   * pushes `appearance.changed`.
+   *
+   * @param language - `"system"` or a locale.
+   * @since 1.5.9
+   */
+  setLanguage(language: LanguagePreference) {
+    this.language = language;
+    this.emit("appearance.changed", { theme: this.appearance, language });
+  }
+  /**
+   * Every `dialogs.confirm` as the player shows it: its texts translated
+   * (message and detail formatted with `args`), newest last. The options
+   * the plugin sent are in {@link TestHost.confirms}.
+   *
+   * @since 1.5.9
+   */
+  readonly confirmTexts: {
+    /** The question. */
+    message: string;
+    /** The text under it, if any. */
+    detail?: string;
+    /** The confirm button. */
+    confirm: string;
+    /** The cancel button (the player's "Cancel" by default). */
+    cancel: string;
+    /** The checkbox, if any. */
+    checkbox?: string;
+  }[] = [];
   /** The sequence provider's flags, `null` without a provider. */
   sequence: {
     /** The provider's `canNext`, as last evaluated. */
@@ -1414,11 +1608,13 @@ export class TestHost implements Transport {
   /** Why one frame that way is impossible (B07), or null; the player's rules. */
   #frameCheck(forward: boolean): string | null {
     const s = this.source;
-    const unsupported = "当前来源不支持此操作";
-    const noBack = "当前来源不支持逐帧后退";
+    const unsupported = this.#hostText("Not supported by the current source");
+    const noBack = this.#hostText(
+      "The current source cannot step back a frame",
+    );
     if (s.phase !== "ready" && s.phase !== "ended") return unsupported;
     if (s.kind !== "media") return forward ? unsupported : noBack;
-    if (s.hasVideo === false) return "没有视频";
+    if (s.hasVideo === false) return this.#hostText("No video");
     if (forward && s.phase !== "ready") return unsupported;
     if (!forward && !s.capabilities.seek) return noBack;
     return null;
@@ -1427,12 +1623,16 @@ export class TestHost implements Transport {
   #coreState(action: string) {
     const f = this.#facts();
     const s = this.source;
-    const unsupported = "当前来源不支持此操作";
+    const unsupported = this.#hostText("Not supported by the current source");
     const rule: Record<string, [boolean, boolean | null, string]> = {
       "play-pause": [f.toggle, f.ready ? s.paused : null, unsupported],
       stop: [f.close, null, unsupported],
-      previous: [!!this.sequence?.canPrevious, null, "没有上一个"],
-      next: [!!this.sequence?.canNext, null, "没有下一个"],
+      previous: [
+        !!this.sequence?.canPrevious,
+        null,
+        this.#hostText("No previous item"),
+      ],
+      next: [!!this.sequence?.canNext, null, this.#hostText("No next item")],
       "frame-back": [
         !this.#frameCheck(false),
         null,
@@ -1465,11 +1665,18 @@ export class TestHost implements Transport {
       boolean,
       boolean?,
     ][] = [
-      ["stop", ["关闭"], 120, "open", ["F4"], false],
-      ["play-pause", ["播放", "播放/暂停"], 201, "domain", ["Space"], false],
+      ["stop", ["Close"], 120, "open", ["F4"], false],
+      [
+        "play-pause",
+        ["Playback", "Play/Pause"],
+        201,
+        "domain",
+        ["Space"],
+        false,
+      ],
       [
         "previous",
-        ["播放", "上一个"],
+        ["Playback", "Previous"],
         202,
         "domain",
         ["PageUp", "Mouse:X1"],
@@ -1477,17 +1684,31 @@ export class TestHost implements Transport {
       ],
       [
         "next",
-        ["播放", "下一个"],
+        ["Playback", "Next"],
         203,
         "domain",
         ["PageDown", "Mouse:X2"],
         false,
       ],
-      ["frame-back", ["播放", "跳转", "上一帧"], 204, "frame", ["D"], true],
-      ["frame-forward", ["播放", "跳转", "下一帧"], 205, "frame", ["F"], true],
+      [
+        "frame-back",
+        ["Playback", "Seek", "Previous Frame"],
+        204,
+        "frame",
+        ["D"],
+        true,
+      ],
+      [
+        "frame-forward",
+        ["Playback", "Seek", "Next Frame"],
+        205,
+        "frame",
+        ["F"],
+        true,
+      ],
       [
         "seek-backward",
-        ["播放", "跳转", "后退5秒"],
+        ["Playback", "Seek", "Back 5 s"],
         210,
         "step",
         ["ArrowLeft"],
@@ -1495,7 +1716,7 @@ export class TestHost implements Transport {
       ],
       [
         "seek-forward",
-        ["播放", "跳转", "前进5秒"],
+        ["Playback", "Seek", "Forward 5 s"],
         211,
         "step",
         ["ArrowRight"],
@@ -1503,18 +1724,32 @@ export class TestHost implements Transport {
       ],
       [
         "rate-normal",
-        ["播放", "速度", "正常"],
+        ["Playback", "Speed", "Normal"],
         220,
         "domain",
         ["Z"],
         false,
         true,
       ],
-      ["rate-down", ["播放", "速度", "减速 0.1"], 221, "domain", ["X"], false],
-      ["rate-up", ["播放", "速度", "加速 0.1"], 222, "domain", ["C"], false],
+      [
+        "rate-down",
+        ["Playback", "Speed", "Slower 0.1"],
+        221,
+        "domain",
+        ["X"],
+        false,
+      ],
+      [
+        "rate-up",
+        ["Playback", "Speed", "Faster 0.1"],
+        222,
+        "domain",
+        ["C"],
+        false,
+      ],
       [
         "volume-up",
-        ["声音", "音量 +"],
+        ["Audio", "Volume +"],
         501,
         "domain",
         ["ArrowUp", "Mouse:WheelUp"],
@@ -1522,13 +1757,13 @@ export class TestHost implements Transport {
       ],
       [
         "volume-down",
-        ["声音", "音量 −"],
+        ["Audio", "Volume −"],
         502,
         "domain",
         ["ArrowDown", "Mouse:WheelDown"],
         true,
       ],
-      ["mute", ["声音", "静音"], 503, "domain", ["M"], false],
+      ["mute", ["Audio", "Mute"], 503, "domain", ["M"], false],
     ];
     const host = this;
     for (const [id, path, order, group, bindings, repeat, radio] of table) {
@@ -1542,6 +1777,18 @@ export class TestHost implements Transport {
           bindings,
           repeat,
         } as unknown as CommandDeclaration,
+        // The player's own words in the player's language.
+        get display() {
+          const leaf = path.at(-1)!;
+          const step = /^(Back|Forward) (\S+) s$/.exec(leaf);
+          const title = step
+            ? host.#hostText(`${step[1]} {} s`, [step[2]!])
+            : host.#hostText(leaf);
+          return {
+            title,
+            path: [...path.slice(0, -1).map((s) => host.#hostText(s)), title],
+          };
+        },
         get state() {
           return host.#coreState(id);
         },
@@ -1577,7 +1824,11 @@ export class TestHost implements Transport {
             kind: "control",
             control: { kind: "pause", paused: !s.paused },
           });
-        this.osd.push(s.phase !== "ended" && !s.paused ? "已暂停" : "播放");
+        this.osd.push(
+          this.#hostText(
+            s.phase !== "ended" && !s.paused ? "Paused" : "Playing",
+          ),
+        );
         return;
       case "stop":
         this.#intent({ kind: "close" });
@@ -1608,7 +1859,10 @@ export class TestHost implements Transport {
         });
 
         this.osd.push(
-          `${delta < 0 ? "后退" : "前进"} ${Math.abs(delta)}秒: ${time(target)} / ${time(s.duration)}`,
+          this.#hostText(
+            delta < 0 ? "Back {} s: {} / {}" : "Forward {} s: {} / {}",
+            [Math.abs(delta), time(target), time(s.duration)],
+          ),
         );
         return;
       }
@@ -1628,7 +1882,7 @@ export class TestHost implements Transport {
                 ),
               );
         this.#intent({ kind: "control", control: { kind: "rate", rate } });
-        this.osd.push(`播放速度: ${rateText(rate)}x`);
+        this.osd.push(this.#hostText("Speed: {}x", [rateText(rate)]));
         return;
       }
       case "volume-up":
@@ -1643,12 +1897,14 @@ export class TestHost implements Transport {
               )
             : Math.max(0, Math.min(200, Math.round(s.output.volume - 5)));
         this.setSource({ output: { volume, muted: false } });
-        this.osd.push(`音量: ${volume}%`);
+        this.osd.push(this.#hostText("Volume: {}%", [volume]));
         return;
       }
       case "mute":
         this.setSource({ output: { ...s.output, muted: !s.output.muted } });
-        this.osd.push(s.output.muted ? "静音: 关" : "静音: 开");
+        this.osd.push(
+          this.#hostText(s.output.muted ? "Mute: Off" : "Mute: On"),
+        );
         return;
     }
   }
@@ -1833,6 +2089,8 @@ export class TestHost implements Transport {
       pictureInPicture: { ...this.mainWindow.pictureInPicture },
       appearance: this.appearance,
       fileTypes: this.fileTypes(),
+      language: this.language,
+      locale: this.locale,
     };
   }
   /**
@@ -2061,10 +2319,14 @@ export class TestHost implements Transport {
         const key = this.#bindingKey(id);
         const scope = declaration.focus ? "panel" : "global";
         const current = this.bindings.overlay.get(key) ?? declaration.bindings;
+        const shown = this.commands.get(id) ?? this.coreCommands.get(id);
         return {
           ...this.#split(key),
-          title: declaration.title,
-          path: declaration.path?.length ? declaration.path : null,
+          // What the user sees, like the player's binding table.
+          title: shown?.display.title ?? declaration.title,
+          path: declaration.path?.length
+            ? (shown?.display.path ?? declaration.path)
+            : null,
           scope: scope as "panel" | "global",
           defaults: declaration.bindings,
           current,
@@ -2394,8 +2656,13 @@ export class TestHost implements Transport {
     for (const other of this.otherResolvers) {
       const what = claims(other);
       if (what) {
-        const target = what === "host" ? "这个网站" : `文件类型 .${what}`;
-        throw taken(`${target} 已由 ${other.owner} 解析`);
+        const target =
+          what === "host"
+            ? this.#hostText("this site")
+            : this.#hostText("File type .{}", [what]);
+        throw taken(
+          this.#hostText("{} is resolved by {}", [target, other.owner]),
+        );
       }
     }
     this.resolvers.set(id, p);
@@ -2539,8 +2806,12 @@ export class TestHost implements Transport {
       )
         throw new HostError("limit", "command registry limit reached");
       const host = this;
+      const declaration = p.declaration as FakeCommand["declaration"];
       this.commands.set(id, {
-        declaration: p.declaration as FakeCommand["declaration"],
+        declaration,
+        get display() {
+          return host.#display(declaration.path ?? [], declaration.title);
+        },
         state: p.state as FakeCommand["state"],
         revision: Number(p.revision),
         async run() {
@@ -2616,12 +2887,21 @@ export class TestHost implements Transport {
             ? this.layout.bottom?.panels?.[0]?.plugin
             : undefined;
       if (holder !== undefined || (p.slot === "bottom" && this.layout.bottom))
-        throw taken(`${SLOT_LABELS[String(p.slot)]}已被 ${holder} 使用`);
+        throw taken(
+          this.#hostText("The {} is used by {}", [
+            this.#hostText(SLOT_LABELS[String(p.slot)]!),
+            String(holder),
+          ]),
+        );
       if (
         p.slot === "sidebar" &&
         (this.layout.sidebar?.panels?.length ?? 0) >= MAX_SIDEBAR_TABS
       )
-        throw taken(`侧栏最多 ${MAX_SIDEBAR_TABS} 个页签`);
+        throw taken(
+          this.#hostText("The sidebar holds at most {} tabs", [
+            MAX_SIDEBAR_TABS,
+          ]),
+        );
       this.#seeImages(p.properties as Record<string, Json>);
       const host = this;
       this.panel = {
@@ -2648,7 +2928,9 @@ export class TestHost implements Transport {
         owner: 1,
         plugin: this.manifestId,
         title:
-          typeof p.title === "string" && p.title ? p.title : this.manifestId,
+          typeof p.title === "string" && p.title
+            ? this.translate(p.title)
+            : this.manifestId,
       });
       return { status: "ready", prepareMs: 0, shellGeneration: 1 };
     },
@@ -2702,13 +2984,19 @@ export class TestHost implements Transport {
       if (typeof p.detached === "boolean") state.detached = p.detached;
     },
     "osd.show": (p) => {
-      const text = String(p.text);
-      if (!text || [...text].length > 200)
+      const text = this.translate(
+        String(p.text),
+        p.args as TemplateArgs | undefined,
+      ).replace(/[\n\r]/g, " ");
+      if (!text.trim() || [...text].length > 200)
         throw new HostError("invalid", "osd text needs 1..200 characters");
       this.osd.push(text);
     },
     "osd.panel": (p) =>
-      void (this.osdPanel = p.text === null ? null : String(p.text)),
+      void (this.osdPanel =
+        p.text === null
+          ? null
+          : this.translate(String(p.text), p.args as TemplateArgs | undefined)),
     "playback.stats": () => this.stats,
     "audio.addTrack": (p) => {
       this.#audioCondition(p.expected);
@@ -2821,7 +3109,7 @@ export class TestHost implements Transport {
         p.unit === "keyframe"
           ? s.phase === "ready" && s.capabilities.seek && s.hasVideo !== false
             ? null
-            : "当前来源不支持此操作"
+            : this.#hostText("Not supported by the current source")
           : this.#frameCheck(p.direction === "forward");
       if (reason) throw new HostError("unsupported", reason);
       this.steps.push({ unit: String(p.unit), direction: String(p.direction) });
@@ -2865,6 +3153,16 @@ export class TestHost implements Transport {
       if (index >= 0) this.dropProviders.splice(index, 1);
     },
     "drops.listen": (p) => void (this.panelDrops = p.listen === true),
+    "appearance.setLanguage": (p) => {
+      const language = String(p.language);
+      if (
+        language !== "system" &&
+        !(LOCALES as readonly string[]).includes(language)
+      )
+        throw new HostError("invalid", `unknown language ${language}`);
+      if (language !== this.language)
+        this.setLanguage(language as LanguagePreference);
+    },
     "appearance.set": (p) => {
       // Like the player: an id it does not have selects the default (the
       // SDK's own `set` refuses one before it gets here).
@@ -2881,7 +3179,7 @@ export class TestHost implements Transport {
       const host = this;
       this.settings.pages.set(id, {
         category: String(p.category),
-        title: String(p.title),
+        title: this.translate(String(p.title)),
         order: Number(p.order ?? 0),
         file: String(p.file),
         component: String(p.component),
@@ -3011,6 +3309,18 @@ export class TestHost implements Transport {
     "ui.interaction": (p) => void (this.mounted().locks = p),
     "dialogs.confirm": (p) => {
       this.confirms.push(p);
+      const args = p.args as TemplateArgs | undefined;
+      const shown = (field: string, formatted = false) =>
+        typeof p[field] === "string"
+          ? this.translate(p[field], formatted ? args : undefined)
+          : undefined;
+      this.confirmTexts.push({
+        message: shown("message", true)!,
+        ...(p.detail === undefined ? {} : { detail: shown("detail", true)! }),
+        confirm: shown("confirm")!,
+        cancel: shown("cancel") ?? this.#hostText("Cancel"),
+        ...(p.checkbox === undefined ? {} : { checkbox: shown("checkbox")! }),
+      });
       const answer = this.dialogAnswers.shift();
       if (answer === undefined)
         throw new Error("test host: no dialog answer queued");
@@ -3021,7 +3331,10 @@ export class TestHost implements Transport {
     "window.state": () => this.#windowFacts(),
     "window.setVideoArea": (p) => {
       if (this.mainWindow.fullscreen)
-        throw new HostError("unavailable", "全屏时不可用");
+        throw new HostError(
+          "unavailable",
+          this.#hostText("Not available in fullscreen"),
+        );
       const width = Math.max(318, Number(p.width));
       const height = Math.max(120, Number(p.height));
       const clamped = width !== p.width || height !== p.height;
@@ -3041,10 +3354,14 @@ export class TestHost implements Transport {
       const pip = this.mainWindow.pictureInPicture;
       if (p.on === pip.active) return;
       if (p.on && !pip.supported)
-        throw new HostError("unsupported", "此系统不支持画中画");
+        throw new HostError(
+          "unsupported",
+          this.#hostText("Picture-in-picture is not supported on this system"),
+        );
       const video =
         this.source.phase !== "empty" && this.source.hasVideo !== false;
-      if (p.on && !video) throw new HostError("unavailable", "没有视频");
+      if (p.on && !video)
+        throw new HostError("unavailable", this.#hostText("No video"));
       this.setMainWindow({
         // The player leaves fullscreen before the window opens.
         fullscreen: p.on ? false : this.mainWindow.fullscreen,
@@ -3466,7 +3783,9 @@ export class TestHost implements Transport {
       };
       this.subtitles.tracks.push({
         target,
-        title: title ?? (format === "ass" ? "外部 ASS" : "外部 SRT"),
+        title:
+          title ??
+          this.#hostText(format === "ass" ? "External ASS" : "External SRT"),
         language: null,
         styleSupported: true,
         styleReason: null,
@@ -3758,9 +4077,18 @@ export async function startPlugin(
     host?: TestHost;
     /** Use an existing directory as `plugin.dataDirectory` (to test a restart). */
     dataDirectory?: string;
+    /**
+     * The interface language to play ({@link TestHost.locale}): the plugin's
+     * `locales/<locale>.po` (or `.json`) in `directory` is loaded and its
+     * menus, messages and titles show translated. Default: the host's.
+     *
+     * @since 1.5.9
+     */
+    locale?: Locale;
   } = {},
 ) {
   const host = options.host ?? new TestHost();
+  if (options.locale !== undefined) host.locale = options.locale;
   const directory =
     options.directory instanceof URL
       ? fileURLToPath(options.directory)
@@ -3776,6 +4104,7 @@ export async function startPlugin(
     manifest = { id: read.id, capabilities: read.capabilities };
   }
   host.manifestId = manifest.id;
+  host.loadCatalog(directory);
   const data = options.dataDirectory ?? host.dataDirectory;
   mkdirSync(data, { recursive: true });
   const instance = await createPlugin(

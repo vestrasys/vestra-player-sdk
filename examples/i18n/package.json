@@ -1,0 +1,16 @@
+{
+  "name": "vestra-example-i18n",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "vestra-plugin check",
+    "build": "vestra-plugin build",
+    "test": "vestra-plugin test",
+    "pack": "vestra-plugin pack",
+    "i18n": "vestra-plugin i18n extract && vestra-plugin i18n check"
+  },
+  "devDependencies": {
+    "@vestra-player/sdk": "file:../.."
+  }
+}

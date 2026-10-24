@@ -59,8 +59,11 @@ export class WindowService {
   appearance: string | undefined;
   /** The file resolvers' extensions, as the reply carried them (`plugin.resolvers.fileTypes`). */
   fileTypes: string[] | undefined;
+  /** The saved interface language, as the reply carried it (`plugin.appearance.language`). */
+  language: string | undefined;
   accept(facts: WindowFacts) {
     if (facts.appearance) this.appearance = facts.appearance;
+    if (facts.language) this.language = facts.language;
     if (Array.isArray(facts.fileTypes)) this.fileTypes = [...facts.fileTypes];
     const next = view(facts);
     if (JSON.stringify(next) === JSON.stringify(this.state)) return;
