@@ -76,11 +76,11 @@ export interface Disposable {
  * | `timeout` | A time limit ran out (`openStream` start-up, `tools.run`, `system.*` after 10 s). |
  * | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
  * | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
- * | `limit` | A player-wide limit was reached (for example the number of commands). |
+ * | `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link PropValue}, or a request is longer than the player's 1 MiB message. |
  * | `reserved` | {@link Packages.validate}, {@link PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use (player 0.4.1). |
  * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`) or another `apiVersion`. |
  * | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
- * | `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. |
+ * | `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. Also reported to {@link Scope.onError} without a request: a callback whose arguments the player could not convert, a property it could not show again when it rebuilt a view (an image file removed since). |
  * | `host` | Any other failure inside the player; `message` is the player's reason. |
  * | `disabled` | The plugin is being stopped; pending requests fail with it. |
  * | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
@@ -668,10 +668,21 @@ export interface MarkdownOptions {
  * nested one). An {@link ImageRef} only as the whole value: nested in an
  * array or object it is `invalid`.
  *
- * Limits per value: nesting depth 8, 4096 values in total (a document is
- * one), 1024 rows per array, 64 KiB per string and 1 MiB of text in total,
- * the text of its Markdown documents included (256 KB per document). A
- * value over a limit is a failed write (see {@link View}).
+ * Limits per value (`UI_VALUE_LIMITS` in `@vestra-player/sdk/testing`,
+ * player 0.4.3; older players: 4096 values and 1024 rows): nesting depth 8,
+ * 16384 values in total (every array, object, string, number, boolean and
+ * null counts, the value itself included; a document is one), 4096 rows
+ * per array, 64 KiB per string or field name and 1 MiB of text in total,
+ * field names and the text of its Markdown documents included (256 KB per
+ * document). A list of rows with 8 fields is 9 values per row, so about
+ * 1800 rows fit. The whole request must also fit the player's 1 MiB
+ * message. A value over a limit is refused with code `limit` and the
+ * property keeps what it showed (see {@link View.set}); `TestHost` refuses
+ * it the same way.
+ *
+ * The limits bound the work of one write, not the size of your data: for
+ * a list that can grow without bound, send the rows near the view and the
+ * row count, and move that window as the user scrolls.
  *
  * @since 1.0.0
  * @category UI
@@ -946,7 +957,13 @@ export interface View {
    * the next update pass replaces the set value with the bound one.
    *
    * Never throws. A write that fails is retried with back-off and reported
-   * to {@link Scope.onError}.
+   * to {@link Scope.onError} (the first failure of a run of failures; the
+   * message names the property). A value over the limits of
+   * {@link PropValue} fails with `limit`. As an initial property (written
+   * while the view is not open) it makes {@link Window.show} reject; a
+   * panel or settings page still opens without it (the property keeps its
+   * default) and the failure goes to the plugin's `onError` (player 0.4.3;
+   * older players left it out silently).
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
@@ -979,7 +996,9 @@ export interface View {
    * run. A view can have several bindings; when two return the same name,
    * the one bound later wins.
    *
-   * Never throws. Writes that fail are not repeated until the value changes.
+   * Never throws. Writes that fail are not repeated until the value
+   * changes, and are reported to {@link Scope.onError} like a failed
+   * {@link View.set} (a value over the limits of {@link PropValue}: `limit`).
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *

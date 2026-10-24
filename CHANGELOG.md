@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.10
+
+**Property value limits: documented, higher, enforced by `TestHost`, reported loudly** (player 0.4.3). A fix; `apiVersion` stays `vestra/1`, and plugins that worked need no change. 1.5.9 was not published to npm; this release includes its changes.
+
+- **`UI_VALUE_LIMITS`** in `@vestra-player/sdk/testing`: the player's limits on one property value, which used to appear only in the `PropValue` description. Raised in player 0.4.3 (older players in brackets): nesting depth 8, **16384 values** (4096), **4096 rows per array** (1024), 64 KiB per string or field name, 1 MiB of text. A list of 8-field rows is 9 values per row, so about 1800 rows fit (about 450 before). The player's tests check that the constant agrees with the player.
+- **`TestHost` enforces them** on `ui.open`, `ui.set`, `ui.mount`, `ui.setMount`, `settings.register` and `settings.set`, with the player's code and message. Before, it took any value, so a plugin whose list outgrew the limit passed its tests and showed a stale list in the player (D1: a 3000-row playlist). A test that writes a value over the limits now sees the failure in `onError` (or, for a tool window's initial property, a rejected `Window.show`).
+- **Failures say what they are.** A value over the limits fails with code **`limit`** (was `host`) and the message names the property (`rows: UI array exceeds 4096 rows`). A panel's or settings page's initial property over the limits is still left out (the panel mounts without it; a failed mount during activation would fail the plugin), but the player now reports it to `onError` instead of only writing its log.
+- **`ui.error` reaches `onError`.** The player reports failures nobody asked about: a callback whose arguments it could not convert, a property it could not show again when it rebuilt a panel or the Options window (an image file removed since), a detached sidebar it could not prepare. The SDK used to drop these; it now reports them to the root scope's `onError` with the player's code (`ui` from older players).
+- The player's runner (player 0.4.3) refuses a request longer than the player's 1 MiB message with `limit`; before, the player stopped the plugin.
+
 ## 1.5.9
 
 **Translations** (player 0.4.3). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.8 need no change. One test-visible change: a core action's `declaration.path` in `TestHost` is now the player's English key (read `display` for what the menu shows). The player now shows its interface in English, Simplified Chinese, Japanese, Korean, German, French or Spanish, chosen at start-up; a plugin writes every text in English and ships one gettext file per language. Plugins write no translation code: the player translates. Guides: [Translate a plugin](docs/how-to/i18n.md), [Migrate a plugin to English source text](docs/how-to/i18n-migration.md); example: `examples/i18n`.

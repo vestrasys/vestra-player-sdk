@@ -18,8 +18,9 @@
  *   value ranges (an out-of-range `filter.set` ends in `failed` with
  *   `invalid`), an empty chain removes the plugin's chain, a chain on a
  *   generated stream fails `unsupported` (the player's own conformance
- *   cases check all three), and the command limits ({@link COMMAND_LIMITS})
- *   and menu ids ({@link MENU_IDS}) are enforced.
+ *   cases check all three), and the command limits ({@link COMMAND_LIMITS}),
+ *   property value limits ({@link UI_VALUE_LIMITS}) and menu ids
+ *   ({@link MENU_IDS}) are enforced.
  *
  * Typical workflow: start the plugin with {@link startPlugin} (it reads the
  * plugin's `manifest.json`), drive it the way the user or another plugin
@@ -76,6 +77,7 @@ import type {
   WireSystemInfo,
 } from "../wire.ts";
 import { COMMAND_LIMITS, MENU_IDS } from "../commands.ts";
+import { UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
@@ -113,6 +115,8 @@ import type { CompiledMessage } from "../i18n.ts";
 export { HostError };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
+/** The player's property value limits, which the test host enforces as well. */
+export { UI_VALUE_LIMITS };
 /**
  * The player's interface languages, English (the source) first, as the
  * player's own table: `["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]`.
@@ -875,6 +879,34 @@ export class TestHost implements Transport {
       checks: ["manifest", "digest", "productionJavaScript", "slintCompile"],
       trustedExecution: true,
     };
+  }
+  /**
+   * Refuse property values over the player's limits ({@link UI_VALUE_LIMITS})
+   * with `limit`, naming the property, as the player does.
+   */
+  #checkValues(values: Record<string, Json>) {
+    for (const [property, value] of Object.entries(values)) {
+      const problem = valueLimitProblem(value);
+      if (problem) throw new HostError("limit", `${property}: ${problem}`);
+    }
+  }
+  /**
+   * A panel's or settings page's initial properties, as the player keeps
+   * them: one over the limits is left out (the property keeps its default)
+   * and reported with `ui.error`, the request itself succeeds.
+   */
+  #initialValues(values: Record<string, Json>): Record<string, Json> {
+    const kept: Record<string, Json> = {};
+    for (const [property, value] of Object.entries(values)) {
+      const problem = valueLimitProblem(value);
+      if (problem)
+        this.emit("ui.error", {
+          code: "limit",
+          message: `${property}: ${problem}`,
+        });
+      else kept[property] = value;
+    }
+    return kept;
   }
   #seeImages(values: Record<string, Json> | Json[]) {
     for (const value of Object.values(values)) {
@@ -2842,6 +2874,7 @@ export class TestHost implements Transport {
       const id = String(p.id);
       if (this.windows.has(id))
         throw new HostError("conflict", "view already exists");
+      this.#checkValues(p.properties as Record<string, Json>);
       this.#seeImages(p.properties as Record<string, Json>);
       const host = this;
       this.windows.set(id, {
@@ -2864,6 +2897,7 @@ export class TestHost implements Transport {
     "ui.set": (p) => {
       const window = this.windows.get(String(p.id));
       if (!window) throw new HostError("missing", "view not found");
+      this.#checkValues({ [String(p.property)]: p.value! });
       this.#seeImages([p.value!]);
       window.props[String(p.property)] = p.value!;
     },
@@ -2902,14 +2936,17 @@ export class TestHost implements Transport {
             MAX_SIDEBAR_TABS,
           ]),
         );
-      this.#seeImages(p.properties as Record<string, Json>);
+      const properties = this.#initialValues(
+        p.properties as Record<string, Json>,
+      );
+      this.#seeImages(properties);
       const host = this;
       this.panel = {
         slot: String(p.slot),
         file: String(p.file),
         component: String(p.component),
         visible: true,
-        props: { ...(p.properties as Record<string, Json>) },
+        props: { ...properties },
         locks: null,
         emit(callback, ...args) {
           host.emit("ui.callback", {
@@ -3138,6 +3175,8 @@ export class TestHost implements Transport {
       this.emit("sequence.step", { direction });
     },
     "ui.setMount": (p) => {
+      this.mounted();
+      this.#checkValues({ [String(p.property)]: p.value! });
       this.#seeImages([p.value!]);
       this.mounted().props[String(p.property)] = p.value!;
     },
@@ -3175,7 +3214,10 @@ export class TestHost implements Transport {
         throw new HostError("invalid", `page ${id} already exists`);
       if (this.settings.pages.size >= 8)
         throw new HostError("invalid", "a plugin has at most 8 settings pages");
-      this.#seeImages(p.properties as Record<string, Json>);
+      const properties = this.#initialValues(
+        p.properties as Record<string, Json>,
+      );
+      this.#seeImages(properties);
       const host = this;
       this.settings.pages.set(id, {
         category: String(p.category),
@@ -3184,7 +3226,7 @@ export class TestHost implements Transport {
         file: String(p.file),
         component: String(p.component),
         global: String(p.global),
-        props: { ...(p.properties as Record<string, Json>) },
+        props: { ...properties },
         emit(callback, ...args) {
           host.emit("ui.callback", {
             view: `$settings:${id}`,
@@ -3197,6 +3239,7 @@ export class TestHost implements Transport {
     "settings.set": (p) => {
       const page = this.settings.pages.get(String(p.id));
       if (!page) throw new HostError("missing", "page not registered");
+      this.#checkValues({ [String(p.property)]: p.value! });
       this.#seeImages([p.value!]);
       page.props[String(p.property)] = p.value!;
     },

@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.9: full reference
+# @vestra-player/sdk 1.5.10: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -998,11 +998,11 @@ change).
 | `timeout` | A time limit ran out (`openStream` start-up, `tools.run`, `system.*` after 10 s). |
 | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
 | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
-| `limit` | A player-wide limit was reached (for example the number of commands). |
+| `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of PropValue, or a request is longer than the player's 1 MiB message. |
 | `reserved` | Packages.validate, PackageCandidate.install: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use (player 0.4.1). |
 | `versionMismatch` | The package needs a newer player (`minPlayerVersion`) or another `apiVersion`. |
 | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
-| `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. |
+| `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. Also reported to Scope.onError without a request: a callback whose arguments the player could not convert, a property it could not show again when it rebuilt a view (an image file removed since). |
 | `host` | Any other failure inside the player; `message` is the player's reason. |
 | `disabled` | The plugin is being stopped; pending requests fail with it. |
 | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
@@ -4287,8 +4287,9 @@ and its semantics are simplified:
   value ranges (an out-of-range `filter.set` ends in `failed` with
   `invalid`), an empty chain removes the plugin's chain, a chain on a
   generated stream fails `unsupported` (the player's own conformance
-  cases check all three), and the command limits (COMMAND_LIMITS)
-  and menu ids (MENU_IDS) are enforced.
+  cases check all three), and the command limits (COMMAND_LIMITS),
+  property value limits (UI_VALUE_LIMITS) and menu ids
+  (MENU_IDS) are enforced.
 
 Typical workflow: start the plugin with startPlugin (it reads the
 plugin's `manifest.json`), drive it the way the user or another plugin
@@ -5255,6 +5256,39 @@ they agree).
 
 ```ts
 const LOCALES: readonly ["en", "zh-Hans", "ja", "ko", "de", "fr", "es"];
+```
+
+### UI_VALUE_LIMITS
+
+The player's limits on one property value (a `PropValue` as written
+by `View.set` or `View.bind`, or an initial property of a
+window, panel or settings page). The player's tests check that these
+agree with the player; TestHost enforces them the same way.
+
+A value over a limit is refused whole with code `limit` (the property
+keeps what it showed) and reported to `Scope.onError`: a write by
+`View.set` or `View.bind` as described there. As an initial property it
+makes `Window.show` reject; a panel or settings page opens without it and
+the failure goes to the plugin's `onError`.
+
+They bound the work one write costs the player's interface thread; they
+are not meant as list sizes to aim for. A list that can grow without
+bound (a playlist, a history) should send the rows near the view and say
+how many there are, not the whole list.
+
+```ts
+const UI_VALUE_LIMITS: {
+  /** Nesting depth; the value itself is depth 0 (8). */
+  readonly depth: 8;
+  /** Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one (16384). */
+  readonly values: 16384;
+  /** Rows of one array (4096). */
+  readonly arrayRows: 4096;
+  /** UTF-8 bytes of one string or object field name (64 KiB). */
+  readonly stringBytes: number;
+  /** UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included (1 MiB). */
+  readonly textBytes: number;
+};
 ```
 
 ### HostError

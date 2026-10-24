@@ -25,3 +25,4 @@ export {
 } from "./i18n.ts";
 export { MANIFEST_FIELDS, MANIFEST_LIMITS } from "./manifest.ts";
 export { MARKDOWN_LIMITS } from "./plugin/markdown.ts";
+export { UI_VALUE_LIMITS } from "./plugin/values.ts";

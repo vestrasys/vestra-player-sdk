@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.5.9: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. llms-full.txt, next to this file, has every declaration, the guides and the examples; L<n> below are its line numbers.
+> @vestra-player/sdk 1.5.10: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. llms-full.txt, next to this file, has every declaration, the guides and the examples; L<n> below are its line numbers.
 
 **How plugins run**
 
@@ -137,7 +137,7 @@ test("shows the position", async () => {
 - `failed`: The operation ran and failed
 - `aborted`: An `AbortSignal` fired
 - `timeout`: A time limit ran out
-- `limit`: A player-wide limit was reached
+- `limit`: A player-wide limit was reached, a property value is over the limits of PropValue, or a request is longer than the player's 1 MiB message
 - `reserved`: Packages.validate, PackageCandidate.install: the id is `vestra` or starts with `vestra.`, which only the player's built-in plugins use
 - `versionMismatch`: The package needs a newer player or another `apiVersion`
 - `ui-prepare`: The player could not prepare a mounted panel or a settings page
@@ -153,7 +153,7 @@ test("shows the position", async () => {
 - [How-to: Keep a slider responsive while dragging](https://vestrasys.github.io/vestra-player-sdk/documents/Keep_a_slider_responsive_while_dragging.html): L627–801
 - [How-to: Remember a window's state between runs](https://vestrasys.github.io/vestra-player-sdk/documents/Remember_a_window_s_state_between_runs.html): L802–931
 - [API: @vestra-player/sdk](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html): L932–4268
-- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html) (TestHost, startPlugin): L4269–5290
+- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html) (TestHost, startPlugin): L4269–5324
 
 ## API
 
@@ -193,15 +193,15 @@ Where each module of `plugin` is declared:
 
 Complete plugins with tests, in [examples/](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples) and in llms-full.txt:
 
-- hello: The README Quick start: one menu command and an on-screen message. L5706–5795
-- blur: A tool window with one slider that blurs the playing video. L5796–6057
-- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L6058–6390
-- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L6391–6575
-- panel-menu: A sidebar panel with its own right-click menu. L6576–6781
-- menus: Radio menu items, separator groups and a menu item whose title changes. L6782–6941
-- theme-widgets: A tool window drawn with the player's theme and widgets. L6942–7105
-- markdown: A window that shows a Markdown document. L7106–7299
-- i18n: A plugin in the player's language: English source text, a Chinese translation. L7300–7467
+- hello: The README Quick start: one menu command and an on-screen message. L5740–5829
+- blur: A tool window with one slider that blurs the playing video. L5830–6091
+- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L6092–6424
+- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L6425–6609
+- panel-menu: A sidebar panel with its own right-click menu. L6610–6815
+- menus: Radio menu items, separator groups and a menu item whose title changes. L6816–6975
+- theme-widgets: A tool window drawn with the player's theme and widgets. L6976–7139
+- markdown: A window that shows a Markdown document. L7140–7333
+- i18n: A plugin in the player's language: English source text, a Chinese translation. L7334–7501
 
 ## Optional
 
