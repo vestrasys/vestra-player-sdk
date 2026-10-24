@@ -6,7 +6,7 @@ import type { Appearance, ThemeId } from "./types.ts";
 import { windowOf } from "./window.ts";
 
 /** The palettes this SDK knows, the default first. */
-export const THEMES: readonly ThemeId[] = ["vestra"];
+export const THEMES: readonly ThemeId[] = ["vestra", "vestra-light"];
 
 /**
  * One per plugin: the value comes with the `window.state` read before

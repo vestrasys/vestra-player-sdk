@@ -388,6 +388,21 @@ export type MenuId =
  * ranges: `open` 100–199, `domain` 200–699 (playback, subtitles, video,
  * audio…), `screen` 700–799, `windows` 800–899, `exit` 900–999.
  *
+ * Built-in menus keep their place. The seven built-in top-level menus
+ * ({@link MenuId}) sit at fixed orders, whatever is inside them: Open 110,
+ * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings
+ * 830 (player 0.3.0). This holds whether the path names the menu by id
+ * (`["@video", "Blur"]`) or by its title (`["视频", "Blur"]`), so a plugin's
+ * item never moves the player's menu. Directly inside a built-in menu,
+ * `order` 0 (the default) sorts after every other order: an item without
+ * `order` goes at the end, after the player's own items (which all use 100
+ * or more). Give a positive order to sit between them (the player's orders
+ * are listed in its menu table, doc/product/menus.md), or a negative one to
+ * come first. Deeper levels (a plugin's own submenu) have no such rule.
+ * Players before 0.3.0 place every submenu at its smallest order, so there
+ * an item without `order` moves the whole menu to the top; to avoid that,
+ * give it an order in the menu's range (Video: 400–499).
+ *
  * {@link Commands.add} throws `invalid` synchronously for a bad path,
  * order, group or binding. The same path registered twice, or a path that
  * is both an item and a submenu, fails with `conflict` (through `ready`).
@@ -418,8 +433,10 @@ export interface CommandOptions {
   title?: string;
   /**
    * Sibling order in the menu, ascending (integer, default 0). A submenu sits
-   * where its first command sits. Equal orders: plugin id, then declaration order.
-   * Range ±1,000,000.
+   * where its first command sits, except a built-in menu, which keeps its
+   * fixed place. Directly inside a built-in menu, 0 (the default) sorts last.
+   * Equal orders: plugin id, then declaration order. Range ±1,000,000. See
+   * {@link CommandOptions} for the menu order rules.
    */
   order?: number;
   /** Separator label: a line is drawn between adjacent items of different groups. Default `"domain"`. */
@@ -1615,19 +1632,20 @@ export interface Drops {
 }
 
 /**
- * The player's palettes. Today there is one, `vestra` (the default); a later
- * version may add more (a light palette, for example), so read colours from
- * `Theme` instead of branching on the id.
+ * The player's palettes: `vestra`, the dark default, and `vestra-light`
+ * (player 0.4.0, SDK 1.5.0), a light palette whose video area stays dark.
+ * Both draw on the logo's colours. Read colours from `Theme` instead of
+ * branching on the id: a later version may add palettes.
  *
  * @remarks
- * SDK 1.4.0 removed a second palette that earlier versions listed. The player
- * treats an id it does not have as `vestra`, so plugins built with an older
- * SDK that still ask for it keep working.
+ * The player treats an id it does not have as `vestra`: plugins built with an
+ * older SDK that still ask for a palette removed in SDK 1.4.0 keep working,
+ * and a player older than 0.4.0 answers `vestra-light` with `vestra`.
  *
  * @since 1.0.0
  * @category UI
  */
-export type ThemeId = "vestra";
+export type ThemeId = "vestra" | "vestra-light";
 
 /**
  * The player's palette, which every view uses. `plugin.appearance`.
@@ -1638,7 +1656,9 @@ export type ThemeId = "vestra";
  * and again when the palette changes. Slint code that reads its colours from
  * `Theme` (`import { Theme } from "@vestra/theme.slint"`) follows it with no
  * plugin code; hard-coded colours do not. Only colours change: corner radii,
- * font sizes and control sizes are the same in every palette.
+ * font sizes and control sizes are the same in every palette. A light palette
+ * also switches the std-widgets controls (`std-widgets.slint`) to their light
+ * colours, and keeps the video area dark.
  *
  * The player saves the choice; it stays after the plugin that set it stops.
  * Tell the user about a change yourself (for example with
@@ -1647,14 +1667,14 @@ export type ThemeId = "vestra";
  * @capability None to read `theme`; `events` to follow changes; `ui.theme`
  *   to change it.
  *
- * @example A menu item that selects the palette
+ * @example A menu item that selects the light palette
  * ```ts
  * plugin.commands.add({
- *   id: "vestra-colours",
- *   path: ["@settings", "Vestra colours"],
+ *   id: "light-colours",
+ *   path: ["@settings", "Light colours"],
  *   radio: true,
- *   checked: () => plugin.appearance.theme === "vestra",
- *   run: () => plugin.appearance.set("vestra"),
+ *   checked: () => plugin.appearance.theme === "vestra-light",
+ *   run: () => plugin.appearance.set("vestra-light"),
  * });
  * ```
  *
@@ -1711,7 +1731,7 @@ export interface Appearance {
    *
    * @example
    * ```ts
-   * await plugin.appearance.set("vestra");
+   * await plugin.appearance.set("vestra-light");
    * ```
    *
    * @since 1.0.0

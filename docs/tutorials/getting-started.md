@@ -47,7 +47,7 @@ my-plugin/
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.4.0" }
+  "devDependencies": { "@vestra-player/sdk": "^1.5.0" }
 }
 ```
 
@@ -237,6 +237,7 @@ During development no build is needed: start the player with `--plugin <plugin-d
 | `1.1`       | `vestra/1`          | The additions need player 0.2.0: set `"minPlayerVersion": "0.2.0"` when you use them.                                                                                                                                                       |
 | `1.3`       | `vestra/1`          | Menu ids (`@video`), `Theme.danger` and removing a video chain with `[]` need player 0.3.0: set `"minPlayerVersion": "0.3.0"` when you use them.                                                                                            |
 | `1.4`       | `vestra/1`          | One exception to "only add": `ThemeId` lost the second palette and is `"vestra"` only. A plugin that compared with or set the removed id fails to type check; the player treats that id as `vestra`, so already built plugins keep running. |
+| `1.5`       | `vestra/1`          | The light palette `vestra-light` and `@vestra/icons.slint` need player 0.4.0: set `"minPlayerVersion": "0.4.0"` when you use them.                                                                                                          |
 
 A breaking change to the plugin API gets a new `apiVersion` and a new major version of this package. The `@vestra-player/sdk/runtime` entry is for the player only and is not covered by semver.
 

@@ -1,6 +1,7 @@
 // Compact controls built on the Vestra theme (core-ui-design.md §2.1):
 //   import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint";
-// Other controls come from std-widgets, which the host compiles as fluent-dark.
+// Icons: @vestra/icons.slint. Other controls come from std-widgets, which the
+// host compiles as fluent-dark and switches to light for a light palette.
 import { TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 
@@ -49,6 +50,7 @@ export component ToolTipArea {
             background: Theme.bg-panel;
             border-color: Theme.line;
             border-width: 1px;
+            border-radius: Theme.radius-control;
             HorizontalLayout {
                 padding-left: 5px; padding-right: 5px; padding-top: 2px; padding-bottom: 2px;
                 Text { text: root.text; color: Theme.text; font-size: Theme.font-body; }
@@ -59,7 +61,8 @@ export component ToolTipArea {
 
 // Dialog button: text (21px, or 18px when `small`), or an icon button when
 // `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height
-// viewbox (filled, or 1.5px lines when `stroked`). The caller sizes icon buttons.
+// viewbox (filled, or 1.5px round-capped lines when `stroked`, as the
+// @vestra/icons.slint set). The caller sizes icon buttons.
 export component Button {
     in property <string> text;
     in property <string> icon;
@@ -112,6 +115,8 @@ export component Button {
         fill: root.stroked ? transparent : root.tint;
         stroke: root.stroked ? root.tint : transparent;
         stroke-width: root.stroked ? 1.5px : 0px;
+        stroke-line-cap: round;
+        stroke-line-join: round;
     }
     touch := TouchArea {
         enabled: root.enabled;
@@ -119,8 +124,9 @@ export component Button {
     }
 }
 
-// 2px line slider. Bar style (default): 8px round thumb, accent fill.
-// Panel style (`panel: true`): 14×12 thumb, blue fill on a dark track.
+// 2px line slider. Bar style (default): 8px round thumb, a white core in a
+// 2px accent ring, gradient fill. Panel style (`panel: true`): 14×12 thumb,
+// gradient fill. The track is `Theme.line` in both.
 export component Slider {
     in-out property <float> value;
     in property <float> minimum: 0;
@@ -146,7 +152,8 @@ export component Slider {
     Rectangle {
         y: (parent.height - 2px) / 2;
         height: 2px;
-        background: root.panel ? Theme.bg-bar : Theme.line;
+        border-radius: 1px;
+        background: Theme.line;
     }
     Rectangle {
         y: (parent.height - 2px) / 2;
@@ -162,10 +169,9 @@ export component Slider {
         width: root.thumb-width;
         height: root.thumb-height;
         border-radius: root.panel ? Theme.radius-control : self.height / 2;
-        background: !root.enabled ? Theme.icon-disabled
-            : root.panel ? Theme.text
-            : touch.pressed ? Theme.accent-press
-            : touch.has-hover ? Theme.accent : Theme.text;
+        background: !root.enabled ? Theme.icon-disabled : root.panel ? Theme.text : #ffffff;
+        border-width: root.panel || !root.enabled ? 0px : 2px;
+        border-color: touch.pressed ? Theme.accent-press : Theme.accent;
     }
     touch := TouchArea {
         enabled: root.enabled;

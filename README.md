@@ -89,6 +89,7 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 | 1.2 | `vestra/1` | 0.2 or newer                                                                              | 26 (shipped with the player) |
 | 1.3 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions (menu ids, `Theme.danger`, empty video chains)    | 26 (shipped with the player) |
 | 1.4 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions. `ThemeId` is `"vestra"` only (see the CHANGELOG) | 26 (shipped with the player) |
+| 1.5 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions; 0.4 for the 1.5 additions (`vestra-light`, `@vestra/icons.slint`) | 26 (shipped with the player) |
 
 Minor releases only add backwards-compatible API; a breaking change gets a new `apiVersion` and a new major version. `@vestra-player/sdk/runtime` is for the player only and not covered by semver.
 
