@@ -57,8 +57,11 @@ export class WindowService {
   }
   /** The palette, as the `window.state` reply carried it (`plugin.appearance`). */
   appearance: string | undefined;
+  /** The file resolvers' extensions, as the reply carried them (`plugin.resolvers.fileTypes`). */
+  fileTypes: string[] | undefined;
   accept(facts: WindowFacts) {
     if (facts.appearance) this.appearance = facts.appearance;
+    if (Array.isArray(facts.fileTypes)) this.fileTypes = [...facts.fileTypes];
     const next = view(facts);
     if (JSON.stringify(next) === JSON.stringify(this.state)) return;
     this.state = next;

@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -108,6 +109,38 @@ test("check, build, test and pack a stand-alone plugin", () => {
       .digest("hex"),
     sha,
   );
+});
+
+test("build runs under the permission model with only the project, the SDK and a scratch folder readable", () => {
+  const directory = realpathSync(project(HELLO));
+  const scratch = realpathSync(
+    mkdtempSync(join(tmpdir(), "vestra-plugin-perm-")),
+  );
+  test.after(() => rmSync(scratch, { recursive: true, force: true }));
+  const sdk = realpathSync(root);
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--permission",
+      "--allow-child-process",
+      `--allow-fs-read=${directory}`,
+      `--allow-fs-read=${sdk}`,
+      `--allow-fs-read=${scratch}`,
+      `--allow-fs-write=${directory}`,
+      `--allow-fs-write=${scratch}`,
+      cli,
+      "build",
+    ],
+    {
+      cwd: directory,
+      encoding: "utf8",
+      env: { ...process.env, TMPDIR: scratch, TMP: scratch, TEMP: scratch },
+    },
+  );
+  // The parent folders (looked at for node_modules/@types, tsconfig.json
+  // and .git) are unreadable: absent, not ERR_ACCESS_DENIED.
+  assert.doesNotMatch(result.stderr, /ERR_ACCESS_DENIED/);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
 });
 
 test("type errors, runtime SDK imports and unknown capabilities fail", () => {

@@ -22,5 +22,5 @@ Until a page is published, the reference documentation of the type named here is
 - **Player state and events.** Reading the playback state, following changes, and conditional controls that fail with `stale` instead of acting on the wrong source ({@link "@vestra-player/sdk"!Player Player}).
 - **Filter chains.** Video and audio filters, how plugins' chains are joined, and live parameter changes.
 - **Storage, secrets and the data directory.** Where a plugin keeps its files, settings and credentials.
-- **Packages and the plugin store.** `.vxp` packages, validation, trial runs and installation.
+- **Packages and the plugin store.** `.vxp` packages, validation and installation.
 - **Errors and recovery.** Error codes, what to retry and what to report ({@link "@vestra-player/sdk"!PluginError PluginError}).

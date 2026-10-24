@@ -39,12 +39,6 @@ export interface PackageValidation {
   checks: string[];
   trustedExecution: true;
 }
-export interface PackageTrial {
-  trialId: number;
-  activationOwner?: number;
-  status: string;
-  cleanupConfirmed?: boolean;
-}
 export interface InstalledPackage {
   revision: number;
   current: null | {
@@ -126,7 +120,7 @@ export class HostError extends Error {
 export interface PackageInfo {
   id: string;
   version: string | null;
-  origin: "installed" | "development" | "trial";
+  origin: "installed" | "development";
   state: "starting" | "running" | "disabled" | "failed" | "stopped";
   error: string | null;
   capabilities: string[];
@@ -170,6 +164,8 @@ export interface WindowFacts {
   pictureInPicture?: { supported: boolean; active: boolean };
   /** The palette (`plugin.appearance`), with the `window.state` reply; a newer player may name a palette this SDK does not list. */
   appearance?: string;
+  /** The file resolvers' extensions (`plugin.resolvers.fileTypes`; player 0.4.2). */
+  fileTypes?: string[];
 }
 /** One timeline mark as the player merges them (`timeline.marks`). */
 export interface WireMark {
@@ -624,20 +620,6 @@ export function createWire(transport: Transport) {
         transport.request<PackageValidation>("packages.validateArchive", {
           file,
         }),
-      /** `requestId` recovers a lost first reply in this owner session. */
-      trial: (token: string, requestId: string) =>
-        transport.request<PackageTrial>("packages.trial", {
-          token,
-          requestId,
-        }),
-      trialStateByRequest: (requestId: string) =>
-        transport.request<PackageTrial>("packages.trialStateByRequest", {
-          requestId,
-        }),
-      trialState: (trialId: number) =>
-        transport.request<PackageTrial>("packages.trialState", { trialId }),
-      stopTrial: (trialId: number) =>
-        transport.request<PackageTrial>("packages.stopTrial", { trialId }),
       installed: (id: string) =>
         transport.request<InstalledPackage>("packages.installed", { id }),
       /** `source` and `replace` are sent only when given (player 0.2.0). */
