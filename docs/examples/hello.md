@@ -4,38 +4,69 @@ title: Hello
 
 # Hello
 
-The smallest useful plugin: one menu command, **Tools → Hello**, that shows an on-screen message. It is the README's Quick start as a runnable project in [`examples/hello`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello). The code on this page is taken from the example's files, so it is always the code CI checks.
+The smallest useful plugin: one menu command that shows a message over the video. It is the README's Quick start as a runnable project.
+
+## What you'll build
+
+![Hello in Vestra Player](../../examples/hello/screenshot.png)
+
+**Tools ▸ Hello** in the main menu. Choosing it shows "Hello" at the top left of the video for a moment.
+
+## Files
+
+```text
+examples/hello/
+  manifest.json          who the plugin is and what it may do
+  main.ts                the code
+  tests/main.test.ts     a test against the SDK's in-memory player
+  package.json           the SDK as a dev dependency, and the scripts
+```
+
+The code below is pulled from these files, so it is exactly what CI builds and tests.
 
 ## The manifest
 
 {@includeCode ../../examples/hello/manifest.json}
 
-- `id` identifies the plugin. Use `<owner>.<name>`; the examples use the owner `examples`.
-- `entry` is the module the player loads. During development it is the TypeScript file itself; `vestra-plugin build` writes `main.js` into `dist/`.
-- `capabilities` lists what the plugin may do: `commands` to add a command, `ui.osd` to show an on-screen message. A call that needs a capability the manifest does not declare fails with `code: "capability"`.
+- `id` names the plugin, as `<owner>.<name>`.
+- `entry` is the module the player loads: the TypeScript file itself during development.
+- `capabilities` lists what the plugin may do. `commands` lets it add a menu command, `ui.osd` lets it show a message over the video. A call without its capability fails with `code: "capability"`.
 
-## The plugin
+## The code
 
 {@includeCode ../../examples/hello/main.ts}
 
-- The SDK is imported with `import type` only. The player creates the `plugin` object and passes it to the default export, `activate`; the built plugin contains none of the SDK's code.
-- {@link "@vestra-player/sdk"!Commands.add | plugin.commands.add} registers a command. `path` places it in the main menu (the last segment is the label); `run` is called when the user picks it or presses one of its `bindings`.
-- {@link "@vestra-player/sdk"!Osd.show | plugin.osd.show} shows a short message over the video. It returns a promise; returning it from `run` lets the SDK report a failure to {@link "@vestra-player/sdk"!Scope.onError | onError}.
-- Nothing has to be cleaned up: the command belongs to `plugin` and is removed when the plugin stops.
+From top to bottom:
+
+1. `import type` brings in the SDK's types only. The player creates the `plugin` object, so the built plugin contains none of the SDK's code.
+2. The default export, `activate`, is what the player calls when it loads the plugin.
+3. {@link "@vestra-player/sdk"!Commands.add | plugin.commands.add} registers a command. `id` is its name inside the plugin; `path` puts it in the main menu, and the last segment is the label.
+4. `run` is called when the user picks the item. {@link "@vestra-player/sdk"!Osd.show | plugin.osd.show} shows the message. Returning its promise lets the SDK report a failure instead of losing it.
+
+Nothing needs cleaning up: the command belongs to `plugin` and is removed when the plugin stops.
 
 ## The test
 
 {@includeCode ../../examples/hello/tests/main.test.ts}
 
-{@link "@vestra-player/sdk/testing"!startPlugin | startPlugin} runs `activate` against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player that speaks the real protocol. `host.command("hello")` reaches the registered command; `host.osd` records every message.
+- {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin} runs `activate` against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player. `directory` makes it read `manifest.json`, so the test has the plugin's real capabilities.
+- `host.command("hello")` is the registered command: its `declaration` (here the menu path) and `run()`, which acts like a click.
+- `host.osd` lists every message the plugin showed.
 
 ## Run it
 
 ```sh
+npm ci                    # once, in the SDK repository root
 cd examples/hello
-npm install                 # links the SDK from the repository
+npm install
 npm run check && npm test
-npm run pack                # examples.hello-0.1.0.vxp
+npm run pack              # examples.hello-0.1.0.vxp
 ```
 
-Start the player with `--plugin <path to examples/hello>` to run `main.ts` without packing. Next: [Getting started](../tutorials/getting-started.md) adds a window, state and key bindings.
+Or start the player with `--plugin <path to examples/hello>` to run `main.ts` directly, without packing.
+
+## Try next
+
+1. **A shortcut.** Add `bindings: ["Ctrl+Alt+H"]` to the command; the key then runs it too.
+2. **A different menu.** Use `path: ["@playback", "Hello"]` to join the player's own **Playback** menu, and add `"minPlayerVersion": "0.3.0"` to the manifest (menu ids are new in 0.3.0).
+3. **Go further.** [Getting started](../tutorials/getting-started.md) adds a window and state; [Bookmark](bookmark.md) is the next example.

@@ -9,9 +9,7 @@ export component Document inherits Window {
     min-height: 200px;
     background: Theme.bg-panel;
     in property <[MarkdownBlock]> doc;
-    callback open-link(string);
     MarkdownView {
         blocks: root.doc;
-        link-clicked(url) => { root.open-link(url); }
     }
 }

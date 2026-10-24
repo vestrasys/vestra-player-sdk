@@ -1240,8 +1240,17 @@ export interface SlotState {
  *
  * @capability ui.mount; `events` to follow changes made elsewhere.
  *
- * @example A "Show sidebar" menu item that works with any sidebar panel (examples/core-ui)
- * {@includeCode ../../examples/core-ui/main.ts#sidebar}
+ * @example A "Show sidebar" menu item that works with any sidebar panel
+ * ```ts
+ * const sidebar = plugin.panels.sidebar;
+ * plugin.commands.add({
+ *   id: "sidebar",
+ *   path: ["Tools", "Show sidebar"],
+ *   checked: () => sidebar.state?.preferred ?? false,
+ *   enabled: () => sidebar.state !== null,
+ *   run: () => sidebar.toggle(),
+ * });
+ * ```
  *
  * @see {@link Panels}, {@link SlotState}
  * @since 1.0.0
@@ -1342,8 +1351,17 @@ export interface PanelSlot {
  *
  * @capability ui.mount
  *
- * @example
- * {@includeCode ../../examples/core-ui/main.ts#sidebar}
+ * @example A "Detach sidebar" menu item
+ * ```ts
+ * const sidebar = plugin.panels.sidebar;
+ * plugin.commands.add({
+ *   id: "detach",
+ *   path: ["Tools", "Detach sidebar"],
+ *   checked: () => sidebar.state?.detached ?? false,
+ *   enabled: () => sidebar.state !== null,
+ *   run: () => sidebar.setDetached(!sidebar.state?.detached),
+ * });
+ * ```
  *
  * @since 1.0.0
  * @category UI

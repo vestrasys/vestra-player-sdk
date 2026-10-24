@@ -1,12 +1,12 @@
 # Panel menu
 
-A sidebar panel with its own right-click menu, keys that only work while the panel has focus, commands outside the main menu, and the next/previous sequence it provides to the player. It takes the sidebar, so do not load it together with a playlist plugin.
+A list in the player's sidebar with its own right-click menu. It takes the sidebar, so do not load it together with a playlist plugin.
 
 ![Panel menu running in Vestra Player](screenshot.png)
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `ui.mount`, `playback.read`, `events`, `playback.control` | `panels.mount`, `Panel.showMenu`, `focus: "panel"`, `player.provideSequence` |
+| `commands`, `ui.mount` | `panels.mount`, `Panel.bind` / `on`, `Panel.showMenu`, commands without a menu path |
 
 ## Run it
 
@@ -19,4 +19,4 @@ npm run pack                # build dist/ and pack examples.panel-menu-0.1.0.vxp
 
 In the player: start it with `--plugin <path to examples/panel-menu>` to run `main.ts` directly, no build needed.
 
-More examples: [Examples](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html).
+Walkthrough: [Panel menu](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Panel_menu.html).

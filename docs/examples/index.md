@@ -14,7 +14,7 @@ To run one, see [Running an example](#running-an-example) at the end of this pag
 
 The smallest complete plugin, and the README's Quick start: **Tools → Hello** shows an on-screen message.
 
-**You learn:** the manifest and capabilities · registering a command with a menu path · the on-screen display.
+**You learn:** the manifest and capabilities · a menu command · the on-screen display.
 
 [Walkthrough](hello.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello)
 
@@ -44,7 +44,7 @@ A plugin that generates its own video and audio — colour bars, a moving grid, 
 
 **Playback → Bookmark…** opens a small tool window that remembers the current position and jumps back to it.
 
-**You learn:** reading playback state · seeking · a tool window bound to plugin state.
+**You learn:** a tool window whose properties are bound to the playback state · handling its buttons.
 
 [Walkthrough](bookmark.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark)
 
@@ -52,29 +52,39 @@ A plugin that generates its own video and audio — colour bars, a moving grid, 
 
 ![Panel menu in Vestra Player](../../examples/panel-menu/screenshot.png)
 
-A sidebar panel with its own right-click menu, keys that only work while the panel has focus, commands outside the main menu, and the next/previous sequence it provides to the player. It takes the sidebar, so do not load it together with a playlist plugin.
+A list in the sidebar with its own right-click menu. It takes the sidebar, so do not load it together with a playlist plugin.
 
-**You learn:** mounting a panel · panel context menus and panel-only bindings · providing next/previous.
+**You learn:** mounting a sidebar panel through a Slint global · a right-click menu made of the plugin's commands.
 
 [Walkthrough](panel-menu.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu)
 
-## Core UI
+## Menus
 
-![Core UI in Vestra Player](../../examples/core-ui/screenshot.png)
+![Menus in Vestra Player](../../examples/menus/screenshot.png)
 
-The core user interface API in one **Examples** submenu.
+An **Examples** menu that sets the playback speed with radio items, and an item whose title shows the speed.
 
-**You learn:** radio items, ordering and groups · a menu item whose title changes · a key binding that repeats while held · a command without a menu entry · on-screen messages · the shared sidebar (show, detach) · a tool window drawn with the `@vestra/` theme and widgets.
+**You learn:** radio items · order and separator groups · changing an item's title by rebuilding a child scope.
 
-[Walkthrough](core-ui.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui)
+[Walkthrough](menus.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/menus)
+
+## Theme widgets
+
+![Theme widgets in Vestra Player](../../examples/theme-widgets/screenshot.png)
+
+A tool window drawn with the player's own theme and controls: sliders, buttons, icon buttons and tooltips.
+
+**You learn:** `@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property.
+
+[Walkthrough](theme-widgets.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/theme-widgets)
 
 ## Markdown
 
 ![Markdown in Vestra Player](../../examples/markdown/screenshot.png)
 
-**Examples → Markdown example…** shows a Markdown document with the core `MarkdownView` component: headings, lists, code, quotes, tables, local and remote images, and links.
+**Examples → Markdown example…** shows a Markdown document in a window.
 
-**You learn:** `plugin.ui.markdown` and `MarkdownView` · resolving relative images · the manifest's display fields (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `license`) and `minPlayerVersion`.
+**You learn:** `plugin.ui.markdown` and `MarkdownView` · images relative to the package · packing a non-code file.
 
 [Walkthrough](markdown.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown)
 
