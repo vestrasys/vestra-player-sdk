@@ -1,32 +1,42 @@
 // The player's colour palette (R-H6) and per-system fonts. Not part of the
 // plugin library: the player sets these `in` properties on every view;
 // `Theme` in @vestra/theme.slint reads them as `out` properties. Defaults:
-// Vestra colours, the macOS fonts.
+// the Aurora colours of the `vestra` palette, the macOS fonts.
+import { Palette } from "std-widgets.slint";
+
 export global VestraPalette {
-    in property <color> bg-bar: #17141c;
-    in property <color> bg-video: #0b0a0f;
-    in property <color> bg-list: #1c1922;
-    in property <color> bg-panel: #221e29;
-    in property <color> line: #07060a;
-    in property <color> hover-bg: #2a2533;
-    in property <color> press-bg: #120f16;
-    in property <color> selected-bg: #2f2938;
-    in property <color> text: #f2eff7;
-    in property <color> text-dim: #8a8496;
-    in property <color> text-list: #b8b2c4;
-    in property <color> text-played: #6f6a7a;
-    in property <color> accent: #fa139c;
-    in property <color> accent-press: #c40f7a;
-    in property <color> accent-disabled: #5c1a42;
-    in property <color> icon-disabled: #3a3542;
-    in property <color> playing: #a24bff;
-    in property <color> button-bg: #322c3b;
-    in property <color> button-hover: #3d3648;
-    in property <color> button-press: #26212e;
-    in property <color> button-disabled: #1d1a23;
+    in property <color> bg-bar: #16141c;
+    in property <color> bg-video: #0a090e;
+    in property <color> bg-list: #1a1821;
+    in property <color> bg-panel: #201d28;
+    in property <color> line: #2b2734;
+    in property <color> hover-bg: #28232f;
+    in property <color> press-bg: #110f16;
+    in property <color> selected-bg: #2f2840;
+    in property <color> text: #f5f3fa;
+    in property <color> text-dim: #8e88a0;
+    in property <color> text-list: #bdb8cb;
+    in property <color> text-played: #6e6980;
+    in property <color> accent: #f72aa6;
+    in property <color> accent-press: #c41a83;
+    in property <color> accent-disabled: #5a1d48;
+    in property <color> icon-disabled: #3b3646;
+    in property <color> playing: #2bb6ff;
+    in property <color> button-bg: #2f2a3b;
+    in property <color> button-hover: #3a3448;
+    in property <color> button-press: #25202e;
+    in property <color> button-disabled: #1b1922;
     // Errors and destructive actions (failed status, delete).
-    in property <color> danger: #ff5a4a;
+    in property <color> danger: #ff5a5f;
     // The system's monospace family (platform::monospace_font).
     in property <string> font-mono: "Menlo";
-    in property <brush> accent-fill: @linear-gradient(90deg, #fdb506 0%, #fc6f3b 25%, #fa139c 60%, #911efc 100%);
+    // Each palette's progress gradient, logo amber → magenta → violet → cyan.
+    // The player copies one into `accent-fill` (Slint's Rust API cannot
+    // build gradients).
+    out property <brush> fill-vestra: @linear-gradient(90deg, #fcc402 0%, #fb5a35 20%, #fa0aa8 45%, #7a0afa 72%, #10a8fc 100%);
+    out property <brush> fill-vestra-light: @linear-gradient(90deg, #f5a700 0%, #f0442f 20%, #e0089a 45%, #6a08e8 72%, #0a95e6 100%);
+    in property <brush> accent-fill: self.fill-vestra;
+    // The std-widgets (fluent) controls follow the palette: the player sets
+    // `light` for a light palette.
+    in-out property <ColorScheme> color-scheme <=> Palette.color-scheme;
 }

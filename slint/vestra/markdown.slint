@@ -6,6 +6,7 @@
 // open (usually `plugin.system.openUrl`).
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
+import { Icon } from "icons.slint";
 
 // One table row (cells are plain text).
 export struct MarkdownRow {
@@ -86,18 +87,15 @@ component MarkdownBlockView {
                         y: 3px;
                         width: 11px;
                         height: 11px;
-                        border-width: 1px;
-                        border-radius: 2px;
+                        border-width: block.task == 2 ? 0px : 1px;
+                        border-radius: 3px;
                         border-color: Theme.text-dim;
                         background: block.task == 2 ? Theme.accent : transparent;
-                        if block.task == 2: Path {
+                        if block.task == 2: Icon {
                             width: 100%;
                             height: 100%;
-                            viewbox-width: 11;
-                            viewbox-height: 11;
-                            commands: "M 2.5 5.5 L 4.5 7.5 L 8.5 3";
-                            stroke: Theme.text;
-                            stroke-width: 1.5px;
+                            name: "check-task";
+                            color: #ffffff;
                         }
                     }
                 }

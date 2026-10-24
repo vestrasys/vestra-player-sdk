@@ -84,6 +84,21 @@ test("appearance: read before activation, set, follows other plugins", async () 
   host.appearance = other;
   await host.request("appearance.set", { theme: "dark" } as never);
   assert.equal(host.appearance, "vestra");
+  // The light palette (SDK 1.5): set, and followed when another plugin picks it.
+  await plugin.appearance.set("vestra-light");
+  assert.equal(host.appearance, "vestra-light");
+  assert.equal(plugin.appearance.theme, "vestra-light");
+  host.setAppearance("vestra");
+  await host.settle();
+  host.setAppearance("vestra-light");
+  await host.settle();
+  assert.equal(plugin.appearance.theme, "vestra-light");
+  assert.deepEqual(changes, [
+    "vestra",
+    "vestra-light",
+    "vestra",
+    "vestra-light",
+  ]);
   await stop();
 });
 
