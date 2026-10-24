@@ -1946,9 +1946,16 @@ export class TestHost implements Transport {
    */
   readonly remoteImages = new Map<string, string | null>();
   /**
-   * The Markdown document a property holds (its wire form read back), or
+   * The Markdown document a value holds (its wire form read back), or
    * `null` when the value is not one. `images` maps each remote address to
-   * the downloaded file.
+   * the downloaded file. Pass a whole property value or a field of one: a
+   * document nested in rows is read the same way.
+   *
+   * @example
+   * ```ts
+   * const rows = host.window("chat").props["messages"] as { body: Json }[];
+   * assert.equal(host.markdown(rows[0]!.body)?.text, "**Hello**");
+   * ```
    */
   markdown(value: Json | undefined): MarkdownWire | null {
     const doc = (value as { $vestraMarkdown?: unknown } | null | undefined)

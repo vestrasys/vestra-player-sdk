@@ -1,9 +1,14 @@
 // Markdown display (store proposal §5):
-//   import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
+//   import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
 // Give `blocks` the value of `plugin.ui.markdown(text)`; the player parses
 // the Markdown and fills the rows. Links report `link-clicked(url)` with the
 // address resolved against the document's base; the plugin decides what to
 // open (usually `plugin.system.openUrl`).
+// `MarkdownView` scrolls one document. `MarkdownBlocks` does not scroll and
+// is as tall as its content: put it in your own layout or in a `ListView`
+// row (a chat message: a `[MarkdownBlock]` field of the row's struct).
+// `code-copy: true` adds a 复制 button to code blocks that reports
+// `copy-code(code)`; the plugin copies it (`plugin.clipboard`).
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { Icon } from "icons.slint";
@@ -45,7 +50,9 @@ export struct MarkdownBlock {
 component MarkdownBlockView {
     in property <MarkdownBlock> block;
     in property <length> available;
+    in property <bool> code-copy;
     callback link-clicked(string);
+    callback copy-code(string);
     private property <length> quote-indent: block.quote * 12px;
     private property <length> list-indent: block.indent * 16px;
     private property <length> inner: max(16px, root.available - root.quote-indent - root.list-indent);
@@ -124,6 +131,24 @@ component MarkdownBlockView {
                         default-font-size: Theme.font-body;
                     }
                 }
+                if root.code-copy: Rectangle {
+                    x: parent.width - self.width - 4px;
+                    y: 4px;
+                    width: copy-label.preferred-width + 12px;
+                    height: Theme.button-small-height;
+                    border-radius: Theme.radius-control;
+                    background: copy-touch.pressed ? Theme.button-press : copy-touch.has-hover ? Theme.button-hover : Theme.button-bg;
+                    copy-label := Text {
+                        text: "复制";
+                        color: copy-touch.has-hover ? Theme.text : Theme.text-dim;
+                        font-size: Theme.font-body;
+                        vertical-alignment: center;
+                    }
+                    copy-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.copy-code(block.code); }
+                    }
+                }
             }
             if block.kind == "image" && block.has-image: HorizontalLayout {
                 alignment: start;
@@ -186,12 +211,38 @@ component MarkdownBlockView {
     }
 }
 
+// Markdown blocks without scrolling, as tall as their content.
+export component MarkdownBlocks inherits Rectangle {
+    in property <[MarkdownBlock]> blocks;
+    // A 复制 button on code blocks, reporting `copy-code(code)`.
+    in property <bool> code-copy: false;
+    callback link-clicked(string);
+    callback copy-code(string);
+    min-height: column.min-height;
+    preferred-height: column.preferred-height;
+    column := VerticalLayout {
+        width: root.width;
+        spacing: 8px;
+        alignment: start;
+        for block in root.blocks: MarkdownBlockView {
+            block: block;
+            available: root.width;
+            code-copy: root.code-copy;
+            link-clicked(url) => { root.link-clicked(url); }
+            copy-code(code) => { root.copy-code(code); }
+        }
+    }
+}
+
 // A scrolling Markdown document.
 export component MarkdownView inherits Rectangle {
     in property <[MarkdownBlock]> blocks;
     // Space around the document.
     in property <length> inset: 10px;
+    // A 复制 button on code blocks, reporting `copy-code(code)`.
+    in property <bool> code-copy: false;
     callback link-clicked(string);
+    callback copy-code(string);
     scroll := ScrollView {
         width: 100%;
         height: 100%;
@@ -200,12 +251,12 @@ export component MarkdownView inherits Rectangle {
         column := VerticalLayout {
             width: scroll.visible-width;
             padding: root.inset;
-            spacing: 8px;
             alignment: start;
-            for block in root.blocks: MarkdownBlockView {
-                block: block;
-                available: scroll.visible-width - 2 * root.inset;
+            MarkdownBlocks {
+                blocks: root.blocks;
+                code-copy: root.code-copy;
                 link-clicked(url) => { root.link-clicked(url); }
+                copy-code(code) => { root.copy-code(code); }
             }
         }
     }

@@ -41,6 +41,7 @@ export const STRICT_CATEGORIES = {
       "MarkdownRef",
       "MarkdownOptions",
       "PropValue",
+      "PropData",
       "Props",
       "ThemeId",
       "SettingsCategory",

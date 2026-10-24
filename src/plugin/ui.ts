@@ -61,8 +61,12 @@ export class ImageHandle implements ImageRef {
   }
 }
 
-/** A property value as sent: images and documents in wire form; released ones refused. */
-function wireValue(value: PropValue): Json {
+/**
+ * A property value as sent: images and documents in wire form, documents at
+ * any depth (released ones refused wherever they are); an image only as the
+ * whole value, like the player.
+ */
+function wireValue(value: PropValue, nested = false): Json {
   if (value instanceof MarkdownHandle) {
     if (value.released)
       throw failure(
@@ -71,13 +75,27 @@ function wireValue(value: PropValue): Json {
       );
     return value.toJSON();
   }
-  if (!(value instanceof ImageHandle)) return value as Json;
-  if (value.released)
-    throw failure(
-      "invalid",
-      `image ${value.path} was released with the scope that created it`,
-    );
-  return value.toJSON();
+  if (value instanceof ImageHandle) {
+    if (nested)
+      throw failure(
+        "invalid",
+        `image ${value.path}: an image reference must be the whole value of an image property`,
+      );
+    if (value.released)
+      throw failure(
+        "invalid",
+        `image ${value.path} was released with the scope that created it`,
+      );
+    return value.toJSON();
+  }
+  if (Array.isArray(value)) return value.map((item) => wireValue(item, true));
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, Json> = {};
+    for (const [key, item] of Object.entries(value))
+      out[key] = wireValue(item as PropValue, true);
+    return out;
+  }
+  return value;
 }
 
 export const ui = (scope: ScopeImpl): Ui => ({
