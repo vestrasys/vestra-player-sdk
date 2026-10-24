@@ -5446,13 +5446,14 @@ The separator of each list style per interface language, as the player's
 table (`i18n::text::SEPARATORS`; its tests check that they agree).
 
 ```ts
-const LIST_SEPARATORS: Readonly<Record<(typeof LOCALES)[number], Readonly<Record<ListStyleName, string>>>>;
+const LIST_SEPARATORS: Readonly<Record<Locale, Readonly<Record<ListStyle, string>>>>;
 ```
 
 ### TEXT_LIMITS
 
-The player's limits on one text value (a TextJson or
-ListJson with everything nested in it), as the player's
+The player's limits on one text value (a
+Text or
+TextList with everything nested in it), as the player's
 `i18n::text` (its tests check that they agree).
 
 ```ts

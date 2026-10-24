@@ -10,6 +10,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { ListStyle, Locale } from "./plugin/types.ts";
 
 /**
  * The player's interface languages: English (the source language) first,
@@ -347,24 +348,23 @@ export function placeholders(text: string): string[] {
 // ---------------------------------------------------------------- texts
 
 /**
- * The ways a list value ({@link ListJson}) is joined, as the player joins
- * them in each interface language (`LIST_SEPARATORS`).
+ * The ways a `TextList` is joined (`ListStyle`), as the player
+ * joins them in each interface language (`LIST_SEPARATORS`).
  */
-export const LIST_STYLES = [
+export const LIST_STYLES: readonly ListStyle[] = [
   "list",
   "clauses",
   "semicolons",
   "sentences",
   "lines",
-] as const;
-export type ListStyleName = (typeof LIST_STYLES)[number];
+];
 
 /**
  * The separator of each list style per interface language, as the player's
  * table (`i18n::text::SEPARATORS`; its tests check that they agree).
  */
 export const LIST_SEPARATORS: Readonly<
-  Record<(typeof LOCALES)[number], Readonly<Record<ListStyleName, string>>>
+  Record<Locale, Readonly<Record<ListStyle, string>>>
 > = {
   en: {
     list: ", ",
@@ -418,8 +418,9 @@ export const LIST_SEPARATORS: Readonly<
 };
 
 /**
- * The player's limits on one text value (a {@link TextJson} or
- * {@link ListJson} with everything nested in it), as the player's
+ * The player's limits on one text value (a
+ * {@link @vestra-player/sdk!Text | Text} or
+ * {@link @vestra-player/sdk!TextList | TextList} with everything nested in it), as the player's
  * `i18n::text` (its tests check that they agree).
  */
 export const TEXT_LIMITS = {
@@ -443,7 +444,7 @@ export type TextJson = {
 /** A list on the wire: items joined the interface language's way. */
 export type ListJson = {
   $vestraList: ArgJson[];
-  style?: ListStyleName;
+  style?: ListStyle;
 };
 /** An argument of a text: data (strings and numbers) or another text. */
 export type ArgJson = string | number | TextJson | ListJson;
