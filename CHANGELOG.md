@@ -4,7 +4,10 @@
 
 Fix; no API or type changes.
 
-- **`storage.json` saves no longer collide.** Every save wrote through the same temporary file (`<name>.json.tmp-<pid>`), so two stores on the same file (the same name opened twice, in one scope or two) could rename each other's temporary file away mid-save; the save then failed with `ENOENT` (on `chmod` or `rename`), seen intermittently on Windows. Each write now has a temporary file of its own, created owner-only (`0600`) through its file handle before it gets the store's name, and removed again if the write fails. Writes of one store were and stay in order.
+- **`storage.json` saves no longer collide.** Every save wrote through the same temporary file (`<name>.json.tmp-<pid>`), and only the writes of one store were queued. Two stores on the same file (the same name opened twice, in one scope or two) could therefore rename each other's temporary file away mid-save, and the save failed with `ENOENT` (on `chmod` or `rename`); on Windows two renames onto the file at once also fail with `EPERM`. Seen intermittently on Windows.
+  - Writes to one file are now queued together, whichever store makes them, and land in the order they were made.
+  - Each write has a temporary file of its own, made owner-only (`0600`) through its file handle before it gets the store's name, and removed again if the write fails.
+  - On Windows, replacing the file is retried for up to 2 s while another program (a virus scanner, the search indexer) briefly holds it open.
 
 ## 1.5.0
 

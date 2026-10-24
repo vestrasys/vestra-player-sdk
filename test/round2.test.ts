@@ -459,10 +459,11 @@ test("storage: overlapping saves and flushes, also of one file opened twice, all
     await Promise.all([one.flush(), two.flush()]);
     await stop();
     assert.deepEqual(errors, []);
-    const { volume } = JSON.parse(
-      readFileSync(join(data, "settings.json"), "utf8"),
-    ) as Settings;
-    assert.ok(volume === 1200 || volume === -200, `last write, not ${volume}`);
+    // Writes to one file go in call order, whichever handle made them.
+    assert.deepEqual(
+      JSON.parse(readFileSync(join(data, "settings.json"), "utf8")),
+      { volume: 1200 },
+    );
     assert.deepEqual(
       readdirSync(data).filter((name) => name.includes(".tmp")),
       [],

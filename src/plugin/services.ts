@@ -116,8 +116,55 @@ export function tools(scope: ScopeImpl): Tools {
 
 const NAME = /^[a-z0-9-]{1,64}$/;
 
-/** Writes so far in this process; numbers each store's temporary file. */
+/** Writes so far in this process; numbers each write's temporary file. */
 let written = 0;
+/**
+ * The pending writes of each file, whichever store they come from: the same
+ * name opened twice must not write or rename into one file at once.
+ */
+const writes = new Map<string, Promise<void>>();
+
+/** Write `text` to `path` atomically, owner-only (0600). */
+async function writeAtomic(path: string, text: string) {
+  // A name of its own per write, so no other write renames it away.
+  const temporary = `${path}.tmp-${process.pid}-${++written}`;
+  await mkdir(join(path, ".."), { recursive: true });
+  try {
+    // Settings can hold private paths and history. The mode is set through
+    // the handle, before the file has its name.
+    const file = await open(temporary, "w", 0o600);
+    try {
+      await file.chmod(0o600);
+      await file.writeFile(text);
+    } finally {
+      await file.close();
+    }
+    await replace(temporary, path);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+/**
+ * Rename over `to`. Windows refuses while another program (a virus scanner,
+ * the search indexer) has `to` open for a moment: retry for up to 2 s there.
+ */
+async function replace(from: string, to: string) {
+  for (let attempt = 0; ; attempt++)
+    try {
+      return await rename(from, to);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (
+        process.platform !== "win32" ||
+        !(code === "EPERM" || code === "EACCES" || code === "EBUSY") ||
+        attempt >= 20
+      )
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, 10 + attempt * 10));
+    }
+}
 
 class Store<T> implements JsonStore<T> {
   readonly #scope: ScopeImpl;
@@ -181,30 +228,18 @@ class Store<T> implements JsonStore<T> {
     if (!this.#dirty) return this.#writing;
     this.#dirty = false;
     const text = `${JSON.stringify(this.#value, null, 2)}\n`;
-    // One write at a time, in order; the newest value is written last.
-    this.#writing = this.#writing
+    // One write per file at a time, in order; the newest value is written
+    // last. The queue is per file, not per store (see `writes`).
+    const path = this.#path;
+    const write = (writes.get(path) ?? Promise.resolve())
       .catch(() => {})
-      .then(async () => {
-        // A name of its own per write: two stores on the same file (the
-        // same name opened twice) must not rename each other's file away.
-        const temporary = `${this.#path}.tmp-${process.pid}-${++written}`;
-        await mkdir(join(this.#path, ".."), { recursive: true });
-        try {
-          // Owner-only: settings can hold private paths and history. The
-          // mode is set through the handle, before the file has its name.
-          const file = await open(temporary, "wx", 0o600);
-          try {
-            await file.chmod(0o600);
-            await file.writeFile(text);
-          } finally {
-            await file.close();
-          }
-          await rename(temporary, this.#path);
-        } catch (error) {
-          await rm(temporary, { force: true }).catch(() => {});
-          throw error;
-        }
-      });
+      .then(() => writeAtomic(path, text));
+    const done = () => {
+      if (writes.get(path) === write) writes.delete(path);
+    };
+    writes.set(path, write);
+    write.then(done, done);
+    this.#writing = write;
     return this.#writing;
   }
   async dispose() {
