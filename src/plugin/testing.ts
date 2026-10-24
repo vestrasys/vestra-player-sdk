@@ -260,6 +260,21 @@ export interface MarkdownWire {
   images: Record<string, string>;
 }
 
+/** Refusals for a position another plugin holds: not activation failures (`startPlugin`). */
+const takenErrors = new WeakSet<Error>();
+const taken = (message: string) => {
+  const error = new HostError("conflict", message);
+  takenErrors.add(error);
+  return error;
+};
+const SLOT_LABELS: Record<string, string> = {
+  bottom: "底栏",
+  sidebar: "侧栏",
+  backdrop: "视频背景",
+};
+/** The player's limit of sidebar tabs. */
+const MAX_SIDEBAR_TABS = 8;
+
 /**
  * An in-memory fake Vestra Player for plugin tests.
  *
@@ -319,21 +334,6 @@ export interface MarkdownWire {
  * });
  * ```
  */
-/** Refusals for a position another plugin holds: not activation failures (`startPlugin`). */
-const takenErrors = new WeakSet<Error>();
-const taken = (message: string) => {
-  const error = new HostError("conflict", message);
-  takenErrors.add(error);
-  return error;
-};
-const SLOT_LABELS: Record<string, string> = {
-  bottom: "底栏",
-  sidebar: "侧栏",
-  backdrop: "视频背景",
-};
-/** The player's limit of sidebar tabs. */
-const MAX_SIDEBAR_TABS = 8;
-
 export class TestHost implements Transport {
   /**
    * Every request the plugin sent, in order: `{ method, params }`.
