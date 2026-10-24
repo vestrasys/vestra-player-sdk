@@ -45,6 +45,8 @@ export const STRICT_CATEGORIES = {
       "ThemeId",
       "SettingsCategory",
       "SlotState",
+      "SlotPanel",
+      "PanelState",
       "ConfirmOptions",
     ],
   },

@@ -52,7 +52,7 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 Two rules of thumb:
 
 - **Prefer the smallest surface that works.** An OSD message before a dialog, a settings page before a tool window. Every window the user has to close is a cost.
-- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins: while one plugin's panel is in a slot, another plugin's mount there fails. Mount a panel only when the plugin's main purpose is to live there.
+- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there.
 
 ## Life cycles
 
@@ -101,7 +101,7 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
 ```
 
 - **Mounting rebuilds the main window.** The player compiles its main window together with every mounted panel, so mounting or unmounting any panel (from any plugin) rebuilds it. The player restores each panel's bridge properties to the last values its plugin wrote, but anything kept only inside the Slint component (a scroll position, a `property` the plugin never writes, the text of a field the plugin does not mirror) starts over. The same happens when the sidebar is detached or attached: the floating window holds a new instance of the component.
-- The position (`plugin.panels.bottom`, `.sidebar`) is separate from the panel: it has the user's preference (`preferred`), whether it is on screen now (`effective`) and why not (`reason`). Any plugin with `ui.mount` can read and toggle it, so a "Show playlist" command can live in a different plugin than the playlist.
+- The position (`plugin.panels.bottom`, `.sidebar`) is separate from the panel: it has the user's preference (`preferred`), whether it is on screen now (`effective`) and why not (`reason`), and its tabs (`panels`). Any plugin with `ui.mount` can read and toggle it, so a "Show playlist" command can live in a different plugin than the playlist. The panel's own state ({@link "@vestra-player/sdk"!Panel.state | Panel.state}) adds whether its tab is the current one (`reason: "otherTab"` when not); {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} brings a background tab forward instead of closing the sidebar.
 - The player remembers the sidebar's visibility, width, detached state and floating window position across launches.
 
 ### Settings page

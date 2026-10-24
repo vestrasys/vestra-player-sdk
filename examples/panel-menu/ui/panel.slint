@@ -33,5 +33,8 @@ export component ListPanel inherits Rectangle {
                 }
             }
         }
+        // Takes the space below the rows. Without it the layout's maximum
+        // height (three 20px rows) would cap the player's main window.
+        Rectangle { vertical-stretch: 1; }
     }
 }

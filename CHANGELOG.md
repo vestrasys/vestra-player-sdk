@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.2
+
+**Sidebar tabs** (the player after 0.4.0). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.1 need no change. The new members work against older players too (see each one).
+
+- **Several sidebar panels.** A plugin mounting in the sidebar while another plugin's panel is there no longer fails: its `ready` resolves and the panel is a second tab. The player draws a 31px tab strip (the playlist's) above the current tab while there are two or more; with one panel nothing changes. Shown, hidden and floating apply to the whole sidebar. Tabs are labelled with the mount's `title` (else the plugin's name); built-in plugins' tabs come first, the playlist's is the first.
+- **`Panel.state`** (`PanelState`: `active`, `preferred`, `effective`, `reason`, `detached`) and **`Panel.onChange`**: the panel's own state. A panel in a background tab has `active: false`, `effective: false` and `reason: "otherTab"`. Older players report the position's state with `active: true`.
+- **`Panel.show()`** makes the panel's tab current and shows the sidebar; **`Panel.toggle()`** hides the sidebar when the panel's tab is shown, otherwise shows it (a background tab comes forward). Use them for a "Show my panel" command: `checked: () => !!list.state?.preferred && !!list.state?.active`. Older players: `setVisible(true)` / `toggle()` of the position.
+- **`PanelSlot.panels`** (`SlotPanel[]`: `plugin`, `title`, `active`) lists a position's tabs, `null` from older players; `PanelSlot.onChange` also runs when only the tabs change. **`PanelSlot.activate(plugin)`** switches the current tab (older players ignore it). `SlotState` is unchanged.
+- **The `tabbed` property.** If a sidebar panel's bridge global declares `in property <bool> tabbed`, the player sets it to `true` while it draws its tab strip, so a panel with a tab strip of its own (the playlist) hides it. Drop coordinates (`Panel.onDrop`) start below the strip.
+- **`Panel.showMenu`** in a background tab rejects with `unavailable`.
+- **Taken positions** (player 0.4.x after 0.4.0, documented now): the bottom bar and the backdrop take one panel; another plugin's mount there rejects `ready` with `conflict` (「底栏已被 vestra.playback 使用」), as does a ninth sidebar tab. This refusal, and `conflict` from `player.provideSequence` while another plugin provides next/previous, do not fail activation in the player: the plugin runs without its panel or sequence. Players 0.4.0 and older answered a taken bottom bar or sidebar with `ui-prepare` and failed the activation.
+- **`PluginInfo.warnings`** (`PluginWarning`: `code` `"slot-occupied"` or `"sequence-taken"`, `slot`, `owner`): what a running plugin was refused because another plugin holds it. Empty from older players.
+- **`TestHost`** models both: `host.mountOther(slot, plugin, { title })` and `host.unmountOther(plugin)` simulate another plugin's panel (a sidebar tab, or a taken bottom bar or backdrop: the plugin's mount then rejects with `conflict`), `host.selectTab(plugin)` the user clicking a tab; `host.layout.sidebar.panels` / `.owner` are the tabs and the current one, `layout.set` takes `active`. `startPlugin` does not fail on a taken position, like the player.
+- Examples: panel-menu no longer asks you not to load it with the playlist; it is a second tab there. Its list ends in a stretching filler: without it the rows' fixed heights capped the player's main window at its minimum height.
+
 ## 1.5.1
 
 Fix; no API or type changes.

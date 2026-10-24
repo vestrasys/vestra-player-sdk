@@ -136,6 +136,8 @@ export interface PackageInfo {
   builtin?: boolean;
   source?: WireSource | null;
   dataDirectory?: string | null;
+  /** What the plugin was refused because another plugin holds it (player 0.4.x, after 0.4.0). */
+  warnings?: { code: string; slot?: string; owner?: string }[];
 }
 /** Where an installed package came from (`packages.install` `source`). */
 export type WireSource =
@@ -181,13 +183,24 @@ export interface LayoutBackdrop {
   owner: number;
   effective: boolean;
 }
+/** One panel of a position, in tab order (`LayoutSlot.panels`). */
+export interface LayoutPanel {
+  owner: number;
+  /** The manifest id of the plugin that mounted it. */
+  plugin: string;
+  /** The tab label: the mount's `title`, else the plugin's name. */
+  title: string;
+}
 /** One position (bottom bar or sidebar) as `layout.state` reports it. */
 export interface LayoutSlot {
+  /** The current tab's panel (the only panel of the bottom bar). */
   owner: number;
   preferred: boolean;
   effective: boolean;
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
   detached: boolean;
+  /** The position's panels in tab order; absent from players without sidebar tabs (0.4.0 and older). */
+  panels?: LayoutPanel[];
 }
 export interface PlaybackStats {
   backend: string;
@@ -510,6 +523,8 @@ export function createWire(transport: Transport) {
         slot: "bottom" | "sidebar";
         visible?: boolean;
         detached?: boolean;
+        /** The plugin id of the panel whose tab becomes the current one. */
+        active?: string;
       }) => transport.request<void>("layout.set", options),
     },
     events: {
