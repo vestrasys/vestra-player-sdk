@@ -1241,6 +1241,48 @@ export interface SlotState {
 }
 
 /**
+ * One panel of a position ({@link PanelSlot.panels}): a tab of the sidebar.
+ *
+ * @since 1.5.2
+ * @category UI
+ */
+export interface SlotPanel {
+  /** The manifest id of the plugin that mounted it (pass it to {@link PanelSlot.activate}). */
+  plugin: string;
+  /** Its tab label: the `title` of {@link Panels.mount}, else the plugin's name. */
+  title: string;
+  /** Its tab is the current one (the panel the position shows). */
+  active: boolean;
+}
+
+/**
+ * The state of one panel ({@link Panel.state}): its position's state, seen
+ * from this panel, which may be one of several sidebar tabs.
+ *
+ * @since 1.5.2
+ * @category UI
+ */
+export interface PanelState {
+  /**
+   * Its tab is the current one. Always `true` for the bottom bar, the
+   * backdrop and a sidebar panel without other tabs.
+   */
+  active: boolean;
+  /** The position's preference (the user's choice to show it). */
+  preferred: boolean;
+  /** This panel is on screen now: the position is, and this is its current tab. */
+  effective: boolean;
+  /**
+   * Why this panel is not on screen, `null` while it is: `otherTab` while
+   * another plugin's tab is the current one (whatever the position's state),
+   * else the position's reason ({@link SlotState.reason}).
+   */
+  reason: SlotState["reason"] | "otherTab";
+  /** The sidebar floats in its own window (with all its tabs). */
+  detached: boolean;
+}
+
+/**
  * The bottom bar or the sidebar position (`plugin.panels.bottom`,
  * `plugin.panels.sidebar`), independent of who mounted the panel there.
  *
@@ -1274,15 +1316,31 @@ export interface SlotState {
  * @category UI
  */
 export interface PanelSlot {
-  /** The current state; `null` while no plugin has a panel there (or without `ui.mount`). */
+  /**
+   * The current state; `null` while no plugin has a panel there (or without
+   * `ui.mount`). With sidebar tabs it is the whole position's: shown,
+   * hidden and floating apply to all tabs, which {@link PanelSlot.panels}
+   * lists.
+   */
   readonly state: SlotState | null;
+  /**
+   * The position's panels in tab order: the sidebar's tabs, the bottom
+   * bar's one panel; `null` while there is none (as `state`), and from
+   * players without sidebar tabs (0.4.0 and older). Refreshed with `state`.
+   *
+   * @throws Never.
+   *
+   * @since 1.5.2
+   */
+  readonly panels: readonly SlotPanel[] | null;
   /**
    * Run code when the position's state changes.
    *
    * @remarks
    * Needs `events`: without it the listener runs only after this plugin's own
-   * changes. Called with `null` when the panel there is unmounted. Errors go
-   * to {@link Scope.onError}.
+   * changes. Called with `null` when the panel there is unmounted, and also
+   * when only the tabs changed ({@link PanelSlot.panels}: a panel added or
+   * removed, another tab current). Errors go to {@link Scope.onError}.
    *
    * @capability ui.mount and events
    *
@@ -1353,6 +1411,41 @@ export interface PanelSlot {
    * @since 1.0.0
    */
   toggle(): Promise<void>;
+  /**
+   * Make a panel's tab the current one, without showing or hiding the
+   * position.
+   *
+   * @remarks
+   * The sidebar holds the panels of several plugins as tabs (see
+   * {@link Panels.mount}); this switches which one it shows, like a click on
+   * its tab. To show this plugin's own panel, use {@link Panel.show}. The
+   * bottom bar has one panel: activating it changes nothing. Players
+   * without sidebar tabs (0.4.0 and older) ignore it.
+   *
+   * @capability ui.mount
+   *
+   * @param plugin - The manifest id of the plugin whose panel to show, one
+   *   of {@link PanelSlot.panels}.
+   * @returns Resolves once the layout has the new current tab, with `state`
+   *   refreshed.
+   *
+   * @throws `missing` (rejects) No panel is mounted at this position, or
+   *   none of `plugin`.
+   * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
+   *
+   * @example A command that shows the playlist's tab
+   * ```ts
+   * plugin.commands.add({
+   *   id: "to-playlist",
+   *   title: "Show the playlist tab",
+   *   run: () => plugin.panels.sidebar.activate("vestra.playlist"),
+   * });
+   * ```
+   *
+   * @since 1.5.2
+   */
+  activate(plugin: string): Promise<void>;
 }
 
 /**
@@ -1448,14 +1541,25 @@ export interface Panel extends View, Disposable {
    *
    * @remarks
    * Mounts made while `activate` runs must succeed before the plugin is
-   * ready: a rejection fails activation. Later failures also go to
-   * {@link Scope.onError}.
+   * ready: a rejection fails activation, except `conflict` for a taken
+   * position (below), which the player (0.4.x after 0.4.0) and `TestHost`
+   * do not count: the plugin runs without its panel, its commands and keys
+   * work, and the player shows the refusal (an OSD message,
+   * {@link PluginInfo.warnings} and the text in {@link PluginInfo.error}).
+   * Later failures also go to {@link Scope.onError}.
+   *
+   * A second sidebar panel is not refused: it resolves as another tab
+   * (see {@link Panel.state}). Built-in plugins mount first at start-up,
+   * so the playlist's tab is first and a built-in panel keeps its position.
    *
    * @throws `ui-prepare` (rejects) The Slint file does not compile, or a
    *   bound property is not declared on the bridge global; `message` has the
-   *   diagnostics. Also when another plugin's panel already occupies the
-   *   bottom bar or the sidebar.
-   * @throws `conflict` (rejects) Another plugin shows the backdrop.
+   *   diagnostics. (Players 0.4.0 and older also answer a taken bottom bar
+   *   or sidebar with it.)
+   * @throws `conflict` (rejects) Another plugin's panel holds the bottom bar
+   *   or the backdrop (shown, or being mounted), or the sidebar has all the
+   *   tabs it takes (8); `message` names the position and the holder
+   *   (「侧栏已被 vestra.playlist 使用」). Not an activation failure.
    * @throws `busy` (rejects) The player is still preparing this plugin's
    *   previous mount, or its queue of mounts is full.
    * @throws `invalid` (rejects) `title` is longer than 128 bytes or has
@@ -1466,6 +1570,107 @@ export interface Panel extends View, Disposable {
    * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    */
   readonly ready: Promise<void>;
+  /**
+   * This panel's state: its position's, and whether its tab is the current
+   * one; `null` until {@link Panel.ready} resolved (and after `dispose`).
+   *
+   * @remarks
+   * Read when first used; with `events` it then follows every change (the
+   * user switching tabs, other plugins, the window size), without `events`
+   * only this plugin's own changes. A sidebar panel in a background tab
+   * has `active: false`, `effective: false` and `reason: "otherTab"`.
+   *
+   * @throws Never; `null` stands for "not mounted".
+   *
+   * @since 1.5.2
+   */
+  readonly state: PanelState | null;
+  /**
+   * Run code when this panel's state changes.
+   *
+   * @remarks
+   * Needs `events`: without it the listener runs only after this plugin's
+   * own changes. Called with `null` when the panel is unmounted. Errors go
+   * to {@link Scope.onError}.
+   *
+   * @capability ui.mount and events
+   *
+   * @param listener - Receives the new state.
+   * @returns A handle that removes the listener.
+   *
+   * @example Say when the user switched to another tab
+   * ```ts
+   * const panel = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
+   * panel.onChange((state) => {
+   *   if (state?.reason === "otherTab") console.error("list in a background tab");
+   * });
+   * ```
+   *
+   * @since 1.5.2
+   */
+  onChange(listener: (state: PanelState | null) => void): Disposable;
+  /**
+   * Show this panel: make its tab the current one and show its position.
+   *
+   * @remarks
+   * Sets the position's preference like {@link PanelSlot.setVisible}`(true)`
+   * (remembered; in fullscreen the sidebar overlay pops out). On players
+   * without sidebar tabs (0.4.0 and older) it is just that. Waits for
+   * {@link Panel.ready} first.
+   *
+   * @capability ui.mount
+   *
+   * @returns Resolves once the layout shows the panel's tab, with `state`
+   *   refreshed.
+   *
+   * @throws `invalid` (rejects) The panel is the backdrop, which the player
+   *   shows by itself.
+   * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws The errors of {@link Panel.ready} (rejects) The mount failed.
+   *
+   * @example
+   * ```ts
+   * const list = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
+   * plugin.commands.add({ id: "show", title: "Show the list", run: () => list.show() });
+   * ```
+   *
+   * @since 1.5.2
+   */
+  show(): Promise<void>;
+  /**
+   * Show this panel, or hide its position when it is shown.
+   *
+   * @remarks
+   * Reads the state from the player first. When the position is shown
+   * (`preferred`) and this panel's tab is the current one, it hides the
+   * position; otherwise it does {@link Panel.show}: a panel in a background
+   * tab comes to the front instead of the sidebar closing. A "Show list"
+   * command checked by `state.preferred && state.active` matches it. Waits
+   * for {@link Panel.ready} first.
+   *
+   * @capability ui.mount
+   *
+   * @returns Resolves once the layout has changed, with `state` refreshed.
+   *
+   * @throws `invalid` (rejects) The panel is the backdrop.
+   * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws The errors of {@link Panel.ready} (rejects) The mount failed.
+   *
+   * @example A toggle command for a sidebar panel (the playlist's F6)
+   * ```ts
+   * const list = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
+   * plugin.commands.add({
+   *   id: "list",
+   *   path: ["@screen", "List"],
+   *   bindings: ["F6"],
+   *   checked: () => (list.state?.preferred ?? false) && (list.state?.active ?? false),
+   *   run: () => list.toggle(),
+   * });
+   * ```
+   *
+   * @since 1.5.2
+   */
+  toggle(): Promise<void>;
   /**
    * Keep the panel on screen while the user works in it.
    *
@@ -1521,8 +1726,8 @@ export interface Panel extends View, Disposable {
    * @returns Resolves once the menu is open (not when the user picks).
    *
    * @throws `missing` (rejects) An item is not a command of this plugin.
-   * @throws `unavailable` (rejects) The panel is not on screen, or it is the
-   *   backdrop.
+   * @throws `unavailable` (rejects) The panel is not on screen (also: its
+   *   sidebar tab is not the current one), or it is the backdrop.
    * @throws `invalid` (rejects) No items, more than 32, or `at` is not
    *   finite.
    * @throws The errors of {@link Panel.ready} (rejects) The mount failed.
@@ -2086,9 +2291,17 @@ export interface Panels {
    *   floats over the video and hides after 3 seconds without activity.
    * - `"sidebar"`: right of the video, the window's full height, as wide as the
    *   user drags it (at least 317). The user can detach it into a floating
-   *   window titled `title`.
+   *   window titled `title`. Several plugins may mount here (player 0.4.x
+   *   after 0.4.0): each panel is a tab, labelled `title` (else the plugin's
+   *   name), and the player draws a 31px tab strip above the current one
+   *   while there are two or more (with one panel, nothing changes).
+   *   Showing, hiding and detaching apply to the whole sidebar. If the
+   *   bridge global declares `in property <bool> tabbed`, the player sets
+   *   it to `true` while it draws the strip, so a panel with a tab strip of
+   *   its own can hide it. Panel coordinates (drops) start below the strip.
    * - `"backdrop"`: the whole video area, under the OSD, while there is no
-   *   video picture (see {@link Panels.backdrop}). One plugin at a time; it
+   *   video picture (see {@link Panels.backdrop}). One plugin at a time (as
+   *   for the bottom bar, another one's mount rejects with `conflict`); it
    *   takes no pointer or keyboard input. While it is mounted, the player does
    *   not show the cover art of audio files itself (from the next file
    *   opened on), so the plugin can draw it.
@@ -3962,6 +4175,31 @@ export interface PluginInfo {
    * the player has none. The path's layout is not part of the API.
    */
   dataDirectory: string | null;
+  /**
+   * What a running plugin was refused because another plugin holds it: a
+   * panel position (`slot-occupied`, with `slot`) or the next/previous
+   * sequence (`sequence-taken`). Neither fails activation; `error` has the
+   * same as text. Empty from players before 0.4.x (after 0.4.0).
+   * Always set by the SDK; optional so that code building `PluginInfo`
+   * values itself (tests) keeps compiling.
+   *
+   * @since 1.5.2
+   */
+  warnings?: readonly PluginWarning[];
+}
+
+/**
+ * One refusal in {@link PluginInfo.warnings}.
+ *
+ * @since 1.5.2
+ */
+export interface PluginWarning {
+  /** `"slot-occupied"` or `"sequence-taken"`; a newer player may add codes. */
+  code: string;
+  /** The panel position (`"bottom"`, `"sidebar"`, `"backdrop"`) for `slot-occupied`. */
+  slot?: string;
+  /** The manifest id of the plugin holding it (absent for a full sidebar). */
+  owner?: string;
 }
 
 /**

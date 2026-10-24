@@ -52,7 +52,7 @@ The smallest complete plugin, and the README's Quick start: **Tools → Hello** 
 
 ![Panel menu in Vestra Player](../../examples/panel-menu/screenshot.png)
 
-A list in the sidebar with its own right-click menu. It takes the sidebar, so do not load it together with a playlist plugin.
+A list in the sidebar with its own right-click menu. Next to the player's playlist it is a second sidebar tab.
 
 **You learn:** mounting a sidebar panel through a Slint global · a right-click menu made of the plugin's commands.
 

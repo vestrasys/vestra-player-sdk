@@ -13,7 +13,7 @@ A list in the player's sidebar with its own right-click menu. It shows the two t
 - Three items in the sidebar, right of the video. A click selects one.
 - A right-click selects the item under the pointer and opens a menu: **Select the first item**, a separator, **Remove the selected item**.
 
-The sidebar holds one panel for all plugins, so do not load this example together with a playlist plugin.
+Several plugins can have a panel in the sidebar: each is a tab. Next to the player's playlist, this example is a second tab labelled "Example list" (its `title`); the player draws the tab strip above it, and with only this panel there is no strip.
 
 ## Files
 
@@ -91,7 +91,7 @@ npm run check && npm test
 npm run pack              # examples.panel-menu-0.1.0.vxp
 ```
 
-Start the player with `--plugin <path to examples/panel-menu>` (and no playlist plugin), then right-click an item in the sidebar.
+Start the player with `--plugin <path to examples/panel-menu>`, click the **Example list** tab above the playlist, then right-click an item. The menu opens only while the tab is the current one (`showMenu` rejects with `unavailable` in a background tab). With player 0.4.0 and older, which have no tabs, do not load it together with the playlist: the sidebar holds one panel there.
 
 ## Try next
 

@@ -16,9 +16,11 @@ import type {
   ImageRef,
   Panel,
   PanelSlot,
+  PanelState,
   Panels,
   PropValue,
   SidebarSlot,
+  SlotPanel,
   SlotState,
   Props,
   Ui,
@@ -355,6 +357,7 @@ type Locks = { focused: boolean; dragging: boolean; popupOpen: boolean };
 
 class PanelHandle extends ViewBase implements Panel {
   readonly ready: Promise<void>;
+  readonly #slot: "bottom" | "sidebar" | "backdrop";
   #mounted = false;
   readonly #locks = { focused: false, dragging: false, popupOpen: false };
   readonly #interaction: Latest<Locks>;
@@ -367,6 +370,7 @@ class PanelHandle extends ViewBase implements Panel {
     if (scope.runtime.views.has("$mount"))
       throw new Error("a plugin can mount only one panel");
     super(scope);
+    this.#slot = slot;
     const runtime = scope.runtime;
     runtime.views.set("$mount", (callback, args) =>
       this.dispatch(callback, args),
@@ -410,6 +414,49 @@ class PanelHandle extends ViewBase implements Panel {
   protected write(property: string, value: Json) {
     return this.scope.runtime.host.ui.setMount(property, value);
   }
+  get state(): PanelState | null {
+    const service = layoutOf(this.scope.runtime);
+    service.start();
+    return this.live()
+      ? panelState(service.state, this.#slot, this.scope.runtime.manifest.id)
+      : null;
+  }
+  onChange(listener: (state: PanelState | null) => void) {
+    const scope = this.scope;
+    let last = JSON.stringify(this.state);
+    const watch = layoutOf(scope.runtime).watch(() => {
+      const state = this.state;
+      const next = JSON.stringify(state);
+      if (next === last) return;
+      last = next;
+      scope.run(listener, state);
+    });
+    return scope.add({
+      dispose: async () => {
+        scope.forget(watch);
+        await watch.dispose();
+      },
+    });
+  }
+  async show() {
+    await this.ready;
+    if (this.#slot === "backdrop")
+      throw failure("invalid", "the player shows the backdrop by itself");
+    await layoutOf(this.scope.runtime).set(this.#slot, {
+      active: this.scope.runtime.manifest.id,
+      visible: true,
+    });
+  }
+  async toggle() {
+    await this.ready;
+    if (this.#slot === "backdrop")
+      throw failure("invalid", "the player shows the backdrop by itself");
+    await layoutOf(this.scope.runtime).read();
+    const state = this.state;
+    if (state?.preferred && state.active)
+      await layoutOf(this.scope.runtime).set(this.#slot, { visible: false });
+    else await this.show();
+  }
   async showMenu(items: (Command | null)[], at: { x: number; y: number }) {
     await this.ready;
     await this.scope.runtime.host.ui.menu(
@@ -439,7 +486,42 @@ class PanelHandle extends ViewBase implements Panel {
     this.#mounted = false;
     await this.release();
     this.scope.runtime.views.delete("$mount");
+    // Listeners of `onChange` hear `null`.
+    this.scope.runtime.invalidate();
+    await layoutOf(this.scope.runtime).refresh();
   }
+}
+
+/** One panel's view of its position (`Panel.state`). */
+function panelState(
+  layout: Layout,
+  slot: "bottom" | "sidebar" | "backdrop",
+  plugin: string,
+): PanelState | null {
+  if (slot === "backdrop")
+    return (
+      layout.backdrop && {
+        active: true,
+        preferred: true,
+        effective: layout.backdrop.effective,
+        reason: null,
+        detached: false,
+      }
+    );
+  const state = layout[slot];
+  if (!state) return null;
+  // Players without tabs (no `panels`): the position holds this panel only.
+  const panels = layout.tabs[slot];
+  const own = panels?.find((panel) => panel.plugin === plugin);
+  if (panels && !own) return null;
+  const active = own?.active ?? true;
+  return {
+    active,
+    preferred: state.preferred,
+    effective: state.effective && active,
+    reason: active ? state.reason : "otherTab",
+    detached: state.detached,
+  };
 }
 
 export const windows = (scope: ScopeImpl): Windows => ({
@@ -450,6 +532,11 @@ export const windows = (scope: ScopeImpl): Windows => ({
 type Layout = {
   bottom: SlotState | null;
   sidebar: SlotState | null;
+  /** `PanelSlot.panels` (null from players without tabs). */
+  tabs: {
+    bottom: readonly SlotPanel[] | null;
+    sidebar: readonly SlotPanel[] | null;
+  };
   backdrop: { readonly effective: boolean } | null;
 };
 
@@ -460,7 +547,12 @@ type Layout = {
  */
 class LayoutService {
   readonly #runtime: Runtime;
-  state: Layout = { bottom: null, sidebar: null, backdrop: null };
+  state: Layout = {
+    bottom: null,
+    sidebar: null,
+    tabs: { bottom: null, sidebar: null },
+    backdrop: null,
+  };
   readonly #listeners = new Set<(layout: Layout) => void>();
   #started = false;
   #reading = false;
@@ -502,9 +594,22 @@ class LayoutService {
             reason: slot.reason,
             detached: slot.detached,
           };
+        const tabs = (slot: LayoutSlot | null): readonly SlotPanel[] | null =>
+          slot?.panels
+            ? Object.freeze(
+                slot.panels.map((panel) =>
+                  Object.freeze({
+                    plugin: panel.plugin,
+                    title: panel.title,
+                    active: panel.owner === slot.owner,
+                  }),
+                ),
+              )
+            : null;
         const next = {
           bottom: view(raw.bottom),
           sidebar: view(raw.sidebar),
+          tabs: { bottom: tabs(raw.bottom), sidebar: tabs(raw.sidebar) },
           backdrop: raw.backdrop
             ? Object.freeze({ effective: raw.backdrop.effective === true })
             : null,
@@ -520,7 +625,7 @@ class LayoutService {
   }
   async set(
     slot: "bottom" | "sidebar",
-    change: { visible?: boolean; detached?: boolean },
+    change: { visible?: boolean; detached?: boolean; active?: string },
   ) {
     this.start();
     await this.#runtime.host.layout.set({ slot, ...change });
@@ -540,10 +645,16 @@ function slot(scope: ScopeImpl, name: "bottom" | "sidebar"): SidebarSlot {
       service().start();
       return service().state[name];
     },
+    get panels() {
+      service().start();
+      return service().state.tabs[name];
+    },
     onChange(listener) {
-      let last = JSON.stringify(service().state[name]);
+      const seen = (layout: Layout) =>
+        JSON.stringify([layout[name], layout.tabs[name]]);
+      let last = seen(service().state);
       const watch = service().watch((layout) => {
-        const next = JSON.stringify(layout[name]);
+        const next = seen(layout);
         if (next === last) return;
         last = next;
         scope.run(listener, layout[name]);
@@ -562,6 +673,7 @@ function slot(scope: ScopeImpl, name: "bottom" | "sidebar"): SidebarSlot {
       await service().set(name, { visible: !(current?.preferred ?? true) });
     },
     setDetached: (detached) => service().set(name, { detached }),
+    activate: (plugin) => service().set(name, { active: plugin }),
   };
 }
 

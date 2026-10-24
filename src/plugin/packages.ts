@@ -293,4 +293,13 @@ const info = (plugin: WirePlugin): PluginInfo =>
     builtin: plugin.builtin === true,
     source: plugin.source ? Object.freeze({ ...plugin.source }) : null,
     dataDirectory: plugin.dataDirectory ?? null,
+    warnings: Object.freeze(
+      (plugin.warnings ?? []).map((warning) =>
+        Object.freeze({
+          code: warning.code,
+          ...(warning.slot === undefined ? {} : { slot: warning.slot }),
+          ...(warning.owner === undefined ? {} : { owner: warning.owner }),
+        }),
+      ),
+    ),
   });

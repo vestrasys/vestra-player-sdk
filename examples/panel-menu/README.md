@@ -1,6 +1,6 @@
 # Panel menu
 
-A list in the player's sidebar with its own right-click menu. It takes the sidebar, so do not load it together with a playlist plugin.
+A list in the player's sidebar with its own right-click menu. Next to the player's playlist it appears as a second sidebar tab, "Example list".
 
 ![Panel menu running in Vestra Player](screenshot.png)
 

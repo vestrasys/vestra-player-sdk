@@ -68,6 +68,7 @@ import { HostError } from "../wire.ts";
 import type { PackageManifest, PackageSource } from "./types.ts";
 import type {
   Json,
+  LayoutPanel,
   LayoutSlot,
   LocalServices,
   PlaybackStats,
@@ -318,6 +319,21 @@ export interface MarkdownWire {
  * });
  * ```
  */
+/** Refusals for a position another plugin holds: not activation failures (`startPlugin`). */
+const takenErrors = new WeakSet<Error>();
+const taken = (message: string) => {
+  const error = new HostError("conflict", message);
+  takenErrors.add(error);
+  return error;
+};
+const SLOT_LABELS: Record<string, string> = {
+  bottom: "底栏",
+  sidebar: "侧栏",
+  backdrop: "视频背景",
+};
+/** The player's limit of sidebar tabs. */
+const MAX_SIDEBAR_TABS = 8;
+
 export class TestHost implements Transport {
   /**
    * Every request the plugin sent, in order: `{ method, params }`.
@@ -365,9 +381,16 @@ export class TestHost implements Transport {
    * ```
    */
   readonly layout: {
-    /** The bottom bar position: `preferred`, `effective`, `reason`, `detached`. */
+    /**
+     * The bottom bar position: `preferred`, `effective`, `reason`,
+     * `detached`, `owner` and `panels` (its one panel).
+     */
     bottom: LayoutSlot | null;
-    /** The sidebar position: `preferred`, `effective`, `reason`, `detached`. */
+    /**
+     * The sidebar position: `preferred`, `effective`, `reason`, `detached`;
+     * `panels` are its tabs in order (`{ owner, plugin, title }`), `owner`
+     * the current tab's (the plugin under test is owner 1).
+     */
     sidebar: LayoutSlot | null;
   } = {
     bottom: null,
@@ -802,6 +825,105 @@ export class TestHost implements Transport {
   setBackdropEffective(effective: boolean) {
     if (this.backdrop) this.backdrop.effective = effective;
     this.emit("window.state", this.#windowFacts());
+  }
+  #nextOwner = 2;
+  /** Owners of other plugins' panels, by plugin id ({@link TestHost.mountOther}). */
+  readonly #others = new Map<string, { slot: string; owner: number }>();
+  /**
+   * Simulate another plugin mounting a panel, before or after the plugin
+   * under test, as the player handles it: in the sidebar it is another tab
+   * (after the existing ones; the first panel's tab is current); the bottom
+   * bar and the backdrop take one panel, so the plugin's own mount there
+   * then rejects with `conflict` (not an activation failure, as in the
+   * player). Pushed as a `window.state` change.
+   *
+   * @param slot - The position.
+   * @param plugin - The other plugin's manifest id.
+   * @param options - `title`: its tab label (default: `plugin`).
+   *
+   * @example The playlist next to this plugin's sidebar panel
+   * ```ts
+   * const host = new TestHost();
+   * host.mountOther("sidebar", "vestra.playlist", { title: "播放列表" });
+   * const { plugin } = await startPlugin(activate, { host, directory });
+   * assert.equal(host.layout.sidebar?.panels?.length, 2);
+   * ```
+   *
+   * @since 1.5.2
+   */
+  mountOther(
+    slot: "bottom" | "sidebar" | "backdrop",
+    plugin: string,
+    options: { title?: string } = {},
+  ) {
+    if (this.#others.has(plugin))
+      throw new Error(`${plugin} already has a panel`);
+    const owner = this.#nextOwner++;
+    if (slot === "backdrop") {
+      if (this.backdrop) throw new Error("the backdrop is taken");
+      this.backdrop = { owner: plugin, effective: true };
+    } else {
+      if (slot === "bottom" && this.layout.bottom)
+        throw new Error("the bottom bar is taken");
+      this.#addPanel(slot, { owner, plugin, title: options.title ?? plugin });
+    }
+    this.#others.set(plugin, { slot, owner });
+    this.emit("window.state", this.#windowFacts());
+  }
+  /**
+   * Simulate another plugin's panel going away ({@link TestHost.mountOther}):
+   * when its tab was current, the next tab (else the previous one) is.
+   *
+   * @since 1.5.2
+   */
+  unmountOther(plugin: string) {
+    const other = this.#others.get(plugin);
+    if (!other) throw new Error(`${plugin} has no panel`);
+    this.#others.delete(plugin);
+    if (other.slot === "backdrop") this.backdrop = null;
+    else this.#removePanel(other.slot as "bottom" | "sidebar", other.owner);
+    this.emit("window.state", this.#windowFacts());
+  }
+  /**
+   * Simulate the user clicking a sidebar tab: `plugin`'s panel (the plugin
+   * under test's `manifestId`, or one of {@link TestHost.mountOther})
+   * becomes the current tab. Pushed as a `window.state` change.
+   *
+   * @since 1.5.2
+   */
+  selectTab(plugin: string) {
+    const slot = this.layout.sidebar;
+    const panel = slot?.panels?.find((entry) => entry.plugin === plugin);
+    if (!slot || !panel) throw new Error(`${plugin} has no sidebar tab`);
+    slot.owner = panel.owner;
+    this.emit("window.state", this.#windowFacts());
+  }
+  #addPanel(slot: "bottom" | "sidebar", panel: LayoutPanel) {
+    const state = this.layout[slot];
+    if (state) state.panels = [...(state.panels ?? []), panel];
+    else
+      this.layout[slot] = {
+        owner: panel.owner,
+        preferred: true,
+        effective: true,
+        reason: null,
+        detached: false,
+        panels: [panel],
+      };
+  }
+  #removePanel(slot: "bottom" | "sidebar", owner: number) {
+    const state = this.layout[slot];
+    if (!state) return;
+    const panels = state.panels ?? [];
+    const index = panels.findIndex((panel) => panel.owner === owner);
+    const rest = panels.filter((panel) => panel.owner !== owner);
+    if (rest.length === 0) {
+      this.layout[slot] = null;
+      return;
+    }
+    state.panels = rest;
+    if (state.owner === owner)
+      state.owner = (rest[index] ?? rest[rest.length - 1]!).owner;
   }
   /**
    * The display layer (`plugin.video.view()`): who owns it (this plugin is
@@ -2169,8 +2291,21 @@ export class TestHost implements Transport {
     },
     "ui.mount": (p) => {
       if (this.panel) throw new HostError("conflict", "owner already mounted");
-      if (p.slot === "backdrop" && this.backdrop)
-        throw new HostError("conflict", "another plugin shows the backdrop");
+      // Like the player: one panel in the bottom bar and the backdrop, tabs
+      // in the sidebar (up to 8).
+      const holder =
+        p.slot === "backdrop"
+          ? this.backdrop?.owner
+          : p.slot === "bottom"
+            ? this.layout.bottom?.panels?.[0]?.plugin
+            : undefined;
+      if (holder !== undefined || (p.slot === "bottom" && this.layout.bottom))
+        throw taken(`${SLOT_LABELS[String(p.slot)]}已被 ${holder} 使用`);
+      if (
+        p.slot === "sidebar" &&
+        (this.layout.sidebar?.panels?.length ?? 0) >= MAX_SIDEBAR_TABS
+      )
+        throw taken(`侧栏最多 ${MAX_SIDEBAR_TABS} 个页签`);
       this.#seeImages(p.properties as Record<string, Json>);
       const host = this;
       this.panel = {
@@ -2193,23 +2328,27 @@ export class TestHost implements Transport {
         return { status: "ready", prepareMs: 0, shellGeneration: 1 };
       }
       const slot = String(p.slot) as "bottom" | "sidebar";
-      this.layout[slot] = {
+      this.#addPanel(slot, {
         owner: 1,
-        preferred: true,
-        effective: true,
-        reason: null,
-        detached: false,
-      };
+        plugin: this.manifestId,
+        title:
+          typeof p.title === "string" && p.title ? p.title : this.manifestId,
+      });
       return { status: "ready", prepareMs: 0, shellGeneration: 1 };
     },
     "ui.unmount": () => {
       if (this.panel?.slot === "backdrop") this.backdrop = null;
       else if (this.panel)
-        this.layout[this.panel.slot as "bottom" | "sidebar"] = null;
+        this.#removePanel(this.panel.slot as "bottom" | "sidebar", 1);
       this.panel = null;
     },
     "ui.menu": (p) => {
       if (!this.panel) throw new HostError("unavailable", "panel not shown");
+      if (this.panel.slot === "sidebar" && this.layout.sidebar?.owner !== 1)
+        throw new HostError(
+          "unavailable",
+          "the panel's tab is not the current one",
+        );
       const items = p.items as (string | null)[];
       for (const id of items)
         if (id !== null && !this.commands.has(id))
@@ -2229,6 +2368,15 @@ export class TestHost implements Transport {
       if (!state) throw new HostError("missing", "no panel at this position");
       if (p.detached !== undefined && slot === "bottom")
         throw new HostError("invalid", "the bottom bar cannot be detached");
+      if (p.active !== undefined && p.active !== null) {
+        const panel = state.panels?.find((entry) => entry.plugin === p.active);
+        if (!panel)
+          throw new HostError(
+            "missing",
+            `${String(p.active)} has no panel at this position`,
+          );
+        state.owner = panel.owner;
+      }
       if (typeof p.visible === "boolean") {
         state.preferred = p.visible;
         state.effective = p.visible;
@@ -3307,7 +3455,15 @@ export async function startPlugin(
     host.app,
   );
   await activate(instance.plugin);
-  await instance.activated();
+  // Like the player: a position another plugin holds is not an activation failure.
+  for (;;) {
+    try {
+      await instance.activated();
+      break;
+    } catch (error) {
+      if (!(error instanceof Error && takenErrors.has(error))) throw error;
+    }
+  }
   await host.settle();
   return {
     /** The test host the plugin talks to. */
