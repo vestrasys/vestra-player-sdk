@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.0
+
+**Own visual identity: the Aurora palettes and the V-Line icons** (player 0.4.0). Additive; `apiVersion` stays `vestra/1`. Plugins that use the additions set `"minPlayerVersion": "0.4.0"`.
+
+- **`ThemeId` gains `"vestra-light"`**, a light palette whose video area stays dark. `plugin.appearance.set("vestra-light")` switches every view; `TestHost` accepts it like the player. A player older than 0.4.0 answers it with `vestra` (an id it does not have).
+- **New colours for `vestra`.** The palette is now Aurora, drawn from the logo's full spectrum: magenta accent (`#f72aa6`), cyan for what is playing (`Theme.playing`, `#2bb6ff`, violet before), `Theme.accent-fill` from amber through magenta and violet to cyan, and a visible `Theme.line` (`#2b2734`; it was near-black). Token names are unchanged; code that reads `Theme` follows.
+- **Rounder corners**: `Theme.radius-control` 4px (was 3px), `Theme.radius-panel` 8px (was 6px). Sizes are otherwise unchanged.
+- **`@vestra/icons.slint`** (new library file, `slint/vestra/icons.slint`): `Icon { name: "play"; color: Theme.text; }` draws one icon of the player's own set (round-capped 1.5px lines), and `Icons.commands(name)` / `box-width` / `box-height` / `line` give its path data. The names are listed in **Windows, panels, settings pages, dialogs and the OSD**.
+- **`@vestra/widgets.slint`**: the bar slider's thumb is a white core in a 2px accent ring; the panel slider's track is `Theme.line`; stroked icon buttons use round caps and joins; tooltips have rounded corners. Geometry and API are unchanged.
+- **std-widgets in a light palette**: the player still compiles plugin files with `fluent-dark` and switches the std-widgets colour scheme (`Palette.color-scheme`) to light for `vestra-light`, so `CheckBox`, `ComboBox`, `LineEdit`, `ScrollView` and the other std-widgets controls follow. The player's palette file (`slint/palette.slint`, not part of the library) now imports `std-widgets.slint` for that.
+
 ## 1.4.1
 
 Documentation only; no code or type changes.
