@@ -1614,19 +1614,20 @@ export interface Drops {
 }
 
 /**
- * The player's palettes. Today there is one, `vestra` (the default); a later
- * version may add more (a light palette, for example), so read colours from
- * `Theme` instead of branching on the id.
+ * The player's palettes: `vestra`, the dark default, and `vestra-light`
+ * (player 0.4.0, SDK 1.5.0), a light palette whose video area stays dark.
+ * Both draw on the logo's colours. Read colours from `Theme` instead of
+ * branching on the id: a later version may add palettes.
  *
  * @remarks
- * SDK 1.4.0 removed a second palette that earlier versions listed. The player
- * treats an id it does not have as `vestra`, so plugins built with an older
- * SDK that still ask for it keep working.
+ * The player treats an id it does not have as `vestra`: plugins built with an
+ * older SDK that still ask for a palette removed in SDK 1.4.0 keep working,
+ * and a player older than 0.4.0 answers `vestra-light` with `vestra`.
  *
  * @since 1.0.0
  * @category UI
  */
-export type ThemeId = "vestra";
+export type ThemeId = "vestra" | "vestra-light";
 
 /**
  * The player's palette, which every view uses. `plugin.appearance`.
@@ -1637,7 +1638,9 @@ export type ThemeId = "vestra";
  * and again when the palette changes. Slint code that reads its colours from
  * `Theme` (`import { Theme } from "@vestra/theme.slint"`) follows it with no
  * plugin code; hard-coded colours do not. Only colours change: corner radii,
- * font sizes and control sizes are the same in every palette.
+ * font sizes and control sizes are the same in every palette. A light palette
+ * also switches the std-widgets controls (`std-widgets.slint`) to their light
+ * colours, and keeps the video area dark.
  *
  * The player saves the choice; it stays after the plugin that set it stops.
  * Tell the user about a change yourself (for example with
@@ -1646,14 +1649,14 @@ export type ThemeId = "vestra";
  * @capability None to read `theme`; `events` to follow changes; `ui.theme`
  *   to change it.
  *
- * @example A menu item that selects the palette
+ * @example A menu item that selects the light palette
  * ```ts
  * plugin.commands.add({
- *   id: "vestra-colours",
- *   path: ["@settings", "Vestra colours"],
+ *   id: "light-colours",
+ *   path: ["@settings", "Light colours"],
  *   radio: true,
- *   checked: () => plugin.appearance.theme === "vestra",
- *   run: () => plugin.appearance.set("vestra"),
+ *   checked: () => plugin.appearance.theme === "vestra-light",
+ *   run: () => plugin.appearance.set("vestra-light"),
  * });
  * ```
  *
@@ -1710,7 +1713,7 @@ export interface Appearance {
    *
    * @example
    * ```ts
-   * await plugin.appearance.set("vestra");
+   * await plugin.appearance.set("vestra-light");
    * ```
    *
    * @since 1.0.0
