@@ -201,7 +201,7 @@ Complete plugins with tests, in [examples/](https://github.com/vestrasys/vestra-
 - menus: Radio menu items, separator groups and a menu item whose title changes. L6782–6941
 - theme-widgets: A tool window drawn with the player's theme and widgets. L6942–7105
 - markdown: A window that shows a Markdown document. L7106–7299
-- i18n: A plugin in the player's language: English source text, a Chinese translation. L7300–7516
+- i18n: A plugin in the player's language: English source text, a Chinese translation. L7300–7467
 
 ## Optional
 
