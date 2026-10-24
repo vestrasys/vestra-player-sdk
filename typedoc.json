@@ -26,7 +26,8 @@
   "searchInDocuments": true,
   "navigationLinks": {
     "GitHub": "https://github.com/vestrasys/vestra-player-sdk",
-    "npm": "https://www.npmjs.com/package/@vestra-player/sdk"
+    "npm": "https://www.npmjs.com/package/@vestra-player/sdk",
+    "llms.txt": "https://vestrasys.github.io/vestra-player-sdk/llms.txt"
   },
   "intentionallyNotExported": [
     "Filter",

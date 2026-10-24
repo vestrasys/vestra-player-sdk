@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.6
+
+**A reference for AI assistants.** Documentation and packaging only; no API change, `apiVersion` stays `vestra/1`. (1.5.5 was not published to npm; this release includes its changes.)
+
+- **`llms.txt` and `llms-full.txt`** ([llmstxt.org](https://llmstxt.org)) in the package, exported as `@vestra-player/sdk/llms.txt` and `@vestra-player/sdk/llms-full.txt` (in `node_modules/@vestra-player/sdk/`), and on the documentation site (`https://vestrasys.github.io/vestra-player-sdk/llms.txt`). For Vestra Player AI and other assistants that write plugins.
+  - `llms.txt` (about 10 KB): what a plugin is, the rules, the folder layout, a manifest with every field and the manifest limits, `activate`, every capability, a `TestHost` test, the command line, the common error codes, and the line numbers of each topic in the full file.
+  - `llms-full.txt` (about 300 KB): the guides (Getting started, the UI concept page, both how-tos), every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its description and its `@capability`, `@player`, `@param`, `@returns`, `@throws` and `@deprecated` tags, the internal types the API refers to, and each example's README, walkthrough and complete source (TypeScript, Slint, tests).
+  - Generated from the sources by `npm run docs:llms` (`scripts/llms.mjs`); CI fails when the committed files are stale.
+- **Getting started**: a "Rules for plugins" section (only the public SDK, `import type`, no other plugins, no system commands, macOS and Windows, your own id) and a manifest with every field.
+- `scripts/check-pack.mjs` allows the two files and checks that they name the package version; the install smoke test resolves both exports.
+
 ## 1.5.5
 
 **Reserved `vestra.` ids** (player 0.4.1). Documentation only; no API change, `apiVersion` stays `vestra/1`.

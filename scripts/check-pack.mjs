@@ -9,7 +9,7 @@
  *   maps, build info or stray files),
  * - every `exports` target and every `bin` entry of package.json is present,
  * - the tarball's package.json has the same name and version as the
- *   repository's.
+ *   repository's, and its llms.txt / llms-full.txt name that version.
  *
  * CI runs it on the tarball it uploads (and, on a release, publishes).
  */
@@ -28,6 +28,7 @@ const ALLOWED = [
   /^README\.md$/,
   /^CHANGELOG\.md$/,
   /^LICENSE$/,
+  /^llms(-full)?\.txt$/,
   /^bin\/[\w-]+\.mjs$/,
   /^slint\/[\w/-]+\.slint$/,
   /^dist\/[\w/-]+\.(js|d\.ts)$/,
@@ -73,6 +74,20 @@ if (inner.name !== manifest.name || inner.version !== manifest.version)
   problems.push(
     `tarball is ${inner.name}@${inner.version}, package.json is ${manifest.name}@${manifest.version}`,
   );
+
+for (const name of ["llms.txt", "llms-full.txt"]) {
+  const text = spawnSync(
+    "tar",
+    ["-xzOf", resolve(tarball), `package/${name}`],
+    {
+      encoding: "utf8",
+    },
+  ).stdout;
+  if (!text?.includes(`${manifest.name} ${manifest.version}`))
+    problems.push(
+      `${name} is not for ${manifest.name} ${manifest.version} (run npm run docs:llms)`,
+    );
+}
 
 if (problems.length) {
   for (const problem of problems) console.error(`::error::${problem}`);

@@ -14,6 +14,16 @@ This guide walks through a complete Vestra Player plugin: the files it is made o
 - Plugins are trusted code. Manifest capabilities are a contract that the player enforces per call (a missing one fails with `code: "capability"`), not a security sandbox.
 - The API is the same on macOS and Windows. A feature a system cannot provide fails with `unsupported`; each method documents its platform differences.
 
+## Rules for plugins
+
+Every plugin, in the official plugin repository or not, follows these rules. They keep plugins independent of each other and portable.
+
+- **Only the public SDK.** Import `@vestra-player/sdk` with `import type` only (a runtime import fails `vestra-plugin build`) and `@vestra-player/sdk/testing` only in tests. `@vestra-player/sdk/runtime` and the SDK's internal modules are for the player.
+- **No other plugins.** Do not import another plugin's code, read its directory or data directory, or talk to it privately (shared files, sockets, messages). A plugin must load, run and stop while no other plugin is installed. Plugins share only what the API makes public: player state, timeline marks, menus, settings pages.
+- **No system commands.** Do not run `open`, `sips`, `plutil`, `security`, `cmd`, `powershell` or similar. Use the API (`plugin.system` to open files and links, `plugin.clipboard`, `plugin.secrets`, `plugin.tools` for ffmpeg and ffprobe) or portable Node.js code. If the API lacks something every system needs, ask for it in the SDK repository.
+- **macOS and Windows.** The same code runs on both: build paths with `node:path`, write package paths with `/`, and handle `unsupported` where a method documents a platform difference.
+- **Your own id.** `<owner>.<name>`, where the owner is your GitHub user or organization. `vestra` and `vestra.*` are reserved for the plugins built into the player.
+
 ## Install
 
 ```sh
@@ -86,6 +96,29 @@ Optional display fields (player 0.2.0), shown by the plugin store and plugin man
 | `changelog`   | Same, default `CHANGELOG.md` when present.                                                    |
 | `sourceUrl`   | `https:` address of the source code.                                                          |
 | `license`     | 1–64 characters, preferably an SPDX expression such as `MIT`.                                 |
+
+A manifest with every field. `id`, `apiVersion`, `entry` and `capabilities` are required; without `version`, `vestra-plugin build` takes it from `--version` or `package.json`.
+
+```json
+{
+  "id": "me.hello",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "capabilities": ["commands", "ui.osd"],
+  "minPlayerVersion": "0.4.1",
+  "name": "Hello",
+  "author": "Me",
+  "punchline": "Says hello from the Tools menu.",
+  "description": "A first plugin.\nIt adds Tools ▸ Hello, which shows an on-screen message.",
+  "tags": ["example"],
+  "icon": "assets/icon.png",
+  "readme": "README.md",
+  "changelog": "CHANGELOG.md",
+  "sourceUrl": "https://github.com/me/hello",
+  "license": "MIT"
+}
+```
 
 Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`. The `vestra.` prefix (and the id `vestra`, in any case) is reserved for the plugins built into the player: from player 0.4.1 the player refuses to install or trial such a package (`reserved`). Every other plugin is a third-party plugin, including those hosted in the official repository.
 
