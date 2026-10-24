@@ -428,6 +428,51 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
   }
 });
 
+test("storage: overlapping saves and flushes, also of one file opened twice, all land", async () => {
+  const data = mkdtempSync(join(tmpdir(), "vestra-storage-"));
+  try {
+    let plugin!: Plugin;
+    const { stop } = await startPlugin((p: Plugin) => void (plugin = p), {
+      capabilities: [],
+      dataDirectory: data,
+    });
+    const errors: unknown[] = [];
+    plugin.onError((error) => errors.push(error));
+    const open = () =>
+      plugin.storage.json<Settings>("settings", {
+        defaults: { volume: 0 },
+        validate: isSettings,
+        debounceMs: 0,
+      });
+    // Two handles on settings.json: each writes in its own order, both at once.
+    const one = open();
+    const two = open();
+    for (let volume = 1; volume <= 200; volume++) {
+      one.save({ volume });
+      two.save({ volume: -volume });
+      const flushes = [one.flush(), two.flush()];
+      one.save({ volume: volume + 1000 }); // the debounce timer races the flush
+      if (volume % 7 === 0)
+        await new Promise((resolve) => setImmediate(resolve));
+      await Promise.all(flushes);
+    }
+    await Promise.all([one.flush(), two.flush()]);
+    await stop();
+    assert.deepEqual(errors, []);
+    // Writes to one file go in call order, whichever handle made them.
+    assert.deepEqual(
+      JSON.parse(readFileSync(join(data, "settings.json"), "utf8")),
+      { volume: 1200 },
+    );
+    assert.deepEqual(
+      readdirSync(data).filter((name) => name.includes(".tmp")),
+      [],
+    );
+  } finally {
+    rmSync(data, { recursive: true, force: true });
+  }
+});
+
 // Windows has no POSIX permission bits: Node reports 0o666 for any writable file.
 test(
   "storage files are owner-only (0600)",
