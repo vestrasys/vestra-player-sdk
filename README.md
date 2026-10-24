@@ -33,7 +33,13 @@ npm i -D @vestra-player/sdk   # Node.js 26 or newer
 `manifest.json` and `main.ts`:
 
 ```json
-{ "id": "examples.hello", "version": "0.1.0", "apiVersion": "vestra/1", "entry": "main.ts", "capabilities": ["commands", "ui.osd"] }
+{
+  "id": "examples.hello",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "capabilities": ["commands", "ui.osd"]
+}
 ```
 
 ```ts
@@ -54,33 +60,34 @@ Run `npx vestra-plugin pack` to check and package it, or start the player with `
 
 Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples). The [examples page](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html) shows each one with a screenshot and a step-by-step walkthrough.
 
-| Example | What you learn | Walkthrough |
-| --- | --- | --- |
-| [hello](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello) | The smallest plugin: a manifest, one menu command, an on-screen message. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Hello.html) |
-| [blur](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur) | Video filters, a tool window with live controls, a shortcut, a settings page, remembered state. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Blur.html) |
-| [signal-generator](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator) | Generating video and audio frames yourself, phase-continuous audio, audio filters, stream lifecycle. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Signal_generator.html) |
-| [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) | Reading and controlling playback from a tool window. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Bookmark.html) |
-| [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) | A sidebar panel with its own context menu, panel-only keys and next/previous. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Panel_menu.html) |
-| [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) | Menus (radio items, groups, changing titles), repeating keys, the shared sidebar, theme widgets. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Core_UI.html) |
-| [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown) | The Markdown view with local and remote images; the manifest's display fields. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Markdown.html) |
+| Example                                                                                                | What you learn                                                           | Walkthrough                                                                                            |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| [hello](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello)                       | The smallest plugin: a manifest, one menu command, an on-screen message. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Hello.html)                     |
+| [blur](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur)                         | A video filter driven by one slider in a tool window.                    | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Blur.html)             |
+| [signal-generator](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator) | Generating video and audio frames yourself: colour bars and a sine tone. | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Signal_generator.html) |
+| [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark)                 | A tool window bound to the playback state, with Mark and Jump buttons.   | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Bookmark.html)         |
+| [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu)             | A sidebar panel with its own right-click menu.                           | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Panel_menu.html)       |
+| [menus](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/menus)                       | Radio items, separator groups and a menu item whose title changes.       | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Menus.html)            |
+| [theme-widgets](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/theme-widgets)       | A tool window drawn with the player's theme and widgets.                 | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Theme_widgets.html)    |
+| [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown)                 | A window that shows a Markdown document.                                 | [Step by step](https://vestrasys.github.io/vestra-player-sdk/documents/Example__Markdown.html)         |
 
 ## Command line
 
-| Command | Does |
-| --- | --- |
-| `vestra-plugin check [dir...]` | Checks the manifest, then a strict type check of the plugin and its tests. |
-| `vestra-plugin test [dir...]` | Runs `node --test` on `tests/*.test.{ts,mjs}`. |
-| `vestra-plugin build [dir...] [--version x.y.z]` | Writes `dist/`: types stripped, files copied, manifest versioned. |
-| `vestra-plugin pack [dir...] [--version x.y.z] [--out dir]` | Builds, then packs `dist/` as `<id>-<version>.vxp`. |
+| Command                                                     | Does                                                                       |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `vestra-plugin check [dir...]`                              | Checks the manifest, then a strict type check of the plugin and its tests. |
+| `vestra-plugin test [dir...]`                               | Runs `node --test` on `tests/*.test.{ts,mjs}`.                             |
+| `vestra-plugin build [dir...] [--version x.y.z]`            | Writes `dist/`: types stripped, files copied, manifest versioned.          |
+| `vestra-plugin pack [dir...] [--version x.y.z] [--out dir]` | Builds, then packs `dist/` as `<id>-<version>.vxp`.                        |
 
 ## Compatibility
 
-| SDK | Plugin API | Vestra Player | Node.js |
-| --- | --- | --- | --- |
-| 1.0 | `vestra/1` | 0.1 or newer | 22.18 or newer |
-| 1.1 | `vestra/1` | 0.2 or newer for the 1.1 additions | 22.18 or newer |
-| 1.2 | `vestra/1` | 0.2 or newer | 26 (shipped with the player) |
-| 1.3 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions (menu ids, `Theme.danger`, empty video chains) | 26 (shipped with the player) |
+| SDK | Plugin API | Vestra Player                                                                             | Node.js                      |
+| --- | ---------- | ----------------------------------------------------------------------------------------- | ---------------------------- |
+| 1.0 | `vestra/1` | 0.1 or newer                                                                              | 22.18 or newer               |
+| 1.1 | `vestra/1` | 0.2 or newer for the 1.1 additions                                                        | 22.18 or newer               |
+| 1.2 | `vestra/1` | 0.2 or newer                                                                              | 26 (shipped with the player) |
+| 1.3 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions (menu ids, `Theme.danger`, empty video chains)    | 26 (shipped with the player) |
 | 1.4 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions. `ThemeId` is `"vestra"` only (see the CHANGELOG) | 26 (shipped with the player) |
 | 1.5 | `vestra/1` | 0.2 or newer; 0.3 for the 1.3 additions; 0.4 for the 1.5 additions (`vestra-light`, `@vestra/icons.slint`) | 26 (shipped with the player) |
 

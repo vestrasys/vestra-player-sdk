@@ -1,0 +1,40 @@
+// The Blur window: one slider. Walkthrough: docs/examples/blur.md.
+import { Theme } from "@vestra/theme.slint";
+import { Slider } from "@vestra/widgets.slint";
+
+export component BlurWindow inherits Window {
+    title: "Blur";
+    width: 280px;
+    background: Theme.bg-panel;
+
+    in-out property <float> strength;
+    in property <string> problem;
+    callback strength-changed(float);
+
+    VerticalLayout {
+        padding: Theme.dialog-padding;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 8px;
+            Slider {
+                minimum: 0;
+                maximum: 10;
+                value <=> root.strength;
+                changed(value) => { root.strength-changed(value); }
+            }
+            Text {
+                width: 24px;
+                text: round(root.strength * 10) / 10;
+                color: Theme.text;
+                font-size: Theme.font-body;
+                horizontal-alignment: right;
+            }
+        }
+        Text {
+            text: root.problem;
+            color: Theme.danger;
+            font-size: Theme.font-body;
+            wrap: word-wrap;
+        }
+    }
+}

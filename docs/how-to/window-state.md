@@ -19,7 +19,13 @@ The **Brightness** window from [Keep a slider responsive while dragging](slider.
   "apiVersion": "vestra/1",
   "entry": "main.ts",
   "minPlayerVersion": "0.3.0",
-  "capabilities": ["commands", "ui.window", "processing.video", "playback.read", "events"]
+  "capabilities": [
+    "commands",
+    "ui.window",
+    "processing.video",
+    "playback.read",
+    "events"
+  ]
 }
 ```
 
@@ -65,7 +71,13 @@ export default async function activate(plugin: Plugin) {
   const filter = plugin.video.filter("brightness");
   const apply = () =>
     filter.set([
-      { kind: "eq", brightness: store.value.brightness, contrast: 1, saturation: 1, gamma: 1 },
+      {
+        kind: "eq",
+        brightness: store.value.brightness,
+        contrast: 1,
+        saturation: 1,
+        gamma: 1,
+      },
     ]);
   apply(); // the effect is back before the window is
 
@@ -106,7 +118,7 @@ export default async function activate(plugin: Plugin) {
 - **Load once, at activation.** `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin. Always pass a `validate` function: the file is outside your control.
 - **Bind the stored value, not a copy.** `window.bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window, and a window opened later starts with the current values.
 - **Save on every change; the store debounces.** `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename). Dragging the slider writes the file once, after the drag. When the plugin stops (the player quits, the user disables the plugin), the store is flushed, so the last value is not lost.
-- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (title-bar button, ⌘W, Ctrl+W, Ctrl+F4). When the player quits, the plugin stops and its windows close *without* `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
+- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (title-bar button, ⌘W, Ctrl+W, Ctrl+F4). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
 - **Restore after binding.** The window is created and bound before `open()` runs, so it opens with the stored values and without flashing defaults. If it cannot open (for example in a player without a user interface), the plugin forgets that it was open instead of failing activation.
 
 ## What you cannot restore
@@ -117,7 +129,7 @@ export default async function activate(plugin: Plugin) {
 ## Variations
 
 - **Several windows from one file** (one per document, created with `windows.create(file, { id })`): store an object keyed by the window id and restore each one.
-- **Preferences rather than state:** a choice such as "reopen my windows at startup" belongs on a settings page ({@link "@vestra-player/sdk"!Settings.page | plugin.settings.page}) that reads and writes the same store; the [blur example](../examples/blur.md) does this with `restoreOnStart`.
+- **Preferences rather than state:** a choice such as "reopen my windows at startup" belongs on a settings page ({@link "@vestra-player/sdk"!Settings.page | plugin.settings.page}) that reads and writes the same store (the `SettingsPage` reference has an example).
 - **Large or binary data:** write your own files in {@link "@vestra-player/sdk"!Plugin.dataDirectory | plugin.dataDirectory} (to a temporary name, then rename) and keep only small settings in `storage.json`.
 
 ## See also

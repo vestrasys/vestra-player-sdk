@@ -21,7 +21,14 @@ A **Brightness** window with a slider from −1 to 1, a value label and a Reset 
   "apiVersion": "vestra/1",
   "entry": "main.ts",
   "minPlayerVersion": "0.3.0",
-  "capabilities": ["commands", "ui.window", "ui.osd", "processing.video", "playback.read", "events"]
+  "capabilities": [
+    "commands",
+    "ui.window",
+    "ui.osd",
+    "processing.video",
+    "playback.read",
+    "events"
+  ]
 }
 ```
 
@@ -81,7 +88,9 @@ export default async function activate(plugin: Plugin) {
   // A filter keeps one request in flight and sends only the newest value.
   const filter = plugin.video.filter("brightness");
   const apply = () =>
-    filter.set([{ kind: "eq", brightness, contrast: 1, saturation: 1, gamma: 1 }]);
+    filter.set([
+      { kind: "eq", brightness, contrast: 1, saturation: 1, gamma: 1 },
+    ]);
 
   const window = plugin.windows.create("ui/brightness.slint");
   // Derived from the model: sent only when it changes.
@@ -110,7 +119,7 @@ export default async function activate(plugin: Plugin) {
 ## Why this stays smooth
 
 1. **The callback does not wait.** `brightnessChanged` updates a variable and calls `filter.set()`, which returns at once. The SDK runs the next callback as soon as it arrives.
-2. **The expensive part keeps only the newest value.** `filter.set()` has *latest-value* semantics: while one request is in flight, newer values replace each other and only the last one is sent. A fast drag costs a request per round trip to the player, not one per pointer move, and the video ends exactly where the slider stopped.
+2. **The expensive part keeps only the newest value.** `filter.set()` has _latest-value_ semantics: while one request is in flight, newer values replace each other and only the last one is sent. A fast drag costs a request per round trip to the player, not one per pointer move, and the video ends exactly where the slider stopped.
 3. **The slider's value is bound, not set.** `bind` sends `brightness` only when it differs from what was sent last, and the player skips a write that equals what the slider already shows. So the plugin never fights the user's pointer, yet Reset (which changes the model) moves the thumb.
 4. **Work that should happen once happens on release.** The on-screen message (and anything like saving or logging) waits for `brightnessReleased`, which fires once per drag.
 
@@ -118,16 +127,16 @@ The Slint side needs two things: an `in-out` property and a two-way binding (`va
 
 ## Which calls keep only the newest value
 
-| Latest value wins (safe on every move) | One request per call (do not call on every move) |
-| --- | --- |
+| Latest value wins (safe on every move)                                                                                 | One request per call (do not call on every move)                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | {@link "@vestra-player/sdk"!VideoFilter VideoFilter}`.set`, {@link "@vestra-player/sdk"!AudioFilter AudioFilter}`.set` | {@link "@vestra-player/sdk"!Player.seek player.seek}: use {@link "@vestra-player/sdk"!Player.scrub player.scrub()} and `Scrub.seek` for a seek slider |
-| {@link "@vestra-player/sdk"!Player.setOutput player.setOutput} (volume, mute) | `player.setRate` and other player controls |
-| `Scrub.seek` (about one seek per display frame) | {@link "@vestra-player/sdk"!Osd.show osd.show}: show a message on release |
-| View properties (`bind`, `set`), {@link "@vestra-player/sdk"!OsdPanel.set OsdPanel.set} | `JsonStore.save` is debounced (300 ms), so it is fine; anything you write yourself is not |
+| {@link "@vestra-player/sdk"!Player.setOutput player.setOutput} (volume, mute)                                          | `player.setRate` and other player controls                                                                                                            |
+| `Scrub.seek` (about one seek per display frame)                                                                        | {@link "@vestra-player/sdk"!Osd.show osd.show}: show a message on release                                                                             |
+| View properties (`bind`, `set`), {@link "@vestra-player/sdk"!OsdPanel.set OsdPanel.set}                                | `JsonStore.save` is debounced (300 ms), so it is fine; anything you write yourself is not                                                             |
 
 ## When the slow part is your own code
 
-If a move triggers your own asynchronous work (rendering a preview with `plugin.tools.run`, a network request), do not `await` it per callback: the SDK starts every callback without waiting for the previous one, so slow runs overlap and can finish out of order, leaving an *older* result on screen. Give that work latest-value semantics yourself:
+If a move triggers your own asynchronous work (rendering a preview with `plugin.tools.run`, a network request), do not `await` it per callback: the SDK starts every callback without waiting for the previous one, so slow runs overlap and can finish out of order, leaving an _older_ result on screen. Give that work latest-value semantics yourself:
 
 ```ts
 import type { Plugin } from "@vestra-player/sdk";
@@ -171,5 +180,5 @@ export default async function activate(plugin: Plugin) {
 ## See also
 
 - [Windows, panels, settings pages, dialogs and the OSD](../concepts/ui.md): set, bind and the update pass.
-- The [blur example](../examples/blur.md) (a strength slider on a video filter) and the [signal generator](../examples/signal-generator.md) (sliders that change generated audio live).
+- The [blur example](../examples/blur.md) (a strength slider on a video filter).
 - {@link "@vestra-player/sdk"!View | View}, {@link "@vestra-player/sdk"!Scope.update | Scope.update}, {@link "@vestra-player/sdk"!Player.scrub | Player.scrub}
