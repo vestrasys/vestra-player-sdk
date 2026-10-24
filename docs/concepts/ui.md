@@ -150,7 +150,7 @@ Helper components without `export` are allowed in every file. The player appends
 ### Names and values
 
 - Write names in camelCase or kebab-case in TypeScript: the SDK turns every capital letter into `-` plus the lower-case letter (`canMark` → `can-mark`, `strengthChanged` → `strength-changed`). Fields inside struct values are **not** converted, so spell struct fields exactly as the Slint struct does (and without `_`, which Slint treats as `-`).
-- Values must be JSON: booleans, numbers, strings, arrays (Slint models) and objects (Slint structs). Two exceptions, each only as the **whole** value of a property: an image from {@link "@vestra-player/sdk"!Ui.image | ui.image} for an `image` property, and a document from {@link "@vestra-player/sdk"!Ui.markdown | ui.markdown} for a `[MarkdownBlock]` property.
+- Values must be JSON: booleans, numbers, strings, arrays (Slint models) and objects (Slint structs). Two exceptions: an image from {@link "@vestra-player/sdk"!Ui.image | ui.image}, only as the **whole** value of an `image` property (nested in an array or object it is `invalid`), and a document from {@link "@vestra-player/sdk"!Ui.markdown | ui.markdown} wherever the Slint type is `[MarkdownBlock]`: the whole value, or (SDK 1.5.4, the player after 0.4.0) a field at any depth, such as the `body` of each message in a chat list.
 - Every name must exist in the Slint file. Writing a property the file does not declare makes a tool window's `show()` or a panel's `ready` fail, and in a settings page it keeps the Options window from opening; for a tool window, so does a callback bound with `on()` that the file does not declare. Once the view is open, such writes are reported to {@link "@vestra-player/sdk"!Scope.onError | onError}.
 
 ### set, bind and the update pass
@@ -197,7 +197,7 @@ Plugin Slint files import the player's design tokens and widgets:
 import { Theme } from "@vestra/theme.slint";
 import { Icon } from "@vestra/icons.slint";
 import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint";
-import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
+import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
 ```
 
 - **Colours follow the player's palette.** The player has two palettes, `vestra` (dark, the default) and `vestra-light` (player 0.4.0, SDK 1.5), both drawn from the logo's colours: a magenta accent, cyan for what is playing, an amber → magenta → violet → cyan gradient for fills (see {@link "@vestra-player/sdk"!Appearance | plugin.appearance}). It sets the palette on every view before it appears and again when the user switches, so `Theme` colours change with it. Colours you hard-code do not. `Theme` properties are read-only.
@@ -207,6 +207,29 @@ import { MarkdownView, MarkdownBlock } from "@vestra/markdown.slint";
 - Control sizes and spacing: `button-height` 21px, `input-height` 21px, `form-row-gap` 26px, `dialog-padding` 14px, `radius-control` 4px (controls, rows, hover plates), `radius-panel` 8px (menus, panels) and others; the full list is the SDK's read-only copy in [`slint/vestra/theme.slint`](https://github.com/vestrasys/vestra-player-sdk/blob/main/slint/vestra/theme.slint). Player 0.4.0 rounded the corners (3px and 6px before).
 - **Icons** (player 0.4.0, SDK 1.5): `Icon { name: "play"; color: Theme.text; }` draws one icon of the player's own set: round-capped 1.5px lines (1.25px for small glyphs), never filled, in the icon's own box (its default size; set `width` and `height` to scale). Names: `play`, `pause`, `stop`, `back`, `forward`, `open`, `volume`, `mute`, `playlist`, `detach`, `attach`, `close`, `failed`, `move-top`, `move-up`, `move-down`, `move-bottom`, `search`, `chapter`, `bookmark`, `check-task`, `check-box`, `menu-check`, `submenu`, `scroll-up`, `scroll-down`, `caret-down`, `sort-asc`, `sort-desc`, `tag-remove`, `preview-play`, `add`, `remove`, `sort`; `Icons.commands(name)`, `Icons.box-width(name)`, `Icons.box-height(name)` and `Icons.line(name)` give the path data for your own `Path`. Plugins that use it set `"minPlayerVersion": "0.4.0"`.
 - Every plugin file is compiled with Slint's `fluent-dark` style, so `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `Switch`, `LineEdit`…) are dark too; in `vestra-light` the player switches them to their light colours (`Palette.color-scheme`) at run time. Do not set `Palette.color-scheme` yourself.
+- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a 复制 button on code blocks that reports `copy-code(code)`; copy it with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}. A chat window:
+
+  ```slint
+  import { ListView } from "std-widgets.slint";
+  import { MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
+  export struct Message { id: string, role: string, body: [MarkdownBlock] }
+  export component Chat inherits Window {
+      in property <[Message]> messages;
+      callback copy-code(string);
+      ListView {
+          for message in root.messages: VerticalLayout {
+              padding: 8px;
+              MarkdownBlocks {
+                  blocks: message.body;
+                  code-copy: true;
+                  copy-code(code) => { root.copy-code(code); }
+              }
+          }
+      }
+  }
+  ```
+
+  Write the list with a document per row (`messages: [{ id, role, body: await plugin.ui.markdown(text) }]`). The player parses only the documents that changed and updates the list in place (rows added or removed at the end, a growing message's changed blocks), so re-sending the whole list on every streamed chunk keeps the scroll position and costs little.
 - For editor support, point the Slint language server's `libraryPaths` at the copy in the SDK package: `{ "vestra": "node_modules/@vestra-player/sdk/slint/vestra" }`.
 
 ## Sizes

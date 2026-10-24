@@ -11,6 +11,7 @@ import type {
   Plugin,
   PluginError,
 } from "../src/plugin/types.ts";
+import type { Json } from "../src/wire.ts";
 import { MARKDOWN_LIMITS } from "../src/plugin/markdown.ts";
 
 const rejects = async (promise: Promise<unknown>, code: string) =>
@@ -239,6 +240,69 @@ test("ui.markdown: sent as a property value, refused after its scope is released
   assert.equal(errors.at(-1)?.code, "invalid");
   assert.equal(host.markdown(host.window("readme").props.doc)?.text, "**hi**");
   assert.equal(existsSync(directory), true);
+  await stop();
+});
+
+test("ui.markdown: documents at any depth of a value (chat rows), released ones refused", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "md-rows-"));
+  writeFileSync(
+    join(directory, "chat.slint"),
+    'import { MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";\nexport struct Message { id: string, body: [MarkdownBlock] }\nexport component Chat inherits Window { in property <[Message]> messages; for m in root.messages: MarkdownBlocks { blocks: m.body; } }\n',
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({ id: "test.chat", capabilities: ["ui.window"] }),
+  );
+  const errors: PluginError[] = [];
+  let plugin!: Plugin;
+  const { host, stop } = await startPlugin(
+    (p: Plugin) => {
+      plugin = p;
+      p.onError((error) => errors.push(error));
+    },
+    { directory },
+  );
+  const chat = plugin.windows.create("chat.slint");
+  const messages = [
+    {
+      id: "m1",
+      body: await plugin.ui.markdown("**你好**", { remoteImages: false }),
+    },
+  ];
+  chat.bind(() => ({ messages }));
+  await chat.show();
+  await host.settle();
+  const shown = () =>
+    (host.window("chat").props.messages as { id: string; body: Json }[]).map(
+      (m) => host.markdown(m.body)?.text,
+    );
+  assert.deepEqual(shown(), ["**你好**"]);
+  // A streamed reply: the last row's document is replaced on every update.
+  messages.push({ id: "m2", body: await plugin.ui.markdown("第") });
+  plugin.update();
+  await host.settle();
+  messages[1]!.body = await plugin.ui.markdown("第二条");
+  plugin.update();
+  await host.settle();
+  assert.deepEqual(shown(), ["**你好**", "第二条"]);
+  assert.equal(errors.length, 0);
+  // A released document is refused wherever it is; the view keeps its value.
+  const child = plugin.scope();
+  const old = await child.ui.markdown("old");
+  await child.dispose();
+  chat.set({ messages: [{ id: "m3", body: old }] });
+  await host.settle();
+  assert.equal(errors.at(-1)?.code, "invalid");
+  assert.deepEqual(shown(), ["**你好**", "第二条"]);
+  // An image only as the whole value (another window: only the first
+  // failure of a streak is reported).
+  const other = plugin.windows.create("chat.slint", { id: "other" });
+  await other.show();
+  const cover = plugin.ui.image(join(directory, "cover.png"));
+  other.set({ messages: [{ id: "m4", body: cover as never }] });
+  await host.settle();
+  assert.equal(errors.at(-1)?.code, "invalid");
+  assert.match(errors.at(-1)!.message, /whole value/);
   await stop();
 });
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.4
+
+**Markdown in list rows** (the player after 0.4.0). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.3 need no change.
+
+- **A `MarkdownRef` at any depth.** A document from `plugin.ui.markdown` may now be a field at any depth of a property value, wherever the Slint type is `[MarkdownBlock]`: for example the `body` of each row of a chat's `[Message]` list. Before, it could only be the whole value of a `[MarkdownBlock]` property. `PropValue` is now `PropData | ImageRef`, where the new **`PropData`** is JSON whose values may also be `MarkdownRef`s, at any depth. A released document is refused with `invalid` wherever it is in the value. An `ImageRef` stays a whole value only: nested in an array or object it is `invalid` (a type error in TypeScript, and refused by the SDK and the player). Older players refuse a nested document like any value they cannot convert.
+- **Limits:** a document still holds at most 256 KB of text, 4000 blocks and 64 images; all of a value's text, its documents' text included, counts toward the value's 1 MiB; each document is one of its 4096 values.
+- **`MarkdownBlocks`** (new in `@vestra/markdown.slint`): the blocks of a document without scrolling, as tall as their content, for your own layout or a `ListView` row. `in [MarkdownBlock] blocks`, `in bool code-copy` (default `false`), callbacks `link-clicked(string)` and `copy-code(string)`. `MarkdownView` is now a `ScrollView` around it and gains the same `code-copy` and `copy-code`; it looks as before.
+- **Code copy, opt in.** With `code-copy: true`, code blocks get a 复制 button that reports `copy-code(code)` with the block's text; the plugin copies it (`plugin.clipboard.writeText`). Off by default: views that do not set it look and behave as before.
+- **Cheaper updates** (player): writing a value again with unchanged documents does not parse them again (a new reference for the same text included), and a value with documents is updated in place where its shape allows: changed rows, rows added or removed at the end, and only the changed blocks of a changed document. Streaming a reply into the last row of a 200-message list therefore keeps the list, its scroll position and the other rows. Nothing to change in plugins.
+- `TestHost` keeps nested documents in the view's properties as they were sent; `host.markdown(value)` reads one back from a field (`host.markdown(rows[0].body)`).
 ## 1.5.3
 
 **File resolvers: local files as generated streams** (player 0.4.1). Additive; `apiVersion` stays `vestra/1`. Plugins that register one set `"minPlayerVersion": "0.4.1"`: an older player refuses the declaration (`invalid`).

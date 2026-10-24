@@ -580,18 +580,31 @@ export interface ImageRef {
 }
 
 /**
- * A Markdown document for `MarkdownView`, made by {@link Ui.markdown}.
+ * A Markdown document for `MarkdownView` or `MarkdownBlocks`, made by
+ * {@link Ui.markdown}.
  *
  * @remarks
- * Opaque, like {@link ImageRef}: pass it as the whole value of a
- * `[MarkdownBlock]` property (the `blocks` of `MarkdownView` from
- * `@vestra/markdown.slint`). It carries the text, the base address and the
- * local copies of its remote images; the player parses and draws it. It
- * belongs to the scope that created it: once that scope is disposed, writing
- * it fails with `invalid`.
+ * Opaque, like {@link ImageRef}: pass it where the Slint type is
+ * `[MarkdownBlock]`: the whole value of such a property (the `blocks` of
+ * `MarkdownView` from `@vestra/markdown.slint`) or, from SDK 1.5.4, a
+ * `[MarkdownBlock]` field at any depth of a property value, such as the
+ * `body` of each row of a chat's message list. It carries the text, the
+ * base address and the local copies of its remote images; the player parses
+ * and draws it. Writing a document whose text did not change (a new
+ * reference for the same text included) costs the player no parsing, and a
+ * changed document updates only the blocks that changed. It belongs to the
+ * scope that created it: once that scope is disposed, writing it fails with
+ * `invalid`, wherever it is in the value.
  *
- * @player 0.2.0
- * @see {@link Ui.markdown}, {@link MarkdownOptions}
+ * @example Chat messages, one document per row
+ * ```ts
+ * const chat = plugin.windows.create("ui/chat.slint");
+ * const body = await plugin.ui.markdown("**Hello**", { remoteImages: false });
+ * chat.set({ messages: [{ id: "m1", role: "assistant", body }] });
+ * ```
+ *
+ * @player 0.2.0; nested in a value: the player after 0.4.0
+ * @see {@link Ui.markdown}, {@link MarkdownOptions}, {@link PropValue}
  * @since 1.1.0
  * @category UI
  */
@@ -627,8 +640,9 @@ export interface MarkdownOptions {
 }
 
 /**
- * The value of one Slint property: JSON, or an image or a Markdown document
- * as the whole value of a property.
+ * The value of one Slint property: JSON with Markdown documents at any
+ * depth ({@link PropData}), or an image as the whole value of an `image`
+ * property.
  *
  * @remarks
  * JSON becomes Slint values as you would expect: booleans for `bool`,
@@ -638,14 +652,43 @@ export interface MarkdownOptions {
  * is refused (Slint treats `_` and `-` as the same, so use camelCase or
  * kebab-case).
  *
- * Limits per value: nesting depth 8, 4096 values in total, 1024 rows per
- * array, 64 KiB per string and 1 MiB of text in total. A value over a limit
- * is a failed write (see {@link View}).
+ * A {@link MarkdownRef} goes where the Slint type is `[MarkdownBlock]`: the
+ * whole value, or a field at any depth (SDK 1.5.4; older players refuse a
+ * nested one). An {@link ImageRef} only as the whole value: nested in an
+ * array or object it is `invalid`.
+ *
+ * Limits per value: nesting depth 8, 4096 values in total (a document is
+ * one), 1024 rows per array, 64 KiB per string and 1 MiB of text in total,
+ * the text of its Markdown documents included (256 KB per document). A
+ * value over a limit is a failed write (see {@link View}).
  *
  * @since 1.0.0
  * @category UI
  */
-export type PropValue = Json | ImageRef | MarkdownRef;
+export type PropValue = PropData | ImageRef;
+
+/**
+ * JSON whose values may also be Markdown documents, at any depth: the part
+ * of {@link PropValue} that nests.
+ *
+ * @example A message list whose rows carry a document
+ * ```ts
+ * const messages: PropData = [
+ *   { id: "m1", role: "user", body: await plugin.ui.markdown("Hi") },
+ * ];
+ * ```
+ *
+ * @since 1.5.4
+ * @category UI
+ */
+export type PropData =
+  | null
+  | boolean
+  | number
+  | string
+  | MarkdownRef
+  | PropData[]
+  | { [key: string]: PropData };
 
 /**
  * Properties to write to a view, by name.
