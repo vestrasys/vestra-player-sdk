@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.3
+
+**File resolvers: local files as generated streams** (player 0.4.1). Additive; `apiVersion` stays `vestra/1`. Plugins that register one set `"minPlayerVersion": "0.4.1"`: an older player refuses the declaration (`invalid`).
+
+- **`resolvers.add({ id, extensions, resolve })`** (`FileResolverOptions`). When anyone opens a local file of those extensions with `player.open` (the Open dialog, the playlist, next / previous, the recent list), the player asks this plugin for a stream instead of playing the file. `resolve(path, signal)` returns a `ResolvedStream`: `{ kind: "stream", width, height, frame, started? }`, with the frame contract of `openStream`. Needs `source.resolve` and `producer.av`. `ResolverOptions` is now the union of `WebResolverOptions` (the existing form) and `FileResolverOptions`.
+  - The open keeps its arbitration: its `ifCurrent` and operation (the opener's `open` / `media.ready()` settle as usual), and `paused` reaches the stream's start. `state.source` stays the path, `state.kind` is `"stream"`.
+  - Cancellation: `signal` aborts when the open is replaced or closed (`player.close()` included), times out (30 s) or the resolver is disposed. Cancelled after `resolve` returned but before the stream ran, the SDK releases the stream and never calls `started`.
+  - `started(stream)` is called synchronously right after activation, before any `onStop`; the `Stream` is the same as `openStream`'s and belongs to the resolver's plugin.
+  - Extensions: 1–16 entries of 1–16 lower-case letters or digits, not `"folder"`; only absolute local paths match (any case), URLs never do.
+- **One extension, and one scheme + host pair, has one resolver.** Another plugin's makes `Resolver.ready` reject with `conflict` (reason `resolver-taken` on the wire), and that no longer fails activation, for web resolvers too (as for panels and the sequence since 1.5.2); the player shows a warning (`PluginInfo.warnings`: `code` `"resolver-taken"`, `owner`, the new `target`). The plugin's own second claim still fails activation.
+- **Resolver failures are sent as the error's message** (`error.message`, was `String(error)`, e.g. `"Error: …"`), and the player shows them word for word (it prefixed `resolver failed: `). This changes the failure text of web resolvers too.
+- **Docs**: `PlayerState.source` documents the naming of generated streams: `producer://<n>` (opaque) for `openStream`, the path for a file resolver's; tell streams apart by `kind`.
+- **`TestHost`** simulates file resolutions: opening a matching path (`player.open`, `openElsewhere`) sends `source.resolveRequest` and keeps the open pending; the answer selects the stream (or fails the open); any later source change cancels it (`source.resolveCancel`). `resolutions` lists the pending ones, `otherResolvers` simulates other plugins' registrations (conflicts). `startPlugin` does not fail activation for such a conflict. Web resolutions are still driven by the test (emit `source.resolveRequest`).
+- Internals: `openStream` is split into prepare / activate / abandon steps shared with file resolvers; the wire client (`sourceResolvers.register`) takes a `{ id, extensions }` declaration and a handler answer with the prepared producer.
+
 ## 1.5.2
 
 **Sidebar tabs** (the player after 0.4.0). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.1 need no change. The new members work against older players too (see each one).

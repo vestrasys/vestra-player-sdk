@@ -2843,7 +2843,12 @@ export interface PlayerState {
   readonly kind: "media" | "stream";
   /** The source's life cycle. */
   readonly phase: "empty" | "loading" | "ready" | "ended" | "error";
-  /** Path or URL. */
+  /**
+   * Path or URL; `null` when empty. A generated stream started with
+   * {@link Player.openStream} has the opaque `producer://<n>` (do not parse
+   * it); one a file resolver generates ({@link FileResolverOptions}) keeps
+   * the path that was opened. Tell streams apart by `kind`, not by `source`.
+   */
   readonly source: string | null;
   /** Playback is paused. */
   readonly paused: boolean;
@@ -3169,7 +3174,9 @@ export interface Player {
    *
    * It does not wait for playback: use {@link Media.ready}. `paused` opens
    * it paused; aborting `signal` closes it. URLs matching a registered
-   * {@link Resolver} are resolved first.
+   * {@link Resolver} are resolved first, and so are local files of an
+   * extension a file resolver claims (the source is then a stream that
+   * plugin generates; `paused` reaches it).
    */
   open(
     source: string,
@@ -3950,8 +3957,14 @@ export interface MediaCapture {
 
 // ---------------------------------------------------------------- source resolvers
 
-/** Declaration of {@link Resolvers.add}. */
-export interface ResolverOptions {
+/**
+ * Declaration of {@link Resolvers.add}: a web resolver
+ * ({@link WebResolverOptions}) or a file resolver ({@link FileResolverOptions}).
+ */
+export type ResolverOptions = WebResolverOptions | FileResolverOptions;
+
+/** A resolver for web pages: `https://host/…` to playable stream URLs. */
+export interface WebResolverOptions {
   /** Local id, unique within the plugin. */
   id: string;
   /** URL schemes handled. */
@@ -3962,15 +3975,107 @@ export interface ResolverOptions {
   resolve(url: string, signal: AbortSignal): Promise<ResolvedMedia>;
 }
 
+/**
+ * A resolver for local files by extension (SDK 1.5.3, player 0.4.1): when
+ * anyone opens such a file with {@link Player.open} (the Open dialog, the
+ * playlist, next / previous, the recent list, a drop that calls `open`),
+ * the player asks this plugin for a stream it generates instead of
+ * playing the file. Needs `source.resolve` and `producer.av`.
+ *
+ * @remarks
+ * The open keeps everything of the original call: its `ifCurrent`, its
+ * operation (the opener's `open` and `media.ready()` settle as for any
+ * file), `paused` (the stream starts paused), and its path as
+ * `state.source`, with `state.kind` `"stream"`. A thrown error fails that
+ * open: `phase` `"error"` with the error's message as `state.error`,
+ * word for word. The stream belongs to this plugin, as with
+ * {@link Player.openStream}.
+ *
+ * Cancellation: `signal` aborts when the open is replaced, closed
+ * (`player.close()`, F4) or times out (30 seconds), or this resolver is
+ * disposed. Cancelled after `resolve` returned but before the stream ran,
+ * the SDK releases the stream and never calls `started`.
+ *
+ * One extension has one resolver: another plugin's resolver for it makes
+ * {@link Resolver.ready} reject with `conflict` without failing activation
+ * (the player shows a warning). When this plugin stops, its extensions are
+ * free again and such files go to the player as before.
+ *
+ * @example
+ * ```ts
+ * const { readFile } = await import("node:fs/promises");
+ * // The plugin's own emulator: one frame per call.
+ * const emulator = (rom: Uint8Array): (() => StreamFrame) => {
+ *   const video = new Uint8Array(256 * 240 * 4).fill(rom[0] ?? 0);
+ *   return () => ({ video, audio: new Float32Array(1600) });
+ * };
+ * plugin.resolvers.add({
+ *   id: "nes",
+ *   extensions: ["nes"],
+ *   async resolve(path, signal) {
+ *     const frame = emulator(await readFile(path, { signal }));
+ *     return {
+ *       kind: "stream",
+ *       width: 256,
+ *       height: 240,
+ *       frame,
+ *       started: (stream) => stream.onStop((error) => error && plugin.osd.show(error.message)),
+ *     };
+ *   },
+ * });
+ * ```
+ */
+export interface FileResolverOptions {
+  /** Local id, unique within the plugin. */
+  id: string;
+  /**
+   * Lower case, without the dot: 1–16 entries of 1–16 lower-case letters or
+   * digits (not `"folder"`). Only absolute local paths match, by their
+   * extension in any case (`/roms/Game.NES`); URLs never do.
+   */
+  extensions: string[];
+  /** Read the file and describe the stream to generate for it. */
+  resolve(path: string, signal: AbortSignal): Promise<ResolvedStream>;
+}
+
+/**
+ * What a file resolver returns: a stream, with the same frame contract as
+ * {@link StreamOptions} (size limits, `frame()` on the audio clock).
+ */
+export interface ResolvedStream {
+  /** Always `"stream"`. */
+  kind: "stream";
+  /** Frame width in pixels. */
+  width: number;
+  /** Frame height in pixels. */
+  height: number;
+  /** Produce the next frame. Never called concurrently or while paused. */
+  frame(): StreamFrame;
+  /**
+   * Called with the running stream once the player plays it, synchronously
+   * after activation and before any {@link Stream.onStop}. Not called when
+   * the open was cancelled first. `stream.stop()` closes the source (if
+   * still current); the plugin stopping stops it too.
+   */
+  started?(stream: Stream): void;
+}
+
 /** A registered resolver. Disposing it unregisters it and aborts resolutions in flight. */
 export interface Resolver extends Disposable {
-  /** Resolves when the player registered it; rejects (e.g. `conflict`) otherwise. */
+  /**
+   * Resolves when the player registered it; rejects otherwise: `conflict`
+   * when another resolver has the extension or the scheme + host (another
+   * plugin's: activation goes on; this plugin's own: activation fails),
+   * `invalid` for a malformed declaration (a player before 0.4.1 also for
+   * `extensions`).
+   */
   readonly ready: Promise<void>;
 }
 
 /**
- * `plugin.resolvers`: turn web page URLs into playable streams. Needs
- * `source.resolve`.
+ * `plugin.resolvers`: turn web page URLs into playable streams, or local
+ * files into streams this plugin generates. Needs `source.resolve` (file
+ * resolvers also `producer.av`).
  *
  * @example
  * ```ts
@@ -3987,9 +4092,11 @@ export interface Resolver extends Disposable {
  */
 export interface Resolvers {
   /**
-   * Register a resolver. When anyone opens a matching URL the player calls
-   * `resolve`; `signal` aborts when the open is cancelled or replaced. One
-   * scheme + host pair has one resolver (`conflict` otherwise).
+   * Register a resolver. When anyone opens a matching URL or file the
+   * player calls `resolve`; `signal` aborts when the open is cancelled or
+   * replaced. One scheme + host pair, and one extension, has one resolver
+   * (`conflict` otherwise). A rejected `resolve` fails the open with the
+   * error's message.
    */
   add(options: ResolverOptions): Resolver;
 }
@@ -4194,10 +4301,18 @@ export interface PluginInfo {
  * @since 1.5.2
  */
 export interface PluginWarning {
-  /** `"slot-occupied"` or `"sequence-taken"`; a newer player may add codes. */
+  /**
+   * `"slot-occupied"`, `"sequence-taken"` or `"resolver-taken"` (player
+   * 0.4.1); a newer player may add codes.
+   */
   code: string;
   /** The panel position (`"bottom"`, `"sidebar"`, `"backdrop"`) for `slot-occupied`. */
   slot?: string;
+  /**
+   * What was taken, for `resolver-taken`: 「文件类型 .nes」 or the
+   * `scheme://host` of a web resolver.
+   */
+  target?: string;
   /** The manifest id of the plugin holding it (absent for a full sidebar). */
   owner?: string;
 }

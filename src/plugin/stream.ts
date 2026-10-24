@@ -7,8 +7,10 @@ import { failure, sleep, toError } from "./runtime.ts";
 import { abortError } from "./player.ts";
 import type { PlayerService } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
+import type { ResolvedProducer } from "../source-resolvers.ts";
 import type {
   PluginError,
+  ResolvedStream,
   Stream,
   StreamOptions,
   StreamStartError,
@@ -203,20 +205,25 @@ async function sendFrame(
   }
 }
 
-export async function openStream(
-  scope: ScopeImpl,
-  service: PlayerService,
-  options: StreamOptions,
-): Promise<Stream> {
-  const host = service.runtime.host;
-  const check = () => {
-    if (options.signal?.aborted || scope.disposed) throw abortError();
-  };
-  let prepared: number | undefined;
-  let socket: Socket | undefined;
-  let generation: number | undefined;
-  /** The request selecting the stream, once sent. */
-  let opened: Promise<void> | undefined;
+/** A producer prerolled at sample zero, not yet the player's source. */
+type Prepared = {
+  producer: number;
+  socket: Socket;
+  frame: StreamOptions["frame"];
+  epoch: number;
+  sample: number;
+  sequence: number;
+};
+
+/**
+ * Prepare a producer, connect and preroll it until the host could select it.
+ * `check` throws to give up (an abort); the producer is then released.
+ */
+async function prepare(
+  host: PlayerService["runtime"]["host"],
+  options: Pick<StreamOptions, "width" | "height" | "frame">,
+  check: () => void,
+): Promise<Prepared> {
   const bytes = options.width * options.height * 4;
   /** The plugin's frame, checked against the declared size. */
   const frame = () => {
@@ -228,103 +235,215 @@ export async function openStream(
       );
     return next;
   };
+  let producer: number | undefined;
+  let socket: Socket | undefined;
   try {
     check();
     const spec = await host.producer.prepare({
       width: options.width,
       height: options.height,
     });
-    prepared = spec.producerId;
+    producer = spec.producerId;
     check();
     socket = await host.producer.connect(spec);
     check();
-    let epoch = spec.epoch;
-    let sample = 0;
-    let sequence = 0;
-    const clock: Clock = {
-      get sample() {
-        return sample;
-      },
-      advance: (n) => (sample += n),
-      nextSequence: () => sequence++,
+    const p: Prepared = {
+      producer,
+      socket,
+      frame,
+      epoch: spec.epoch,
+      sample: 0,
+      sequence: 0,
     };
+    const clock = clockOf(p);
     // A prepared producer is paused at sample zero. Supply a frame at zero and
     // enough contiguous PCM before asking the host to select it.
-    while (sample < PREROLL) {
+    while (p.sample < PREROLL) {
       check();
-      await writeFrame(socket, frame(), clock, epoch);
+      await writeFrame(socket, frame(), clock, p.epoch);
     }
     for (const deadline = Date.now() + 10_000; ; await sleep(10)) {
       check();
-      const state = await host.producer.state(prepared);
+      const state = await host.producer.state(producer);
       if (state.error) throw failure("stream", state.error);
-      if (state.epoch !== epoch)
+      if (state.epoch !== p.epoch)
         throw failure("stream", "producer epoch changed before activation");
       if (!["ok", "recoverableXrun", "deviceChanged"].includes(state.health))
         throw failure("device", `audio device is not ready: ${state.health}`);
       if (state.acknowledged && state.receivedFrames >= 1024 && state.hasVideo)
-        break;
+        return p;
       if (Date.now() >= deadline)
         throw timeout("prefill", "timed out preparing the first buffers");
     }
+  } catch (error) {
+    socket?.close();
+    if (producer !== undefined)
+      await host.producer.release(producer).catch(() => {});
+    throw error;
+  }
+}
+
+const clockOf = (p: Prepared): Clock => ({
+  get sample() {
+    return p.sample;
+  },
+  advance: (n) => (p.sample += n),
+  nextSequence: () => p.sequence++,
+});
+
+/**
+ * Wait until the host runs the selected producer: acknowledge its start
+ * control. `selected` says whether the host has accepted the selection yet
+ * (`"selected"`: it has, and a producer no longer active was replaced);
+ * `check` throws to give up.
+ */
+async function activate(
+  host: PlayerService["runtime"]["host"],
+  p: Prepared,
+  check: () => void,
+  selected: (() => boolean) | "selected",
+) {
+  for (const deadline = Date.now() + 10_000; ; await sleep(10)) {
+    check();
+    const state = await host.producer.state(p.producer);
+    if (state.error) throw failure("stream", state.error);
+    if (selected === "selected" && !state.active) throw abortError();
+    if (state.pendingControl) {
+      p.epoch = state.pendingControl.epoch;
+      p.sample = state.pendingControl.baseSample;
+      p.sequence = 0;
+      await host.producer.ack(state.pendingControl);
+    }
+    if (
+      (selected === "selected" || selected()) &&
+      state.active &&
+      !state.pendingControl &&
+      state.acknowledged &&
+      state.epoch === p.epoch
+    )
+      return;
+    if (Date.now() >= deadline)
+      throw timeout("activation", "timed out waiting for stream activation");
+  }
+}
+
+/** Give a prepared producer up: its source (if still ours), connection, producer. */
+async function abandon(
+  service: PlayerService,
+  p: Prepared,
+  generation: number | undefined,
+) {
+  // A cancelled open may already have selected this producer: close only
+  // that source, before its frame connection (as in `stop`).
+  if (generation !== undefined)
+    await service.closeIfCurrent(generation).catch(() => {});
+  p.socket.close();
+  await service.runtime.host.producer.release(p.producer).catch(() => {});
+}
+
+const handleOf = (
+  scope: ScopeImpl,
+  service: PlayerService,
+  p: Prepared,
+  generation: number,
+) =>
+  new StreamHandle(scope, service, {
+    producer: p.producer,
+    socket: p.socket,
+    generation,
+    frame: p.frame,
+    epoch: p.epoch,
+    sample: p.sample,
+    sequence: p.sequence,
+  });
+
+export async function openStream(
+  scope: ScopeImpl,
+  service: PlayerService,
+  options: StreamOptions,
+): Promise<Stream> {
+  const host = service.runtime.host;
+  const check = () => {
+    if (options.signal?.aborted || scope.disposed) throw abortError();
+  };
+  const p = await prepare(host, options, check);
+  let generation: number | undefined;
+  /** The request selecting the stream. */
+  let opened: Promise<void> | undefined;
+  try {
     let accepted = false;
+    let failed: unknown;
     opened = service
       .submit(
-        { kind: "openProvider", producerId: prepared, startPaused: false },
+        { kind: "openProvider", producerId: p.producer, startPaused: false },
         { accepted: (ticket) => (generation = ticket.stamp.generation) },
       )
       .then((ticket) => {
         generation = ticket.stamp.generation;
         accepted = true;
       });
-    let failed: unknown;
     opened.catch((error) => (failed = error));
     // Activation needs this side to acknowledge the host's start control.
-    for (const deadline = Date.now() + 10_000; ; await sleep(10)) {
-      check();
-      if (failed) throw failed;
-      const state = await host.producer.state(prepared);
-      if (state.error) throw failure("stream", state.error);
-      if (state.pendingControl) {
-        epoch = state.pendingControl.epoch;
-        sample = state.pendingControl.baseSample;
-        sequence = 0;
-        await host.producer.ack(state.pendingControl);
-      }
-      if (
-        accepted &&
-        state.active &&
-        !state.pendingControl &&
-        state.acknowledged &&
-        state.epoch === epoch
-      )
-        break;
-      if (Date.now() >= deadline)
-        throw timeout("activation", "timed out waiting for stream activation");
-    }
-    const handle = new StreamHandle(scope, service, {
-      producer: prepared,
-      socket,
-      generation: generation!,
-      frame,
-      epoch,
-      sample,
-      sequence,
-    });
-    prepared = undefined;
-    socket = undefined;
-    return handle;
+    await activate(
+      host,
+      p,
+      () => {
+        check();
+        if (failed) throw failed;
+      },
+      () => accepted,
+    );
+    return handleOf(scope, service, p, generation!);
   } catch (error) {
     // An abort can arrive before the host answered the selecting request: wait
     // for that answer so a source selected afterwards is still closed.
-    if (opened && prepared !== undefined) await opened.catch(() => {});
-    // A cancelled open may already have selected this producer: close only
-    // that source, before its frame connection (as in `stop`).
-    if (generation !== undefined && prepared !== undefined)
-      await service.closeIfCurrent(generation).catch(() => {});
-    socket?.close();
-    if (prepared !== undefined)
-      await host.producer.release(prepared).catch(() => {});
+    await opened?.catch(() => {});
+    await abandon(service, p, generation);
     throw error;
   }
+}
+
+/**
+ * A file resolver's stream (`ResolvedStream`): prepared and prerolled while
+ * the open waits, then handed to the host as the answer. Once the host
+ * selected it, the start control is acknowledged and `started` gets the
+ * running stream, synchronously, before any `onStop`. Cancelled before or
+ * during activation (the open was replaced or closed, the plugin stopped),
+ * the producer is released and `started` is never called.
+ */
+export async function resolvedStream(
+  scope: ScopeImpl,
+  service: PlayerService,
+  stream: ResolvedStream,
+  signal: AbortSignal,
+): Promise<ResolvedProducer> {
+  const host = service.runtime.host;
+  const p = await prepare(host, stream, () => {
+    if (signal.aborted || scope.disposed) throw abortError();
+  });
+  return {
+    kind: "stream",
+    producerId: p.producer,
+    abandoned: () => abandon(service, p, undefined),
+    accepted: async ({ stamp }) => {
+      try {
+        await activate(
+          host,
+          p,
+          () => {
+            if (scope.disposed) throw abortError();
+          },
+          "selected",
+        );
+        // Replaced before it ran: the source is no longer this stream.
+        if (service.raw.stamp.generation > stamp.generation) throw abortError();
+      } catch (error) {
+        await abandon(service, p, stamp.generation);
+        if ((error as PluginError).code !== "aborted") scope.report(error);
+        return;
+      }
+      const handle = handleOf(scope, service, p, stamp.generation);
+      if (stream.started) scope.run(stream.started, handle);
+    },
+  };
 }
