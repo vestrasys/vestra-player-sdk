@@ -117,7 +117,7 @@ export default async function activate(plugin: Plugin) {
 ## Variations
 
 - **Several windows from one file** (one per document, created with `windows.create(file, { id })`): store an object keyed by the window id and restore each one.
-- **Preferences rather than state:** a choice such as "reopen my windows at startup" belongs on a settings page ({@link "@vestra-player/sdk"!Settings.page | plugin.settings.page}) that reads and writes the same store; the [blur example](../examples/blur.md) does this with `restoreOnStart`.
+- **Preferences rather than state:** a choice such as "reopen my windows at startup" belongs on a settings page ({@link "@vestra-player/sdk"!Settings.page | plugin.settings.page}) that reads and writes the same store (the `SettingsPage` reference has an example).
 - **Large or binary data:** write your own files in {@link "@vestra-player/sdk"!Plugin.dataDirectory | plugin.dataDirectory} (to a temporary name, then rename) and keep only small settings in `storage.json`.
 
 ## See also

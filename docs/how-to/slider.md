@@ -171,5 +171,5 @@ export default async function activate(plugin: Plugin) {
 ## See also
 
 - [Windows, panels, settings pages, dialogs and the OSD](../concepts/ui.md): set, bind and the update pass.
-- The [blur example](../examples/blur.md) (a strength slider on a video filter) and the [signal generator](../examples/signal-generator.md) (sliders that change generated audio live).
+- The [blur example](../examples/blur.md) (a strength slider on a video filter).
 - {@link "@vestra-player/sdk"!View | View}, {@link "@vestra-player/sdk"!Scope.update | Scope.update}, {@link "@vestra-player/sdk"!Player.scrub | Player.scrub}

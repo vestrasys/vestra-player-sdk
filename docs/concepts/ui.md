@@ -172,7 +172,7 @@ Update passes run:
 
 Several requests in the same microtask are merged into one pass, and each view has at most one write in flight: values that change meanwhile are merged into the next write. So binding a value that changes 60 times a second costs at most one write per round trip, never a queue.
 
-The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md) and the signal generator's [Step 7](../examples/signal-generator.md)).
+The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md)).
 
 ### Two-way controls
 
@@ -291,4 +291,4 @@ test("the label counts clicks", async () => {
 - On-screen display: {@link "@vestra-player/sdk"!Osd | Osd}, {@link "@vestra-player/sdk"!OsdPanel | OsdPanel}
 - Palette: {@link "@vestra-player/sdk"!Appearance | Appearance}, {@link "@vestra-player/sdk"!ThemeId | ThemeId}
 
-Examples that use them: [blur](../examples/blur.md) (tool window, settings page, OSD), [signal-generator](../examples/signal-generator.md) (a live control window), [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) (sidebar panel with a context menu), [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) (theme widgets, the shared sidebar), [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) and [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown).
+Examples that use them: [blur](../examples/blur.md) (a tool window with a live slider), [panel-menu](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu) (sidebar panel with a context menu), [core-ui](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/core-ui) (theme widgets, the shared sidebar), [bookmark](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark) and [markdown](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/markdown).
