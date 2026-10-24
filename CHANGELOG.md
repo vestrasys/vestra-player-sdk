@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.8
+
+**Trial loading is removed; `resolvers.fileTypes`; the CLI under `--permission`.** `apiVersion` stays `vestra/1`. The removal breaks code that called `PackageCandidate.trial()`: only Vestra Player AI did, and it moves to installing (an install can be rolled back).
+
+- **Removed: `PackageCandidate.trial()`, the `PackageTrial` type, `PluginInfo.origin` `"trial"` and the error code `cleanup`** (only `PackageTrial.stop` used it). The player (0.4.2) no longer answers `packages.trial`, `packages.trialState`, `packages.trialStateByRequest` or `packages.stopTrial`, and never lists a plugin with origin `"trial"`. Trial loads only supported plugins using `commands`, `ui.window` and `events`, listed the plugin under another id (`<id>.trial.<n>`), and `trial()` returned before activation ended, so the feature was removed instead of extended. Check a package with `validate` and install it; `rollback` restores the previous version.
+- **`plugin.resolvers.fileTypes`** (player 0.4.2): the extensions some plugin's file resolver handles, lower case, sorted, each once, without who registered them; `[]` from older players. Reading needs no capability. **`plugin.resolvers.onFileTypesChange(listener)`** follows it when a file resolver comes or goes (needs `events`). For a playlist that accepts ROMs while an emulator plugin runs. `TestHost`: `host.fileTypes()` (this plugin's file resolvers plus `otherResolvers`) and `host.updateFileTypes()` after changing `otherResolvers`.
+- **`vestra-plugin` runs under Node's permission model** (`--permission`, with `--allow-child-process` for the type checker): looking for `node_modules/@types`, `tsconfig.json` and `.git` in parent folders it may not read threw `ERR_ACCESS_DENIED`; such a folder now counts as absent.
+- `Packages.validate`: the player (0.4.2) keeps the 32 most recent candidates and drops the oldest, whose `install` then fails with `stale`; before, the 33rd validation of a run failed with `busy` until the player restarted.
+
 ## 1.5.7
 
 **Replaced or closed streams stop with `null`.** A fix; no API change, `apiVersion` stays `vestra/1`, any player.

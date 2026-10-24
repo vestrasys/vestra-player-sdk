@@ -120,7 +120,7 @@ A manifest with every field. `id`, `apiVersion`, `entry` and `capabilities` are 
 }
 ```
 
-Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`. The `vestra.` prefix (and the id `vestra`, in any case) is reserved for the plugins built into the player: from player 0.4.1 the player refuses to install or trial such a package (`reserved`). Every other plugin is a third-party plugin, including those hosted in the official repository.
+Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`. The `vestra.` prefix (and the id `vestra`, in any case) is reserved for the plugins built into the player: from player 0.4.1 the player refuses to install such a package (`reserved`). Every other plugin is a third-party plugin, including those hosted in the official repository.
 
 | Capability                             | Opens                                                                                                   |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |

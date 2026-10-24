@@ -34,7 +34,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync as exists } from "node:fs";
 import {
   cp,
   mkdir,
@@ -110,6 +110,20 @@ async function json(path, fallback) {
 }
 
 /** A module from the plugin's project first, else the SDK's own dependencies. */
+/**
+ * Whether a path exists. Under Node's permission model (`--permission`)
+ * `existsSync` throws for a path outside the allowed ones; such a path
+ * counts as absent, as for a user who cannot read it.
+ */
+function present(path) {
+  try {
+    return exists(path);
+  } catch (error) {
+    if (error?.code === "ERR_ACCESS_DENIED") return false;
+    throw error;
+  }
+}
+
 function resolveFrom(directory, specifier) {
   for (const base of [directory, sdkRoot]) {
     try {
@@ -139,7 +153,7 @@ async function typescript() {
 async function plugin(path) {
   const directory = resolve(path);
   const name = relative(process.cwd(), directory) || basename(directory);
-  if (!existsSync(join(directory, "manifest.json")))
+  if (!present(join(directory, "manifest.json")))
     fail(`${name}: no manifest.json in ${directory}`);
   const manifest = await json(join(directory, "manifest.json"));
   const { problems, hints } = manifestProblems(manifest, directory);
@@ -165,7 +179,7 @@ function displayFiles(target) {
     const field = name === "README.md" ? "readme" : "changelog";
     if (
       target.manifest[field] === undefined &&
-      existsSync(join(target.directory, name))
+      present(join(target.directory, name))
     )
       files.add(name);
   }
@@ -200,7 +214,7 @@ function dependencies(target) {
   };
   if (
     !Object.keys(deps).length ||
-    existsSync(join(target.directory, "node_modules"))
+    present(join(target.directory, "node_modules"))
   )
     return;
   console.log(`${target.name}: installing dependencies (npm ci)`);
@@ -221,7 +235,7 @@ function* upwards(directory) {
   for (let current = directory; ;) {
     yield current;
     const parent = dirname(current);
-    if (parent === current || existsSync(join(current, ".git"))) return;
+    if (parent === current || present(join(current, ".git"))) return;
     current = parent;
   }
 }
@@ -235,13 +249,13 @@ function checkConfig(target, sources) {
   const roots = [];
   for (const directory of upwards(target.directory)) {
     const types = join(directory, "node_modules/@types");
-    if (existsSync(types)) roots.push(types);
+    if (present(types)) roots.push(types);
   }
   const node = resolveFrom(target.directory, "@types/node/package.json");
   if (node) roots.push(dirname(dirname(node)));
   const base = [...upwards(target.directory)]
     .map((directory) => join(directory, "tsconfig.json"))
-    .find((file) => existsSync(file));
+    .find((file) => present(file));
   return {
     ...(base ? { extends: base } : {}),
     compilerOptions: {
@@ -262,7 +276,7 @@ async function check(target) {
   const own = (await files(target.directory)).filter(
     (file) => isTypeScript(file) || file.endsWith(".mts"),
   );
-  const tests = existsSync(join(target.directory, "tests"))
+  const tests = present(join(target.directory, "tests"))
     ? (await readdir(join(target.directory, "tests")))
         .filter(isTypeScript)
         .map((file) => join("tests", file))
@@ -308,7 +322,7 @@ function entries(target) {
   const entry = target.manifest.entry.replace(/^dist\//, "");
   const candidates = [entry.replace(/\.js$/, ".ts"), entry];
   const found = candidates.find((file) =>
-    existsSync(join(target.directory, file)),
+    present(join(target.directory, file)),
   );
   if (!found)
     fail(`${target.name}: entry ${target.manifest.entry} has no source file`);
@@ -454,7 +468,7 @@ async function build(target, flag) {
 
 async function test(target) {
   const directory = join(target.directory, "tests");
-  const tests = existsSync(directory)
+  const tests = present(directory)
     ? (await readdir(directory))
         .filter((file) => /\.test\.(ts|mjs)$/.test(file))
         .sort()

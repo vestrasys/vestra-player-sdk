@@ -1,15 +1,13 @@
-/** Package validation, trial loading and install/rollback (`plugins.manage`). */
+/** Package validation and install/rollback (`plugins.manage`). */
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type {
   PackageInfo as WirePlugin,
   PackageOperation,
-  PackageTrial as TrialRecord,
   PackageValidation,
   WireSource,
 } from "../wire.ts";
 import { failure, sleep, uncertain } from "./runtime.ts";
-import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   InstallOptions,
@@ -17,7 +15,6 @@ import type {
   PackageChange,
   PackageChangeStatus,
   PackageManifest,
-  PackageTrial,
   Packages,
   PluginInfo,
 } from "./types.ts";
@@ -29,55 +26,6 @@ const TERMINAL: PackageChangeStatus[] = [
   "failedDegraded",
   "tooLate",
 ];
-const STARTING = ["preparing", "activating", "starting"];
-
-class TrialHandle implements PackageTrial {
-  readonly #scope: ScopeImpl;
-  #record: TrialRecord;
-  #stopped: Promise<void> | undefined;
-  constructor(scope: ScopeImpl, record: TrialRecord) {
-    this.#scope = scope;
-    this.#record = record;
-    scope.add(this);
-  }
-  get status() {
-    return this.#record.status;
-  }
-  /**
-   * Concurrent calls share one stop; a confirmed stop is final. A failed one
-   * (code `cleanup`: the host did not confirm cleanup) is forgotten, so the
-   * next call sends a new stop to the host.
-   */
-  stop() {
-    const host = this.#scope.runtime.host.packages;
-    if (this.#stopped) return this.#stopped;
-    const stopping = (async () => {
-      this.#record = await host.stopTrial(this.#record.trialId);
-      while (
-        !this.#record.cleanupConfirmed &&
-        this.#record.status !== "stopped" &&
-        this.#record.status !== "failed"
-      ) {
-        await sleep(250);
-        this.#record = await host.trialState(this.#record.trialId);
-      }
-      if (!this.#record.cleanupConfirmed)
-        throw failure(
-          "cleanup",
-          `trial cleanup not confirmed: ${this.#record.status}`,
-        );
-    })();
-    this.#stopped = stopping;
-    stopping.catch(() => {
-      if (this.#stopped === stopping) this.#stopped = undefined;
-    });
-    return stopping;
-  }
-  async dispose() {
-    this.#scope.forget(this);
-    await this.stop().catch(() => {});
-  }
-}
 
 class ChangeHandle implements PackageChange {
   readonly #scope: ScopeImpl;
@@ -152,23 +100,6 @@ async function change(
   return new ChangeHandle(scope, operation);
 }
 
-async function trial(scope: ScopeImpl, runtime: Runtime, token: string) {
-  const host = runtime.host.packages;
-  const requestId = randomUUID();
-  let record: TrialRecord;
-  try {
-    record = await host.trial(token, requestId);
-  } catch (error) {
-    if (!uncertain(error)) throw error;
-    record = await host.trialStateByRequest(requestId);
-  }
-  while (STARTING.includes(record.status)) {
-    await sleep(250);
-    record = await host.trialState(record.trialId);
-  }
-  return new TrialHandle(scope, record);
-}
-
 function installOptions(options: InstallOptions | undefined) {
   if (options === undefined) return {};
   if (typeof options !== "object" || options === null)
@@ -210,7 +141,6 @@ function candidate(
     digest: checked.digest,
     manifest: checked.manifest as unknown as PackageManifest,
     checks: checked.checks,
-    trial: () => trial(scope, runtime, checked.token),
     install: async (options) => {
       const wire = installOptions(options);
       return change(

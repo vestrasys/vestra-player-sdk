@@ -1130,6 +1130,41 @@ export class TestHost implements Transport {
     hosts?: string[];
   }[] = [];
   /**
+   * What `plugin.resolvers.fileTypes` reports: the extensions of this
+   * plugin's file resolvers and of {@link TestHost.otherResolvers}, sorted,
+   * each once.
+   */
+  fileTypes(): string[] {
+    const types = new Set<string>();
+    for (const declaration of [
+      ...this.resolvers.values(),
+      ...this.otherResolvers,
+    ] as { extensions?: string[] }[])
+      for (const type of declaration.extensions ?? []) types.add(type);
+    return [...types].sort();
+  }
+  #sentTypes = "[]";
+  /**
+   * Push `resolvers.fileTypes` when {@link TestHost.fileTypes} changed:
+   * called after this plugin's resolvers come and go; call it yourself
+   * after changing {@link TestHost.otherResolvers} (another plugin started
+   * or stopped).
+   *
+   * @example
+   * ```ts
+   * host.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+   * host.updateFileTypes();
+   * await host.settle();
+   * assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
+   * ```
+   */
+  updateFileTypes() {
+    const types = this.fileTypes();
+    if (JSON.stringify(types) === this.#sentTypes) return;
+    this.#sentTypes = JSON.stringify(types);
+    this.emit("resolvers.fileTypes", { fileTypes: types });
+  }
+  /**
    * File opens waiting for this plugin's file resolver (`extensions`), by
    * request id: the path and how it was opened. Opening a matching path
    * (`player.open`, {@link TestHost.openElsewhere}) sends
@@ -1797,6 +1832,7 @@ export class TestHost implements Transport {
       videoArea: { ...this.mainWindow.videoArea },
       pictureInPicture: { ...this.mainWindow.pictureInPicture },
       appearance: this.appearance,
+      fileTypes: this.fileTypes(),
     };
   }
   /**
@@ -1922,7 +1958,7 @@ export class TestHost implements Transport {
     /** Its version, `null` when unknown. */
     version: string | null;
     /** Where it was loaded from. */
-    origin: "installed" | "development" | "trial";
+    origin: "installed" | "development";
     /** Its run state. */
     state: "starting" | "running" | "disabled" | "failed" | "stopped";
     /** Why it failed (`state: "failed"`). */
@@ -3252,11 +3288,6 @@ export class TestHost implements Transport {
         throw new HostError("invalid", "a plugin cannot disable itself");
       const entry = this.packages.find((each) => each.id === id);
       if (!entry) throw new HostError("missing", `no plugin ${id}`);
-      if (entry.origin === "trial")
-        throw new HostError(
-          "unsupported",
-          "a trial is stopped with its handle",
-        );
       this.packageCalls.push({
         method: "setEnabled",
         id,
@@ -3542,10 +3573,14 @@ export class TestHost implements Transport {
       return { jobId: job.jobId, cancel: "requested" };
     },
     "jobs.operation": () => ({ status: "unknown" }),
-    "sourceResolvers.register": (p) => void this.#register(p),
+    "sourceResolvers.register": (p) => {
+      this.#register(p);
+      this.updateFileTypes();
+    },
     "sourceResolvers.unregister": (p) => {
       this.resolvers.delete(String(p.id));
       this.#cancelResolutions();
+      this.updateFileTypes();
     },
     "sourceResolvers.respond": (p) => this.#respond(p),
     "producer.prepare": async () => {

@@ -371,3 +371,49 @@ test("disposing the resolver aborts a resolve in flight and frees the extension"
   assert.equal(started.host.resolutions.size, 0);
   await started.stop();
 });
+
+test("fileTypes lists every file resolver's extensions and follows them with events", async () => {
+  const testHost = host();
+  testHost.otherResolvers.push({
+    owner: "vestra.gb",
+    extensions: ["gbc", "gb"],
+  });
+  const { plugin, stop } = await emulator(async () => stream(), {
+    host: testHost,
+  });
+  // The snapshot before activation had only the other plugin's.
+  const seen: string[][] = [];
+  plugin.resolvers.onFileTypesChange((types) => seen.push(types));
+  await testHost.settle();
+  testHost.updateFileTypes();
+  await until(() => plugin.resolvers.fileTypes.includes("nes"), "own nes");
+  assert.deepEqual(plugin.resolvers.fileTypes, ["gb", "gbc", "nes"]);
+  // Another plugin stops.
+  testHost.otherResolvers.length = 0;
+  testHost.updateFileTypes();
+  await until(() => plugin.resolvers.fileTypes.length === 1, "gb gone");
+  assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
+  assert.deepEqual(seen.at(-1), ["nes"]);
+  assert.throws(() => (plugin.resolvers.fileTypes as string[]).push("x"));
+  await stop();
+});
+
+test("fileTypes needs no capability; without events it is the list of the first read", async () => {
+  const testHost = host();
+  testHost.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+  let plugin!: Plugin;
+  const { stop } = await startPlugin((p) => void (plugin = p), {
+    capabilities: [],
+    host: testHost,
+  });
+  assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
+  let calls = 0;
+  plugin.resolvers.onFileTypesChange(() => calls++);
+  await testHost.settle();
+  testHost.otherResolvers.length = 0;
+  testHost.updateFileTypes();
+  await testHost.settle();
+  assert.equal(calls, 0);
+  assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
+  await stop();
+});
