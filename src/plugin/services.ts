@@ -4,7 +4,7 @@
  * run in this plugin's own process.
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
-import { chmod, mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { failure } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
@@ -116,6 +116,9 @@ export function tools(scope: ScopeImpl): Tools {
 
 const NAME = /^[a-z0-9-]{1,64}$/;
 
+/** Writes so far in this process; numbers each store's temporary file. */
+let written = 0;
+
 class Store<T> implements JsonStore<T> {
   readonly #scope: ScopeImpl;
   readonly #path: string;
@@ -182,12 +185,25 @@ class Store<T> implements JsonStore<T> {
     this.#writing = this.#writing
       .catch(() => {})
       .then(async () => {
-        const temporary = `${this.#path}.tmp-${process.pid}`;
+        // A name of its own per write: two stores on the same file (the
+        // same name opened twice) must not rename each other's file away.
+        const temporary = `${this.#path}.tmp-${process.pid}-${++written}`;
         await mkdir(join(this.#path, ".."), { recursive: true });
-        // Owner-only: settings can hold private paths and history.
-        await writeFile(temporary, text, { mode: 0o600 });
-        await chmod(temporary, 0o600);
-        await rename(temporary, this.#path);
+        try {
+          // Owner-only: settings can hold private paths and history. The
+          // mode is set through the handle, before the file has its name.
+          const file = await open(temporary, "wx", 0o600);
+          try {
+            await file.chmod(0o600);
+            await file.writeFile(text);
+          } finally {
+            await file.close();
+          }
+          await rename(temporary, this.#path);
+        } catch (error) {
+          await rm(temporary, { force: true }).catch(() => {});
+          throw error;
+        }
       });
     return this.#writing;
   }

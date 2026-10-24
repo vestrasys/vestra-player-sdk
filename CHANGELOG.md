@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1
+
+Fix; no API or type changes.
+
+- **`storage.json` saves no longer collide.** Every save wrote through the same temporary file (`<name>.json.tmp-<pid>`), so two stores on the same file (the same name opened twice, in one scope or two) could rename each other's temporary file away mid-save; the save then failed with `ENOENT` (on `chmod` or `rename`), seen intermittently on Windows. Each write now has a temporary file of its own, created owner-only (`0600`) through its file handle before it gets the store's name, and removed again if the write fails. Writes of one store were and stay in order.
+
 ## 1.5.0
 
 **Own visual identity: the Aurora palettes and the V-Line icons** (player 0.4.0). Additive; `apiVersion` stays `vestra/1`. Plugins that use the additions set `"minPlayerVersion": "0.4.0"`.
