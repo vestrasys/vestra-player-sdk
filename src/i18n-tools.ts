@@ -193,9 +193,6 @@ class Extractor {
   }
 
   add(file: string, line: number, message: Omit<Message, "references">) {
-    // Only placeholders and punctuation (`"{}\n{}"`, `"· {}"`): nothing to
-    // translate; the player formats it as it is.
-    if (!/\p{L}/u.test(message.id.replace(/\{[^{}]*\}/g, ""))) return;
     this.found.push({ ...message, file, line, references: [] });
   }
 

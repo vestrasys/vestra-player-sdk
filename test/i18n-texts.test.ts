@@ -82,6 +82,9 @@ msgstr "还需要 {} 个"
 msgid "The ROM file was not found."
 msgstr "找不到 ROM 文件。"
 
+msgid "{} ({})"
+msgstr "{}（{}）"
+
 msgid "Chapter {}"
 msgstr "第 {} 章"
 
@@ -367,6 +370,9 @@ test("timeline titles, OSD panel columns and the export-only resolve", async () 
     host.timeline.layers.get(host.manifestId)?.[0]?.title,
     "第 1 章",
   );
+  // A template of placeholders and punctuation is translated like any other.
+  await plugin.osd.show(plugin.i18n.text("{} ({})", ["a.mkv", "05:00"]));
+  assert.equal(host.osd.at(-1), "a.mkv（05:00）");
   // Cut after translation: 分辨率： is 8 columns.
   assert.equal(host.osdPanel, "分辨率：192…");
   const { text, list, resolve } = plugin.i18n;
@@ -402,6 +408,7 @@ export default async function activate(plugin: Plugin) {
   void plugin.osd.show(list([text("· {}", [text("Use the network")])], "lines"));
   void plugin.osd.show(text(\`Track \${n}\`));
   void plugin.osd.show({ $vestraText: "Hand written" });
+  void plugin.osd.show(text("{} ({})", ["a.mkv", "05:00"]));
   throw plugin.i18n.error("The ROM file was not found.");
 }
 `;
@@ -429,6 +436,11 @@ test("extract finds text(), error() and $vestraText sources; a spread field is r
   writeFileSync(join(dir, "package.json"), '{"type":"module"}');
   writeFileSync(join(dir, "main.ts"), MAIN);
   writeFileSync(join(dir, "model.ts"), MODEL);
+  mkdirSync(join(dir, "ui"));
+  writeFileSync(
+    join(dir, "ui/row.slint"),
+    'export component Row inherits Text { in property <string> a; in property <string> b; text: @tr("{0}: {1}", a, b); }\n',
+  );
   const extract = spawnSync(process.execPath, [cli, "i18n", "extract"], {
     cwd: dir,
     encoding: "utf8",
@@ -437,6 +449,8 @@ test("extract finds text(), error() and $vestraText sources; a spread field is r
   const ids = parsePo(readFileSync(join(dir, "locales/messages.pot"), "utf8"))
     .entries.map((e) => e.id)
     .sort();
+  // Placeholders and punctuation only are collected too: Chinese writes
+  // "{}（{}）" and "{0}：{1}".
   assert.deepEqual(ids, [
     "Audio Track",
     "Busy",
@@ -449,6 +463,9 @@ test("extract finds text(), error() and $vestraText sources; a spread field is r
     "The ROM file was not found.",
     "Track {} ({})",
     "Use the network",
+    "{0}: {1}",
+    "{} ({})",
+    "· {}",
   ]);
   const check = spawnSync(process.execPath, [cli, "i18n", "check"], {
     cwd: dir,
