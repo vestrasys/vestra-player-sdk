@@ -1113,9 +1113,13 @@ export class TestHost implements Transport {
    * ```
    */
   readonly otherResolvers: {
+    /** The manifest id of the plugin holding them (shown in the refusal). */
     owner: string;
+    /** File extensions it resolves (a file resolver), lower case, no dot. */
     extensions?: string[];
+    /** URL schemes it resolves (a web resolver), with `hosts`. */
     schemes?: string[];
+    /** Exact host names it resolves (a web resolver), with `schemes`. */
     hosts?: string[];
   }[] = [];
   /**
@@ -1129,7 +1133,14 @@ export class TestHost implements Transport {
    */
   readonly resolutions = new Map<
     number,
-    { resolverId: string; source: string; paused: boolean }
+    {
+      /** The id of this plugin's resolver asked (`resolvers.add` `id`). */
+      resolverId: string;
+      /** The path being opened, as sent to `resolve`. */
+      source: string;
+      /** The open asked for a paused start (`player.open(path, { paused })`). */
+      paused: boolean;
+    }
   >();
   /**
    * Answers for `dialogs.open` (paths, `null` = cancelled) and

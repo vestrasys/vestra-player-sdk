@@ -8,7 +8,7 @@ export type ResolvedResource = {
   headers?: Record<string, string>;
 };
 /**
- * What a resolver returns ({@link ResolverOptions.resolve}): the playable
+ * What a resolver returns ({@link WebResolverOptions.resolve}): the playable
  * stream(s) behind a page URL. Both streams must use identical `headers`;
  * different maps fail explicitly (nothing is dropped silently).
  *
