@@ -63,7 +63,7 @@ export type CommandDeclaration = {
   title: string;
   /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. */
   path: string[];
-  /** Sibling order, ascending; a submenu takes its first command's order. */
+  /** Sibling order, ascending; a submenu takes its first command's order (a built-in menu keeps a fixed one). */
   order: number;
   /** Separator label: adjacent siblings of different groups get a line. */
   group: string;

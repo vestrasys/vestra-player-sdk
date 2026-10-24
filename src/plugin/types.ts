@@ -388,6 +388,21 @@ export type MenuId =
  * ranges: `open` 100–199, `domain` 200–699 (playback, subtitles, video,
  * audio…), `screen` 700–799, `windows` 800–899, `exit` 900–999.
  *
+ * Built-in menus keep their place. The seven built-in top-level menus
+ * ({@link MenuId}) sit at fixed orders, whatever is inside them: Open 110,
+ * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings
+ * 830 (player 0.3.0). This holds whether the path names the menu by id
+ * (`["@video", "Blur"]`) or by its title (`["视频", "Blur"]`), so a plugin's
+ * item never moves the player's menu. Directly inside a built-in menu,
+ * `order` 0 (the default) sorts after every other order: an item without
+ * `order` goes at the end, after the player's own items (which all use 100
+ * or more). Give a positive order to sit between them (the player's orders
+ * are listed in its menu table, doc/product/menus.md), or a negative one to
+ * come first. Deeper levels (a plugin's own submenu) have no such rule.
+ * Players before 0.3.0 place every submenu at its smallest order, so there
+ * an item without `order` moves the whole menu to the top; to avoid that,
+ * give it an order in the menu's range (Video: 400–499).
+ *
  * {@link Commands.add} throws `invalid` synchronously for a bad path,
  * order, group or binding. The same path registered twice, or a path that
  * is both an item and a submenu, fails with `conflict` (through `ready`).
@@ -418,8 +433,10 @@ export interface CommandOptions {
   title?: string;
   /**
    * Sibling order in the menu, ascending (integer, default 0). A submenu sits
-   * where its first command sits. Equal orders: plugin id, then declaration order.
-   * Range ±1,000,000.
+   * where its first command sits, except a built-in menu, which keeps its
+   * fixed place. Directly inside a built-in menu, 0 (the default) sorts last.
+   * Equal orders: plugin id, then declaration order. Range ±1,000,000. See
+   * {@link CommandOptions} for the menu order rules.
    */
   order?: number;
   /** Separator label: a line is drawn between adjacent items of different groups. Default `"domain"`. */
