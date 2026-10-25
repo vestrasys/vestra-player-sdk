@@ -84,6 +84,19 @@ export interface Disposable {
  * | `host` | Any other failure inside the player; `message` is the player's reason. |
  * | `disabled` | The plugin is being stopped; pending requests fail with it. |
  * | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
+ * | `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
+ * | `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |
+ * | `input-overflow` | `openStream` input: the player's queue of physical key transitions was full; the input was revoked and its keys released. |
+ * | `internal` | An internal step of the player failed (keeping an operation's result, a subtitle or media job); `message` has the reason. |
+ * | `javascript`, `slint` | {@link Packages.validate}: the package's entry module does not pass `node --check` / one of its Slint files does not compile; `message` has the diagnostics. |
+ * | `owner` | A resolver answered a request that belongs to another plugin's resolver. |
+ * | `pending` | An operation with the same token is still running in the player. The SDK waits and asks again, so it rarely reaches a plugin. |
+ * | `producer` | `openStream`: the player refused or lost the generated stream; `message` has the reason. |
+ * | `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
+ * | `revisionConflict` | {@link Packages}: the installed revision changed since it was read (another install, rollback or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
+ * | `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
+ * | `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
+ * | `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
  *
  * Errors thrown by handlers the SDK invokes go to {@link Scope.onError}. A
  * rejected promise you forgot to `await` is only logged; it never crashes
@@ -1380,8 +1393,10 @@ export interface SlotState {
    * - `fullscreen`: the sidebar's fullscreen overlay is collapsed and pops
    *   out when the pointer reaches the right edge; treat it as "on" for a
    *   toggle button;
-   * - `idle`: the bottom bar in fullscreen, hidden after 3 seconds without
-   *   activity.
+   * - `idle`: the bottom bar in fullscreen while the pointer is outside the
+   *   bar's own band at the bottom of the screen (player 0.5.1: keys and
+   *   pointer motion elsewhere do not bring it back; before 0.5.1 it hid after
+   *   3 seconds without activity).
    */
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
   /** The sidebar floats in its own window; always `false` for the bottom bar. */
@@ -1823,8 +1838,11 @@ export interface Panel extends View, Disposable {
    * Keep the panel on screen while the user works in it.
    *
    * @remarks
-   * The bottom bar hides after 3 seconds without activity in fullscreen, and
-   * the fullscreen sidebar overlay collapses when the pointer leaves it. Set a
+   * In fullscreen the bottom bar shows only while the pointer is in the bar's
+   * own band at the bottom of the screen: at once when the pointer enters it,
+   * hidden 500 ms after it leaves (player 0.5.1; keys and pointer motion
+   * elsewhere do not reveal it), and the fullscreen sidebar overlay collapses
+   * when the pointer leaves it. A lock keeps the bar shown. Set a
    * lock while a text field has focus, a drag is in progress or a popup is
    * open, and clear it afterwards. Locks are merged with the earlier ones;
    * the last value of each wins. The player already locks a panel while the
@@ -2772,7 +2790,9 @@ export interface Panels {
    * - `"bottom"`: under the video, as wide as the video column, as tall as the
    *   component's preferred height. It may draw above its slot into the video
    *   area (negative `y`); the player does not clip it. In fullscreen it
-   *   floats over the video and hides after 3 seconds without activity.
+   *   floats over the video and shows only while the pointer is in its band
+   *   at the bottom of the screen (hidden 500 ms after the pointer leaves;
+   *   {@link Panel.setInteraction} locks keep it).
    * - `"sidebar"`: right of the video, the window's full height, as wide as the
    *   user drags it (at least 317). The user can detach it into a floating
    *   window titled `title`. Several plugins may mount here (player 0.4.x
@@ -3592,10 +3612,27 @@ export interface PlaybackStats {
   backend: string;
   /** The playback session number. */
   session: number;
-  /** Frames the host has shown. */
+  /**
+   * Frames the video renderer produced. Not all of them reach the screen: a
+   * busy window shows only the newest one, so compare
+   * {@link PlaybackStats.presentedFps | presentedFps}.
+   */
   framesShown: number;
-  /** Frames dropped, `null` when unknown. */
+  /** Frames dropped by the backend (mpv), `null` when unknown. */
   framesDropped: number | null;
+  /**
+   * New video frames the player window showed per second over the last
+   * second, measured by the player itself: draws of the main window that put
+   * a new picture on screen. Lower than `video.fps` when frames are lost
+   * after decoding and rendering (the window could not keep up with the
+   * source, or the display refreshes slower); `0` while paused. `null` when
+   * the player cannot measure it (no window, the first second, players
+   * before 0.5.1).
+   *
+   * @player 0.5.1
+   * @since 1.5.15
+   */
+  presentedFps: number | null;
   /** Every field is the backend's own value, `null` when it has none. */
   video: {
     /** Codec name. */
@@ -3620,8 +3657,15 @@ export interface PlaybackStats {
     displayFps: number | null;
     /** Bits per second, updated per keyframe. */
     bitrate: number | null;
-    /** Hardware decoder in use, e.g. "videotoolbox"; "no" = software decoding. */
+    /** Hardware decoder in use, e.g. "videotoolbox", "d3d11va-copy"; "no" = software decoding. */
     hwdec: string | null;
+    /**
+     * How the video is decoded, from `hwdec`: `"hardware"` (the method is in
+     * `hwdec`) or `"software"`; `null` before a decoder runs.
+     *
+     * @since 1.5.15 (with older players the SDK derives it from `hwdec`)
+     */
+    decoding: "hardware" | "software" | null;
     /** Transfer characteristic as mpv names it, e.g. "bt.1886", "pq", "hlg". */
     transfer: string | null;
   } | null;

@@ -913,7 +913,7 @@ const index = [
   "",
   "## Optional",
   "",
-  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments in dist/plugin/*.d.ts; Slint library in slint/vestra/.`,
+  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments in node_modules/${pkg.name}/dist/plugin/types.d.ts (the API) and dist/plugin/testing.d.ts (TestHost); Slint library in slint/vestra/.`,
   "",
 ].join("\n");
 

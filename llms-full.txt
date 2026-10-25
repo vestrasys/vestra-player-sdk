@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.14: full reference
+# @vestra-player/sdk 1.5.15: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -488,6 +488,7 @@ Reading it needs `playback.read`; following it needs `events` too:
 - The SDK reads the state once before `activate` and, with `events`, keeps `player.state` current and calls onChange listeners after every change. The state **never goes backwards**: a late event that is older than what the plugin already has is dropped.
 - Without `events`, `player.state` stays as it was first read until you call refresh().
 - Some facts are read on demand instead of pushed, because they are large or rarely needed: chapters(), stats() (codecs, frame counts, decoder, bitrates), audioDevices().
+  - In `stats()`, the frame counts come from two places. `framesShown` and `framesDropped` are the video renderer's (mpv's) counts. `presentedFps` is what the player window really showed: new frames per second over the last second. When it stays well below `video.fps` while playing, frames are lost after rendering (the window cannot keep up, or the display refreshes slower). `video.decoding` says whether the video is decoded in `"hardware"` (the method in `video.hwdec`) or `"software"`.
 
 Because the state is a snapshot, a plugin can keep one and use it later as the condition for a control.
 
@@ -2080,6 +2081,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.4.1 | PluginError, FileResolverOptions, PackageCandidate.install, PluginWarning.code, Packages.validate |
 | 0.4.2 | Resolvers.fileTypes, Resolvers.onFileTypesChange |
 | 0.4.3 | CommandOptions.path, PropValue, View.set, Appearance.setLanguage, TemplateArgs, Text, ConfirmOptions.args, OsdPanel.set, OsdPanelOptions.maxColumns, Osd.show |
+| 0.5.1 | SlotState.reason, Panel.setInteraction, PlaybackStats.presentedFps |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -3059,6 +3061,19 @@ change).
 | `host` | Any other failure inside the player; `message` is the player's reason. |
 | `disabled` | The plugin is being stopped; pending requests fail with it. |
 | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
+| `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
+| `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |
+| `input-overflow` | `openStream` input: the player's queue of physical key transitions was full; the input was revoked and its keys released. |
+| `internal` | An internal step of the player failed (keeping an operation's result, a subtitle or media job); `message` has the reason. |
+| `javascript`, `slint` | Packages.validate: the package's entry module does not pass `node --check` / one of its Slint files does not compile; `message` has the diagnostics. |
+| `owner` | A resolver answered a request that belongs to another plugin's resolver. |
+| `pending` | An operation with the same token is still running in the player. The SDK waits and asks again, so it rarely reaches a plugin. |
+| `producer` | `openStream`: the player refused or lost the generated stream; `message` has the reason. |
+| `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
+| `revisionConflict` | Packages: the installed revision changed since it was read (another install, rollback or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
+| `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
+| `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
+| `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
 
 Errors thrown by handlers the SDK invokes go to Scope.onError. A
 rejected promise you forgot to `await` is only logged; it never crashes
@@ -3662,8 +3677,10 @@ interface SlotState {
    * - `fullscreen`: the sidebar's fullscreen overlay is collapsed and pops
    *   out when the pointer reaches the right edge; treat it as "on" for a
    *   toggle button;
-   * - `idle`: the bottom bar in fullscreen, hidden after 3 seconds without
-   *   activity.
+   * - `idle`: the bottom bar in fullscreen while the pointer is outside the
+   *   bar's own band at the bottom of the screen (player 0.5.1: keys and
+   *   pointer motion elsewhere do not bring it back; before 0.5.1 it hid after
+   *   3 seconds without activity).
    */
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
   /** The sidebar floats in its own window; always `false` for the bottom bar. */
@@ -4931,10 +4948,15 @@ interface PlaybackStats {
   backend: string;
   /** The playback session number. */
   session: number;
-  /** Frames the host has shown. */
+  /** Frames the video renderer produced. Not all of them reach the screen: a busy window shows only the newest one, so compare presentedFps. */
   framesShown: number;
-  /** Frames dropped, `null` when unknown. */
+  /** Frames dropped by the backend (mpv), `null` when unknown. */
   framesDropped: number | null;
+  /**
+   * New video frames the player window showed per second over the last second, measured by the player itself: draws of the main window that put a new picture on screen. Lower than `video.fps` when frames are lost after decoding and rendering (the window could not keep up with the source, or the display refreshes slower); `0` while paused. `null` when the player cannot measure it (no window, the first second, players before 0.5.1).
+   * @player 0.5.1
+   */
+  presentedFps: number | null;
   /** Every field is the backend's own value, `null` when it has none. */
   video: {
     /** Codec name. */
@@ -4959,8 +4981,10 @@ interface PlaybackStats {
     displayFps: number | null;
     /** Bits per second, updated per keyframe. */
     bitrate: number | null;
-    /** Hardware decoder in use, e.g. "videotoolbox"; "no" = software decoding. */
+    /** Hardware decoder in use, e.g. "videotoolbox", "d3d11va-copy"; "no" = software decoding. */
     hwdec: string | null;
+    /** How the video is decoded, from `hwdec`: `"hardware"` (the method is in `hwdec`) or `"software"`; `null` before a decoder runs. */
+    decoding: "hardware" | "software" | null;
     /** Transfer characteristic as mpv names it, e.g. "bt.1886", "pq", "hlg". */
     transfer: string | null;
   } | null;
@@ -6456,7 +6480,9 @@ type SubtitleStyle = {
   outline: number;
   /** Bottom margin 2–15 % of the video height. */
   marginPercent: number;
-  /** Timing offset −600000–600000 ms. */
+  /**
+   * Timing offset in milliseconds, −600000…600000 (±10 minutes); positive shows the subtitles later. Outside the range the player refuses the style with `invalid`.
+   */
   offsetMs: number;
   /** Bold text; default false. */
   bold?: boolean;
@@ -8011,10 +8037,15 @@ interface PlaybackStats {
   backend: string;
   /** The playback session number. */
   session: number;
-  /** Frames the host has shown. */
+  /** Frames the video renderer produced. Not all of them reach the screen: a busy window shows only the newest one, so compare presentedFps. */
   framesShown: number;
-  /** Frames dropped, `null` when unknown. */
+  /** Frames dropped by the backend (mpv), `null` when unknown. */
   framesDropped: number | null;
+  /**
+   * New video frames the player window showed per second over the last second, measured by the player itself: draws of the main window that put a new picture on screen. Lower than `video.fps` when frames are lost after decoding and rendering (the window could not keep up with the source, or the display refreshes slower); `0` while paused. `null` when the player cannot measure it (no window, the first second, players before 0.5.1).
+   * @player 0.5.1
+   */
+  presentedFps: number | null;
   /** Every field is the backend's own value, `null` when it has none. */
   video: {
     /** Codec name. */
@@ -8039,8 +8070,10 @@ interface PlaybackStats {
     displayFps: number | null;
     /** Bits per second, updated per keyframe. */
     bitrate: number | null;
-    /** Hardware decoder in use, e.g. "videotoolbox"; "no" = software decoding. */
+    /** Hardware decoder in use, e.g. "videotoolbox", "d3d11va-copy"; "no" = software decoding. */
     hwdec: string | null;
+    /** How the video is decoded, from `hwdec`: `"hardware"` (the method is in `hwdec`) or `"software"`; `null` before a decoder runs. */
+    decoding: "hardware" | "software" | null;
     /** Transfer characteristic as mpv names it, e.g. "bt.1886", "pq", "hlg". */
     transfer: string | null;
   } | null;

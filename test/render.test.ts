@@ -185,5 +185,53 @@ test("stats: hwdec and transfer pass through, null when absent", async () => {
   const older = await plugin.player.stats();
   assert.equal(older.video?.hwdec, null);
   assert.equal(older.video?.transfer, null);
+  assert.equal(older.video?.decoding, null);
+  await stop();
+});
+
+test("stats: presentedFps and decoding pass through; decoding follows hwdec for older players", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  assert.equal(
+    (await plugin.player.stats()).presentedFps,
+    null,
+    "TestHost default",
+  );
+  host.stats = {
+    ...host.stats,
+    presentedFps: 29.5,
+    video: {
+      codec: "av1",
+      width: 3840,
+      height: 2160,
+      fps: 60,
+      hwdec: "d3d11va-copy",
+      decoding: "hardware",
+    },
+  };
+  let stats = await plugin.player.stats();
+  assert.equal(stats.presentedFps, 29.5);
+  assert.equal(stats.video?.decoding, "hardware");
+  assert.equal(stats.video?.hwdec, "d3d11va-copy");
+  // A player before 0.5.1 sends neither: presentedFps is null, decoding comes from hwdec.
+  const { presentedFps: _, ...older } = host.stats;
+  host.stats = {
+    ...older,
+    video: { codec: "h264", width: 1, height: 1, fps: 24, hwdec: "no" },
+  };
+  stats = await plugin.player.stats();
+  assert.equal(stats.presentedFps, null);
+  assert.equal(stats.video?.decoding, "software");
+  host.stats = {
+    ...older,
+    video: {
+      codec: "h264",
+      width: 1,
+      height: 1,
+      fps: 24,
+      hwdec: "videotoolbox",
+    },
+  };
+  assert.equal((await plugin.player.stats()).video?.decoding, "hardware");
   await stop();
 });

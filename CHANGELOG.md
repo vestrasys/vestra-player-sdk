@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.15
+
+**How many frames really reach the screen, and how the video is decoded** (player 0.5.1); every player error code documented; the fullscreen bottom bar's new behaviour. Additive; `apiVersion` stays `vestra/1`, and plugins need no change.
+
+- **`PlaybackStats.presentedFps`**: new video frames the player window showed per second over the last second, measured by the player (draws of the main window that put a new picture on screen). `framesShown` counts the frames the video renderer produced, so it cannot show frames lost afterwards, for example a window that draws only every other frame: then `presentedFps` is about half of `video.fps`. `null` when the player cannot measure it (no window, the first second) and with players before 0.5.1.
+- **`PlaybackStats.video.decoding`**: `"hardware"` or `"software"`, from mpv's `hwdec-current` (the method stays in `video.hwdec`, e.g. `"d3d11va-copy"`); `null` before a decoder runs. With players that do not send it, the SDK derives it from `hwdec`.
+- `framesShown` and `framesDropped` say what they count (TSDoc only).
+- **`TestHost`**: `host.stats` takes both fields; `presentedFps` is `null` by default, and `video.decoding` follows `video.hwdec` when a test leaves it out.
+- **`PluginError`**: the table lists the player's remaining codes with their meaning: `activation`, `command`, `input-overflow`, `internal`, `javascript`, `slint`, `owner`, `pending`, `producer`, `resolution`, `revisionConflict`, `source-geometry`, `source-geometry-unsupported`, `source-unavailable` and `unknown-expired`. `pending`, `unknown-expired` and `revisionConflict` are mostly handled inside the SDK, but can reach a plugin.
+- **`SubtitleStyle.offsetMs`**: the range is −600000…600000 ms (±10 minutes), positive shows subtitles later, and outside it the player fails with `invalid`.
+- **The fullscreen bottom bar** (player 0.5.1): it shows only while the pointer is in the bar's own band at the bottom of the screen, at once on entering and hidden 500 ms after leaving; keys and pointer motion elsewhere no longer reveal it, and `Panel.setInteraction` locks keep it. `SlotState.reason` `"idle"`, `Panel.setInteraction` and `Panels.mount` (`"bottom"`) said "hides after 3 seconds without activity".
+- `llms.txt` names the declaration files by path again (`node_modules/@vestra-player/sdk/dist/plugin/types.d.ts` for the API, `dist/plugin/testing.d.ts` for TestHost) instead of `dist/plugin/*.d.ts`.
+
 ## 1.5.14
 
 **The documentation site in seven groups, with generated reference tables.** A documentation release; `apiVersion` stays `vestra/1`, and plugins need no change. Everything a plugin author needs is now on the [documentation site](https://vestrasys.github.io/vestra-player-sdk/) once, in English.
