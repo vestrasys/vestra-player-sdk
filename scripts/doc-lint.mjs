@@ -17,7 +17,11 @@
  * - capability  methods of module entry types have `@capability`
  *
  * It also compares the error codes of the `PluginError` table with the codes
- * the SDK itself throws (`failure("…")`).
+ * the SDK itself throws (`failure("…")`), and checks every `@capability`
+ * tag in src/ (enforced): each dotted name in it (`ui.mount`) and each
+ * single-word name it gives (`events`) must be a capability of
+ * `CAPABILITY_INFO`, and the tag must name at least one unless it starts
+ * with "None" or "That of".
  *
  * The rules above are a report (exit 0). The categories listed in
  * scripts/doc-standard.mjs are enforced: a symbol of such a category that
@@ -30,6 +34,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Application, ReflectionKind } from "typedoc";
 import { STRICT_CATEGORIES, strictDeclarations } from "./doc-standard.mjs";
+import { CAPABILITY_INFO } from "../src/capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--strict");
@@ -233,6 +238,56 @@ const undocumentedCodes = [...thrown.keys()].filter(
   (code) => !documented.has(code),
 );
 
+// @capability tags name capabilities that exist.
+const capabilityProblems = [];
+{
+  const known = new Set(Object.keys(CAPABILITY_INFO));
+  const bareNames = new Set([...known].filter((name) => !name.includes(".")));
+  const scan = (directory) => {
+    for (const item of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, item.name);
+      if (item.isDirectory()) {
+        scan(path);
+        continue;
+      }
+      if (!path.endsWith(".ts")) continue;
+      const text = readFileSync(path, "utf8");
+      for (const comment of text.matchAll(/\/\*\*[\s\S]*?\*\//g)) {
+        const lines = comment[0]
+          .split("\n")
+          .map((line) => line.replace(/^\s*\/?\*+\/?\s?/, ""));
+        lines.forEach((line, index) => {
+          if (!line.startsWith("@capability")) return;
+          const rest = [line.slice("@capability".length)];
+          for (const next of lines.slice(index + 1)) {
+            if (/^@\w/.test(next) || !next.trim()) break;
+            rest.push(next);
+          }
+          const tag = rest
+            .join(" ")
+            .replace(/\{@link[^}]*\}/g, "")
+            .trim();
+          const at = `${path.slice(root.length + 1)}:${text.slice(0, comment.index).split("\n").length + index}`;
+          const dotted = tag.match(/\b[a-z]+(?:\.[a-z]+)+\b/g) ?? [];
+          const words = (tag.match(/\b[a-z]+\b/g) ?? []).filter((word) =>
+            bareNames.has(word),
+          );
+          for (const name of dotted)
+            if (!known.has(name))
+              capabilityProblems.push(
+                `${at}: @capability names "${name}", which is not in CAPABILITY_INFO`,
+              );
+          if (!dotted.length && !words.length && !/^(None|That of)\b/.test(tag))
+            capabilityProblems.push(
+              `${at}: @capability "${tag}" names no capability`,
+            );
+        });
+      }
+    }
+  };
+  scan(join(root, "src"));
+}
+
 // Report.
 console.log(
   `Public API: ${declarations} declarations, ${members} members (entry types: ${entryTypes.size})\n`,
@@ -265,6 +320,10 @@ for (const [category, report] of strictReport) {
     console.log(`::error::${category}: ${text}`);
   strictFailures += report.problems.length;
 }
+
+console.log(`\n@capability tags: ${capabilityProblems.length} problems`);
+for (const text of capabilityProblems) console.log(`::error::${text}`);
+strictFailures += capabilityProblems.length;
 
 if (listRule) {
   if (!stats[listRule]) {

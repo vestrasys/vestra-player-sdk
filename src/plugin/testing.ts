@@ -76,8 +76,13 @@ import type {
   Transport,
   WireSystemInfo,
 } from "../wire.ts";
-import { BUILTIN_SUBMENUS, COMMAND_LIMITS, MENU_IDS } from "../commands.ts";
-import type { BuiltinSubmenu } from "../commands.ts";
+import {
+  BUILTIN_COMMANDS,
+  BUILTIN_SUBMENUS,
+  COMMAND_LIMITS,
+  MENU_IDS,
+} from "../commands.ts";
+import type { BuiltinCommand, BuiltinSubmenu } from "../commands.ts";
 import { CAPABILITY_INFO, MESSAGE_LIMIT } from "../capabilities.ts";
 import type { CapabilityInfo } from "../capabilities.ts";
 import { OSD_LIMITS } from "./osd.ts";
@@ -131,8 +136,8 @@ export { HostError };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
 /** The submenus of the player's built-in plugins, by key path. */
-export { BUILTIN_SUBMENUS };
-export type { BuiltinSubmenu };
+export { BUILTIN_COMMANDS, BUILTIN_SUBMENUS };
+export type { BuiltinCommand, BuiltinSubmenu };
 /** The manifest capabilities: what each opens and how the store shows it. */
 export { CAPABILITY_INFO };
 export type { CapabilityInfo };

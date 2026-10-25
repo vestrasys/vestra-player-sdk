@@ -148,6 +148,398 @@ export const BUILTIN_SUBMENUS: readonly BuiltinSubmenu[] = Object.freeze([
   { path: ["Emulator"], plugins: ["vestra.nes"] },
 ]);
 
+/**
+ * A command the player or one of its built-in plugins registers: an entry
+ * of {@link BUILTIN_COMMANDS}.
+ *
+ * @since 1.5.14
+ */
+export interface BuiltinCommand {
+  /** `"host"` for the player's own commands, else the built-in plugin's id. */
+  readonly owner: string;
+  /** The command's id within its owner (`"play-pause"`, `"capture.save"`). */
+  readonly id: string;
+  /**
+   * The menu path by key (the English texts paths merge by), the leaf
+   * included; a built-in menu by its key (`"Video"`, not `"@video"`).
+   * Empty for a command that is not in the main menu (a panel shortcut).
+   */
+  readonly path: readonly string[];
+  /** The English title (the last segment of `path` when there is one). */
+  readonly title: string;
+  /** The default bindings, canonical, in the order the command declares them. */
+  readonly bindings: readonly string[];
+  /** `"panel"`: the bindings apply only while the owner's panel has focus. */
+  readonly focus: "panel" | null;
+}
+
+/** owner | id | key path, or (title) outside the menu | bindings | panel */
+const BUILTIN_COMMAND_TABLE = `
+vestra.playback | open | Open File… | Ctrl+O, F3
+vestra.playback | open-url | Open ▸ Open URL… | Ctrl+U
+vestra.playlist | playlist.open-folder | Open ▸ Open Folder… | F2
+vestra.subtitles | load | Open ▸ Open Subtitle… | Alt+O
+vestra.audio | audio.load | Open ▸ Load External Audio…
+vestra.history | recent.empty | Open ▸ Recently Played ▸ (No Entries)
+vestra.history | recent.prune | Open ▸ Recently Played ▸ Remove Invalid Entries
+vestra.history | recent.clear | Open ▸ Recently Played ▸ Clear Entries
+vestra.history | recent.enabled | Open ▸ Recently Played ▸ Record Playback History
+vestra.subtitles | load-secondary | Open ▸ Add Secondary Subtitle…
+host | stop | Close | F4
+vestra.playback | reopen | Reopen Current/Last File | Ctrl+Y
+vestra.playback | copy-name | Copy to Clipboard ▸ File Name
+vestra.playback | copy-folder | Copy to Clipboard ▸ Folder Path
+vestra.playback | copy-path | Copy to Clipboard ▸ Full Path
+host | play-pause | Playback ▸ Play/Pause | Space
+host | previous | Playback ▸ Previous | PageUp, Mouse:X1
+host | next | Playback ▸ Next | PageDown, Mouse:X2
+host | frame-back | Playback ▸ Seek ▸ Previous Frame | D
+host | frame-forward | Playback ▸ Seek ▸ Next Frame | F
+vestra.playback | keyframe-back | Playback ▸ Seek ▸ Previous Keyframe | Ctrl+Shift+ArrowLeft
+vestra.playback | keyframe-forward | Playback ▸ Seek ▸ Next Keyframe | Ctrl+Shift+ArrowRight
+host | seek-backward | Playback ▸ Seek ▸ Back 5 s | ArrowLeft
+host | seek-forward | Playback ▸ Seek ▸ Forward 5 s | ArrowRight
+vestra.playback | backward-2 | Playback ▸ Seek ▸ Back 30 s | Ctrl+ArrowLeft
+vestra.playback | forward-2 | Playback ▸ Seek ▸ Forward 30 s | Ctrl+ArrowRight
+vestra.playback | backward-3 | Playback ▸ Seek ▸ Back 60 s | Shift+ArrowLeft
+vestra.playback | forward-3 | Playback ▸ Seek ▸ Forward 60 s | Shift+ArrowRight
+vestra.playback | backward-4 | Playback ▸ Seek ▸ Back 300 s | Ctrl+Alt+ArrowLeft
+vestra.playback | forward-4 | Playback ▸ Seek ▸ Forward 300 s | Ctrl+Alt+ArrowRight
+vestra.subtitles | dialogue-previous | Playback ▸ Seek ▸ Previous Dialogue | Home
+vestra.subtitles | dialogue-next | Playback ▸ Seek ▸ Next Dialogue | End
+vestra.subtitles | dialogue-current | Playback ▸ Seek ▸ Current Subtitle Start | Ctrl+Home
+vestra.playback | jump-start | Playback ▸ Seek ▸ Jump to Start | Backspace
+vestra.playback | time-jump | Playback ▸ Seek ▸ Seek Steps…
+vestra.playback | jump | Playback ▸ Jump to Time… | G
+host | rate-normal | Playback ▸ Speed ▸ Normal | Z
+host | rate-down | Playback ▸ Speed ▸ Slower 0.1 | X
+host | rate-up | Playback ▸ Speed ▸ Faster 0.1 | C
+vestra.playback | rate-05 | Playback ▸ Speed ▸ 0.5×
+vestra.playback | rate-15 | Playback ▸ Speed ▸ 1.5×
+vestra.playback | rate-20 | Playback ▸ Speed ▸ 2×
+vestra.playback | rate-custom | Playback ▸ Speed ▸ Custom…
+vestra.playlist | playlist.add | Playback ▸ Playlist ▸ Add Files…
+vestra.playlist | playlist.link | Playback ▸ Playlist ▸ Add Link…
+vestra.playlist | playlist.add-folder | Playback ▸ Playlist ▸ Add Folder…
+vestra.playlist | playlist.repeat-none | Playback ▸ Playlist ▸ Repeat ▸ Off
+vestra.playlist | playlist.repeat-all | Playback ▸ Playlist ▸ Repeat ▸ All
+vestra.playlist | playlist.repeat-one | Playback ▸ Playlist ▸ Repeat ▸ One
+vestra.playlist | playlist.shuffle | Playback ▸ Playlist ▸ Shuffle
+vestra.playlist | playlist.open-list | Playback ▸ Playlist ▸ Open List File…
+vestra.playlist | playlist.save-list | Playback ▸ Playlist ▸ Save List…
+vestra.playlist | playlist.open-mode-only | Playback ▸ Playlist ▸ When Opening a File ▸ Open Only That File
+vestra.playlist | playlist.open-mode-similar | Playback ▸ Playlist ▸ When Opening a File ▸ Add Similar Files
+vestra.playlist | playlist.open-mode-folder | Playback ▸ Playlist ▸ When Opening a File ▸ Add All Files in the Folder
+vestra.playlist | playlist.fast-advance | Playback ▸ Playlist ▸ Fast Advance to Next
+vestra.playlist | playlist.remember | Playback ▸ Playlist ▸ Remember List
+vestra.playlist | playlist.confirm-clear | Playback ▸ Playlist ▸ Confirm Before Removing All
+vestra.playback | prevent-sleep | Playback ▸ Disable Screen Saver While Playing
+vestra.window | hide-cursor | Playback ▸ Hide Pointer While Playing
+vestra.playback | hover-time | Playback ▸ Show Time on Seek Bar Hover
+vestra.playback | hover-thumbnail | Playback ▸ Show Thumbnail on Seek Bar Hover
+vestra.history | resume.off | Playback ▸ Resume Playback ▸ Don't Resume
+vestra.history | resume.auto | Playback ▸ Resume Playback ▸ Resume Automatically
+vestra.history | resume.ask | Playback ▸ Resume Playback ▸ Ask Every Time
+vestra.history | resume.audio | Playback ▸ Resume Playback ▸ Also Remember Audio Files
+vestra.history | resume.clear | Playback ▸ Resume Playback ▸ Clear All Saved Positions
+vestra.marks | marks.list | Playback ▸ Chapters and Bookmarks ▸ Chapter and Bookmark List… | H
+vestra.marks | marks.add | Playback ▸ Chapters and Bookmarks ▸ Add Bookmark | P
+vestra.marks | marks.previous | Playback ▸ Chapters and Bookmarks ▸ Previous Bookmark or Chapter | Shift+PageUp
+vestra.marks | marks.next | Playback ▸ Chapters and Bookmarks ▸ Next Bookmark or Chapter | Shift+PageDown
+vestra.marks | marks.previous-chapter | Playback ▸ Chapters and Bookmarks ▸ Previous Chapter | Ctrl+PageUp
+vestra.marks | marks.next-chapter | Playback ▸ Chapters and Bookmarks ▸ Next Chapter | Ctrl+PageDown
+vestra.marks | marks.seekbar | Playback ▸ Chapters and Bookmarks ▸ Show Marks on Seek Bar
+vestra.marks | ab.set-a | Playback ▸ A-B Loop ▸ Set Start Point | [
+vestra.marks | ab.clear-a | Playback ▸ A-B Loop ▸ Clear Start Point | {
+vestra.marks | ab.a-back | Playback ▸ A-B Loop ▸ Start Point Back 0.1 s | Ctrl+[
+vestra.marks | ab.a-forward | Playback ▸ A-B Loop ▸ Start Point Forward 0.1 s | Alt+[
+vestra.marks | ab.set-b | Playback ▸ A-B Loop ▸ Set End Point | ]
+vestra.marks | ab.clear-b | Playback ▸ A-B Loop ▸ Clear End Point | }
+vestra.marks | ab.b-back | Playback ▸ A-B Loop ▸ End Point Back 0.1 s | Ctrl+]
+vestra.marks | ab.b-forward | Playback ▸ A-B Loop ▸ End Point Forward 0.1 s | Alt+]
+vestra.marks | ab.back | Playback ▸ A-B Loop ▸ Move Range Back 0.1 s | Ctrl+Alt+[
+vestra.marks | ab.forward | Playback ▸ A-B Loop ▸ Move Range Forward 0.1 s | Ctrl+Alt+]
+vestra.marks | ab.segment | Playback ▸ A-B Loop ▸ Loop Current Chapter or Bookmark Range | Alt+\\
+vestra.marks | ab.toggle | Playback ▸ A-B Loop ▸ A-B Loop On/Off | \\
+vestra.marks | ab.count.endless | Playback ▸ A-B Loop ▸ Loop Count ▸ Endless
+vestra.marks | ab.count.1 | Playback ▸ A-B Loop ▸ Loop Count ▸ Once
+vestra.marks | ab.count.2 | Playback ▸ A-B Loop ▸ Loop Count ▸ 2 Times
+vestra.marks | ab.count.3 | Playback ▸ A-B Loop ▸ Loop Count ▸ 3 Times
+vestra.marks | ab.count.5 | Playback ▸ A-B Loop ▸ Loop Count ▸ 5 Times
+vestra.marks | ab.count.10 | Playback ▸ A-B Loop ▸ Loop Count ▸ 10 Times
+vestra.subtitles | show | Subtitles ▸ Show Subtitles | Alt+H
+vestra.subtitles | track-off | Subtitles ▸ Subtitle Track ▸ Off
+vestra.subtitles | track-cycle | Subtitles ▸ Subtitle Track ▸ Cycle | Alt+L
+vestra.subtitles | second-off | Subtitles ▸ Secondary Subtitle ▸ Off
+vestra.subtitles | second-position-top | Subtitles ▸ Secondary Subtitle ▸ Position ▸ Top
+vestra.subtitles | second-position-aboveMain | Subtitles ▸ Secondary Subtitle ▸ Position ▸ Above Main Subtitle
+vestra.subtitles | bold | Subtitles ▸ Subtitle Style ▸ Bold | Alt+B
+vestra.subtitles | size-up | Subtitles ▸ Subtitle Style ▸ Size + | Alt+PageUp
+vestra.subtitles | size-down | Subtitles ▸ Subtitle Style ▸ Size − | Alt+PageDown
+vestra.subtitles | move-up | Subtitles ▸ Subtitle Style ▸ Move Up | Alt+ArrowUp
+vestra.subtitles | move-down | Subtitles ▸ Subtitle Style ▸ Move Down | Alt+ArrowDown
+vestra.subtitles | move-reset | Subtitles ▸ Subtitle Style ▸ Reset Position | Alt+Home
+vestra.subtitles | shadow | Subtitles ▸ Subtitle Style ▸ Shadow
+vestra.subtitles | box | Subtitles ▸ Subtitle Style ▸ Opaque Box
+vestra.subtitles | ass-original | Subtitles ▸ Original ASS/SSA Styles
+vestra.subtitles | sync-earlier | Subtitles ▸ Sync ▸ Earlier 0.5 s | .
+vestra.subtitles | sync-later | Subtitles ▸ Sync ▸ Later 0.5 s | ,
+vestra.subtitles | sync-reset | Subtitles ▸ Sync ▸ Reset | /
+vestra.subtitles | sync-input | Subtitles ▸ Sync ▸ Adjust Sync…
+vestra.subtitle-online | search | Subtitles ▸ Online Subtitles ▸ Search and Download Subtitles…
+vestra.subtitle-online | settings | Subtitles ▸ Online Subtitles ▸ Online Subtitle Settings…
+vestra.subtitles | reload | Subtitles ▸ Reload Subtitles | Ctrl+Alt+Y
+vestra.subtitles | refresh | Subtitles ▸ Refresh Subtitle Tracks
+vestra.subtitles | tune | Subtitles ▸ Subtitle Tuning…
+vestra.subtitles | settings | Subtitles ▸ Subtitle Settings…
+vestra.video | video.shader.use | Video ▸ Pixel Shaders ▸ Use Shaders | Shift+P
+vestra.video | video.shader.list | Video ▸ Pixel Shaders ▸ Shader List…
+vestra.video | video.shader.folder | Video ▸ Pixel Shaders ▸ Open Shader Folder
+vestra.video | video.shader.reload | Video ▸ Pixel Shaders ▸ Reload Shaders
+vestra.video | video.hdr.auto | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Auto
+vestra.video | video.hdr.off | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Off
+vestra.video | video.hdr.bt.2390 | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ BT.2390
+vestra.video | video.hdr.hable | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Hable
+vestra.video | video.hdr.mobius | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Mobius
+vestra.video | video.hdr.reinhard | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Reinhard
+vestra.video | video.hdr.clip | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Clip
+vestra.video | video.hdr.peak | Video ▸ Pixel Shaders ▸ HDR Tone Mapping ▸ Dynamic Peak Detection
+vestra.video | video.hdr.settings | Video ▸ Pixel Shaders ▸ HDR Settings…
+vestra.video | video.deinterlace.cycle | Video ▸ Deinterlace ▸ Cycle | Ctrl+I
+vestra.video | video.deinterlace.auto | Video ▸ Deinterlace ▸ Auto
+vestra.video | video.deinterlace.on | Video ▸ Deinterlace ▸ Always
+vestra.video | video.deinterlace.off | Video ▸ Deinterlace ▸ Never
+vestra.video | video.deinterlace.output.frame | Video ▸ Deinterlace ▸ Output ▸ By Frame
+vestra.video | video.deinterlace.output.field | Video ▸ Deinterlace ▸ Output ▸ By Field (Double Rate)
+vestra.video | video.fit.keep | Video ▸ Aspect ▸ Keep Aspect Ratio
+vestra.video | video.fit.stretch | Video ▸ Aspect ▸ Ignore Aspect Ratio
+vestra.video | video.fit.fill | Video ▸ Aspect ▸ Fill Window (Crop Excess)
+vestra.video | video.aspect.cycle | Video ▸ Aspect ▸ Cycle Aspect Ratio | Shift+F6
+vestra.video | video.aspect.default | Video ▸ Aspect ▸ Default (Source)
+vestra.video | video.aspect.0 | Video ▸ Aspect ▸ 4:3
+vestra.video | video.aspect.1 | Video ▸ Aspect ▸ 16:9
+vestra.video | video.aspect.2 | Video ▸ Aspect ▸ 16:10
+vestra.video | video.aspect.3 | Video ▸ Aspect ▸ 1.85:1
+vestra.video | video.aspect.4 | Video ▸ Aspect ▸ 2.35:1
+vestra.video | video.aspect.custom | Video ▸ Aspect ▸ Custom (x:y)
+vestra.video | video.aspect.edit | Video ▸ Aspect ▸ Custom Aspect Ratio…
+vestra.video | video.reframe.none | Video ▸ Crop/Stretch ▸ None
+vestra.video | video.reframe.pad.0 | Video ▸ Crop/Stretch ▸ Stretch to 4:3
+vestra.video | video.reframe.pad.1 | Video ▸ Crop/Stretch ▸ Stretch to 16:9
+vestra.video | video.reframe.pad.2 | Video ▸ Crop/Stretch ▸ Stretch to 16:10
+vestra.video | video.reframe.pad.3 | Video ▸ Crop/Stretch ▸ Stretch to 1.85:1
+vestra.video | video.reframe.pad.4 | Video ▸ Crop/Stretch ▸ Stretch to 2.35:1
+vestra.video | video.reframe.crop.0 | Video ▸ Crop/Stretch ▸ Crop to 4:3
+vestra.video | video.reframe.crop.1 | Video ▸ Crop/Stretch ▸ Crop to 16:9
+vestra.video | video.reframe.crop.2 | Video ▸ Crop/Stretch ▸ Crop to 16:10
+vestra.video | video.reframe.crop.3 | Video ▸ Crop/Stretch ▸ Crop to 1.85:1
+vestra.video | video.reframe.crop.4 | Video ▸ Crop/Stretch ▸ Crop to 2.35:1
+vestra.video | video.reframe.reset | Video ▸ Crop/Stretch ▸ Reset Position
+vestra.video | video.reframe.left | Video ▸ Crop/Stretch ▸ Move Left
+vestra.video | video.reframe.right | Video ▸ Crop/Stretch ▸ Move Right
+vestra.video | video.reframe.up | Video ▸ Crop/Stretch ▸ Move Up
+vestra.video | video.reframe.down | Video ▸ Crop/Stretch ▸ Move Down
+vestra.video | video.frame.reset | Video ▸ Framing ▸ Reset Framing | Numpad5, Alt+Backspace
+vestra.video | video.frame.zoom-in | Video ▸ Framing ▸ Zoom In | Numpad9, Alt+Plus
+vestra.video | video.frame.zoom-out | Video ▸ Framing ▸ Zoom Out | Numpad1, Alt+-
+vestra.video | video.frame.right | Video ▸ Framing ▸ Pan → | Ctrl+Numpad6, Alt+ArrowRight
+vestra.video | video.frame.left | Video ▸ Framing ▸ Pan ← | Ctrl+Numpad4, Alt+ArrowLeft
+vestra.video | video.frame.up | Video ▸ Framing ▸ Pan ↑ | Ctrl+Numpad8, Alt+ArrowUp
+vestra.video | video.frame.down | Video ▸ Framing ▸ Pan ↓ | Ctrl+Numpad2, Alt+ArrowDown
+vestra.video | video.frame.centre | Video ▸ Framing ▸ Center Frame | Ctrl+Numpad5
+vestra.video | video.flip.vertical | Video ▸ Image Processing ▸ Flip Vertically | Ctrl+P
+vestra.video | video.flip.horizontal | Video ▸ Image Processing ▸ Flip Horizontally | Ctrl+Z
+vestra.video | video.gaussian | Video ▸ Image Processing ▸ Gaussian Blur | Ctrl+B
+vestra.video | video.sharpen | Video ▸ Image Processing ▸ Sharpen | Ctrl+R
+vestra.video | video.edge | Video ▸ Image Processing ▸ Edge Sharpen
+vestra.video | video.deblock | Video ▸ Image Processing ▸ Deblock | Ctrl+H
+vestra.video | video.deband | Video ▸ Image Processing ▸ Deband
+vestra.video | video.denoise.d3 | Video ▸ Image Processing ▸ 3D Denoise | Ctrl+N
+vestra.video | video.denoise.gradual | Video ▸ Image Processing ▸ Gradual Denoise
+vestra.video | video.denoise.temporal | Video ▸ Image Processing ▸ Temporal Denoise | Ctrl+M
+vestra.video | video.frame-blend | Video ▸ Image Processing ▸ Frame Doubling
+vestra.video | video.interpolation | Video ▸ Image Processing ▸ Motion Interpolation
+vestra.video | video.rotate.cycle | Video ▸ Rotation ▸ Cycle | Alt+K
+vestra.video | video.rotate.0 | Video ▸ Rotation ▸ No Rotation
+vestra.video | video.rotate.90 | Video ▸ Rotation ▸ 90°
+vestra.video | video.rotate.180 | Video ▸ Rotation ▸ 180°
+vestra.video | video.rotate.270 | Video ▸ Rotation ▸ 270°
+vestra.capture | capture.save | Video ▸ Snapshot ▸ Save Current Frame | Ctrl+E
+vestra.capture | capture.saveAs | Video ▸ Snapshot ▸ Save Current Frame As…
+vestra.capture | capture.copy | Video ▸ Snapshot ▸ Copy Current Frame | Ctrl+C
+vestra.capture | capture.saveScreen | Video ▸ Snapshot ▸ Save Rendered Frame | Ctrl+Alt+E
+vestra.capture | capture.saveScreenAs | Video ▸ Snapshot ▸ Save Rendered Frame As…
+vestra.capture | capture.copyScreen | Video ▸ Snapshot ▸ Copy Rendered Frame | Ctrl+Alt+C
+vestra.capture | capture.burst | Video ▸ Snapshot ▸ Burst… | Ctrl+G
+vestra.capture | capture.clip | Video ▸ Snapshot ▸ Export Clip…
+vestra.capture | capture.tasks | Video ▸ Snapshot ▸ Export Tasks…
+vestra.capture | capture.format.png | Video ▸ Snapshot ▸ Capture as PNG
+vestra.capture | capture.format.jpeg | Video ▸ Snapshot ▸ Capture as JPEG
+vestra.capture | capture.format.bmp | Video ▸ Snapshot ▸ Capture as BMP
+vestra.capture | capture.screenSubtitles | Video ▸ Snapshot ▸ Include Subtitles in Rendered Frame
+vestra.capture | capture.settings | Video ▸ Snapshot ▸ Snapshot Settings…
+vestra.capture | capture.folder | Video ▸ Snapshot ▸ Snapshot Folder…
+vestra.capture | capture.openFolder | Video ▸ Snapshot ▸ Open Snapshot Folder
+vestra.video | video.picture | Video ▸ Picture Adjustments…
+vestra.video | video.reset | Video ▸ Reset | Q
+vestra.video | video.brightness.down | Video ▸ Brightness -1% | W
+vestra.video | video.brightness.up | Video ▸ Brightness +1% | E
+vestra.video | video.contrast.down | Video ▸ Contrast -1% | R
+vestra.video | video.contrast.up | Video ▸ Contrast +1% | T
+vestra.video | video.saturation.down | Video ▸ Saturation -1% | Y
+vestra.video | video.saturation.up | Video ▸ Saturation +1% | U
+vestra.video | video.hue.down | Video ▸ Hue -1% | I
+vestra.video | video.hue.up | Video ▸ Hue +1% | O
+host | volume-up | Audio ▸ Volume + | ArrowUp, Mouse:WheelUp
+host | volume-down | Audio ▸ Volume − | ArrowDown, Mouse:WheelDown
+host | mute | Audio ▸ Mute | M
+vestra.audio | audio.workbench | Audio ▸ Audio Workbench…
+vestra.audio | audio.track.none | Audio ▸ Audio Track ▸ No Audio Tracks
+vestra.audio | audio.track.cycle | Audio ▸ Audio Track ▸ Cycle Tracks | Alt+A
+vestra.audio | audio.channels.stereo | Audio ▸ Audio Track ▸ Stereo
+vestra.audio | audio.channels.left | Audio ▸ Audio Track ▸ Left Channel
+vestra.audio | audio.channels.right | Audio ▸ Audio Track ▸ Right Channel
+vestra.audio | audio.channels.mono | Audio ▸ Audio Track ▸ Mono Mix
+vestra.audio | audio.channels.swap | Audio ▸ Audio Track ▸ Swap Left and Right
+vestra.audio | audio.device.none | Audio ▸ Output Device ▸ No Output Devices
+vestra.audio | audio.equalizer | Audio ▸ Equalizer | Shift+E
+vestra.audio | audio.preset.0 | Audio ▸ Preset ▸ Flat
+vestra.audio | audio.preset.1 | Audio ▸ Preset ▸ Voice
+vestra.audio | audio.preset.2 | Audio ▸ Preset ▸ Music
+vestra.audio | audio.preset.3 | Audio ▸ Preset ▸ Cinema
+vestra.audio | audio.sync.earlier | Audio ▸ Audio Sync ▸ 50 ms Earlier | >
+vestra.audio | audio.sync.later | Audio ▸ Audio Sync ▸ 50 ms Later | <
+vestra.audio | audio.sync.reset | Audio ▸ Audio Sync ▸ Reset | ?
+vestra.audio | audio.sync.keep.none | Audio ▸ Audio Sync ▸ Don't Keep
+vestra.audio | audio.sync.keep.session | Audio ▸ Audio Sync ▸ Keep for This Run
+vestra.audio | audio.sync.keep.always | Audio ▸ Audio Sync ▸ Always Keep
+vestra.audio | audio.normalize | Audio ▸ Processing ▸ Normalize | Shift+N
+vestra.audio | audio.clarity | Audio ▸ Processing ▸ Crystalizer | Shift+C
+vestra.audio | audio.reset | Audio ▸ Reset
+vestra.visualizer | audio-cover | Audio ▸ Show Album Cover for Audio Only
+vestra.nes | nes.open | Emulator ▸ Open NES ROM…
+vestra.nes | nes.stop | Emulator ▸ Stop NES
+vestra.nes | nes.window | Emulator ▸ NES Tools…
+host | fullscreen | Toggle Fullscreen | Enter, Alt+Enter, F11, Mouse:LeftDoubleClick
+vestra.window | pip | Screen ▸ Picture-in-Picture
+vestra.window | mini | Screen ▸ Mini Size | \`
+vestra.window | size.0.5 | Screen ▸ 0.5× | 1
+vestra.window | size.1 | Screen ▸ 1× | 2
+vestra.window | size.1.5 | Screen ▸ 1.5× | 3
+vestra.window | size.2 | Screen ▸ 2× | 4
+vestra.window | fit | Screen ▸ Fit to Video Aspect Ratio | 8
+vestra.window | auto.off | Screen ▸ When Playback Starts ▸ Don't Resize
+vestra.window | auto.0.5 | Screen ▸ When Playback Starts ▸ 0.5×
+vestra.window | auto.1 | Screen ▸ When Playback Starts ▸ 1×
+vestra.window | auto.1.5 | Screen ▸ When Playback Starts ▸ 1.5×
+vestra.window | auto.2 | Screen ▸ When Playback Starts ▸ 2×
+vestra.window | auto.fit | Screen ▸ When Playback Starts ▸ Fit to Video Aspect Ratio
+vestra.window | auto.once | Screen ▸ When Playback Starts ▸ Only Once
+vestra.window | top.cycle | Screen ▸ Always on Top ▸ Cycle Mode | Ctrl+T
+vestra.window | top.never | Screen ▸ Always on Top ▸ Never
+vestra.window | top.always | Screen ▸ Always on Top ▸ Always
+vestra.window | top.playing | Screen ▸ Always on Top ▸ While Playing
+vestra.window | top.fullscreen | Screen ▸ Always on Top ▸ While Playing in Fullscreen
+vestra.playlist | playlist.visibility | Playlist | F6
+vestra.info | info.toggle | Playback Info | Tab
+vestra.info | info.properties | Playback Properties… | Ctrl+F1
+vestra.workshop | workshop.open | Vestra Player AI…
+vestra.store | open | Plugin Store…
+vestra.preferences | options | Settings ▸ Options… | F5
+vestra.hotkeys | keys | Settings ▸ Keyboard Shortcuts…
+vestra.hotkeys | mouse | Settings ▸ Mouse…
+vestra.hotkeys | ignore-defaults | Settings ▸ Ignore Default Shortcuts
+vestra.plugins | manage | Settings ▸ Plugin Manager…
+vestra.preferences | theme.vestra | Settings ▸ Appearance ▸ Vestra Dark
+vestra.preferences | theme.vestra-light | Settings ▸ Appearance ▸ Vestra Light
+vestra.visualizer | idle-logo | Settings ▸ Appearance ▸ Show Logo When Idle
+vestra.visualizer | choose-logo | Settings ▸ Appearance ▸ Choose Logo Image…
+vestra.visualizer | reset-logo | Settings ▸ Appearance ▸ Restore Default Logo
+vestra.preferences | language.system | Settings ▸ Language ▸ Follow System
+vestra.preferences | language.en | Settings ▸ Language ▸ English
+vestra.preferences | language.zh-Hans | Settings ▸ Language ▸ 简体中文
+vestra.preferences | language.ja | Settings ▸ Language ▸ 日本語
+vestra.preferences | language.ko | Settings ▸ Language ▸ 한국어
+vestra.preferences | language.de | Settings ▸ Language ▸ Deutsch
+vestra.preferences | language.fr | Settings ▸ Language ▸ Français
+vestra.preferences | language.es | Settings ▸ Language ▸ Español
+vestra.info | info.about | About Vestra Player… | F1
+host | quit | Quit | Cmd+Q
+host | exit-fullscreen | (Leave Fullscreen) | Escape
+vestra.info | info.brief | (Brief Info) | Shift+Tab
+vestra.playlist | playlist.play | (Play) | Enter, P | panel
+vestra.playlist | playlist.list-add | (Add Files…) | Ctrl+I | panel
+vestra.playlist | playlist.list-add-folder | (Add Folder…) | Ctrl+O | panel
+vestra.playlist | playlist.list-link | (Add Link…) | Ctrl+U | panel
+vestra.playlist | playlist.remove | (Remove Selected) | Delete, Backspace | panel
+vestra.playlist | playlist.remove-unselected | (Remove Unselected) | Ctrl+Delete | panel
+vestra.playlist | playlist.remove-invalid | (Remove Invalid Items) | Ctrl+T | panel
+vestra.playlist | playlist.clear | (Remove All) | Alt+Delete | panel
+vestra.playlist | playlist.reveal | (Show in Finder) | Ctrl+F | panel
+vestra.playlist | playlist.move-top | (Move to Top) | Ctrl+Home | panel
+vestra.playlist | playlist.move-up | (Move Up) | Ctrl+ArrowUp | panel
+vestra.playlist | playlist.move-down | (Move Down) | Ctrl+ArrowDown | panel
+vestra.playlist | playlist.move-bottom | (Move to Bottom) | Ctrl+End | panel
+vestra.playlist | playlist.sort-ascending | (Ascending) | Ctrl+1 | panel
+vestra.playlist | playlist.sort-descending | (Descending) | Ctrl+2 | panel
+vestra.playlist | playlist.sort-title | (By Title) | Ctrl+3 | panel
+vestra.playlist | playlist.sort-filename | (By File Name) | Ctrl+4 | panel
+vestra.playlist | playlist.sort-extension | (By Extension) | Ctrl+5 | panel
+vestra.playlist | playlist.sort-size | (By Size) | Ctrl+6 | panel
+vestra.playlist | playlist.sort-duration | (By Duration) | Ctrl+7 | panel
+vestra.playlist | playlist.sort-date | (By Date) | Ctrl+8 | panel
+vestra.playlist | playlist.sort-shuffle | (Random Order) | Ctrl+9 | panel
+vestra.playlist | playlist.sort-folder | (By Folder) | Ctrl+0 | panel
+vestra.playlist | playlist.sort-path | (Sort by Path)
+vestra.playlist | playlist.sort-reverse | (Reverse Current Order)
+vestra.playlist | playlist.select-all | (Select All) | Ctrl+A | panel
+vestra.playlist | playlist.search | (Search) | Ctrl+S | panel
+vestra.playlist | playlist.list-open-list | (Open List File…) | F3 | panel
+vestra.playlist | playlist.list-save-list | (Save List…) | F2 | panel
+vestra.playlist | playlist.close | (Close List) | F6 | panel
+vestra.playlist | playlist.settings | (Playlist Settings…) | F5 | panel
+`;
+
+/**
+ * The commands the player and its built-in plugins register when the
+ * player starts with nothing open, in menu order (commands outside the main
+ * menu last): their key paths, default bindings and owners. Use it to pick
+ * a menu place and default keys that do not collide with the player's (the
+ * user's own changes come on top; see {@link @vestra-player/sdk!Bindings | Bindings}). Menu items built
+ * from content (tracks, recent files, output devices) are not listed; their
+ * placeholders (`No Audio Tracks`) are. The player's tests check that this
+ * list agrees with what the player and its built-in plugins register.
+ *
+ * @example
+ * ```ts
+ * import assert from "node:assert/strict";
+ * import { BUILTIN_COMMANDS } from "@vestra-player/sdk/testing";
+ *
+ * const taken = BUILTIN_COMMANDS.filter((command) => command.focus === null)
+ *   .flatMap((command) => command.bindings);
+ * assert.ok(!taken.includes("Ctrl+K"));
+ * ```
+ *
+ * @since 1.5.14
+ */
+export const BUILTIN_COMMANDS: readonly BuiltinCommand[] = Object.freeze(
+  BUILTIN_COMMAND_TABLE.trim()
+    .split("\n")
+    .map((line): BuiltinCommand => {
+      const [owner = "", id = "", menu = "", keys = "", focus = ""] =
+        line.split(" | ");
+      const path = menu.startsWith("(") ? [] : menu.split(" ▸ ");
+      return Object.freeze({
+        owner,
+        id,
+        path: Object.freeze(path),
+        title: path.at(-1) ?? menu.slice(1, -1),
+        bindings: Object.freeze(keys ? keys.split(", ") : []),
+        focus: focus === "panel" ? "panel" : null,
+      });
+    }),
+);
+
 export type CommandState = {
   enabled: boolean;
   checked: boolean | null;

@@ -17,7 +17,12 @@ export {
   CAPABILITY_INFO,
   MESSAGE_LIMIT,
 } from "./capabilities.ts";
-export { BUILTIN_SUBMENUS, COMMAND_LIMITS, MENU_IDS } from "./commands.ts";
+export {
+  BUILTIN_COMMANDS,
+  BUILTIN_SUBMENUS,
+  COMMAND_LIMITS,
+  MENU_IDS,
+} from "./commands.ts";
 export { BINDING_INPUTS } from "./plugin/bindings.ts";
 export { OSD_LIMITS } from "./plugin/osd.ts";
 export { SECRET_LIMITS } from "./plugin/services.ts";

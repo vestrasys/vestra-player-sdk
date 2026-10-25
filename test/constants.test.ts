@@ -1,6 +1,6 @@
 /**
  * The exported tables the documentation is generated from: capabilities,
- * limits, binding names and the built-in plugins' submenus. The player's
+ * limits, binding names, the built-in commands and submenus. The player's
  * own tests check them against the player; these check that they are
  * consistent in themselves and that the SDK and the test host enforce them.
  */
@@ -12,6 +12,7 @@ import test from "node:test";
 import ts from "typescript";
 import {
   BINDING_INPUTS,
+  BUILTIN_COMMANDS,
   BUILTIN_SUBMENUS,
   CAPABILITY_INFO,
   MENU_IDS,
@@ -258,4 +259,47 @@ test("BUILTIN_SUBMENUS: key paths of the built-in plugins' submenus", () => {
     assert.ok(at >= rank, path.join(" ▸ "));
     rank = at;
   }
+});
+
+test("BUILTIN_COMMANDS: owners, key paths and canonical bindings", () => {
+  assert.ok(Object.isFrozen(BUILTIN_COMMANDS));
+  const ids = BUILTIN_COMMANDS.map((c) => `${c.owner}/${c.id}`);
+  assert.equal(new Set(ids).size, ids.length);
+  const paths = BUILTIN_COMMANDS.filter((c) => c.path.length).map((c) =>
+    c.path.join("\u0000"),
+  );
+  assert.equal(new Set(paths).size, paths.length);
+  let outside = false;
+  for (const command of BUILTIN_COMMANDS) {
+    assert.ok(Object.isFrozen(command) && Object.isFrozen(command.bindings));
+    assert.ok(
+      command.owner === "host" || /^vestra\.[a-z-]+$/.test(command.owner),
+    );
+    assert.ok(command.id && command.title);
+    for (const binding of command.bindings)
+      assert.equal(canonical(binding), binding);
+    for (const segment of command.path)
+      assert.ok(segment === segment.trim() && !segment.startsWith("@"));
+    if (command.path.length) {
+      assert.equal(command.path.at(-1), command.title);
+      // Commands outside the menu come last.
+      assert.ok(!outside, command.id);
+    } else outside = true;
+  }
+  // The submenus they form are the built-in submenus plus the player's own.
+  const submenus = new Set<string>();
+  const tops = MENU_IDS.map((id) => MENU_KEYS[id]!);
+  for (const { path } of BUILTIN_COMMANDS)
+    for (let depth = 1; depth < path.length; depth++) {
+      const key = path.slice(0, depth).join("/");
+      if (
+        !(depth === 1 && tops.includes(path[0]!)) &&
+        !HOST_GROUPS.includes(key)
+      )
+        submenus.add(key);
+    }
+  assert.deepEqual(
+    [...submenus].sort(),
+    BUILTIN_SUBMENUS.map((menu) => menu.path.join("/")).sort(),
+  );
 });
