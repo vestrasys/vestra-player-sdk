@@ -31,6 +31,7 @@ Reading it needs `playback.read`; following it needs `events` too:
 - The SDK reads the state once before `activate` and, with `events`, keeps `player.state` current and calls {@link "@vestra-player/sdk"!Player.onChange | onChange} listeners after every change. The state **never goes backwards**: a late event that is older than what the plugin already has is dropped.
 - Without `events`, `player.state` stays as it was first read until you call {@link "@vestra-player/sdk"!Player.refresh | refresh()}.
 - Some facts are read on demand instead of pushed, because they are large or rarely needed: {@link "@vestra-player/sdk"!Player.chapters | chapters()}, {@link "@vestra-player/sdk"!Player.stats | stats()} (codecs, frame counts, decoder, bitrates), {@link "@vestra-player/sdk"!Player.audioDevices | audioDevices()}.
+  - In `stats()`, the frame counts come from two places. `framesShown` and `framesDropped` are the video renderer's (mpv's) counts. `presentedFps` is what the player window really showed: new frames per second over the last second. When it stays well below `video.fps` while playing, frames are lost after rendering (the window cannot keep up, or the display refreshes slower). `video.decoding` says whether the video is decoded in `"hardware"` (the method in `video.hwdec`) or `"software"`.
 
 Because the state is a snapshot, a plugin can keep one and use it later as the condition for a control.
 

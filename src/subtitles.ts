@@ -44,7 +44,11 @@ export type SubtitleStyle = {
   outline: number;
   /** Bottom margin 2–15 % of the video height. */
   marginPercent: number;
-  /** Timing offset −600000–600000 ms. */
+  /**
+   * Timing offset in milliseconds, −600000…600000 (±10 minutes); positive
+   * shows the subtitles later. Outside the range the player refuses the
+   * style with `invalid`.
+   */
   offsetMs: number;
   /** Bold text; default false. */
   bold?: boolean;

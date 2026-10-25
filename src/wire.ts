@@ -217,6 +217,8 @@ export interface PlaybackStats {
   session: number;
   framesShown: number;
   framesDropped: number | null;
+  /** Player 0.5.1 and newer; the SDK fills in `null`. */
+  presentedFps?: number | null;
   video: {
     codec: string | null;
     width: number | null;
@@ -232,6 +234,7 @@ export interface PlaybackStats {
     displayFps?: number | null;
     bitrate?: number | null;
     hwdec?: string | null;
+    decoding?: "hardware" | "software" | null;
     transfer?: string | null;
   } | null;
   audio: {
