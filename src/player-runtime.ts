@@ -26,6 +26,7 @@ export {
 export { BINDING_INPUTS } from "./plugin/bindings.ts";
 export { OSD_LIMITS } from "./plugin/osd.ts";
 export { SECRET_LIMITS } from "./plugin/services.ts";
+export { THEME_PALETTES } from "./palettes.ts";
 export {
   Catalog,
   HOST_ZH_HANS,

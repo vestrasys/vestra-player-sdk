@@ -75,8 +75,7 @@ winner disabled ─────────────▶ the next command it s
 - **Conflicts are not errors.** A binding that loses is written to the player's log and takes effect by itself when the winner goes away (its plugin stops, the user rebinds it). Tests can check `host.conflicts` ({@link "@vestra-player/sdk/testing"!TestHost.conflicts | TestHost.conflicts}).
 - **A disabled command lets its key go.** This is what makes context-dependent keys work: `Escape` bound to "Leave Fullscreen" does nothing outside fullscreen, so `Escape` reaches the focused control. Give `reason` to a command whose key should still be taken and explained while it is disabled.
 - **`repeat: true`** fires again on the keyboard's auto-repeat while the key is held; without it a binding fires once per press.
-- **Standard close keys are not bindings.** ⌘W on macOS, Ctrl+W and Ctrl+F4 on Windows close a tool window, the floating sidebar or the Options window before any binding or Slint handler sees them. The main window ignores them, so a `Ctrl+W` binding fires there, and only there.
-- Some keys never reach the player because the system takes them first (on macOS ⌃F1–⌃F8, ⌃ and the arrow keys, ⌘Tab). [Reference: commands](../reference/commands.md#keys-the-system-takes-first) lists them; default bindings should avoid them.
+- **Some keys never reach a binding.** The system takes some keys first, and the standard close keys close a tool window, the floating sidebar or the Options window before any binding sees them (in the main window they are ordinary keys). [Keys the system takes first](../reference/commands.md#keys-the-system-takes-first) lists them; default bindings avoid them.
 
 ### What a key name matches
 

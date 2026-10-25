@@ -64,7 +64,7 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 ## Inside a built-in menu
 
 - **Name the menu by its id**: `["@video", "Blur"]`. The seven built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings) stay where they are whatever you put in them.
-- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's (the player's orders are in the menu table linked above); the player's items use 100 and up.
+- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use 100 and up, in the order listed in [Built-in commands](../reference/commands.md#built-in-commands), and the ranges per menu are at {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 - **Group related items** with a `group` of your own, so a separator sets them apart from the player's items.
 - **Playback ▸ Speed and Playback ▸ Seek are the player's.** You can add to them; their titles stay the player's.
 
@@ -88,15 +88,15 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 
 - **A panel's commands go into its own right-click menu** ({@link "@vestra-player/sdk"!Panel.showMenu | panel.showMenu}), not into the main menu: it looks the same and is made of the plugin's own commands. Commands that make sense only in the panel have no `path` there.
 - **Keys that act on the panel's content** (Enter to play, Delete to remove) are bindings with `focus: "panel"`: they win over the global meaning of the same key while the panel has focus, and give it back when it loses focus. That is intended, not a conflict.
-- The player's playlist is the model: its list menu, its Add and Sort buttons and its panel keys; see the "Playlist has focus" table in the player's menu table.
+- The player's playlist is the model: its list menu, its Add and Sort buttons and its panel keys; its panel keys are at the end of [Built-in commands](../reference/commands.md#built-in-commands).
 
 ## Default bindings
 
 A default binding is optional. Users rebind every command (Settings ▸ Keyboard Shortcuts…) and can turn all defaults off (Settings ▸ Ignore Default Shortcuts), so give one only to a command people repeat often.
 
-- **Pick an unused key.** Check the player's menu table, which lists every default binding and its conflict check. Two commands with the same key are not an error, but only one of them runs (the user's choice, then the player's own commands, then the plugin loaded first), so a colliding default simply does nothing for the user.
+- **Pick an unused key.** Check [Built-in commands](../reference/commands.md#built-in-commands), which lists every default binding of the player and its built-in plugins. Two commands with the same key are not an error, but only one of them runs (the user's choice, then the player's own commands, then the plugin loaded first), so a colliding default simply does nothing for the user.
 - **Write `Ctrl`, not `Cmd`**, for a binding that works on both systems: on macOS `Ctrl+X` fires for both ⌃X and ⌘X.
-- **Avoid the keys the system takes first** (on macOS ⌃F1–⌃F8, ⌃ with an arrow key, ⌘H, ⌘M; on Windows some graphics drivers' Ctrl+Alt+arrow keys) and the standard close keys (⌘W; Ctrl+W, Ctrl+F4), which close windows before any binding sees them. The full list is in [Commands](../reference/commands.md#keys-the-system-takes-first).
+- **Avoid the [keys the system takes first](../reference/commands.md#keys-the-system-takes-first)**, the standard close keys among them, as defaults.
 - **The right mouse button opens the menu** and is not a binding input; the other video-area mouse inputs are.
 - **A typed symbol is its own key**: `>` is not `Shift+.`, so `.` and `>` can do different things.
 - **Remember that bindings belong to the main window.** They do not fire while a tool window or the Options window has focus ([Focus and keyboard](../concepts/ui.md)).

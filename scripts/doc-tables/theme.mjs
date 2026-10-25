@@ -1,11 +1,15 @@
 /**
  * `<!-- generated:theme <colors|sizes> -->`: the tokens of `Theme`
  * (slint/vestra/theme.slint). `colors`: the colour and brush tokens with
- * the default palette's value (slint/palette.slint, the `vestra` palette).
+ * their value in each palette: `vestra` from slint/palette.slint (the
+ * defaults of the SDK's copy), `vestra-light` from `THEME_PALETTES`
+ * (src/palettes.ts) and, for the gradient, palette.slint's
+ * `fill-vestra-light`. The two must agree on `vestra`.
  * `sizes`: the length tokens (corner radii, font sizes, control sizes). A
  * token's own short comment becomes its note.
  */
 import { exportsOf, lines, member } from "./lib/slint.mjs";
+import { THEME_PALETTES } from "../../src/palettes.ts";
 
 /** The `in` defaults of `VestraPalette`, by name. */
 function palette(source) {
@@ -48,9 +52,23 @@ export default function theme({ args, read, table }) {
   // A short sentence is a note; a longer one or a heading (no full stop) is not.
   const note = (comment) =>
     comment.length <= 100 && comment.endsWith(".") ? comment : "";
+  for (const [name, value] of Object.entries(THEME_PALETTES.vestra))
+    if (values.get(name) !== value)
+      throw new Error(
+        `THEME_PALETTES.vestra.${name} is ${value}, slint/palette.slint has ${values.get(name)}`,
+      );
+  const light = (name) => {
+    const value =
+      THEME_PALETTES["vestra-light"][name] ??
+      (values.get(name) === "self.fill-vestra"
+        ? values.get("fill-vestra-light")
+        : undefined);
+    if (!value) throw new Error(`no vestra-light value for ${name}`);
+    return value;
+  };
   if (part === "colors")
     return table(
-      ["Token", "Value in `vestra`", "Note"],
+      ["Token", "Value in `vestra`", "Value in `vestra-light`", "Note"],
       global.members
         .filter((m) => ["color", "brush"].includes(m.type))
         .map((m) => {
@@ -60,6 +78,7 @@ export default function theme({ args, read, table }) {
           return [
             `\`Theme.${m.name}\``,
             shownValue(resolved(values, reference[1])),
+            shownValue(light(reference[1])),
             note(m.comment),
           ];
         }),

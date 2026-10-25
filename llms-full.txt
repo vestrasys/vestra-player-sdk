@@ -117,7 +117,7 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
-- `path` is the menu path, matched by exact titles. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id instead of its title, which depends on the player's language: `["@video", "Blur"]` (also `@open`, `@playback`, `@subtitles`, `@audio`, `@screen`, `@settings`; player 0.3.0).
+- `path` is the menu path in English; paths merge by these words in every interface language. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id, such as `["@video", "Blur"]` (Built-in menus).
 - `enabled` is a function: the SDK re-evaluates it after every handler and every state change it receives, and sends only changes. This needs `events` to follow outside changes.
 - `run` may return a promise. Errors thrown or rejected there go to `plugin.onError`, then to the plugin log.
 - Commands are registered in the background; activation succeeds once every registration made during `activate` succeeded.
@@ -434,8 +434,7 @@ winner disabled ─────────────▶ the next command it s
 - **Conflicts are not errors.** A binding that loses is written to the player's log and takes effect by itself when the winner goes away (its plugin stops, the user rebinds it). Tests can check `host.conflicts` (TestHost.conflicts).
 - **A disabled command lets its key go.** This is what makes context-dependent keys work: `Escape` bound to "Leave Fullscreen" does nothing outside fullscreen, so `Escape` reaches the focused control. Give `reason` to a command whose key should still be taken and explained while it is disabled.
 - **`repeat: true`** fires again on the keyboard's auto-repeat while the key is held; without it a binding fires once per press.
-- **Standard close keys are not bindings.** ⌘W on macOS, Ctrl+W and Ctrl+F4 on Windows close a tool window, the floating sidebar or the Options window before any binding or Slint handler sees them. The main window ignores them, so a `Ctrl+W` binding fires there, and only there.
-- Some keys never reach the player because the system takes them first (on macOS ⌃F1–⌃F8, ⌃ and the arrow keys, ⌘Tab). Reference: commands lists them; default bindings should avoid them.
+- **Some keys never reach a binding.** The system takes some keys first, and the standard close keys close a tool window, the floating sidebar or the Options window before any binding sees them (in the main window they are ordinary keys). Keys the system takes first lists them; default bindings avoid them.
 
 ##### What a key name matches
 
@@ -729,7 +728,7 @@ Every surface is a **handle** owned by the Scope that created it. Disposing the 
  └──────────────┘           └──────────────┘   show()   └──────────────┘
         ▲                       │       │
         │  close()              │       │  the user: title-bar close button,
-        │  (no onClose)         │       │  ⌘W (macOS), Ctrl+W or Ctrl+F4 (Windows)
+        │  (no onClose)         │       │  the standard close keys
         └───────────────────────┘       │  → onClose listeners run
         ▲                               │
         └───────────────────────────────┘
@@ -849,7 +848,7 @@ export component ListPanel inherits Rectangle {
 
 - **Exactly one exported component** per file (plus the one bridge global in a panel or settings page file). Helper components without `export` are allowed. The player appends a line that exports its palette to every plugin file, so do not declare anything named `VestraPalette`.
 - **The `fluent-dark` style.** Every plugin file is compiled with Slint's `fluent-dark` style, so `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `Switch`, `LineEdit`…) are dark; in the light palette the player switches them to their light colours (`Palette.color-scheme`) at run time. Do not set `Palette.color-scheme` yourself.
-- **No fonts of your own.** Every window uses the system's interface font, and Slint falls back per character to a system font that has a missing glyph (CJK text in a Latin font, for example). The player bundles no interface font and a plugin does not need to set one; a `default-font-family` or `font-family` you set still applies, with the same fallback. The fonts per system are in Reference: theme.
+- **No fonts of your own.** Every window uses the system's interface font, and a character it lacks (CJK text in a Latin font, for example) falls back per character to a font for its script; on Windows the player sets that chain itself and ends it with a bundled CJK font. A plugin does not need to set a font; a `default-font-family` or `font-family` you set still applies, with the same fallback. The fonts per system are in Reference: theme.
 - **Editor support through `libraryPaths`.** The `@vestra/…` imports resolve inside the player. For the Slint language server, point `libraryPaths` at the read-only copy in the SDK package: `{ "vestra": "node_modules/@vestra-player/sdk/slint/vestra" }`.
 - **Text the user sees is `@tr("English")`**, translated when the player loads the file (Translate a plugin).
 
@@ -902,30 +901,8 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 
 - **Colours follow the player's palette.** The player has two palettes, `vestra` (dark, the default) and `vestra-light` (player 0.4.0, SDK 1.5), both drawn from the logo's colours (see plugin.appearance). It sets the palette on every view before it appears and again when the user switches, so `Theme` colours change with it. Colours you hard-code do not. `Theme` properties are read-only.
 - **The video area is dark in every palette** (`Theme.bg-video`). Text or icons you draw over the video (a backdrop, an overlay) use light colours, not `Theme.text`, which is dark in `vestra-light`.
-- **Use tokens, not values.** `Theme` has colour tokens (`text`, `accent`, `danger` for errors and destructive actions…), font sizes, control sizes and spacing; `Icon { name: "play"; color: Theme.text; }` draws an icon of the player's own set (player 0.4.0, SDK 1.5, so set `"minPlayerVersion": "0.4.0"`); `@vestra/widgets.slint` has the compact `Button`, `Slider`, `ToolTipArea` and `UrlInputRow`. Every token with its current value in the `vestra` palette (the SDK does not publish the `vestra-light` values), the icon names and the widgets' properties are in Reference: theme. The values may change between player versions; the tokens keep their meaning.
-- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a **Copy** button on code blocks (`@tr("Copy")`, which the player translates into the interface language) that reports `copy-code(code)`; copy it with plugin.clipboard. A chat window:
-
-  ```slint
-  import { ListView } from "std-widgets.slint";
-  import { MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
-  export struct Message { id: string, role: string, body: [MarkdownBlock] }
-  export component Chat inherits Window {
-      in property <[Message]> messages;
-      callback copy-code(string);
-      ListView {
-          for message in root.messages: VerticalLayout {
-              padding: 8px;
-              MarkdownBlocks {
-                  blocks: message.body;
-                  code-copy: true;
-                  copy-code(code) => { root.copy-code(code); }
-              }
-          }
-      }
-  }
-  ```
-
-  Write the list with a document per row (`messages: [{ id, role, body: await plugin.ui.markdown(text) }]`). The player parses only the documents that changed and updates the list in place (rows added or removed at the end, a growing message's changed blocks), so re-sending the whole list on every streamed chunk keeps the scroll position and costs little.
+- **Use tokens, not values.** `Theme` has colour tokens (`text`, `accent`, `danger` for errors and destructive actions…), font sizes, control sizes and spacing; `Icon { name: "play"; color: Theme.text; }` draws an icon of the player's own set (player 0.4.0, SDK 1.5, so set `"minPlayerVersion": "0.4.0"`); `@vestra/widgets.slint` has the compact `Button`, `Slider`, `ToolTipArea` and `UrlInputRow`. Every token with its current values in both palettes, the icon names and the widgets' properties are in Reference: theme. The values may change between player versions; the tokens keep their meaning.
+- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a **Copy** button on code blocks (`@tr("Copy")`, which the player translates into the interface language) that reports `copy-code(code)`; copy it with plugin.clipboard. A list of documents (a chat, one message per row) is the example at Ui.markdown; Example: Markdown shows one document in a window.
 
 #### Sizes
 
@@ -946,12 +923,12 @@ The operating system places a tool window when it opens; the player does not rem
 
 - **Command key bindings belong to the main window.** A binding from CommandOptions.bindings fires while the main window or the floating sidebar window has focus (and the key was not taken by a focused control, such as Space in a text field). It does **not** fire while a tool window or the Options window has focus. Keys inside your own window are Slint's job: use a `FocusScope` with `key-pressed`, or a button's default action.
 - A binding with `focus: "panel"` fires only while this plugin's panel (docked or floating) has focus, and wins over global bindings there.
-- **Standard close keys are not bindings.** ⌘W on macOS, Ctrl+W and Ctrl+F4 on Windows close a tool window, the floating sidebar or the Options window exactly like the title-bar button (a tool window's `onClose` runs). The player takes these keys before Slint sees them, even when a text field has focus, so neither your Slint handlers nor your bindings receive them. The main window does not react to them, so a `Ctrl+W` binding still fires there.
+- **Standard close keys are not bindings.** They close a tool window, the floating sidebar or the Options window like the title-bar button (`onClose` runs) before your Slint handlers or bindings see them; the keys per system are in Keys the system takes first.
 - While a menu or a system dialog is open, bindings pause.
 
 #### Platform differences
 
-The API is the same on macOS and Windows; what differs is the system's own part: the close keys (⌘W, or Ctrl+W and Ctrl+F4), how `dialogs.confirm` looks, the monospace font, the modifier `DropModifiers.cmd` stands for. Reference: platforms lists every difference. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
+The API is the same on macOS and Windows; what differs is the system's own part: the standard close keys, how `dialogs.confirm` looks, the monospace font, the modifier `DropModifiers.cmd` stands for. Reference: platforms lists every difference. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
 
 #### Common pitfalls
 
@@ -968,32 +945,7 @@ The API is the same on macOS and Windows; what differs is the system's own part:
 
 #### Testing
 
-`TestHost` from `@vestra-player/sdk/testing` runs a plugin without the player and records its interface: `host.window(id)` (`props`, `callbacks`, `visible`, `emit(callback, ...args)`, `userClose()`), `host.mounted()` for the panel, `host.settingsPage(id)` and `host.settings`, `host.osd` (messages shown), `host.confirms` and `host.dialogAnswers`. Property names in `props` are the Slint (kebab-case) names. The test host does not compile Slint files; check them by running the plugin in the player.
-
-```ts
-import assert from "node:assert/strict";
-import test from "node:test";
-import type { Plugin } from "@vestra-player/sdk";
-import { startPlugin } from "@vestra-player/sdk/testing";
-
-async function activate(plugin: Plugin) {
-  let count = 0;
-  const window = plugin.windows.create("ui/counter.slint");
-  window.bind(() => ({ label: `Clicked ${count} times` }));
-  window.on("clicked", () => count++);
-  await window.show();
-}
-
-test("the label counts clicks", async () => {
-  const { host, stop } = await startPlugin(activate, {
-    capabilities: ["ui.window"],
-  });
-  host.window("counter").emit("clicked");
-  await host.settle();
-  assert.equal(host.window("counter").props["label"], "Clicked 1 times");
-  await stop();
-});
-```
+`TestHost` from `@vestra-player/sdk/testing` runs a plugin without the player and records its interface: windows with their properties and callbacks, the mounted panel, settings pages, the OSD and dialogs. It does not compile Slint files; check them by running the plugin in the player. How to write such tests is in Test a plugin.
 
 ## How-to: Keep a slider responsive while dragging
 
@@ -1286,7 +1238,7 @@ export default async function activate(plugin: Plugin) {
 - **Load once, at activation.** `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin. Always pass a `validate` function: the file is outside your control.
 - **Bind the stored value, not a copy.** `window.bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window, and a window opened later starts with the current values.
 - **Save on every change; the store debounces.** `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename). Dragging the slider writes the file once, after the drag. When the plugin stops (the player quits, the user disables the plugin), the store is flushed, so the last value is not lost.
-- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (title-bar button, ⌘W, Ctrl+W, Ctrl+F4). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
+- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (the title-bar button or the standard close keys). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
 - **Restore after binding.** The window is created and bound before `open()` runs, so it opens with the stored values and without flashing defaults. If it cannot open (for example in a player without a user interface), the plugin forgets that it was open instead of failing activation.
 
 #### What you cannot restore
@@ -1474,7 +1426,7 @@ assert.deepEqual(host.command("counter").display.path, ["工具", "计数器…"
 assert.deepEqual(host.osd, ["计数：1"]); // osd.show("Count: {}", [1])
 ```
 
-`command.display` is the menu as shown (`display.reason` the shown reason), `host.osd`, `host.osdPanel` and `host.confirmTexts` the shown messages, `host.fileDialogs` the file dialogs' titles and file names, window and panel `props` the property values with their text values shown, `host.translate(text, args)` any text (a string or a text value). The declared English stays in `command.declaration` and `host.sent(...)`. Without `locale` the test host plays English, except that the player's own messages stay in the Chinese older SDKs used.
+`command.display` is the menu as shown (`display.reason` the shown reason), `host.osd`, `host.osdPanel` and `host.confirmTexts` the shown messages, `host.fileDialogs` the file dialogs' titles and file names, window and panel `props` the property values with their text values shown, `host.translate(text, args)` any text (a string or a text value). The declared English stays in `command.declaration` and `host.sent(...)`. Without `locale`, the plugin's own texts show in English as declared, but the player's own texts (core action OSD messages, menu titles and reasons) stay in Simplified Chinese, as in SDK 1.5.8 and older, so existing tests keep passing; pass `locale: "en"` to see the player in English.
 
 #### Limits
 
@@ -1482,7 +1434,7 @@ assert.deepEqual(host.osd, ["计数：1"]); // osd.show("Count: {}", [1])
 - Plurals have two forms (1 and everything else). For a language with more forms (Russian, Arabic, Polish) the player does not ship a translation.
 - Numbers in templates print as JavaScript writes them (`1.5`), not in the language's own format.
 - A text the player cannot find in the catalog shows in English; so does a plugin's text on a player before 0.4.3, which also shows templates without filling them in. Set `"minPlayerVersion": "0.4.3"` in the manifest of a plugin that relies on templates or text values (older players run an older SDK, which has no `plugin.i18n.text`).
-- Text values: 16 arguments per text, 256 items per list, nesting 8 deep, 1024 values in one text, 4096 bytes per source or string argument (`TEXT_LIMITS` in `@vestra-player/sdk/testing`). A property value's limits (`UI_VALUE_LIMITS`) count a text value as the string it becomes.
+- Text values have limits on arguments, list items, nesting and bytes (Text values); a property value's limits (Property values) count a text value as the string it becomes.
 
 ## How-to: Migrate a plugin to English source text
 
@@ -1948,7 +1900,7 @@ The player's picture, audio and subtitle tools share one layout; a window of the
 
 - **A link input is `UrlInputRow`**: the input with **Open** and **Cancel**, Enter accepts and Escape cancels, no history list. The player's own link windows (Open URL, the playlist's Add URL, the plugin store) all use it.
 - **Group the fields** of a longer form (storage, format and size, range…) with labels in a right-aligned left column; the main action is a primary button (`Theme.button-primary-height`) at the bottom.
-- The standard close keys (⌘W; Ctrl+W, Ctrl+F4) close every tool window; you cannot and need not handle them (Focus and keyboard).
+- The standard close keys close every tool window; you cannot and need not handle them.
 
 #### Panels
 
@@ -2033,7 +1985,7 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 #### Inside a built-in menu
 
 - **Name the menu by its id**: `["@video", "Blur"]`. The seven built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings) stay where they are whatever you put in them.
-- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's (the player's orders are in the menu table linked above); the player's items use 100 and up.
+- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use 100 and up, in the order listed in Built-in commands, and the ranges per menu are at CommandOptions.order.
 - **Group related items** with a `group` of your own, so a separator sets them apart from the player's items.
 - **Playback ▸ Speed and Playback ▸ Seek are the player's.** You can add to them; their titles stay the player's.
 
@@ -2057,15 +2009,15 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 
 - **A panel's commands go into its own right-click menu** (panel.showMenu), not into the main menu: it looks the same and is made of the plugin's own commands. Commands that make sense only in the panel have no `path` there.
 - **Keys that act on the panel's content** (Enter to play, Delete to remove) are bindings with `focus: "panel"`: they win over the global meaning of the same key while the panel has focus, and give it back when it loses focus. That is intended, not a conflict.
-- The player's playlist is the model: its list menu, its Add and Sort buttons and its panel keys; see the "Playlist has focus" table in the player's menu table.
+- The player's playlist is the model: its list menu, its Add and Sort buttons and its panel keys; its panel keys are at the end of Built-in commands.
 
 #### Default bindings
 
 A default binding is optional. Users rebind every command (Settings ▸ Keyboard Shortcuts…) and can turn all defaults off (Settings ▸ Ignore Default Shortcuts), so give one only to a command people repeat often.
 
-- **Pick an unused key.** Check the player's menu table, which lists every default binding and its conflict check. Two commands with the same key are not an error, but only one of them runs (the user's choice, then the player's own commands, then the plugin loaded first), so a colliding default simply does nothing for the user.
+- **Pick an unused key.** Check Built-in commands, which lists every default binding of the player and its built-in plugins. Two commands with the same key are not an error, but only one of them runs (the user's choice, then the player's own commands, then the plugin loaded first), so a colliding default simply does nothing for the user.
 - **Write `Ctrl`, not `Cmd`**, for a binding that works on both systems: on macOS `Ctrl+X` fires for both ⌃X and ⌘X.
-- **Avoid the keys the system takes first** (on macOS ⌃F1–⌃F8, ⌃ with an arrow key, ⌘H, ⌘M; on Windows some graphics drivers' Ctrl+Alt+arrow keys) and the standard close keys (⌘W; Ctrl+W, Ctrl+F4), which close windows before any binding sees them. The full list is in Commands.
+- **Avoid the keys the system takes first**, the standard close keys among them, as defaults.
 - **The right mouse button opens the menu** and is not a binding input; the other video-area mouse inputs are.
 - **A typed symbol is its own key**: `>` is not `Shift+.`, so `.` and `>` can do different things.
 - **Remember that bindings belong to the main window.** They do not fire while a tool window or the Options window has focus (Focus and keyboard).
@@ -2229,7 +2181,7 @@ plugin.ui.markdown and its image downloads. A failed or oversized image shows it
 
 #### On-screen display
 
-Counted on the text as shown, after translation and with its arguments filled in. A text over a limit fails with code `invalid`: osd.show rejects, OsdPanel.set reports to `Scope.onError`.
+Counted on the text as shown, after translation and with its arguments filled in. A text over a limit fails with code `invalid`: osd.show rejects, OsdPanel.set reports to `Scope.onError`. Font sizes and placement are at Osd.
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
@@ -2724,13 +2676,18 @@ The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscre
 
 #### Keys the system takes first
 
-These never reach a binding; do not use them as defaults.
+These keys may never reach a binding, because the system or the player takes them first; do not use them as defaults. This table is the one list of them; other pages link here.
 
 | Keys | Taken by |
 | --- | --- |
-| ⌃F1–⌃F8, ⌃↑ ⌃↓ ⌃← ⌃→, ⌘Tab, ⌘Space (macOS) | The system's keyboard navigation, Mission Control and Spaces, the application switcher, Spotlight. |
+| ⌃F1–⌃F8 (macOS) | The system's keyboard navigation (⌃F1 turns keyboard access on and off). A `Ctrl+F1` binding still fires with ⌘F1. |
+| ⌃← ⌃→ ⌃↑ ⌃↓ (macOS) | Spaces, Mission Control and application windows. The ⌘ versions of a `Ctrl+arrow` binding work. |
+| ⌘H, ⌘M (macOS) | The system: hide and minimize the application. A `Ctrl+H` or `Ctrl+M` binding then fires only with ⌃. |
+| ⌘Tab, ⌘Space (macOS) | The application switcher and Spotlight. |
+| F11, and F1–F12 on Apple keyboards (macOS) | F11 shows the desktop; on Apple keyboards the function keys are media keys unless fn is held. |
+| Ctrl+Alt+arrow keys (Windows) | Some graphics drivers, to rotate the screen. |
 | Most `Cmd+…` combinations (Windows) | The system, for the Windows logo key. `Cmd+Q` (**Quit**) does nothing there; the window's close button and Alt+F4 quit. |
-| ⌘W (macOS); Ctrl+W, Ctrl+F4 (Windows) | The player, in a tool window, the floating sidebar and the Options window: they close that window. In the main window a binding for them fires as usual. |
+| **Standard close keys**: ⌘W (macOS); Ctrl+W, Ctrl+F4 (Windows) | The player, in a tool window, the floating sidebar and the Options window: they close that window exactly like the title-bar button (a tool window's `onClose` runs), even while a text field has focus, so neither Slint handlers nor bindings see them. In the main window they do nothing, so a binding for them fires there as usual. |
 | Right button, left drag on the video | The player: the context menu; moving the window in window mode. |
 
 The defaults of the built-in commands are taken as well: a plugin default on the same input in the same scope loses to the player's own command and to plugins loaded earlier.
@@ -2756,11 +2713,11 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
 | Render options (RenderOptions) | Available; `peakDetect` has no effect. | `unsupported` (software rendering). |
 | Bindings | `Ctrl` also matches ⌘; `Cmd` is ⌘. | `Cmd` is the Windows logo key; `Cmd+Q` does not quit. |
-| Close a tool window, the floating sidebar, the Options window | ⌘W | Ctrl+W, Ctrl+F4 |
-| Interface font | The system font; CJK falls back per character (PingFang and others). | The system font; CJK falls back per character. |
+| Keys taken first, standard close keys | See Keys the system takes first. | See Keys the system takes first. |
+| Interface font | The system font; CJK falls back per character to the system's fonts (PingFang, Hiragino). | The system font; CJK falls back per character to Windows' CJK fonts in the interface language's order, then the bundled Noto Sans CJK SC (the chain). |
 | `Theme.font-mono` | Menlo | Consolas |
 
-Other systems have no released player; there, every feature in this table that needs the system fails with `unsupported` (always on top and `setVideoArea` with `unavailable`, `preventSleep` has no effect), and keys follow the Windows column with Ctrl+W as the close key.
+Other systems have no released player; there, every feature in this table that needs the system fails with `unsupported` (always on top and `setVideoArea` with `unavailable`, `preventSleep` has no effect), and keys behave as on Windows.
 
 When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable` on every system.
 
@@ -2779,33 +2736,33 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 
 #### Colours
 
-`Theme` colours follow the user's palette: `vestra`, the dark default, and `vestra-light` (player 0.4.0), whose video area stays dark. The player sets the palette on every view and again when the user switches, so read colours from `Theme` (they are read-only `out` properties) and never write a colour value yourself. The table shows the `vestra` values.
+`Theme` colours follow the user's palette: `vestra`, the dark default, and `vestra-light` (player 0.4.0), whose video area stays dark. The player sets the palette on every view and again when the user switches, so read colours from `Theme` (they are read-only `out` properties) and never write a colour value yourself. The table shows both palettes' current values; the same values are THEME_PALETTES, for tests.
 
-| Token | Value in `vestra` | Note |
-| --- | --- | --- |
-| `Theme.bg-bar` | `#16141c` |  |
-| `Theme.bg-video` | `#0a090e` |  |
-| `Theme.bg-list` | `#1a1821` |  |
-| `Theme.bg-panel` | `#201d28` |  |
-| `Theme.line` | `#2b2734` |  |
-| `Theme.hover-bg` | `#28232f` |  |
-| `Theme.press-bg` | `#110f16` |  |
-| `Theme.selected-bg` | `#2f2840` |  |
-| `Theme.text` | `#f5f3fa` |  |
-| `Theme.text-dim` | `#8e88a0` |  |
-| `Theme.text-list` | `#bdb8cb` |  |
-| `Theme.text-played` | `#6e6980` |  |
-| `Theme.accent` | `#f72aa6` |  |
-| `Theme.accent-press` | `#c41a83` |  |
-| `Theme.accent-disabled` | `#5a1d48` |  |
-| `Theme.icon-disabled` | `#3b3646` |  |
-| `Theme.playing` | `#2bb6ff` |  |
-| `Theme.button-bg` | `#2f2a3b` |  |
-| `Theme.button-hover` | `#3a3448` |  |
-| `Theme.button-press` | `#25202e` |  |
-| `Theme.button-disabled` | `#1b1922` |  |
-| `Theme.danger` | `#ff5a5f` | Errors and destructive actions: a failed status line, a Delete button. |
-| `Theme.accent-fill` | gradient 90°: `#fcc402 0%`, `#fb5a35 20%`, `#fa0aa8 45%`, `#7a0afa 72%`, `#10a8fc 100%` | Brand gradient for "progress" fills (seek bar, volume, sliders, accents). |
+| Token | Value in `vestra` | Value in `vestra-light` | Note |
+| --- | --- | --- | --- |
+| `Theme.bg-bar` | `#16141c` | `#f7f6fa` |  |
+| `Theme.bg-video` | `#0a090e` | `#0e0d12` |  |
+| `Theme.bg-list` | `#1a1821` | `#ffffff` |  |
+| `Theme.bg-panel` | `#201d28` | `#f1eff5` |  |
+| `Theme.line` | `#2b2734` | `#dcd8e4` |  |
+| `Theme.hover-bg` | `#28232f` | `#e9e6f0` |  |
+| `Theme.press-bg` | `#110f16` | `#dcd8e6` |  |
+| `Theme.selected-bg` | `#2f2840` | `#efe4fb` |  |
+| `Theme.text` | `#f5f3fa` | `#1c1924` |  |
+| `Theme.text-dim` | `#8e88a0` | `#6f6a7f` |  |
+| `Theme.text-list` | `#bdb8cb` | `#3b3748` |  |
+| `Theme.text-played` | `#6e6980` | `#9a95a8` |  |
+| `Theme.accent` | `#f72aa6` | `#d4128a` |  |
+| `Theme.accent-press` | `#c41a83` | `#a80d6c` |  |
+| `Theme.accent-disabled` | `#5a1d48` | `#ecbcd9` |  |
+| `Theme.icon-disabled` | `#3b3646` | `#c9c5d2` |  |
+| `Theme.playing` | `#2bb6ff` | `#0773ba` |  |
+| `Theme.button-bg` | `#2f2a3b` | `#e6e3ec` |  |
+| `Theme.button-hover` | `#3a3448` | `#dcd8e4` |  |
+| `Theme.button-press` | `#25202e` | `#cfcadb` |  |
+| `Theme.button-disabled` | `#1b1922` | `#efedf3` |  |
+| `Theme.danger` | `#ff5a5f` | `#c42b2b` | Errors and destructive actions: a failed status line, a Delete button. |
+| `Theme.accent-fill` | gradient 90°: `#fcc402 0%`, `#fb5a35 20%`, `#fa0aa8 45%`, `#7a0afa 72%`, `#10a8fc 100%` | gradient 90°: `#f5a700 0%`, `#f0442f 20%`, `#e0089a 45%`, `#6a08e8 72%`, `#0a95e6 100%` | Brand gradient for "progress" fills (seek bar, volume, sliders, accents). |
 
 `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `LineEdit`…) are compiled in Slint's `fluent-dark` style and switched to their light colours in `vestra-light`; do not set `Palette.color-scheme` yourself.
 
@@ -2833,7 +2790,11 @@ Corner radii, font sizes and control sizes are constants, the same in both palet
 | `Theme.form-row-gap` | `26px` |  |
 | `Theme.dialog-padding` | `14px` |  |
 
-- **No font family of its own.** Every window uses the system's interface font, and Slint falls back per character to a system font that has a missing glyph (CJK text in a Latin font). A plugin does not need to set a font.
+- **No font family of its own.** Every window uses the system's interface font for Latin text; a plugin does not need to set a font, and a `default-font-family` it sets stays first. A character the font lacks falls back, character by character, to a font for its script.
+- **CJK fallback.** On macOS the system's own fallback (PingFang, Hiragino) covers Chinese, Japanese and Korean. On Windows the player sets a chain per script for every window, plugin windows included, and uses the first installed family that has the character:
+  1. Windows' CJK families in the interface language's order: for Han text, the language's own tradition first (Simplified Chinese, the default for other languages: Microsoft YaHei UI, Microsoft YaHei, DengXian, SimSun, NSimSun, SimHei; Traditional Chinese: Microsoft JhengHei UI, Microsoft JhengHei, PMingLiU, MingLiU; Japanese: Yu Gothic UI, Meiryo UI, Yu Gothic, Meiryo, MS UI Gothic, MS Gothic; Korean: Malgun Gothic, Gulim, Dotum, Batang), then the other traditions. Kana starts with the Japanese families, Hangul with the Korean, Bopomofo with the Traditional Chinese.
+  2. The family Windows' own fallback picks.
+  3. The bundled Noto Sans CJK SC, last, so CJK text never shows as boxes when an edition lacks the optional font packs.
 - **`Theme.font-mono`** is the system's monospace family: Menlo on macOS, Consolas on Windows (Platforms). CJK falls back in it too.
 
 #### Icons
@@ -2933,6 +2894,10 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `enabled` | in `bool` | `true` |  |
 | `accepted` | callback `(string)` |  |  |
 | `cancelled` | callback `()` |  |  |
+| `focus-input` | function `()` |  |  |
+| `select-all` | function `()` |  |  |
+
+A component's public functions are called from your own Slint code, through an element id: `row.focus-input()` puts the keyboard focus into `UrlInputRow`'s input (call it when the window opens, for example from `init`), `row.select-all()` selects its text.
 
 #### Markdown
 
@@ -3403,8 +3368,8 @@ interface CommandOptions {
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write
-   * `Ctrl+…` for bindings that work on both. Avoid keys the system takes
-   * first (⌃F1–⌃F8, ⌃Arrow keys, ⌘Tab on macOS).
+   * `Ctrl+…` for bindings that work on both. Avoid the
+   * keys the system takes first.
    *
    * Conflicts are not errors: the user's overrides win, then the player's
    * own commands, then the plugin loaded first; a shadowed binding takes
@@ -7689,6 +7654,24 @@ const TEXT_LIMITS: {
 };
 ```
 
+### THEME_PALETTES
+
+The colours of the player's palettes, by `Theme` colour token (without the
+`Theme.` prefix): `vestra`, the dark default, and `vestra-light` (player
+0.4.0). The player sets one of them on every view; a plugin reads the
+colours through `Theme` in its Slint files and never needs these values.
+They are here for the documentation (Reference: theme) and for tests that
+check a design against both palettes.
+
+Current values: a later player may adjust them, a token keeps its
+meaning. The `vestra` values are also the defaults of the SDK's copy of
+the palette (`slint/palette.slint`); the player's tests check both
+palettes against its own.
+
+```ts
+const THEME_PALETTES: Readonly<Record<"vestra" | "vestra-light", Readonly<Record<string, string>>>>;
+```
+
 ### BINDING_INPUTS
 
 The names a binding (`CommandOptions.bindings`, `Bindings.set`) is made
@@ -8393,7 +8376,7 @@ The SDK is imported with `import type` only: the player passes the `plugin` obje
 
 (code: `main.ts`, part "command", below)
 
-- `path: ["@video", "Blur…"]` puts the item in the player's own **Video** menu. Menu paths are matched by their exact titles, and the player's menus are titled in its own language, so `["Video", "Blur…"]` would create a second top-level menu. A first segment that starts with `@` names a built-in menu whatever its title. The built-in menu stays where it is, and an item without `order` goes at the end of it.
+- `path: ["@video", "Blur…"]` puts the item in the player's own **Video** menu. Paths merge by their English keys in every interface language, so `["Video", "Blur…"]` reaches the same menu; the id form `@video` says plainly that a built-in menu is meant, and an unknown id fails with `invalid` instead of making a new menu (Menu paths). Players up to 0.4.2 titled their menus in Chinese and are reached only by the id. The built-in menu stays where it is, and an item without `order` goes at the end of it.
 - `run` opens the window, or shows it again after the user closed it. Returning the promise of `show()` lets the SDK report a failure to the plugin log.
 
 #### ui/blur.slint
@@ -8698,7 +8681,7 @@ When the plugin is disabled or the player quits, the SDK stops the stream the sa
 
 (code: `main.ts`, part "command", below)
 
-- `path: ["@open", "Signal generator"]` puts the item in the player's own **Open** menu. Menu paths are matched by their exact titles, and the player's menus are titled in its own language, so `["Open", …]` would add a second top-level menu. A first segment starting with `@` names a built-in menu whatever its title.
+- `path: ["@open", "Signal generator"]` puts the item in the player's own **Open** menu. Paths merge by their English keys in every interface language, so `["Open", …]` reaches the same menu; the id form `@open` names the built-in menu explicitly and also reaches it in players up to 0.4.2, whose menus were titled in Chinese (Menu paths).
 - `checked` is a function. The SDK calls it again after every handler and every `onStop`, and updates the check mark when the result changes.
 - `run` starts the stream when there is none and stops it when there is one. It returns the promise so that a failure reaches the plugin log.
 

@@ -72,7 +72,7 @@ One {@link "@vestra-player/sdk"!Text | Text} or {@link "@vestra-player/sdk"!Text
 
 ## On-screen display
 
-Counted on the text as shown, after translation and with its arguments filled in. A text over a limit fails with code `invalid`: {@link "@vestra-player/sdk"!Osd.show | osd.show} rejects, {@link "@vestra-player/sdk"!OsdPanel.set | OsdPanel.set} reports to `Scope.onError`.
+Counted on the text as shown, after translation and with its arguments filled in. A text over a limit fails with code `invalid`: {@link "@vestra-player/sdk"!Osd.show | osd.show} rejects, {@link "@vestra-player/sdk"!OsdPanel.set | OsdPanel.set} reports to `Scope.onError`. Font sizes and placement are at {@link "@vestra-player/sdk"!Osd | Osd}.
 
 <!-- generated:limits OSD_LIMITS -->
 

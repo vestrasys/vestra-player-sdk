@@ -33,6 +33,6 @@ Filter chains change the frames and samples; the display layer and the render op
 
 ## Windows, panels, settings pages, dialogs and the OSD
 
-A plugin can show its interface in five places, and choosing the right one matters more than any detail of the API. The page compares tool windows, panels, settings pages, dialogs and the OSD, draws each one's life cycle (including what ⌘W / Ctrl+W does and why mounting a panel rebuilds the main window), explains how Slint and TypeScript exchange values and the rules for plugin Slint files, and covers the theme, sizes, focus and keyboard and the common pitfalls.
+A plugin can show its interface in five places, and choosing the right one matters more than any detail of the API. The page compares tool windows, panels, settings pages, dialogs and the OSD, draws each one's life cycle (including what the standard close keys do and why mounting a panel rebuilds the main window), explains how Slint and TypeScript exchange values and the rules for plugin Slint files, and covers the theme, sizes, focus and keyboard and the common pitfalls.
 
 [Read the page](ui.md)

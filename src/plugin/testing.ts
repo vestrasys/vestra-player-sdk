@@ -88,6 +88,7 @@ import type { CapabilityInfo } from "../capabilities.ts";
 import { OSD_LIMITS } from "./osd.ts";
 import { SECRET_LIMITS } from "./services.ts";
 import { BINDING_INPUTS } from "./bindings.ts";
+import { THEME_PALETTES } from "../palettes.ts";
 import { UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
@@ -149,6 +150,8 @@ export { OSD_LIMITS };
 export { SECRET_LIMITS };
 /** The names bindings are made of. */
 export { BINDING_INPUTS };
+/** The colours of the player's palettes, by `Theme` token. */
+export { THEME_PALETTES };
 /** The player's property value limits, which the test host enforces as well. */
 export { UI_VALUE_LIMITS };
 /**

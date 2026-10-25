@@ -308,3 +308,28 @@ test("BUILTIN_COMMANDS: owners, key paths and canonical bindings", () => {
     BUILTIN_SUBMENUS.map((menu) => menu.path.join("/")).sort(),
   );
 });
+
+test("THEME_PALETTES: both palettes have every Theme colour; vestra is palette.slint's", async () => {
+  const { THEME_PALETTES } = await import("../src/palettes.ts");
+  const { readFileSync } = await import("node:fs");
+  const read = (path: string) =>
+    readFileSync(new URL(path, import.meta.url), "utf8");
+  const defaults = Object.fromEntries(
+    [
+      ...read("../slint/palette.slint").matchAll(
+        /in property <color> ([\w-]+): (#[0-9a-f]{6});/g,
+      ),
+    ].map((m) => [m[1], m[2]]),
+  );
+  assert.deepEqual({ ...THEME_PALETTES.vestra }, defaults);
+  const theme = read("../slint/vestra/theme.slint");
+  const tokens = [
+    ...theme.matchAll(/out property <color> [\w-]+: VestraPalette\.([\w-]+);/g),
+  ].map((m) => m[1]);
+  assert.ok(tokens.length > 0);
+  for (const palette of Object.values(THEME_PALETTES)) {
+    assert.deepEqual(Object.keys(palette).sort(), Object.keys(defaults).sort());
+    for (const token of tokens)
+      assert.match(palette[token as keyof typeof palette], /^#[0-9a-f]{6}$/);
+  }
+});

@@ -114,7 +114,7 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
-- `path` is the menu path, matched by exact titles. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id instead of its title, which depends on the player's language: `["@video", "Blur"]` (also `@open`, `@playback`, `@subtitles`, `@audio`, `@screen`, `@settings`; player 0.3.0).
+- `path` is the menu path in English; paths merge by these words in every interface language. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id, such as `["@video", "Blur"]` ([Built-in menus](../reference/commands.md#built-in-menus)).
 - `enabled` is a function: the SDK re-evaluates it after every handler and every state change it receives, and sends only changes. This needs `events` to follow outside changes.
 - `run` may return a promise. Errors thrown or rejected there go to `plugin.onError`, then to the plugin log.
 - Commands are registered in the background; activation succeeds once every registration made during `activate` succeeded.

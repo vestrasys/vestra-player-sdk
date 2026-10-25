@@ -64,6 +64,8 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 
 Modules and handles (`full` in `scripts/doc-standard.mjs`) carry all of it; their methods carry the summary, `@example`, `@capability`, `@since` and `@throws` (for a Promise). Data types (`data`) carry a summary, `@since`, `@category` and a summary per field with its unit and range. When a category is done, list its symbols in `scripts/doc-standard.mjs` so CI keeps it complete.
 
+**Known gap:** only `UI` has reached the standard so far, so the API reference still shows most symbols of `@vestra-player/sdk` under "Other" and `@vestra-player/sdk/testing` by kind. Giving every symbol a business `@category` (Plugin, Commands, Playback, UI, Processing, Subtitles, Media, Sources, Packages, Services, Text, Testing) is a later round, one category per patch release.
+
 ## Documentation structure
 
 The site has seven fixed groups, in this order; a new group needs a change to this section first.
@@ -162,3 +164,4 @@ To switch to trusted publishing (npm account with publish rights on `@vestra-pla
 
 - **Slint widget copy.** `slint/palette.slint`, `slint/vestra/theme.slint`, `slint/vestra/widgets.slint` and `slint/vestra/markdown.slint` are read-only copies of the player's `@vestra/` library (`src/host/ui/palette.slint` and `src/host/ui/vestra/` in the `vestra-player` repository), used only to compile and preview plugin user interfaces in an editor. The player is the source: when it changes the library, copy the same files here and release. The player's consistency test checks that the installed SDK copy is byte-identical to its own.
 - The capability table and `API_VERSION` (`src/capabilities.ts`) and the command limits (`src/commands.ts`, `COMMAND_LIMITS`) must match the player; its tests check that too.
+- `THEME_PALETTES` (`src/palettes.ts`): the colours of `vestra` and `vestra-light`, copied from the player's `src/host/src/theme.rs`. `slint/palette.slint` holds only the `vestra` defaults, so the `vestra-light` values exist in the SDK only here; the unit tests check `vestra` against `palette.slint`, and the player's agreement test must check both against `theme.rs`.

@@ -24,10 +24,10 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
 | Render options ({@link "@vestra-player/sdk"!RenderOptions | RenderOptions}) | Available; `peakDetect` has no effect. | `unsupported` (software rendering). |
 | Bindings | `Ctrl` also matches ⌘; `Cmd` is ⌘. | `Cmd` is the Windows logo key; `Cmd+Q` does not quit. |
-| Close a tool window, the floating sidebar, the Options window | ⌘W | Ctrl+W, Ctrl+F4 |
-| Interface font | The system font; CJK falls back per character (PingFang and others). | The system font; CJK falls back per character. |
+| Keys taken first, standard close keys | See [Keys the system takes first](commands.md#keys-the-system-takes-first). | See [Keys the system takes first](commands.md#keys-the-system-takes-first). |
+| Interface font | The system font; CJK falls back per character to the system's fonts (PingFang, Hiragino). | The system font; CJK falls back per character to Windows' CJK fonts in the interface language's order, then the bundled Noto Sans CJK SC ([the chain](theme.md#sizes-and-fonts)). |
 | `Theme.font-mono` | Menlo | Consolas |
 
-Other systems have no released player; there, every feature in this table that needs the system fails with `unsupported` (always on top and `setVideoArea` with `unavailable`, `preventSleep` has no effect), and keys follow the Windows column with Ctrl+W as the close key.
+Other systems have no released player; there, every feature in this table that needs the system fails with `unsupported` (always on top and `setVideoArea` with `unavailable`, `preventSleep` has no effect), and keys behave as on Windows.
 
 When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable` on every system.

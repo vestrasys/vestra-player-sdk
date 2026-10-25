@@ -79,7 +79,7 @@ The SDK is imported with `import type` only: the player passes the `plugin` obje
 
 {@includeCode ../../examples/blur/main.ts#command}
 
-- `path: ["@video", "Blur…"]` puts the item in the player's own **Video** menu. Menu paths are matched by their exact titles, and the player's menus are titled in its own language, so `["Video", "Blur…"]` would create a second top-level menu. A first segment that starts with `@` names a built-in menu whatever its title. The built-in menu stays where it is, and an item without `order` goes at the end of it.
+- `path: ["@video", "Blur…"]` puts the item in the player's own **Video** menu. Paths merge by their English keys in every interface language, so `["Video", "Blur…"]` reaches the same menu; the id form `@video` says plainly that a built-in menu is meant, and an unknown id fails with `invalid` instead of making a new menu ([Menu paths](../reference/commands.md#menu-paths)). Players up to 0.4.2 titled their menus in Chinese and are reached only by the id. The built-in menu stays where it is, and an item without `order` goes at the end of it.
 - `run` opens the window, or shows it again after the user closed it. Returning the promise of `show()` lets the SDK report a failure to the plugin log.
 
 ## ui/blur.slint

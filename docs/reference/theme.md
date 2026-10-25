@@ -18,35 +18,35 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 
 ## Colours
 
-`Theme` colours follow the user's palette: `vestra`, the dark default, and `vestra-light` (player 0.4.0), whose video area stays dark. The player sets the palette on every view and again when the user switches, so read colours from `Theme` (they are read-only `out` properties) and never write a colour value yourself. The table shows the `vestra` values.
+`Theme` colours follow the user's palette: `vestra`, the dark default, and `vestra-light` (player 0.4.0), whose video area stays dark. The player sets the palette on every view and again when the user switches, so read colours from `Theme` (they are read-only `out` properties) and never write a colour value yourself. The table shows both palettes' current values; the same values are {@link "@vestra-player/sdk/testing"!THEME_PALETTES | THEME_PALETTES}, for tests.
 
 <!-- generated:theme colors -->
 
-| Token | Value in `vestra` | Note |
-| --- | --- | --- |
-| `Theme.bg-bar` | `#16141c` |  |
-| `Theme.bg-video` | `#0a090e` |  |
-| `Theme.bg-list` | `#1a1821` |  |
-| `Theme.bg-panel` | `#201d28` |  |
-| `Theme.line` | `#2b2734` |  |
-| `Theme.hover-bg` | `#28232f` |  |
-| `Theme.press-bg` | `#110f16` |  |
-| `Theme.selected-bg` | `#2f2840` |  |
-| `Theme.text` | `#f5f3fa` |  |
-| `Theme.text-dim` | `#8e88a0` |  |
-| `Theme.text-list` | `#bdb8cb` |  |
-| `Theme.text-played` | `#6e6980` |  |
-| `Theme.accent` | `#f72aa6` |  |
-| `Theme.accent-press` | `#c41a83` |  |
-| `Theme.accent-disabled` | `#5a1d48` |  |
-| `Theme.icon-disabled` | `#3b3646` |  |
-| `Theme.playing` | `#2bb6ff` |  |
-| `Theme.button-bg` | `#2f2a3b` |  |
-| `Theme.button-hover` | `#3a3448` |  |
-| `Theme.button-press` | `#25202e` |  |
-| `Theme.button-disabled` | `#1b1922` |  |
-| `Theme.danger` | `#ff5a5f` | Errors and destructive actions: a failed status line, a Delete button. |
-| `Theme.accent-fill` | gradient 90°: `#fcc402 0%`, `#fb5a35 20%`, `#fa0aa8 45%`, `#7a0afa 72%`, `#10a8fc 100%` | Brand gradient for "progress" fills (seek bar, volume, sliders, accents). |
+| Token | Value in `vestra` | Value in `vestra-light` | Note |
+| --- | --- | --- | --- |
+| `Theme.bg-bar` | `#16141c` | `#f7f6fa` |  |
+| `Theme.bg-video` | `#0a090e` | `#0e0d12` |  |
+| `Theme.bg-list` | `#1a1821` | `#ffffff` |  |
+| `Theme.bg-panel` | `#201d28` | `#f1eff5` |  |
+| `Theme.line` | `#2b2734` | `#dcd8e4` |  |
+| `Theme.hover-bg` | `#28232f` | `#e9e6f0` |  |
+| `Theme.press-bg` | `#110f16` | `#dcd8e6` |  |
+| `Theme.selected-bg` | `#2f2840` | `#efe4fb` |  |
+| `Theme.text` | `#f5f3fa` | `#1c1924` |  |
+| `Theme.text-dim` | `#8e88a0` | `#6f6a7f` |  |
+| `Theme.text-list` | `#bdb8cb` | `#3b3748` |  |
+| `Theme.text-played` | `#6e6980` | `#9a95a8` |  |
+| `Theme.accent` | `#f72aa6` | `#d4128a` |  |
+| `Theme.accent-press` | `#c41a83` | `#a80d6c` |  |
+| `Theme.accent-disabled` | `#5a1d48` | `#ecbcd9` |  |
+| `Theme.icon-disabled` | `#3b3646` | `#c9c5d2` |  |
+| `Theme.playing` | `#2bb6ff` | `#0773ba` |  |
+| `Theme.button-bg` | `#2f2a3b` | `#e6e3ec` |  |
+| `Theme.button-hover` | `#3a3448` | `#dcd8e4` |  |
+| `Theme.button-press` | `#25202e` | `#cfcadb` |  |
+| `Theme.button-disabled` | `#1b1922` | `#efedf3` |  |
+| `Theme.danger` | `#ff5a5f` | `#c42b2b` | Errors and destructive actions: a failed status line, a Delete button. |
+| `Theme.accent-fill` | gradient 90°: `#fcc402 0%`, `#fb5a35 20%`, `#fa0aa8 45%`, `#7a0afa 72%`, `#10a8fc 100%` | gradient 90°: `#f5a700 0%`, `#f0442f 20%`, `#e0089a 45%`, `#6a08e8 72%`, `#0a95e6 100%` | Brand gradient for "progress" fills (seek bar, volume, sliders, accents). |
 
 <!-- /generated -->
 
@@ -80,7 +80,11 @@ Corner radii, font sizes and control sizes are constants, the same in both palet
 
 <!-- /generated -->
 
-- **No font family of its own.** Every window uses the system's interface font, and Slint falls back per character to a system font that has a missing glyph (CJK text in a Latin font). A plugin does not need to set a font.
+- **No font family of its own.** Every window uses the system's interface font for Latin text; a plugin does not need to set a font, and a `default-font-family` it sets stays first. A character the font lacks falls back, character by character, to a font for its script.
+- **CJK fallback.** On macOS the system's own fallback (PingFang, Hiragino) covers Chinese, Japanese and Korean. On Windows the player sets a chain per script for every window, plugin windows included, and uses the first installed family that has the character:
+  1. Windows' CJK families in the interface language's order: for Han text, the language's own tradition first (Simplified Chinese, the default for other languages: Microsoft YaHei UI, Microsoft YaHei, DengXian, SimSun, NSimSun, SimHei; Traditional Chinese: Microsoft JhengHei UI, Microsoft JhengHei, PMingLiU, MingLiU; Japanese: Yu Gothic UI, Meiryo UI, Yu Gothic, Meiryo, MS UI Gothic, MS Gothic; Korean: Malgun Gothic, Gulim, Dotum, Batang), then the other traditions. Kana starts with the Japanese families, Hangul with the Korean, Bopomofo with the Traditional Chinese.
+  2. The family Windows' own fallback picks.
+  3. The bundled Noto Sans CJK SC, last, so CJK text never shows as boxes when an edition lacks the optional font packs.
 - **`Theme.font-mono`** is the system's monospace family: Menlo on macOS, Consolas on Windows ([Platforms](platforms.md)). CJK falls back in it too.
 
 ## Icons
@@ -186,8 +190,12 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `enabled` | in `bool` | `true` |  |
 | `accepted` | callback `(string)` |  |  |
 | `cancelled` | callback `()` |  |  |
+| `focus-input` | function `()` |  |  |
+| `select-all` | function `()` |  |  |
 
 <!-- /generated -->
+
+A component's public functions are called from your own Slint code, through an element id: `row.focus-input()` puts the keyboard focus into `UrlInputRow`'s input (call it when the window opens, for example from `init`), `row.select-all()` selects its text.
 
 ## Markdown
 

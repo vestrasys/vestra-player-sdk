@@ -32,7 +32,7 @@ export function lines(source) {
 }
 
 /**
- * The properties and callbacks a declaration line holds:
+ * The properties, callbacks and public functions a declaration line holds:
  * `in property <length> radius-panel: 8px;` → `{ direction: "in", type:
  * "length", name: "radius-panel", value: "8px" }`.
  */
@@ -49,6 +49,17 @@ export function member(text) {
       name: property[3],
       value: property[4] ?? null,
     };
+  const fn =
+    /^public\s+(?:pure\s+)?function\s+([\w-]+)\s*(\([^)]*\))(?:\s*->\s*([^\s{]+))?/.exec(
+      text,
+    );
+  if (fn)
+    return {
+      kind: "function",
+      name: fn[1],
+      type: fn[3] ? `${fn[2]} -> ${fn[3]}` : fn[2],
+      value: null,
+    };
   const callback = /^callback\s+([\w-]+)(\(.*\))?;$/.exec(text);
   if (callback)
     return {
@@ -62,7 +73,8 @@ export function member(text) {
 
 /**
  * The exported components and globals of a file: `{ kind, name, comment,
- * members }`, where `members` are the properties and callbacks declared
+ * members }`, where `members` are the properties, callbacks and public
+ * functions declared
  * directly inside (one level deep), each with its comment.
  */
 export function exportsOf(source) {

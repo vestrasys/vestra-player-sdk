@@ -1,7 +1,7 @@
 /**
  * `<!-- generated:widgets <file> -->`: the exported components of
  * `slint/vestra/<file>.slint` (`widgets`, `markdown`), each with its comment
- * and a table of its properties and callbacks (direction, type, default and
+ * and a table of its properties, callbacks and public functions (direction, type, default and
  * the comment above it). Structs are listed by name only: plugins pass them
  * through.
  */
@@ -23,9 +23,9 @@ export default function widgets({ args, read, table }) {
         ["Member", "Kind", "Default", "Note"],
         component.members.map((m) => [
           `\`${m.name}\``,
-          m.kind === "callback"
-            ? `callback \`${m.type}\``
-            : `${m.direction} \`${m.type}\``,
+          m.kind === "property"
+            ? `${m.direction} \`${m.type}\``
+            : `${m.kind} \`${m.type}\``,
           m.value ? `\`${m.value}\`` : "",
           m.comment,
         ]),

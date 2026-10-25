@@ -71,7 +71,7 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
  └──────────────┘           └──────────────┘   show()   └──────────────┘
         ▲                       │       │
         │  close()              │       │  the user: title-bar close button,
-        │  (no onClose)         │       │  ⌘W (macOS), Ctrl+W or Ctrl+F4 (Windows)
+        │  (no onClose)         │       │  the standard close keys
         └───────────────────────┘       │  → onClose listeners run
         ▲                               │
         └───────────────────────────────┘
@@ -150,7 +150,7 @@ A tool window ({@link "@vestra-player/sdk"!Window | Window}), a panel ({@link "@
 
 - **Exactly one exported component** per file (plus the one bridge global in a panel or settings page file). Helper components without `export` are allowed. The player appends a line that exports its palette to every plugin file, so do not declare anything named `VestraPalette`.
 - **The `fluent-dark` style.** Every plugin file is compiled with Slint's `fluent-dark` style, so `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `Switch`, `LineEdit`…) are dark; in the light palette the player switches them to their light colours (`Palette.color-scheme`) at run time. Do not set `Palette.color-scheme` yourself.
-- **No fonts of your own.** Every window uses the system's interface font, and Slint falls back per character to a system font that has a missing glyph (CJK text in a Latin font, for example). The player bundles no interface font and a plugin does not need to set one; a `default-font-family` or `font-family` you set still applies, with the same fallback. The fonts per system are in [Reference: theme](../reference/theme.md#sizes-and-fonts).
+- **No fonts of your own.** Every window uses the system's interface font, and a character it lacks (CJK text in a Latin font, for example) falls back per character to a font for its script; on Windows the player sets that chain itself and ends it with a bundled CJK font. A plugin does not need to set a font; a `default-font-family` or `font-family` you set still applies, with the same fallback. The fonts per system are in [Reference: theme](../reference/theme.md#sizes-and-fonts).
 - **Editor support through `libraryPaths`.** The `@vestra/…` imports resolve inside the player. For the Slint language server, point `libraryPaths` at the read-only copy in the SDK package: `{ "vestra": "node_modules/@vestra-player/sdk/slint/vestra" }`.
 - **Text the user sees is `@tr("English")`**, translated when the player loads the file ([Translate a plugin](../how-to/i18n.md)).
 
@@ -203,30 +203,8 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 
 - **Colours follow the player's palette.** The player has two palettes, `vestra` (dark, the default) and `vestra-light` (player 0.4.0, SDK 1.5), both drawn from the logo's colours (see {@link "@vestra-player/sdk"!Appearance | plugin.appearance}). It sets the palette on every view before it appears and again when the user switches, so `Theme` colours change with it. Colours you hard-code do not. `Theme` properties are read-only.
 - **The video area is dark in every palette** (`Theme.bg-video`). Text or icons you draw over the video (a backdrop, an overlay) use light colours, not `Theme.text`, which is dark in `vestra-light`.
-- **Use tokens, not values.** `Theme` has colour tokens (`text`, `accent`, `danger` for errors and destructive actions…), font sizes, control sizes and spacing; `Icon { name: "play"; color: Theme.text; }` draws an icon of the player's own set (player 0.4.0, SDK 1.5, so set `"minPlayerVersion": "0.4.0"`); `@vestra/widgets.slint` has the compact `Button`, `Slider`, `ToolTipArea` and `UrlInputRow`. Every token with its current value in the `vestra` palette (the SDK does not publish the `vestra-light` values), the icon names and the widgets' properties are in [Reference: theme](../reference/theme.md#colours). The values may change between player versions; the tokens keep their meaning.
-- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a **Copy** button on code blocks (`@tr("Copy")`, which the player translates into the interface language) that reports `copy-code(code)`; copy it with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}. A chat window:
-
-  ```slint
-  import { ListView } from "std-widgets.slint";
-  import { MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
-  export struct Message { id: string, role: string, body: [MarkdownBlock] }
-  export component Chat inherits Window {
-      in property <[Message]> messages;
-      callback copy-code(string);
-      ListView {
-          for message in root.messages: VerticalLayout {
-              padding: 8px;
-              MarkdownBlocks {
-                  blocks: message.body;
-                  code-copy: true;
-                  copy-code(code) => { root.copy-code(code); }
-              }
-          }
-      }
-  }
-  ```
-
-  Write the list with a document per row (`messages: [{ id, role, body: await plugin.ui.markdown(text) }]`). The player parses only the documents that changed and updates the list in place (rows added or removed at the end, a growing message's changed blocks), so re-sending the whole list on every streamed chunk keeps the scroll position and costs little.
+- **Use tokens, not values.** `Theme` has colour tokens (`text`, `accent`, `danger` for errors and destructive actions…), font sizes, control sizes and spacing; `Icon { name: "play"; color: Theme.text; }` draws an icon of the player's own set (player 0.4.0, SDK 1.5, so set `"minPlayerVersion": "0.4.0"`); `@vestra/widgets.slint` has the compact `Button`, `Slider`, `ToolTipArea` and `UrlInputRow`. Every token with its current values in both palettes, the icon names and the widgets' properties are in [Reference: theme](../reference/theme.md#colours). The values may change between player versions; the tokens keep their meaning.
+- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a **Copy** button on code blocks (`@tr("Copy")`, which the player translates into the interface language) that reports `copy-code(code)`; copy it with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}. A list of documents (a chat, one message per row) is the example at {@link "@vestra-player/sdk"!Ui.markdown | Ui.markdown}; [Example: Markdown](../examples/markdown.md) shows one document in a window.
 
 ## Sizes
 
@@ -247,12 +225,12 @@ The operating system places a tool window when it opens; the player does not rem
 
 - **Command key bindings belong to the main window.** A binding from {@link "@vestra-player/sdk"!CommandOptions.bindings | CommandOptions.bindings} fires while the main window or the floating sidebar window has focus (and the key was not taken by a focused control, such as Space in a text field). It does **not** fire while a tool window or the Options window has focus. Keys inside your own window are Slint's job: use a `FocusScope` with `key-pressed`, or a button's default action.
 - A binding with `focus: "panel"` fires only while this plugin's panel (docked or floating) has focus, and wins over global bindings there.
-- **Standard close keys are not bindings.** ⌘W on macOS, Ctrl+W and Ctrl+F4 on Windows close a tool window, the floating sidebar or the Options window exactly like the title-bar button (a tool window's `onClose` runs). The player takes these keys before Slint sees them, even when a text field has focus, so neither your Slint handlers nor your bindings receive them. The main window does not react to them, so a `Ctrl+W` binding still fires there.
+- **Standard close keys are not bindings.** They close a tool window, the floating sidebar or the Options window like the title-bar button (`onClose` runs) before your Slint handlers or bindings see them; the keys per system are in [Keys the system takes first](../reference/commands.md#keys-the-system-takes-first).
 - While a menu or a system dialog is open, bindings pause.
 
 ## Platform differences
 
-The API is the same on macOS and Windows; what differs is the system's own part: the close keys (⌘W, or Ctrl+W and Ctrl+F4), how `dialogs.confirm` looks, the monospace font, the modifier `DropModifiers.cmd` stands for. [Reference: platforms](../reference/platforms.md) lists every difference. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
+The API is the same on macOS and Windows; what differs is the system's own part: the standard close keys, how `dialogs.confirm` looks, the monospace font, the modifier `DropModifiers.cmd` stands for. [Reference: platforms](../reference/platforms.md) lists every difference. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
 
 ## Common pitfalls
 
@@ -269,32 +247,7 @@ The API is the same on macOS and Windows; what differs is the system's own part:
 
 ## Testing
 
-`TestHost` from `@vestra-player/sdk/testing` runs a plugin without the player and records its interface: `host.window(id)` (`props`, `callbacks`, `visible`, `emit(callback, ...args)`, `userClose()`), `host.mounted()` for the panel, `host.settingsPage(id)` and `host.settings`, `host.osd` (messages shown), `host.confirms` and `host.dialogAnswers`. Property names in `props` are the Slint (kebab-case) names. The test host does not compile Slint files; check them by running the plugin in the player.
-
-```ts
-import assert from "node:assert/strict";
-import test from "node:test";
-import type { Plugin } from "@vestra-player/sdk";
-import { startPlugin } from "@vestra-player/sdk/testing";
-
-async function activate(plugin: Plugin) {
-  let count = 0;
-  const window = plugin.windows.create("ui/counter.slint");
-  window.bind(() => ({ label: `Clicked ${count} times` }));
-  window.on("clicked", () => count++);
-  await window.show();
-}
-
-test("the label counts clicks", async () => {
-  const { host, stop } = await startPlugin(activate, {
-    capabilities: ["ui.window"],
-  });
-  host.window("counter").emit("clicked");
-  await host.settle();
-  assert.equal(host.window("counter").props["label"], "Clicked 1 times");
-  await stop();
-});
-```
+`TestHost` from `@vestra-player/sdk/testing` runs a plugin without the player and records its interface: windows with their properties and callbacks, the mounted panel, settings pages, the OSD and dialogs. It does not compile Slint files; check them by running the plugin in the player. How to write such tests is in [Test a plugin](../how-to/testing.md).
 
 ## API on this page
 

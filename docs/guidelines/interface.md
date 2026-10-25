@@ -64,7 +64,7 @@ The player's picture, audio and subtitle tools share one layout; a window of the
 
 - **A link input is `UrlInputRow`**: the input with **Open** and **Cancel**, Enter accepts and Escape cancels, no history list. The player's own link windows (Open URL, the playlist's Add URL, the plugin store) all use it.
 - **Group the fields** of a longer form (storage, format and size, range…) with labels in a right-aligned left column; the main action is a primary button (`Theme.button-primary-height`) at the bottom.
-- The standard close keys (⌘W; Ctrl+W, Ctrl+F4) close every tool window; you cannot and need not handle them ([Focus and keyboard](../concepts/ui.md)).
+- The [standard close keys](../reference/commands.md#keys-the-system-takes-first) close every tool window; you cannot and need not handle them.
 
 ## Panels
 

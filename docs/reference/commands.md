@@ -476,13 +476,18 @@ The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscre
 
 ## Keys the system takes first
 
-These never reach a binding; do not use them as defaults.
+These keys may never reach a binding, because the system or the player takes them first; do not use them as defaults. This table is the one list of them; other pages link here.
 
 | Keys | Taken by |
 | --- | --- |
-| ⌃F1–⌃F8, ⌃↑ ⌃↓ ⌃← ⌃→, ⌘Tab, ⌘Space (macOS) | The system's keyboard navigation, Mission Control and Spaces, the application switcher, Spotlight. |
+| ⌃F1–⌃F8 (macOS) | The system's keyboard navigation (⌃F1 turns keyboard access on and off). A `Ctrl+F1` binding still fires with ⌘F1. |
+| ⌃← ⌃→ ⌃↑ ⌃↓ (macOS) | Spaces, Mission Control and application windows. The ⌘ versions of a `Ctrl+arrow` binding work. |
+| ⌘H, ⌘M (macOS) | The system: hide and minimize the application. A `Ctrl+H` or `Ctrl+M` binding then fires only with ⌃. |
+| ⌘Tab, ⌘Space (macOS) | The application switcher and Spotlight. |
+| F11, and F1–F12 on Apple keyboards (macOS) | F11 shows the desktop; on Apple keyboards the function keys are media keys unless fn is held. |
+| Ctrl+Alt+arrow keys (Windows) | Some graphics drivers, to rotate the screen. |
 | Most `Cmd+…` combinations (Windows) | The system, for the Windows logo key. `Cmd+Q` (**Quit**) does nothing there; the window's close button and Alt+F4 quit. |
-| ⌘W (macOS); Ctrl+W, Ctrl+F4 (Windows) | The player, in a tool window, the floating sidebar and the Options window: they close that window. In the main window a binding for them fires as usual. |
+| **Standard close keys**: ⌘W (macOS); Ctrl+W, Ctrl+F4 (Windows) | The player, in a tool window, the floating sidebar and the Options window: they close that window exactly like the title-bar button (a tool window's `onClose` runs), even while a text field has focus, so neither Slint handlers nor bindings see them. In the main window they do nothing, so a binding for them fires there as usual. |
 | Right button, left drag on the video | The player: the context menu; moving the window in window mode. |
 
 The defaults of the built-in commands are taken as well: a plugin default on the same input in the same scope loses to the player's own command and to plugins loaded earlier.
