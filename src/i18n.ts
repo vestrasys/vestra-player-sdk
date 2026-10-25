@@ -39,6 +39,8 @@ export interface PoEntry {
   flags: string[];
   /** A `#~` entry: no longer in the source. */
   obsolete: boolean;
+  /** `# ` lines: the translator's own comments, kept as written. */
+  comments?: string[];
 }
 
 /** The catalog key: `msgid`, or `msgctxt` U+0004 `msgid`. */
@@ -49,9 +51,17 @@ const translated = (entry: PoEntry) =>
   !entry.fuzzy && !entry.obsolete && (entry.strings[0] ?? "") !== "";
 
 /** Parse a `.po` (or `.pot`) file. Throws with the line number on errors. */
-export function parsePo(text: string): { header: string; entries: PoEntry[] } {
+export function parsePo(text: string): {
+  header: string;
+  /** The comment lines before the header entry, as written (`# Reviewed…`, `#, fuzzy`). */
+  headerComments: string[];
+  entries: PoEntry[];
+} {
   const entries: PoEntry[] = [];
   let header = "";
+  let headerComments: string[] = [];
+  // Every comment line of the entry being read, as written.
+  let raw: string[] = [];
   const blank = (): PoEntry => ({
     id: "",
     strings: [],
@@ -69,10 +79,12 @@ export function parsePo(text: string): { header: string; entries: PoEntry[] } {
   let pending = blank();
   const finish = () => {
     if (started) {
-      if (entry.id === "" && entry.context === undefined)
+      if (entry.id === "" && entry.context === undefined) {
         header = entry.strings[0] ?? "";
-      else entries.push(entry);
+        headerComments = raw;
+      } else entries.push(entry);
     }
+    raw = [];
     entry = blank();
     started = false;
     field = "none";
@@ -92,8 +104,11 @@ export function parsePo(text: string): { header: string; entries: PoEntry[] } {
       if (line === "") continue;
     } else if (line.startsWith("#")) {
       if (started) finish();
+      raw.push(lines[index]!.trimEnd());
       const body = line.slice(2).trim();
-      if (line.startsWith("#.")) pending.notes.push(body);
+      if (line === "#" || line.startsWith("# "))
+        (pending.comments ??= []).push(line.slice(2));
+      else if (line.startsWith("#.")) pending.notes.push(body);
       else if (line.startsWith("#:"))
         pending.references.push(...body.split(/\s+/).filter(Boolean));
       else if (line.startsWith("#,"))
@@ -146,7 +161,7 @@ export function parsePo(text: string): { header: string; entries: PoEntry[] } {
     field = next;
   }
   finish();
-  return { header, entries };
+  return { header, headerComments, entries };
 }
 
 function unquote(text: string, at: (message: string) => Error): string {
@@ -181,12 +196,23 @@ function field(keyword: string, text: string): string {
   return [`${keyword} ""`, ...parts.map(poString)].join("\n");
 }
 
-/** Write a `.po` file: the header, then the entries in the given order. */
-export function writePo(header: string, entries: readonly PoEntry[]): string {
-  const blocks = [`msgid ""\n${field("msgstr", header)}`];
+/**
+ * Write a `.po` file: the header (after its comment lines, as written),
+ * then the entries in the given order.
+ */
+export function writePo(
+  header: string,
+  entries: readonly PoEntry[],
+  headerComments: readonly string[] = [],
+): string {
+  const blocks = [
+    [...headerComments, `msgid ""`, field("msgstr", header)].join("\n"),
+  ];
   for (const entry of entries) {
     const prefix = entry.obsolete ? "#~ " : "";
     const lines: string[] = [];
+    for (const comment of entry.comments ?? [])
+      lines.push(comment === "" ? "#" : `# ${comment}`);
     for (const note of entry.notes) lines.push(`#. ${note}`);
     if (entry.references.length && !entry.obsolete)
       lines.push(`#: ${entry.references.join(" ")}`);
