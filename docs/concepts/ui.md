@@ -1,5 +1,6 @@
 ---
 title: Windows, panels, settings pages, dialogs and the OSD
+description: The five places a plugin shows its interface, how to choose one, how each lives and dies, and how Slint files and TypeScript exchange values.
 ---
 
 # Windows, panels, settings pages, dialogs and the OSD
@@ -145,7 +146,13 @@ A tool window ({@link "@vestra-player/sdk"!Window | Window}), a panel ({@link "@
 
 {@includeCode ../../examples/panel-menu/ui/panel.slint}
 
-Helper components without `export` are allowed in every file. The player appends a line that exports its palette to every plugin file, so do not declare anything named `VestraPalette`.
+### Rules for plugin Slint files
+
+- **Exactly one exported component** per file (plus the one bridge global in a panel or settings page file). Helper components without `export` are allowed. The player appends a line that exports its palette to every plugin file, so do not declare anything named `VestraPalette`.
+- **The `fluent-dark` style.** Every plugin file is compiled with Slint's `fluent-dark` style, so `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `Switch`, `LineEdit`…) are dark; in the light palette the player switches them to their light colours (`Palette.color-scheme`) at run time. Do not set `Palette.color-scheme` yourself.
+- **No fonts of your own.** Every window uses the system's interface font, and Slint falls back per character to a system font that has a missing glyph (CJK text in a Latin font, for example). The player bundles no interface font and a plugin does not need to set one; a `default-font-family` or `font-family` you set still applies, with the same fallback. The fonts per system are in [Reference: theme](../reference/theme.md).
+- **Editor support through `libraryPaths`.** The `@vestra/…` imports resolve inside the player. For the Slint language server, point `libraryPaths` at the read-only copy in the SDK package: `{ "vestra": "node_modules/@vestra-player/sdk/slint/vestra" }`.
+- **Text the user sees is `@tr("English")`**, translated when the player loads the file ([Translate a plugin](../how-to/i18n.md)).
 
 ### Names and values
 
@@ -164,13 +171,7 @@ Helper components without `export` are allowed in every file. The player appends
 | Write fails      | Retried with back-off (0.25 s doubling up to 30 s).                                     | Not repeated until the value changes.                                                 |
 | Typical use      | One-off values: a document, a reset.                                                    | Everything derived from plugin state: labels, enabled flags, lists, status lines.     |
 
-Update passes run:
-
-- after every handler the SDK calls (a command's `run`, a view callback, an `onChange` listener) returns, and again when its promise settles;
-- after player, subtitle, panel position, filter and export state changes;
-- when you call {@link "@vestra-player/sdk"!Scope.update | plugin.update()}.
-
-Several requests in the same microtask are merged into one pass, and each view has at most one write in flight: values that change meanwhile are merged into the next write. So binding a value that changes 60 times a second costs at most one write per round trip, never a queue.
+Update passes run after every handler the SDK calls, after player and other state changes, and when you call {@link "@vestra-player/sdk"!Scope.update | plugin.update()}; several requests are merged into one pass, and each view has at most one write in flight ([The update pass](plugins.md#the-update-pass) has the details).
 
 The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md)).
 
@@ -200,14 +201,10 @@ import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint"
 import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
 ```
 
-- **Colours follow the player's palette.** The player has two palettes, `vestra` (dark, the default) and `vestra-light` (player 0.4.0, SDK 1.5), both drawn from the logo's colours: a magenta accent, cyan for what is playing, an amber → magenta → violet → cyan gradient for fills (see {@link "@vestra-player/sdk"!Appearance | plugin.appearance}). It sets the palette on every view before it appears and again when the user switches, so `Theme` colours change with it. Colours you hard-code do not. `Theme` properties are read-only.
+- **Colours follow the player's palette.** The player has two palettes, `vestra` (dark, the default) and `vestra-light` (player 0.4.0, SDK 1.5), both drawn from the logo's colours (see {@link "@vestra-player/sdk"!Appearance | plugin.appearance}). It sets the palette on every view before it appears and again when the user switches, so `Theme` colours change with it. Colours you hard-code do not. `Theme` properties are read-only.
 - **The video area is dark in every palette** (`Theme.bg-video`). Text or icons you draw over the video (a backdrop, an overlay) use light colours, not `Theme.text`, which is dark in `vestra-light`.
-- Colour tokens: `bg-bar`, `bg-video`, `bg-list`, `bg-panel`, `line`, `hover-bg`, `press-bg`, `selected-bg`, `text`, `text-dim`, `text-list`, `text-played`, `accent`, `accent-press`, `accent-disabled`, `icon-disabled`, `playing`, `button-bg`, `button-hover`, `button-press`, `button-disabled`, `accent-fill` (a gradient brush) and `danger` (errors and destructive actions: a failed status line, a Delete button; player 0.3.0, SDK 1.3).
-- Fonts: every window uses the system UI font (Slint falls back per character for scripts it lacks, CJK included); `Theme.font-mono` is the system's monospace family (Menlo on macOS, Consolas on Windows). Sizes: `font-xs` 9px, `font-body` 11px, `font-tab` 12px, `font-title` 13px.
-- Control sizes and spacing: `button-height` 21px, `input-height` 21px, `form-row-gap` 26px, `dialog-padding` 14px, `radius-control` 4px (controls, rows, hover plates), `radius-panel` 8px (menus, panels) and others; the full list is the SDK's read-only copy in [`slint/vestra/theme.slint`](https://github.com/vestrasys/vestra-player-sdk/blob/main/slint/vestra/theme.slint). Player 0.4.0 rounded the corners (3px and 6px before).
-- **Icons** (player 0.4.0, SDK 1.5): `Icon { name: "play"; color: Theme.text; }` draws one icon of the player's own set: round-capped 1.5px lines (1.25px for small glyphs), never filled, in the icon's own box (its default size; set `width` and `height` to scale). Names: `play`, `pause`, `stop`, `back`, `forward`, `open`, `volume`, `mute`, `playlist`, `detach`, `attach`, `close`, `failed`, `move-top`, `move-up`, `move-down`, `move-bottom`, `search`, `chapter`, `bookmark`, `check-task`, `check-box`, `menu-check`, `submenu`, `scroll-up`, `scroll-down`, `caret-down`, `sort-asc`, `sort-desc`, `tag-remove`, `preview-play`, `add`, `remove`, `sort`; `Icons.commands(name)`, `Icons.box-width(name)`, `Icons.box-height(name)` and `Icons.line(name)` give the path data for your own `Path`. Plugins that use it set `"minPlayerVersion": "0.4.0"`.
-- Every plugin file is compiled with Slint's `fluent-dark` style, so `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `Switch`, `LineEdit`…) are dark too; in `vestra-light` the player switches them to their light colours (`Palette.color-scheme`) at run time. Do not set `Palette.color-scheme` yourself.
-- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a 复制 button on code blocks that reports `copy-code(code)`; copy it with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}. A chat window:
+- **Use tokens, not values.** `Theme` has colour tokens (`text`, `accent`, `danger` for errors and destructive actions…), font sizes, control sizes and spacing; `Icon { name: "play"; color: Theme.text; }` draws an icon of the player's own set (player 0.4.0, SDK 1.5, so set `"minPlayerVersion": "0.4.0"`); `@vestra/widgets.slint` has the compact `Button`, `Slider`, `ToolTipArea` and `UrlInputRow`. Every token with its current values in both palettes, the icon names and the widgets' properties are in [Reference: theme](../reference/theme.md). The values may change between player versions; the tokens keep their meaning.
+- **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a **Copy** button on code blocks (`@tr("Copy")`, which the player translates into the interface language) that reports `copy-code(code)`; copy it with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}. A chat window:
 
   ```slint
   import { ListView } from "std-widgets.slint";
@@ -230,7 +227,6 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
   ```
 
   Write the list with a document per row (`messages: [{ id, role, body: await plugin.ui.markdown(text) }]`). The player parses only the documents that changed and updates the list in place (rows added or removed at the end, a growing message's changed blocks), so re-sending the whole list on every streamed chunk keeps the scroll position and costs little.
-- For editor support, point the Slint language server's `libraryPaths` at the copy in the SDK package: `{ "vestra": "node_modules/@vestra-player/sdk/slint/vestra" }`.
 
 ## Sizes
 
@@ -256,14 +252,7 @@ The operating system places a tool window when it opens; the player does not rem
 
 ## Platform differences
 
-|                                                | macOS                                                                                 | Windows                                                                                                                                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Close a tool window, floating sidebar, Options | ⌘W                                                                                    | Ctrl+W, Ctrl+F4                                                                                                                                                                       |
-| `dialogs.confirm`                              | An `NSAlert` sheet on the active player window (the tool window that asked, usually). | A task dialog owned by the active player window, titled "Vestra Player"; `destructive` shows a warning icon; a `checkbox` is asked as a second yes/no dialog after the user confirms. |
-| `Theme.font-mono`                              | Menlo                                                                                 | Consolas                                                                                                                                                                              |
-| `DropModifiers.cmd`                            | ⌘                                                                                     | Ctrl                                                                                                                                                                                  |
-
-The API is the same on both systems. Other systems answer `dialogs.confirm` with `unsupported`. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
+The API is the same on macOS and Windows; what differs is the system's own part: the close keys (⌘W, or Ctrl+W and Ctrl+F4), how `dialogs.confirm` looks, the monospace font, the modifier `DropModifiers.cmd` stands for. [Reference: platforms](../reference/platforms.md) lists every difference. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
 
 ## Common pitfalls
 
