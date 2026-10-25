@@ -12,7 +12,8 @@ npm run lint        # oxlint (.oxlintrc.json)
 npm run build       # rebuild dist/ (compiled .js + .d.ts; comments are kept for editors)
 npm test            # unit tests (run against src/)
 npm run docs        # API documentation site in docs-site/ (TypeDoc)
-npm run docs:check  # type check the ts code blocks in README.md, docs/ and @example comments; drift checks
+npm run docs:check  # type check the ts code blocks in README.md, docs/ and @example comments; drift, structure and generated-table checks
+npm run docs:tables # rewrite the generated tables in docs/ (scripts/doc-tables.mjs)
 npm run doc-lint    # documentation coverage report; fails when an enforced category is incomplete
 npm run docs:llms   # regenerate llms.txt and llms-full.txt (`-- --check`: fail when they are stale)
 npm run examples    # every examples/<name>: npm install, vestra-plugin check, test, pack (needs dist/)
@@ -27,7 +28,7 @@ The package publishes compiled `.js` and `.d.ts` files, not `.ts` sources: Node 
 
 - The reference is generated from the TSDoc comments in `src/` by TypeDoc (pinned in `devDependencies`, configured in `typedoc.json`). Entry points are the public entries `.` (`src/index.ts`) and `./testing` (`src/plugin/testing.ts`). `./runtime` and wire-level modules are internal and not documented.
 - `README.md` is the site's front page (it must render on GitHub, npm and TypeDoc: absolute URLs for images and repository links, no `<picture>`, no GitHub alerts).
-- The hand-written pages live in `docs/tutorials/`, `docs/concepts/`, `docs/how-to/` and `docs/examples/` (Diátaxis). Each folder's `index.md` comes first; `scripts/typedoc-plugin.mjs` puts every page in the navigation group of its folder (Tutorials, Concepts, How-to, Examples; the two entry points are "API"), so a new page needs only a `title` in its front matter. `docs/maintaining.md` (this page) is deliberately not on the site.
+- The hand-written pages live in one folder per navigation group under `docs/` (see [Documentation structure](#documentation-structure)). `scripts/typedoc-plugin.mjs` puts every page in the group of its folder, in the order of `scripts/doc-structure.mjs`; the two entry points are "API". `docs/maintaining.md` (this page) is deliberately not on the site.
 - Example walkthroughs (`docs/examples/<name>.md`) pull code from the example with `{@includeCode ../../examples/<name>/main.ts#region}` and `// #region name` / `// #endregion name` markers in the source; never paste example code into a page.
 - Theme: `typedoc-github-theme`; `typedoc-plugin-mdn-links` links Node and Web types to MDN. Search covers comments and documents. `tsdoc.json` declares the custom block tags `@capability` and `@player`.
 - `npm run docs` treats warnings as errors: every exported declaration and member must be documented, `{@link}` targets and relative links in documents must resolve, `{@includeCode}` regions must exist, and an internal type referenced by the public API must be listed in `intentionallyNotExported`. Mark members that only exist for the player with `@internal`.
@@ -62,6 +63,35 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 ````
 
 Modules and handles (`full` in `scripts/doc-standard.mjs`) carry all of it; their methods carry the summary, `@example`, `@capability`, `@since` and `@throws` (for a Promise). Data types (`data`) carry a summary, `@since`, `@category` and a summary per field with its unit and range. When a category is done, list its symbols in `scripts/doc-standard.mjs` so CI keeps it complete.
+
+## Documentation structure
+
+The site has seven fixed groups, in this order; a new group needs a change to this section first.
+
+| Group | Folder | Holds | Size limit per page |
+| --- | --- | --- | --- |
+| Tutorials | `docs/tutorials/` | Step-by-step lessons for a newcomer that can be followed to the end. | 350 lines |
+| Concepts | `docs/concepts/` | What something is, why it works that way and what it relates to, across several modules; no member lists. | 350 lines, 4500 words |
+| How-to | `docs/how-to/` | One page answers one "how do I do X?"; assumes Getting started. | 200 lines |
+| Guidelines | `docs/guidelines/` | Normative rules (should / should not) for interface and menu consistency. They prescribe, so they are not concepts; they are not tasks either. | 200 lines |
+| Examples | `docs/examples/` | Walkthroughs of the complete plugins in `examples/`. | 200 lines |
+| Reference | `docs/reference/` | Lookup tables across symbols (capabilities, manifest and versions, limits, menu and binding names, platforms, theme, CLI), generated where possible. A fact about one symbol belongs in its TSDoc, not here. | 150 hand-written lines |
+| API | (TypeDoc entry points) | The per-symbol reference from the TSDoc in `src/`. | — |
+
+Every group's `index.md` comes first and is limited to 120 lines. Errors and testing have no group of their own: the error codes live in the `PluginError` table, the test helpers on `TestHost`.
+
+Rules, all checked by `npm run docs:check`:
+
+- **One topic per page.** Front matter has a `title` and a one-sentence `description` (what the page is for). Lines are counted without the front matter and without generated blocks; above the limit the check warns, more than 25 % above it fails.
+- **Navigation depth 2** (group → page): no folders inside a group folder, no `children` front matter, and no `group` front matter (the folder decides the group).
+- **The page list is a table.** `scripts/doc-structure.mjs` lists the groups and, per group, its pages in navigation order, each with `why` it is a page of its own rather than a section of an existing page (a different topic, or as a section it would push that page over its limit or blur its focus). The Markdown files under `docs/` must be exactly the listed pages (plus this page), so adding, renaming or removing a page changes the table and shows in review.
+- **Index pages link only to pages that exist**, and every page is linked from its group's index (no orphans). No "coming soon" or "being written" entries: a page that is not written yet is an SDK issue, not a line on the site.
+- **One fact, one place.** Constants, lists, limits and the capability table are generated from the code (below); pages link to each other instead of repeating. The README keeps a summary and links.
+- `typedoc.json` must agree: `groupOrder` is the groups above followed by `API` and `*`, and `projectDocuments` includes every group folder.
+
+**Generated tables.** A page marks a generated block with `<!-- generated:<name> [arguments] -->` and `<!-- /generated -->`; `npm run docs:tables` (`scripts/doc-tables.mjs`) replaces what is between them with the output of `scripts/doc-tables/<name>.mjs` (a module whose default export returns the block's Markdown; the script's header comment describes its arguments). Never edit a generated block by hand: change the source and run `npm run docs:tables`, then commit. `docs:check` runs `doc-tables.mjs --check` and fails when a block is stale, has no generator, or is not closed.
+
+**Pending pages during a documentation round.** A round may list a page before it exists (`new: true`) and give each page it creates or reworks a `pending: "<package>"` mark. A pending page's violations, and a missing `new` page, are warnings instead of errors, so the parts of a round can land one by one. This only holds while `package.json` is at or below `PENDING_UNTIL` in `scripts/doc-structure.mjs`; from the next version on, every remaining `pending` or `new` mark is itself an error. The release that ends the round removes all marks, and the check is strict again; a later round that needs the allowance sets `PENDING_UNTIL` to the version it starts from.
 
 ## Examples
 

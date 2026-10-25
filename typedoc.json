@@ -6,15 +6,24 @@
   "out": "docs-site",
   "readme": "README.md",
   "projectDocuments": [
-    "docs/{tutorials,concepts,how-to,examples}/index.md",
-    "docs/{tutorials,concepts,how-to,examples}/!(index).md"
+    "docs/{tutorials,concepts,how-to,guidelines,examples,reference}/index.md",
+    "docs/{tutorials,concepts,how-to,guidelines,examples,reference}/!(index).md"
   ],
   "favicon": ".github/assets/logo.png",
   "excludeInternal": true,
   "excludePrivate": true,
   "includeVersion": true,
   "sort": ["source-order"],
-  "groupOrder": ["Tutorials", "Concepts", "How-to", "Examples", "API", "*"],
+  "groupOrder": [
+    "Tutorials",
+    "Concepts",
+    "How-to",
+    "Guidelines",
+    "Examples",
+    "Reference",
+    "API",
+    "*"
+  ],
   "categorizeByGroup": false,
   "defaultCategory": "Other",
   "navigation": {
