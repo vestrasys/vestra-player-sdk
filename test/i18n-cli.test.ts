@@ -259,12 +259,14 @@ test("check reports coverage and problems as warnings", () => {
     MAIN.replace('"Not now"', '"Later"'),
   );
   result = run(directory, "i18n", "check");
-  assert.equal(result.status, 0, result.stderr);
+  // A stale messages.pot fails i18n check (SDK 1.5.12); the warnings print.
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /messages\.pot is out of date/);
+  assert.match(result.stderr, /de\.po: 1 message is not in this file/);
   const out = result.stdout;
   assert.match(out, /i18n: de: 2\/\d+ translated, 0 fuzzy, 0 obsolete/);
   assert.match(out, /placeholders of "Speed \{\}×" differ/);
   assert.match(out, /"\{n\} file" has no msgstr\[1\]/);
-  assert.match(out, /messages\.pot is out of date/);
   assert.match(out, /en\.po: English is the source language/);
   assert.match(out, /main\.ts:\d+: user-visible text composed in TypeScript/);
   assert.match(out, /main\.ts:\d+: the text of Osd\.show is not a literal/);
@@ -272,10 +274,16 @@ test("check reports coverage and problems as warnings", () => {
   assert.match(out, /ui\/page\.slint:8: Slint text without @tr: "Plain words"/);
   assert.match(out, /ui\/page\.slint:9: not English/);
   assert.doesNotMatch(out, /0:42/);
-  // `check` shows the same warnings and still passes.
+  // `check` shows the same lines and still passes.
   result = run(directory, "check");
   assert.equal(result.status, 0, result.stderr + result.stdout);
   assert.match(result.stdout, /i18n: de: /);
+  assert.match(result.stdout, /messages\.pot is out of date/);
+  // After extract, i18n check passes again.
+  assert.equal(run(directory, "i18n", "extract").status, 0);
+  result = run(directory, "i18n", "check");
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /out of date|not in this file/);
   // A broken .po fails i18n check.
   writeFileSync(file, 'msgid "a"\nmsgstr "\\q"\n');
   result = run(directory, "i18n", "check");

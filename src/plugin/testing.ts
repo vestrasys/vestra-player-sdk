@@ -2278,11 +2278,20 @@ export class TestHost implements Transport {
   }
   /**
    * Press a binding like the host's table would: panel-focus bindings first
-   * when `panel` is true, then global ones; the earliest registration wins a
-   * conflict. Resolves after the command ran; rejects when nothing is bound
-   * or the command is disabled or busy. Bindings use the reference syntax
-   * (`"Space"`, `"Ctrl+O"`, `"Mouse:WheelUp"`); the player's core actions
-   * match first, and user overrides in `bindings.overlay` apply.
+   * when `panel` is true, then global ones; within a scope the earliest
+   * registration first (the player's own commands before the plugin's), as
+   * the conflict rule orders them. A disabled command lets the key pass to
+   * the next command bound to it (SDK 1.5.12, as player 0.4.3): the one it
+   * shadowed, then the global scope. The first enabled one runs; `press`
+   * resolves after it ran (`"ran"`), or rejects when it is busy. When only
+   * disabled commands hold the key, the first one with a `reason` shows the
+   * reason on the OSD and eats the key (`"reason"`, see `host.osd`);
+   * without a reason the key goes on to the focused control (`"passed"`,
+   * nothing runs). Rejects when nothing is bound. Bindings use the
+   * reference syntax (`"Space"`, `"Ctrl+O"`, `"Mouse:WheelUp"`), and user
+   * overrides in `bindings.overlay` apply.
+   *
+   * @returns What the key did: `"ran"`, `"reason"` or `"passed"`.
    *
    * @example
    * ```ts
@@ -2290,13 +2299,34 @@ export class TestHost implements Transport {
    * await host.press("Delete", { panel: true }); // while the panel has focus
    * ```
    */
-  async press(binding: string, options: { panel?: boolean } = {}) {
+  async press(
+    binding: string,
+    options: { panel?: boolean } = {},
+  ): Promise<"ran" | "reason" | "passed"> {
     const claims = this.#claims();
-    const id =
-      (options.panel ? claims.get(`panel ${binding}`)?.[0] : undefined) ??
-      claims.get(`global ${binding}`)?.[0];
-    if (!id) throw new Error(`test host: nothing is bound to ${binding}`);
-    await (this.coreCommands.get(id) ?? this.command(id)).run();
+    const ids = [
+      ...(options.panel ? (claims.get(`panel ${binding}`) ?? []) : []),
+      ...(claims.get(`global ${binding}`) ?? []),
+    ];
+    if (!ids.length)
+      throw new Error(`test host: nothing is bound to ${binding}`);
+    const command = (id: string) =>
+      this.coreCommands.get(id) ?? this.command(id);
+    const enabled = ids.find((id) => command(id).state.enabled);
+    if (enabled !== undefined) {
+      await command(enabled).run();
+      return "ran";
+    }
+    for (const id of ids) {
+      const reason = this.commands.has(id)
+        ? command(id).display.reason
+        : command(id).state.reason;
+      if (typeof reason === "string" && reason !== "") {
+        this.osd.push(reason);
+        return "reason";
+      }
+    }
+    return "passed";
   }
   /**
    * Bindings declared by more than one command, each as
