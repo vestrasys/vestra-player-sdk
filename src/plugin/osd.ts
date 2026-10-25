@@ -14,6 +14,39 @@ import { isTextValue, textProblem } from "../i18n.ts";
 import type { ArgJson } from "../i18n.ts";
 
 /**
+ * The player's limits on the on-screen display ({@link Osd}), counted on
+ * the text as shown: after the player translated it and filled in its
+ * arguments. A text over them fails with code `invalid`: `osd.show`
+ * rejects, `OsdPanel.set` reports to `Scope.onError`. The player's tests
+ * check that these agree with the player.
+ *
+ * @example
+ * ```ts
+ * import { OSD_LIMITS } from "@vestra-player/sdk/testing";
+ *
+ * const lines = rows.slice(0, OSD_LIMITS.panelLines);
+ * panel.set(lines.join("\n"), null, { maxColumns: 60 });
+ * ```
+ *
+ * @since 1.5.14
+ */
+export const OSD_LIMITS = Object.freeze({
+  /**
+   * Characters of one `osd.show` message (200; at least 1 that is not
+   * white space). Line breaks are shown as spaces.
+   */
+  messageChars: 200,
+  /** Lines of the information block (`OsdPanel.set`) (32). */
+  panelLines: 32,
+  /** UTF-8 bytes of the information block (4096). */
+  panelBytes: 4096,
+  /** The smallest `OsdPanelOptions.maxColumns` (8). */
+  minColumns: 8,
+  /** The largest `OsdPanelOptions.maxColumns` (1000). */
+  maxColumns: 1000,
+} as const);
+
+/**
  * Copy and check template arguments: an array or object of at most 16
  * strings, finite numbers, texts and lists (`TEXT_LIMITS`).
  */
@@ -82,9 +115,16 @@ class PanelHandle implements OsdPanel {
       const max = options?.maxColumns;
       if (
         max !== undefined &&
-        !(Number.isInteger(max) && max >= 8 && max <= 1000)
+        !(
+          Number.isInteger(max) &&
+          max >= OSD_LIMITS.minColumns &&
+          max <= OSD_LIMITS.maxColumns
+        )
       )
-        throw failure("invalid", "maxColumns is an integer from 8 to 1000");
+        throw failure(
+          "invalid",
+          `maxColumns is an integer from ${OSD_LIMITS.minColumns} to ${OSD_LIMITS.maxColumns}`,
+        );
       value = {
         text: text === null ? null : shownText(text, args),
         ...(text === null || args === undefined || args === null

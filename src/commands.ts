@@ -53,6 +53,101 @@ export const MENU_IDS = [
   "settings",
 ] as const;
 
+/**
+ * A submenu that one of the player's built-in plugins declares: an entry of
+ * {@link BUILTIN_SUBMENUS}.
+ *
+ * @since 1.5.14
+ */
+export interface BuiltinSubmenu {
+  /**
+   * The submenu's key path: the English texts paths merge by, the
+   * built-in menu first by its key (`"Playback"` for `@playback`). Write
+   * these segments, followed by your command's title, to put a command into
+   * this submenu.
+   */
+  readonly path: readonly string[];
+  /** The built-in plugins that declare it (`vestra.history`). */
+  readonly plugins: readonly string[];
+}
+
+/**
+ * The submenus the player's built-in plugins declare, by key path, in menu
+ * order (built-in menus as in {@link MENU_IDS}, then top-level submenus).
+ * Menu paths merge by their English key, so a command whose path starts
+ * with the same keys appears in the same submenu, whatever the interface
+ * language; the submenu's title is the declaring plugin's translation. The
+ * player's own submenus (`Playback ▸ Speed`, `Playback ▸ Seek`) are not
+ * listed. The player's tests check that this list agrees with what its
+ * built-in plugins declare.
+ *
+ * @example
+ * ```ts
+ * import { BUILTIN_SUBMENUS } from "@vestra-player/sdk/testing";
+ *
+ * const snapshot = BUILTIN_SUBMENUS.find((menu) => menu.path.at(-1) === "Snapshot")!;
+ * plugin.commands.add({
+ *   id: "snapshot-to-clipboard",
+ *   path: ["@video", ...snapshot.path.slice(1), "Copy Snapshot"],
+ *   run: copySnapshot,
+ * });
+ * ```
+ *
+ * @since 1.5.14
+ */
+export const BUILTIN_SUBMENUS: readonly BuiltinSubmenu[] = Object.freeze([
+  { path: ["Open", "Recently Played"], plugins: ["vestra.history"] },
+  { path: ["Playback", "A-B Loop"], plugins: ["vestra.marks"] },
+  { path: ["Playback", "A-B Loop", "Loop Count"], plugins: ["vestra.marks"] },
+  { path: ["Playback", "Chapters and Bookmarks"], plugins: ["vestra.marks"] },
+  { path: ["Playback", "Playlist"], plugins: ["vestra.playlist"] },
+  { path: ["Playback", "Playlist", "Repeat"], plugins: ["vestra.playlist"] },
+  {
+    path: ["Playback", "Playlist", "When Opening a File"],
+    plugins: ["vestra.playlist"],
+  },
+  { path: ["Playback", "Resume Playback"], plugins: ["vestra.history"] },
+  {
+    path: ["Subtitles", "Online Subtitles"],
+    plugins: ["vestra.subtitle-online"],
+  },
+  { path: ["Subtitles", "Secondary Subtitle"], plugins: ["vestra.subtitles"] },
+  {
+    path: ["Subtitles", "Secondary Subtitle", "Position"],
+    plugins: ["vestra.subtitles"],
+  },
+  { path: ["Subtitles", "Subtitle Style"], plugins: ["vestra.subtitles"] },
+  { path: ["Subtitles", "Subtitle Track"], plugins: ["vestra.subtitles"] },
+  { path: ["Subtitles", "Sync"], plugins: ["vestra.subtitles"] },
+  { path: ["Video", "Aspect"], plugins: ["vestra.video"] },
+  { path: ["Video", "Crop/Stretch"], plugins: ["vestra.video"] },
+  { path: ["Video", "Deinterlace"], plugins: ["vestra.video"] },
+  { path: ["Video", "Deinterlace", "Output"], plugins: ["vestra.video"] },
+  { path: ["Video", "Framing"], plugins: ["vestra.video"] },
+  { path: ["Video", "Image Processing"], plugins: ["vestra.video"] },
+  { path: ["Video", "Pixel Shaders"], plugins: ["vestra.video"] },
+  {
+    path: ["Video", "Pixel Shaders", "HDR Tone Mapping"],
+    plugins: ["vestra.video"],
+  },
+  { path: ["Video", "Rotation"], plugins: ["vestra.video"] },
+  { path: ["Video", "Snapshot"], plugins: ["vestra.capture"] },
+  { path: ["Audio", "Audio Sync"], plugins: ["vestra.audio"] },
+  { path: ["Audio", "Audio Track"], plugins: ["vestra.audio"] },
+  { path: ["Audio", "Output Device"], plugins: ["vestra.audio"] },
+  { path: ["Audio", "Preset"], plugins: ["vestra.audio"] },
+  { path: ["Audio", "Processing"], plugins: ["vestra.audio"] },
+  { path: ["Screen", "Always on Top"], plugins: ["vestra.window"] },
+  { path: ["Screen", "When Playback Starts"], plugins: ["vestra.window"] },
+  {
+    path: ["Settings", "Appearance"],
+    plugins: ["vestra.preferences", "vestra.visualizer"],
+  },
+  { path: ["Settings", "Language"], plugins: ["vestra.preferences"] },
+  { path: ["Copy to Clipboard"], plugins: ["vestra.playback"] },
+  { path: ["Emulator"], plugins: ["vestra.nes"] },
+]);
+
 export type CommandState = {
   enabled: boolean;
   checked: boolean | null;
