@@ -1,0 +1,51 @@
+---
+title: Capabilities
+description: Every capability a manifest can declare, with the API members it opens, the capabilities they also need and how the plugin store describes it.
+---
+
+# Capabilities
+
+A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manifest.md)). A call to a member whose capability is missing fails with code `capability`; nothing else is checked at run time, and capabilities limit only the player API, not the file system or the network (a plugin is a Node.js process). The store shows the capabilities to the user before installing, in the words of the "Shown in the store as" column; the highlighted ones reach outside the plugin's own features.
+
+<!-- generated:capabilities -->
+
+| Capability | Opens | Also needs | Shown in the store as | Highlighted |
+| --- | --- | --- | --- | --- |
+| `producer.av` | {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} | `playback.control` | Provide audio and video it generates itself |  |
+| `playback.read` | {@linkcode "@vestra-player/sdk"!Player.state Player.state}, {@linkcode "@vestra-player/sdk"!Player.refresh Player.refresh}, {@linkcode "@vestra-player/sdk"!Player.stats Player.stats}, {@linkcode "@vestra-player/sdk"!Player.chapters Player.chapters}, {@linkcode "@vestra-player/sdk"!Player.audioDevices Player.audioDevices}, {@linkcode "@vestra-player/sdk"!Timeline.marks Timeline.marks} | — | Read what is playing and the position |  |
+| `playback.control` | {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!Player.setOutput Player.setOutput}, {@linkcode "@vestra-player/sdk"!Player.provideSequence Player.provideSequence}, {@linkcode "@vestra-player/sdk"!Player.next Player.next}, {@linkcode "@vestra-player/sdk"!Player.previous Player.previous}, {@linkcode "@vestra-player/sdk"!Player.addAudioTrack Player.addAudioTrack}, {@linkcode "@vestra-player/sdk"!Player.selectAudioTrack Player.selectAudioTrack}, {@linkcode "@vestra-player/sdk"!Player.step Player.step}, {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek}, {@linkcode "@vestra-player/sdk"!Player.setLoop Player.setLoop}, {@linkcode "@vestra-player/sdk"!Player.setAudioDevice Player.setAudioDevice}, {@linkcode "@vestra-player/sdk"!Power.preventSleep Power.preventSleep} | — | Open media, control playback, keep the computer awake |  |
+| `source.resolve` | {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} | — | Resolve online video addresses |  |
+| `events` | {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!Timeline.onChange Timeline.onChange}, {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!Appearance.onChange Appearance.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange}, {@linkcode "@vestra-player/sdk"!Resolvers.onFileTypesChange Resolvers.onFileTypesChange} | — | Receive playback changes as they happen |  |
+| `commands` | {@linkcode "@vestra-player/sdk"!Commands.add Commands.add}, {@linkcode "@vestra-player/sdk"!Host.run Host.run} | — | Add menu commands and shortcuts |  |
+| `ui.window` | {@linkcode "@vestra-player/sdk"!Windows.create Windows.create} | — | Open tool windows |  |
+| `ui.mount` | {@linkcode "@vestra-player/sdk"!Panels.mount Panels.mount}, {@linkcode "@vestra-player/sdk"!Panels.bottom Panels.bottom}, {@linkcode "@vestra-player/sdk"!Panels.sidebar Panels.sidebar}, {@linkcode "@vestra-player/sdk"!Panels.backdrop Panels.backdrop}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} | — | Show panels in the bottom bar, the sidebar or behind the video |  |
+| `ui.dialog` | {@linkcode "@vestra-player/sdk"!Dialogs.confirm Dialogs.confirm}, {@linkcode "@vestra-player/sdk"!Dialogs.openFile Dialogs.openFile}, {@linkcode "@vestra-player/sdk"!Dialogs.openFiles Dialogs.openFiles}, {@linkcode "@vestra-player/sdk"!Dialogs.openDirectory Dialogs.openDirectory}, {@linkcode "@vestra-player/sdk"!Dialogs.saveFile Dialogs.saveFile} | — | Show file pickers and confirmations |  |
+| `plugins.manage` | {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive}, {@linkcode "@vestra-player/sdk"!Packages.rollback Packages.rollback}, {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled}, {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} | — | Install, uninstall and disable other plugins | yes |
+| `processing.video` | {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render} | `playback.read` | Process the picture (filters, shaders) |  |
+| `processing.audio` | {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} | `playback.read`, `events` | Process the sound |  |
+| `subtitles.read` | {@linkcode "@vestra-player/sdk"!Subtitles.state Subtitles.state}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.refresh Subtitles.refresh} | — | Read subtitles |  |
+| `subtitles.control` | {@linkcode "@vestra-player/sdk"!Subtitles.select Subtitles.select}, {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load}, {@linkcode "@vestra-player/sdk"!Subtitles.remove Subtitles.remove}, {@linkcode "@vestra-player/sdk"!Subtitles.setStyle Subtitles.setStyle} | — | Load and change subtitles |  |
+| `media.read` | {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture}, {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} | `media.control` | Take snapshots and export clips |  |
+| `media.control` | {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture}, {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} | `media.read` | Take snapshots and export clips |  |
+| `ui.osd` | {@linkcode "@vestra-player/sdk"!Osd.show Osd.show}, {@linkcode "@vestra-player/sdk"!Osd.panel Osd.panel} | — | Show messages on the video |  |
+| `clipboard` | {@linkcode "@vestra-player/sdk"!Clipboard.readText Clipboard.readText}, {@linkcode "@vestra-player/sdk"!Clipboard.writeText Clipboard.writeText}, {@linkcode "@vestra-player/sdk"!Clipboard.writeImage Clipboard.writeImage} | — | Read and write the clipboard | yes |
+| `window.control` | {@linkcode "@vestra-player/sdk"!MainWindow.setVideoArea MainWindow.setVideoArea}, {@linkcode "@vestra-player/sdk"!MainWindow.setAlwaysOnTop MainWindow.setAlwaysOnTop}, {@linkcode "@vestra-player/sdk"!MainWindow.setCursorAutoHide MainWindow.setCursorAutoHide}, {@linkcode "@vestra-player/sdk"!MainWindow.setPictureInPicture MainWindow.setPictureInPicture} | — | Adjust the main window (size, on top, picture-in-picture) |  |
+| `bindings.manage` | {@linkcode "@vestra-player/sdk"!Bindings.list Bindings.list}, {@linkcode "@vestra-player/sdk"!Bindings.set Bindings.set}, {@linkcode "@vestra-player/sdk"!Bindings.reset Bindings.reset}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange} | — | Change all shortcuts | yes |
+| `timeline.marks` | {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} | — | Show marks on the progress bar |  |
+| `ui.drop` | {@linkcode "@vestra-player/sdk"!Drops.provide Drops.provide}, {@linkcode "@vestra-player/sdk"!Panel.onDrop Panel.onDrop} | — | Receive files dropped on the player |  |
+| `ui.settings` | {@linkcode "@vestra-player/sdk"!Settings.page Settings.page}, {@linkcode "@vestra-player/sdk"!Settings.show Settings.show} | — | Add pages to the Options window |  |
+| `ui.theme` | {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set}, {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage} | — | Change the player's palette |  |
+| `secrets` | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | — | Store sign-in details in the system keychain | yes |
+
+<!-- /generated -->
+
+**Also needs** applies to every member of the row: declare those capabilities as well. A few members or options need one more, documented at the member:
+
+- {@link "@vestra-player/sdk"!Scope.video | video.filter} also needs `events`.
+- A `processed` snapshot or export ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) also needs `playback.read` and `subtitles.read`.
+- A file resolver ({@link "@vestra-player/sdk"!Resolvers.add | Resolvers.add} with file types) also needs `producer.av`.
+- Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere.
+
+## Without a capability
+
+A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading {@link "@vestra-player/sdk"!MainWindow.state | window.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and {@link "@vestra-player/sdk"!Packages.list | packages.list}. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest ({@link "@vestra-player/sdk/testing"!CAPABILITY_INFO | CAPABILITY_INFO}).

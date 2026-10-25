@@ -1,5 +1,6 @@
 ---
 title: "Example: Menus"
+description: "Walkthrough of examples/menus: radio items, separator groups and a menu item whose title changes."
 ---
 
 # Example: Menus

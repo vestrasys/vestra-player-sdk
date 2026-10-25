@@ -325,16 +325,19 @@ export interface Plugin extends Scope {
   /** The manifest id, e.g. `"community.bookmark"`. */
   readonly id: string;
   /**
-   * A writable directory for this plugin's own files (settings, remembered
-   * folders). Kept across restarts, disabling and upgrades. Write files atomically: to a temporary name, then rename.
-   * Throws `unavailable` when the player provided none.
+   * A writable directory for this plugin's own files (settings, caches,
+   * remembered folders), created by the player before it starts the plugin.
+   * Each installation has its own directory (player 0.2.0): it is kept across
+   * restarts, disabling, upgrades and rollbacks, and a reinstall of the same
+   * id from a different source gets a new, empty one. It is deleted only by
+   * `packages.uninstall(id, { removeData: true })`. No capability.
    *
-   * Location: `~/Library/Application Support/Vestra/plugin-data/<id>/` on
-   * macOS, `%APPDATA%\Vestra\plugin-data\<id>\` on Windows (the environment
-   * variable `VESTRA_PLUGIN_DATA` moves the root). Another plugin's data
-   * directory is `join(dirname(plugin.dataDirectory), id)`. It is deleted
-   * only by `packages.uninstall(id, { removeData: true })`. No capability.
-   * For JSON settings prefer {@link Scope.storage}.
+   * The path's format is not part of the API: do not derive another
+   * plugin's directory from it (a plugin manager reads
+   * {@link PluginInfo.dataDirectory}). Write files atomically (to a
+   * temporary name, then rename); for JSON settings prefer
+   * {@link Scope.storage}. Throws `unavailable` when the player provided
+   * none. See [How a plugin runs](../../docs/concepts/plugins.md#the-data-directory).
    */
   readonly dataDirectory: string;
 }
@@ -400,9 +403,10 @@ export type MenuId =
  * item never moves the player's menu. Directly inside a built-in menu,
  * `order` 0 (the default) sorts after every other order: an item without
  * `order` goes at the end, after the player's own items (which all use 100
- * or more). Give a positive order to sit between them (the player's orders
- * are listed in its menu table, doc/product/menus.md), or a negative one to
- * come first. Deeper levels (a plugin's own submenu) have no such rule.
+ * or more). Give a positive order to sit between them (the player's items
+ * in menu order are in
+ * [Built-in commands](../../docs/reference/commands.md#built-in-commands)),
+ * or a negative one to come first. Deeper levels (a plugin's own submenu) have no such rule.
  * Players before 0.3.0 place every submenu at its smallest order, so there
  * an item without `order` moves the whole menu to the top; to avoid that,
  * give it an order in the menu's range (Video: 400–499).
@@ -483,8 +487,8 @@ export interface CommandOptions {
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write
-   * `Ctrl+…` for bindings that work on both. Avoid keys the system takes
-   * first (⌃F1–⌃F8, ⌃Arrow keys, ⌘Tab on macOS).
+   * `Ctrl+…` for bindings that work on both. Avoid the
+   * [keys the system takes first](../../docs/reference/commands.md#keys-the-system-takes-first).
    *
    * Conflicts are not errors: the user's overrides win, then the player's
    * own commands, then the plugin loaded first; a shadowed binding takes
@@ -842,6 +846,15 @@ export interface Ui {
    * The text is at most 256 KB; very long documents are cut off after 4000
    * blocks.
    *
+   * `MarkdownView` scrolls one document. `MarkdownBlocks` (SDK 1.5.4, players
+   * after 0.4.0) draws one without scrolling, as tall as its content, for a
+   * layout of your own or a `ListView` row. For a list of documents, write
+   * the whole list with one document per row: the player parses only the
+   * documents that changed and updates the list in place (rows added or
+   * removed at the end, a growing document's changed blocks), so re-sending
+   * the list on every streamed chunk keeps the scroll position and costs
+   * little.
+   *
    * @capability None.
    * @player 0.2.0 (set `"minPlayerVersion": "0.2.0"` in the manifest)
    *
@@ -855,6 +868,44 @@ export interface Ui {
    * @throws `invalid` (rejects) `text` is not a string or is over 256 KB, or
    *   `base` is neither an `http(s):` address nor an absolute path.
    * @throws `unsupported` (rejects) The player is older than 0.2.0.
+   *
+   * @example A chat: one Markdown document per row, with Copy buttons
+   * `ui/chat.slint`:
+   *
+   * ```slint
+   * import { ListView } from "std-widgets.slint";
+   * import { MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
+   * export struct Message { id: string, role: string, body: [MarkdownBlock] }
+   * export component Chat inherits Window {
+   *     in property <[Message]> messages;
+   *     callback copy-code(string);
+   *     ListView {
+   *         for message in root.messages: VerticalLayout {
+   *             padding: 8px;
+   *             MarkdownBlocks {
+   *                 blocks: message.body;
+   *                 code-copy: true;
+   *                 copy-code(code) => { root.copy-code(code); }
+   *             }
+   *         }
+   *     }
+   * }
+   * ```
+   *
+   * ```ts
+   * const chat = plugin.windows.create("ui/chat.slint");
+   * const history: { id: string; role: string; text: string }[] = [];
+   * chat.on("copyCode", (code: string) => plugin.clipboard.writeText(code));
+   * async function render() {
+   *   const messages = [];
+   *   for (const { id, role, text } of history)
+   *     messages.push({ id, role, body: await plugin.ui.markdown(text) });
+   *   chat.set({ messages });
+   * }
+   * history.push({ id: "1", role: "user", text: "Show me `ls`." });
+   * await render();
+   * await chat.show();
+   * ```
    *
    * @example Show a README from the web
    * ```ts
@@ -1064,8 +1115,8 @@ export interface View {
  *    {@link View.bind} or {@link View.set}.
  * 3. {@link Window.show} opens the window with those properties.
  *    {@link Window.hide} hides it and keeps its state.
- * 4. {@link Window.close}, or the user (title-bar button; ⌘W on macOS,
- *    Ctrl+W or Ctrl+F4 on Windows), destroys the window instance; only the
+ * 4. {@link Window.close}, or the user (title-bar button or the
+ *    [standard close keys](../../docs/reference/commands.md#keys-the-system-takes-first)), destroys the window instance; only the
  *    user's close calls {@link Window.onClose}. The handle stays usable: the
  *    next `show()` opens a fresh instance with the current properties.
  * 5. `dispose()`, disposing the owning scope or the plugin stopping closes
@@ -1219,8 +1270,8 @@ export interface Window extends View, Disposable {
    * Run code when the user closes the window.
    *
    * @remarks
-   * Called for the title-bar close button and the standard close keys (⌘W
-   * on macOS, Ctrl+W or Ctrl+F4 on Windows). When it runs, the window
+   * Called for the title-bar close button and the
+   * [standard close keys](../../docs/reference/commands.md#keys-the-system-takes-first). When it runs, the window
    * instance is gone and {@link Window.opened} is already `false`; a later
    * `show()` opens a fresh one. It is not called for the plugin's own
    * {@link Window.close} or `dispose()`, nor when the plugin stops. Errors
@@ -1553,8 +1604,8 @@ export interface PanelSlot {
  * Detached, the sidebar panel is shown in a separate window (300×408 by
  * default, at least 300×250) with the panel's `title`. The plugin's
  * properties and callbacks stay the same, but the window holds a new
- * instance of the component. Closing the floating window (its close button,
- * ⌘W, Ctrl+W, Ctrl+F4) is the same as `setVisible(false)`.
+ * instance of the component. Closing the floating window (its close button
+ * or the [standard close keys](../../docs/reference/commands.md#keys-the-system-takes-first)) is the same as `setVisible(false)`.
  *
  * @capability ui.mount
  *
@@ -3834,8 +3885,8 @@ export interface Host {
  * {@link Osd.panel}.
  *
  * @remarks
- * The block sits under the OSD message line, on a translucent black
- * background, and takes no input. Its font scales with the video area. When
+ * The block sits under the OSD message line, on a translucent dark plate
+ * (see {@link Osd} for sizes), and takes no input. When
  * several plugins have one, they are stacked from top to bottom. `dispose()`,
  * disposing the scope or stopping the plugin removes it.
  *
@@ -3915,8 +3966,25 @@ export interface OsdPanelOptions {
  * ({@link Osd.show}) is one line at the top left of the video that
  * disappears after 2 seconds; a newer message, from any plugin, replaces it.
  * The information block ({@link Osd.panel}) stays until the plugin changes
- * or removes it. Both are white text with a dark outline whose size follows
- * the height of the video area.
+ * or removes it.
+ *
+ * How the player draws them (a player before 0.4.0 drew bold white text
+ * with a black outline instead):
+ *
+ * - **Message**: white text on a translucent dark plate with rounded
+ *   corners and a gradient line along its bottom edge, 10px from the
+ *   video area's left and top edges.
+ * - **Font size** follows the video area: 3 % of its height, rounded and
+ *   clamped to 12–48px (about 18px in the default window, 32px in
+ *   fullscreen at 1080 pixels high). The plate's padding and corners scale
+ *   with it.
+ * - **Information block**: 4px below the message plate, on the same kind of
+ *   plate; its font scales in proportion (11px when the message is 16px),
+ *   clamped to 9–28px.
+ *
+ * How long a text may be is in
+ * [Limits: on-screen display](../../docs/reference/limits.md#on-screen-display)
+ * ({@link "@vestra-player/sdk/testing"!OSD_LIMITS | OSD_LIMITS}).
  *
  * @capability ui.osd
  *

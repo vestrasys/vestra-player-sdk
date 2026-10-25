@@ -315,14 +315,43 @@ export function system(scope: ScopeImpl): System {
   };
 }
 
-const SECRET = /^[a-z0-9._-]{1,64}$/;
+/**
+ * The player's limits on {@link Secrets}. A name or value outside them
+ * fails with code `invalid`; a new name beyond `names` fails with `limit`.
+ * The player's tests check that these agree with the player.
+ *
+ * @example
+ * ```ts
+ * import { SECRET_LIMITS } from "@vestra-player/sdk/testing";
+ *
+ * assert.ok(Buffer.byteLength(token) <= SECRET_LIMITS.valueBytes);
+ * ```
+ *
+ * @since 1.5.14
+ */
+export const SECRET_LIMITS = Object.freeze({
+  /**
+   * Characters of a name (64, at least 1), each one of `a-z`, `0-9`, `.`,
+   * `_` and `-`.
+   */
+  nameChars: 64,
+  /** UTF-8 bytes of a value (1024, at least 1; no NUL character). */
+  valueBytes: 1024,
+  /** Different names one plugin may have stored at the same time (256). */
+  names: 256,
+} as const);
+
+const SECRET = new RegExp(`^[a-z0-9._-]{1,${SECRET_LIMITS.nameChars}}$`);
 
 export const secrets = (scope: ScopeImpl): Secrets => {
   const named = (name: unknown) => {
     if (!scope.runtime.can("secrets"))
       throw failure("capability", "secrets must be declared in manifest");
     if (typeof name !== "string" || !SECRET.test(name))
-      throw failure("invalid", "secret names are 1–64 of a-z, 0-9, ., _ and -");
+      throw failure(
+        "invalid",
+        `secret names are 1–${SECRET_LIMITS.nameChars} of a-z, 0-9, ., _ and -`,
+      );
     return name;
   };
   return {
@@ -332,11 +361,11 @@ export const secrets = (scope: ScopeImpl): Secrets => {
         typeof value !== "string" ||
         !value ||
         value.includes("\0") ||
-        Buffer.byteLength(value) > 1024
+        Buffer.byteLength(value) > SECRET_LIMITS.valueBytes
       )
         throw failure(
           "invalid",
-          "secret values are 1–1024 bytes of text; delete() removes one",
+          `secret values are 1–${SECRET_LIMITS.valueBytes} bytes of text; delete() removes one`,
         );
       await scope.runtime.host.secrets.set(named(name), value);
     },

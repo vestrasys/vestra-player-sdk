@@ -1,5 +1,6 @@
 ---
 title: Remember a window's state between runs
+description: Store a tool window's values and whether it was open, and restore both at the next start.
 ---
 
 # Remember a window's state between runs
@@ -118,7 +119,7 @@ export default async function activate(plugin: Plugin) {
 - **Load once, at activation.** `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin. Always pass a `validate` function: the file is outside your control.
 - **Bind the stored value, not a copy.** `window.bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window, and a window opened later starts with the current values.
 - **Save on every change; the store debounces.** `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename). Dragging the slider writes the file once, after the drag. When the plugin stops (the player quits, the user disables the plugin), the store is flushed, so the last value is not lost.
-- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (title-bar button, ⌘W, Ctrl+W, Ctrl+F4). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
+- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (the title-bar button or the [standard close keys](../reference/commands.md#keys-the-system-takes-first)). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
 - **Restore after binding.** The window is created and bound before `open()` runs, so it opens with the stored values and without flashing defaults. If it cannot open (for example in a player without a user interface), the plugin forgets that it was open instead of failing activation.
 
 ## What you cannot restore

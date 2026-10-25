@@ -1,5 +1,6 @@
 ---
 title: Getting started
+description: "The one tutorial, from an empty folder to a packed plugin: files, manifest, a first command, a window, tests and packaging."
 ---
 
 # Getting started
@@ -8,11 +9,11 @@ This guide walks through a complete Vestra Player plugin: the files it is made o
 
 ## How plugins run
 
-- Each plugin runs in its own Node.js process (Node.js 26, which the player ships) started by the player. It can use the Node standard library, the file system, the network and npm packages.
-- The player loads the entry module and calls its **default export** `activate(plugin)`. The `plugin` object is created by the player; the plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
-- Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle owned by `plugin` or a child scope, and is released automatically when the plugin stops. There is no cleanup function to return.
-- Plugins are trusted code. Manifest capabilities are a contract that the player enforces per call (a missing one fails with `code: "capability"`), not a security sandbox.
-- The API is the same on macOS and Windows. A feature a system cannot provide fails with `unsupported`; each method documents its platform differences.
+- Each plugin runs in its own Node.js process (Node.js 26, which the player ships). It can use the Node standard library, the file system, the network and npm packages.
+- The player loads the entry module and calls its **default export** `activate(plugin)`. The plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
+- Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. There is no cleanup function to return.
+
+[How a plugin runs](../concepts/plugins.md) explains the process, activation, handles, the update pass and failures in full.
 
 ## Rules for plugins
 
@@ -73,82 +74,23 @@ my-plugin/
 }
 ```
 
-| Field              | Rule                                                                                                                                                                                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`               | Non-empty, globally unique identifier; use `author.plugin`.                                                                                                                                                  |
-| `version`          | Three non-negative integers `x.y.z`. `vestra-plugin build` writes it into `dist/manifest.json`.                                                                                                              |
-| `apiVersion`       | Always `"vestra/1"` for this major version of the SDK.                                                                                                                                                       |
-| `entry`            | Relative path inside the package: `.ts` during development, `.js` after building.                                                                                                                            |
-| `capabilities`     | Only names from the table below.                                                                                                                                                                             |
-| `minPlayerVersion` | Optional `x.y.z`: the oldest player that can load the plugin. Older players refuse it with `versionMismatch` ("requires Vestra Player ≥ x.y.z"). Set it when you use API added after SDK 1.0 (see Versions). |
+- `id` is your plugin's identifier: `<owner>.<name>`, ASCII letters, digits, `.`, `-` and `_`.
+- `version` is `x.y.z`; `vestra-plugin build` writes it into the package.
+- `apiVersion` is always `"vestra/1"` for this major version of the SDK.
+- `entry` is the entry module: `.ts` while you develop, `.js` after building.
+- `capabilities` lists what the plugin may do. A call to a member whose capability is missing fails with `code: "capability"`.
 
-Optional display fields (player 0.2.0), shown by the plugin store and plugin manager:
+Optional display fields (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `readme`, `changelog`, `sourceUrl`, `license`) are shown by the plugin store and the plugin manager, and `minPlayerVersion` names the oldest player that can load the plugin. Every field with its exact rules is in [Manifest](../reference/manifest.md#fields).
 
-| Field         | Rule                                                                                          |
-| ------------- | --------------------------------------------------------------------------------------------- |
-| `name`        | 1–64 characters, one line.                                                                    |
-| `author`      | 1–64 characters, one line.                                                                    |
-| `punchline`   | One-line summary, 1–120 characters.                                                           |
-| `description` | Plain text, 1–2000 characters; line breaks allowed.                                           |
-| `tags`        | Up to 8 tags, 1–24 characters each, unique ignoring case.                                     |
-| `icon`        | Package path of a PNG or JPEG, at most 512 KB and 1024 pixels per side (256×256 recommended). |
-| `readme`      | Package path of a UTF-8 `.md` file (≤ 256 KB). Default: `README.md` when present.             |
-| `changelog`   | Same, default `CHANGELOG.md` when present.                                                    |
-| `sourceUrl`   | `https:` address of the source code.                                                          |
-| `license`     | 1–64 characters, preferably an SPDX expression such as `MIT`.                                 |
+The capabilities you need first:
 
-A manifest with every field. `id`, `apiVersion`, `entry` and `capabilities` are required; without `version`, `vestra-plugin build` takes it from `--version` or `package.json`.
+| Capability      | Opens                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| `commands`      | `plugin.commands.add` (menu items and key bindings) and `plugin.host.run`                          |
+| `ui.window`     | `plugin.windows.create` (tool windows)                                                             |
+| `playback.read` | reading `plugin.player.state` (what is playing, the position), `stats`, `chapters`, timeline marks |
 
-```json
-{
-  "id": "me.hello",
-  "version": "0.1.0",
-  "apiVersion": "vestra/1",
-  "entry": "main.ts",
-  "capabilities": ["commands", "ui.osd"],
-  "minPlayerVersion": "0.4.1",
-  "name": "Hello",
-  "author": "Me",
-  "punchline": "Says hello from the Tools menu.",
-  "description": "A first plugin.\nIt adds Tools ▸ Hello, which shows an on-screen message.",
-  "tags": ["example"],
-  "icon": "assets/icon.png",
-  "readme": "README.md",
-  "changelog": "CHANGELOG.md",
-  "sourceUrl": "https://github.com/me/hello",
-  "license": "MIT"
-}
-```
-
-Unknown fields, unknown capabilities and paths that leave the package directory (including through symbolic links) are rejected. The id's characters are ASCII letters, digits, `.`, `-` and `_`; the official plugin repository additionally requires `<GitHub user or organization>.<plugin name>`. The `vestra.` prefix (and the id `vestra`, in any case) is reserved for the plugins built into the player: from player 0.4.1 the player refuses to install such a package (`reserved`). Every other plugin is a third-party plugin, including those hosted in the official repository.
-
-| Capability                             | Opens                                                                                                   |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `commands`                             | `commands.add`, `host.run`                                                                              |
-| `ui.window`                            | `windows.create`                                                                                        |
-| `ui.mount`                             | `panels.mount`, `panels.bottom` / `.sidebar` / `.backdrop`                                              |
-| `ui.dialog`                            | `dialogs.*`                                                                                             |
-| `ui.osd`                               | `osd.show`, `osd.panel`                                                                                 |
-| `ui.drop`                              | `drops.provide`, `Panel.onDrop`                                                                         |
-| `ui.theme`                             | `appearance.set`                                                                                        |
-| `ui.settings`                          | `settings.page`, `settings.show`                                                                        |
-| `playback.read`                        | reading `player.state` at start, `refresh`, `stats`, `chapters`, `audioDevices`, `timeline.marks`       |
-| `events`                               | live `player.state` / `onChange`, panel visibility, subtitle and window updates                         |
-| `playback.control`                     | `player.open`, `setPaused`, `seek`, `setRate`, … and `power.preventSleep`                               |
-| `producer.av`                          | `player.openStream` (with `playback.control`: the stream becomes the player's source)                   |
-| `processing.video`                     | `video.filter` (with `playback.read` and `events`), `video.view`, `video.render` (with `playback.read`) |
-| `processing.audio`                     | `audio.filter` (with `playback.read` and `events`)                                                      |
-| `subtitles.read` / `subtitles.control` | reading / changing subtitles                                                                            |
-| `media.read` / `media.control`         | `media.capture`, snapshot exports                                                                       |
-| `source.resolve`                       | `resolvers.add`                                                                                         |
-| `plugins.manage`                       | `packages.validate`, `rollback`, `setEnabled`, `uninstall`                                              |
-| `clipboard`                            | `clipboard.*`                                                                                           |
-| `window.control`                       | `window.setVideoArea`, `setAlwaysOnTop`, `setCursorAutoHide`, `setPictureInPicture`                     |
-| `bindings.manage`                      | `bindings.*`                                                                                            |
-| `timeline.marks`                       | `timeline.layer()`                                                                                      |
-| `secrets`                              | `secrets.*`                                                                                             |
-
-No capability is needed for `tools`, `storage`, `system`, `ui.image`, `plugin.app`, reading `window.state` and `appearance.theme`, and `packages.list`.
+The plugin on this page also uses `ui.osd` (on-screen messages), `events` (follow playback changes as they happen) and `playback.control` (seeking). Every capability, with the members it opens and the capabilities they also need, is in [Capabilities](../reference/capabilities.md).
 
 ## A first plugin
 
@@ -172,7 +114,7 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
-- `path` is the menu path, matched by exact titles. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id instead of its title, which depends on the player's language: `["@video", "Blur"]` (also `@open`, `@playback`, `@subtitles`, `@audio`, `@screen`, `@settings`; player 0.3.0).
+- `path` is the menu path in English; paths merge by these words in every interface language. "Tools" is a new top-level menu of this plugin. To put an item into one of the player's own menus, start the path with its id, such as `["@video", "Blur"]` ([Built-in menus](../reference/commands.md#built-in-menus)).
 - `enabled` is a function: the SDK re-evaluates it after every handler and every state change it receives, and sends only changes. This needs `events` to follow outside changes.
 - `run` may return a promise. Errors thrown or rejected there go to `plugin.onError`, then to the plugin log.
 - Commands are registered in the background; activation succeeds once every registration made during `activate` succeeded.
@@ -242,7 +184,7 @@ test("shows the position", async () => {
 });
 ```
 
-Useful controls: `host.command(id).run()`, `host.press("Ctrl+Alt+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait until the plugin's host calls are answered (it does not wait for the plugin's own file reads or child processes: poll the result you assert on, see `settle`). See {@link "@vestra-player/sdk/testing"!TestHost | TestHost}.
+Useful controls: `host.command(id).run()`, `host.press("Ctrl+Alt+W")`, `host.window(id).emit(callback, ...args)` and `.props`, `host.openElsewhere(path)`, `host.handle(method, fn)` to inject failures (throw a `HostError`), `host.settle()` to wait until the plugin's host calls are answered (it does not wait for the plugin's own file reads or child processes: poll the result you assert on, see `settle`). See {@link "@vestra-player/sdk/testing"!TestHost | TestHost} and [Test a plugin](../how-to/testing.md).
 
 Run them with `npm test` (`vestra-plugin test`, which is `node --test tests/*.test.{ts,mjs}`).
 
@@ -255,28 +197,21 @@ vestra-plugin build [plugin-dir...] [--version x.y.z]
 vestra-plugin pack  [plugin-dir...] [--version x.y.z] [--out dir]
 ```
 
-- `check`: checks the manifest (every rule above), then a strict type check of the plugin's `.ts` files and `tests/`. It extends the nearest `tsconfig.json` at or above the plugin directory, else built-in strict settings. Hints that do not fail the check (such as an id without an owner prefix) are printed.
-- `build`: checks, then writes `dist/`: `.ts` files with types stripped (relative imports rewritten to `.js`), `.slint`, `.mjs` and data files copied, the manifest's `icon`, `readme` and `changelog` (and `README.md` / `CHANGELOG.md` when present) copied, `dist/manifest.json` with the version (from `--version`, else the manifest, else `package.json`). Tests, `node_modules/`, other Markdown and `package*.json` are left out. A runtime import of `@vestra-player/sdk` fails the build.
-- `pack`: builds, then packs `dist/` as `<id>-<version>.vxp` (a zip with `manifest.json` at its root; the same input gives the same bytes) and prints its size and sha256. This is the file users install and repositories list.
-- Runtime npm dependencies must be bundled: set `"vestra": { "bundle": true }` (or `{ "bundle": { "external": [...] } }`) in the plugin's `package.json` and add `esbuild` as a dev dependency. `"vestra": { "assets": ["vendor"] }` copies extra files verbatim.
+- `check` checks the manifest, then type checks the plugin's `.ts` files and `tests/` strictly.
+- `build` checks, then writes `dist/`: the code with types stripped, the Slint and data files, and `dist/manifest.json` with the version. A runtime import of `@vestra-player/sdk` fails the build.
+- `pack` builds, then packs `dist/` as `<id>-<version>.vxp`, the file users install and the plugin store lists.
+
+What `build` puts into the package, how to bundle npm dependencies and the translation commands are in [Command line](../reference/cli.md).
 
 During development no build is needed: start the player with `--plugin <plugin-dir>` (repeatable) to run `main.ts` directly.
 
 ## Versions
 
-| SDK package | Plugin `apiVersion` | Notes                                                                                                                                                                                                                                       |
-| ----------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `1.x`       | `vestra/1`          | Minor releases only add backwards-compatible API; patch releases fix documentation and bugs.                                                                                                                                                |
-| `1.1`       | `vestra/1`          | The additions need player 0.2.0: set `"minPlayerVersion": "0.2.0"` when you use them.                                                                                                                                                       |
-| `1.3`       | `vestra/1`          | Menu ids (`@video`), `Theme.danger` and removing a video chain with `[]` need player 0.3.0: set `"minPlayerVersion": "0.3.0"` when you use them.                                                                                            |
-| `1.4`       | `vestra/1`          | One exception to "only add": `ThemeId` lost the second palette and is `"vestra"` only. A plugin that compared with or set the removed id fails to type check; the player treats that id as `vestra`, so already built plugins keep running. |
-| `1.5`       | `vestra/1`          | The light palette `vestra-light` and `@vestra/icons.slint` need player 0.4.0: set `"minPlayerVersion": "0.4.0"` when you use them.                                                                                                          |
-
-A breaking change to the plugin API gets a new `apiVersion` and a new major version of this package. The `@vestra-player/sdk/runtime` entry is for the player only and is not covered by semver.
+Every 1.x release of the SDK implements the plugin API `vestra/1`; minor releases only add to it, and a breaking change gets a new `apiVersion` and a new major version. Some additions need a newer player: when you use one, set `minPlayerVersion` to the version it names. [Player versions](../reference/manifest.md#player-versions) lists which API needs which player.
 
 ## Next
 
-- {@link "@vestra-player/sdk"!Scope | Scope}: every module available on `plugin`.
-- {@link "@vestra-player/sdk"!PluginError | PluginError}: error codes.
-- {@link "@vestra-player/sdk"!Player | Player}: playback state and conditional controls.
-- {@link "@vestra-player/sdk"!View | View}: windows, panels and settings pages.
+- [Examples](../examples/index.md): complete plugins, each with a step-by-step walkthrough.
+- [Concepts](../concepts/index.md): how plugins, commands, playback, processing and the interface work.
+- [Test a plugin](../how-to/testing.md) and [Publish a plugin](../how-to/publish.md).
+- {@link "@vestra-player/sdk"!Scope | Scope}: every module available on `plugin`; {@link "@vestra-player/sdk"!PluginError | PluginError}: error codes.

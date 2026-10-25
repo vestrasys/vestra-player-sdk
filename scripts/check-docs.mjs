@@ -28,7 +28,9 @@
  * `"@vestra-player/sdk": "^x.y.z"` in the documents names the current
  * major.minor version.
  */
+import { spawnSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -37,6 +39,14 @@ import {
 } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
+import {
+  GROUPS,
+  LIMITS,
+  OFF_SITE,
+  PENDING_UNTIL,
+  PLACEHOLDERS,
+} from "./doc-structure.mjs";
+import { withoutGenerated } from "./doc-tables.mjs";
 import { strictDeclarations } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -296,6 +306,175 @@ for (const path of [...documents, "examples/README.md"]) {
       drift.push(`${path}: ${match[0]} but the SDK is ${pkg.version}`);
 }
 
+// ── Structure (scripts/doc-structure.mjs; docs/maintaining.md) ──────────
+
+const structure = { errors: [], warnings: [] };
+{
+  const compare = (a, b) => {
+    const x = a.split(".").map(Number);
+    const y = b.split(".").map(Number);
+    for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return 0;
+  };
+  const pendingAllowed = compare(pkg.version, PENDING_UNTIL) <= 0;
+  const error = (message) => structure.errors.push(message);
+  /** A rule violation on a page: a warning while the page is pending. */
+  const violation = (page, message) =>
+    (page.pending && pendingAllowed
+      ? structure.warnings
+      : structure.errors
+    ).push(
+      page.pending && pendingAllowed
+        ? `${message} (pending: ${page.pending})`
+        : message,
+    );
+
+  // typedoc.json agrees with the groups.
+  const typedoc = JSON.parse(read("typedoc.json"));
+  const order = [...GROUPS.map((g) => g.title), "API", "*"];
+  if (JSON.stringify(typedoc.groupOrder) !== JSON.stringify(order))
+    error(`typedoc.json groupOrder must be ${JSON.stringify(order)}`);
+  for (const group of GROUPS)
+    if (!typedoc.projectDocuments.every((glob) => glob.includes(group.folder)))
+      error(`typedoc.json projectDocuments must include docs/${group.folder}/`);
+
+  // The files under docs/ are exactly the listed pages (P3, P4).
+  const listed = new Map();
+  for (const group of GROUPS)
+    for (const page of group.pages) {
+      const path = `docs/${group.folder}/${page.file}`;
+      listed.set(path, { ...page, group, path });
+      if (!page.why?.trim()) error(`${path}: no \`why\` in doc-structure.mjs`);
+      if ((page.pending || page.new) && !pendingAllowed)
+        error(
+          `${path}: still marked ${page.pending ? `pending (${page.pending})` : "new"} in doc-structure.mjs after ${PENDING_UNTIL}; remove the mark`,
+        );
+    }
+  const folders = new Set(GROUPS.map((g) => g.folder));
+  for (const item of readdirSync(join(root, "docs"), { withFileTypes: true })) {
+    if (item.isDirectory() && !folders.has(item.name))
+      error(`docs/${item.name}/: not a group in doc-structure.mjs`);
+    if (!item.isDirectory() && !OFF_SITE.includes(item.name))
+      error(`docs/${item.name}: pages belong in a group folder`);
+  }
+  for (const folder of folders) {
+    if (!existsSync(join(root, "docs", folder))) continue;
+    for (const item of readdirSync(join(root, "docs", folder), {
+      withFileTypes: true,
+    })) {
+      const path = `docs/${folder}/${item.name}`;
+      if (item.isDirectory())
+        error(`${path}/: no subfolders in a group (navigation depth 2)`);
+      else if (!listed.has(path))
+        error(`${path}: not listed in scripts/doc-structure.mjs`);
+    }
+  }
+
+  // Every page: front matter, size, placeholders (P2, P3, P5).
+  const frontMatter = (text) => {
+    const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
+    if (!match) return { fields: null, body: text };
+    const fields = {};
+    for (const line of match[1].split(/\r?\n/)) {
+      const field = /^([\w-]+):\s*(.*)$/.exec(line);
+      if (field)
+        fields[field[1]] = field[2].replace(/^(["'])(.*)\1$/, "$2").trim();
+    }
+    return { fields, body: text.slice(match[0].length) };
+  };
+  for (const page of listed.values()) {
+    const { path, group } = page;
+    if (!existsSync(join(root, path))) {
+      if (page.new && page.pending && pendingAllowed)
+        structure.warnings.push(
+          `${path}: not written yet (pending: ${page.pending})`,
+        );
+      else error(`${path}: listed in scripts/doc-structure.mjs but missing`);
+      continue;
+    }
+    const text = read(path);
+    const { fields, body } = frontMatter(text);
+    if (!fields) {
+      violation(page, `${path}: no front matter`);
+      continue;
+    }
+    if (!fields.title) violation(page, `${path}: no \`title\` in front matter`);
+    if (!fields.description)
+      violation(page, `${path}: no \`description\` in front matter`);
+    else if (fields.description.length > 200)
+      violation(page, `${path}: \`description\` is longer than one sentence`);
+    for (const key of ["children", "group"])
+      if (key in fields)
+        violation(page, `${path}: \`${key}\` front matter is not allowed`);
+
+    const kind = page.file === "index.md" ? "index" : group.kind;
+    let counted;
+    try {
+      counted = withoutGenerated(body);
+    } catch (problem) {
+      error(`${path}: ${problem.message}`);
+      counted = body;
+    }
+    const lines = counted.replace(/\n+$/, "").split("\n").length;
+    const words = counted.split(/\s+/).filter(Boolean).length;
+    for (const [unit, value] of [
+      ["lines", lines],
+      ["words", words],
+    ]) {
+      const limit = LIMITS[kind][unit];
+      if (!limit || value <= limit) continue;
+      const message = `${path}: ${value} ${unit}, the limit for a ${kind} page is ${limit}`;
+      if (value > limit * 1.25) violation(page, message);
+      else structure.warnings.push(message);
+    }
+    for (const placeholder of PLACEHOLDERS)
+      if (placeholder.test(body))
+        violation(
+          page,
+          `${path}: placeholder "${placeholder.exec(body)[0]}" (link only pages that exist)`,
+        );
+  }
+
+  // Every page is linked from its group's index, and an index links only to
+  // pages that exist (P5).
+  for (const group of GROUPS) {
+    const indexPath = `docs/${group.folder}/index.md`;
+    if (!existsSync(join(root, indexPath))) continue;
+    const index = read(indexPath);
+    const targets = new Set(
+      [...index.matchAll(/\]\(\s*([^)\s#]+\.md)(?:#[^)\s]*)?\s*\)/g)].map(
+        (m) => m[1],
+      ),
+    );
+    for (const target of targets) {
+      const resolved = rel(resolve(root, "docs", group.folder, target));
+      if (!existsSync(join(root, resolved)))
+        violation(
+          listed.get(indexPath),
+          `${indexPath}: links to ${target}, which does not exist`,
+        );
+    }
+    for (const page of group.pages) {
+      if (page.file === "index.md") continue;
+      const path = `docs/${group.folder}/${page.file}`;
+      if (!existsSync(join(root, path))) continue;
+      if (![...targets].some((t) => t === page.file || t === `./${page.file}`))
+        violation(
+          listed.get(path),
+          `${path}: not linked from ${indexPath} (orphan page)`,
+        );
+    }
+  }
+
+  // The generated tables are current (scripts/doc-tables.mjs --check).
+  const tables = spawnSync(
+    process.execPath,
+    [join(root, "scripts/doc-tables.mjs"), "--check"],
+    { stdio: "inherit" },
+  );
+  if (tables.status !== 0) error("generated tables: see the errors above");
+}
+
 // ── Report ──────────────────────────────────────────────────────────────
 
 const count = (kind) => snippets.filter((s) => s.kind === kind).length;
@@ -304,6 +483,9 @@ for (const { at, message } of [...failures.markdown, ...failures.enforced])
   console.error(`::error file=${at}::${message}`);
 for (const line of failures.other) console.error(`::error::${line}`);
 for (const line of drift) console.error(`::error::drift: ${line}`);
+for (const line of structure.errors)
+  console.error(`::error::structure: ${line}`);
+for (const line of structure.warnings) console.warn(`warning: ${line}`);
 const exampleLevel = strict ? "error" : "warning";
 if (verbose || strict)
   for (const { at, message } of failures.example)
@@ -329,6 +511,7 @@ console.log(
     `@example, other: ${count("example")} ts blocks, ${failed("example")} failing (${strict ? "errors" : "warnings only"})`,
     `nocheck blocks skipped: ${skipped}`,
     `drift problems: ${drift.length}`,
+    `structure: ${structure.errors.length} errors, ${structure.warnings.length} warnings`,
   ].join("\n"),
 );
 
@@ -337,6 +520,7 @@ if (
   failures.enforced.length ||
   failures.other.length ||
   drift.length ||
+  structure.errors.length ||
   (strict && failures.example.length)
 )
   process.exit(1);

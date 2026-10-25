@@ -1,5 +1,6 @@
 ---
 title: Migrate a plugin to English source text
+description: The checklist for moving a plugin written in one language before SDK 1.5.9 to English source text with its old texts as the first translation.
 ---
 
 # Migrate a plugin to English source text
@@ -23,7 +24,7 @@ plugin.commands.add({ id: "snapshot", path: ["@video", "Snapshot", "Save Current
 ```
 
 - The player's menus: `@open`, `@playback`, `@subtitles`, `@video`, `@audio`, `@screen`, `@settings` (or their keys `Open`, `Playback`, `Subtitles`, `Video`, `Audio`, `Screen`, `Settings`). Its own submenus `Playback ▸ Speed` and `Playback ▸ Seek` keep the player's words too. The old Chinese titles of these menus (视频, 播放 ▸ 速度 …) still work, so an unmigrated plugin lands in the same menus meanwhile.
-- **Shared submenus merge by the English words.** When another plugin puts items into the same submenu, both must write it identically. The player's menu table ([doc/product/menus.md](https://github.com/vestrasys/vestra-player/blob/main/doc/product/menus.md) in the player repository) lists the agreed English keys; use those, and ask before inventing a new shared one.
+- **Shared submenus merge by the English words.** When another plugin puts items into the same submenu, both must write it identically. [Submenu keys in use](../reference/commands.md#submenu-keys-in-use) lists the English keys the player and its built-in plugins use; reuse those, and ask before inventing a new shared one.
 - Title case for menu items ("Save Current Frame…"), an ellipsis `…` when the item opens a window or asks something.
 - Dynamic items (tracks, devices, presets) whose titles are data (a file name, a device name) stay data: they are not translated. Items whose titles come from a fixed list are text: put the list in an `as const` table so `extract` finds them:
 

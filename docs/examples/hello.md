@@ -1,5 +1,6 @@
 ---
 title: Hello
+description: "Walkthrough of examples/hello: the smallest plugin, with a manifest, one menu command and an on-screen message."
 ---
 
 # Hello

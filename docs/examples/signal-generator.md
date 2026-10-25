@@ -1,5 +1,6 @@
 ---
 title: "Example: Signal generator"
+description: "Walkthrough of examples/signal-generator: a generated stream of colour bars and a sine tone with openStream."
 ---
 
 # Example: Signal generator
@@ -119,7 +120,7 @@ When the plugin is disabled or the player quits, the SDK stops the stream the sa
 
 {@includeCode ../../examples/signal-generator/main.ts#command}
 
-- `path: ["@open", "Signal generator"]` puts the item in the player's own **Open** menu. Menu paths are matched by their exact titles, and the player's menus are titled in its own language, so `["Open", …]` would add a second top-level menu. A first segment starting with `@` names a built-in menu whatever its title.
+- `path: ["@open", "Signal generator"]` puts the item in the player's own **Open** menu. Paths merge by their English keys in every interface language, so `["Open", …]` reaches the same menu; the id form `@open` names the built-in menu explicitly and also reaches it in players up to 0.4.2, whose menus were titled in Chinese ([Menu paths](../reference/commands.md#menu-paths)).
 - `checked` is a function. The SDK calls it again after every handler and every `onStop`, and updates the check mark when the result changes.
 - `run` starts the stream when there is none and stops it when there is one. It returns the promise so that a failure reaches the plugin log.
 

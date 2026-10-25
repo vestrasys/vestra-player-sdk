@@ -76,7 +76,19 @@ import type {
   Transport,
   WireSystemInfo,
 } from "../wire.ts";
-import { COMMAND_LIMITS, MENU_IDS } from "../commands.ts";
+import {
+  BUILTIN_COMMANDS,
+  BUILTIN_SUBMENUS,
+  COMMAND_LIMITS,
+  MENU_IDS,
+} from "../commands.ts";
+import type { BuiltinCommand, BuiltinSubmenu } from "../commands.ts";
+import { CAPABILITY_INFO, MESSAGE_LIMIT } from "../capabilities.ts";
+import type { CapabilityInfo } from "../capabilities.ts";
+import { OSD_LIMITS } from "./osd.ts";
+import { SECRET_LIMITS } from "./services.ts";
+import { BINDING_INPUTS } from "./bindings.ts";
+import { THEME_PALETTES } from "../palettes.ts";
 import { UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
@@ -124,6 +136,22 @@ import type { ListJson, TemplateArgsValue, TextJson } from "../i18n.ts";
 export { HostError };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
+/** The submenus of the player's built-in plugins, by key path. */
+export { BUILTIN_COMMANDS, BUILTIN_SUBMENUS };
+export type { BuiltinCommand, BuiltinSubmenu };
+/** The manifest capabilities: what each opens and how the store shows it. */
+export { CAPABILITY_INFO };
+export type { CapabilityInfo };
+/** The longest message a plugin may send the player. */
+export { MESSAGE_LIMIT };
+/** The player's limits on the on-screen display. */
+export { OSD_LIMITS };
+/** The player's limits on stored secrets. */
+export { SECRET_LIMITS };
+/** The names bindings are made of. */
+export { BINDING_INPUTS };
+/** The colours of the player's palettes, by `Theme` token. */
+export { THEME_PALETTES };
 /** The player's property value limits, which the test host enforces as well. */
 export { UI_VALUE_LIMITS };
 /**
@@ -3184,8 +3212,11 @@ export class TestHost implements Transport {
     },
     "osd.show": (p) => {
       const text = this.#shown(p.text, p.args, "text").replace(/[\n\r]/g, " ");
-      if (!text.trim() || [...text].length > 200)
-        throw new HostError("invalid", "osd text needs 1..200 characters");
+      if (!text.trim() || [...text].length > OSD_LIMITS.messageChars)
+        throw new HostError(
+          "invalid",
+          `osd text needs 1..${OSD_LIMITS.messageChars} characters`,
+        );
       this.osd.push(text);
     },
     "osd.panel": (p) => {
@@ -3193,14 +3224,30 @@ export class TestHost implements Transport {
       const max = p.maxColumns;
       if (
         max !== undefined &&
-        !(Number.isInteger(max) && Number(max) >= 8 && Number(max) <= 1000)
+        !(
+          Number.isInteger(max) &&
+          Number(max) >= OSD_LIMITS.minColumns &&
+          Number(max) <= OSD_LIMITS.maxColumns
+        )
       )
         throw new HostError(
           "invalid",
-          "maxColumns is an integer from 8 to 1000",
+          `maxColumns is an integer from ${OSD_LIMITS.minColumns} to ${OSD_LIMITS.maxColumns}`,
         );
-      const text = this.#shown(p.text, p.args, "text");
-      this.osdPanel = max === undefined ? text : fitColumns(text, Number(max));
+      const shown = this.#shown(p.text, p.args, "text");
+      const text = max === undefined ? shown : fitColumns(shown, Number(max));
+      // As the player: \n separates lines, a trailing one ends the last.
+      const lines = text.split("\n");
+      if (text.endsWith("\n")) lines.pop();
+      if (
+        Buffer.byteLength(text) > OSD_LIMITS.panelBytes ||
+        lines.length > OSD_LIMITS.panelLines
+      )
+        throw new HostError(
+          "invalid",
+          `osd panel allows ${OSD_LIMITS.panelLines} lines, ${OSD_LIMITS.panelBytes} bytes`,
+        );
+      this.osdPanel = text;
     },
     "playback.stats": () => this.stats,
     "audio.addTrack": (p) => {

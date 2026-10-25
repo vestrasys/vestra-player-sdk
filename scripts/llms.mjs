@@ -6,10 +6,11 @@
  *   node scripts/llms.mjs --check   fail when the committed files are stale
  *
  * - llms.txt: the short index. What a plugin is, the rules, the folder
- *   layout, a manifest with every field, `activate`, the capabilities, the
+ *   layout, a manifest and its fields, `activate`, every capability, the
  *   test host, the command line, the error codes, and where each topic is in
- *   llms-full.txt (line numbers).
- * - llms-full.txt: the guides (docs/tutorials, docs/concepts, docs/how-to,
+ *   llms-full.txt (line numbers). It stays below 9 KB.
+ * - llms-full.txt: the documentation pages of every group in
+ *   scripts/doc-structure.mjs except the examples (index pages left out,
  *   condensed), every public declaration of `@vestra-player/sdk` and
  *   `@vestra-player/sdk/testing` as a declaration file whose doc comments are
  *   reduced to their description and the tags `@capability`, `@player`,
@@ -17,8 +18,9 @@
  *   plugin's README, walkthrough notes and complete source.
  *
  * Everything comes from the sources: the declarations from an in-memory
- * declaration emit of src/ (stripInternal), the text from README.md,
- * docs/**.md and examples/, the limits from src/manifest.ts and
+ * declaration emit of src/ (stripInternal), the text from docs/**.md and
+ * examples/ (the capability and command line tables from the generated
+ * tables of docs/reference/), the limits from src/manifest.ts and
  * src/commands.ts. The output depends only on those files (no dates, sorted
  * listings, LF line endings), so CI regenerates it and compares
  * (`npm run docs:llms -- --check`). Both files are in the npm package
@@ -31,6 +33,7 @@ import ts from "typescript";
 import { MANIFEST_FIELDS, MANIFEST_LIMITS } from "../src/manifest.ts";
 import { COMMAND_LIMITS, MENU_IDS } from "../src/commands.ts";
 import { CAPABILITIES, API_VERSION } from "../src/capabilities.ts";
+import { GROUPS } from "./doc-structure.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const check = process.argv.includes("--check");
@@ -41,6 +44,8 @@ const read = (path) =>
 const pkg = JSON.parse(read("package.json"));
 const SITE = "https://vestrasys.github.io/vestra-player-sdk/";
 const REPO = "https://github.com/vestrasys/vestra-player-sdk";
+/** llms.txt must stay below this size (bytes). */
+const INDEX_LIMIT = 9 * 1024;
 const fail = (message) => {
   console.error(`::error::llms: ${message}`);
   process.exit(1);
@@ -53,9 +58,11 @@ function plain(text) {
   return text
     .replace(/^---\n[\s\S]*?\n---\n+/, "")
     .replace(/^[ \t]*!\[[^\]]*\]\([^)]*\)[ \t]*\n+/gm, "")
-    .replace(/\{@link\s+([^}|]+?)\s*\|\s*([^}]+?)\s*\}/g, "$2")
-    .replace(/\{@link\s+([^}]+?)\s*\}/g, (_, target) =>
-      target.replace(/^"[^"]+"!/, "").replace(/^"([^"]+)"$/, "$1"),
+    .replace(/^<!-- \/?generated[^>]*-->\n+/gm, "")
+    .replace(/\{@link(?:code|plain)?\s+([^}|]+?)\s*\|\s*([^}]+?)\s*\}/g, "$2")
+    .replace(
+      /\{@link(?:code|plain)?\s+("[^"]+"!)?(\S+?)(?:\s+([^}]+?))?\s*\}/g,
+      (_, _module, target, text) => text ?? target.replace(/^"([^"]+)"$/, "$1"),
     )
     .replace(/\[([^\]]+)\]\((?!https?:)[^)]*\)/g, "$1");
 }
@@ -269,6 +276,10 @@ function parseDoc(comment) {
 }
 
 const oneLine = (text) => text.replace(/\s*\n\s*/g, " ").trim();
+const firstSentence = (text) => {
+  const match = /^(.+?[.!?])(\s|$)/.exec(oneLine(text));
+  return match ? match[1] : oneLine(text);
+};
 const simple = (text) => !/\n\s*\n|^\s*([-*] |\d+\. |```|\|)/m.test(text);
 
 /** The kept tags as lines (`@throws conflict (throws) …`). */
@@ -407,37 +418,69 @@ const internalExports = internalNames.map((name) => {
 // ── Text from the documents ─────────────────────────────────────────────
 
 const gettingStarted = read("docs/tutorials/getting-started.md");
-const readme = read("README.md");
+const capabilitiesPage = read("docs/reference/capabilities.md");
+const cliPage = read("docs/reference/cli.md");
 const examplesReadme = read("examples/README.md");
 const typesSource = read("src/plugin/types.ts");
 
+/** The rows of the generated table `<!-- generated:name -->` of a page. */
+function generatedTable(text, name, page) {
+  const start = text.indexOf(`<!-- generated:${name} -->`);
+  if (start < 0) fail(`${page}: no generated table ${name}`);
+  return table(text.slice(start, text.indexOf("<!-- /generated -->", start)));
+}
+
 const manifestSection = section(gettingStarted, "The manifest");
-const completeManifest = fences(manifestSection).filter(
-  (f) => f.lang === "json",
-)[1];
+const firstManifest = fences(manifestSection).find((f) => f.lang === "json");
+if (!firstManifest) fail("getting-started.md, The manifest: no JSON manifest");
+
+/** `[capability, opens, also needs]` from Reference: capabilities. */
+const capabilityRows = generatedTable(
+  capabilitiesPage,
+  "capabilities",
+  "reference/capabilities.md",
+).map(([cap, opens, requires]) => [
+  /`([\w.]+)`/.exec(cap)[1],
+  plain(opens),
+  requires === "—" ? "" : requires,
+]);
 {
-  const fields = Object.keys(JSON.parse(completeManifest.code));
-  const missing = MANIFEST_FIELDS.filter((f) => !fields.includes(f));
-  const extra = fields.filter((f) => !MANIFEST_FIELDS.includes(f));
+  const listed = capabilityRows.map(([cap]) => cap);
+  const missing = CAPABILITIES.filter((c) => !listed.includes(c));
+  const extra = listed.filter((c) => !CAPABILITIES.includes(c));
   if (missing.length || extra.length)
     fail(
-      `getting-started.md, the manifest with every field: missing ${missing.join(", ") || "none"}, unknown ${extra.join(", ") || "none"}`,
+      `reference/capabilities.md table: missing ${missing.join(", ") || "none"}, unknown ${extra.join(", ") || "none"}`,
     );
 }
-const capabilityRows = table(
-  manifestSection.slice(manifestSection.indexOf("| Capability")),
-);
-{
-  const listed = capabilityRows.flatMap((row) =>
-    [...row[0].matchAll(/`([\w.]+)`/g)].map((m) => m[1]),
-  );
-  const missing = CAPABILITIES.filter((c) => !listed.includes(c));
-  if (missing.length)
-    fail(`getting-started.md capability table misses ${missing.join(", ")}`);
+/** "Player.open, Player.seek, Power.x" → "Player.open/seek, Power.x". */
+function compactMembers(list) {
+  const groups = new Map();
+  for (const member of list.split(/,\s*/)) {
+    const [owner, ...rest] = member.split(".");
+    if (!groups.has(owner)) groups.set(owner, []);
+    if (rest.length) groups.get(owner).push(rest.join("."));
+  }
+  // Owners with the same single member: "Player/Panel.onChange".
+  const byMember = new Map();
+  for (const [owner, names] of groups) {
+    const key = names.length === 1 ? names[0] : `\0${owner}`;
+    if (!byMember.has(key)) byMember.set(key, []);
+    byMember.get(key).push([owner, names]);
+  }
+  return [...byMember.values()]
+    .map((owners) =>
+      owners.length > 1
+        ? `${owners.map(([owner]) => owner).join("/")}.${owners[0][1][0]}`
+        : owners[0][1].length
+          ? `${owners[0][0]}.${owners[0][1].join("/")}`
+          : owners[0][0],
+    )
+    .join(", ");
 }
-const noCapability = manifestSection
-  .split("\n")
-  .find((line) => line.startsWith("No capability is needed"));
+const noCapability = firstSentence(
+  plain(section(capabilitiesPage, "Without a capability")),
+);
 
 /** The PluginError table: `[code cell, meaning]`. */
 const errorRows = (() => {
@@ -467,9 +510,6 @@ const COMMON_ERRORS = [
   "limit",
   "reserved",
   "versionMismatch",
-  "ui-prepare",
-  "ui",
-  "disabled",
 ];
 {
   const codes = errorRows.flatMap(([cell]) =>
@@ -484,12 +524,22 @@ const shortMeaning = (text) => {
   while (/\s*\([^()]*\)/.test(short))
     short = short.replace(/\s*\([^()]*\)/g, "");
   return short
-    .replace(/; .*$/, "")
+    .replace(/^[\w.,\s]+: (\w)/, (_, c) => c.toUpperCase())
+    .replace(/(; |, or |, which ).*$/, "")
     .replace(/(\.)\s.*$/, "$1")
     .replace(/\.$/, "");
 };
 
-const cliRows = table(section(readme, "Command line"));
+/** `[command, does]` from Reference: command line, each cut to its first clause. */
+const cliRows = generatedTable(cliPage, "cli commands", "reference/cli.md").map(
+  ([command, does]) => [
+    command,
+    does
+      .replace(/\s*\([^()]*\)/g, "")
+      .replace(/([;:] |, and | with ).*$/, "")
+      .trim(),
+  ],
+);
 const exampleRows = table(examplesReadme);
 const exampleNames = exampleRows.map(([cell]) => /\[(.+?)\]/.exec(cell)[1]);
 {
@@ -505,31 +555,53 @@ const exampleNames = exampleRows.map(([cell]) => /\[(.+?)\]/.exec(cell)[1]);
 
 // ── llms-full.txt ───────────────────────────────────────────────────────
 
-/** The guides, in reading order: the file and its page on the site. */
-const GUIDES = [
-  ["docs/tutorials/getting-started.md", "documents/Getting_started.html"],
-  [
-    "docs/concepts/ui.md",
-    "documents/Windows__panels__settings_pages__dialogs_and_the_OSD.html",
-  ],
-  [
-    "docs/how-to/slider.md",
-    "documents/Keep_a_slider_responsive_while_dragging.html",
-  ],
-  [
-    "docs/how-to/window-state.md",
-    "documents/Remember_a_window_s_state_between_runs.html",
-  ],
-];
+/** The front matter `title` of a page (TypeDoc names the page after it). */
+const titleOf = (path) => {
+  const match = /^---\n[\s\S]*?^title:\s*(.+?)\s*$[\s\S]*?\n---\n/m.exec(
+    read(path),
+  );
+  if (!match) fail(`${path}: no title in the front matter`);
+  return match[1].replace(/^"(.*)"$/, "$1");
+};
+/** The page's address on the site, as TypeDoc's createNormalizedUrl makes it. */
+const pageUrl = (path) =>
+  `documents/${[...titleOf(path)]
+    .map((c) =>
+      /[A-Za-z0-9()+,\-._]/.test(c) || c.codePointAt(0) >= 160 ? c : "_",
+    )
+    .join("")
+    .replace(/\(/g, "%28")
+    .replace(/\)/g, "%29")}.html`;
+
+/** The singular kind of each group's pages, for headings. */
 const KINDS = {
   tutorials: "Tutorial",
   concepts: "Concept",
   "how-to": "How-to",
+  guidelines: "Guideline",
+  reference: "Reference",
 };
+/**
+ * The documentation pages in reading order: `{ group, path, url }`, every
+ * group of the site except the examples (which follow the API with their
+ * source), without the index pages.
+ */
+const GUIDES = GROUPS.filter((g) => KINDS[g.folder]).flatMap((g) =>
+  g.pages
+    .filter((p) => p.file !== "index.md")
+    .map((p) => {
+      const path = `docs/${g.folder}/${p.file}`;
+      return { group: g.title, path, url: pageUrl(path) };
+    }),
+);
 const guideHeading = (path) =>
   `## ${KINDS[path.split("/")[1]]}: ${/^# (.+)$/m.exec(read(path))[1]}`;
 const DROPPED_SECTIONS = ["Next", "See also", "API on this page"];
 
+/**
+ * A page as one `##` section; its own headings move two levels down, so they
+ * never collide with the `###` declaration headings that llms.txt points at.
+ */
 function guide(path) {
   let text = plain(includeCode(read(path), inlineCode));
   for (const heading of DROPPED_SECTIONS) {
@@ -541,7 +613,7 @@ function guide(path) {
     lines.splice(start, end - start);
     text = lines.join("\n");
   }
-  return demote(text.trim(), 1).replace(/^## .*$/m, guideHeading(path));
+  return demote(text.trim(), 2).replace(/^### .*$/m, guideHeading(path));
 }
 
 function exampleFiles(name) {
@@ -635,7 +707,7 @@ emit(
   ].join("\n"),
 );
 
-for (const [path] of GUIDES) emit(guide(path) + "\n");
+for (const { path } of GUIDES) emit(guide(path) + "\n");
 
 emit(`## API: @vestra-player/sdk\n`);
 emit(
@@ -712,10 +784,6 @@ function manifestLimits() {
 
 // ── llms.txt ────────────────────────────────────────────────────────────
 
-const firstSentence = (text) => {
-  const match = /^(.+?[.!?])(\s|$)/.exec(oneLine(text));
-  return match ? match[1] : oneLine(text);
-};
 const bullets = (text) =>
   text
     .split("\n")
@@ -725,8 +793,6 @@ const bullets = (text) =>
 const running = bullets(plain(section(gettingStarted, "How plugins run")));
 const rules = bullets(plain(section(gettingStarted, "Rules for plugins")));
 const layout = fences(section(gettingStarted, "Files"))[0].code;
-const testing = section(gettingStarted, "Testing");
-const testCode = fences(testing).find((f) => f.lang === "ts").code;
 const helloMain = read("examples/hello/main.ts").trimEnd();
 
 const scopeStatement = statementsOf(
@@ -750,15 +816,20 @@ const fullUrl = `${SITE}llms-full.txt`;
 const index = [
   `# Vestra Player SDK`,
   "",
-  `> ${pkg.name} ${pkg.version}: write plugins for Vestra Player in TypeScript (plugin API \`${API_VERSION}\`). A plugin is a folder with \`manifest.json\` and an entry module whose default export \`activate(plugin)\` the player calls; it runs in its own Node.js process. llms-full.txt, next to this file, has every declaration, the guides and the examples; L<n> below are its line numbers.`,
-  "",
-  "**How plugins run**",
-  "",
-  ...running.map((b) => `- ${firstSentence(b)}`),
+  `> ${pkg.name} ${pkg.version}: write plugins for Vestra Player in TypeScript (plugin API \`${API_VERSION}\`). A plugin is a folder with \`manifest.json\` and an entry module whose default export \`activate(plugin)\` the player calls; it runs in its own Node.js process. ${running
+    // Getting started, How plugins run: the process and activate are said above.
+    .slice(2)
+    .map(firstSentence)
+    .join(
+      " ",
+    )} L<n> are line numbers in llms-full.txt, next to this file: every page, declaration and example.`,
   "",
   "**Rules**",
   "",
-  ...rules.map((b) => `- ${b}`),
+  ...rules.map((b) => {
+    const match = /^(\*\*.+?\*\*)\s*(.*)$/.exec(b);
+    return match ? `- ${match[1]} ${firstSentence(match[2])}` : `- ${b}`;
+  }),
   "",
   "**Files**",
   "",
@@ -766,11 +837,13 @@ const index = [
   layout,
   "```",
   "",
-  `**manifest.json** (every field; unknown fields and capabilities are rejected; ${manifestLimits()})`,
+  "**manifest.json**",
   "",
   "```json",
-  completeManifest.code,
+  firstManifest.code,
   "```",
+  "",
+  `Fields: ${MANIFEST_FIELDS.map((f) => `\`${f}\``).join(", ")}; unknown fields and capabilities are rejected. Rules and limits: ${rangeOf("## Reference: Manifest")}.`,
   "",
   "**main.ts**",
   "",
@@ -778,16 +851,15 @@ const index = [
   helloMain,
   "```",
   "",
-  "**Capabilities** (a call without its capability fails with `capability`)",
+  "**Capabilities** (a call without one fails with `capability`)",
   "",
-  ...capabilityRows.map(([cap, opens]) => `- ${cap}: ${opens}`),
-  `- ${noCapability}`,
+  ...capabilityRows.map(
+    ([cap, opens, requires]) =>
+      `- \`${cap}\`: ${compactMembers(opens)}${requires ? ` (also ${requires})` : ""}`,
+  ),
+  `- ${noCapability.replace(/^A member not in the table needs no capability:/, "No capability:").replace(/`plugin\./g, "`")} Details: ${rangeOf("## Reference: Capabilities")}.`,
   "",
-  "**Test** (`tests/*.test.ts`, run by `vestra-plugin test`)",
-  "",
-  "```ts",
-  testCode,
-  "```",
+  `**Test**: \`tests/*.test.ts\` with \`node:test\`, run by \`vestra-plugin test\`. \`startPlugin(activate, { directory: new URL("..", import.meta.url) })\` from \`@vestra-player/sdk/testing\` returns \`{ host, stop }\`; \`host\` is a TestHost (an in-memory player): \`host.setSource(…)\`, \`host.command(id).run()\`, \`host.press(key)\`, \`await host.settle()\`, then assert on \`host.osd\`, \`host.window(id).props\`… Guide: ${rangeOf("## How-to: Test a plugin")}; TestHost: L${lineOf("### TestHost")}.`,
   "",
   "**Command line**",
   "",
@@ -803,27 +875,36 @@ const index = [
   "",
   "## Reference",
   "",
-  `- [Full reference](${fullUrl}): in the package at node_modules/${pkg.name}/llms-full.txt.`,
-  ...GUIDES.map(([path, url]) => {
-    const heading = guideHeading(path);
-    return `- [${heading.slice(3)}](${SITE}${url}): ${rangeOf(heading)}`;
+  `- [llms-full.txt](${fullUrl}), also node_modules/${pkg.name}/llms-full.txt; the pages are on the [site](${SITE}).`,
+  ...[...new Set(GUIDES.map((g) => g.group))].map((group) => {
+    const pages = GUIDES.filter((g) => g.group === group);
+    return `- ${group}: ${pages
+      .map(({ path }) => {
+        const heading = guideHeading(path);
+        return `${heading.slice(heading.indexOf(": ") + 2)} ${rangeOf(heading)}`;
+      })
+      .join("; ")}`;
   }),
   `- [API: @vestra-player/sdk](${SITE}modules/_vestra-player_sdk.html): ${rangeOf("## API: @vestra-player/sdk")}`,
-  `- [API: @vestra-player/sdk/testing](${SITE}modules/_vestra-player_sdk_testing.html) (TestHost, startPlugin): ${rangeOf("## API: @vestra-player/sdk/testing")}`,
+  `- [API: @vestra-player/sdk/testing](${SITE}modules/_vestra-player_sdk_testing.html): ${rangeOf("## API: @vestra-player/sdk/testing")}`,
   "",
   "## API",
   "",
-  "Where each module of `plugin` is declared:",
+  "Where each module of `plugin` (`plugin.<module>`) is declared:",
   "",
   `- ${["Plugin", "Scope", "PluginError", "Disposable"].map((t) => `${t} L${lineOf(`### ${t}`)}`).join(", ")}`,
-  ...modules.map(
-    ({ name, types }) =>
-      `- plugin.${name}: ${types.map((t) => `${t} L${lineOf(`### ${t}`)}`).join(", ")}`,
-  ),
+  "- " +
+    modules
+      .map(
+        ({ name, types }) =>
+          `${types.length === 1 && types[0].toLowerCase() === name.toLowerCase() ? "" : `${name}: `}${types.map((t) => `${t} L${lineOf(`### ${t}`)}`).join(", ")}`,
+      )
+      .join("; ") +
+    ".",
   "",
   "## Examples",
   "",
-  `Complete plugins with tests, in [examples/](${REPO}/tree/main/examples) and in llms-full.txt:`,
+  `Tested plugins in [examples/](${REPO}/tree/main/examples):`,
   "",
   ...exampleRows.map(([, shows], i) => {
     const name = exampleNames[i];
@@ -832,8 +913,7 @@ const index = [
   "",
   "## Optional",
   "",
-  `- [Changelog](${REPO}/blob/main/CHANGELOG.md): changes per version and the player version each addition needs.`,
-  `- Declarations with every doc comment: node_modules/${pkg.name}/dist/plugin/types.d.ts, dist/plugin/testing.d.ts; Slint widgets: slint/vestra/*.slint.`,
+  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments in dist/plugin/*.d.ts; Slint library in slint/vestra/.`,
   "",
 ].join("\n");
 
@@ -850,6 +930,10 @@ for (const [name, text] of Object.entries(outputs)) {
 }
 if (stale.length)
   fail(`${stale.join(" and ")} out of date: run \`npm run docs:llms\``);
+if (Buffer.byteLength(index) > INDEX_LIMIT)
+  fail(
+    `llms.txt is ${Buffer.byteLength(index)} bytes, more than ${INDEX_LIMIT}: shorten it`,
+  );
 const kb = (text) => (Buffer.byteLength(text) / 1024).toFixed(1);
 console.log(
   Object.entries(outputs)
