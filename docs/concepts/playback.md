@@ -108,7 +108,7 @@ same ifCurrent condition, same Media, same ready() for the caller
 {@link "@vestra-player/sdk"!Player.openStream | player.openStream} (capability `producer.av`) makes a source whose picture and sound the plugin generates: a signal generator, an emulator, a synthesizer. A file resolver returns the same kind of stream. The SDK calls the plugin's `frame()` on the audio clock (never concurrently, not while paused) and handles buffering, start-up and pausing; frames reach the player over a local connection the SDK sets up.
 
 - `state.kind` is `"stream"`. It cannot seek, change speed or restart, and it **bypasses the filters**: the player does not decode it, so filter chains report `unsupported` while it plays ([Video and audio processing](processing.md)).
-- Frame sizes and sample values have limits; a frame that breaks them ends the stream with `invalid` ([Reference: limits](../reference/limits.md)).
+- Frame sizes and sample values have limits; a frame that breaks them ends the stream with `invalid` ([Reference: limits](../reference/limits.md#limits-documented-at-their-api)).
 - {@link "@vestra-player/sdk"!Stream.onStop | Stream.onStop} reports only stops from outside (another source, the user closing it, a failure), not the plugin's own `stop()`.
 
 ## Next and previous
@@ -123,7 +123,7 @@ The player's **Previous** and **Next** (menu, keys, the bottom bar) are not tied
 
 Play/pause, stop, previous/next, frame steps, relative seeks, speed, volume and mute are **core actions**: commands the player registers itself, so they work with no plugin running. {@link "@vestra-player/sdk"!Host.run | plugin.host.run(action)} runs one exactly as its menu item or key would, with the same checks and the same on-screen text. A plugin's play button should call `host.run("play-pause")` rather than `setPaused`, so that it behaves like the Space key in every case (restart after the end, the "Paused" message, disabled without a source).
 
-The difference from the `Player` methods: a `Player` control is a precise operation the plugin is responsible for (conditional, silent, its own error handling); a core action is the user's action, performed on the plugin's behalf. The action ids, menu places and default keys are in [Reference: commands](../reference/commands.md); how keys reach them is in [Commands, menus and key bindings](commands.md#the-players-own-commands).
+The difference from the `Player` methods: a `Player` control is a precise operation the plugin is responsible for (conditional, silent, its own error handling); a core action is the user's action, performed on the plugin's behalf. The action ids, menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); how keys reach them is in [Commands, menus and key bindings](commands.md#the-players-own-commands).
 
 ## API on this page
 

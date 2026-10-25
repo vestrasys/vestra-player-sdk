@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.14
+
+**The documentation site in seven groups, with generated reference tables.** A documentation release; `apiVersion` stays `vestra/1`, and plugins need no change. Everything a plugin author needs is now on the [documentation site](https://vestrasys.github.io/vestra-player-sdk/) once, in English.
+
+- **Seven groups**: Tutorials, Concepts, How-to, Guidelines, Examples, Reference and API. `scripts/doc-structure.mjs` lists every page and why it is a page of its own; `npm run docs:check` fails on a page that is not listed, a page without a `description`, a placeholder ("coming soon"), a nested folder, a stale generated table or a page far over its size limit.
+- **Reference** (new): Manifest (every field and the player version each newer part of the API needs), Capabilities, Limits, Commands, menus and bindings (built-in menus, submenu keys in use, the built-in commands and their default keys, binding syntax and names, core actions, the keys the system takes first), Platforms, Theme (tokens with their current `vestra` values, fonts, icons, widgets) and Command line. Their tables are generated from the SDK's code and Slint files (`npm run docs:tables`), so they cannot drift from it.
+- **Guidelines** (new): interface and menu rules.
+- **New pages**: Concepts *How a plugin runs*, *Commands, menus and key bindings*, *Playback state, controls and sources*, *Video and audio processing*; How-to *Test a plugin*, *Publish a plugin*; *Translate a plugin* gains the language list and the machine translation review. Getting started and the README link to the Reference instead of repeating its tables; the old compatibility tables are replaced by the generated player version table.
+- **New exports** for the generated tables and for tests (`@vestra-player/sdk/testing`): `CAPABILITY_INFO` (per capability: the members it opens, the capabilities they also need, the store's wording, whether the store highlights it; `CAPABILITIES` is derived from it), `MESSAGE_LIMIT` (1 MiB per message), `OSD_LIMITS`, `SECRET_LIMITS`, `BINDING_INPUTS` (the key and mouse names a binding is made of), `BUILTIN_SUBMENUS` (the submenu keys the built-in plugins use) and `BUILTIN_COMMANDS` (the built-in commands with their menu paths and default keys). The player's tests check them against the player.
+- **`TestHost`** enforces the information block's limits like the player: `OsdPanel.set` with more than 32 lines or 4096 bytes (after `maxColumns` is applied) fails with `invalid`.
+- `llms.txt` lists every capability and points at every page of the site in `llms-full.txt`, which now contains all of them.
+
 ## 1.5.13
 
 **`i18n extract` keeps the translator's comments and writes the right number of plural forms.** A fix; `apiVersion` stays `vestra/1`.

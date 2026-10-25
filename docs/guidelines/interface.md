@@ -79,7 +79,7 @@ The player's picture, audio and subtitle tools share one layout; a window of the
 
 - **Every visible text is English source text** that the player translates ([Translate a plugin](../how-to/i18n.md)). Write short, plain sentences; one sentence per status or error.
 - **Leave room for longer languages.** German and French texts are usually longer than English; a Chinese, Japanese or Korean character is about one font size wide, a Latin letter about half. Let labels and buttons grow with their text (layouts, `preferred-width`; the `Button` widget does) instead of fixing widths to the English text.
-- **Mixed scripts must render without boxes.** That is why you use the system font (above): the player falls back per character to the system's fonts (on Windows also to a bundled CJK font) ([Theme](../reference/theme.md)).
+- **Mixed scripts must render without boxes.** That is why you use the system font (above): the player falls back per character to the system's fonts (on Windows also to a bundled CJK font) ([Theme](../reference/theme.md#sizes-and-fonts)).
 - **Data is not translated.** File names, track names and device names show as they are.
 
 ## Check your plugin

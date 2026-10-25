@@ -62,10 +62,9 @@ export const GROUPS = [
     folder: "tutorials",
     kind: "tutorial",
     pages: [
-      { file: "index.md", pending: "WP6", why: "Group index." },
+      { file: "index.md", why: "Group index." },
       {
         file: "getting-started.md",
-        pending: "WP6",
         why: "The one tutorial: from an empty folder to a packed plugin.",
       },
     ],
@@ -75,34 +74,25 @@ export const GROUPS = [
     folder: "concepts",
     kind: "concept",
     pages: [
-      { file: "index.md", pending: "WP5", why: "Group index." },
+      { file: "index.md", why: "Group index." },
       {
         file: "plugins.md",
-        new: true,
-        pending: "WP5",
         why: "How a plugin runs (process, activate, handles and scopes, the update pass, stopping, data directory, failures): the base every other concept builds on.",
       },
       {
         file: "commands.md",
-        new: true,
-        pending: "WP5",
         why: "Commands, menu paths and how a key finds its command: one model shared by menus, bindings and panels.",
       },
       {
         file: "playback.md",
-        new: true,
-        pending: "WP5",
         why: "Playback state and events, conditional controls, sources and the play sequence: spans Player, Resolvers and the core actions.",
       },
       {
         file: "processing.md",
-        new: true,
-        pending: "WP5",
         why: "Video and audio filter chains, joining plugins' chains, live parameters, the view and render options.",
       },
       {
         file: "ui.md",
-        pending: "WP5",
         why: "The five interface surfaces and how Slint and TypeScript talk; at its size limit, so no other topic joins it.",
       },
     ],
@@ -112,37 +102,29 @@ export const GROUPS = [
     folder: "how-to",
     kind: "how-to",
     pages: [
-      { file: "index.md", pending: "WP4", why: "Group index." },
+      { file: "index.md", why: "Group index." },
       {
         file: "slider.md",
-        pending: "WP4",
         why: "One task: keep a slider responsive while dragging.",
       },
       {
         file: "window-state.md",
-        pending: "WP4",
         why: "One task: remember a window's state between runs.",
       },
       {
         file: "i18n.md",
-        pending: "WP4",
         why: "One task: translate a plugin.",
       },
       {
         file: "i18n-migration.md",
-        pending: "WP4",
         why: "One task: migrate a plugin written before 1.5.9 to English source text.",
       },
       {
         file: "testing.md",
-        new: true,
-        pending: "WP4",
         why: "One task: test a plugin with TestHost (actions, simulated sources, injected failures, settling).",
       },
       {
         file: "publish.md",
-        new: true,
-        pending: "WP4",
         why: "One task: submit a plugin to the plugin store.",
       },
     ],
@@ -152,17 +134,13 @@ export const GROUPS = [
     folder: "guidelines",
     kind: "guideline",
     pages: [
-      { file: "index.md", new: true, pending: "WP3", why: "Group index." },
+      { file: "index.md", why: "Group index." },
       {
         file: "interface.md",
-        new: true,
-        pending: "WP3",
         why: "Rules for tool windows, panels, the OSD, theme and size use, text length and CJK: prescriptive, so neither a concept nor a task.",
       },
       {
         file: "menus.md",
-        new: true,
-        pending: "WP3",
         why: "Rules for where commands go, submenus, titles and default bindings: a different topic from the interface rules.",
       },
     ],
@@ -172,44 +150,37 @@ export const GROUPS = [
     folder: "examples",
     kind: "example",
     pages: [
-      { file: "index.md", pending: "WP6", why: "Group index." },
+      { file: "index.md", why: "Group index." },
       {
         file: "hello.md",
-        pending: "WP6",
         why: "Walkthrough of examples/hello.",
       },
-      { file: "blur.md", pending: "WP6", why: "Walkthrough of examples/blur." },
+      { file: "blur.md", why: "Walkthrough of examples/blur." },
       {
         file: "signal-generator.md",
-        pending: "WP6",
         why: "Walkthrough of examples/signal-generator.",
       },
       {
         file: "bookmark.md",
-        pending: "WP6",
         why: "Walkthrough of examples/bookmark.",
       },
       {
         file: "panel-menu.md",
-        pending: "WP6",
         why: "Walkthrough of examples/panel-menu.",
       },
       {
         file: "menus.md",
-        pending: "WP6",
         why: "Walkthrough of examples/menus.",
       },
       {
         file: "theme-widgets.md",
-        pending: "WP6",
         why: "Walkthrough of examples/theme-widgets.",
       },
       {
         file: "markdown.md",
-        pending: "WP6",
         why: "Walkthrough of examples/markdown.",
       },
-      { file: "i18n.md", pending: "WP6", why: "Walkthrough of examples/i18n." },
+      { file: "i18n.md", why: "Walkthrough of examples/i18n." },
     ],
   },
   {
@@ -217,47 +188,33 @@ export const GROUPS = [
     folder: "reference",
     kind: "reference",
     pages: [
-      { file: "index.md", new: true, pending: "WP2", why: "Group index." },
+      { file: "index.md", why: "Group index." },
       {
         file: "manifest.md",
-        new: true,
-        pending: "WP2",
         why: "Manifest field rules and the minPlayerVersion table: lookup across many symbols.",
       },
       {
         file: "capabilities.md",
-        new: true,
-        pending: "WP2",
         why: "Every capability with the API it opens, what it requires and its store wording: one generated table.",
       },
       {
         file: "limits.md",
-        new: true,
-        pending: "WP2",
         why: "Every runtime limit in one generated table instead of scattered over the API.",
       },
       {
         file: "commands.md",
-        new: true,
-        pending: "WP2",
         why: "Menu ids, menu keys, menu path and binding syntax, core action ids and the keys the system takes first.",
       },
       {
         file: "platforms.md",
-        new: true,
-        pending: "WP2",
         why: "Every platform difference in one table.",
       },
       {
         file: "theme.md",
-        new: true,
-        pending: "WP2",
         why: "Theme tokens and values, fonts, icons and the @vestra/widgets components, generated from slint/.",
       },
       {
         file: "cli.md",
-        new: true,
-        pending: "WP2",
         why: "The vestra-plugin commands, their options and the package.json `vestra` field.",
       },
     ],

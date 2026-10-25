@@ -1,5 +1,6 @@
 ---
 title: "Example: Blur"
+description: "Walkthrough of examples/blur: a command in the Video menu, a tool window with one slider and a live video filter."
 ---
 
 # Example: Blur

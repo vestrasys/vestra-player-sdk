@@ -1,5 +1,6 @@
 ---
 title: "Example: Bookmark"
+description: "Walkthrough of examples/bookmark: a tool window bound to the playback state, with Mark and Jump buttons."
 ---
 
 # Example: Bookmark

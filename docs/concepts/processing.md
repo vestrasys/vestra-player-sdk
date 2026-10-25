@@ -34,7 +34,7 @@ picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma:
 - **A chain is a desired state.** `set(nodes)` says what the chain should be from now on; the last write wins. The SDK applies it to the current media, and **applies it again to every new source**, so the plugin does not react to file changes itself.
 - **Each plugin owns its own chains.** The player joins the chains of all plugins in a stable order. Setting or disposing a chain changes only that plugin's contribution; an empty chain (`[]`, or for audio no nodes and no delay) withdraws it and leaves the others alone.
 - **Nothing is sent until the first `set()`**, and disposing a chain that was applied withdraws it.
-- **Limits are shared.** All plugins together have at most 64 nodes, one `frameBlend` and a bounded audio delay ([Reference: limits](../reference/limits.md)); a value out of a node's range fails with `invalid`.
+- **Limits are shared.** All plugins together have at most 64 nodes, one `frameBlend` and a bounded audio delay ([Reference: limits](../reference/limits.md#limits-documented-at-their-api)); a value out of a node's range fails with `invalid`.
 - **The same chain is the picture.** A processed snapshot or an export ({@link "@vestra-player/sdk"!MediaCapture | plugin.media}) goes through the same chains, so it matches what plays.
 
 ### Status

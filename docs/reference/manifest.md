@@ -61,7 +61,7 @@ The table lists the API whose documentation names a player version, newest last:
 
 | Player | API that needs it or changed with it |
 | --- | --- |
-| 0.2.0 | {@linkcode "@vestra-player/sdk"!MarkdownRef MarkdownRef}, {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown}, {@linkcode "@vestra-player/sdk"!PackageManifest PackageManifest}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive} |
+| 0.2.0 | {@linkcode "@vestra-player/sdk"!Plugin.dataDirectory Plugin.dataDirectory}, {@linkcode "@vestra-player/sdk"!MarkdownRef MarkdownRef}, {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown}, {@linkcode "@vestra-player/sdk"!PackageManifest PackageManifest}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive} |
 | 0.3.0 | {@linkcode "@vestra-player/sdk"!CommandOptions CommandOptions}, {@linkcode "@vestra-player/sdk/testing"!MENU_IDS MENU_IDS} |
 | 0.4.0 | {@linkcode "@vestra-player/sdk"!ThemeId ThemeId} |
 | 0.4.1 | {@linkcode "@vestra-player/sdk"!PluginError PluginError}, {@linkcode "@vestra-player/sdk"!FileResolverOptions FileResolverOptions}, {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install}, {@linkcode "@vestra-player/sdk"!PluginWarning.code PluginWarning.code}, {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate} |

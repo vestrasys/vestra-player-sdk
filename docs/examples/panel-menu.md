@@ -1,5 +1,6 @@
 ---
 title: "Example: Panel menu"
+description: "Walkthrough of examples/panel-menu: a sidebar panel with its own right-click menu made of the plugin's commands."
 ---
 
 # Example: Panel menu

@@ -1,5 +1,6 @@
 ---
 title: "Example: Theme widgets"
+description: "Walkthrough of examples/theme-widgets: a tool window drawn with the player's theme, icons and widgets."
 ---
 
 # Example: Theme widgets

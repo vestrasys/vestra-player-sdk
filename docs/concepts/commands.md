@@ -29,7 +29,7 @@ const toggle = plugin.commands.add({
 - **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions ({@link "@vestra-player/sdk"!Bindable | Bindable}). Functions are evaluated in every [update pass](plugins.md#the-update-pass) and sent only when they change, so the menu's check mark follows the player without a listener. {@link "@vestra-player/sdk"!Command.set | Command.set} replaces them later.
 - **The player calls `run` only when it can run.** While a command is disabled or busy, neither its menu item nor its binding calls `run`; `reason` tells the user why (it appears in the menu and, for a key press, on the video).
 - **Titles and paths are fixed.** They cannot change in place. A menu that follows changing content (tracks, presets, a radio group) lives in a child scope that is disposed and rebuilt when the content changes; `order` keeps its place ([Handles and scopes](plugins.md#handles-and-scopes)).
-- Disposing the command removes it from the menu and the binding table; the same id can be added again at once. The number of commands per plugin and per player is limited ([Reference: limits](../reference/limits.md)); the limit stops runaway menus, so cap menus built from media content (tracks, chapters) yourself.
+- Disposing the command removes it from the menu and the binding table; the same id can be added again at once. The number of commands per plugin and per player is limited ([Reference: limits](../reference/limits.md#commands)); the limit stops runaway menus, so cap menus built from media content (tracks, chapters) yourself.
 
 ## How menu paths merge
 
@@ -38,7 +38,7 @@ The player has **one main menu**, built from the paths of every command of every
 - **Paths are English source text, and they are keys.** `["@video", "Picture", "Brightness…"]` names a place in the menu. Commands of different plugins whose leading segments are the same share that submenu: two plugins that both write `["@playback", "A-B Loop", …]` put their items into one **A-B Loop** submenu.
 - **Each segment is shown translated by the plugin that declared it.** The player looks every segment and the title up in the declaring plugin's catalog ([Translate a plugin](../how-to/i18n.md)). A submenu shared by several plugins takes its label from the first command in it. The player's own menus (the seven top-level menus and **Playback ▸ Speed**, **Playback ▸ Seek**) always show the player's words.
 - **Built-in menus** are named by id or by key: `@video` and `Video` are the same menu. The id form is safer, because it fails with `invalid` when misspelled, and players up to 0.4.2 titled their menus in Chinese, where only `@video` reaches the built-in menu. Only the first segment is read as an id.
-- **Shared submenus need a shared key.** Plugins that should meet in one submenu must spell its key identically. The keys already in use (by the player and its built-in plugins) are listed in [Reference: commands](../reference/commands.md); reuse one instead of inventing a near-synonym.
+- **Shared submenus need a shared key.** Plugins that should meet in one submenu must spell its key identically. The keys already in use (by the player and its built-in plugins) are listed in [Reference: commands](../reference/commands.md#submenu-keys-in-use); reuse one instead of inventing a near-synonym.
 - **A segment with data** (a track number, a count) is a {@link "@vestra-player/sdk"!Text | Text} from `plugin.i18n.text(…)`: it is shown translated and filled in, and it merges by its English rendering ("Track 2 (opus)").
 
 The same path cannot be registered twice, and a path cannot be both an item and a submenu: the second registration fails with `conflict`.
@@ -53,7 +53,7 @@ The orders of the player's own items and the recommended top-level ranges are on
 
 ## How a key finds its command
 
-A binding is a string such as `"Ctrl+Shift+A"`, `"NumpadEnter"` or `"Mouse:WheelUp"` ([Reference: commands](../reference/commands.md) has the syntax and every input name). When the user presses a key, the player looks for a command in this order:
+A binding is a string such as `"Ctrl+Shift+A"`, `"NumpadEnter"` or `"Mouse:WheelUp"` ([Reference: commands](../reference/commands.md#binding-syntax) has the syntax and every input name). When the user presses a key, the player looks for a command in this order:
 
 ```text
 key press in the main window or the floating sidebar
@@ -76,7 +76,7 @@ winner disabled ─────────────▶ the next command it s
 - **A disabled command lets its key go.** This is what makes context-dependent keys work: `Escape` bound to "Leave Fullscreen" does nothing outside fullscreen, so `Escape` reaches the focused control. Give `reason` to a command whose key should still be taken and explained while it is disabled.
 - **`repeat: true`** fires again on the keyboard's auto-repeat while the key is held; without it a binding fires once per press.
 - **Standard close keys are not bindings.** ⌘W on macOS, Ctrl+W and Ctrl+F4 on Windows close a tool window, the floating sidebar or the Options window before any binding or Slint handler sees them. The main window ignores them, so a `Ctrl+W` binding fires there, and only there.
-- Some keys never reach the player because the system takes them first (on macOS ⌃F1–⌃F8, ⌃ and the arrow keys, ⌘Tab). [Reference: commands](../reference/commands.md) lists them; default bindings should avoid them.
+- Some keys never reach the player because the system takes them first (on macOS ⌃F1–⌃F8, ⌃ and the arrow keys, ⌘Tab). [Reference: commands](../reference/commands.md#keys-the-system-takes-first) lists them; default bindings should avoid them.
 
 ### What a key name matches
 
@@ -100,7 +100,7 @@ The user can rebind any command, the player's own included. Those **overrides** 
 
 The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Leave Fullscreen**, **Quit** and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
 
-A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md); what they do to playback is in [Playback](playback.md#core-actions).
+A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); what they do to playback is in [Playback](playback.md#core-actions).
 
 ## API on this page
 

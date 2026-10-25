@@ -1,5 +1,6 @@
 ---
 title: "Example: Signal generator"
+description: "Walkthrough of examples/signal-generator: a generated stream of colour bars and a sine tone with openStream."
 ---
 
 # Example: Signal generator

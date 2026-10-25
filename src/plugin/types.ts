@@ -325,16 +325,19 @@ export interface Plugin extends Scope {
   /** The manifest id, e.g. `"community.bookmark"`. */
   readonly id: string;
   /**
-   * A writable directory for this plugin's own files (settings, remembered
-   * folders). Kept across restarts, disabling and upgrades. Write files atomically: to a temporary name, then rename.
-   * Throws `unavailable` when the player provided none.
+   * A writable directory for this plugin's own files (settings, caches,
+   * remembered folders), created by the player before it starts the plugin.
+   * Each installation has its own directory (player 0.2.0): it is kept across
+   * restarts, disabling, upgrades and rollbacks, and a reinstall of the same
+   * id from a different source gets a new, empty one. It is deleted only by
+   * `packages.uninstall(id, { removeData: true })`. No capability.
    *
-   * Location: `~/Library/Application Support/Vestra/plugin-data/<id>/` on
-   * macOS, `%APPDATA%\Vestra\plugin-data\<id>\` on Windows (the environment
-   * variable `VESTRA_PLUGIN_DATA` moves the root). Another plugin's data
-   * directory is `join(dirname(plugin.dataDirectory), id)`. It is deleted
-   * only by `packages.uninstall(id, { removeData: true })`. No capability.
-   * For JSON settings prefer {@link Scope.storage}.
+   * The path's format is not part of the API: do not derive another
+   * plugin's directory from it (a plugin manager reads
+   * {@link PluginInfo.dataDirectory}). Write files atomically (to a
+   * temporary name, then rename); for JSON settings prefer
+   * {@link Scope.storage}. Throws `unavailable` when the player provided
+   * none. See [How a plugin runs](../../docs/concepts/plugins.md#the-data-directory).
    */
   readonly dataDirectory: string;
 }
@@ -400,9 +403,10 @@ export type MenuId =
  * item never moves the player's menu. Directly inside a built-in menu,
  * `order` 0 (the default) sorts after every other order: an item without
  * `order` goes at the end, after the player's own items (which all use 100
- * or more). Give a positive order to sit between them (the player's orders
- * are listed in its menu table, doc/product/menus.md), or a negative one to
- * come first. Deeper levels (a plugin's own submenu) have no such rule.
+ * or more). Give a positive order to sit between them (the player's items
+ * in menu order are in
+ * [Built-in commands](../../docs/reference/commands.md#built-in-commands)),
+ * or a negative one to come first. Deeper levels (a plugin's own submenu) have no such rule.
  * Players before 0.3.0 place every submenu at its smallest order, so there
  * an item without `order` moves the whole menu to the top; to avoid that,
  * give it an order in the menu's range (Video: 400–499).
