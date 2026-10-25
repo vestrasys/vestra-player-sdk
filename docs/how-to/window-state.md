@@ -1,5 +1,6 @@
 ---
 title: Remember a window's state between runs
+description: Store a tool window's values and whether it was open, and restore both at the next start.
 ---
 
 # Remember a window's state between runs

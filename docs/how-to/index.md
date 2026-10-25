@@ -1,5 +1,6 @@
 ---
 title: How-to guides
+description: Short guides that each answer one practical question about writing, translating, testing or publishing a plugin.
 ---
 
 # How-to guides
@@ -30,12 +31,14 @@ The checklist for a plugin written in one language before SDK 1.5.9: English men
 
 [Read the guide](i18n-migration.md)
 
-## Guides being written
+## Test a plugin
 
-- Show "Starting…" while a callback awaits something slow (`plugin.update()` sends bound properties before the callback returns; see the signal generator, Step 7).
-- Build file paths that work on macOS and Windows.
-- Run an external program and read its output.
-- Test a plugin with the in-memory test host.
-- Bundle npm dependencies into a package.
+`@vestra-player/sdk/testing` runs a plugin against `TestHost`, an in-memory player that speaks the real protocol. The guide shows the shape of a test (start, act, settle, assert, stop), how to act like the user (run commands, press keys and what `press` reports, fire window callbacks, answer dialogs), how to simulate sources and the main window, how to inject a refusal or a lost reply with `host.handle`, when `settle()` is enough and when to poll, and what to assert on.
 
-Until a guide exists, the [Examples](../examples/index.md) show most of these techniques in complete plugins.
+[Read the guide](testing.md)
+
+## Publish a plugin
+
+Plugins reach the store through pull requests to the official plugin repository. The guide covers preparing the package, choosing the id, registering the source repository (or hosting the plugin there), the pull request and its checks, updating, withdrawing, asking for a revocation, and what users see of the plugin in the store.
+
+[Read the guide](publish.md)

@@ -1,5 +1,6 @@
 ---
 title: Migrate a plugin to English source text
+description: The checklist for moving a plugin written in one language before SDK 1.5.9 to English source text with its old texts as the first translation.
 ---
 
 # Migrate a plugin to English source text

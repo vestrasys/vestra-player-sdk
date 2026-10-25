@@ -1,5 +1,6 @@
 ---
 title: Keep a slider responsive while dragging
+description: Make a slider that drives a filter, the volume or a preview follow the pointer without lagging or queueing requests.
 ---
 
 # Keep a slider responsive while dragging
