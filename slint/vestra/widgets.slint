@@ -81,13 +81,17 @@ export component Button {
     min-height: root.icon-only ? root.icon-height : root.small ? Theme.button-small-height : Theme.button-height;
     min-width: root.icon-only ? root.icon-width : root.small ? Theme.button-small-min-width : Theme.button-min-width;
     preferred-height: self.min-height;
+    // A longer (translated) label widens the button instead of overflowing it.
+    preferred-width: root.icon-only ? self.min-width
+        : max(self.min-width, label.preferred-width + 2 * Theme.button-padding);
     accessible-role: button;
     accessible-label: root.text;
     accessible-enabled: root.enabled;
     accessible-checkable: root.icon-only;
     accessible-checked: root.checked;
     accessible-action-default => { if root.enabled { root.clicked(); } }
-    if !root.icon-only: Rectangle {
+    Rectangle {
+        visible: !root.icon-only;
         border-radius: Theme.radius-control;
         background: !root.enabled ? Theme.button-disabled
             : touch.pressed ? Theme.button-press
@@ -96,7 +100,7 @@ export component Button {
             padding-left: Theme.button-padding;
             padding-right: Theme.button-padding;
             alignment: center;
-            Text {
+            label := Text {
                 text: root.text;
                 color: root.enabled ? Theme.text-list : Theme.text-dim;
                 font-size: Theme.font-body;

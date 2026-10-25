@@ -29,7 +29,8 @@
  *   i18n check    coverage per language, placeholder and plural problems, a
  *                 stale messages.pot, and texts that cannot be translated
  *                 (composed in TypeScript, not literals, not English, Slint
- *                 text without @tr); warnings only, an unreadable .po fails
+ *                 text without @tr) as warnings; fails (exit 1) on a stale
+ *                 messages.pot, a .po missing messages, an unreadable file
  *
  * `check` prints the same i18n warnings when the plugin has locales/;
  * `build` compiles locales/<lang>.po to dist/locales/<lang>.json (the .po
@@ -430,7 +431,8 @@ async function i18nCheck(target) {
   dependencies(target);
   const { warnings, errors } = await i18nReport(target);
   for (const line of warnings) console.log(`${target.name}: i18n: ${line}`);
-  if (errors.length) fail(`${target.name}: ${errors.join("; ")}`);
+  // A stale messages.pot, a .po missing messages, an unreadable file.
+  if (errors.length) fail(`${target.name}: i18n: ${errors.join("; ")}`);
   if (!warnings.length) console.log(`${target.name}: i18n: no problems`);
 }
 

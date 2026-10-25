@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.12
+
+**Keys of disabled commands pass on; `i18n check` fails on stale catalogs; translator notes in tables; the Button follows its text.** A fix release; `apiVersion` stays `vestra/1`.
+
+- **`TestHost.press` matches the player (0.4.3) for disabled commands.** A disabled command no longer swallows its key: the key goes to the next command bound to it (the one it shadowed in a conflict, then the global scope after a panel binding). With only disabled commands left, the first one with a `reason` shows the reason on the OSD and eats the key; without a reason the key reaches the focused control. `press` now resolves with what happened, `"ran"`, `"reason"` (see `host.osd`) or `"passed"`, instead of rejecting for a disabled command; it still rejects when nothing is bound and when the command that runs is busy. A test that expected `press` to reject for a disabled command now gets `"passed"` or `"reason"`.
+- **`vestra-plugin i18n check` exits with 1** when `locales/messages.pot` is out of date, missing while `.po` files exist, or a `.po` lacks some of the template's messages, so CI catches a forgotten `extract`. Before, it printed these and exited 0. The other findings stay warnings, and `vestra-plugin check` still only prints them.
+- **`TRANSLATORS:` notes on `as const` table entries.** A comment before a property or element of an object or array literal under `as const` (at any depth) now reaches the translators like one at a call site; before, texts extracted through a table lost their notes.
+- **`slint/vestra/widgets.slint`** (the copy of the player's library): `Button`'s preferred width follows its label (the minimum width is unchanged), so a longer translated label widens the button instead of overflowing it.
+
 ## 1.5.11
 
 **Text values: words mixed with data, translated by the player** (player 0.4.3). Additive; `apiVersion` stays `vestra/1`, and plugins that worked need no change. 1.5.9 and 1.5.10 were not published to npm; this release includes them. Round-2 i18n requests R2-audio-1, R2-video-1, R2-subtitles-1/2, R2-playlist-1/2, R2-store-1, R2-workshop-1, R2-nes-1, capture #1, P-2, the info and hotkeys export texts, timeline and subtitle titles: one mechanism. Guide: [Translate a plugin ▸ Text that mixes words and data](docs/how-to/i18n.md#text-that-mixes-words-and-data).

@@ -83,7 +83,7 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 | `vestra-plugin build [dir...] [--version x.y.z]`            | Writes `dist/`: types stripped, files copied, manifest versioned.          |
 | `vestra-plugin pack [dir...] [--version x.y.z] [--out dir]` | Builds, then packs `dist/` as `<id>-<version>.vxp`.                        |
 | `vestra-plugin i18n extract [dir...] [--locale lang]`       | Collects the texts to translate into `locales/`, keeping translations.     |
-| `vestra-plugin i18n check [dir...]`                         | Translation coverage and untranslatable text (warnings only).              |
+| `vestra-plugin i18n check [dir...]`                         | Translation coverage and untranslatable text; fails on stale catalogs.     |
 
 ## Compatibility
 

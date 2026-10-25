@@ -172,6 +172,35 @@ function ignored(node: ts.Node, text: string): boolean {
     .includes("i18n-ignore");
 }
 
+/**
+ * A string that is an entry (a property value or an element) of an object
+ * or array literal inside `… as const`, at any depth.
+ */
+function inConstTable(node: ts.Node): boolean {
+  let current: ts.Node;
+  if (ts.isPropertyAssignment(node.parent) && node.parent.initializer === node)
+    current = node.parent.parent;
+  else if (ts.isArrayLiteralExpression(node.parent)) current = node.parent;
+  else return false;
+  for (;;) {
+    const parent: ts.Node = current.parent;
+    if (
+      ts.isAsExpression(parent) &&
+      ts.isTypeReferenceNode(parent.type) &&
+      ts.isIdentifier(parent.type.typeName) &&
+      parent.type.typeName.text === "const"
+    )
+      return true;
+    if (ts.isPropertyAssignment(parent)) current = parent.parent;
+    else if (
+      ts.isArrayLiteralExpression(parent) ||
+      ts.isParenthesizedExpression(parent)
+    )
+      current = parent;
+    else return false;
+  }
+}
+
 /** The statement (or class member) a node belongs to. */
 function statementOf(node: ts.Node): ts.Node {
   let current = node;
@@ -186,6 +215,11 @@ function statementOf(node: ts.Node): ts.Node {
 
 class Extractor {
   readonly found: (Message & { file: string; line: number })[] = [];
+  /**
+   * `TRANSLATORS:` notes on entries of `as const` tables, by text: a table
+   * entry is extracted through its literal type, which has no comments.
+   */
+  readonly tableNotes = new Map<string, string[]>();
   readonly findings: Finding[] = [];
   readonly #checker: ts.TypeChecker | undefined;
   constructor(checker: ts.TypeChecker | undefined) {
@@ -422,6 +456,20 @@ class Extractor {
     const text = source.text;
     const visit = (node: ts.Node) => {
       if (ts.isCallExpression(node)) this.#call(node, file, source, text);
+      if (
+        (ts.isStringLiteral(node) ||
+          ts.isNoSubstitutionTemplateLiteral(node)) &&
+        inConstTable(node)
+      ) {
+        // The comment sits before the entry: the property, or the element.
+        const entry = ts.isPropertyAssignment(node.parent) ? node.parent : node;
+        const notes = notesOf(entry, text);
+        if (notes.length) {
+          const known = this.tableNotes.get(node.text) ?? [];
+          for (const note of notes) if (!known.includes(note)) known.push(note);
+          this.tableNotes.set(node.text, known);
+        }
+      }
       // A text value written as data: `{ $vestraText: "…" }`.
       if (
         ts.isPropertyAssignment(node) &&
@@ -797,7 +845,11 @@ export function extract(options: ExtractOptions): {
     }
     if (occurrence.plural !== undefined && message.plural === undefined)
       message.plural = occurrence.plural;
-    for (const note of occurrence.notes)
+    const tableNotes =
+      occurrence.context === undefined
+        ? (extractor.tableNotes.get(occurrence.id) ?? [])
+        : [];
+    for (const note of [...occurrence.notes, ...tableNotes])
       if (!message.notes.includes(note)) message.notes.push(note);
     if (!message.references.includes(reference))
       message.references.push(reference);
@@ -915,8 +967,15 @@ export function checkCatalogs(
       entries.map((e) => `${keyOf(e.context, e.id)}\u0000${e.plural ?? ""}`),
     );
   const wanted = keys(messages);
+  const files = existsSync(locales)
+    ? readdirSync(locales)
+        .filter((name) => name.endsWith(".po"))
+        .sort()
+    : [];
+  // A stale template or a .po without some of its messages fails
+  // `i18n check` (an error); `check` prints it like the warnings.
   if (!existsSync(pot))
-    warnings.push(
+    (files.length ? errors : warnings).push(
       "locales/messages.pot is missing: run vestra-plugin i18n extract",
     );
   else {
@@ -925,18 +984,13 @@ export function checkCatalogs(
       const same =
         have.size === wanted.size && [...wanted].every((key) => have.has(key));
       if (!same)
-        warnings.push(
+        errors.push(
           "locales/messages.pot is out of date: run vestra-plugin i18n extract",
         );
     } catch (error) {
       errors.push(`locales/messages.pot: ${(error as Error).message}`);
     }
   }
-  const files = existsSync(locales)
-    ? readdirSync(locales)
-        .filter((name) => name.endsWith(".po"))
-        .sort()
-    : [];
   for (const name of files) {
     const language = name.slice(0, -3);
     if (language === "en") {
@@ -973,7 +1027,7 @@ export function checkCatalogs(
     const inFile = keys(live);
     const missing = [...wanted].filter((key) => !inFile.has(key)).length;
     if (missing)
-      warnings.push(
+      errors.push(
         `locales/${name}: ${missing} ${missing === 1 ? "message is" : "messages are"} not in this file: run vestra-plugin i18n extract`,
       );
     for (const entry of live) {
