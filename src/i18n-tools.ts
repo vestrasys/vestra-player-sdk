@@ -860,10 +860,18 @@ export function extract(options: ExtractOptions): {
   return { messages: [...messages.values()], findings };
 }
 
-const entryOf = (message: Message): PoEntry => {
+/** `msgstr[n]` lines a plural entry has: the header's `nplurals`, else the language's. */
+const formsOf = (language: string, header: string | undefined) => {
+  const declared = /nplurals\s*=\s*(\d+)/.exec(header ?? "")?.[1];
+  if (declared !== undefined && Number(declared) >= 1) return Number(declared);
+  return ONE_FORM.has(language) ? 1 : 2;
+};
+
+const entryOf = (message: Message, forms = 2): PoEntry => {
   const entry: PoEntry = {
     id: message.id,
-    strings: message.plural === undefined ? [""] : ["", ""],
+    strings:
+      message.plural === undefined ? [""] : Array<string>(forms).fill(""),
     fuzzy: false,
     notes: [...message.notes],
     references: [...message.references],
@@ -885,7 +893,7 @@ export function template(
     .join(" ");
   return writePo(
     `Project-Id-Version: ${project}\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n`,
-    messages.map(entryOf),
+    messages.map((message) => entryOf(message)),
   );
 }
 
@@ -918,17 +926,29 @@ export function merge(
     old.set(keyOf(entry.context, entry.id), entry);
   const result: PoEntry[] = [];
   const present = new Set<string>();
+  // A plural entry has exactly nplurals msgstr[n] (one for ja, ko,
+  // zh-Hans); extra empty ones are dropped, filled ones kept.
+  const forms = formsOf(language, parsed?.header ?? newHeader(language));
   let added = 0;
   let translated = 0;
   for (const message of messages) {
     const key = keyOf(message.context, message.id);
     present.add(key);
-    const entry = entryOf(message);
+    const entry = entryOf(message, forms);
     const before = old.get(key);
+    // The translator's own comments stay with their message.
+    if (before?.comments?.length) entry.comments = [...before.comments];
     if (before && hasText(before)) {
       entry.strings = [...before.strings];
       if (message.plural === undefined) entry.strings = [entry.strings[0]!];
-      else while (entry.strings.length < 2) entry.strings.push("");
+      else {
+        while (entry.strings.length < forms) entry.strings.push("");
+        while (
+          entry.strings.length > forms &&
+          entry.strings[entry.strings.length - 1] === ""
+        )
+          entry.strings.pop();
+      }
       entry.fuzzy = before.fuzzy;
       entry.flags = [...before.flags];
     } else if (!before) added++;
@@ -942,7 +962,11 @@ export function merge(
     obsolete++;
   }
   return {
-    text: writePo(parsed?.header ?? newHeader(language), result),
+    text: writePo(
+      parsed?.header ?? newHeader(language),
+      result,
+      parsed?.headerComments ?? [],
+    ),
     total: messages.length,
     translated,
     added,

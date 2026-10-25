@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.13
+
+**`i18n extract` keeps the translator's comments and writes the right number of plural forms.** A fix; `apiVersion` stays `vestra/1`.
+
+- Merging into a `locales/<lang>.po` kept only the header's text: comment lines before the header (`# Reviewed by an AI reviewer on 2026-10-25`, `# Translator: …`, `#, fuzzy`) and the translator's own `# ` comments on entries were dropped. Both are now kept as written (`parsePo` returns `headerComments`, entries carry `comments`; `writePo` writes them).
+- A plural entry has exactly `nplurals` `msgstr[n]` lines, from the file's `Plural-Forms` (or the language: one for `ja`, `ko`, `zh-Hans`). Before, every plural entry got an empty `msgstr[1]`, also in one-form languages; a merge now removes such an extra empty line (a filled one stays).
+
 ## 1.5.12
 
 **Keys of disabled commands pass on; `i18n check` fails on stale catalogs; translator notes in tables; the Button follows its text.** A fix release; `apiVersion` stays `vestra/1`.
