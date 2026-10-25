@@ -18,8 +18,9 @@
  *   value ranges (an out-of-range `filter.set` ends in `failed` with
  *   `invalid`), an empty chain removes the plugin's chain, a chain on a
  *   generated stream fails `unsupported` (the player's own conformance
- *   cases check all three), and the command limits ({@link COMMAND_LIMITS})
- *   and menu ids ({@link MENU_IDS}) are enforced.
+ *   cases check all three), and the command limits ({@link COMMAND_LIMITS}),
+ *   property value limits ({@link UI_VALUE_LIMITS}) and menu ids
+ *   ({@link MENU_IDS}) are enforced.
  *
  * Typical workflow: start the plugin with {@link startPlugin} (it reads the
  * plugin's `manifest.json`), drive it the way the user or another plugin
@@ -76,6 +77,7 @@ import type {
   WireSystemInfo,
 } from "../wire.ts";
 import { COMMAND_LIMITS, MENU_IDS } from "../commands.ts";
+import { UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
@@ -95,24 +97,51 @@ import type {
   Locale,
   Plugin,
   TemplateArgs,
+  TextValue,
   ThemeId,
 } from "./types.ts";
 import {
   Catalog,
-  compileCatalog,
   format as formatTemplate,
   HOST_GROUPS,
   HOST_ZH_HANS,
   LOCALES,
+  fitColumns,
+  isTextValue,
+  LIST_SEPARATORS,
+  loadPackageCatalog,
   menuKeys,
-  parsePo,
+  renderTemplateArgs,
+  renderText,
+  resolveTexts,
+  TEXT_LIMITS,
+  textKey,
+  textProblem,
 } from "../i18n.ts";
-import type { CompiledMessage } from "../i18n.ts";
+import type { ListJson, TemplateArgsValue, TextJson } from "../i18n.ts";
 
 /** Throw one of these from `host.handle(...)` to simulate a definite refusal. */
 export { HostError };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
+/** The player's property value limits, which the test host enforces as well. */
+export { UI_VALUE_LIMITS };
+/**
+ * The player's limits on one text value ({@link Text}, {@link TextList},
+ * with everything nested in it), which the test host enforces as well:
+ * nesting depth 8, 1024 texts, lists and arguments in all, 16 arguments per
+ * text, 256 items per list, 4096 bytes per source text or string argument.
+ *
+ * @since 1.5.11
+ */
+export { TEXT_LIMITS };
+/**
+ * The separator of each {@link ListStyle} per interface language, as the
+ * player joins a {@link TextList}.
+ *
+ * @since 1.5.11
+ */
+export { LIST_SEPARATORS };
 /**
  * The player's interface languages, English (the source) first, as the
  * player's own table: `["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]`.
@@ -176,6 +205,20 @@ export interface FakeWindow {
 }
 
 /**
+ * A file dialog as the player shows it ({@link TestHost.fileDialogs}).
+ *
+ * @since 1.5.11
+ */
+export interface FileDialogText {
+  /** Which dialog. */
+  kind: "openFile" | "openFiles" | "openDirectory" | "saveFile";
+  /** Its title as shown, if the plugin gave one. */
+  title?: string;
+  /** The proposed file name as shown, if the plugin gave one. */
+  fileName?: string;
+}
+
+/**
  * A command the plugin registered with `plugin.commands.add`, as the test
  * host keeps it. Get one with {@link TestHost.command} (the plugin's own) or
  * {@link TestHost.coreAction} (the player's core actions).
@@ -209,6 +252,14 @@ export interface FakeCommand {
     title: string;
     /** Each segment of the path as shown; empty without a path. */
     path: string[];
+    /**
+     * The disabled or busy reason as shown, `null` without one (a plugin
+     * command's; not enumerable, so comparing `display` with
+     * `{ title, path }` still works).
+     *
+     * @since 1.5.11
+     */
+    reason?: string | null;
   };
   /** The command state the player last received (after the update pass). */
   state: {
@@ -218,8 +269,8 @@ export interface FakeCommand {
     checked: boolean | null;
     /** `true` while the plugin reports the command as busy. */
     busy: boolean;
-    /** The reason shown when the command is disabled or busy. */
-    reason: string | null;
+    /** The reason the plugin sent (source text or a text value; see `display.reason`). */
+    reason: TextValue | null;
   };
   /**
    * The state revision the player holds; increases with every state update
@@ -512,21 +563,7 @@ export class TestHost implements Transport {
    * @since 1.5.9
    */
   loadCatalog(directory: string) {
-    this.#catalog = new Catalog();
-    if (this.locale === "en") return;
-    const base = join(directory, "locales", this.locale);
-    if (existsSync(`${base}.json`)) {
-      const compiled = JSON.parse(readFileSync(`${base}.json`, "utf8")) as {
-        messages?: Record<string, CompiledMessage>;
-      };
-      this.#catalog = new Catalog(compiled.messages ?? {});
-    } else if (existsSync(`${base}.po`))
-      this.#catalog = new Catalog(
-        compileCatalog(
-          this.locale,
-          parsePo(readFileSync(`${base}.po`, "utf8")).entries,
-        ).messages,
-      );
+    this.#catalog = loadPackageCatalog(directory, this.locale);
   }
   /**
    * A text of the plugin as the player shows it: translated with the
@@ -544,28 +581,85 @@ export class TestHost implements Transport {
    *
    * @since 1.5.9
    */
-  translate(text: string, args?: TemplateArgs): string {
-    return this.#catalog.template(text, args ?? null);
+  translate(text: TextValue, args?: TemplateArgs): string {
+    if (typeof text !== "string")
+      return renderText(
+        text as TextJson | ListJson,
+        this.#catalog,
+        this.locale,
+      );
+    const values = renderTemplateArgs(
+      args as TextJson["args"],
+      this.#catalog,
+      this.locale,
+    );
+    return this.#catalog.template(text, values ?? null);
+  }
+  /**
+   * A text of a request as the player shows it, refused as the player
+   * refuses it: a string is a template (formatted with `args`, if given), a
+   * text value carries its own arguments.
+   */
+  #shown(text: unknown, args: unknown, what: string): string {
+    if (args !== undefined && args !== null) {
+      const problem = textProblem(args, "args");
+      if (problem) throw new HostError("invalid", problem);
+    }
+    if (typeof text === "string")
+      return this.translate(text, (args ?? undefined) as TemplateArgs);
+    if (!isTextValue(text))
+      throw new HostError("invalid", `${what} requires a string or a text`);
+    const problem = textProblem(text);
+    if (problem) throw new HostError("invalid", `${what}: ${problem}`);
+    if (args !== undefined && args !== null)
+      throw new HostError("invalid", `${what}: a text value takes no args`);
+    return this.translate(text as TextValue);
+  }
+  /** A declared text: a string is translated as it is, a text rendered. */
+  #declared(text: unknown, what: string): string {
+    return this.#shown(text, undefined, what);
+  }
+  /** Property values with their text values shown, as the player does first. */
+  #shownValues<T>(values: T): T {
+    const resolved = resolveTexts(values, this.#catalog, this.locale);
+    if ("problem" in resolved) throw new HostError("invalid", resolved.problem);
+    return resolved.value;
   }
   /** A text of the player itself, in the player's language (see `locale`). */
   #hostText(text: string, args?: TemplateArgs): string {
     const zh = this.#locale === undefined || this.#locale === "zh-Hans";
     const shown = (zh && (HOST_ZH_HANS[text] ?? TEST_ZH_HANS[text])) || text;
-    return args === undefined ? shown : formatTemplate(shown, args);
+    return args === undefined
+      ? shown
+      : formatTemplate(shown, args as TemplateArgsValue);
   }
   /** A declared menu path and title as the player shows them. */
-  #display(path: readonly string[], title: string) {
-    const keys = menuKeys(path);
-    return {
-      title: this.translate(title),
+  #display(
+    path: readonly (string | TextJson)[],
+    title: string | TextJson,
+    reason: TextValue | null = null,
+  ) {
+    const keys = menuKeys(
+      path.map((segment) =>
+        typeof segment === "string" ? segment : textKey(segment),
+      ),
+    );
+    const display = {
+      title: this.translate(title as TextValue),
       // The player's submenus by key, everything else as declared.
       path: keys.map((segment, index) =>
         index < keys.length - 1 &&
         HOST_GROUPS.includes(keys.slice(0, index + 1).join("/"))
           ? this.#hostText(segment)
-          : this.translate(path[index] ?? segment),
+          : this.translate((path[index] ?? segment) as TextValue),
       ),
-    };
+    } as { title: string; path: string[]; reason: string | null };
+    // Not enumerable: `deepEqual(display, { title, path })` keeps passing.
+    Object.defineProperty(display, "reason", {
+      value: reason === null ? null : this.translate(reason),
+      enumerable: false,
+    });
+    return display;
   }
   /**
    * The saved interface language (`plugin.appearance.language`), changed by
@@ -604,6 +698,15 @@ export class TestHost implements Transport {
     /** The checkbox, if any. */
     checkbox?: string;
   }[] = [];
+  /**
+   * Every file dialog (`openFile`, `openFiles`, `openDirectory`,
+   * `saveFile`) as the player shows it: the title translated, a text file
+   * name translated, newest last. The options the plugin sent are in
+   * `host.sent("dialogs.open")`.
+   *
+   * @since 1.5.11
+   */
+  readonly fileDialogs: FileDialogText[] = [];
   /** The sequence provider's flags, `null` without a provider. */
   sequence: {
     /** The provider's `canNext`, as last evaluated. */
@@ -875,6 +978,40 @@ export class TestHost implements Transport {
       checks: ["manifest", "digest", "productionJavaScript", "slintCompile"],
       trustedExecution: true,
     };
+  }
+  /** A command state's reason, refused as the player refuses it. */
+  #checkReason(state: Json | undefined) {
+    const reason = (state as { reason?: unknown } | null)?.reason;
+    if (reason !== null && reason !== undefined)
+      this.#declared(reason, "reason");
+  }
+  /**
+   * Refuse property values over the player's limits ({@link UI_VALUE_LIMITS})
+   * with `limit`, naming the property, as the player does.
+   */
+  #checkValues(values: Record<string, Json>) {
+    for (const [property, value] of Object.entries(values)) {
+      const problem = valueLimitProblem(value);
+      if (problem) throw new HostError("limit", `${property}: ${problem}`);
+    }
+  }
+  /**
+   * A panel's or settings page's initial properties, as the player keeps
+   * them: one over the limits is left out (the property keeps its default)
+   * and reported with `ui.error`, the request itself succeeds.
+   */
+  #initialValues(values: Record<string, Json>): Record<string, Json> {
+    const kept: Record<string, Json> = {};
+    for (const [property, value] of Object.entries(values)) {
+      const problem = valueLimitProblem(value);
+      if (problem)
+        this.emit("ui.error", {
+          code: "limit",
+          message: `${property}: ${problem}`,
+        });
+      else kept[property] = value;
+    }
+    return kept;
   }
   #seeImages(values: Record<string, Json> | Json[]) {
     for (const value of Object.values(values)) {
@@ -2323,9 +2460,16 @@ export class TestHost implements Transport {
         return {
           ...this.#split(key),
           // What the user sees, like the player's binding table.
-          title: shown?.display.title ?? declaration.title,
+          title: shown?.display.title ?? String(declaration.title),
           path: declaration.path?.length
-            ? (shown?.display.path ?? declaration.path)
+            ? (shown?.display.path ?? declaration.path.map(String))
+            : null,
+          key: declaration.path?.length
+            ? menuKeys(
+                declaration.path.map((segment) =>
+                  typeof segment === "string" ? segment : textKey(segment),
+                ),
+              )
             : null,
           scope: scope as "panel" | "global",
           defaults: declaration.bindings,
@@ -2684,8 +2828,14 @@ export class TestHost implements Transport {
       } as Partial<SourceState>);
       throw new HostError("resolution", message);
     };
-    if (typeof p.error === "string")
-      fail(p.error.trim() ? p.error.slice(0, 2048) : "resolver failed");
+    // A text value (`plugin.i18n.error`) is shown translated, like the player.
+    const error = isTextValue(p.error)
+      ? this.#declared(p.error, "error")
+      : p.error;
+    if (typeof error === "string")
+      fail(
+        error.trim() ? [...error].slice(0, 2048).join("") : "resolver failed",
+      );
     const result = (p.result ?? {}) as { kind?: string; producerId?: number };
     const producer = this.producers.get(Number(result.producerId));
     if (result.kind !== "stream") fail("invalid resolved stream descriptor");
@@ -2807,10 +2957,19 @@ export class TestHost implements Transport {
         throw new HostError("limit", "command registry limit reached");
       const host = this;
       const declaration = p.declaration as FakeCommand["declaration"];
+      // Like the player: the menu texts and the reason are checked (and
+      // shown) when they arrive.
+      for (const segment of [declaration.title, ...(declaration.path ?? [])])
+        this.#declared(segment, "a menu text");
+      this.#checkReason(p.state);
       this.commands.set(id, {
         declaration,
         get display() {
-          return host.#display(declaration.path ?? [], declaration.title);
+          return host.#display(
+            declaration.path ?? [],
+            declaration.title,
+            this.state.reason,
+          );
         },
         state: p.state as FakeCommand["state"],
         revision: Number(p.revision),
@@ -2834,6 +2993,7 @@ export class TestHost implements Transport {
       const command = this.command(String(p.id));
       if (Number(p.revision) <= command.revision)
         throw new HostError("command", `stale command revision ${p.revision}`);
+      this.#checkReason(p.state);
       command.revision = Number(p.revision);
       command.state = p.state as FakeCommand["state"];
       return { revision: command.revision };
@@ -2842,12 +3002,16 @@ export class TestHost implements Transport {
       const id = String(p.id);
       if (this.windows.has(id))
         throw new HostError("conflict", "view already exists");
-      this.#seeImages(p.properties as Record<string, Json>);
+      const properties = this.#shownValues(
+        p.properties as Record<string, Json>,
+      );
+      this.#checkValues(properties);
+      this.#seeImages(properties);
       const host = this;
       this.windows.set(id, {
         file: String(p.file),
         visible: true,
-        props: { ...(p.properties as Record<string, Json>) },
+        props: { ...properties },
         callbacks: p.callbacks as string[],
         userClose() {
           host.windows.delete(id);
@@ -2864,8 +3028,10 @@ export class TestHost implements Transport {
     "ui.set": (p) => {
       const window = this.windows.get(String(p.id));
       if (!window) throw new HostError("missing", "view not found");
-      this.#seeImages([p.value!]);
-      window.props[String(p.property)] = p.value!;
+      const value = this.#shownValues(p.value!);
+      this.#checkValues({ [String(p.property)]: value });
+      this.#seeImages([value]);
+      window.props[String(p.property)] = value;
     },
     "ui.show": (p) => {
       const window = this.windows.get(String(p.id));
@@ -2902,14 +3068,17 @@ export class TestHost implements Transport {
             MAX_SIDEBAR_TABS,
           ]),
         );
-      this.#seeImages(p.properties as Record<string, Json>);
+      const properties = this.#initialValues(
+        this.#shownValues(p.properties as Record<string, Json>),
+      );
+      this.#seeImages(properties);
       const host = this;
       this.panel = {
         slot: String(p.slot),
         file: String(p.file),
         component: String(p.component),
         visible: true,
-        props: { ...(p.properties as Record<string, Json>) },
+        props: { ...properties },
         locks: null,
         emit(callback, ...args) {
           host.emit("ui.callback", {
@@ -2984,19 +3153,25 @@ export class TestHost implements Transport {
       if (typeof p.detached === "boolean") state.detached = p.detached;
     },
     "osd.show": (p) => {
-      const text = this.translate(
-        String(p.text),
-        p.args as TemplateArgs | undefined,
-      ).replace(/[\n\r]/g, " ");
+      const text = this.#shown(p.text, p.args, "text").replace(/[\n\r]/g, " ");
       if (!text.trim() || [...text].length > 200)
         throw new HostError("invalid", "osd text needs 1..200 characters");
       this.osd.push(text);
     },
-    "osd.panel": (p) =>
-      void (this.osdPanel =
-        p.text === null
-          ? null
-          : this.translate(String(p.text), p.args as TemplateArgs | undefined)),
+    "osd.panel": (p) => {
+      if (p.text === null) return void (this.osdPanel = null);
+      const max = p.maxColumns;
+      if (
+        max !== undefined &&
+        !(Number.isInteger(max) && Number(max) >= 8 && Number(max) <= 1000)
+      )
+        throw new HostError(
+          "invalid",
+          "maxColumns is an integer from 8 to 1000",
+        );
+      const text = this.#shown(p.text, p.args, "text");
+      this.osdPanel = max === undefined ? text : fitColumns(text, Number(max));
+    },
     "playback.stats": () => this.stats,
     "audio.addTrack": (p) => {
       this.#audioCondition(p.expected);
@@ -3138,8 +3313,11 @@ export class TestHost implements Transport {
       this.emit("sequence.step", { direction });
     },
     "ui.setMount": (p) => {
-      this.#seeImages([p.value!]);
-      this.mounted().props[String(p.property)] = p.value!;
+      this.mounted();
+      const value = this.#shownValues(p.value!);
+      this.#checkValues({ [String(p.property)]: value });
+      this.#seeImages([value]);
+      this.mounted().props[String(p.property)] = value;
     },
     "timeline.marks": () => ({ marks: this.timeline.marks }),
     "drops.provide": (p) => {
@@ -3175,7 +3353,10 @@ export class TestHost implements Transport {
         throw new HostError("invalid", `page ${id} already exists`);
       if (this.settings.pages.size >= 8)
         throw new HostError("invalid", "a plugin has at most 8 settings pages");
-      this.#seeImages(p.properties as Record<string, Json>);
+      const properties = this.#initialValues(
+        this.#shownValues(p.properties as Record<string, Json>),
+      );
+      this.#seeImages(properties);
       const host = this;
       this.settings.pages.set(id, {
         category: String(p.category),
@@ -3184,7 +3365,7 @@ export class TestHost implements Transport {
         file: String(p.file),
         component: String(p.component),
         global: String(p.global),
-        props: { ...(p.properties as Record<string, Json>) },
+        props: { ...properties },
         emit(callback, ...args) {
           host.emit("ui.callback", {
             view: `$settings:${id}`,
@@ -3197,8 +3378,10 @@ export class TestHost implements Transport {
     "settings.set": (p) => {
       const page = this.settings.pages.get(String(p.id));
       if (!page) throw new HostError("missing", "page not registered");
-      this.#seeImages([p.value!]);
-      page.props[String(p.property)] = p.value!;
+      const value = this.#shownValues(p.value!);
+      this.#checkValues({ [String(p.property)]: value });
+      this.#seeImages([value]);
+      page.props[String(p.property)] = value;
     },
     "settings.unregister": (p) => {
       this.settings.pages.delete(String(p.id));
@@ -3274,10 +3457,11 @@ export class TestHost implements Transport {
         p.sourceId !== this.source.stamp.generation
       )
         return { applied: false };
-      const marks = p.marks as { time: Json; kind: Json; title?: Json }[];
+      const sent = p.marks as { time: Json; kind: Json; title?: Json }[];
       const duration = this.source.duration;
-      if (!Array.isArray(marks) || marks.length > 1000)
+      if (!Array.isArray(sent) || sent.length > 1000)
         throw new HostError("invalid", "a layer holds at most 1000 marks");
+      const marks = sent.map((mark) => ({ ...mark }));
       for (const mark of marks) {
         const time = mark.time;
         if (
@@ -3289,6 +3473,9 @@ export class TestHost implements Transport {
           throw new HostError("invalid", `time ${time} is outside the media`);
         if (!["chapter", "bookmark", "marker"].includes(String(mark.kind)))
           throw new HostError("invalid", "kind is chapter, bookmark or marker");
+        // A text value is shown translated (`plugin.i18n.text`).
+        if (isTextValue(mark.title))
+          mark.title = this.#declared(mark.title, "title");
         if (
           mark.title !== undefined &&
           mark.title !== null &&
@@ -3309,11 +3496,14 @@ export class TestHost implements Transport {
     "ui.interaction": (p) => void (this.mounted().locks = p),
     "dialogs.confirm": (p) => {
       this.confirms.push(p);
-      const args = p.args as TemplateArgs | undefined;
       const shown = (field: string, formatted = false) =>
-        typeof p[field] === "string"
-          ? this.translate(p[field], formatted ? args : undefined)
-          : undefined;
+        p[field] === undefined
+          ? undefined
+          : this.#shown(
+              p[field],
+              formatted && typeof p[field] === "string" ? p.args : undefined,
+              field,
+            );
       this.confirmTexts.push({
         message: shown("message", true)!,
         ...(p.detail === undefined ? {} : { detail: shown("detail", true)! }),
@@ -3396,7 +3586,22 @@ export class TestHost implements Transport {
         loop: loop && { a: loop.a, b: loop.b, count: loop.count ?? null },
       });
     },
-    "dialogs.open": () => {
+    "dialogs.open": (p) => {
+      const title =
+        p.title === undefined ? undefined : this.#declared(p.title, "title");
+      // A string file name is data; a text is shown translated, a path
+      // separator in the translation replaced.
+      const fileName =
+        p.fileName === undefined
+          ? undefined
+          : typeof p.fileName === "string"
+            ? p.fileName
+            : this.#declared(p.fileName, "fileName").replace(/[/\\]/g, "-");
+      this.fileDialogs.push({
+        kind: String(p.kind) as FileDialogText["kind"],
+        ...(title === undefined ? {} : { title }),
+        ...(fileName === undefined ? {} : { fileName }),
+      });
       const answer = this.dialogAnswers.shift();
       if (answer === undefined)
         throw new Error("test host: no dialog answer queued");
@@ -3756,7 +3961,11 @@ export class TestHost implements Transport {
           : p.select === "secondary"
             ? "secondary"
             : "primary";
-      const title = typeof p.title === "string" ? p.title : null;
+      const title = isTextValue(p.title)
+        ? this.#declared(p.title, "title")
+        : typeof p.title === "string"
+          ? p.title
+          : null;
       if (title !== null && ([...title].length < 1 || [...title].length > 200))
         throw new HostError(
           "invalid",

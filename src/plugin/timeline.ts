@@ -1,5 +1,6 @@
 /** Seek-bar marks (`plugin.timeline`): one layer per plugin, merged by the player. */
 import { failure, Latest, quiet } from "./runtime.ts";
+import type { TextJson } from "../i18n.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { WireMark } from "../wire.ts";
@@ -94,7 +95,7 @@ export function timeline(scope: ScopeImpl): Timeline {
 }
 
 type Write = {
-  marks: { time: number; kind: string; title?: string }[];
+  marks: { time: number; kind: string; title?: string | TextJson }[];
   sourceId?: number;
 };
 
@@ -119,7 +120,9 @@ class Layer implements TimelineLayer {
       marks: marks.map((mark) => ({
         time: mark?.time,
         kind: mark?.kind,
-        ...(mark?.title === undefined ? {} : { title: mark.title }),
+        ...(mark?.title === undefined
+          ? {}
+          : { title: mark.title as string | TextJson }),
       })),
     };
     if (options.ifCurrent) write.sourceId = options.ifCurrent.sourceId;

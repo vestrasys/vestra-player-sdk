@@ -5,6 +5,7 @@ import type {
   SubtitleStamp,
   SubtitleTrack as Target,
 } from "../subtitles.ts";
+import { isTextValue, textProblem } from "../i18n.ts";
 import type { SourceState } from "../source.ts";
 import { Latest, failure, sleep, uncertain } from "./runtime.ts";
 import { abortError } from "./player.ts";
@@ -251,7 +252,12 @@ export function subtitles(scope: ScopeImpl): Subtitles {
           'select must be "primary", "secondary" or "none"',
         );
       const title = options?.title;
-      if (
+      // A text value (`plugin.i18n.text`) is checked here and its shown
+      // length by the player.
+      if (isTextValue(title)) {
+        const problem = textProblem(title);
+        if (problem) throw failure("invalid", `title: ${problem}`);
+      } else if (
         title !== undefined &&
         (typeof title !== "string" ||
           [...title].length < 1 ||

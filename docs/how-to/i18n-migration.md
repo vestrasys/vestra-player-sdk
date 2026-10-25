@@ -87,6 +87,24 @@ plugin.osd.show(`配色：${theme === "vestra" ? "Vestra 深色" : "Vestra 浅�
 plugin.osd.show(theme === "vestra" ? "Palette: Vestra Dark" : "Palette: Vestra Light");
 ```
 
+**A text value** (SDK 1.5.11), when the words and the data cannot be separated into a Slint file or one template: a menu item with a number, a `[string]` model, a sentence made of translated parts, a list.
+
+```ts nocheck
+const { text, list } = plugin.i18n;
+// Before: the old Chinese, or English that a Chinese user then saw
+plugin.commands.add({ id, path: ["@audio", "Audio Track", `Track ${n} (${codec})`], run });
+tune.bind(() => ({ trackLabels: ["关闭字幕", ...names] }));
+plugin.osd.show("Download failed: {}", [english(reason)]);
+plugin.osd.show("Removed missing shaders: {}", [missing.join("、")]);
+// After
+plugin.commands.add({ id, path: ["@audio", "Audio Track", text("Track {} ({})", [n, codec])], run });
+tune.bind(() => ({ trackLabels: [text("Subtitles Off"), ...names] }));
+plugin.osd.show("Download failed: {}", [text(REASONS[reason])]);
+plugin.osd.show("Removed missing shaders: {}", [list(missing)]);
+```
+
+The table of where text values are accepted is in [Translate a plugin](i18n.md#text-that-mixes-words-and-data). A resolver's failure: `throw plugin.i18n.error("The ROM file was not found.")`. Text for the clipboard or a file: `plugin.i18n.resolve(value)`, never for the interface.
+
 **Status texts as data.** A text that a window shows depending on state (`"正在载入…"`, `"没有音轨"`) becomes a state value (`loading: true`) that the Slint file turns into words.
 
 Error messages that come from the player or the SDK (`error.message`) are not the plugin's text: showing them as they are is fine, but do not put them into a template of your own.
@@ -129,4 +147,5 @@ assert.deepEqual(host.command("snapshot").display.path, ["视频", "截图", "�
 - [ ] Every Slint text in `@tr`; no sentence composed in TypeScript.
 - [ ] `locales/messages.pot` up to date, `locales/zh-Hans.po` complete (`check`: `zh-Hans: N/N translated`).
 - [ ] Shared submenus use the agreed English keys.
+- [ ] No `i18n-ignore` left on text that only waited for text values (SDK 1.5.11): menu items with data, `[string]` models, nested reasons, lists.
 - [ ] `minPlayerVersion` is `0.4.3`; `vestra-plugin check`, `build` and `test` pass.

@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.9: full reference
+# @vestra-player/sdk 1.5.11: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -998,11 +998,11 @@ change).
 | `timeout` | A time limit ran out (`openStream` start-up, `tools.run`, `system.*` after 10 s). |
 | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
 | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
-| `limit` | A player-wide limit was reached (for example the number of commands). |
+| `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of PropValue, or a request is longer than the player's 1 MiB message. |
 | `reserved` | Packages.validate, PackageCandidate.install: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use (player 0.4.1). |
 | `versionMismatch` | The package needs a newer player (`minPlayerVersion`) or another `apiVersion`. |
 | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
-| `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. |
+| `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. Also reported to Scope.onError without a request: a callback whose arguments the player could not convert, a property it could not show again when it rebuilt a view (an image file removed since). |
 | `host` | Any other failure inside the player; `message` is the player's reason. |
 | `disabled` | The plugin is being stopped; pending requests fail with it. |
 | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
@@ -1201,8 +1201,8 @@ interface CommandState {
   checked: boolean | null;
   /** Shown as busy; like `enabled: false`, the player does not call `run`. Default false. */
   busy: boolean;
-  /** Shown when the command is disabled or busy. */
-  reason: string | null;
+  /** Shown when the command is disabled or busy: English source text the player translates, or a Text (SDK 1.5.11). */
+  reason: TextValue | null;
 }
 ```
 
@@ -1279,10 +1279,15 @@ interface CommandOptions {
    * titled their menus in Chinese (视频…): there `["Video", "Blur"]` is a
    * menu of its own, so plugins for those players write `@video`; player
    * 0.4.3 still accepts the old Chinese titles of its own menus.
+   *
+   * A segment that mixes words with data (a track number, a count) is a
+   * Text (SDK 1.5.11, player 0.4.3): `plugin.i18n.text("Track {}
+   * ({})", [n, codec])`. The menu shows it translated and filled in; it
+   * merges by its English rendering ("Track 2 (opus)").
    */
-  path?: string[];
-  /** Menu label (English source text, shown translated); defaults to the last path segment. */
-  title?: string;
+  path?: (string | Text)[];
+  /** Menu label (English source text, shown translated, or a Text); defaults to the last path segment. */
+  title?: string | Text;
   /**
    * Sibling order in the menu, ascending (integer, default 0). A submenu sits where its first command sits, except a built-in menu, which keeps its fixed place. Directly inside a built-in menu, 0 (the default) sorts last. Equal orders: plugin id, then declaration order. Range ±1,000,000. See CommandOptions for the menu order rules.
    */
@@ -1324,8 +1329,8 @@ interface CommandOptions {
   checked?: Bindable<boolean | null>;
   /** Busy state (default false); the player does not call `run` while busy. */
   busy?: Bindable<boolean>;
-  /** Why the command is disabled or busy (shown to the user). */
-  reason?: Bindable<string | null>;
+  /** Why the command is disabled or busy (shown to the user): English source text, or a Text for one with data in it (SDK 1.5.11). */
+  reason?: Bindable<TextValue | null>;
   /**
    * Run the command (menu item, binding, panel menu or `host.command(id).run()` in tests). It may return a promise; errors and rejections go to Scope.onError, and bound values are re-evaluated when it returns and when its promise settles.
    */
@@ -1432,7 +1437,7 @@ JSON whose values may also be Markdown documents, at any depth: the part
 of PropValue that nests.
 
 ```ts
-type PropData = null | boolean | number | string | MarkdownRef | PropData[] | {
+type PropData = null | boolean | number | string | MarkdownRef | Text | TextList | PropData[] | {
   [key: string]: PropData;
 };
 ```
@@ -1948,12 +1953,82 @@ type LanguagePreference = "system" | Locale;
 ### TemplateArgs
 
 Arguments of a template sentence (Osd.show,
-OsdPanel.set, ConfirmOptions.args): an array for `{}` and
-`{0}`, `{1}` placeholders, or an object for `{name}` placeholders. At most
-16 strings and finite numbers; whole numbers print without a fraction.
+OsdPanel.set, ConfirmOptions.args, I18n.text): an
+array for `{}` and `{0}`, `{1}` placeholders, or an object for `{name}`
+placeholders. At most 16. Strings and finite numbers are data, shown as
+they are (whole numbers without a fraction); a Text or
+TextList argument (SDK 1.5.11, player 0.4.3) is translated too,
+so a sentence can be built from translated parts.
 
 ```ts
-type TemplateArgs = readonly (string | number)[] | Readonly<Record<string, string | number>>;
+type TemplateArgs = readonly TextArg[] | Readonly<Record<string, TextArg>>;
+```
+
+### Text
+
+A text the player translates with the plugin's catalog and fills in:
+English source text with its arguments. Made by I18n.text; plain
+data, not a translation (the plugin never sees the translated string).
+
+```ts
+interface Text {
+  /** The English source text: a template with `{}`, `{0}` or `{name}`. */
+  readonly $vestraText: string;
+  /** Values for its placeholders. */
+  readonly args?: TemplateArgs;
+}
+```
+
+### TextList
+
+Values joined the way the interface language joins them ("a, b" in
+English, "a、b" in Chinese). Made by I18n.list; accepted where a
+Text is.
+
+```ts
+interface TextList {
+  /** The items: data, or texts the player translates. */
+  readonly $vestraList: readonly TextArg[];
+  /** How they are joined; `"list"` by default. */
+  readonly style?: ListStyle;
+}
+```
+
+### ListStyle
+
+How a TextList is joined, per interface language:
+
+| style | English | 简体中文 | 日本語 |
+| --- | --- | --- | --- |
+| `list` (enumeration) | `, ` | `、` | `、` |
+| `clauses` (parts of one sentence) | `, ` | `，` | `、` |
+| `semicolons` | `; ` | `；` | `；` |
+| `sentences` (no final full stop) | `. ` | `。` | `。` |
+| `lines` | line break | line break | line break |
+
+Korean, German and Spanish join as English; French puts a narrow space
+before `;`.
+
+```ts
+type ListStyle = "list" | "clauses" | "semicolons" | "sentences" | "lines";
+```
+
+### TextArg
+
+An argument of a template: data (a string or a finite number, shown as it
+is) or a Text or TextList (translated).
+
+```ts
+type TextArg = string | number | Text | TextList;
+```
+
+### TextValue
+
+A text the player shows: English source text (translated as a whole), a
+Text or a TextList.
+
+```ts
+type TextValue = string | Text | TextList;
 ```
 
 ### I18n
@@ -1968,6 +2043,68 @@ interface I18n {
    * The interface language of this run, chosen at start-up from the saved Appearance.language or the system's languages; English when neither names a Locale. Players before 0.4.3 report `"en"`.
    */
   readonly locale: Locale;
+  /**
+   * A text that mixes words with data, for the player to translate: the
+   * English source text (a template) and its arguments. It returns a plain
+   * Text value, not a translation; pass it where the player shows
+   * text (see Text) and the player shows it translated with this
+   * plugin's catalog. `vestra-plugin i18n extract` collects `source` from
+   * every call, so write it as a literal (or a conditional of literals, or
+   * an `as const` table entry).
+   *
+   * Arguments are data unless they are texts themselves, so a sentence can
+   * be built from translated parts without composing it in TypeScript.
+   * `text` does not use `this`: `const { text, list } = plugin.i18n` works.
+   * @param source - English source text; `{}`, `{0}` or `{name}` for the arguments, `{{` and `}}` for braces.
+   * @param args - Values for its placeholders.
+   * @throws invalid A malformed or over-limit value (`TEXT_LIMITS`).
+   * @capability None.
+   */
+  text(source: string, args?: TemplateArgs): Text;
+  /**
+   * Items joined the way the interface language joins them (see ListStyle): `list(["a.glsl", "b.glsl"])` shows "a.glsl, b.glsl" in English and "a.glsl、b.glsl" in Chinese. Items are data, or texts the player translates. Accepted where a Text is.
+   * @param items - At most 256.
+   * @param style - `"list"` by default.
+   * @throws invalid A malformed or over-limit value.
+   * @capability None.
+   */
+  list(items: readonly TextArg[], style?: ListStyle): TextList;
+  /**
+   * An `Error` whose words the player shows translated: throw it where the player shows a plugin's failure to the user, such as from a file or web resolver's `resolve` (FileResolverOptions, WebResolverOptions) (also when a stream fails while it starts). The player shows `text` translated with this plugin's catalog (as `player.state.error` and the failure message); `message` is the English rendering, for logs and older players. Elsewhere it is an ordinary `Error`.
+   * @param source - English source text, as I18n.text's.
+   * @param args - Values for its placeholders.
+   * @throws invalid A malformed or over-limit value.
+   * @capability None.
+   */
+  error(source: string, args?: TemplateArgs): TextError;
+  /**
+   * The string a text shows in this run's language, for text that leaves
+   * the player: what the plugin copies to the clipboard or writes to a file
+   * ("Copy info", "Save as…"). Translated with this plugin's catalog (a
+   * string as a whole, a Text or TextList with its
+   * arguments), the way the player would show it.
+   *
+   * Only for text leaving the player. Never use it for the interface (a
+   * window, the menu, the OSD, a dialog): pass the value itself there, so
+   * the player translates it and `vestra-plugin i18n check` can see the
+   * sentence is whole.
+   * @param value - Source text, or a text value.
+   * @returns The translated string.
+   * @throws invalid A malformed value.
+   * @capability None.
+   */
+  resolve(value: TextValue): string;
+}
+```
+
+### TextError
+
+An `Error` the player shows translated (I18n.error).
+
+```ts
+interface TextError extends Error {
+  /** What the player shows. */
+  readonly text: Text;
 }
 ```
 
@@ -2135,12 +2272,12 @@ This plugin's own marks; disposing it removes them.
 ```ts
 interface TimelineLayer extends Disposable {
   /**
-   * Replace the layer (last write wins; `[]` clears it). At most 1000 marks, titles ≤ 100 characters, times within the media. Failures go to `onError`; with `ifCurrent`, a write for another source is dropped silently.
+   * Replace the layer (last write wins; `[]` clears it). At most 1000 marks, titles ≤ 100 characters, times within the media. Failures go to `onError`; with `ifCurrent`, a write for another source is dropped silently. A title is data (a chapter's or bookmark's own name), or a Text the player translates (`text("Chapter {}", [n])`, SDK 1.5.11); other plugins read the shown string.
    */
   set(marks: {
     time: number;
     kind: MarkKind;
-    title?: string;
+    title?: string | Text;
   }[], options?: {
     ifCurrent?: PlayerState;
   }): void;
@@ -2335,19 +2472,19 @@ Chinese character is one character).
 ```ts
 interface ConfirmOptions {
   /** The question, shown in bold; 1–200 characters. */
-  message: string;
+  message: TextValue;
   /** More text under the message; at most 2000 characters. */
-  detail?: string;
+  detail?: TextValue;
   /** The confirm button's text (the default button: Enter picks it); 1–40 characters. */
-  confirm: string;
+  confirm: TextValue;
   /** The cancel button's text (Escape picks it); 1–40 characters. */
-  cancel?: string;
+  cancel?: TextValue;
   /** Mark the confirm button as destructive: red text on macOS, a warning icon on Windows. */
   destructive?: boolean;
   /** A checkbox under the text, such as "Don't ask again"; 1–40 characters. */
-  checkbox?: string;
+  checkbox?: TextValue;
   /**
-   * Values for the placeholders of `message` and `detail` (player 0.4.3). Every text of the dialog is English source text that the player shows translated from the plugin's catalog; `message` and `detail` are templates like Osd.show's. The length limits apply to the shown text.
+   * Values for the placeholders of `message` and `detail` (player 0.4.3). Any of the texts may instead be a Text (SDK 1.5.11), which carries its own arguments; `args` only fills the string ones. Every text of the dialog is English source text that the player shows translated from the plugin's catalog; `message` and `detail` are templates like Osd.show's. The length limits apply to the shown text.
    */
   args?: TemplateArgs;
 }
@@ -2390,8 +2527,8 @@ interface Dialogs {
    * @throws capability (rejects) The manifest does not declare `ui.dialog`.
    */
   openFile(options?: {
-    /** The dialog's title, at most 256 bytes. */
-    title?: string;
+    /** The dialog's title (English source text or a Text), at most 256 bytes. */
+    title?: TextValue;
   }): Promise<string | null>;
   /**
    * Ask the user for one or more files to open.
@@ -2404,8 +2541,8 @@ interface Dialogs {
    * @throws capability (rejects) The manifest does not declare `ui.dialog`.
    */
   openFiles(options?: {
-    /** The dialog's title, at most 256 bytes. */
-    title?: string;
+    /** The dialog's title (English source text or a Text), at most 256 bytes. */
+    title?: TextValue;
   }): Promise<string[]>;
   /**
    * Ask the user for a folder.
@@ -2418,8 +2555,8 @@ interface Dialogs {
    * @throws capability (rejects) The manifest does not declare `ui.dialog`.
    */
   openDirectory(options?: {
-    /** The dialog's title, at most 256 bytes. */
-    title?: string;
+    /** The dialog's title (English source text or a Text), at most 256 bytes. */
+    title?: TextValue;
   }): Promise<string | null>;
   /**
    * Ask the user where to save a file.
@@ -2432,10 +2569,12 @@ interface Dialogs {
    * @throws capability (rejects) The manifest does not declare `ui.dialog`.
    */
   saveFile(options?: {
-    /** The dialog's title, at most 256 bytes. */
-    title?: string;
-    /** The proposed file name: a plain name, at most 256 bytes. */
-    fileName?: string;
+    /** The dialog's title (English source text or a Text), at most 256 bytes. */
+    title?: TextValue;
+    /**
+     * The proposed file name: a plain name, at most 256 bytes. A string is data (not translated); a Text (SDK 1.5.11) is shown translated, `text("Playlist.m3u8")` (a `/` or `\\` in a translation becomes `-`).
+     */
+    fileName?: TextValue;
   }): Promise<string | null>;
 }
 ```
@@ -2973,9 +3112,23 @@ interface OsdPanel extends Disposable {
    * Show the block with this text, change it, or hide it.
    * @capability ui.osd
    * @param text - The text, with `\n` between lines: at most 32 lines and 4096 bytes once translated and formatted. `null` hides the block. A template, like Osd.show's.
-   * @param args - Values for its placeholders (player 0.4.3).
+   * @param args - Values for its placeholders (player 0.4.3); `null` or omitted for none.
+   * @param options - `maxColumns`: cut long lines (SDK 1.5.11).
    */
-  set(text: string | null, args?: TemplateArgs): void;
+  set(text: TextValue | null, args?: TemplateArgs | null, options?: OsdPanelOptions): void;
+}
+```
+
+### OsdPanelOptions
+
+Options of OsdPanel.set.
+
+```ts
+interface OsdPanelOptions {
+  /**
+   * Cut every line longer than this many columns, after translation and formatting, ending it with `…`: a wide character (Chinese, Japanese, Korean, full-width forms) is two columns, a combining mark none, any other one. An integer from 8 to 1000 (player 0.4.3; older players show whole lines). Measure the video area to choose it.
+   */
+  maxColumns?: number;
 }
 ```
 
@@ -2998,7 +3151,7 @@ interface Osd {
    * @throws unavailable (rejects) The player runs without a user interface.
    * @throws capability (rejects) The manifest does not declare `ui.osd`.
    */
-  show(text: string, args?: TemplateArgs): Promise<void>;
+  show(text: TextValue, args?: TemplateArgs): Promise<void>;
   /**
    * Create this plugin's information block.
    * @capability ui.osd
@@ -3268,7 +3421,9 @@ interface Subtitles {
   /**
    * Upload a subtitle file's bytes (UTF-8 SRT, or ASS/SSA with
    * `format: "ass"`) for the current source; select it unless
-   * `select: "none"`. `title` (1–200 characters) names the track. Aborting
+   * `select: "none"`. `title` (1–200 characters) names the track: data, or
+   * a Text the player translates (`text("{} · {}", [text("Simplified
+   * Chinese"), file])`, SDK 1.5.11). Aborting
    * `signal` before the commit discards the upload (rejects with AbortError);
    * once the commit was sent it completes.
    *
@@ -3278,7 +3433,7 @@ interface Subtitles {
    */
   load(bytes: Uint8Array, options?: SubtitleConditional & {
     format?: "srt" | "ass";
-    title?: string;
+    title?: string | Text;
     select?: "primary" | "secondary" | "none";
     signal?: AbortSignal;
   }): Promise<SubtitleTrack>;
@@ -3810,8 +3965,12 @@ One command's bindings, from Bindings.list.
 interface BindingInfo extends BindingRef {
   /** Menu title. */
   title: string;
-  /** Menu path; `null` for a command outside the menu. */
+  /** Menu path as shown; `null` for a command outside the menu. */
   path: string[] | null;
+  /**
+   * The menu path's keys: the English text menus merge by, the same in every interface language (`["Playback", "Seek", "Back 5 s"]`; a built-in menu by its key, `"Video"`, also when declared as `@video`). `null` for a command outside the menu, and from players before 0.4.3. Find a command by where it is in the menu with this, not with `path`. Always set by `list()`; optional so that test fakes written for older SDKs still type-check.
+   */
+  key?: string[] | null;
   /** Global, or only while the plugin's panel has focus. */
   scope: "global" | "panel";
   /** The command's own bindings. */
@@ -4287,8 +4446,9 @@ and its semantics are simplified:
   value ranges (an out-of-range `filter.set` ends in `failed` with
   `invalid`), an empty chain removes the plugin's chain, a chain on a
   generated stream fails `unsupported` (the player's own conformance
-  cases check all three), and the command limits (COMMAND_LIMITS)
-  and menu ids (MENU_IDS) are enforced.
+  cases check all three), and the command limits (COMMAND_LIMITS),
+  property value limits (UI_VALUE_LIMITS) and menu ids
+  (MENU_IDS) are enforced.
 
 Typical workflow: start the plugin with startPlugin (it reads the
 plugin's `manifest.json`), drive it the way the user or another plugin
@@ -4329,6 +4489,21 @@ interface FakeWindow {
 }
 ```
 
+### FileDialogText
+
+A file dialog as the player shows it (TestHost.fileDialogs).
+
+```ts
+interface FileDialogText {
+  /** Which dialog. */
+  kind: "openFile" | "openFiles" | "openDirectory" | "saveFile";
+  /** Its title as shown, if the plugin gave one. */
+  title?: string;
+  /** The proposed file name as shown, if the plugin gave one. */
+  fileName?: string;
+}
+```
+
 ### FakeCommand
 
 A command the plugin registered with `plugin.commands.add`, as the test
@@ -4347,6 +4522,10 @@ interface FakeCommand {
     title: string;
     /** Each segment of the path as shown; empty without a path. */
     path: string[];
+    /**
+     * The disabled or busy reason as shown, `null` without one (a plugin command's; not enumerable, so comparing `display` with `{ title, path }` still works).
+     */
+    reason?: string | null;
   };
   /** The command state the player last received (after the update pass). */
   state: {
@@ -4356,8 +4535,8 @@ interface FakeCommand {
     checked: boolean | null;
     /** `true` while the plugin reports the command as busy. */
     busy: boolean;
-    /** The reason shown when the command is disabled or busy. */
-    reason: string | null;
+    /** The reason the plugin sent (source text or a text value; see `display.reason`). */
+    reason: TextValue | null;
   };
   /** The state revision the player holds; increases with every state update the SDK sends. */
   revision: number;
@@ -4518,7 +4697,7 @@ class TestHost implements Transport {
    * @param args - Values for its placeholders.
    * @returns The shown text.
    */
-  translate(text: string, args?: TemplateArgs): string;
+  translate(text: TextValue, args?: TemplateArgs): string;
   /** The saved interface language (`plugin.appearance.language`), changed by `appearance.setLanguage` or TestHost.setLanguage. */
   language: LanguagePreference;
   /**
@@ -4541,6 +4720,10 @@ class TestHost implements Transport {
     /** The checkbox, if any. */
     checkbox?: string;
   }[];
+  /**
+   * Every file dialog (`openFile`, `openFiles`, `openDirectory`, `saveFile`) as the player shows it: the title translated, a text file name translated, newest last. The options the plugin sent are in `host.sent("dialogs.open")`.
+   */
+  readonly fileDialogs: FileDialogText[];
   /** The sequence provider's flags, `null` without a provider. */
   sequence: {
     /** The provider's `canNext`, as last evaluated. */
@@ -5257,6 +5440,70 @@ they agree).
 const LOCALES: readonly ["en", "zh-Hans", "ja", "ko", "de", "fr", "es"];
 ```
 
+### LIST_SEPARATORS
+
+The separator of each list style per interface language, as the player's
+table (`i18n::text::SEPARATORS`; its tests check that they agree).
+
+```ts
+const LIST_SEPARATORS: Readonly<Record<Locale, Readonly<Record<ListStyle, string>>>>;
+```
+
+### TEXT_LIMITS
+
+The player's limits on one text value (a
+Text or
+TextList with everything nested in it), as the player's
+`i18n::text` (its tests check that they agree).
+
+```ts
+const TEXT_LIMITS: {
+  /** Nesting depth of texts and lists; the value itself is depth 0 (8). */
+  readonly depth: 8;
+  /** Texts, lists and arguments in all, the value itself included (1024). */
+  readonly nodes: 1024;
+  /** Arguments of one text (16). */
+  readonly args: 16;
+  /** Items of one list (256). */
+  readonly items: 256;
+  /** UTF-8 bytes of a source text or a string argument (4096). */
+  readonly stringBytes: 4096;
+};
+```
+
+### UI_VALUE_LIMITS
+
+The player's limits on one property value (a `PropValue` as written
+by `View.set` or `View.bind`, or an initial property of a
+window, panel or settings page). The player's tests check that these
+agree with the player; TestHost enforces them the same way.
+
+A value over a limit is refused whole with code `limit` (the property
+keeps what it showed) and reported to `Scope.onError`: a write by
+`View.set` or `View.bind` as described there. As an initial property it
+makes `Window.show` reject; a panel or settings page opens without it and
+the failure goes to the plugin's `onError`.
+
+They bound the work one write costs the player's interface thread; they
+are not meant as list sizes to aim for. A list that can grow without
+bound (a playlist, a history) should send the rows near the view and say
+how many there are, not the whole list.
+
+```ts
+const UI_VALUE_LIMITS: {
+  /** Nesting depth; the value itself is depth 0 (8). */
+  readonly depth: 8;
+  /** Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one (16384). */
+  readonly values: 16384;
+  /** Rows of one array (4096). */
+  readonly arrayRows: 4096;
+  /** UTF-8 bytes of one string or object field name (64 KiB). */
+  readonly stringBytes: number;
+  /** UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included (1 MiB). */
+  readonly textBytes: number;
+};
+```
+
 ### HostError
 
 A definite refusal from the player (or the plugin runner), with a stable
@@ -5653,9 +5900,10 @@ interface WireSystemInfo {
 
 ```ts
 type CommandDeclaration = {
-  title: string;
-  /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. */
-  path: string[];
+  /** Source text, or a text value (player 0.4.3). */
+  title: string | TextJson;
+  /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. Segments may be text values (player 0.4.3). */
+  path: (string | TextJson)[];
   /** Sibling order, ascending; a submenu takes its first command's order (a built-in menu keeps a fixed one). */
   order: number;
   /** Separator label: adjacent siblings of different groups get a line. */

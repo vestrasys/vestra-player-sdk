@@ -53,6 +53,13 @@ export const STRICT_CATEGORIES = {
       "Locale",
       "LanguagePreference",
       "TemplateArgs",
+      "Text",
+      "TextList",
+      "ListStyle",
+      "TextArg",
+      "TextValue",
+      "TextError",
+      "OsdPanelOptions",
     ],
   },
 };

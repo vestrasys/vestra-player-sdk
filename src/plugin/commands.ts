@@ -2,7 +2,11 @@
 import { failure, Latest, quiet } from "./runtime.ts";
 import { checkBindings } from "./bindings.ts";
 import { MENU_IDS } from "../commands.ts";
-import type { CommandDeclaration } from "../commands.ts";
+import { isTextValue, textProblem } from "../i18n.ts";
+import type {
+  CommandDeclaration,
+  CommandState as WireState,
+} from "../commands.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   Bindable,
@@ -24,7 +28,19 @@ function declare(options: CommandOptions): CommandDeclaration {
     throw failure("invalid", `command ${options.id}: title or path required`);
   if (path.length > 8)
     throw failure("invalid", `command ${options.id}: path has 1–8 segments`);
-  const menu = path[0]?.startsWith("@") ? path[0].slice(1) : null;
+  for (const segment of [title, ...path])
+    if (typeof segment !== "string") {
+      const problem = isTextValue(segment)
+        ? "$vestraList" in segment
+          ? "a menu text is a string or a text, not a list"
+          : textProblem(segment)
+        : "title and path segments are strings or texts";
+      if (problem)
+        throw failure("invalid", `command ${options.id}: ${problem}`);
+    }
+  const first = path[0];
+  const menu =
+    typeof first === "string" && first.startsWith("@") ? first.slice(1) : null;
   if (menu !== null && !(MENU_IDS as readonly string[]).includes(menu))
     throw failure(
       "invalid",
@@ -43,8 +59,8 @@ function declare(options: CommandOptions): CommandDeclaration {
     );
   const bindings = [...(options.bindings ?? [])];
   return {
-    title,
-    path,
+    title: title as CommandDeclaration["title"],
+    path: path as CommandDeclaration["path"],
     order,
     group: options.group ?? "domain",
     radio: options.radio ?? false,
@@ -93,9 +109,19 @@ class CommandHandle implements Command {
       const revision = ++this.#revision;
       if (revision === 1) {
         await previous;
-        await runtime.host.commands.register(this.id, 1, declaration, state);
+        await runtime.host.commands.register(
+          this.id,
+          1,
+          declaration,
+          state as WireState,
+        );
         this.#registered = true;
-      } else await runtime.host.commands.update(this.id, revision, state);
+      } else
+        await runtime.host.commands.update(
+          this.id,
+          revision,
+          state as WireState,
+        );
     });
     const initial = this.#state();
     this.#last = JSON.stringify(initial);
@@ -111,11 +137,18 @@ class CommandHandle implements Command {
     scope.add(this);
   }
   #state(): CommandState {
+    const reason = value(this.#spec.reason);
+    if (reason !== null && typeof reason !== "string") {
+      const problem = isTextValue(reason)
+        ? textProblem(reason)
+        : "reason is a string, a text or null";
+      if (problem) throw failure("invalid", `command ${this.id}: ${problem}`);
+    }
     return {
       enabled: value(this.#spec.enabled),
       checked: value(this.#spec.checked),
       busy: value(this.#spec.busy),
-      reason: value(this.#spec.reason),
+      reason,
     };
   }
   #sync() {

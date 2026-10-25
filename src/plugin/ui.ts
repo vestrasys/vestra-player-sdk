@@ -1,5 +1,6 @@
 /** Tool windows, docked panels and system dialogs. */
-import { templateArgs } from "./osd.ts";
+import { shownText, templateArgs } from "./osd.ts";
+import { isTextValue } from "../i18n.ts";
 import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { failure, Latest, quiet } from "./runtime.ts";
@@ -24,6 +25,7 @@ import type {
   SlotPanel,
   SlotState,
   Props,
+  TextValue,
   Ui,
   View,
   Window,
@@ -732,9 +734,17 @@ export const panels = (scope: ScopeImpl): Panels => ({
 export const dialogs = (scope: ScopeImpl): Dialogs => {
   const open = async (
     kind: "openFile" | "openFiles" | "openDirectory" | "saveFile",
-    options: { title?: string; fileName?: string } = {},
+    options: { title?: TextValue; fileName?: TextValue } = {},
   ) => {
-    const result = await scope.runtime.host.dialogs.open({ kind, ...options });
+    const result = await scope.runtime.host.dialogs.open({
+      kind,
+      ...(options.title === undefined
+        ? {}
+        : { title: shownText(options.title, undefined, "title") }),
+      ...(options.fileName === undefined
+        ? {}
+        : { fileName: shownText(options.fileName, undefined, "fileName") }),
+    });
     return result.cancelled ? [] : result.paths;
   };
   return {
@@ -742,10 +752,13 @@ export const dialogs = (scope: ScopeImpl): Dialogs => {
       const { message, detail, confirm, cancel, destructive, checkbox, args } =
         options ?? ({} as never);
       const values = templateArgs(args);
+      // A string's length is checked here; a text value's (shown) length by
+      // the player.
       const length = (text: unknown, min: number, max: number) =>
-        typeof text === "string" &&
-        [...text].length >= min &&
-        [...text].length <= max;
+        isTextValue(text) ||
+        (typeof text === "string" &&
+          [...text].length >= min &&
+          [...text].length <= max);
       if (
         !length(message, 1, 200) ||
         !length(confirm, 1, 40) ||
@@ -758,15 +771,20 @@ export const dialogs = (scope: ScopeImpl): Dialogs => {
           "invalid",
           "confirm needs message 1–200, confirm/cancel/checkbox 1–40, detail ≤ 2000 characters",
         );
+      // `args` fills the string templates; a text value carries its own.
+      const shown = (text: TextValue, what: string) =>
+        shownText(text, undefined, what);
       const answer = await scope.runtime.host.dialogs.confirm({
-        message,
-        confirm,
-        ...(detail === undefined ? {} : { detail }),
-        ...(cancel === undefined ? {} : { cancel }),
+        message: shown(message, "message"),
+        confirm: shown(confirm, "confirm"),
+        ...(detail === undefined ? {} : { detail: shown(detail, "detail") }),
+        ...(cancel === undefined ? {} : { cancel: shown(cancel, "cancel") }),
         ...(destructive === undefined ? {} : { destructive }),
-        ...(checkbox === undefined ? {} : { checkbox }),
+        ...(checkbox === undefined
+          ? {}
+          : { checkbox: shown(checkbox, "checkbox") }),
         ...(values === undefined ? {} : { args: values }),
-      });
+      } as { [key: string]: Json });
       return {
         confirmed: answer.confirmed === true,
         checked: answer.checked === true,
