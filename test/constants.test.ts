@@ -9,6 +9,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import {
   BINDING_INPUTS,
@@ -108,7 +109,10 @@ test("CAPABILITY_INFO: labels, highlighted ones and requirements", () => {
 });
 
 test("CAPABILITY_INFO names members that exist", () => {
-  const file = new URL("../src/plugin/types.ts", import.meta.url).pathname;
+  // fileURLToPath, not URL.pathname: on Windows the pathname is "/D:/…".
+  const file = fileURLToPath(
+    new URL("../src/plugin/types.ts", import.meta.url),
+  );
   const program = ts.createProgram([file], {
     allowImportingTsExtensions: true,
     noEmit: true,
@@ -117,10 +121,11 @@ test("CAPABILITY_INFO names members that exist", () => {
     module: ts.ModuleKind.NodeNext,
   });
   const checker = program.getTypeChecker();
-  const source = program.getSourceFile(file)!;
-  const exports = checker.getExportsOfModule(
-    checker.getSymbolAtLocation(source)!,
-  );
+  const source = program.getSourceFile(file);
+  assert.ok(source, `the program has ${file}`);
+  const module = checker.getSymbolAtLocation(source);
+  assert.ok(module, `${file} is a module`);
+  const exports = checker.getExportsOfModule(module);
   const typeOf = (name: string) => {
     const symbol = exports.find((each) => each.name === name);
     assert.ok(symbol, `types.ts exports ${name}`);

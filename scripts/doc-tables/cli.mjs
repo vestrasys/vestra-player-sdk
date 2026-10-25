@@ -1,22 +1,24 @@
 /**
  * `<!-- generated:cli <usage|commands> -->`: the `vestra-plugin` command
  * line (bin/vestra-plugin.mjs). `usage`: what `vestra-plugin --help`
- * prints. `commands`: the commands with their description from the
+ * prints, read from the script's `USAGE` constant (not by running the
+ * script, which needs a built dist/). `commands`: the commands with their description from the
  * script's header comment (the indented `name   text` lines).
  */
-import { spawnSync } from "node:child_process";
-import { join } from "node:path";
-
-export default function cli({ root, args, read, table }) {
+export default function cli({ args, read, table }) {
   const [part] = args;
   if (part === "usage") {
-    const run = spawnSync(
-      process.execPath,
-      [join(root, "bin/vestra-plugin.mjs"), "--help"],
-      { encoding: "utf8" },
+    const source = read("bin/vestra-plugin.mjs");
+    const block = /^const USAGE = \[\n([\s\S]*?)\n\]\.join\("\\n"\);$/m.exec(
+      source,
     );
-    if (run.status !== 0) throw new Error(`--help failed: ${run.stderr}`);
-    return ["```text", run.stdout.trimEnd(), "```"].join("\n");
+    if (!block)
+      throw new Error("bin/vestra-plugin.mjs: no `const USAGE = [...]`");
+    const lines = [...block[1].matchAll(/^\s*("(?:[^"\\]|\\.)*"),?$/gm)].map(
+      (m) => JSON.parse(m[1]),
+    );
+    if (!lines.length) throw new Error("bin/vestra-plugin.mjs: USAGE is empty");
+    return ["```text", lines.join("\n"), "```"].join("\n");
   }
   if (part === "commands") {
     const source = read("bin/vestra-plugin.mjs");
