@@ -7,7 +7,11 @@ import { join, relative } from "node:path";
 import test from "node:test";
 import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
-import { executableNames, systemServices } from "../src/plugin/local.ts";
+import {
+  executableNames,
+  localSocketPath,
+  systemServices,
+} from "../src/plugin/local.ts";
 
 async function started(capabilities: string[], host = new TestHost()) {
   let plugin!: Plugin;
@@ -154,4 +158,19 @@ test("tools are found by their Windows names", () => {
     "ffprobe.bat",
     "ffprobe.com",
   ]);
+});
+
+test("a local stream is a socket file, or a named pipe on Windows", () => {
+  assert.equal(
+    localSocketPath("/tmp/vestra-test-host-a1", "producer-1", "darwin"),
+    join("/tmp/vestra-test-host-a1", "producer-1.sock"),
+  );
+  assert.equal(
+    localSocketPath(
+      "C:\\Users\\u\\AppData\\Local\\Temp\\vestra-test-host-a1",
+      "producer-1",
+      "win32",
+    ),
+    "\\\\.\\pipe\\vestra-test-host-a1-producer-1",
+  );
 });

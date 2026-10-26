@@ -66,6 +66,7 @@ import { tmpdir } from "node:os";
 import { extname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
+import { localSocketPath } from "./local.ts";
 import type { PackageManifest, PackageSource } from "./types.ts";
 import type {
   Json,
@@ -1436,8 +1437,9 @@ export class TestHost implements Transport {
    */
   readonly jobs = new Map<number, MediaJob>();
   /**
-   * `openStream`'s transport: a Unix socket (macOS, Linux) or, with `"tcp"`,
-   * loopback TCP where the plugin must send the token first (Windows).
+   * `openStream`'s transport: a local stream (a Unix socket on macOS and
+   * Linux, a named pipe on Windows) or, with `"tcp"`, loopback TCP where the
+   * plugin must send the token first, as the player on Windows answers.
    * Set it before the plugin calls `openStream`.
    */
   producerTransport: "unix" | "tcp" = "unix";
@@ -3886,6 +3888,12 @@ export class TestHost implements Transport {
         throw new HostError("invalid", "a plugin cannot disable itself");
       const entry = this.packages.find((each) => each.id === id);
       if (!entry) throw new HostError("missing", `no plugin ${id}`);
+      // As the player (with SDK 1.5.18 on): users manage third-party plugins only.
+      if (entry.builtin && p.enabled === false)
+        throw new HostError(
+          "unsupported",
+          `${id} is a built-in plugin: built-in plugins cannot be disabled`,
+        );
       this.packageCalls.push({
         method: "setEnabled",
         id,
@@ -3953,7 +3961,7 @@ export class TestHost implements Transport {
       if (entry.builtin)
         throw new HostError(
           "unsupported",
-          "built-in plugins can be disabled but not uninstalled",
+          "built-in plugins cannot be uninstalled",
         );
       if (entry.origin !== "installed")
         throw new HostError(
@@ -4187,7 +4195,8 @@ export class TestHost implements Transport {
       const id = ++this.#next.producer;
       const tcp = this.producerTransport === "tcp";
       const token = tcp ? randomBytes(32) : null;
-      const path = join(this.#scratch, `producer-${id}.sock`);
+      // A Unix socket, or a named pipe on Windows (`localSocketPath`).
+      const path = localSocketPath(this.#scratch, `producer-${id}`);
       const producer = {
         id,
         receivedFrames: 0,

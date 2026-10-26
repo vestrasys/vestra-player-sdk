@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -232,6 +234,77 @@ test("display fields are checked and their files are packed", () => {
     vestraPlugin(directory, "check").stderr,
     /icon must be a PNG or JPEG/,
   );
+});
+
+/**
+ * The SDK copied outside any `node_modules`, its dependencies beside it and
+ * found through `NODE_PATH`: how the player's AI workshop vendors it
+ * (`vendor/@vestra-player/sdk`, `vendor/typescript`, `NODE_PATH=vendor`).
+ * Returns the copied CLI and the environment to run it with.
+ */
+function vendored(): { cli: string; env: NodeJS.ProcessEnv } {
+  const vendor = join(
+    realpathSync(mkdtempSync(join(tmpdir(), "vestra-vendor-"))),
+    "vendor",
+  );
+  test.after(() =>
+    rmSync(resolve(vendor, ".."), { recursive: true, force: true }),
+  );
+  const sdk = join(vendor, "@vestra-player/sdk");
+  for (const entry of ["dist", "bin", "slint", "package.json"])
+    cpSync(join(root, entry), join(sdk, entry), { recursive: true });
+  for (const name of ["typescript", "@types/node", "undici-types"]) {
+    mkdirSync(resolve(vendor, name, ".."), { recursive: true });
+    symlinkSync(
+      realpathSync(join(root, "node_modules", name)),
+      join(vendor, name),
+      "junction",
+    );
+  }
+  return {
+    cli: join(sdk, "bin/vestra-plugin.mjs"),
+    env: { ...process.env, NODE_PATH: vendor },
+  };
+}
+
+test("the CLI runs from an SDK copy outside node_modules (TypeScript on NODE_PATH)", () => {
+  const { cli: copied, env } = vendored();
+  const directory = mkdtempSync(join(tmpdir(), "vestra-plugin-vendored-"));
+  test.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.vendored",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands"],
+    }),
+  );
+  writeFileSync(join(directory, "package.json"), '{"type":"module"}');
+  writeFileSync(
+    join(directory, "main.ts"),
+    [
+      "type Plugin = { commands: { add(command: object): void } };",
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.commands.add({ id: "hello", title: "Hello", run() {} });',
+      "}",
+    ].join("\n"),
+  );
+  for (const args of [["check"], ["pack", "--out", "out"]]) {
+    const result = spawnSync(process.execPath, [copied, ...args], {
+      cwd: directory,
+      encoding: "utf8",
+      env,
+    });
+    assert.doesNotMatch(result.stderr, /ERR_MODULE_NOT_FOUND/);
+    assert.equal(
+      result.status,
+      0,
+      `${args[0]}: ${result.stdout}${result.stderr}`,
+    );
+  }
+  assert.ok(existsSync(join(directory, "out/me.vendored-1.0.0.vxp")));
 });
 
 test("an id without a prefix is only a hint", () => {

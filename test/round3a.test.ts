@@ -249,6 +249,37 @@ test("bindings: list, override, unbind, reset; press follows the overlay", async
   await stop();
 });
 
+test("packages: a built-in can be neither disabled nor uninstalled", async () => {
+  const host = new TestHost();
+  host.packages = [
+    {
+      id: "vestra.audio",
+      version: "1.0.0",
+      origin: "installed",
+      state: "running",
+      error: null,
+      capabilities: [],
+      directory: "/install/plugins/vestra.audio",
+      builtin: true,
+      source: { kind: "bundled" },
+    },
+  ];
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["plugins.manage"],
+    host,
+  });
+  await rejects(
+    plugin.packages.setEnabled("vestra.audio", false),
+    "unsupported",
+  );
+  await rejects(
+    plugin.packages.uninstall("vestra.audio").then((change) => change.done),
+    "unsupported",
+  );
+  assert.equal(host.packages[0]!.state, "running");
+  await stop();
+});
+
 test("packages: list, follow, enable, disable and uninstall", async () => {
   const host = new TestHost();
   const entry = (id: string, origin: "installed" | "development") => ({

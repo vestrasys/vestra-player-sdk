@@ -17,10 +17,9 @@ const capabilities = [
   "producer.av",
 ];
 
+/** The default local stream: a Unix socket, a named pipe on Windows. */
 function host() {
-  const host = new TestHost();
-  if (process.platform === "win32") host.producerTransport = "tcp";
-  return host;
+  return new TestHost();
 }
 
 const frame = () => ({

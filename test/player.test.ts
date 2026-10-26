@@ -15,13 +15,11 @@ const start = (
 ) => startPlugin(activate, { capabilities, ...(host ? { host } : {}) });
 
 /**
- * A host for `openStream` tests. Windows has no Unix socket files, so the
- * frame connection there is loopback TCP, as in the player.
+ * A host for `openStream` tests: the default local stream (a Unix socket, a
+ * named pipe on Windows). Loopback TCP is tested in windows-gaps.test.ts.
  */
 function streamHost() {
-  const host = new TestHost();
-  if (process.platform === "win32") host.producerTransport = "tcp";
-  return host;
+  return new TestHost();
 }
 
 test("state is read before activation and older events are dropped", async () => {
