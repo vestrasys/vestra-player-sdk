@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { failure, Latest, quiet } from "./runtime.ts";
 import { dropsOf } from "./drops.ts";
-import { MarkdownHandle, markdown } from "./markdown.ts";
+import { MarkdownHandle, markdown, remoteImageFile } from "./markdown.ts";
 import type { Json } from "../wire.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
@@ -15,6 +15,7 @@ import type {
   Command,
   Dialogs,
   Disposable,
+  ImageOptions,
   ImageRef,
   Panel,
   PanelSlot,
@@ -51,25 +52,38 @@ export class ImageHandle implements ImageRef {
   readonly __vestraImage = true as const;
   readonly #scope: ScopeImpl;
   readonly #ref = ++images;
-  constructor(scope: ScopeImpl, path: string) {
+  readonly #maxSide: number | undefined;
+  constructor(scope: ScopeImpl, path: string, maxSide?: number) {
     this.#scope = scope;
     this.path = path;
+    this.#maxSide = maxSide;
   }
   /** Released with its scope: writing it is `invalid`. */
   get released() {
     return this.#scope.disposed;
   }
   toJSON(): Json {
-    return { $vestraImage: this.path, ref: this.#ref };
+    // `maxSide` only when given: players before 0.5.1 refuse the field.
+    return this.#maxSide === undefined
+      ? { $vestraImage: this.path, ref: this.#ref }
+      : { $vestraImage: this.path, ref: this.#ref, maxSide: this.#maxSide };
   }
 }
 
+/** `ImageOptions.maxSide`, checked: an integer 1–4096 or absent. */
+export function imageSide(options: ImageOptions | undefined) {
+  const side = options?.maxSide;
+  if (side === undefined) return undefined;
+  if (!Number.isInteger(side) || side < 1 || side > 4096)
+    throw failure("invalid", "maxSide must be an integer 1–4096");
+  return side;
+}
+
 /**
- * A property value as sent: images and documents in wire form, documents at
- * any depth (released ones refused wherever they are); an image only as the
- * whole value, like the player.
+ * A property value as sent: images and documents in wire form, at any depth
+ * (released ones refused wherever they are), like the player.
  */
-function wireValue(value: PropValue, nested = false): Json {
+function wireValue(value: PropValue): Json {
   if (value instanceof MarkdownHandle) {
     if (value.released)
       throw failure(
@@ -79,11 +93,6 @@ function wireValue(value: PropValue, nested = false): Json {
     return value.toJSON();
   }
   if (value instanceof ImageHandle) {
-    if (nested)
-      throw failure(
-        "invalid",
-        `image ${value.path}: an image reference must be the whole value of an image property`,
-      );
     if (value.released)
       throw failure(
         "invalid",
@@ -91,21 +100,28 @@ function wireValue(value: PropValue, nested = false): Json {
       );
     return value.toJSON();
   }
-  if (Array.isArray(value)) return value.map((item) => wireValue(item, true));
+  if (Array.isArray(value)) return value.map((item) => wireValue(item));
   if (value !== null && typeof value === "object") {
     const out: Record<string, Json> = {};
     for (const [key, item] of Object.entries(value))
-      out[key] = wireValue(item as PropValue, true);
+      out[key] = wireValue(item as PropValue);
     return out;
   }
   return value;
 }
 
 export const ui = (scope: ScopeImpl): Ui => ({
-  image(path) {
+  image(path, options) {
     if (typeof path !== "string" || !path)
       throw failure("invalid", "ui.image needs a file path");
-    return new ImageHandle(scope, path);
+    return new ImageHandle(scope, path, imageSide(options));
+  },
+  async remoteImage(url, options) {
+    if (typeof url !== "string" || !url.startsWith("https://"))
+      throw failure("invalid", "ui.remoteImage needs an https: address");
+    const side = imageSide(options);
+    const file = await remoteImageFile(scope.runtime, url);
+    return new ImageHandle(scope, file, side);
   },
   markdown: (text, options) => markdown(scope, text, options),
 });

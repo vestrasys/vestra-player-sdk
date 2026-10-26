@@ -41,6 +41,7 @@ export const STRICT_CATEGORIES = {
       "ImageRef",
       "MarkdownRef",
       "MarkdownOptions",
+      "ImageOptions",
       "PropValue",
       "PropData",
       "Props",

@@ -126,6 +126,23 @@ Play/pause, stop, previous/next, frame steps, relative seeks, speed, volume and 
 
 The difference from the `Player` methods: a `Player` control is a precise operation the plugin is responsible for (conditional, silent, its own error handling); a core action is the user's action, performed on the plugin's behalf. The action ids, menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); how keys reach them is in [Commands, menus and key bindings](commands.md#the-players-own-commands).
 
+### Step seeks: exact or keyframe
+
+← / → (`seek-backward` / `seek-forward`) seek by the step that {@link "@vestra-player/sdk"!Player.setStepSeek | player.setStepSeek} sets (5 s by default). By default they land on the exact time, which on a file with keyframes far apart means decoding from the previous keyframe first: a visible stall on 4K video. `setStepSeek({ seconds, keyframes: true })` (player 0.5.1, SDK 1.5.19) makes them land on a keyframe instead: forward on the first keyframe at or after position + step, backward on the last at or before position − step, and every press moves. Presses during a seek add up and continue from where it landed, and the on-screen text shows the landed time. Sources without moving video still seek exactly. The seek bar, `player.seek`, scrubs, chapters, loops and `player.step` are never affected.
+
+For more steps of your own (Ctrl+→ and the like), call `plugin.host.run("seek-forward", { seconds: 30 })`: the same checks, mode, accumulation and text as →. In keyframe mode it resolves once the seek has landed, so `player.state.position` is current afterwards; do not show your own text for it. Set `"minPlayerVersion": "0.5.1"` when you rely on either option: older players ignore them.
+
+```ts
+const keyframes = true; // the plugin's own setting
+await plugin.player.setStepSeek({ seconds: 5, keyframes });
+const seek = (delta: number) =>
+  plugin.host.run(delta < 0 ? "seek-backward" : "seek-forward", {
+    seconds: Math.abs(delta),
+  });
+```
+
+In tests, `TestHost.keyframes` models the source's keyframes, and `host.coreSeeks` records each step seek with where it landed.
+
 ## API on this page
 
 - State: {@link "@vestra-player/sdk"!Player | Player}, {@link "@vestra-player/sdk"!PlayerState | PlayerState}, {@link "@vestra-player/sdk"!AudioTrack | AudioTrack}, {@link "@vestra-player/sdk"!PlaybackStats | PlaybackStats}, {@link "@vestra-player/sdk"!Chapter | Chapter}

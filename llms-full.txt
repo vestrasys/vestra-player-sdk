@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.18: full reference
+# @vestra-player/sdk 1.5.19: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -583,6 +583,23 @@ Play/pause, stop, previous/next, frame steps, relative seeks, speed, volume and 
 
 The difference from the `Player` methods: a `Player` control is a precise operation the plugin is responsible for (conditional, silent, its own error handling); a core action is the user's action, performed on the plugin's behalf. The action ids, menu places and default keys are in Reference: commands; how keys reach them is in Commands, menus and key bindings.
 
+##### Step seeks: exact or keyframe
+
+← / → (`seek-backward` / `seek-forward`) seek by the step that player.setStepSeek sets (5 s by default). By default they land on the exact time, which on a file with keyframes far apart means decoding from the previous keyframe first: a visible stall on 4K video. `setStepSeek({ seconds, keyframes: true })` (player 0.5.1, SDK 1.5.19) makes them land on a keyframe instead: forward on the first keyframe at or after position + step, backward on the last at or before position − step, and every press moves. Presses during a seek add up and continue from where it landed, and the on-screen text shows the landed time. Sources without moving video still seek exactly. The seek bar, `player.seek`, scrubs, chapters, loops and `player.step` are never affected.
+
+For more steps of your own (Ctrl+→ and the like), call `plugin.host.run("seek-forward", { seconds: 30 })`: the same checks, mode, accumulation and text as →. In keyframe mode it resolves once the seek has landed, so `player.state.position` is current afterwards; do not show your own text for it. Set `"minPlayerVersion": "0.5.1"` when you rely on either option: older players ignore them.
+
+```ts
+const keyframes = true; // the plugin's own setting
+await plugin.player.setStepSeek({ seconds: 5, keyframes });
+const seek = (delta: number) =>
+  plugin.host.run(delta < 0 ? "seek-backward" : "seek-forward", {
+    seconds: Math.abs(delta),
+  });
+```
+
+In tests, `TestHost.keyframes` models the source's keyframes, and `host.coreSeeks` records each step seek with where it landed.
+
 ## Concept: Video and audio processing
 
 A plugin can change what the user sees and hears in three different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
@@ -856,7 +873,8 @@ export component ListPanel inherits Rectangle {
 ##### Names and values
 
 - Write names in camelCase or kebab-case in TypeScript: the SDK turns every capital letter into `-` plus the lower-case letter (`canMark` → `can-mark`, `strengthChanged` → `strength-changed`). Fields inside struct values are **not** converted, so spell struct fields exactly as the Slint struct does (and without `_`, which Slint treats as `-`).
-- Values must be JSON: booleans, numbers, strings, arrays (Slint models) and objects (Slint structs). Two exceptions: an image from ui.image, only as the **whole** value of an `image` property (nested in an array or object it is `invalid`), and a document from ui.markdown wherever the Slint type is `[MarkdownBlock]`: the whole value, or (SDK 1.5.4, the player after 0.4.0) a field at any depth, such as the `body` of each message in a chat list.
+- Values must be JSON: booleans, numbers, strings, arrays (Slint models) and objects (Slint structs). Two exceptions: an image from ui.image or ui.remoteImage wherever the Slint type is `image`: the whole value, or (SDK 1.5.19, player 0.5.1) a field at any depth, such as the logo of each row of a list; and a document from ui.markdown wherever the Slint type is `[MarkdownBlock]`: the whole value, or (SDK 1.5.4, the player after 0.4.0) a field at any depth, such as the `body` of each message in a chat list.
+- Images in rows: give small pictures `maxSide` (about twice the drawn size, `64` for a 32 px logo), so that the player decodes them small. The images nested in one view's values may show at most 32 MB of decoded pixels together; a write past that is refused with `limit`. A nested image whose file fails the player's checks is drawn empty, and the rest of the row is shown. Rows with images update in place, so a `ListView` keeps its scroll position when the list is written again.
 - Every name must exist in the Slint file. Writing a property the file does not declare makes a tool window's `show()` or a panel's `ready` fail, and in a settings page it keeps the Options window from opening; for a tool window, so does a callback bound with `on()` that the file does not declare. Once the view is open, such writes are reported to onError.
 
 ##### set, bind and the update pass
@@ -2157,7 +2175,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.4.1 | PluginError, FileResolverOptions, PackageCandidate.install, PluginWarning.code, Packages.validate |
 | 0.4.2 | Resolvers.fileTypes, Resolvers.onFileTypesChange |
 | 0.4.3 | CommandOptions.path, PropValue, View.set, Appearance.setLanguage, TemplateArgs, Text, ConfirmOptions.args, OsdPanel.set, OsdPanelOptions.maxColumns, Osd.show |
-| 0.5.1 | SlotState.reason, Panel.setInteraction, PlaybackStats.presentedFps |
+| 0.5.1 | ImageRef, ImageOptions.maxSide, PropValue, Ui.image, Ui.remoteImage, SlotState.reason, Panel.setInteraction, PlaybackStats.presentedFps, Player.setStepSeek, Host.run, Packages.reload |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2178,7 +2196,7 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 | `ui.window` | Windows.create | — | Open tool windows |  |
 | `ui.mount` | Panels.mount, Panels.bottom, Panels.sidebar, Panels.backdrop, PanelSlot.onChange, Panel.onChange, BackdropSlot.onChange | — | Show panels in the bottom bar, the sidebar or behind the video |  |
 | `ui.dialog` | Dialogs.confirm, Dialogs.openFile, Dialogs.openFiles, Dialogs.openDirectory, Dialogs.saveFile | — | Show file pickers and confirmations |  |
-| `plugins.manage` | Packages.validate, Packages.validateArchive, Packages.setEnabled, Packages.uninstall | — | Install, uninstall and disable other plugins | yes |
+| `plugins.manage` | Packages.validate, Packages.validateArchive, Packages.setEnabled, Packages.reload, Packages.uninstall | — | Install, uninstall and disable other plugins | yes |
 | `processing.video` | Plugin.video.filter, Plugin.video.view, Plugin.video.render | `playback.read` | Process the picture (filters, shaders) |  |
 | `processing.audio` | Plugin.audio.filter | `playback.read`, `events` | Process the sound |  |
 | `subtitles.read` | Subtitles.state, Subtitles.onChange, Subtitles.refresh | — | Read subtitles |  |
@@ -2651,7 +2669,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Settings ▸ Keyboard Shortcuts… |  | `vestra.hotkeys/keys` |
 | Settings ▸ Mouse… |  | `vestra.hotkeys/mouse` |
 | Settings ▸ Ignore Default Shortcuts |  | `vestra.hotkeys/ignore-defaults` |
-| Settings ▸ Plugin Manager… |  | `vestra.plugins/manage` |
 | Settings ▸ Appearance ▸ Vestra Dark |  | `vestra.preferences/theme.vestra` |
 | Settings ▸ Appearance ▸ Vestra Light |  | `vestra.preferences/theme.vestra-light` |
 | Settings ▸ Appearance ▸ Show Logo When Idle |  | `vestra.visualizer/idle-logo` |
@@ -3537,6 +3554,20 @@ interface ImageRef {
 }
 ```
 
+### ImageOptions
+
+Options of Ui.image and Ui.remoteImage.
+
+```ts
+interface ImageOptions {
+  /**
+   * Decode the image scaled down, aspect kept, so that neither side is over this many pixels (an integer 1–4096); smaller images stay as they are. Use about twice the drawn size (64 for a 32 px logo) so that it stays sharp on high-density screens. It keeps the decoded memory small: a 1024×1024 icon is 4 MB decoded, 16 KB at `maxSide: 64`.
+   * @player 0.5.1; older players refuse the reference (`invalid`).
+   */
+  maxSide?: number;
+}
+```
+
 ### MarkdownRef
 
 A Markdown document for `MarkdownView` or `MarkdownBlocks`, made by
@@ -3571,9 +3602,8 @@ interface MarkdownOptions {
 
 ### PropValue
 
-The value of one Slint property: JSON with Markdown documents at any
-depth (PropData), or an image as the whole value of an `image`
-property.
+The value of one Slint property: JSON with Markdown documents and images
+at any depth (PropData).
 
 ```ts
 type PropValue = PropData | ImageRef;
@@ -3581,11 +3611,11 @@ type PropValue = PropData | ImageRef;
 
 ### PropData
 
-JSON whose values may also be Markdown documents, at any depth: the part
-of PropValue that nests.
+JSON whose values may also be Markdown documents and (SDK 1.5.19) images,
+at any depth: the part of PropValue that nests.
 
 ```ts
-type PropData = null | boolean | number | string | MarkdownRef | Text | TextList | PropData[] | {
+type PropData = null | boolean | number | string | MarkdownRef | ImageRef | Text | TextList | PropData[] | {
   [key: string]: PropData;
 };
 ```
@@ -3611,10 +3641,22 @@ interface Ui {
    * Reference a PNG or JPEG file for an `image` property.
    * @capability None.
    * @param path - Absolute path of the image file, inside the package directory or the data directory.
+   * @param options - `maxSide` (SDK 1.5.19, player 0.5.1): decode the image scaled down, aspect kept, so that neither side is over it.
    * @returns A new ImageRef, owned by this scope.
-   * @throws invalid (throws) `path` is not a non-empty string.
+   * @throws invalid (throws) `path` is not a non-empty string, or `maxSide` is not an integer 1–4096.
    */
-  image(path: string): ImageRef;
+  image(path: string, options?: ImageOptions): ImageRef;
+  /**
+   * Download an `https:` PNG or JPEG image (a thumbnail, a repository's plugin icon) and reference the local copy, as Ui.image does.
+   * @capability None (the plugin process has network access).
+   * @player Any (the reference is an ordinary ImageRef); nested in a value, player 0.5.1.
+   * @param url - The image's `https:` address.
+   * @param options - As for Ui.image.
+   * @returns The reference, owned by this scope, once the file is in the cache.
+   * @throws invalid (rejects) `url` is not an `https:` address, or `maxSide` is not an integer 1–4096.
+   * @throws unavailable (rejects) the download failed, timed out, was too large, or is not a PNG or JPEG image; or the plugin has no data directory.
+   */
+  remoteImage(url: string, options?: ImageOptions): Promise<ImageRef>;
   /**
    * Prepare a Markdown document for `MarkdownView` (`@vestra/markdown.slint`).
    * @capability None.
@@ -5181,10 +5223,28 @@ interface Player {
    */
   step(unit: "frame" | "keyframe", direction: "backward" | "forward", options?: Conditional): Promise<void>;
   /**
-   * The core's first-tier relative seek (`seek-backward` / `seek-forward`, ← / →): 0.1–3600 seconds in tenths, default 5. The newest call of any plugin wins; it reverts when that plugin stops.
+   * The core's first-tier relative seek (`seek-backward` / `seek-forward`,
+   * ← / →): 0.1–3600 seconds in tenths, default 5. The newest call of any
+   * plugin wins; it reverts when that plugin stops.
+   *
+   * `keyframes: true` (player 0.5.1, SDK 1.5.19): the step seeks
+   * (`seek-backward` / `seek-forward`, including Host.run with
+   * `seconds` and the picture-in-picture skips) land on a keyframe instead
+   * of the exact time: forward on the first keyframe at or after position +
+   * step, backward on the last at or before position − step, and they
+   * always move. Presses during a seek add up and continue from where it
+   * landed; the on-screen text shows the landed time. Sources without moving
+   * video seek exactly. The seek bar, Player.seek, scrubs, chapters,
+   * loops and Player.step are unaffected. Omitted or `false`: exact
+   * seeks, as before. `seconds` and `keyframes` are written as a pair: the
+   * newest call sets both.
+   *
+   * Older players ignore `keyframes`: set `"minPlayerVersion": "0.5.1"` in
+   * the manifest when you rely on it.
    */
   setStepSeek(options: {
     seconds: number;
+    keyframes?: boolean;
   }): Promise<void>;
   /** The chapters of the current media (empty without media or chapters), read on demand; `sourceId` tells which source they belong to. `playback.read`. */
   chapters(): Promise<{
@@ -5226,7 +5286,7 @@ The core's basic playback actions (menu commands owned by the player).
 | `play-pause` | Space | pause / resume, replay after the end |
 | `previous` / `next` | PageUp, Mouse:X1 / PageDown, Mouse:X2 | ask the sequence provider |
 | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
-| `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds |
+| `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
 | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
 | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
 | `mute` | M | toggle mute |
@@ -5252,6 +5312,23 @@ interface Host {
    * Prefer this over reimplementing playback buttons.
    */
   run(action: HostAction): Promise<void>;
+  /**
+   * One step seek of `seconds` (0.1–3600 in tenths) instead of the
+   * Player.setStepSeek step: the same checks, mode (exact or
+   * keyframes), accumulation and on-screen text as ← / →. Use it for more
+   * seek steps of your own (Ctrl+→ and the like) so that they add up with
+   * the core's and land the same way.
+   *
+   * In keyframe mode it resolves once the seek has landed (so
+   * `player.state.position` is current after the `await`); presses that add
+   * up resolve together, the last with the text. In exact mode it resolves
+   * once the seek is submitted, as before. `invalid` for `seconds` out of
+   * range.
+   * @player 0.5.1 (set `"minPlayerVersion": "0.5.1"`: older players ignore `seconds` and seek by the `setStepSeek` step)
+   */
+  run(action: "seek-backward" | "seek-forward", options: {
+    seconds: number;
+  }): Promise<void>;
 }
 ```
 
@@ -6092,6 +6169,23 @@ interface Packages {
    * Stop or start a plugin (`plugins.manage`). An installed plugin stays disabled across launches; a development load only for this run. `invalid` to disable oneself, `missing` unknown. `busy` while it is being installed. `unsupported` to disable a built-in (PluginInfo.builtin): users manage third-party plugins only (players released with SDK 1.5.18 on; older ones disabled built-ins too).
    */
   setEnabled(id: string, enabled: boolean): Promise<void>;
+  /**
+   * Restart a plugin (`plugins.manage`): stop it and start it again from the
+   * same package with the same data directory, for example to recover one
+   * that misbehaves. Built-ins included. A stopped or failed plugin is just
+   * started. The disabled flag is never written, so a reload never leaves
+   * a plugin disabled.
+   *
+   * Resolves once the plugin is stopped and its start is scheduled; the
+   * player starts it as soon as the old process is gone (at most 20 s).
+   * Follow it with Packages.onChange: `starting`, then `running`,
+   * or `failed` with the reason.
+   *
+   * `invalid` for oneself or a disabled plugin (enable it instead),
+   * `missing` unknown, `busy` while it is being installed or reloaded.
+   * @player 0.5.1; older players reject it as an unknown request (`unsupported`).
+   */
+  reload(id: string): Promise<void>;
   /**
    * Remove an installed plugin (`plugins.manage`); `removeData` also deletes its data directory, otherwise reinstalling it from the same source reconnects to its data. Its user bindings stay (as orphans). `unsupported` for built-ins and development loads, `missing` unknown, `invalid` for oneself.
    */
@@ -6991,12 +7085,16 @@ class TestHost implements Transport {
     kind: string;
     title?: string | null;
   }[]): void;
-  /** Runtime images written to views (`plugin.ui.image`), newest last. The SDK refuses images of released scopes before anything is sent. */
+  /**
+   * Runtime images written to views (`plugin.ui.image`, `plugin.ui.remoteImage`), whole values and (SDK 1.5.19) images nested in rows, newest last. The SDK refuses images of released scopes before anything is sent. The test host does not read the files, so it does not check the player's per-view budget (`IMAGE_LIMITS.viewBytes`).
+   */
   readonly images: {
     /** The image file's path, as given to `ui.image`. */
     path: string;
     /** The SDK's reference number for that `ImageRef`. */
     ref: number;
+    /** Its `maxSide` option, when given. */
+    maxSide?: number;
   }[];
   /**
    * The file an image property shows, or `null` when the value is not a runtime image. View properties hold images in their wire form; this reads the path back.
@@ -7317,6 +7415,25 @@ class TestHost implements Transport {
   constructor();
   /** The `player.setStepSeek` value in effect (default 5). */
   stepSeek: number;
+  /** The `player.setStepSeek` `keyframes` in effect (default `false`, SDK 1.5.19). */
+  stepSeekKeyframes: boolean;
+  /**
+   * Test data: the keyframe times (seconds, ascending) of the current source, for keyframe step seeks. `null` (the default): none modelled, and step seeks are exact even with `stepSeekKeyframes`.
+   */
+  keyframes: number[] | null;
+  /**
+   * Every step seek the core ran (`seek-backward` / `seek-forward`, from a key, the menu or `host.run`), newest last: the step, whether it went to a keyframe, and where it landed.
+   */
+  readonly coreSeeks: {
+    /** `seek-backward` or `seek-forward`. */
+    action: string;
+    /** The step: `host.run`'s `seconds`, else `setStepSeek`'s. */
+    seconds: number;
+    /** It landed on a keyframe (`stepSeekKeyframes` and keyframes modelled). */
+    keyframes: boolean;
+    /** The new position. */
+    landed: number;
+  }[];
   /** Every `player.step`, newest last. */
   readonly steps: {
     /** `"frame"` or `"keyframe"`. */
@@ -7430,7 +7547,7 @@ class TestHost implements Transport {
   /** Every `packages.setEnabled` / `uninstall` / `install`, newest last. */
   readonly packageCalls: {
     /** Which call. */
-    method: "setEnabled" | "uninstall" | "install";
+    method: "setEnabled" | "reload" | "uninstall" | "install";
     /** The target plugin id. */
     id: string;
     /** `setEnabled`'s value. */
@@ -7447,7 +7564,7 @@ class TestHost implements Transport {
    */
   readonly candidates: Map<string, PackageManifest>;
   /**
-   * Remote Markdown images (`plugin.ui.markdown`): address → a local PNG or JPEG file served for it, or `null` for a failing download. Nothing is fetched from the network in tests; unknown addresses fail.
+   * Remote images (`plugin.ui.markdown`, `plugin.ui.remoteImage`): address → a local PNG or JPEG file served for it, or `null` for a failing download. Nothing is fetched from the network in tests; unknown addresses fail.
    */
   readonly remoteImages: Map<string, string | null>;
   /**
@@ -7874,6 +7991,21 @@ const UI_VALUE_LIMITS: {
   /** UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included (1 MiB). */
   readonly textBytes: number;
 };
+```
+
+### IMAGE_LIMITS
+
+The player's runtime image limits (`host/src/ui_image.rs`): a file's
+bytes and sides, the decoded pixels each plugin caches, and (SDK 1.5.19,
+player 0.5.1) the decoded pixels the nested images of one view may show.
+
+```ts
+const IMAGE_LIMITS: Readonly<{
+  fileBytes: number;
+  side: 4096;
+  pluginBytes: number;
+  viewBytes: number;
+}>;
 ```
 
 ### HostError

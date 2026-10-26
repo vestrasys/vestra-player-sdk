@@ -189,6 +189,11 @@ export const packages = (scope: ScopeImpl): Packages => ({
       throw failure("invalid", "setEnabled takes an id and a boolean");
     await scope.runtime.host.packages.setEnabled(id, enabled);
   },
+  async reload(id) {
+    if (typeof id !== "string" || !id)
+      throw failure("invalid", "reload takes a plugin id");
+    await scope.runtime.host.packages.reload(id);
+  },
   uninstall: (id, options = {}) =>
     change(
       scope,

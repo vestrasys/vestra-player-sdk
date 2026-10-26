@@ -9,7 +9,7 @@ import { join, resolve } from "node:path";
 import { failure } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { systemServices } from "./local.ts";
-import { playerOf } from "./player.ts";
+import { playerOf, validStep } from "./player.ts";
 import type {
   Clipboard,
   Host,
@@ -47,10 +47,20 @@ const ACTIONS = new Set<string>([
 ]);
 
 export const host = (scope: ScopeImpl): Host => ({
-  async run(action) {
+  async run(action: string, options?: { seconds: number }) {
     if (!ACTIONS.has(action))
       throw failure("invalid", `unknown host action ${String(action)}`);
-    await scope.runtime.host.host.run(action);
+    const seconds = options?.seconds;
+    if (options !== undefined) {
+      if (action !== "seek-backward" && action !== "seek-forward")
+        throw failure(
+          "invalid",
+          `seconds applies only to seek-backward and seek-forward, not ${action}`,
+        );
+      if (!validStep(seconds))
+        throw failure("invalid", "seconds must be 0.1–3600 in tenths");
+    }
+    await scope.runtime.host.host.run(action, seconds);
     // Like the player's own controls: `player.state` shows the result.
     if (scope.runtime.can("playback.read"))
       await playerOf(scope.runtime)

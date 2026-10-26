@@ -116,6 +116,13 @@ function decoding(hwdec: string | null | undefined) {
 }
 
 export const rawOf = (state: PlayerState) => raws.get(state);
+/** A step-seek length the player accepts: 0.1–3600 seconds in tenths. */
+export const validStep = (seconds: unknown): seconds is number =>
+  typeof seconds === "number" &&
+  Number.isFinite(seconds) &&
+  seconds >= 0.1 &&
+  seconds <= 3600 &&
+  Math.abs(Math.round(seconds * 10) - seconds * 10) <= 1e-9;
 export const sameStamp = (a: SourceStamp, b: SourceStamp) =>
   a.generation === b.generation && a.intentVersion === b.intentVersion;
 
@@ -581,15 +588,12 @@ export function player(scope: ScopeImpl): Player {
         .refresh()
         .catch(() => {});
     },
-    async setStepSeek({ seconds }) {
-      if (
-        !Number.isFinite(seconds) ||
-        seconds < 0.1 ||
-        seconds > 3600 ||
-        Math.abs(Math.round(seconds * 10) - seconds * 10) > 1e-9
-      )
+    async setStepSeek({ seconds, keyframes }) {
+      if (!validStep(seconds))
         throw failure("invalid", "seconds must be 0.1–3600 in tenths");
-      await scope.runtime.host.step.setStepSeek(seconds);
+      if (keyframes !== undefined && typeof keyframes !== "boolean")
+        throw failure("invalid", "keyframes must be a boolean");
+      await scope.runtime.host.step.setStepSeek(seconds, keyframes);
     },
     async audioDevices() {
       const devices = await scope.runtime.host.audioOutput.devices();

@@ -485,7 +485,11 @@ export function createWire(transport: Transport) {
     },
     /** The core's own playback actions; resolves when the action finished. */
     host: {
-      run: (action: string) => transport.request<void>("host.run", { action }),
+      run: (action: string, seconds?: number) =>
+        transport.request<void>(
+          "host.run",
+          seconds === undefined ? { action } : { action, seconds },
+        ),
     },
     step: {
       step: (unit: string, direction: string, expected?: SourceStamp) =>
@@ -494,8 +498,11 @@ export function createWire(transport: Transport) {
           direction,
           ...(expected ? { expected } : {}),
         }),
-      setStepSeek: (seconds: number) =>
-        transport.request<void>("player.setStepSeek", { seconds }),
+      setStepSeek: (seconds: number, keyframes?: boolean) =>
+        transport.request<void>(
+          "player.setStepSeek",
+          keyframes === undefined ? { seconds } : { seconds, keyframes },
+        ),
     },
     clipboard: {
       readText: () => transport.request<string | null>("clipboard.readText"),
@@ -691,6 +698,8 @@ export function createWire(transport: Transport) {
       list: () => transport.request<PackageInfo[]>("packages.list"),
       setEnabled: (id: string, enabled: boolean) =>
         transport.request<void>("packages.setEnabled", { id, enabled }),
+      reload: (id: string) =>
+        transport.request<void>("packages.reload", { id }),
       uninstall: (
         id: string,
         removeData: boolean,

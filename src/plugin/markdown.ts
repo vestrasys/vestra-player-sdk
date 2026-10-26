@@ -144,33 +144,12 @@ async function fetchImages(
   if (!data || !urls.length) return {};
   const cache = join(data, ".vestra-cache", "markdown");
   await mkdir(cache, { recursive: true });
-  const download = runtime.local?.download ?? httpsDownload;
   const found: Record<string, string> = {};
   const queue = [...new Set(urls)].filter((u) => u.startsWith("https://"));
   const worker = async () => {
     for (let url = queue.shift(); url !== undefined; url = queue.shift()) {
-      const file = join(cache, createHash("sha256").update(url).digest("hex"));
       try {
-        const info = await stat(file).catch(() => null);
-        const now = Date.now();
-        if (info && now - info.mtimeMs < MARKDOWN_LIMITS.cacheMaxAgeMs) {
-          const time = new Date(info.mtimeMs);
-          await utimes(file, new Date(now), time).catch(() => {});
-          found[url] = file;
-          continue;
-        }
-        const bytes = await download(url, {
-          maxBytes: MARKDOWN_LIMITS.imageBytes,
-          signal: AbortSignal.timeout(MARKDOWN_LIMITS.imageTimeoutMs),
-        });
-        if (bytes.length > MARKDOWN_LIMITS.imageBytes)
-          throw new Error("image too large");
-        if (!isPng(bytes) && !isJpeg(bytes))
-          throw new Error("not a PNG or JPEG image");
-        const temporary = `${file}.${process.pid}.tmp`;
-        await writeFile(temporary, bytes);
-        await rename(temporary, file);
-        found[url] = file;
+        found[url] = (await cached(runtime, cache, url)).file;
       } catch {
         // Shown as its alt text.
       }
@@ -181,6 +160,78 @@ async function fetchImages(
   );
   await trim(cache, new Set(Object.values(found)));
   return found;
+}
+
+/**
+ * The cached copy of `url` in `cache`, downloaded when missing or older than
+ * a day; throws why it could not be had. `fresh`: it was downloaded now.
+ */
+async function cached(
+  runtime: Runtime,
+  cache: string,
+  url: string,
+): Promise<{ file: string; fresh: boolean }> {
+  const file = join(cache, createHash("sha256").update(url).digest("hex"));
+  const info = await stat(file).catch(() => null);
+  const now = Date.now();
+  if (info && now - info.mtimeMs < MARKDOWN_LIMITS.cacheMaxAgeMs) {
+    const time = new Date(info.mtimeMs);
+    await utimes(file, new Date(now), time).catch(() => {});
+    return { file, fresh: false };
+  }
+  const download = runtime.local?.download ?? httpsDownload;
+  const bytes = await download(url, {
+    maxBytes: MARKDOWN_LIMITS.imageBytes,
+    signal: AbortSignal.timeout(MARKDOWN_LIMITS.imageTimeoutMs),
+  });
+  if (bytes.length > MARKDOWN_LIMITS.imageBytes)
+    throw new Error("image too large");
+  if (!isPng(bytes) && !isJpeg(bytes))
+    throw new Error("not a PNG or JPEG image");
+  const temporary = `${file}.${process.pid}.tmp`;
+  await writeFile(temporary, bytes);
+  await rename(temporary, file);
+  return { file, fresh: true };
+}
+
+/** `ui.remoteImage` downloads in flight and waiting, per plugin. */
+const slots = new WeakMap<
+  Runtime,
+  { active: number; waiting: (() => void)[] }
+>();
+
+/**
+ * `ui.remoteImage`: the local copy of an `https:` image in
+ * `<dataDirectory>/.vestra-cache/images/` (the Markdown limits: 4 MB, 10 s,
+ * 4 at a time per plugin, 32 MB of cache, a day). Rejects `unavailable`.
+ */
+export async function remoteImageFile(
+  runtime: Runtime,
+  url: string,
+): Promise<string> {
+  const data = runtime.dataDirectory;
+  if (!data) throw failure("unavailable", "the plugin has no data directory");
+  const cache = join(data, ".vestra-cache", "images");
+  let slot = slots.get(runtime);
+  if (!slot) slots.set(runtime, (slot = { active: 0, waiting: [] }));
+  const queue = slot;
+  if (queue.active >= MARKDOWN_LIMITS.concurrency)
+    await new Promise<void>((go) => queue.waiting.push(go));
+  queue.active += 1;
+  try {
+    await mkdir(cache, { recursive: true });
+    const { file, fresh } = await cached(runtime, cache, url);
+    if (fresh) await trim(cache, new Set([file]));
+    return file;
+  } catch (error) {
+    throw failure(
+      "unavailable",
+      `image ${url}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  } finally {
+    queue.active -= 1;
+    queue.waiting.shift()?.();
+  }
 }
 
 /** Keep the cache under its size: drop the least recently used files not in use. */
