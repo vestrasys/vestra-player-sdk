@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.5.19: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. L<n> are line numbers in llms-full.txt, next to this file: every page, declaration and example.
+> @vestra-player/sdk 1.5.20: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. L<n> are line numbers in llms-full.txt, next to this file: every page, declaration and example.
 
 **Rules**
 
@@ -117,7 +117,7 @@ export default async function activate(plugin: Plugin) {
 - Guidelines: Interface guidelines L1937–2021; Menu guidelines L2022–2119
 - Reference: Manifest L2120–2183; Capabilities L2184–2226; Limits L2227–2321; Commands, menus and bindings L2322–2789; Platforms L2790–2818; Theme L2819–3023; Command line L3024–3079
 - [API: @vestra-player/sdk](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html): L3080–6680
-- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html): L6681–8041
+- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html): L6681–8045
 
 ## API
 
@@ -130,15 +130,15 @@ Where each module of `plugin` (`plugin.<module>`) is declared:
 
 Tested plugins in [examples/](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples):
 
-- hello: The README Quick start: one menu command and an on-screen message. L8465–8554
-- blur: A tool window with one slider that blurs the playing video. L8555–8816
-- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L8817–9149
-- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L9150–9334
-- panel-menu: A sidebar panel with its own right-click menu. L9335–9540
-- menus: Radio menu items, separator groups and a menu item whose title changes. L9541–9700
-- theme-widgets: A tool window drawn with the player's theme and widgets. L9701–9864
-- markdown: A window that shows a Markdown document. L9865–10059
-- i18n: A plugin in the player's language: English source text, a Chinese translation. L10060–10227
+- hello: The README Quick start: one menu command and an on-screen message. L8469–8558
+- blur: A tool window with one slider that blurs the playing video. L8559–8820
+- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L8821–9153
+- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L9154–9338
+- panel-menu: A sidebar panel with its own right-click menu. L9339–9544
+- menus: Radio menu items, separator groups and a menu item whose title changes. L9545–9704
+- theme-widgets: A tool window drawn with the player's theme and widgets. L9705–9868
+- markdown: A window that shows a Markdown document. L9869–10063
+- i18n: A plugin in the player's language: English source text, a Chinese translation. L10064–10231
 
 ## Optional
 

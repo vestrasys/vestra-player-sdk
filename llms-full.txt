@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.19: full reference
+# @vestra-player/sdk 1.5.20: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -8001,9 +8001,13 @@ player 0.5.1) the decoded pixels the nested images of one view may show.
 
 ```ts
 const IMAGE_LIMITS: Readonly<{
+  /** The largest image file the player reads, in bytes. */
   fileBytes: number;
+  /** The longest side, in pixels, the player accepts for an image file. */
   side: 4096;
+  /** The decoded pixel bytes the player caches for each plugin's images. */
   pluginBytes: number;
+  /** The decoded pixel bytes the nested images of one view may show (player 0.5.1). */
   viewBytes: number;
 }>;
 ```

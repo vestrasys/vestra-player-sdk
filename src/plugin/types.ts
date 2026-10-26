@@ -614,7 +614,10 @@ export interface Commands {
  * await cover.show();
  * ```
  *
- * @example A logo in each row (`export struct Row { key: string, name: string, icon: image }`)
+ * @example A logo in each row
+ * ```slint
+ * export struct Row { key: string, name: string, icon: image }
+ * ```
  * ```ts
  * const items = [{ id: "a", name: "A", iconPath: `${plugin.dataDirectory}/a.png` }];
  * const list = plugin.windows.create("ui/list.slint");
