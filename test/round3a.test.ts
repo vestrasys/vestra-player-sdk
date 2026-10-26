@@ -259,7 +259,6 @@ test("packages: list, follow, enable, disable and uninstall", async () => {
     error: null,
     capabilities: [],
     directory: `/plugins/${id}`,
-    previousVersion: null,
   });
   host.packages = [
     entry("a.video", "installed"),

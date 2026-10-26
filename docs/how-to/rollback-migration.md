@@ -1,24 +1,24 @@
 ---
-title: Migrating off package rollback (1.5.16)
-description: What to change in a plugin manager now that the player keeps no previous plugin version, before SDK 1.5.17 removes Packages.rollback and PluginInfo.previousVersion.
+title: Migrating off package rollback (1.5.16, removed in 1.5.17)
+description: What to change in a plugin manager now that the player keeps no previous plugin version. Packages.rollback and PluginInfo.previousVersion were deprecated in SDK 1.5.16 and removed in 1.5.17.
 ---
 
-# Migrating off package rollback (1.5.16)
+# Migrating off package rollback (1.5.16, removed in 1.5.17)
 
-For plugins that manage other plugins (`plugins.manage`): stores, plugin managers, anything that calls {@link "@vestra-player/sdk"!Packages.rollback | packages.rollback} or reads {@link "@vestra-player/sdk"!PluginInfo.previousVersion | PluginInfo.previousVersion}. A plugin that only uses its own API needs no change.
+For plugins that manage other plugins (`plugins.manage`): stores, plugin managers, anything that called `packages.rollback` or read `PluginInfo.previousVersion`. Both were deprecated in 1.5.16 and **removed in 1.5.17**: with 1.5.17 a remaining use is a TypeScript compile error. A plugin that only uses its own API needs no change.
 
 ## What changed
 
 The player no longer keeps a previous version of a plugin. An upgrade replaces the package, so there is nothing to roll back to:
 
-- `packages.rollback(id)` always fails with `unsupported` (the player answers "unknown package method").
-- Every entry of `packages.list()` and `packages.onChange` has `previousVersion: null`.
+- There is no `packages.rollback`: the player answers the wire method with `unsupported` ("unknown package method"), and SDK 1.5.17 no longer has it.
+- `packages.list()` and `packages.onChange` entries have no `previousVersion` (always `null` with SDK 1.5.16, removed in 1.5.17).
 - Built-in plugins (`builtin: true`) run in place from the player installation. They can be disabled and enabled, never uninstalled or replaced; `uninstall` fails with `unsupported`. A built-in's `directory` is inside the installation (`<install resources>/plugins/<id>`) and read-only.
 - Third-party plugins can still be uninstalled.
 
 Why: built-ins now run from the read-only installation instead of a copy, and an upgrade replaces the package instead of keeping the old one beside it. Going back to an older version becomes an ordinary uninstall and install that the user starts.
 
-`TestHost` behaves the same way since 1.5.16, so tests show it too.
+`TestHost` behaves the same way, so tests show it too.
 
 ## 1. Remove rollback calls and `previousVersion` checks
 
@@ -28,7 +28,7 @@ Before:
 if (info.previousVersion !== null) showButton("Roll back", () => plugin.packages.rollback(info.id));
 ```
 
-After: delete both. There is no replacement call; nothing on the player can restore an earlier package. Remove the button, menu item or command, and any state, text or test that depends on `previousVersion`.
+After: delete both. There is no replacement call; nothing on the player can restore an earlier package. Remove the button, menu item or command, and any state, text or test that depends on `previousVersion`. With SDK 1.5.17 the compiler finds every remaining use.
 
 ## 2. Going back to an older version
 
@@ -58,14 +58,14 @@ for (const info of await plugin.packages.list()) {
 
 ## 5. Tests
 
-`TestHost` lists every plugin with `previousVersion: null`, whatever a test puts in `host.packages`, and rejects `packages.rollback` with `unsupported`. The `previousVersion` field of `host.packages` entries is deprecated and ignored; it stays required in 1.5.16 so that test data shaped like a `PluginInfo` keeps compiling, and goes in 1.5.17. A test that expected a rollback to succeed should now assert the rejection or be removed.
+With SDK 1.5.17, `host.packages` entries have no `previousVersion` field: delete `previousVersion: null` (or any value) from test data, or the test no longer compiles. `TestHost` has no `packages.rollback`. Remove tests that exercised a rollback; there is nothing left to assert. (With 1.5.16 the field was still required but ignored, and `TestHost` answered rollback with `unsupported`.)
 
 ## Timeline
 
 | SDK | Player | What happens |
 | --- | --- | --- |
 | 1.5.16 | ships with it | `Packages.rollback` and `PluginInfo.previousVersion` (and the wire field) are `@deprecated`. The player and `TestHost` answer rollback with `unsupported` and list `previousVersion: null`. Code still compiles. |
-| 1.5.17 | — | Both symbols are removed. Remaining uses are TypeScript compile errors. |
+| 1.5.17 | ships with it | **Removed:** `Packages.rollback`, `PluginInfo.previousVersion`, the wire method `packages.rollback` and the wire field `previousVersion`, `TestHost`'s `previousVersion` field and its `packages.rollback` handler, and `Packages.rollback` in the `plugins.manage` capability. Remaining uses are TypeScript compile errors. |
 
 `apiVersion` stays `vestra/1` in both releases, as when 1.5.8 removed `PackageCandidate.trial()`.
 
@@ -75,4 +75,4 @@ for (const info of await plugin.packages.list()) {
 - [ ] Built-ins offer only disable and enable.
 - [ ] Nothing writes into a plugin's `directory`.
 - [ ] No Undo after an install, no older-version install; older versions go through uninstall and a user-chosen `.vxp`.
-- [ ] Tests pass with SDK 1.5.16; the only deprecated name left in them is the `previousVersion: null` of `host.packages` test data.
+- [ ] Tests compile and pass with SDK 1.5.17; no `previousVersion` is left in `host.packages` test data.

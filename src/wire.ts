@@ -126,12 +126,6 @@ export interface PackageInfo {
   error: string | null;
   capabilities: string[];
   directory: string;
-  /**
-   * Always `null` from players that ship with SDK 1.5.16 or later.
-   *
-   * @deprecated Removed in 1.5.17: the player keeps no previous version.
-   */
-  previousVersion: string | null;
   /** Player 0.2.0; absent from older players. */
   builtin?: boolean;
   source?: WireSource | null;
@@ -687,16 +681,6 @@ export function createWire(transport: Transport) {
           requestId,
           ...(options.source === undefined ? {} : { source: options.source }),
           ...(options.replace ? { replace: true } : {}),
-        }),
-      /**
-       * @deprecated Removed in 1.5.17. The player no longer has this method and
-       * rejects it with `unsupported` ("unknown package method").
-       */
-      rollback: (id: string, expectedRevision: number, requestId: string) =>
-        transport.request<PackageOperation>("packages.rollback", {
-          id,
-          expectedRevision,
-          requestId,
         }),
       operation: (operationId: string) =>
         transport.request<PackageOperation>("packages.operation", {

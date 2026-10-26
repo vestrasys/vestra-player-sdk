@@ -4924,15 +4924,6 @@ export interface PluginInfo {
    */
   directory: string;
   /**
-   * Always `null`: the player no longer keeps a previous version, and an
-   * upgrade replaces the package.
-   *
-   * @deprecated Removed in 1.5.17. The player no longer keeps a previous
-   * version, so this is always `null`. See
-   * [Migrating off package rollback](../../docs/how-to/rollback-migration.md).
-   */
-  previousVersion: string | null;
-  /**
    * Shipped with the player: it can be disabled, not uninstalled or
    * replaced. `false` from players before 0.2.0.
    */
@@ -5033,16 +5024,6 @@ export interface Packages {
    * fails with `reserved`, as in {@link Packages.validate}.
    */
   validateArchive(file: string): Promise<PackageCandidate>;
-  /**
-   * Formerly restored a plugin's previous version (`plugins.manage`).
-   *
-   * @deprecated Removed in 1.5.17. The player no longer keeps a previous
-   * version, so this always fails with `unsupported`. To go back to an older
-   * version of a third-party plugin, the user uninstalls it and installs that
-   * version's `.vxp`. See
-   * [Migrating off package rollback](../../docs/how-to/rollback-migration.md).
-   */
-  rollback(id: string): Promise<PackageChange>;
   /** Every plugin: running, installed, and this run's development loads. No capability. */
   list(): Promise<PluginInfo[]>;
   /** The new list after any start, stop, failure, install or uninstall. No capability. */

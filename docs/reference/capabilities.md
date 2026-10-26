@@ -20,7 +20,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 | `ui.window` | {@linkcode "@vestra-player/sdk"!Windows.create Windows.create} | — | Open tool windows |  |
 | `ui.mount` | {@linkcode "@vestra-player/sdk"!Panels.mount Panels.mount}, {@linkcode "@vestra-player/sdk"!Panels.bottom Panels.bottom}, {@linkcode "@vestra-player/sdk"!Panels.sidebar Panels.sidebar}, {@linkcode "@vestra-player/sdk"!Panels.backdrop Panels.backdrop}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} | — | Show panels in the bottom bar, the sidebar or behind the video |  |
 | `ui.dialog` | {@linkcode "@vestra-player/sdk"!Dialogs.confirm Dialogs.confirm}, {@linkcode "@vestra-player/sdk"!Dialogs.openFile Dialogs.openFile}, {@linkcode "@vestra-player/sdk"!Dialogs.openFiles Dialogs.openFiles}, {@linkcode "@vestra-player/sdk"!Dialogs.openDirectory Dialogs.openDirectory}, {@linkcode "@vestra-player/sdk"!Dialogs.saveFile Dialogs.saveFile} | — | Show file pickers and confirmations |  |
-| `plugins.manage` | {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive}, {@linkcode "@vestra-player/sdk"!Packages.rollback Packages.rollback}, {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled}, {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} | — | Install, uninstall and disable other plugins | yes |
+| `plugins.manage` | {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive}, {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled}, {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} | — | Install, uninstall and disable other plugins | yes |
 | `processing.video` | {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render} | `playback.read` | Process the picture (filters, shaders) |  |
 | `processing.audio` | {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} | `playback.read`, `events` | Process the sound |  |
 | `subtitles.read` | {@linkcode "@vestra-player/sdk"!Subtitles.state Subtitles.state}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.refresh Subtitles.refresh} | — | Read subtitles |  |
@@ -45,8 +45,6 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 - A `processed` snapshot or export ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) also needs `playback.read` and `subtitles.read`.
 - A file resolver ({@link "@vestra-player/sdk"!Resolvers.add | Resolvers.add} with file types) also needs `producer.av`.
 - Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere.
-
-**Deprecated:** {@link "@vestra-player/sdk"!Packages.rollback | Packages.rollback} in the `plugins.manage` row (since 1.5.16; removed in 1.5.17). The player keeps no previous version, so it always fails with `unsupported`; see [Migrating off package rollback](../how-to/rollback-migration.md).
 
 ## Without a capability
 
