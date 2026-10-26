@@ -66,9 +66,13 @@ function documentText(value: Json): string | null {
  * player 0.5.1) the decoded pixels the nested images of one view may show.
  */
 export const IMAGE_LIMITS = Object.freeze({
+  /** The largest image file the player reads, in bytes. */
   fileBytes: 16 * 1024 * 1024,
+  /** The longest side, in pixels, the player accepts for an image file. */
   side: 4096,
+  /** The decoded pixel bytes the player caches for each plugin's images. */
   pluginBytes: 64 * 1024 * 1024,
+  /** The decoded pixel bytes the nested images of one view may show (player 0.5.1). */
   viewBytes: 32 * 1024 * 1024,
 });
 

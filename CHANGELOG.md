@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.20
+
+Republishes 1.5.19, which was tagged but never published: its API documentation build failed (an example title and four undocumented `IMAGE_LIMITS` fields). Documentation only; the code is the same as 1.5.19 below.
+
 ## 1.5.19
 
 Images in list rows, restarting a plugin, and keyframe step seeks (player 0.5.1). Additive; `apiVersion` stays `vestra/1`, and plugins that do not use the new members need no change. Requested by the plugin store (STORE-ROW-LOGO, STORE-RELOAD-BUILTIN) and the playback plugin (keyframe seeks); the online video plugins' search results need the same row images.
