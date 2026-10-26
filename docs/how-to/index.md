@@ -42,3 +42,9 @@ The checklist for a plugin written in one language before SDK 1.5.9: English men
 Plugins reach the store through pull requests to the official plugin repository. The guide covers preparing the package, choosing the id, registering the source repository (or hosting the plugin there), the pull request and its checks, updating, withdrawing, asking for a revocation, and what users see of the plugin in the store.
 
 [Read the guide](publish.md)
+
+## Migrate off package rollback
+
+The player no longer keeps a previous plugin version: `packages.rollback` fails with `unsupported` and `previousVersion` is always `null` (SDK 1.5.16; both are removed in 1.5.17). The checklist for plugins with `plugins.manage`: remove rollback calls and UI and any "Undo install", keep to install, uninstall and disable/enable (an older version is the user's uninstall plus a `.vxp`), offer only disable and enable for built-ins, and update tests.
+
+[Read the guide](rollback-migration.md)

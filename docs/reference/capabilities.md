@@ -46,6 +46,8 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 - A file resolver ({@link "@vestra-player/sdk"!Resolvers.add | Resolvers.add} with file types) also needs `producer.av`.
 - Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere.
 
+**Deprecated:** {@link "@vestra-player/sdk"!Packages.rollback | Packages.rollback} in the `plugins.manage` row (since 1.5.16; removed in 1.5.17). The player keeps no previous version, so it always fails with `unsupported`; see [Migrating off package rollback](../how-to/rollback-migration.md).
+
 ## Without a capability
 
 A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading {@link "@vestra-player/sdk"!MainWindow.state | window.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and {@link "@vestra-player/sdk"!Packages.list | packages.list}. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest ({@link "@vestra-player/sdk/testing"!CAPABILITY_INFO | CAPABILITY_INFO}).

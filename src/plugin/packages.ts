@@ -1,4 +1,4 @@
-/** Package validation and install/rollback (`plugins.manage`). */
+/** Package validation, install and uninstall (`plugins.manage`). */
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type {
@@ -78,7 +78,7 @@ class ChangeHandle implements PackageChange {
   }
 }
 
-/** Install and rollback reuse the request id as the operation id after a lost reply. */
+/** Install and uninstall reuse the request id as the operation id after a lost reply. */
 async function change(
   scope: ScopeImpl,
   submit: (
@@ -170,6 +170,8 @@ export const packages = (scope: ScopeImpl): Packages => ({
     const checked = await scope.runtime.host.packages.validateArchive(path);
     return candidate(scope, path, checked);
   },
+  // Deprecated (removed in 1.5.17): still forwarded, so the player's
+  // `unsupported` ("unknown package method") reaches the caller.
   rollback: (id) =>
     change(
       scope,
@@ -219,7 +221,7 @@ const info = (plugin: WirePlugin): PluginInfo =>
     error: plugin.error,
     capabilities: [...plugin.capabilities],
     directory: plugin.directory,
-    previousVersion: plugin.previousVersion,
+    previousVersion: plugin.previousVersion ?? null,
     builtin: plugin.builtin === true,
     source: plugin.source ? Object.freeze({ ...plugin.source }) : null,
     dataDirectory: plugin.dataDirectory ?? null,

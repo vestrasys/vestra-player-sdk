@@ -127,6 +127,10 @@ export const GROUPS = [
         file: "publish.md",
         why: "One task: submit a plugin to the plugin store.",
       },
+      {
+        file: "rollback-migration.md",
+        why: "One task: move a plugin manager off Packages.rollback and PluginInfo.previousVersion (deprecated in 1.5.16, removed in 1.5.17).",
+      },
     ],
   },
   {
