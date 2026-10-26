@@ -272,6 +272,16 @@ test("packages: a built-in can be neither disabled nor uninstalled", async () =>
     plugin.packages.setEnabled("vestra.audio", false),
     "unsupported",
   );
+  // SDK 1.5.19: a running built-in is restarted with reload, never disabled.
+  const states: string[] = [];
+  plugin.packages.onChange((list) => states.push(list[0]!.state));
+  await plugin.packages.reload("vestra.audio");
+  await host.settle();
+  assert.deepEqual(states, ["starting", "running"]);
+  assert.deepEqual(host.packageCalls.at(-1), {
+    method: "reload",
+    id: "vestra.audio",
+  });
   await rejects(
     plugin.packages.uninstall("vestra.audio").then((change) => change.done),
     "unsupported",
@@ -313,6 +323,13 @@ test("packages: list, follow, enable, disable and uninstall", async () => {
   assert.deepEqual(seen.at(-1), ["disabled", "running"]);
   await rejects(plugin.packages.setEnabled("test.plugin", false), "invalid");
   await rejects(plugin.packages.setEnabled("nobody", true), "missing");
+  // reload: not oneself, not a disabled plugin (enable it), not unknown.
+  await rejects(plugin.packages.reload("test.plugin"), "invalid");
+  await rejects(plugin.packages.reload("a.video"), "invalid");
+  await rejects(plugin.packages.reload("nobody"), "missing");
+  await plugin.packages.reload("b.dev");
+  await host.settle();
+  assert.deepEqual(seen.at(-1), ["disabled", "running"]);
   const change = await plugin.packages.uninstall("a.video", {
     removeData: true,
   });

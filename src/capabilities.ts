@@ -170,6 +170,7 @@ export const CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>> =
         "Packages.validate",
         "Packages.validateArchive",
         "Packages.setEnabled",
+        "Packages.reload",
         "Packages.uninstall",
       ],
       requires: [],

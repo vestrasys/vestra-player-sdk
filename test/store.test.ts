@@ -292,15 +292,109 @@ test("ui.markdown: documents at any depth of a value (chat rows), released ones 
   await host.settle();
   assert.equal(errors.at(-1)?.code, "invalid");
   assert.deepEqual(shown(), ["**你好**", "第二条"]);
-  // An image only as the whole value (another window: only the first
-  // failure of a streak is reported).
-  const other = plugin.windows.create("chat.slint", { id: "other" });
-  await other.show();
-  const cover = plugin.ui.image(join(directory, "cover.png"));
-  other.set({ messages: [{ id: "m4", body: cover as never }] });
+  await stop();
+});
+
+test("ui.image nests in rows (SDK 1.5.19): maxSide, released images refused at any depth", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "image-rows-"));
+  writeFileSync(
+    join(directory, "list.slint"),
+    "export struct Row { key: string, icon: image }\nexport component List inherits Window { in property <[Row]> rows; }\n",
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({ id: "test.list", capabilities: ["ui.window"] }),
+  );
+  const errors: PluginError[] = [];
+  let plugin!: Plugin;
+  const { host, stop } = await startPlugin(
+    (p: Plugin) => {
+      plugin = p;
+      p.onError((error) => errors.push(error));
+    },
+    { directory },
+  );
+  const logo = join(directory, "logo.png");
+  const list = plugin.windows.create("list.slint");
+  list.set({
+    rows: [
+      { key: "a", icon: plugin.ui.image(logo, { maxSide: 64 }) },
+      { key: "b", icon: plugin.ui.image(logo) },
+    ],
+  });
+  await list.show();
+  await host.settle();
+  const rows = host.window("list").props.rows as { key: string; icon: Json }[];
+  assert.deepEqual(
+    rows.map((row) => host.imagePath(row.icon)),
+    [logo, logo],
+  );
+  assert.deepEqual(
+    host.images.slice(-2).map((image) => image.maxSide),
+    [64, undefined],
+  );
+  assert.equal(errors.length, 0);
+  // maxSide is an integer 1–4096.
+  for (const maxSide of [0, 4097, 1.5])
+    assert.throws(
+      () => plugin.ui.image(logo, { maxSide }),
+      (error: PluginError) => error.code === "invalid",
+    );
+  // A released image is refused wherever it is; the view keeps its value.
+  const child = plugin.scope();
+  const old = child.ui.image(logo);
+  await child.dispose();
+  list.set({ rows: [{ key: "c", icon: old }] });
   await host.settle();
   assert.equal(errors.at(-1)?.code, "invalid");
-  assert.match(errors.at(-1)!.message, /whole value/);
+  assert.equal(
+    (host.window("list").props.rows as { key: string }[])[0]!.key,
+    "a",
+  );
+  await stop();
+});
+
+test("ui.remoteImage downloads into the image cache once; failures reject unavailable", async () => {
+  const files = mkdtempSync(join(tmpdir(), "remote-image-"));
+  writeFileSync(join(files, "ok.png"), PNG);
+  writeFileSync(join(files, "bad.gif"), "GIF89a");
+  const host = new TestHost();
+  host.remoteImages.set("https://img.example/ok.png", join(files, "ok.png"));
+  host.remoteImages.set("https://img.example/bad.gif", join(files, "bad.gif"));
+  let plugin!: Plugin;
+  const { stop } = await startPlugin(
+    (p: Plugin) => {
+      plugin = p;
+    },
+    { host },
+  );
+  const image = await plugin.ui.remoteImage("https://img.example/ok.png", {
+    maxSide: 320,
+  });
+  assert.ok(
+    image.path.startsWith(
+      join(plugin.dataDirectory!, ".vestra-cache", "images"),
+    ),
+    image.path,
+  );
+  assert.equal(
+    JSON.parse(JSON.stringify(image)).maxSide,
+    320,
+    "the option travels with the reference",
+  );
+  // A second reference reads the cache: no download.
+  host.remoteImages.delete("https://img.example/ok.png");
+  const again = await plugin.ui.remoteImage("https://img.example/ok.png");
+  assert.equal(again.path, image.path);
+  for (const url of ["https://img.example/bad.gif", "https://img.example/x"])
+    await assert.rejects(
+      plugin.ui.remoteImage(url),
+      (error: PluginError) => error.code === "unavailable",
+    );
+  await assert.rejects(
+    plugin.ui.remoteImage("http://img.example/ok.png"),
+    (error: PluginError) => error.code === "invalid",
+  );
   await stop();
 });
 

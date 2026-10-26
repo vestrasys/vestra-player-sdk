@@ -90,7 +90,8 @@ import { OSD_LIMITS } from "./osd.ts";
 import { SECRET_LIMITS } from "./services.ts";
 import { BINDING_INPUTS } from "./bindings.ts";
 import { THEME_PALETTES } from "../palettes.ts";
-import { UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
+import { IMAGE_LIMITS, UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
+import { validStep } from "./player.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
@@ -154,7 +155,7 @@ export { BINDING_INPUTS };
 /** The colours of the player's palettes, by `Theme` token. */
 export { THEME_PALETTES };
 /** The player's property value limits, which the test host enforces as well. */
-export { UI_VALUE_LIMITS };
+export { IMAGE_LIMITS, UI_VALUE_LIMITS };
 /**
  * The player's limits on one text value ({@link Text}, {@link TextList},
  * with everything nested in it), which the test host enforces as well:
@@ -967,14 +968,19 @@ export class TestHost implements Transport {
     this.emit("timeline.changed", { marks: this.timeline.marks });
   }
   /**
-   * Runtime images written to views (`plugin.ui.image`), newest last. The
-   * SDK refuses images of released scopes before anything is sent.
+   * Runtime images written to views (`plugin.ui.image`,
+   * `plugin.ui.remoteImage`), whole values and (SDK 1.5.19) images nested
+   * in rows, newest last. The SDK refuses images of released scopes before
+   * anything is sent. The test host does not read the files, so it does not
+   * check the player's per-view budget (`IMAGE_LIMITS.viewBytes`).
    */
   readonly images: {
     /** The image file's path, as given to `ui.image`. */
     path: string;
     /** The SDK's reference number for that `ImageRef`. */
     ref: number;
+    /** Its `maxSide` option, when given. */
+    maxSide?: number;
   }[] = [];
   /**
    * The file an image property shows, or `null` when the value is not a
@@ -1044,14 +1050,19 @@ export class TestHost implements Transport {
     return kept;
   }
   #seeImages(values: Record<string, Json> | Json[]) {
-    for (const value of Object.values(values)) {
+    const see = (value: Json) => {
       const path = this.imagePath(value);
-      if (path !== null)
+      if (path !== null) {
+        const { ref, maxSide } = value as { ref?: number; maxSide?: number };
         this.images.push({
           path,
-          ref: Number((value as { ref?: number }).ref),
+          ref: Number(ref),
+          ...(maxSide === undefined ? {} : { maxSide }),
         });
-    }
+      } else if (value !== null && typeof value === "object")
+        for (const item of Object.values(value)) see(item);
+    };
+    for (const value of Object.values(values)) see(value);
   }
   // ------------------------------------------------------------ round 3b batch 2
 
@@ -1730,6 +1741,39 @@ export class TestHost implements Transport {
 
   /** The `player.setStepSeek` value in effect (default 5). */
   stepSeek = 5;
+  /** The `player.setStepSeek` `keyframes` in effect (default `false`, SDK 1.5.19). */
+  stepSeekKeyframes = false;
+  /**
+   * Test data: the keyframe times (seconds, ascending) of the current
+   * source, for keyframe step seeks. `null` (the default): none modelled,
+   * and step seeks are exact even with `stepSeekKeyframes`.
+   *
+   * @example
+   * ```ts
+   * host.setSource({ phase: "ready", duration: 45, position: 12 });
+   * host.keyframes = [0, 10, 20, 30, 40];
+   * await plugin.player.setStepSeek({ seconds: 5, keyframes: true });
+   * await plugin.host.run("seek-forward");
+   * assert.equal(host.source.position, 20);
+   * assert.equal(host.osd.at(-1), "Forward 5 s: 00:20 / 00:45");
+   * ```
+   */
+  keyframes: number[] | null = null;
+  /**
+   * Every step seek the core ran (`seek-backward` / `seek-forward`, from a
+   * key, the menu or `host.run`), newest last: the step, whether it went to
+   * a keyframe, and where it landed.
+   */
+  readonly coreSeeks: {
+    /** `seek-backward` or `seek-forward`. */
+    action: string;
+    /** The step: `host.run`'s `seconds`, else `setStepSeek`'s. */
+    seconds: number;
+    /** It landed on a keyframe (`stepSeekKeyframes` and keyframes modelled). */
+    keyframes: boolean;
+    /** The new position. */
+    landed: number;
+  }[] = [];
   /** Every `player.step`, newest last. */
   readonly steps: {
     /** `"frame"` or `"keyframe"`. */
@@ -1970,7 +2014,7 @@ export class TestHost implements Transport {
       this.coreCommands.set(`host/${id}`, command);
     }
   }
-  #runCore(action: string) {
+  #runCore(action: string, seconds?: number) {
     const state = this.#coreState(action);
     if (!state.enabled)
       throw new HostError("unavailable", state.reason ?? "unavailable");
@@ -2014,18 +2058,40 @@ export class TestHost implements Transport {
         return;
       case "seek-backward":
       case "seek-forward": {
-        const delta =
-          action === "seek-forward" ? this.stepSeek : -this.stepSeek;
+        const step = seconds ?? this.stepSeek;
+        const delta = action === "seek-forward" ? step : -step;
         const base = s.position ?? 0;
-        const target = Math.max(
+        let target = Math.max(
           0,
           Math.min(s.duration ?? Infinity, base + delta),
         );
+        // Keyframe mode, as the player: forward on the first keyframe at or
+        // after the target (none: the exact target), backward on the last at
+        // or before it; only sources with moving video that can seek.
+        const keyframes =
+          this.stepSeekKeyframes &&
+          this.keyframes !== null &&
+          s.hasVideo !== false &&
+          s.capabilities.seek;
+        if (keyframes && target !== base) {
+          const keys = this.keyframes!;
+          target =
+            delta > 0
+              ? (keys.find((k) => k >= target) ?? target)
+              : keys
+                  .filter((k) => k <= target)
+                  .reduce((a, k) => Math.max(a, k), 0);
+        }
         this.#intent({
           kind: "control",
           control: { kind: "seek", seconds: target },
         });
-
+        this.coreSeeks.push({
+          action,
+          seconds: step,
+          keyframes,
+          landed: target,
+        });
         this.osd.push(
           this.#hostText(
             delta < 0 ? "Back {} s: {} / {}" : "Forward {} s: {} / {}",
@@ -2433,7 +2499,7 @@ export class TestHost implements Transport {
   /** Every `packages.setEnabled` / `uninstall` / `install`, newest last. */
   readonly packageCalls: {
     /** Which call. */
-    method: "setEnabled" | "uninstall" | "install";
+    method: "setEnabled" | "reload" | "uninstall" | "install";
     /** The target plugin id. */
     id: string;
     /** `setEnabled`'s value. */
@@ -2462,9 +2528,10 @@ export class TestHost implements Transport {
    */
   readonly candidates = new Map<string, PackageManifest>();
   /**
-   * Remote Markdown images (`plugin.ui.markdown`): address → a local PNG or
-   * JPEG file served for it, or `null` for a failing download. Nothing is
-   * fetched from the network in tests; unknown addresses fail.
+   * Remote images (`plugin.ui.markdown`, `plugin.ui.remoteImage`): address
+   * → a local PNG or JPEG file served for it, or `null` for a failing
+   * download. Nothing is fetched from the network in tests; unknown
+   * addresses fail.
    */
   readonly remoteImages = new Map<string, string | null>();
   /**
@@ -3344,16 +3411,32 @@ export class TestHost implements Transport {
       ];
       if (!actions.includes(String(p.action)))
         throw new HostError("invalid", `unknown host action ${p.action}`);
-      this.#runCore(String(p.action));
+      // SDK 1.5.19: one step seek of another step.
+      let seconds: number | undefined;
+      if (p.seconds !== undefined && p.seconds !== null) {
+        if (p.action !== "seek-backward" && p.action !== "seek-forward")
+          throw new HostError(
+            "invalid",
+            `seconds applies only to seek-backward and seek-forward, not ${p.action}`,
+          );
+        if (!validStep(p.seconds))
+          throw new HostError("invalid", "seconds must be 0.1..3600 in tenths");
+        seconds = p.seconds;
+      }
+      this.#runCore(String(p.action), seconds);
     },
     "player.setStepSeek": (p) => {
-      const seconds = Number(p.seconds);
-      if (
-        !(seconds >= 0.1 && seconds <= 3600) ||
-        Math.abs(Math.round(seconds * 10) - seconds * 10) > 1e-9
-      )
+      if (!validStep(p.seconds))
         throw new HostError("invalid", "seconds must be 0.1..3600 in tenths");
-      this.stepSeek = seconds;
+      if (
+        p.keyframes !== undefined &&
+        p.keyframes !== null &&
+        typeof p.keyframes !== "boolean"
+      )
+        throw new HostError("invalid", "keyframes must be a boolean");
+      // Written as a pair, as the player does.
+      this.stepSeek = p.seconds;
+      this.stepSeekKeyframes = p.keyframes === true;
     },
     "player.step": (p) => {
       this.#audioCondition(p.expected);
@@ -3901,6 +3984,33 @@ export class TestHost implements Transport {
       });
       entry.state = p.enabled === true ? "running" : "disabled";
       this.setPackages(this.packages);
+    },
+    // As the player (SDK 1.5.19): stop and start again, built-ins included;
+    // `packages.changed` shows `starting`, then `running`.
+    "packages.reload": (p) => {
+      const id = String(p.id);
+      if (id === this.manifestId)
+        throw new HostError("invalid", "a plugin cannot reload itself");
+      const entry = this.packages.find((each) => each.id === id);
+      if (!entry) throw new HostError("missing", `no plugin ${id}`);
+      if (entry.state === "starting")
+        throw new HostError(
+          "busy",
+          "the package is being installed or reloaded",
+        );
+      if (entry.state === "disabled")
+        throw new HostError(
+          "invalid",
+          `${id} is disabled: enable it instead of reloading it`,
+        );
+      this.packageCalls.push({ method: "reload", id });
+      entry.state = "starting";
+      entry.error = null;
+      this.setPackages(this.packages);
+      setTimeout(() => {
+        entry.state = "running";
+        this.setPackages(this.packages);
+      }, 0);
     },
     "packages.validate": (p) => this.#validate(String(p.directory)),
     "packages.validateArchive": (p) => this.#validate(String(p.file)),

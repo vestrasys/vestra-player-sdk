@@ -169,3 +169,18 @@ test("ui.error from the player reaches onError with its code", async () => {
   );
   await stop();
 });
+
+test("a nested image counts as one value, like the player (SDK 1.5.19)", () => {
+  const image = (n: number): Json => ({ $vestraImage: "/i.png", ref: n });
+  const rows = (count: number): Json =>
+    Array.from({ length: count }, (_, n) => ({ icon: image(n) }));
+  // 1 + 4096 × (struct + image) = 8193 values: fits (as objects it would
+  // be 1 + 4096 × 4 and over the limit).
+  assert.equal(valueLimitProblem(rows(4096)), null);
+  assert.equal(
+    valueLimitProblem([
+      { icon: { $vestraImage: "/i.png", ref: 1, maxSide: 64 } },
+    ]),
+    null,
+  );
+});

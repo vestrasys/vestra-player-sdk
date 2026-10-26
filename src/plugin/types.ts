@@ -595,11 +595,12 @@ export interface Commands {
  * An image file for a Slint `image` property, made by {@link Ui.image}.
  *
  * @remarks
- * Opaque: pass it as the **whole** value of an `image` property with
- * {@link View.set} or {@link View.bind}; it cannot sit inside a struct or an
- * array. Making the reference does not read the file: the player checks and
- * decodes it each time a view uses it ({@link Ui.image} has the rules and
- * limits).
+ * Opaque: pass it where the Slint type is `image`, with {@link View.set} or
+ * {@link View.bind}: the whole value of an `image` property or, from SDK
+ * 1.5.19 (player 0.5.1), an `image` field at any depth, such as the logo of
+ * each row of a list. Making the reference does not read the file: the
+ * player checks and decodes it each time a view uses it ({@link Ui.image}
+ * has the rules and limits).
  *
  * A reference belongs to the {@link Scope} that created it. Once that scope
  * is disposed, writing the reference fails with `invalid` (reported to
@@ -613,6 +614,19 @@ export interface Commands {
  * await cover.show();
  * ```
  *
+ * @example A logo in each row (`export struct Row { key: string, name: string, icon: image }`)
+ * ```ts
+ * const items = [{ id: "a", name: "A", iconPath: `${plugin.dataDirectory}/a.png` }];
+ * const list = plugin.windows.create("ui/list.slint");
+ * list.bind(() => ({
+ *   rows: items.map((item) => ({
+ *     key: item.id,
+ *     name: item.name,
+ *     icon: plugin.ui.image(item.iconPath, { maxSide: 64 }),
+ *   })),
+ * }));
+ * ```
+ *
  * @see {@link Ui.image}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
  * @since 1.0.0
  * @category UI
@@ -622,6 +636,25 @@ export interface ImageRef {
   readonly path: string;
   /** Brand that marks the value as an image reference; never construct one yourself. */
   readonly __vestraImage: true;
+}
+
+/**
+ * Options of {@link Ui.image} and {@link Ui.remoteImage}.
+ *
+ * @since 1.5.19
+ * @category UI
+ */
+export interface ImageOptions {
+  /**
+   * Decode the image scaled down, aspect kept, so that neither side is over
+   * this many pixels (an integer 1–4096); smaller images stay as they are.
+   * Use about twice the drawn size (64 for a 32 px logo) so that it stays
+   * sharp on high-density screens. It keeps the decoded memory small: a
+   * 1024×1024 icon is 4 MB decoded, 16 KB at `maxSide: 64`.
+   *
+   * @player 0.5.1; older players refuse the reference (`invalid`).
+   */
+  maxSide?: number;
 }
 
 /**
@@ -685,9 +718,8 @@ export interface MarkdownOptions {
 }
 
 /**
- * The value of one Slint property: JSON with Markdown documents at any
- * depth ({@link PropData}), or an image as the whole value of an `image`
- * property.
+ * The value of one Slint property: JSON with Markdown documents and images
+ * at any depth ({@link PropData}).
  *
  * @remarks
  * JSON becomes Slint values as you would expect: booleans for `bool`,
@@ -704,13 +736,20 @@ export interface MarkdownOptions {
  *
  * A {@link MarkdownRef} goes where the Slint type is `[MarkdownBlock]`: the
  * whole value, or a field at any depth (SDK 1.5.4; older players refuse a
- * nested one). An {@link ImageRef} only as the whole value: nested in an
- * array or object it is `invalid`.
+ * nested one). An {@link ImageRef} goes where the Slint type is `image`: the
+ * whole value, or a field at any depth (SDK 1.5.19, player 0.5.1; older
+ * players refuse a nested one with `invalid`). The images nested in the
+ * values of one view (a window, panel or settings page) may show at most
+ * 32 MB of decoded pixels together (`IMAGE_LIMITS.viewBytes` in
+ * `@vestra-player/sdk/runtime`): a write
+ * that would pass it is refused with `limit`; use
+ * {@link ImageOptions.maxSide} for small pictures such as logos and
+ * thumbnails.
  *
  * Limits per value (`UI_VALUE_LIMITS` in `@vestra-player/sdk/testing`,
  * player 0.4.3; older players: 4096 values and 1024 rows): nesting depth 8,
  * 16384 values in total (every array, object, string, number, boolean and
- * null counts, the value itself included; a document is one), 4096 rows
+ * null counts, the value itself included; a document or an image is one), 4096 rows
  * per array, 64 KiB per string or field name and 1 MiB of text in total,
  * field names and the text of its Markdown documents included (256 KB per
  * document). A list of rows with 8 fields is 9 values per row, so about
@@ -729,8 +768,8 @@ export interface MarkdownOptions {
 export type PropValue = PropData | ImageRef;
 
 /**
- * JSON whose values may also be Markdown documents, at any depth: the part
- * of {@link PropValue} that nests.
+ * JSON whose values may also be Markdown documents and (SDK 1.5.19) images,
+ * at any depth: the part of {@link PropValue} that nests.
  *
  * @example A message list whose rows carry a document
  * ```ts
@@ -748,6 +787,7 @@ export type PropData =
   | number
   | string
   | MarkdownRef
+  | ImageRef
   | Text
   | TextList
   | PropData[]
@@ -808,10 +848,13 @@ export interface Ui {
    * the main window being rebuilt): it must be inside this plugin's package
    * directory or {@link Plugin.dataDirectory} after following links, at most
    * 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
-   * does not matter). A failed check is a failed property write: `missing`
-   * for a file that does not exist, `invalid` otherwise. It goes to
-   * {@link Scope.onError} and the property keeps its previous image; in the
-   * initial properties of a tool window it makes {@link Window.show} reject.
+   * does not matter). A failed check of a whole-value image is a failed
+   * property write: `missing` for a file that does not exist, `invalid`
+   * otherwise. It goes to {@link Scope.onError} and the property keeps its
+   * previous image; in the initial properties of a tool window it makes
+   * {@link Window.show} reject. A nested image (a field of a row, SDK
+   * 1.5.19) that fails its check is drawn empty instead, and the rest of
+   * the value is shown, as a Markdown image shows its alt text.
    *
    * The player caches decoded images per plugin (up to 64 MB, least recently
    * used first) and does not watch files. Every call returns a new value, so
@@ -822,9 +865,12 @@ export interface Ui {
    *
    * @param path - Absolute path of the image file, inside the package
    *   directory or the data directory.
+   * @param options - `maxSide` (SDK 1.5.19, player 0.5.1): decode the image
+   *   scaled down, aspect kept, so that neither side is over it.
    * @returns A new {@link ImageRef}, owned by this scope.
    *
-   * @throws `invalid` (throws) `path` is not a non-empty string.
+   * @throws `invalid` (throws) `path` is not a non-empty string, or
+   *   `maxSide` is not an integer 1–4096.
    *
    * @example Show a thumbnail the plugin rendered
    * ```ts
@@ -837,7 +883,51 @@ export interface Ui {
    *
    * @since 1.0.0
    */
-  image(path: string): ImageRef;
+  image(path: string, options?: ImageOptions): ImageRef;
+  /**
+   * Download an `https:` PNG or JPEG image (a thumbnail, a repository's
+   * plugin icon) and reference the local copy, as {@link Ui.image} does.
+   *
+   * @remarks
+   * Downloads like {@link Ui.markdown}'s remote images: Node's `fetch` in
+   * this plugin's process, at most 4 MB and 10 s per image, 4 downloads at a
+   * time per plugin, into `<dataDirectory>/.vestra-cache/images/`; the cache
+   * keeps 32 MB and fetches an address again after 24 hours, so a list that
+   * shows the same thumbnails again reads them from disk.
+   *
+   * @capability None (the plugin process has network access).
+   * @player Any (the reference is an ordinary {@link ImageRef}); nested in a
+   *   value, player 0.5.1.
+   *
+   * @param url - The image's `https:` address.
+   * @param options - As for {@link Ui.image}.
+   * @returns The reference, owned by this scope, once the file is in the
+   *   cache.
+   *
+   * @throws `invalid` (rejects) `url` is not an `https:` address, or
+   *   `maxSide` is not an integer 1–4096.
+   * @throws `unavailable` (rejects) the download failed, timed out, was too
+   *   large, or is not a PNG or JPEG image; or the plugin has no data
+   *   directory.
+   *
+   * @example Search results with thumbnails
+   * ```ts
+   * const results = [{ title: "A", thumbnailUrl: "https://example.com/a.jpg" }];
+   * const placeholder = plugin.ui.image(`${plugin.dataDirectory}/blank.png`);
+   * const rows = await Promise.all(
+   *   results.map(async (r) => ({
+   *     title: r.title,
+   *     thumb: await plugin.ui
+   *       .remoteImage(r.thumbnailUrl, { maxSide: 320 })
+   *       .catch(() => placeholder),
+   *   })),
+   * );
+   * plugin.windows.create("ui/results.slint").set({ rows });
+   * ```
+   *
+   * @since 1.5.19
+   */
+  remoteImage(url: string, options?: ImageOptions): Promise<ImageRef>;
   /**
    * Prepare a Markdown document for `MarkdownView` (`@vestra/markdown.slint`).
    *
@@ -3833,8 +3923,23 @@ export interface Player {
    * The core's first-tier relative seek (`seek-backward` / `seek-forward`,
    * ← / →): 0.1–3600 seconds in tenths, default 5. The newest call of any
    * plugin wins; it reverts when that plugin stops.
+   *
+   * `keyframes: true` (player 0.5.1, SDK 1.5.19): the step seeks
+   * (`seek-backward` / `seek-forward`, including {@link Host.run} with
+   * `seconds` and the picture-in-picture skips) land on a keyframe instead
+   * of the exact time: forward on the first keyframe at or after position +
+   * step, backward on the last at or before position − step, and they
+   * always move. Presses during a seek add up and continue from where it
+   * landed; the on-screen text shows the landed time. Sources without moving
+   * video seek exactly. The seek bar, {@link Player.seek}, scrubs, chapters,
+   * loops and {@link Player.step} are unaffected. Omitted or `false`: exact
+   * seeks, as before. `seconds` and `keyframes` are written as a pair: the
+   * newest call sets both.
+   *
+   * Older players ignore `keyframes`: set `"minPlayerVersion": "0.5.1"` in
+   * the manifest when you rely on it.
    */
-  setStepSeek(options: { seconds: number }): Promise<void>;
+  setStepSeek(options: { seconds: number; keyframes?: boolean }): Promise<void>;
   /**
    * The chapters of the current media (empty without media or chapters),
    * read on demand; `sourceId` tells which source they belong to.
@@ -3880,7 +3985,7 @@ export interface Player {
  * | `play-pause` | Space | pause / resume, replay after the end |
  * | `previous` / `next` | PageUp, Mouse:X1 / PageDown, Mouse:X2 | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
- * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds |
+ * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
  * | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
  * | `mute` | M | toggle mute |
@@ -3919,6 +4024,32 @@ export interface Host {
    * ```
    */
   run(action: HostAction): Promise<void>;
+  /**
+   * One step seek of `seconds` (0.1–3600 in tenths) instead of the
+   * {@link Player.setStepSeek} step: the same checks, mode (exact or
+   * keyframes), accumulation and on-screen text as ← / →. Use it for more
+   * seek steps of your own (Ctrl+→ and the like) so that they add up with
+   * the core's and land the same way.
+   *
+   * In keyframe mode it resolves once the seek has landed (so
+   * `player.state.position` is current after the `await`); presses that add
+   * up resolve together, the last with the text. In exact mode it resolves
+   * once the seek is submitted, as before. `invalid` for `seconds` out of
+   * range.
+   *
+   * @player 0.5.1 (set `"minPlayerVersion": "0.5.1"`: older players ignore
+   * `seconds` and seek by the `setStepSeek` step)
+   * @since 1.5.19
+   *
+   * @example
+   * ```ts
+   * bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 }));
+   * ```
+   */
+  run(
+    action: "seek-backward" | "seek-forward",
+    options: { seconds: number },
+  ): Promise<void>;
 }
 
 // ---------------------------------------------------------------- on-screen display
@@ -5038,6 +5169,26 @@ export interface Packages {
    * (players released with SDK 1.5.18 on; older ones disabled built-ins too).
    */
   setEnabled(id: string, enabled: boolean): Promise<void>;
+  /**
+   * Restart a plugin (`plugins.manage`): stop it and start it again from the
+   * same package with the same data directory, for example to recover one
+   * that misbehaves. Built-ins included. A stopped or failed plugin is just
+   * started. The disabled flag is never written, so a reload never leaves
+   * a plugin disabled.
+   *
+   * Resolves once the plugin is stopped and its start is scheduled; the
+   * player starts it as soon as the old process is gone (at most 20 s).
+   * Follow it with {@link Packages.onChange}: `starting`, then `running`,
+   * or `failed` with the reason.
+   *
+   * `invalid` for oneself or a disabled plugin (enable it instead),
+   * `missing` unknown, `busy` while it is being installed or reloaded.
+   *
+   * @player 0.5.1; older players reject it as an unknown request
+   * (`unsupported`).
+   * @since 1.5.19
+   */
+  reload(id: string): Promise<void>;
   /**
    * Remove an installed plugin (`plugins.manage`); `removeData` also deletes
    * its data directory, otherwise reinstalling it from the same source

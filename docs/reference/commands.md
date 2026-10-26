@@ -363,7 +363,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Settings ▸ Keyboard Shortcuts… |  | `vestra.hotkeys/keys` |
 | Settings ▸ Mouse… |  | `vestra.hotkeys/mouse` |
 | Settings ▸ Ignore Default Shortcuts |  | `vestra.hotkeys/ignore-defaults` |
-| Settings ▸ Plugin Manager… |  | `vestra.plugins/manage` |
 | Settings ▸ Appearance ▸ Vestra Dark |  | `vestra.preferences/theme.vestra` |
 | Settings ▸ Appearance ▸ Vestra Light |  | `vestra.preferences/theme.vestra-light` |
 | Settings ▸ Appearance ▸ Show Logo When Idle |  | `vestra.visualizer/idle-logo` |

@@ -59,6 +59,69 @@ test("host.run executes core actions with the playback OSD text", async () => {
   await stop();
 });
 
+test("keyframe step seeks (SDK 1.5.19): setStepSeek keyframes, host.run seconds, landed OSD", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({ position: 12, duration: 45 });
+  host.keyframes = [0, 10, 20, 30, 40];
+  const { plugin, stop } = await started(host);
+  // Exact until asked.
+  await plugin.host.run("seek-forward");
+  assert.equal(host.source.position, 17);
+  await plugin.player.setStepSeek({ seconds: 5, keyframes: true });
+  assert.equal(host.stepSeekKeyframes, true);
+  await plugin.host.run("seek-forward");
+  assert.equal(host.source.position, 30);
+  assert.equal(host.osd.at(-1), "前进 5秒: 00:30 / 00:45");
+  // Tiers 2–4: another step, the same mode, from where it landed.
+  await plugin.host.run("seek-backward", { seconds: 30 });
+  assert.equal(host.source.position, 0);
+  await plugin.host.run("seek-forward", { seconds: 30 });
+  assert.equal(host.source.position, 30);
+  assert.deepEqual(
+    host.coreSeeks.map((s) => [s.seconds, s.keyframes, s.landed]),
+    [
+      [5, false, 17],
+      [5, true, 30],
+      [30, true, 0],
+      [30, true, 30],
+    ],
+  );
+  // Past the last keyframe: the exact target.
+  await plugin.host.run("seek-forward", { seconds: 12 });
+  assert.equal(host.source.position, 42);
+  // Audio only: exact.
+  host.setSource({ hasVideo: false, position: 12 });
+  await plugin.host.run("seek-forward");
+  assert.equal(host.source.position, 17);
+  // The pair is written whole: seconds alone turns keyframes off.
+  await plugin.player.setStepSeek({ seconds: 10 });
+  assert.equal(host.stepSeekKeyframes, false);
+  // Validation, in the SDK and in the host.
+  await rejects(
+    plugin.player.setStepSeek({ seconds: 5, keyframes: "yes" as never }),
+    "invalid",
+  );
+  await rejects(
+    plugin.host.run("play-pause" as "seek-forward", { seconds: 5 }),
+    "invalid",
+  );
+  for (const seconds of [0, 3601, 1.25])
+    await rejects(plugin.host.run("seek-forward", { seconds }), "invalid");
+  assert.deepEqual(
+    host.sent("player.setStepSeek").map((p) => p.keyframes),
+    [true, undefined],
+  );
+  assert.deepEqual(
+    host
+      .sent("host.run")
+      .filter((p) => p.seconds !== undefined)
+      .map((p) => p.seconds),
+    [30, 30, 12],
+  );
+  await stop();
+});
+
 test("volume-up stops at 100 like the player; a louder volume is kept", async () => {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
