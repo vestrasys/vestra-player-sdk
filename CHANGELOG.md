@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.16
+
+**Package rollback is deprecated: the player keeps no previous plugin version.** `apiVersion` stays `vestra/1`; code still compiles, and plugins that do not manage other plugins need no change. 1.5.17 removes the deprecated symbols, as 1.5.8 removed `PackageCandidate.trial()` at patch level. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
+
+- **Deprecated: `Packages.rollback`** (removed in 1.5.17). The player no longer has `packages.rollback` and answers it with `unsupported` ("unknown package method"); the SDK still forwards the call, so the error reaches the caller. To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`.
+- **Deprecated: `PluginInfo.previousVersion`** and the wire field `PackageInfo.previousVersion` (removed in 1.5.17): always `null`, since an upgrade replaces the package. The SDK reads a missing field as `null`.
+- **Built-in plugins** run in place from the player installation: `PluginInfo.directory` of a built-in is `<install resources>/plugins/<id>` and read-only (plugins write only under `plugin.dataDirectory`); they can be disabled and enabled, not uninstalled (`unsupported`, as before).
+- **`TestHost`** matches the player: `packages.list` and `packages.changed` report `previousVersion: null` for every plugin, an install no longer records the replaced version, and `packages.rollback` rejects with `unsupported` ("unknown package method"). The `previousVersion` field of `host.packages` entries is deprecated and ignored; it stays required (as `PluginInfo.previousVersion` does), so existing test code compiles unchanged.
+- `"Packages.rollback"` stays in `CAPABILITY_INFO["plugins.manage"].apis` until 1.5.17; the Capabilities reference notes the deprecation.
+- Docs: the new how-to *Migrating off package rollback (1.5.16)*; *Publish a plugin* no longer mentions a roll back button, installing an older version from the store or the user's rollback as a safety net; the data directory is "kept across restarts, disabling and upgrades"; `revisionConflict`, `PackageChange` and `PackageChangeStatus` speak of installs and uninstalls (the statuses are unchanged).
+
 ## 1.5.15
 
 **How many frames really reach the screen, and how the video is decoded** (player 0.5.1); every player error code documented; the fullscreen bottom bar's new behaviour. Additive; `apiVersion` stays `vestra/1`, and plugins need no change.

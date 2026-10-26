@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.15: full reference
+# @vestra-player/sdk 1.5.16: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -319,7 +319,7 @@ So `onDispose` cleanup must be quick and must not rely on the player. Media the 
 plugin.dataDirectory is a writable directory for the plugin's own files (settings, caches, remembered folders). It needs no capability; the player creates it before it starts the plugin.
 
 - **One directory per installation.** Each fresh installation of a plugin gets its own directory (player 0.2.0). Installing the same id again from the same source is an upgrade and keeps the directory. Installing the same id from a different source, and confirming the replacement, gives the new plugin a new, empty directory; the old one is kept and reconnected if the user goes back to the first source later. A development load (`--plugin`) has a directory of its own.
-- **Kept** when the plugin is disabled, reloaded, upgraded or rolled back. Uninstalling deletes it only when the user asks for that (uninstall with `removeData: true`); otherwise reinstalling from the same source reconnects it.
+- **Kept** when the plugin is disabled, reloaded or upgraded. Uninstalling deletes it only when the user asks for that (uninstall with `removeData: true`); otherwise reinstalling from the same source reconnects it.
 - **The path's layout is not part of the API.** Do not derive another plugin's directory from yours; a plugin manager reads it from PluginInfo.dataDirectory.
 - **Write atomically.** Write to a temporary name and rename it, so a player that quits mid-write never leaves half a file; fall back to defaults when a file is missing or unreadable. For JSON settings use plugin.storage.json, which already does this (defaults, debounced atomic writes, a corrupt file moved aside).
 - Reading the property throws `unavailable` when the player could not provide a directory.
@@ -1753,9 +1753,9 @@ Every member of `TestHost` is in the @vestra-player/sdk/testing reference.
 
 ## How-to: Publish a plugin
 
-**Goal:** your plugin appears in the player's plugin store, where users install, update and roll it back.
+**Goal:** your plugin appears in the player's plugin store, where users install, update and uninstall it.
 
-The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI, the user's rollback and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them.
+The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them.
 
 #### Two ways in
 
@@ -1836,9 +1836,83 @@ After the merge, the repository's publish workflow builds the package, releases 
 The store shows the newest version's manifest fields, so what you write there is the plugin's page:
 
 - **The list**: name and version, author and repository, the punchline. Search covers the name, id, author, punchline and tags; the list can be filtered by tag and sorted by name or by the date of the newest version. There are no download counts.
-- **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, roll back, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked; an older compatible version can be installed from there). A side column shows the version, the date, the license, a link to `sourceUrl` and the capabilities in plain words, the risky ones highlighted (the wording is the "Shown in the store as" column of Capabilities), with a fixed note that capabilities limit only the player API, not file or network access.
+- **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the store has no action to install an older one: a user who wants an older version uninstalls the plugin and installs that version's `.vxp` (Migrating off package rollback). A side column shows the version, the date, the license, a link to `sourceUrl` and the capabilities in plain words, the risky ones highlighted (the wording is the "Shown in the store as" column of Capabilities), with a fixed note that capabilities limit only the player API, not file or network access.
 - **Before installing**, the user confirms a dialog that lists the capabilities; an update that adds capabilities lists the new ones. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
 - **The README** is rendered as Markdown; relative links and images resolve against the README's own address, and remote images are shown for the official repository.
+
+## How-to: Migrating off package rollback (1.5.16)
+
+For plugins that manage other plugins (`plugins.manage`): stores, plugin managers, anything that calls packages.rollback or reads PluginInfo.previousVersion. A plugin that only uses its own API needs no change.
+
+#### What changed
+
+The player no longer keeps a previous version of a plugin. An upgrade replaces the package, so there is nothing to roll back to:
+
+- `packages.rollback(id)` always fails with `unsupported` (the player answers "unknown package method").
+- Every entry of `packages.list()` and `packages.onChange` has `previousVersion: null`.
+- Built-in plugins (`builtin: true`) run in place from the player installation. They can be disabled and enabled, never uninstalled or replaced; `uninstall` fails with `unsupported`. A built-in's `directory` is inside the installation (`<install resources>/plugins/<id>`) and read-only.
+- Third-party plugins can still be uninstalled.
+
+Why: built-ins now run from the read-only installation instead of a copy, and an upgrade replaces the package instead of keeping the old one beside it. Going back to an older version becomes an ordinary uninstall and install that the user starts.
+
+`TestHost` behaves the same way since 1.5.16, so tests show it too.
+
+#### 1. Remove rollback calls and `previousVersion` checks
+
+Before:
+
+```ts nocheck
+if (info.previousVersion !== null) showButton("Roll back", () => plugin.packages.rollback(info.id));
+```
+
+After: delete both. There is no replacement call; nothing on the player can restore an earlier package. Remove the button, menu item or command, and any state, text or test that depends on `previousVersion`.
+
+#### 2. Going back to an older version
+
+Managing plugins has exactly three operations: **install**, **uninstall** and **disable/enable**. There is no rollback, no "install older version" and no "Undo install".
+
+To go back to an older version, the user uninstalls the plugin and installs the older version's `.vxp` file themselves, as two ordinary operations. Do not offer an action that does both, an older-version install from a store, or an "Undo" after an install (the official store and the AI window drop theirs). Uninstalling without `removeData` keeps the plugin's data, and a reinstall from the same source reconnects to it; a `.vxp` file is a different source from a repository, so a plugin first installed from the store gets a new, empty data directory.
+
+#### 3. Remove "Undo install"
+
+Remove any Undo action after an install, its texts and translations, and the code that only served it: copies of installed `.vxp` files, remembered "last install" state, and tests of it. A user who wants a plugin gone uninstalls it.
+
+#### 4. Built-in plugins
+
+Check `builtin` before offering actions:
+
+```ts
+for (const info of await plugin.packages.list()) {
+  const actions = info.builtin
+    ? [info.state === "disabled" ? "Enable" : "Disable"]
+    : ["Disable", "Uninstall"];
+  console.log(info.id, actions);
+}
+```
+
+- Offer only disable and enable for a built-in (`packages.setEnabled`); never uninstall or install over it.
+- Never write into a built-in's `directory`, or into any plugin's `directory`: read `manifest.json` from it if you need to. A plugin writes only under its own plugin.dataDirectory.
+
+#### 5. Tests
+
+`TestHost` lists every plugin with `previousVersion: null`, whatever a test puts in `host.packages`, and rejects `packages.rollback` with `unsupported`. The `previousVersion` field of `host.packages` entries is deprecated and ignored; it stays required in 1.5.16 so that test data shaped like a `PluginInfo` keeps compiling, and goes in 1.5.17. A test that expected a rollback to succeed should now assert the rejection or be removed.
+
+#### Timeline
+
+| SDK | Player | What happens |
+| --- | --- | --- |
+| 1.5.16 | ships with it | `Packages.rollback` and `PluginInfo.previousVersion` (and the wire field) are `@deprecated`. The player and `TestHost` answer rollback with `unsupported` and list `previousVersion: null`. Code still compiles. |
+| 1.5.17 | — | Both symbols are removed. Remaining uses are TypeScript compile errors. |
+
+`apiVersion` stays `vestra/1` in both releases, as when 1.5.8 removed `PackageCandidate.trial()`.
+
+#### Before you hand it in
+
+- [ ] No call to `packages.rollback`; no UI or logic gated on `previousVersion`.
+- [ ] Built-ins offer only disable and enable.
+- [ ] Nothing writes into a plugin's `directory`.
+- [ ] No Undo after an install, no older-version install; older versions go through uninstall and a user-chosen `.vxp`.
+- [ ] Tests pass with SDK 1.5.16; the only deprecated name left in them is the `previousVersion: null` of `host.packages` test data.
 
 ## Guideline: Interface guidelines
 
@@ -2125,6 +2199,8 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 - A `processed` snapshot or export (MediaCapture) also needs `playback.read` and `subtitles.read`.
 - A file resolver (Resolvers.add with file types) also needs `producer.av`.
 - Without `events`, Player.state is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere.
+
+**Deprecated:** Packages.rollback in the `plugins.manage` row (since 1.5.16; removed in 1.5.17). The player keeps no previous version, so it always fails with `unsupported`; see Migrating off package rollback.
 
 #### Without a capability
 
@@ -3070,7 +3146,7 @@ change).
 | `pending` | An operation with the same token is still running in the player. The SDK waits and asks again, so it rarely reaches a plugin. |
 | `producer` | `openStream`: the player refused or lost the generated stream; `message` has the reason. |
 | `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
-| `revisionConflict` | Packages: the installed revision changed since it was read (another install, rollback or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
+| `revisionConflict` | Packages: the installed revision changed since it was read (another install or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
 | `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
 | `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
 | `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
@@ -3245,7 +3321,7 @@ interface Plugin extends Scope {
    * A writable directory for this plugin's own files (settings, caches,
    * remembered folders), created by the player before it starts the plugin.
    * Each installation has its own directory (player 0.2.0): it is kept across
-   * restarts, disabling, upgrades and rollbacks, and a reinstall of the same
+   * restarts, disabling and upgrades, and a reinstall of the same
    * id from a different source gets a new, empty one. It is deleted only by
    * `packages.uninstall(id, { removeData: true })`. No capability.
    *
@@ -5885,7 +5961,7 @@ interface PackageCandidate {
 
 ### PackageChangeStatus
 
-The progress of an install, rollback or uninstall.
+The progress of an install or uninstall.
 
 ```ts
 type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed" | "cancelled" | "failed" | "failedDegraded" | "tooLate";
@@ -5893,7 +5969,7 @@ type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed
 
 ### PackageChange
 
-An install, rollback or uninstall in progress. The SDK never submits a
+An install or uninstall in progress. The SDK never submits a
 change twice: after a lost reply it only queries the same request.
 
 ```ts
@@ -5929,9 +6005,14 @@ interface PluginInfo {
   error: string | null;
   /** Declared capabilities. */
   capabilities: string[];
-  /** The package directory (read its `manifest.json` for display fields). */
+  /**
+   * The package directory (read its `manifest.json` for display fields). A built-in's directory is inside the player installation (`<install resources>/plugins/<id>`) and read-only: a plugin writes only under its own Plugin.dataDirectory.
+   */
   directory: string;
-  /** The version a rollback would restore, `null` without one. */
+  /**
+   * Always `null`: the player no longer keeps a previous version, and an upgrade replaces the package.
+   * @deprecated Removed in 1.5.17. The player no longer keeps a previous version, so this is always `null`. See Migrating off package rollback.
+   */
   previousVersion: string | null;
   /** Shipped with the player: it can be disabled, not uninstalled or replaced. `false` from players before 0.2.0. */
   builtin: boolean;
@@ -6006,7 +6087,10 @@ interface Packages {
    * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the same checks as Packages.validate after unpacking. Check the file's sha256 yourself before calling when you know it. A reserved id fails with `reserved`, as in Packages.validate.
    */
   validateArchive(file: string): Promise<PackageCandidate>;
-  /** Restore a plugin's previous version (`plugins.manage`). */
+  /**
+   * Formerly restored a plugin's previous version (`plugins.manage`).
+   * @deprecated Removed in 1.5.17. The player no longer keeps a previous version, so this always fails with `unsupported`. To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`. See Migrating off package rollback.
+   */
   rollback(id: string): Promise<PackageChange>;
   /** Every plugin: running, installed, and this run's development loads. No capability. */
   list(): Promise<PluginInfo[]>;
@@ -7327,7 +7411,7 @@ class TestHost implements Transport {
     overlay: Map<string, string[]>;
   };
   /**
-   * What `packages.list` reports; `setEnabled`, `uninstall` and `install` update it. `builtin`, `source` and `dataDirectory` are optional here (default `false`, `null`, `null`).
+   * What `packages.list` reports; `setEnabled`, `uninstall` and `install` update it. `builtin`, `source` and `dataDirectory` are optional here (default `false`, `null`, `null`). Like the player, the host lists every plugin with `previousVersion: null` and answers `packages.rollback` with `unsupported` (since 1.5.16).
    */
   packages: {
     /** The plugin's manifest id. */
@@ -7344,7 +7428,10 @@ class TestHost implements Transport {
     capabilities: string[];
     /** The package directory. */
     directory: string;
-    /** The version a rollback would restore, `null` without one. */
+    /**
+     * Ignored: `packages.list` always reports `null`. Still required in 1.5.16 so that test data shaped like a `PluginInfo` keeps compiling.
+     * @deprecated Removed in 1.5.17 with `PluginInfo.previousVersion`.
+     */
     previousVersion: string | null;
     /** Shipped with the player: `uninstall` and `install` are `unsupported`. */
     builtin?: boolean;

@@ -93,7 +93,7 @@ export interface Disposable {
  * | `pending` | An operation with the same token is still running in the player. The SDK waits and asks again, so it rarely reaches a plugin. |
  * | `producer` | `openStream`: the player refused or lost the generated stream; `message` has the reason. |
  * | `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
- * | `revisionConflict` | {@link Packages}: the installed revision changed since it was read (another install, rollback or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
+ * | `revisionConflict` | {@link Packages}: the installed revision changed since it was read (another install or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
  * | `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
  * | `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
  * | `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
@@ -341,7 +341,7 @@ export interface Plugin extends Scope {
    * A writable directory for this plugin's own files (settings, caches,
    * remembered folders), created by the player before it starts the plugin.
    * Each installation has its own directory (player 0.2.0): it is kept across
-   * restarts, disabling, upgrades and rollbacks, and a reinstall of the same
+   * restarts, disabling and upgrades, and a reinstall of the same
    * id from a different source gets a new, empty one. It is deleted only by
    * `packages.uninstall(id, { removeData: true })`. No capability.
    *
@@ -4874,7 +4874,7 @@ export interface PackageCandidate {
   install(options?: InstallOptions): Promise<PackageChange>;
 }
 
-/** The progress of an install, rollback or uninstall. */
+/** The progress of an install or uninstall. */
 export type PackageChangeStatus =
   | "preparing"
   | "activating"
@@ -4886,7 +4886,7 @@ export type PackageChangeStatus =
   | "tooLate";
 
 /**
- * An install, rollback or uninstall in progress. The SDK never submits a
+ * An install or uninstall in progress. The SDK never submits a
  * change twice: after a lost reply it only queries the same request.
  */
 export interface PackageChange {
@@ -4916,9 +4916,21 @@ export interface PluginInfo {
   error: string | null;
   /** Declared capabilities. */
   capabilities: string[];
-  /** The package directory (read its `manifest.json` for display fields). */
+  /**
+   * The package directory (read its `manifest.json` for display fields).
+   * A built-in's directory is inside the player installation
+   * (`<install resources>/plugins/<id>`) and read-only: a plugin writes only
+   * under its own {@link Plugin.dataDirectory}.
+   */
   directory: string;
-  /** The version a rollback would restore, `null` without one. */
+  /**
+   * Always `null`: the player no longer keeps a previous version, and an
+   * upgrade replaces the package.
+   *
+   * @deprecated Removed in 1.5.17. The player no longer keeps a previous
+   * version, so this is always `null`. See
+   * [Migrating off package rollback](../../docs/how-to/rollback-migration.md).
+   */
   previousVersion: string | null;
   /**
    * Shipped with the player: it can be disabled, not uninstalled or
@@ -5021,7 +5033,15 @@ export interface Packages {
    * fails with `reserved`, as in {@link Packages.validate}.
    */
   validateArchive(file: string): Promise<PackageCandidate>;
-  /** Restore a plugin's previous version (`plugins.manage`). */
+  /**
+   * Formerly restored a plugin's previous version (`plugins.manage`).
+   *
+   * @deprecated Removed in 1.5.17. The player no longer keeps a previous
+   * version, so this always fails with `unsupported`. To go back to an older
+   * version of a third-party plugin, the user uninstalls it and installs that
+   * version's `.vxp`. See
+   * [Migrating off package rollback](../../docs/how-to/rollback-migration.md).
+   */
   rollback(id: string): Promise<PackageChange>;
   /** Every plugin: running, installed, and this run's development loads. No capability. */
   list(): Promise<PluginInfo[]>;
