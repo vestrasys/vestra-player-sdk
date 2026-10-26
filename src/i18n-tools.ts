@@ -22,8 +22,10 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { join, relative, sep } from "node:path";
-import ts from "typescript";
+import { pathToFileURL } from "node:url";
+import type TS from "typescript";
 import {
   compileCatalog,
   keyOf,
@@ -34,6 +36,20 @@ import {
   writePo,
 } from "./i18n.ts";
 import type { PoEntry } from "./i18n.ts";
+
+/**
+ * The SDK's TypeScript dependency, resolved the way the CLI resolves it
+ * (`compiler()` in bin/vestra-plugin.mjs): through `require` resolution from
+ * this package, which also searches `NODE_PATH`. A bare `import` of
+ * "typescript" would search only ancestor `node_modules` directories, so an
+ * SDK copied outside any (the player's AI workshop vendors one, and supplies
+ * TypeScript on `NODE_PATH`) could not start the CLI.
+ */
+const ts: typeof TS = (
+  await import(
+    pathToFileURL(createRequire(import.meta.url).resolve("typescript")).href
+  )
+).default;
 
 /** A translatable text found in the sources. */
 export interface Message {
@@ -65,7 +81,7 @@ export interface ExtractOptions {
   /** The plugin's production `.ts` / `.mts` files, relative to `directory`. */
   typescript: readonly string[];
   /** Compiler options for a program over those files (as `check` uses). */
-  compilerOptions?: ts.CompilerOptions;
+  compilerOptions?: TS.CompilerOptions;
 }
 
 /** Locales whose plural has one form (`n == 1` and other are the same). */
@@ -140,7 +156,7 @@ const join2 = (a: Values, b: Values): Values => ({
   composed: a.composed || b.composed,
 });
 
-function notesOf(node: ts.Node, text: string): string[] {
+function notesOf(node: TS.Node, text: string): string[] {
   const notes: string[] = [];
   for (const range of ts.getLeadingCommentRanges(text, node.getFullStart()) ??
     []) {
@@ -164,7 +180,7 @@ function notesOf(node: ts.Node, text: string): string[] {
  * translated (a language's own name, a product name). `extract` leaves it
  * out and `check` does not warn about it.
  */
-function ignored(node: ts.Node, text: string): boolean {
+function ignored(node: TS.Node, text: string): boolean {
   // The trivia before the node (getLeadingCommentRanges leaves out a
   // comment on the same line as the previous token).
   return text
@@ -176,14 +192,14 @@ function ignored(node: ts.Node, text: string): boolean {
  * A string that is an entry (a property value or an element) of an object
  * or array literal inside `… as const`, at any depth.
  */
-function inConstTable(node: ts.Node): boolean {
-  let current: ts.Node;
+function inConstTable(node: TS.Node): boolean {
+  let current: TS.Node;
   if (ts.isPropertyAssignment(node.parent) && node.parent.initializer === node)
     current = node.parent.parent;
   else if (ts.isArrayLiteralExpression(node.parent)) current = node.parent;
   else return false;
   for (;;) {
-    const parent: ts.Node = current.parent;
+    const parent: TS.Node = current.parent;
     if (
       ts.isAsExpression(parent) &&
       ts.isTypeReferenceNode(parent.type) &&
@@ -202,7 +218,7 @@ function inConstTable(node: ts.Node): boolean {
 }
 
 /** The statement (or class member) a node belongs to. */
-function statementOf(node: ts.Node): ts.Node {
+function statementOf(node: TS.Node): TS.Node {
   let current = node;
   while (
     current.parent &&
@@ -221,8 +237,8 @@ class Extractor {
    */
   readonly tableNotes = new Map<string, string[]>();
   readonly findings: Finding[] = [];
-  readonly #checker: ts.TypeChecker | undefined;
-  constructor(checker: ts.TypeChecker | undefined) {
+  readonly #checker: TS.TypeChecker | undefined;
+  constructor(checker: TS.TypeChecker | undefined) {
     this.#checker = checker;
   }
 
@@ -241,7 +257,7 @@ class Extractor {
   }
 
   /** Values of a type: string literals, or a union of them (null and undefined ignored). */
-  #fromType(type: ts.Type, depth = 0): Values {
+  #fromType(type: TS.Type, depth = 0): Values {
     const result = none();
     const parts = type.isUnion() ? type.types : [type];
     for (const part of parts) {
@@ -272,7 +288,7 @@ class Extractor {
     return result;
   }
 
-  values(node: ts.Expression): Values {
+  values(node: TS.Expression): Values {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
       return { values: [node.text], dynamic: false, composed: false };
     if (ts.isTemplateExpression(node))
@@ -295,7 +311,7 @@ class Extractor {
       )
         return join2(this.values(node.left), this.values(node.right));
       if (op === ts.SyntaxKind.PlusToken) {
-        const stringy = (side: ts.Expression) =>
+        const stringy = (side: TS.Expression) =>
           ts.isStringLiteralLike(side) ||
           ts.isTemplateExpression(side) ||
           (this.#checker &&
@@ -313,7 +329,7 @@ class Extractor {
     if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
       if (!ts.isBlock(node.body)) return this.values(node.body);
       let result = none();
-      const visit = (child: ts.Node) => {
+      const visit = (child: TS.Node) => {
         if (ts.isFunctionLike(child)) return;
         if (ts.isReturnStatement(child) && child.expression)
           result = join2(result, this.values(child.expression));
@@ -328,8 +344,8 @@ class Extractor {
   }
 
   /** The elements of a menu path: each segment's values, the leading `@id` skipped. */
-  #path(node: ts.Expression, file: string, source: ts.SourceFile) {
-    const add = (values: Values, at: ts.Node, first: boolean) => {
+  #path(node: TS.Expression, file: string, source: TS.SourceFile) {
+    const add = (values: Values, at: TS.Node, first: boolean) => {
       this.#emit(
         values,
         at,
@@ -339,7 +355,7 @@ class Extractor {
         (value) => !(first && value.startsWith("@")),
       );
     };
-    const inner = (expr: ts.Expression): ts.Expression =>
+    const inner = (expr: TS.Expression): TS.Expression =>
       ts.isParenthesizedExpression(expr) ||
       ts.isAsExpression(expr) ||
       ts.isSatisfiesExpression(expr)
@@ -362,9 +378,9 @@ class Extractor {
 
   /** A path given as a value: a tuple or array type of string literals. */
   #tuple(
-    node: ts.Expression,
+    node: TS.Expression,
     file: string,
-    source: ts.SourceFile,
+    source: TS.SourceFile,
     first: boolean,
   ) {
     const checker = this.#checker;
@@ -373,7 +389,7 @@ class Extractor {
       const type = checker.getTypeAtLocation(node);
       const elements =
         checker.isTupleType(type) || checker.isArrayType(type)
-          ? checker.getTypeArguments(type as ts.TypeReference)
+          ? checker.getTypeArguments(type as TS.TypeReference)
           : undefined;
       if (elements)
         elements.forEach((element, index) => {
@@ -390,9 +406,9 @@ class Extractor {
 
   #emit(
     values: Values,
-    at: ts.Node,
+    at: TS.Node,
     file: string,
-    source: ts.SourceFile,
+    source: TS.SourceFile,
     what: string,
     keep: (value: string) => boolean,
     notes: string[] = [],
@@ -407,7 +423,7 @@ class Extractor {
   }
 
   /** `Interface.method` of a call to the SDK, if it is one of `SITES`. */
-  #site(call: ts.CallExpression): string | undefined {
+  #site(call: TS.CallExpression): string | undefined {
     const callee = call.expression;
     const declaration = this.#checker?.getResolvedSignature(call)?.declaration;
     if (!ts.isPropertyAccessExpression(callee)) {
@@ -452,9 +468,9 @@ class Extractor {
     return BY_NAME[`${ownerName}.${method}`];
   }
 
-  typescript(file: string, source: ts.SourceFile) {
+  typescript(file: string, source: TS.SourceFile) {
     const text = source.text;
-    const visit = (node: ts.Node) => {
+    const visit = (node: TS.Node) => {
       if (ts.isCallExpression(node)) this.#call(node, file, source, text);
       if (
         (ts.isStringLiteral(node) ||
@@ -509,9 +525,9 @@ class Extractor {
   }
 
   #call(
-    call: ts.CallExpression,
+    call: TS.CallExpression,
     file: string,
-    source: ts.SourceFile,
+    source: TS.SourceFile,
     text: string,
   ) {
     const name = this.#site(call);
@@ -612,14 +628,14 @@ class Extractor {
           ? property.name.text
           : undefined;
       if (!key || !fields.includes(key) || ignored(property, text)) continue;
-      let value: ts.Expression | undefined;
+      let value: TS.Expression | undefined;
       if (ts.isPropertyAssignment(property)) value = property.initializer;
       else if (ts.isShorthandPropertyAssignment(property))
         value = property.name;
       else if (ts.isMethodDeclaration(property) && property.body) {
         // `reason() { return … }`
         const values = none();
-        const visit = (child: ts.Node) => {
+        const visit = (child: TS.Node) => {
           if (ts.isFunctionLike(child)) return;
           if (ts.isReturnStatement(child) && child.expression)
             Object.assign(values, join2(values, this.values(child.expression)));
@@ -785,8 +801,8 @@ export function extract(options: ExtractOptions): {
   findings: Finding[];
 } {
   const { directory } = options;
-  let checker: ts.TypeChecker | undefined;
-  let program: ts.Program | undefined;
+  let checker: TS.TypeChecker | undefined;
+  let program: TS.Program | undefined;
   const files = options.typescript.map((file) => join(directory, file));
   if (files.length) {
     program = ts.createProgram(files, {

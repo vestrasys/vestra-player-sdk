@@ -45,6 +45,6 @@ Plugins reach the store through pull requests to the official plugin repository.
 
 ## Migrate off package rollback
 
-The player no longer keeps a previous plugin version: `packages.rollback` and `previousVersion` were deprecated in SDK 1.5.16 and removed in 1.5.17. The checklist for plugins with `plugins.manage`: remove rollback calls and UI and any "Undo install", keep to install, uninstall and disable/enable (an older version is the user's uninstall plus a `.vxp`), offer only disable and enable for built-ins, and update tests.
+The player no longer keeps a previous plugin version: `packages.rollback` and `previousVersion` were deprecated in SDK 1.5.16 and removed in 1.5.17. The checklist for plugins with `plugins.manage`: remove rollback calls and UI and any "Undo install", keep to install, uninstall and disable/enable for third-party plugins (an older version is the user's uninstall plus a `.vxp`), offer no action for built-ins (from 1.5.18 they cannot be disabled either), and update tests.
 
 [Read the guide](rollback-migration.md)

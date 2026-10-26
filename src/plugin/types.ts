@@ -4924,8 +4924,9 @@ export interface PluginInfo {
    */
   directory: string;
   /**
-   * Shipped with the player: it can be disabled, not uninstalled or
-   * replaced. `false` from players before 0.2.0.
+   * Shipped with the player: it always runs; it cannot be disabled,
+   * uninstalled or replaced (older players, before SDK 1.5.18, let it be disabled).
+   * `false` from players before 0.2.0.
    */
   builtin: boolean;
   /** Where an installed plugin came from; `null` for development loads. */
@@ -5032,7 +5033,9 @@ export interface Packages {
    * Stop or start a plugin (`plugins.manage`). An installed plugin stays
    * disabled across launches; a development load only for this run.
    * `invalid` to disable oneself, `missing` unknown.
-   * `busy` while it is being installed.
+   * `busy` while it is being installed. `unsupported` to disable a built-in
+   * ({@link PluginInfo.builtin}): users manage third-party plugins only
+   * (players released with SDK 1.5.18 on; older ones disabled built-ins too).
    */
   setEnabled(id: string, enabled: boolean): Promise<void>;
   /**

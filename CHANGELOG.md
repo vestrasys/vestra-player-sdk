@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.18
+
+Fixes for Windows and for a vendored SDK, and built-ins that can no longer be disabled. `apiVersion` stays `vestra/1`; plugins that do not manage other plugins need no change.
+
+- **`TestHost` streams on Windows**: `openStream`'s default transport listened on a socket file in the temp folder, which Windows refuses (`listen EACCES`), so stream tests failed there. It now listens on a named pipe (`\\.\pipe\vestra-test-host-…-producer-<id>`) on Windows and on a Unix socket elsewhere. `producerTransport = "tcp"` still gives the player's own Windows transport (loopback TCP with a token).
+- **The CLI runs from an SDK outside any `node_modules`** (a copy with TypeScript on `NODE_PATH`, as the player's AI workshop vendors it): `dist/i18n-tools.js` resolved TypeScript with a bare ES module import, which ignores `NODE_PATH`, so `vestra-plugin` stopped at start with `ERR_MODULE_NOT_FOUND`. It now resolves TypeScript as the rest of the CLI does.
+- **Built-in plugins cannot be disabled** (user ruling, 2026-10-26: users manage third-party plugins only). The player and `TestHost` answer `packages.setEnabled(builtin, false)` with `unsupported`; a built-in an older player let the user disable runs again after the upgrade. `PluginInfo.builtin`, `Packages.setEnabled` and *Migrating off package rollback* say so; a plugin manager offers no action for a built-in.
+
 ## 1.5.17
 
 **Package rollback is removed**, as announced in 1.5.16: the player keeps no previous plugin version. `apiVersion` stays `vestra/1` (a patch release, as when 1.5.8 removed `PackageCandidate.trial()`); plugins that do not manage other plugins need no change. A plugin manager that still calls `rollback` or reads `previousVersion` no longer compiles. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
