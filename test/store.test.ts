@@ -50,7 +50,6 @@ test("packages: list entries without the new fields read as before", async () =>
       error: null,
       capabilities: [],
       directory: "/plugins/a.video",
-      previousVersion: null,
     },
   ];
   const { plugin, stop } = await manager(host);
@@ -72,7 +71,6 @@ test("packages: .vxp install with a source, conflict, replace and built-ins", as
       error: null,
       capabilities: [],
       directory: "/plugins/video",
-      previousVersion: null,
       builtin: true,
       source: { kind: "bundled" },
       dataDirectory: "/data/1",
@@ -142,55 +140,6 @@ test("packages: .vxp install with a source, conflict, replace and built-ins", as
     "invalid",
   );
   await rejects(plugin.packages.validateArchive("/nowhere.vxp"), "missing");
-  await stop();
-});
-
-test("packages: no rollback (1.5.16): rollback is unsupported, previousVersion is null", async () => {
-  const host = new TestHost();
-  host.packages = [
-    {
-      id: "someone.demo",
-      version: "1.0.0",
-      origin: "installed",
-      state: "running",
-      error: null,
-      capabilities: [],
-      directory: "/plugins/someone.demo",
-      // Deprecated and ignored: the host lists every plugin with null.
-      previousVersion: "0.9.0",
-      source: { kind: "file" },
-    },
-  ];
-  const upgrade = resolve("/downloads/someone.demo-1.1.0.vxp");
-  host.candidates.set(upgrade, manifest("someone.demo", "1.1.0"));
-  const { plugin, stop } = await manager(host);
-  const changed: (string | null)[][] = [];
-  plugin.packages.onChange((list) =>
-    changed.push(list.map((p) => p.previousVersion)),
-  );
-  assert.deepEqual(
-    (await plugin.packages.list()).map((p) => p.previousVersion),
-    [null],
-  );
-  // An upgrade replaces the package; no previous version is kept.
-  const candidate = await plugin.packages.validateArchive(upgrade);
-  assert.equal(await (await candidate.install()).done, "committed");
-  const [info] = await plugin.packages.list();
-  assert.equal(info!.version, "1.1.0");
-  assert.equal(info!.previousVersion, null);
-  await host.settle();
-  assert.deepEqual(changed, [[null]]);
-  // rollback still reaches the host, which no longer has the method.
-  await assert.rejects(
-    plugin.packages.rollback("someone.demo"),
-    (error: { code?: string; message?: string }) => {
-      assert.equal(error.code, "unsupported");
-      assert.match(error.message ?? "", /unknown package method/);
-      return true;
-    },
-  );
-  assert.equal(host.sent("packages.rollback").length, 1);
-  assert.equal((await plugin.packages.list())[0]!.version, "1.1.0");
   await stop();
 });
 

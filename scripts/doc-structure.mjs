@@ -129,7 +129,7 @@ export const GROUPS = [
       },
       {
         file: "rollback-migration.md",
-        why: "One task: move a plugin manager off Packages.rollback and PluginInfo.previousVersion (deprecated in 1.5.16, removed in 1.5.17).",
+        why: "One task: move a plugin manager off Packages.rollback and PluginInfo.previousVersion (deprecated in 1.5.16; removed in 1.5.17).",
       },
     ],
   },

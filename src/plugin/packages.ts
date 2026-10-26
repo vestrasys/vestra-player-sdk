@@ -170,15 +170,6 @@ export const packages = (scope: ScopeImpl): Packages => ({
     const checked = await scope.runtime.host.packages.validateArchive(path);
     return candidate(scope, path, checked);
   },
-  // Deprecated (removed in 1.5.17): still forwarded, so the player's
-  // `unsupported` ("unknown package method") reaches the caller.
-  rollback: (id) =>
-    change(
-      scope,
-      (requestId, revision) =>
-        scope.runtime.host.packages.rollback(id, revision, requestId),
-      id,
-    ),
   list: async () => (await scope.runtime.host.packages.list()).map(info),
   onChange(listener) {
     const watch = scope.runtime.on(
@@ -221,7 +212,6 @@ const info = (plugin: WirePlugin): PluginInfo =>
     error: plugin.error,
     capabilities: [...plugin.capabilities],
     directory: plugin.directory,
-    previousVersion: plugin.previousVersion ?? null,
     builtin: plugin.builtin === true,
     source: plugin.source ? Object.freeze({ ...plugin.source }) : null,
     dataDirectory: plugin.dataDirectory ?? null,

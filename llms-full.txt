@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.16: full reference
+# @vestra-player/sdk 1.5.17: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -1840,22 +1840,22 @@ The store shows the newest version's manifest fields, so what you write there is
 - **Before installing**, the user confirms a dialog that lists the capabilities; an update that adds capabilities lists the new ones. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
 - **The README** is rendered as Markdown; relative links and images resolve against the README's own address, and remote images are shown for the official repository.
 
-## How-to: Migrating off package rollback (1.5.16)
+## How-to: Migrating off package rollback (1.5.16, removed in 1.5.17)
 
-For plugins that manage other plugins (`plugins.manage`): stores, plugin managers, anything that calls packages.rollback or reads PluginInfo.previousVersion. A plugin that only uses its own API needs no change.
+For plugins that manage other plugins (`plugins.manage`): stores, plugin managers, anything that called `packages.rollback` or read `PluginInfo.previousVersion`. Both were deprecated in 1.5.16 and **removed in 1.5.17**: with 1.5.17 a remaining use is a TypeScript compile error. A plugin that only uses its own API needs no change.
 
 #### What changed
 
 The player no longer keeps a previous version of a plugin. An upgrade replaces the package, so there is nothing to roll back to:
 
-- `packages.rollback(id)` always fails with `unsupported` (the player answers "unknown package method").
-- Every entry of `packages.list()` and `packages.onChange` has `previousVersion: null`.
+- There is no `packages.rollback`: the player answers the wire method with `unsupported` ("unknown package method"), and SDK 1.5.17 no longer has it.
+- `packages.list()` and `packages.onChange` entries have no `previousVersion` (always `null` with SDK 1.5.16, removed in 1.5.17).
 - Built-in plugins (`builtin: true`) run in place from the player installation. They can be disabled and enabled, never uninstalled or replaced; `uninstall` fails with `unsupported`. A built-in's `directory` is inside the installation (`<install resources>/plugins/<id>`) and read-only.
 - Third-party plugins can still be uninstalled.
 
 Why: built-ins now run from the read-only installation instead of a copy, and an upgrade replaces the package instead of keeping the old one beside it. Going back to an older version becomes an ordinary uninstall and install that the user starts.
 
-`TestHost` behaves the same way since 1.5.16, so tests show it too.
+`TestHost` behaves the same way, so tests show it too.
 
 #### 1. Remove rollback calls and `previousVersion` checks
 
@@ -1865,7 +1865,7 @@ Before:
 if (info.previousVersion !== null) showButton("Roll back", () => plugin.packages.rollback(info.id));
 ```
 
-After: delete both. There is no replacement call; nothing on the player can restore an earlier package. Remove the button, menu item or command, and any state, text or test that depends on `previousVersion`.
+After: delete both. There is no replacement call; nothing on the player can restore an earlier package. Remove the button, menu item or command, and any state, text or test that depends on `previousVersion`. With SDK 1.5.17 the compiler finds every remaining use.
 
 #### 2. Going back to an older version
 
@@ -1895,14 +1895,14 @@ for (const info of await plugin.packages.list()) {
 
 #### 5. Tests
 
-`TestHost` lists every plugin with `previousVersion: null`, whatever a test puts in `host.packages`, and rejects `packages.rollback` with `unsupported`. The `previousVersion` field of `host.packages` entries is deprecated and ignored; it stays required in 1.5.16 so that test data shaped like a `PluginInfo` keeps compiling, and goes in 1.5.17. A test that expected a rollback to succeed should now assert the rejection or be removed.
+With SDK 1.5.17, `host.packages` entries have no `previousVersion` field: delete `previousVersion: null` (or any value) from test data, or the test no longer compiles. `TestHost` has no `packages.rollback`. Remove tests that exercised a rollback; there is nothing left to assert. (With 1.5.16 the field was still required but ignored, and `TestHost` answered rollback with `unsupported`.)
 
 #### Timeline
 
 | SDK | Player | What happens |
 | --- | --- | --- |
 | 1.5.16 | ships with it | `Packages.rollback` and `PluginInfo.previousVersion` (and the wire field) are `@deprecated`. The player and `TestHost` answer rollback with `unsupported` and list `previousVersion: null`. Code still compiles. |
-| 1.5.17 | — | Both symbols are removed. Remaining uses are TypeScript compile errors. |
+| 1.5.17 | ships with it | **Removed:** `Packages.rollback`, `PluginInfo.previousVersion`, the wire method `packages.rollback` and the wire field `previousVersion`, `TestHost`'s `previousVersion` field and its `packages.rollback` handler, and `Packages.rollback` in the `plugins.manage` capability. Remaining uses are TypeScript compile errors. |
 
 `apiVersion` stays `vestra/1` in both releases, as when 1.5.8 removed `PackageCandidate.trial()`.
 
@@ -1912,7 +1912,7 @@ for (const info of await plugin.packages.list()) {
 - [ ] Built-ins offer only disable and enable.
 - [ ] Nothing writes into a plugin's `directory`.
 - [ ] No Undo after an install, no older-version install; older versions go through uninstall and a user-chosen `.vxp`.
-- [ ] Tests pass with SDK 1.5.16; the only deprecated name left in them is the `previousVersion: null` of `host.packages` test data.
+- [ ] Tests compile and pass with SDK 1.5.17; no `previousVersion` is left in `host.packages` test data.
 
 ## Guideline: Interface guidelines
 
@@ -2176,7 +2176,7 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 | `ui.window` | Windows.create | — | Open tool windows |  |
 | `ui.mount` | Panels.mount, Panels.bottom, Panels.sidebar, Panels.backdrop, PanelSlot.onChange, Panel.onChange, BackdropSlot.onChange | — | Show panels in the bottom bar, the sidebar or behind the video |  |
 | `ui.dialog` | Dialogs.confirm, Dialogs.openFile, Dialogs.openFiles, Dialogs.openDirectory, Dialogs.saveFile | — | Show file pickers and confirmations |  |
-| `plugins.manage` | Packages.validate, Packages.validateArchive, Packages.rollback, Packages.setEnabled, Packages.uninstall | — | Install, uninstall and disable other plugins | yes |
+| `plugins.manage` | Packages.validate, Packages.validateArchive, Packages.setEnabled, Packages.uninstall | — | Install, uninstall and disable other plugins | yes |
 | `processing.video` | Plugin.video.filter, Plugin.video.view, Plugin.video.render | `playback.read` | Process the picture (filters, shaders) |  |
 | `processing.audio` | Plugin.audio.filter | `playback.read`, `events` | Process the sound |  |
 | `subtitles.read` | Subtitles.state, Subtitles.onChange, Subtitles.refresh | — | Read subtitles |  |
@@ -2199,8 +2199,6 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 - A `processed` snapshot or export (MediaCapture) also needs `playback.read` and `subtitles.read`.
 - A file resolver (Resolvers.add with file types) also needs `producer.av`.
 - Without `events`, Player.state is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere.
-
-**Deprecated:** Packages.rollback in the `plugins.manage` row (since 1.5.16; removed in 1.5.17). The player keeps no previous version, so it always fails with `unsupported`; see Migrating off package rollback.
 
 #### Without a capability
 
@@ -6009,11 +6007,6 @@ interface PluginInfo {
    * The package directory (read its `manifest.json` for display fields). A built-in's directory is inside the player installation (`<install resources>/plugins/<id>`) and read-only: a plugin writes only under its own Plugin.dataDirectory.
    */
   directory: string;
-  /**
-   * Always `null`: the player no longer keeps a previous version, and an upgrade replaces the package.
-   * @deprecated Removed in 1.5.17. The player no longer keeps a previous version, so this is always `null`. See Migrating off package rollback.
-   */
-  previousVersion: string | null;
   /** Shipped with the player: it can be disabled, not uninstalled or replaced. `false` from players before 0.2.0. */
   builtin: boolean;
   /** Where an installed plugin came from; `null` for development loads. */
@@ -6087,11 +6080,6 @@ interface Packages {
    * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the same checks as Packages.validate after unpacking. Check the file's sha256 yourself before calling when you know it. A reserved id fails with `reserved`, as in Packages.validate.
    */
   validateArchive(file: string): Promise<PackageCandidate>;
-  /**
-   * Formerly restored a plugin's previous version (`plugins.manage`).
-   * @deprecated Removed in 1.5.17. The player no longer keeps a previous version, so this always fails with `unsupported`. To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`. See Migrating off package rollback.
-   */
-  rollback(id: string): Promise<PackageChange>;
   /** Every plugin: running, installed, and this run's development loads. No capability. */
   list(): Promise<PluginInfo[]>;
   /** The new list after any start, stop, failure, install or uninstall. No capability. */
@@ -7411,7 +7399,7 @@ class TestHost implements Transport {
     overlay: Map<string, string[]>;
   };
   /**
-   * What `packages.list` reports; `setEnabled`, `uninstall` and `install` update it. `builtin`, `source` and `dataDirectory` are optional here (default `false`, `null`, `null`). Like the player, the host lists every plugin with `previousVersion: null` and answers `packages.rollback` with `unsupported` (since 1.5.16).
+   * What `packages.list` reports; `setEnabled`, `uninstall` and `install` update it. `builtin`, `source` and `dataDirectory` are optional here (default `false`, `null`, `null`).
    */
   packages: {
     /** The plugin's manifest id. */
@@ -7428,11 +7416,6 @@ class TestHost implements Transport {
     capabilities: string[];
     /** The package directory. */
     directory: string;
-    /**
-     * Ignored: `packages.list` always reports `null`. Still required in 1.5.16 so that test data shaped like a `PluginInfo` keeps compiling.
-     * @deprecated Removed in 1.5.17 with `PluginInfo.previousVersion`.
-     */
-    previousVersion: string | null;
     /** Shipped with the player: `uninstall` and `install` are `unsupported`. */
     builtin?: boolean;
     /** Where it was installed from. */

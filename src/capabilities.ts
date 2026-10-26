@@ -169,7 +169,6 @@ export const CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>> =
       apis: [
         "Packages.validate",
         "Packages.validateArchive",
-        "Packages.rollback",
         "Packages.setEnabled",
         "Packages.uninstall",
       ],

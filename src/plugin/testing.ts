@@ -2404,9 +2404,7 @@ export class TestHost implements Transport {
   /**
    * What `packages.list` reports; `setEnabled`, `uninstall` and `install`
    * update it. `builtin`, `source` and `dataDirectory` are optional here
-   * (default `false`, `null`, `null`). Like the player, the host lists every
-   * plugin with `previousVersion: null` and answers `packages.rollback` with
-   * `unsupported` (since 1.5.16).
+   * (default `false`, `null`, `null`).
    */
   packages: {
     /** The plugin's manifest id. */
@@ -2423,13 +2421,6 @@ export class TestHost implements Transport {
     capabilities: string[];
     /** The package directory. */
     directory: string;
-    /**
-     * Ignored: `packages.list` always reports `null`. Still required in
-     * 1.5.16 so that test data shaped like a `PluginInfo` keeps compiling.
-     *
-     * @deprecated Removed in 1.5.17 with `PluginInfo.previousVersion`.
-     */
-    previousVersion: string | null;
     /** Shipped with the player: `uninstall` and `install` are `unsupported`. */
     builtin?: boolean;
     /** Where it was installed from. */
@@ -2509,14 +2500,7 @@ export class TestHost implements Transport {
    */
   setPackages(list: TestHost["packages"]) {
     this.packages = list;
-    this.emit("packages.changed", this.#listed());
-  }
-  /** `packages.list` as the player sends it: no previous version is kept. */
-  #listed(): Json {
-    return this.packages.map((entry) => ({
-      ...structuredClone(entry),
-      previousVersion: null,
-    })) as unknown as Json;
+    this.emit("packages.changed", structuredClone(this.packages));
   }
   #split(key: string) {
     const at = key.indexOf("/");
@@ -3895,7 +3879,7 @@ export class TestHost implements Transport {
       else this.bindings.overlay.delete(`${p.plugin}/${p.command}`);
       this.emit("bindings.changed", null);
     },
-    "packages.list": () => this.#listed(),
+    "packages.list": () => structuredClone(this.packages),
     "packages.setEnabled": (p) => {
       const id = String(p.id);
       if (id === this.manifestId && p.enabled === false)
@@ -3952,7 +3936,6 @@ export class TestHost implements Transport {
         error: null,
         capabilities: [...manifest.capabilities],
         directory: `/test-host/packages/${manifest.id}`,
-        previousVersion: null,
         builtin: false,
         source,
         dataDirectory: entry?.dataDirectory ?? null,
@@ -3984,11 +3967,6 @@ export class TestHost implements Transport {
       });
       this.setPackages(this.packages.filter((each) => each.id !== id));
       return { operationId: String(p.requestId), status: "committed" };
-    },
-    // The player no longer keeps a previous version (SDK 1.5.16): the method
-    // is gone and fails like any unknown package method.
-    "packages.rollback": () => {
-      throw new HostError("unsupported", "unknown package method");
     },
     "ui.markdownScan": (p) => {
       const text = String(p.text);

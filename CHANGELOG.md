@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.17
+
+**Package rollback is removed**, as announced in 1.5.16: the player keeps no previous plugin version. `apiVersion` stays `vestra/1` (a patch release, as when 1.5.8 removed `PackageCandidate.trial()`); plugins that do not manage other plugins need no change. A plugin manager that still calls `rollback` or reads `previousVersion` no longer compiles. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
+
+- **Removed: `Packages.rollback`** and the wire method `packages.rollback`. The player already answers the method with `unsupported` ("unknown package method"). To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`.
+- **Removed: `PluginInfo.previousVersion`** and the wire field `PackageInfo.previousVersion`; `packages.list` and `packages.changed` no longer carry it.
+- **Removed from `CAPABILITY_INFO["plugins.manage"].apis`**: `"Packages.rollback"`; the capability is unchanged otherwise.
+- **`TestHost`**: `host.packages` entries have no `previousVersion` field (delete it from test data), and there is no `packages.rollback` handler.
+- Unchanged: `revisionConflict`, and the `restoring` and `failedDegraded` statuses of `PackageChange`, which belong to recovery from a failed install.
+- Docs: the Capabilities reference loses the deprecation note; *Migrating off package rollback* says what 1.5.17 removed; `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.16
 
 **Package rollback is deprecated: the player keeps no previous plugin version.** `apiVersion` stays `vestra/1`; code still compiles, and plugins that do not manage other plugins need no change. 1.5.17 removes the deprecated symbols, as 1.5.8 removed `PackageCandidate.trial()` at patch level. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
