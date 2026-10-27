@@ -291,7 +291,7 @@ test("a stream that cannot start after resolve returned fails the open in the pl
 
 test("another plugin's extension is a conflict that does not fail activation", async () => {
   const fake = host();
-  fake.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+  fake.otherResolvers.push({ owner: "example.emulator", extensions: ["nes"] });
   let code: string | undefined;
   const { stop } = await startPlugin(
     (plugin) => {
@@ -399,7 +399,10 @@ test("fileTypes lists every file resolver's extensions and follows them with eve
 
 test("fileTypes needs no capability; without events it is the list of the first read", async () => {
   const testHost = host();
-  testHost.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+  testHost.otherResolvers.push({
+    owner: "example.emulator",
+    extensions: ["nes"],
+  });
   let plugin!: Plugin;
   const { stop } = await startPlugin((p) => void (plugin = p), {
     capabilities: [],

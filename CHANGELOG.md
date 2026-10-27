@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.28
+
+**Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`. Only the SDK's copy of what the player ships changes; a plugin that read `BUILTIN_COMMANDS` or `BUILTIN_SUBMENUS` to avoid a key or a menu path simply finds those entries free now.
+
+- **`BUILTIN_COMMANDS` and `BUILTIN_SUBMENUS` follow the player** (its agreement test failed on them):
+  - Subtitles 0.4.6: `vestra.subtitles` **Move Up** and **Move Down** have no default keys any more (they were `Alt+ArrowUp` / `Alt+ArrowDown`, which pan the video).
+  - The NES emulator is no longer a built-in plugin (it moved to the plugin repository as VestraNES, under **Games ▸ VestraNES**): its three commands (`nes.open`, `nes.stop`, `nes.window`) and the built-in **Emulator** submenu are gone. The player has no built-in Games item.
+- Docs: *Built-in commands* regenerated; *Menu guidelines* names a domain submenu **Games** for an emulator and no longer lists Emulator at the top level. `TestHost.otherResolvers` examples use a neutral id (`example.emulator`). `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.27
 
 **Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Plugins pick the fix up with the player's next SDK upgrade (the player builds the `plugin` object with its own copy); nothing in a plugin changes.

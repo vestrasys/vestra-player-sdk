@@ -11,7 +11,7 @@ How paths merge, how `order` and `group` sort items and how a key finds its comm
 
 ## Organize by what the user does
 
-- **Put a command where its subject is, not under your plugin's name.** A video filter goes into Video, a subtitle tool into Subtitles, an open-something command into Open. A plugin that brings a domain of its own gets a submenu named after the domain, not after the plugin (the NES plugin's Emulator).
+- **Put a command where its subject is, not under your plugin's name.** A video filter goes into Video, a subtitle tool into Subtitles, an open-something command into Open. A plugin that brings a domain of its own gets a submenu named after the domain, not after the plugin (Games for an emulator, not the emulator's name).
 - **Before adding an item, look for an existing one.** Every command the player and its built-in plugins add, with its menu path and default key, is listed in [Built-in commands](../reference/commands.md#built-in-commands). Do not add a second entry for something the player already does, and do not scatter one feature over several menus.
 - **Top level is for frequent, direct commands**: opening files, closing, fullscreen and the entries that show a window or panel. Everything else goes into a submenu of its domain.
 - **No "File" or "View" menu.** Commands that open something go into Open ▸; commands that show a window or panel sit directly at the top level.
@@ -31,7 +31,6 @@ Playback ▸                                 group domain
 Subtitles ▸
 Video ▸
 Audio ▸
-Emulator ▸
 ────────────────────────────────────────
 Toggle Fullscreen             Enter        group screen
 Screen ▸
