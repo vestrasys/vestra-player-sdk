@@ -1245,8 +1245,9 @@ export class TestHost implements Transport {
   panelDrops = false;
   /**
    * Drop files like the player: on a panel with an `onDrop` listener the
-   * whole list goes there; otherwise (and on the video area) grouped by
-   * extension to the first provider (`folder` for existing directories).
+   * whole list goes there; otherwise (and on the video area) each path goes
+   * to the first provider of its extension (`folder` for existing
+   * directories), one call per provider with all of its paths.
    * Files nobody takes are ignored. Resolves once the host is idle again.
    *
    * @param paths - The dropped paths, in the order the file manager gives.
@@ -1255,10 +1256,11 @@ export class TestHost implements Transport {
    *   `modifiers`: keys held (default all `false`).
    *
    * @example Drop files on the video and on the panel
-   * The first drop lands on the video area, where the files are grouped by
-   * extension and each group goes to the first provider that takes it; the
-   * second lands on the panel at a point, with Alt held, and the panel's
-   * `onDrop` gets the whole list. `drop` resolves once the host is idle.
+   * The first drop lands on the video area: each extension belongs to the
+   * provider that registered it first, and each provider gets one call with
+   * all of its paths. The second lands on the panel at a point, with Alt
+   * held, and the panel's `onDrop` gets the whole list. `drop` resolves
+   * once the host is idle.
    * ```ts
    * declare const host: TestHost;
    * // ---cut---

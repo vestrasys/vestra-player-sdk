@@ -783,8 +783,8 @@ export interface Commands {
  * {@link View.bind}: the whole value of an `image` property or, from SDK
  * 1.5.19 (player 0.5.1), an `image` field at any depth, such as the logo of
  * each row of a list. Making the reference does not read the file: the
- * player checks and decodes it each time a view uses it ({@link Ui.image}
- * has the rules and limits).
+ * player checks and decodes it each time it receives the value (a property
+ * write, a window opening; {@link Ui.image} has the rules and limits).
  *
  * A reference belongs to the {@link Scope} that created it. Once that scope
  * is disposed, writing the reference fails with `invalid` (reported to
@@ -794,8 +794,10 @@ export interface Commands {
  * @example Show a cover image from the data directory
  * A window opens showing `cover.png`, which the plugin saved in its data
  * directory. `ui.image` only makes a reference, without reading the file;
- * the player checks and decodes the file when the window uses the value,
- * so a missing file shows up as a failed write (or a rejected `show`).
+ * the player checks and decodes the file when it receives the value, so a
+ * missing file fails that write with `missing` (here: `show` rejects, as
+ * it is an initial property). A missing image nested inside a value is
+ * drawn empty instead.
  * ```ts
  * const cover = plugin.windows.create("ui/cover.slint");
  * // `art` is an `image` property in ui/cover.slint.
@@ -1059,8 +1061,8 @@ export interface Ui {
    *
    * @remarks
    * Returns at once without touching the file. The player checks the file
-   * each time a view uses the reference (a property write, a window opening,
-   * the main window being rebuilt): it must be inside this plugin's package
+   * each time it receives the reference (a property write, a window or
+   * settings page opening, the main window being rebuilt): it must be inside this plugin's package
    * directory or {@link Plugin.dataDirectory} after following links, at most
    * 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
    * does not matter). A failed check of a whole-value image is a failed
@@ -1072,9 +1074,10 @@ export interface Ui {
    * the value is shown, as a Markdown image shows its alt text.
    *
    * The player caches decoded images per plugin (up to 64 MB, least recently
-   * used first) and does not watch files. Every call returns a new value, so
-   * after rewriting a file under the same path, call `image()` again and
-   * write the new reference.
+   * used first) by path, size and modification time, and does not watch
+   * files. After rewriting a file under the same path, call `image()` again
+   * and write the new reference: the SDK does not send a value that did not
+   * change, so the player would not look at the file again.
    *
    * @capability None.
    *
@@ -1089,9 +1092,11 @@ export interface Ui {
    *
    * @example Show a thumbnail the plugin rendered
    * A window shows a PNG the plugin wrote into its data directory. The file
-   * must be inside the package or data directory; `image` returns at once,
-   * and each call is a new reference, so after rewriting the file the
-   * plugin calls it again to make the player read the new content.
+   * must be inside the package or data directory; `image` returns at once.
+   * The player decodes the file when it receives the value and notices a
+   * rewritten file by its size and modification time; the plugin still
+   * calls `image()` again after rewriting it, because the SDK does not send
+   * a value that did not change.
    * ```ts
    * const window = plugin.windows.create("ui/thumbnail.slint");
    * const file = `${plugin.dataDirectory}/thumbnail.png`;
@@ -1673,8 +1678,9 @@ export interface Window extends View, Disposable {
    *
    * @example Remember that the user closed the window
    * The plugin records that the notes window was closed, so it does not
-   * reopen it at the next start. `onClose` runs for the title-bar button
-   * and the system's close keys (not for the plugin's own `close`); the
+   * reopen it at the next start. `onClose` runs for the title-bar button,
+   * the player's close keys (Cmd+W, Ctrl+W, Ctrl+F4) and the system's own
+   * close request such as Alt+F4 (not for the plugin's own `close`); the
    * store writes the change to `window.json` shortly after.
    * ```ts
    * const store = plugin.storage.json("window", { defaults: { open: false } });
@@ -1904,8 +1910,8 @@ export interface PanelSlot {
    * @example Tell the user when the window is too narrow for the sidebar
    * When the sidebar should show but the window has no room for it, the
    * OSD says so. With `events`, the listener runs on every change of the
-   * position, whoever caused it; `reason: "space"` means the preference is
-   * to show it but the window is too small.
+   * position, whoever caused it. The player reports `reason: "space"` when
+   * the preference is to show the sidebar but the window is too small.
    * ```ts
    * plugin.panels.sidebar.onChange((state) => {
    *   // `null`: no panel is mounted in the sidebar any more.
@@ -2189,8 +2195,9 @@ export interface Panel extends View, Disposable {
    * @example Notice when the list moves to a background tab
    * The plugin logs when the user switches the sidebar to another plugin's
    * tab, for example to pause work the list does. With `events` the
-   * listener runs on every change; `reason: "otherTab"` means the sidebar
-   * shows another plugin's panel.
+   * listener runs on every change. `reason: "otherTab"` exists only in a
+   * panel's own state: the SDK sets it when the sidebar's current tab is
+   * another plugin's (the position's state never has it).
    * ```ts
    * const panel = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
    * panel.onChange((state) => {
@@ -2432,17 +2439,20 @@ export interface Drops {
    * Take files dropped on the video area. The first provider registered for
    * an extension gets it; files nobody takes are ignored.
    *
-   * Paths are grouped by extension (case-insensitive) in the order the file
+   * Paths are grouped by provider (an extension, case-insensitive, belongs
+   * to the provider that registered it first) in the order the file
    * manager gave them, one call per provider. Folders are not expanded.
    *
    * @throws `invalid` synchronously for malformed extensions.
    *
    * @example Load dropped subtitle files
    * Dropping .srt or .ass files on the video loads each one as a subtitle
-   * track. The player groups the dropped paths by extension and calls the
-   * first provider registered for each group once, with that group's paths;
-   * the plugin reads each file itself and uploads its bytes with
-   * `subtitles.load`.
+   * track. Each extension belongs to the provider that registered it first;
+   * the player groups the dropped paths by provider and calls each provider
+   * once with all of its paths, so .srt and .ass files dropped together
+   * arrive in one call. (A panel under the pointer that listens with
+   * `onDrop` takes the whole drop first.) The plugin reads each file itself
+   * and uploads its bytes with `subtitles.load`.
    * ```ts
    * import { readFile } from "node:fs/promises";
    * // ---cut---
@@ -3504,8 +3514,9 @@ export interface WindowState {
  * `setVideoArea`.
  *
  * @example Resize the window to the video's own size
- * Screen ▸ Original size makes the video area exactly as large as the
- * video, one pixel per point. `stats()` reports the video's size;
+ * Screen ▸ Original size makes the video area as many logical points as
+ * the video has pixels (one pixel per pixel at a display scale of 100 %).
+ * `stats()` reports the video's size;
  * `setVideoArea` resizes the window around the video column (bars and a
  * docked sidebar added), scales it down if it would not fit the screen,
  * and is refused in fullscreen, hence the `enabled` check.
@@ -3607,9 +3618,10 @@ export interface AppInfo {
  *
  * @example Describe the player and the system for a bug report
  * The plugin builds a line such as "Vestra 0.5.10 on macOS 26.2" to copy
- * into a bug report. `app.version` is known from the start; `system()`
- * asks the player for the operating system and displays at the time of
- * the call.
+ * into a bug report. `app.version` is known from the start; each
+ * `system()` call asks the player, which reads the displays at that moment
+ * and reports the operating system's name and version as it determined
+ * them once when it started.
  * ```ts
  * const system = await plugin.app.system();
  * const text = `Vestra ${plugin.app.version} on ${system.name} ${system.version ?? ""}`;
@@ -3711,6 +3723,10 @@ export interface ConfirmOptions {
  * a dialog from code. Only one dialog (of any kind, from any plugin) is open
  * at a time: another call meanwhile rejects with `busy`. Playback continues
  * while a dialog is open; command key bindings pause.
+ *
+ * **Platforms:** {@link Dialogs.confirm} needs macOS or Windows (other
+ * systems reject it with `unsupported`); the file dialogs work on every
+ * system.
  *
  * For anything more than a question or a path, use a {@link Windows | tool
  * window}.
@@ -5823,8 +5839,9 @@ export interface PluginWarning {
  * The plugin installs a package directory it downloaded and unpacked, and
  * reports why when it does not work. `validate` asks the player to check
  * the package and returns a candidate; `install` starts the change and
- * `done` resolves with its final status once the player activated the new
- * plugin (`committed`) or gave up (`failed`, `cancelled`).
+ * `done` resolves with its final status: `committed` only once the new
+ * plugin reported that it is running, otherwise `failed`, `cancelled`,
+ * `failedDegraded` or `tooLate`.
  * ```ts
  * declare const unpackedDirectory: string;
  * // ---cut---
