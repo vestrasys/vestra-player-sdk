@@ -116,7 +116,9 @@ export const BAR_BUTTON_ICONS = [
  * past `perPlugin` or `total` is left out: its command still registers and
  * its menu entry stays, and the player logs the button it left out
  * (`limit`). Which ones stay: each plugin's first declared button, then the
- * `total` lowest by order, plugin id and declaration order.
+ * `total` highest by order, plugin id and declaration order: as in a narrow
+ * strip, the lowest order goes first (equal orders: the smaller plugin id,
+ * then the earlier declaration, goes first).
  *
  * @since 1.5.29
  */

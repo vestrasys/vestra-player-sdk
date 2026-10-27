@@ -500,7 +500,7 @@ The user can rebind any command, the player's own included. Those **overrides** 
 
 #### Bottom-bar buttons
 
-A command can also be a button on the bottom bar: give it `button: { icon, order }` (CommandButton, player 0.5.10) besides its menu `path`. The player shows the buttons of all plugins in one strip at the bar's right end, left to right by `order`, its own **Toggle Sidebar** rightmost; a click runs the command like its menu item, the tooltip is the item's title and first key, and a disabled or busy command's button is drawn disabled with the reason in its tooltip. One button per plugin and eight in the player (`BAR_BUTTON_LIMITS`). The strip lives in the bottom bar's own layout (`BarButtons`, [Writing a bottom bar): a bar that does not place it shows no buttons, which is why a button always has a menu entry too.
+A command can also be a button on the bottom bar: give it `button: { icon, order }` (CommandButton, player 0.5.10) besides its menu `path`. The player shows the buttons of all plugins in one strip at the bar's right end, left to right by `order`, its own **Toggle Sidebar** rightmost; in a narrow window the lowest order (leftmost) goes first and the toggle last; a click runs the command like its menu item, the tooltip is the item's title and first key, and a disabled or busy command's button is drawn disabled with the reason in its tooltip. One button per plugin and eight in the player (`BAR_BUTTON_LIMITS`). The strip lives in the bottom bar's own layout (`BarButtons`, [Writing a bottom bar): a bar that does not place it shows no buttons, which is why a button always has a menu entry too.
 
 ```ts
 const store = plugin.windows.create("ui/store.slint");
@@ -2099,7 +2099,7 @@ The player's picture, audio and subtitle tools share one layout; a window of the
 
 The bottom bar holds one panel, and every plugin's command buttons (CommandOptions.button) and the player's sidebar toggle show inside it, in a strip the player fills. A bar that replaces the built-in one (`vestra.playback`) must place that strip, or those buttons show nowhere while it is mounted (their menu entries stay):
 
-- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many 41×40 cells as fit (the sidebar toggle stays longest; of the plugins' buttons, the highest order goes first) and is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed.
+- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many 41×40 cells as fit and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last and is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
 - **Decide what goes first when the window narrows.** The built-in bar gives the strip only the room its own buttons and the time leave, so the strip shrinks first, then its Fullscreen button hides, and the time is never cut.
 - **Do not draw a sidebar toggle of your own**: the strip has the player's (**Toggle Sidebar**, `host/sidebar`), with its state.
 - `vestra-plugin check` warns when a plugin mounts a bottom bar whose Slint file does not use `BarButtons`, and the player logs the buttons a mounted bar hides.
@@ -2370,7 +2370,7 @@ A command added past a limit fails with code `limit` (its `ready` rejects; durin
 
 #### Bottom-bar buttons
 
-A command's button (CommandOptions.button, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the lowest orders (then plugin id, then declaration order). The player's own sidebar toggle is extra.
+A command's button (CommandOptions.button, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the eight highest orders, so the lowest go first, as in a narrow strip (equal orders: the smaller plugin id, then the earlier declaration, goes first). The player's own sidebar toggle is extra.
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
@@ -2878,8 +2878,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 - **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: the icon in the accent colour. Accessibility: a button named by the title, with its enabled and checked state and a default action.
 - **Click**: runs the command exactly as a click on its menu item does.
-- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip drops the highest order first and the sidebar toggle last.
-- **Limits** (Limits): one button per plugin (its first declared), eight in the player. A button past them is left out and logged with `limit`; the command and its menu entry stay.
+- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip loses cells from its outer (left) end inward: the lowest order goes first, the sidebar toggle last. `order` is position only: low is further left and goes first.
+- **Limits** (Limits): one button per plugin (its first declared), eight in the player (the highest orders; the lowest go first, ties: the smaller plugin id, then the earlier declaration). A button past them is left out and logged with `limit`; the command and its menu entry stay.
 - **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
 - **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
 
@@ -3200,6 +3200,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `room` | in `length` |  | The width the bar can give the strip; the cells that fit show. |
+| `first-shown` | out `int` | `BarButtonsHost.buttons.length - root.count` | The index (in the player's list, ascending order) of the leftmost plugin button shown; the ones before it are hidden for want of room. |
 
 Struct **`BarButtonItem`**: One button as the player shows it.
 
@@ -3597,7 +3598,7 @@ interface CommandButton {
    */
   icon: BarButtonIcon | ImageRef;
   /**
-   * Place in the strip, left to right ascending: an integer 0–999. Equal orders sort by plugin id, then declaration order. Pick from the bands the player's own buttons use: AI 100, Plugin Store 200.
+   * Place in the strip, left to right ascending: an integer 0–999. It is position only: a lower order sits further left, and in a narrow window (or past the limit of eight) it is the first to go. Equal orders sort by plugin id, then declaration order. The player's own buttons use AI 100, Plugin Store 200.
    */
   order: number;
 }
@@ -8154,7 +8155,9 @@ same values as the player's (its tests check that they agree). A button
 past `perPlugin` or `total` is left out: its command still registers and
 its menu entry stays, and the player logs the button it left out
 (`limit`). Which ones stay: each plugin's first declared button, then the
-`total` lowest by order, plugin id and declaration order.
+`total` highest by order, plugin id and declaration order: as in a narrow
+strip, the lowest order goes first (equal orders: the smaller plugin id,
+then the earlier declaration, goes first).
 
 ```ts
 const BAR_BUTTON_LIMITS: {

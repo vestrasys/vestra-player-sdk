@@ -453,7 +453,8 @@ export type BarButtonIcon =
  * buttons, `BarButtons` from `@vestra/bar-buttons.slint`, at its right end;
  * the player fills it with the buttons of every plugin, left to right by
  * `order`, and its own sidebar toggle rightmost. When the window is narrow
- * the strip drops the highest orders first (the sidebar toggle last). A
+ * the strip loses cells from its outer (left) end inward: the lowest order
+ * goes first, the sidebar toggle last. A
  * bottom bar that does not place `BarButtons` shows no buttons: the
  * command's menu entry stays, and the player logs the buttons it cannot
  * show and whose bar hides them. The built-in bar (`vestra.playback`) places
@@ -499,9 +500,11 @@ export interface CommandButton {
    */
   icon: BarButtonIcon | ImageRef;
   /**
-   * Place in the strip, left to right ascending: an integer 0–999. Equal
-   * orders sort by plugin id, then declaration order. Pick from the
-   * bands the player's own buttons use: AI 100, Plugin Store 200.
+   * Place in the strip, left to right ascending: an integer 0–999. It is
+   * position only: a lower order sits further left, and in a narrow window
+   * (or past the limit of eight) it is the first to go. Equal orders sort
+   * by plugin id, then declaration order. The player's own buttons use AI
+   * 100, Plugin Store 200.
    */
   order: number;
 }

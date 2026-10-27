@@ -6,9 +6,9 @@
 //   import { BarButtons } from "@vestra/bar-buttons.slint";
 //   strip := BarButtons { x: parent.width - self.width - 4px; room: ...; }
 // It shows as many 41×40 cells as fit in `room`, the strip as wide as the
-// cells shown (`width`): the sidebar toggle stays longest, and of the
-// plugins' buttons (ascending `order`, left to right) the highest order goes
-// first. A bar without a `BarButtons` shows none of them (their menu
+// cells shown (`width`). Cells go from the strip's outer (left) end inward:
+// of the plugins' buttons (ascending `order`, left to right) the lowest
+// order goes first, and the sidebar toggle goes last. A bar without a `BarButtons` shows none of them (their menu
 // entries stay; the player logs which buttons are hidden).
 //
 // The cells look like the bar's own icon buttons: a 32×32 plate on hover
@@ -115,21 +115,24 @@ component Cell inherits Rectangle {
 export component BarButtons {
     // The width the bar can give the strip; the cells that fit show.
     in property <length> room;
+    // The index (in the player's list, ascending order) of the leftmost
+    // plugin button shown; the ones before it are hidden for want of room.
+    out property <int> first-shown: BarButtonsHost.buttons.length - root.count;
     // The cells that fit in `room`.
     private property <int> fit: Math.max(0, Math.floor(root.room / 41px));
     private property <bool> toggle: BarButtonsHost.toggle.token != "" && root.fit >= 1;
-    // The plugins' buttons shown: the lowest orders, after the toggle's cell.
+    // The plugins' buttons shown: the highest orders, left of the toggle's cell.
     private property <int> count: Math.max(0, Math.min(BarButtonsHost.buttons.length, root.fit - (root.toggle ? 1 : 0)));
     width: (root.count + (root.toggle ? 1 : 0)) * 41px;
     height: 40px;
     init => { BarButtonsHost.placed = true; }
-    Cell { x: 0px; shown: root.count > 0; item: BarButtonsHost.buttons[0]; }
-    Cell { x: 41px; shown: root.count > 1; item: BarButtonsHost.buttons[1]; }
-    Cell { x: 82px; shown: root.count > 2; item: BarButtonsHost.buttons[2]; }
-    Cell { x: 123px; shown: root.count > 3; item: BarButtonsHost.buttons[3]; }
-    Cell { x: 164px; shown: root.count > 4; item: BarButtonsHost.buttons[4]; }
-    Cell { x: 205px; shown: root.count > 5; item: BarButtonsHost.buttons[5]; }
-    Cell { x: 246px; shown: root.count > 6; item: BarButtonsHost.buttons[6]; }
-    Cell { x: 287px; shown: root.count > 7; item: BarButtonsHost.buttons[7]; }
+    Cell { x: (0 - root.first-shown) * 41px; shown: 0 >= root.first-shown && 0 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[0]; }
+    Cell { x: (1 - root.first-shown) * 41px; shown: 1 >= root.first-shown && 1 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[1]; }
+    Cell { x: (2 - root.first-shown) * 41px; shown: 2 >= root.first-shown && 2 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[2]; }
+    Cell { x: (3 - root.first-shown) * 41px; shown: 3 >= root.first-shown && 3 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[3]; }
+    Cell { x: (4 - root.first-shown) * 41px; shown: 4 >= root.first-shown && 4 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[4]; }
+    Cell { x: (5 - root.first-shown) * 41px; shown: 5 >= root.first-shown && 5 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[5]; }
+    Cell { x: (6 - root.first-shown) * 41px; shown: 6 >= root.first-shown && 6 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[6]; }
+    Cell { x: (7 - root.first-shown) * 41px; shown: 7 >= root.first-shown && 7 < BarButtonsHost.buttons.length; item: BarButtonsHost.buttons[7]; }
     Cell { x: root.count * 41px; shown: root.toggle; item: BarButtonsHost.toggle; }
 }

@@ -243,6 +243,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `room` | in `length` |  | The width the bar can give the strip; the cells that fit show. |
+| `first-shown` | out `int` | `BarButtonsHost.buttons.length - root.count` | The index (in the player's list, ascending order) of the leftmost plugin button shown; the ones before it are hidden for want of room. |
 
 Struct **`BarButtonItem`**: One button as the player shows it.
 

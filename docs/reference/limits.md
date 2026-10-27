@@ -22,7 +22,7 @@ A command added past a limit fails with code `limit` (its `ready` rejects; durin
 
 ## Bottom-bar buttons
 
-A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the lowest orders (then plugin id, then declaration order). The player's own sidebar toggle is extra.
+A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the eight highest orders, so the lowest go first, as in a narrow strip (equal orders: the smaller plugin id, then the earlier declaration, goes first). The player's own sidebar toggle is extra.
 
 <!-- generated:limits BAR_BUTTON_LIMITS -->
 

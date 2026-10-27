@@ -423,8 +423,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 - **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: the icon in the accent colour. Accessibility: a button named by the title, with its enabled and checked state and a default action.
 - **Click**: runs the command exactly as a click on its menu item does.
-- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip drops the highest order first and the sidebar toggle last.
-- **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared), eight in the player. A button past them is left out and logged with `limit`; the command and its menu entry stay.
+- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip loses cells from its outer (left) end inward: the lowest order goes first, the sidebar toggle last. `order` is position only: low is further left and goes first.
+- **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared), eight in the player (the highest orders; the lowest go first, ties: the smaller plugin id, then the earlier declaration). A button past them is left out and logged with `limit`; the command and its menu entry stay.
 - **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
 - **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
 
