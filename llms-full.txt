@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.24: full reference
+# @vestra-player/sdk 1.5.25: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -221,7 +221,7 @@ It assumes you have written a first plugin (Getting started). For each type's me
 #### The plugin process
 
 - **One Node.js process per plugin.** The player starts each plugin in a Node.js 26 process of its own (the installed player ships that Node.js). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in one plugin does not stop the player or other plugins.
-- **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with plugin.storage or in your own files in the data directory.
+- **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with plugin.storage or in your own files in the data directory, and state that must outlive a restart of the plugin's process, but not the player, in plugin.storage.session (Restarts).
 - **Trusted code.** Manifest capabilities are a contract the player checks on every call (a missing one fails with `code: "capability"`), not a sandbox: the process has the user's file and network access. The full list of capabilities and the API each one opens is in Reference: capabilities.
 - **One API on every system.** The same plugin runs on macOS and Windows. Something a system cannot do fails with `unsupported`; the differences are collected in Reference: platforms.
 - **Types only.** The plugin imports `@vestra-player/sdk` with `import type`. The `plugin` object it receives is built by the player's copy of the SDK, so a built plugin contains only its own code and keeps working with the SDK version the player ships.
@@ -313,6 +313,27 @@ The player stops a plugin when the user disables or uninstalls it, when it is re
 3. A process that has not exited 300 ms later is killed.
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with player.open **keeps playing** after it stops.
+
+#### Restarts: activate can run more than once
+
+A plugin's process does not live as long as the player. Within one player session the player stops a plugin and starts it again, and `activate` runs again in a new process, when:
+
+- the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
+- it **crashed**, or failed to start, and is started again.
+
+A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use. Write the plugin for those too.
+
+Everything in the process is gone after such a restart: variables, timers, caches, open sockets. The menus, windows and panels come back because `activate` creates them again. **Keep state that must survive a restart in session storage (or persistent storage):**
+
+| Where | Survives a restart of the plugin | Survives the player quitting | Cleared when |
+| --- | --- | --- | --- |
+| Variables in the process | no | no | the process stops |
+| plugin.storage.session (player 0.5.5) | yes | no | the user disables or uninstalls the plugin; the player quits |
+| plugin.storage.json, files in the data directory | yes | yes | uninstalling with `removeData` |
+
+Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
+
+Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
 
 #### The data directory
 
@@ -1660,7 +1681,7 @@ Every test follows the same five steps:
 4. **Assert** on what the host recorded.
 5. **Stop** with `await stop()`: the plugin is disposed as when the player stops it (scopes released, stores flushed) and the host's temporary files are removed. Each test creates its own host.
 
-`startPlugin` also returns `plugin`, the object `activate` received, to call the API directly (`plugin.player.state`). Its options: `host` (a host you prepared before activation, as above), `dataDirectory` (an existing folder as `plugin.dataDirectory`, to test a restart), `locale` (play another interface language, see Translate a plugin), and `id` with `capabilities` to start without a `manifest.json`.
+`startPlugin` also returns `plugin`, the object `activate` received, to call the API directly (`plugin.player.state`). Its options: `host` (a host you prepared before activation, as above), `dataDirectory` (an existing folder as `plugin.dataDirectory`, to test a restart), `sessionStorage` (the values of `plugin.storage.session` an earlier run left, to test a restart within one player session), `locale` (play another interface language, see Translate a plugin), and `id` with `capabilities` to start without a `manifest.json`.
 
 #### Act like the user
 
@@ -1774,6 +1795,29 @@ The host checks what the player checks: the command limits, the property value l
 #### Test a restart
 
 Copy `host.dataDirectory` after the first run and pass it as `dataDirectory` to the second, to check what the plugin stored and restores; the example is on startPlugin, and Remember a window's state between runs is a plugin that needs it.
+
+A restart within one player session (a reload, an upgrade, a crash) keeps plugin.storage.session too. Pass the first run's `host.sessionStorage` as `sessionStorage` to the second run; leave it out to test a fresh player session, where those values are gone:
+
+```ts
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { startPlugin } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+test("goes on with the queue after a restart", async () => {
+  const first = await startPlugin(activate);
+  await first.plugin.storage.session.set("queue", ["a.mkv", "b.mkv"]);
+  const kept = first.host.sessionStorage;
+  await first.stop();
+
+  const second = await startPlugin(activate, { sessionStorage: kept });
+  assert.deepEqual(await second.plugin.storage.session.get("queue"), [
+    "a.mkv",
+    "b.mkv",
+  ]);
+  await second.stop();
+});
+```
 
 Every member of `TestHost` is in the @vestra-player/sdk/testing reference.
 
@@ -2186,6 +2230,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.1 | ImageRef, ImageOptions.maxSide, PropValue, Ui.image, Ui.remoteImage, SlotState.reason, Panel.setInteraction, PlaybackStats.presentedFps, Player.setStepSeek, Host.run, Packages.reload |
 | 0.5.2 | HostAction |
 | 0.5.3 | Scrub.seek |
+| 0.5.5 | SessionStorage |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2306,6 +2351,16 @@ plugin.secrets. A name or value out of its rule fails with code `invalid`; a new
 | `SECRET_LIMITS.nameChars` | 64 | Characters of a name (64, at least 1), each one of `a-z`, `0-9`, `.`, `_` and `-`. |
 | `SECRET_LIMITS.valueBytes` | 1024 (1 KiB) | UTF-8 bytes of a value. |
 | `SECRET_LIMITS.names` | 256 | Different names one plugin may have stored at the same time. |
+
+#### Session storage
+
+plugin.storage.session (player 0.5.5). A key out of its rule, or a value that is not JSON (or has a string with a lone surrogate), fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing. Each key counts its UTF-8 bytes, its value as compact JSON and `entryBytes`. One `set` is also one message, so a single value must fit in `MESSAGE_LIMIT` with its key and the request around it.
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `SESSION_STORAGE_LIMITS.keyBytes` | 1024 (1 KiB) | UTF-8 bytes of a key. |
+| `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | Bytes one plugin may hold at the same time: for every key, its UTF-8 bytes, its value written as compact JSON (`JSON.stringify(value)`) and `entryBytes`. |
+| `SESSION_STORAGE_LIMITS.entryBytes` | 128 | What each key costs on top of its text and value (128): the player's own bookkeeping, so that many tiny entries stay within `bytes` of memory. |
 
 #### Messages
 
@@ -6427,6 +6482,70 @@ interface Storage {
     validate?: (value: unknown) => value is T;
     debounceMs?: number;
   }): JsonStore<T>;
+  /**
+   * Values the player keeps in its memory for this plugin until the player quits: they survive a restart of the plugin's process (reload, upgrade, crash, failed start) but not the player. See SessionStorage.
+   */
+  readonly session: SessionStorage;
+}
+```
+
+### SessionStorage
+
+`plugin.storage.session`: JSON values that live as long as the **player**,
+not as long as the plugin's process (like `chrome.storage.session`). No
+capability; needs player 0.5.5 (older players reject the calls with
+`unsupported`).
+
+`activate` can run more than once in one player session: the player stops
+and starts a plugin's process again when the plugin is reloaded (also a
+development load with `--plugin`) or upgraded, and after a crash or a
+failed start. A later player may also restart plugins that share a
+process, or stop an idle plugin and start it on its next use. Variables do
+not survive that; keep state that must survive a restart here (or in
+storage.json when it must also survive the player
+quitting).
+
+| | Values |
+| --- | --- |
+| The plugin's process restarts: reload, upgrade, crash | kept |
+| The plugin failed to start or failed, and starts again | kept |
+| The user disables the plugin, or uninstalls it | cleared |
+| The player quits | cleared |
+
+- **Per plugin.** A plugin sees only its own keys. Like
+  dataDirectory, the values belong to the
+  installation: a development load (`--plugin`) has its own.
+- **JSON.** `set` stores what `JSON.stringify(value)` writes, and `get`
+  returns that, parsed: `undefined` object properties are dropped, a `Date`
+  comes back as a string, `NaN` as `null`. **The order of an object's
+  properties is not kept**: they may come back in another order. A value
+  `JSON.stringify` cannot write (`undefined`, a function, a cycle, a
+  `BigInt`) or a string with a lone surrogate (`"\uD800"`) fails with
+  `invalid`. The value is not checked when it comes back: after an upgrade
+  an older version's value may be read, so check its shape when it matters.
+- **Bounded.** Keys are 1–1024 bytes of text. A plugin holds at most 1 MiB,
+  counting every key, its value as compact JSON and 128 bytes per key
+  (SESSION_STORAGE_LIMITS); a
+  `set` beyond it fails with `limit` and changes nothing. One `set` is
+  also one message to the player, at most 1 MiB with its key, so a single
+  value is a little smaller than that; a larger one fails with `limit`.
+  Split large state over several keys.
+- **Each call is one request.** A `set` is kept once its promise
+  resolves, so a crash right after loses nothing; there is no debounce.
+  Calls answer in order.
+
+```ts
+interface SessionStorage {
+  /** The value stored under `key`, or `undefined` when there is none. */
+  get<T = unknown>(key: string): Promise<T | undefined>;
+  /**
+   * Store or replace `value` under `key`. `invalid` for a bad key or a value that is not JSON, `limit` when the plugin's values would be over 1 MiB or the request over the 1 MiB message limit.
+   */
+  set(key: string, value: unknown): Promise<void>;
+  /** Remove a key; removing a missing one is fine. */
+  delete(key: string): Promise<void>;
+  /** The keys stored, in code point order. */
+  keys(): Promise<string[]>;
 }
 ```
 
@@ -7436,6 +7555,10 @@ class TestHost implements Transport {
    * The player's secret store for this plugin: name → value. Preset entries to simulate stored secrets; inject failures with `host.handle("secrets.get", ...)`. Like the player, `secrets.set` of a new name fails `limit` once 256 names are stored.
    */
   readonly secrets: Map<string, string>;
+  /**
+   * `plugin.storage.session`: key → value, as the player keeps them. Preset entries to simulate values an earlier run of the plugin stored in the same player session, or pass `startPlugin(..., { sessionStorage })`. Like the player, a key is 1–1024 bytes, a `set` that would make the entries larger than 1 MiB (keys, values as compact JSON and `SESSION_STORAGE_LIMITS.entryBytes` per key) fails `limit`, and an object's properties are stored sorted, as the player hands them back.
+   */
+  readonly sessionStorage: Map<string, Json>;
   /** What `plugin.app.system()` reports. */
   systemInfo: WireSystemInfo;
   /** What `plugin.app` reports. Set it before startPlugin: the plugin receives it once at start-up. */
@@ -7721,6 +7844,10 @@ function startPlugin(activate: (plugin: Plugin) => unknown, options?: {
   /** Use an existing directory as `plugin.dataDirectory` (to test a restart). */
   dataDirectory?: string;
   /**
+   * Start with these `plugin.storage.session` values (to test a restart within one player session): pass the previous run's `host.sessionStorage`. They are copied into the new host's TestHost.sessionStorage.
+   */
+  sessionStorage?: ReadonlyMap<string, Json>;
+  /**
    * The interface language to play (TestHost.locale): the plugin's `locales/<locale>.po` (or `.json`) in `directory` is loaded and its menus, messages and titles show translated. Default: the host's.
    */
   locale?: Locale;
@@ -8004,6 +8131,27 @@ const OSD_LIMITS: Readonly<{
   readonly minColumns: 8;
   /** The largest `OsdPanelOptions.maxColumns` (1000). */
   readonly maxColumns: 1000;
+}>;
+```
+
+### SESSION_STORAGE_LIMITS
+
+The player's limits on SessionStorage. A key outside them fails
+with code `invalid`; a `set` that would make the plugin's entries larger
+than `bytes` fails with `limit` and changes nothing. A single `set` must
+also fit in one message to the player
+(MESSAGE_LIMIT, 1 MiB
+with the key and the request around the value). The player's tests check
+that these agree with the player.
+
+```ts
+const SESSION_STORAGE_LIMITS: Readonly<{
+  /** UTF-8 bytes of a key (1024, at least 1; no NUL character). */
+  readonly keyBytes: 1024;
+  /** Bytes one plugin may hold at the same time: for every key, its UTF-8 bytes, its value written as compact JSON (`JSON.stringify(value)`) and `entryBytes`. */
+  readonly bytes: number;
+  /** What each key costs on top of its text and value (128): the player's own bookkeeping, so that many tiny entries stay within `bytes` of memory. */
+  readonly entryBytes: 128;
 }>;
 ```
 

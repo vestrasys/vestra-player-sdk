@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.25
+
+**Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: `plugin.storage.json` and every other API do what they did. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.5.
+
+- **`plugin.storage.session`** (`SessionStorage`, player 0.5.5; user ruling of 2026-10-27, after Chrome's `chrome.storage.session`): `get(key)`, `set(key, value)`, `delete(key)` and `keys()` of JSON values that live as long as the **player**, not the plugin's process. They survive every restart of the plugin within one player session (a reload, also of a development load, an upgrade, a crash, a failed start) and are cleared when the user disables or uninstalls the plugin, and when the player quits. Per plugin, no capability. Keys are 1–1024 bytes of well-formed text; a plugin's keys, values (as compact JSON) and 128 bytes per key are at most 1 MiB together, and a `set` beyond fails with `limit` and changes nothing. One value must also fit in one 1 MiB message. A value `JSON.stringify` cannot write, or one with a lone surrogate in a string, fails with `invalid`; the order of an object's properties is not kept; `get` returns `undefined` for a missing key. Each `set` is one acknowledged request, without debounce. Players before 0.5.5 reject the calls with `unsupported`, so set `"minPlayerVersion": "0.5.5"`.
+- **`SESSION_STORAGE_LIMITS`** (`@vestra-player/sdk/testing` and `/runtime`): `keyBytes` 1024, `bytes` 1 MiB, `entryBytes` 128.
+- **`TestHost.sessionStorage`** (the player's store for the plugin, with the player's key rule and quota, objects stored with sorted properties as the player returns them) and **`startPlugin(..., { sessionStorage })`** to start with the values an earlier run left, to test a restart within one player session. `TestHost` now refuses any request over the 1 MiB message limit with `limit`, as the plugin runner does.
+- Docs: *How a plugin runs* gains *Restarts: activate can run more than once*: when the player restarts a plugin's process, and "keep state that must survive a restart in session storage (or persistent storage)", with a table of what survives what. *Test a plugin* (testing a restart with session values), *Reference: limits* (`SESSION_STORAGE_LIMITS`). `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.24
 
 **Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: `when: "interlaced"` and `when: "all"` do what they did. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.4.

@@ -87,7 +87,7 @@ import type { BuiltinCommand, BuiltinSubmenu } from "../commands.ts";
 import { CAPABILITY_INFO, MESSAGE_LIMIT } from "../capabilities.ts";
 import type { CapabilityInfo } from "../capabilities.ts";
 import { OSD_LIMITS } from "./osd.ts";
-import { SECRET_LIMITS } from "./services.ts";
+import { SECRET_LIMITS, SESSION_STORAGE_LIMITS } from "./services.ts";
 import { BINDING_INPUTS } from "./bindings.ts";
 import { THEME_PALETTES } from "../palettes.ts";
 import { IMAGE_LIMITS, UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
@@ -150,6 +150,8 @@ export { MESSAGE_LIMIT };
 export { OSD_LIMITS };
 /** The player's limits on stored secrets. */
 export { SECRET_LIMITS };
+/** The player's limits on `plugin.storage.session`. */
+export { SESSION_STORAGE_LIMITS };
 /** The names bindings are made of. */
 export { BINDING_INPUTS };
 /** The colours of the player's palettes, by `Theme` token. */
@@ -190,6 +192,42 @@ export { LIST_SEPARATORS };
 export { LOCALES };
 
 type Handler = (params: Record<string, Json>) => unknown;
+/** A `plugin.storage.session` key, checked as the player does. */
+function sessionKey(key: Json | undefined): string {
+  if (
+    typeof key !== "string" ||
+    !key ||
+    key.includes("\0") ||
+    Buffer.byteLength(key) > SESSION_STORAGE_LIMITS.keyBytes
+  )
+    throw new HostError(
+      "invalid",
+      "session storage keys are 1–1024 bytes of text without NUL",
+    );
+  return key;
+}
+/** Code point (UTF-8 byte) order, as the player sorts session keys. */
+const byCodePoint = (a: string, b: string) =>
+  Buffer.compare(Buffer.from(a), Buffer.from(b));
+/**
+ * A JSON value as the player hands it back: the player does not keep the
+ * order of object properties, it sorts them.
+ */
+function sortedJson(value: Json): Json {
+  if (Array.isArray(value)) return value.map(sortedJson);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort(byCodePoint)
+        .map((key) => [key, sortedJson((value as Record<string, Json>)[key]!)]),
+    );
+  return value;
+}
+/** What one session entry counts towards the player's quota. */
+const sessionCost = (key: string, value: Json) =>
+  Buffer.byteLength(key) +
+  Buffer.byteLength(JSON.stringify(value)) +
+  SESSION_STORAGE_LIMITS.entryBytes;
 type Call = { method: string; params: Record<string, Json> };
 
 /**
@@ -1622,6 +1660,18 @@ export class TestHost implements Transport {
    * new name fails `limit` once 256 names are stored.
    */
   readonly secrets = new Map<string, string>();
+  /**
+   * `plugin.storage.session`: key → value, as the player keeps them. Preset
+   * entries to simulate values an earlier run of the plugin stored in the
+   * same player session, or pass `startPlugin(..., { sessionStorage })`.
+   * Like the player, a key is 1–1024 bytes, a `set` that would make the
+   * entries larger than 1 MiB (keys, values as compact JSON and
+   * `SESSION_STORAGE_LIMITS.entryBytes` per key) fails `limit`, and an
+   * object's properties are stored sorted, as the player hands them back.
+   *
+   * @since 1.5.25
+   */
+  readonly sessionStorage = new Map<string, Json>();
   /** What `plugin.app.system()` reports. */
   systemInfo: WireSystemInfo = {
     os: "macos",
@@ -2163,6 +2213,14 @@ export class TestHost implements Transport {
    */
   async request<T>(method: string, params: Json = {}): Promise<T> {
     const record = (params ?? {}) as Record<string, Json>;
+    // The plugin runner refuses a request over the message limit before
+    // sending it (runtime/runner.ts): the player never sees it.
+    const line = JSON.stringify({ id: this.calls.length + 1, method, params });
+    if (Buffer.byteLength(line, "utf8") + 1 > MESSAGE_LIMIT)
+      throw new HostError(
+        "limit",
+        `${method}: request exceeds the player's 1 MiB message limit`,
+      );
     this.calls.push({ method, params: record });
     this.#inFlight++;
     try {
@@ -3387,6 +3445,31 @@ export class TestHost implements Transport {
       this.secrets.set(name, String(p.value));
     },
     "secrets.delete": (p) => void this.secrets.delete(String(p.name)),
+    // As the player (host/src/session_storage.rs).
+    "storage.session.get": (p) => {
+      const key = sessionKey(p.key);
+      return this.sessionStorage.has(key)
+        ? { value: structuredClone(this.sessionStorage.get(key)) }
+        : {};
+    },
+    "storage.session.set": (p) => {
+      const key = sessionKey(p.key);
+      if (!("value" in p))
+        throw new HostError("invalid", "set needs a JSON value");
+      let total = sessionCost(key, p.value!);
+      for (const [other, value] of this.sessionStorage)
+        if (other !== key) total += sessionCost(other, value);
+      if (total > SESSION_STORAGE_LIMITS.bytes)
+        throw new HostError(
+          "limit",
+          `session storage holds at most ${SESSION_STORAGE_LIMITS.bytes} bytes per plugin (keys, JSON values and ${SESSION_STORAGE_LIMITS.entryBytes} per key); this value would make ${total}`,
+        );
+      this.sessionStorage.set(key, sortedJson(p.value!));
+    },
+    "storage.session.delete": (p) =>
+      void this.sessionStorage.delete(sessionKey(p.key)),
+    "storage.session.keys": () =>
+      [...this.sessionStorage.keys()].sort(byCodePoint),
     "app.system": () => structuredClone(this.systemInfo),
     "clipboard.readText": () => this.clipboard.text,
     "clipboard.writeText": (p) => {
@@ -4510,6 +4593,15 @@ export async function startPlugin(
     /** Use an existing directory as `plugin.dataDirectory` (to test a restart). */
     dataDirectory?: string;
     /**
+     * Start with these `plugin.storage.session` values (to test a restart
+     * within one player session): pass the previous run's
+     * `host.sessionStorage`. They are copied into the new host's
+     * {@link TestHost.sessionStorage}.
+     *
+     * @since 1.5.25
+     */
+    sessionStorage?: ReadonlyMap<string, Json>;
+    /**
      * The interface language to play ({@link TestHost.locale}): the plugin's
      * `locales/<locale>.po` (or `.json`) in `directory` is loaded and its
      * menus, messages and titles show translated. Default: the host's.
@@ -4538,6 +4630,8 @@ export async function startPlugin(
   host.manifestId = manifest.id;
   host.loadCatalog(directory);
   const data = options.dataDirectory ?? host.dataDirectory;
+  for (const [key, value] of options.sessionStorage ?? [])
+    host.sessionStorage.set(key, sortedJson(value));
   mkdirSync(data, { recursive: true });
   const instance = await createPlugin(
     host,

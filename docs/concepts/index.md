@@ -9,7 +9,7 @@ Concept pages explain how the player and its plugins fit together: what a thing 
 
 ## How a plugin runs
 
-Each plugin runs in a Node.js process of its own and receives a `plugin` object in `activate`. Everything it creates is a handle owned by a scope, so stopping the plugin releases everything. The page covers the process, activation and what makes it fail, handles and child scopes, the update pass that sends bound values to the player, what happens when a plugin stops, the data directory and installation instances, and how failures reach the plugin (`code`, `onError`, no timeouts, no blind retries).
+Each plugin runs in a Node.js process of its own and receives a `plugin` object in `activate`. Everything it creates is a handle owned by a scope, so stopping the plugin releases everything. The page covers the process, activation and what makes it fail, handles and child scopes, the update pass that sends bound values to the player, what happens when a plugin stops, why `activate` can run more than once in one session and where to keep state that must survive a restart (session storage or persistent storage), the data directory and installation instances, and how failures reach the plugin (`code`, `onError`, no timeouts, no blind retries).
 
 [Read the page](plugins.md)
 

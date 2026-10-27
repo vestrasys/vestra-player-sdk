@@ -70,6 +70,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.1 | {@linkcode "@vestra-player/sdk"!ImageRef ImageRef}, {@linkcode "@vestra-player/sdk"!ImageOptions.maxSide ImageOptions.maxSide}, {@linkcode "@vestra-player/sdk"!PropValue PropValue}, {@linkcode "@vestra-player/sdk"!Ui.image Ui.image}, {@linkcode "@vestra-player/sdk"!Ui.remoteImage Ui.remoteImage}, {@linkcode "@vestra-player/sdk"!SlotState.reason SlotState.reason}, {@linkcode "@vestra-player/sdk"!Panel.setInteraction Panel.setInteraction}, {@linkcode "@vestra-player/sdk"!PlaybackStats.presentedFps PlaybackStats.presentedFps}, {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek}, {@linkcode "@vestra-player/sdk"!Host.run Host.run}, {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload} |
 | 0.5.2 | {@linkcode "@vestra-player/sdk"!HostAction HostAction} |
 | 0.5.3 | {@linkcode "@vestra-player/sdk"!Scrub.seek Scrub.seek} |
+| 0.5.5 | {@linkcode "@vestra-player/sdk"!SessionStorage SessionStorage} |
 
 <!-- /generated -->
 

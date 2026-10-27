@@ -1,6 +1,6 @@
 ---
 title: How a plugin runs
-description: The plugin process, activation, handles and scopes, the update pass, stopping, the data directory and how failures reach the plugin.
+description: The plugin process, activation, handles and scopes, the update pass, stopping, restarts and the state that survives them, the data directory and how failures reach the plugin.
 ---
 
 # How a plugin runs
@@ -12,7 +12,7 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 ## The plugin process
 
 - **One Node.js process per plugin.** The player starts each plugin in a Node.js 26 process of its own (the installed player ships that Node.js). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in one plugin does not stop the player or other plugins.
-- **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage} or in your own files in the [data directory](#the-data-directory).
+- **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage} or in your own files in the [data directory](#the-data-directory), and state that must outlive a restart of the plugin's process, but not the player, in {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} ([Restarts](#restarts-activate-can-run-more-than-once)).
 - **Trusted code.** Manifest capabilities are a contract the player checks on every call (a missing one fails with `code: "capability"`), not a sandbox: the process has the user's file and network access. The full list of capabilities and the API each one opens is in [Reference: capabilities](../reference/capabilities.md).
 - **One API on every system.** The same plugin runs on macOS and Windows. Something a system cannot do fails with `unsupported`; the differences are collected in [Reference: platforms](../reference/platforms.md).
 - **Types only.** The plugin imports `@vestra-player/sdk` with `import type`. The `plugin` object it receives is built by the player's copy of the SDK, so a built plugin contains only its own code and keeps working with the SDK version the player ships.
@@ -105,6 +105,27 @@ The player stops a plugin when the user disables or uninstalls it, when it is re
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with {@link "@vestra-player/sdk"!Player.open | player.open} **keeps playing** after it stops.
 
+## Restarts: activate can run more than once
+
+A plugin's process does not live as long as the player. Within one player session the player stops a plugin and starts it again, and `activate` runs again in a new process, when:
+
+- the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
+- it **crashed**, or failed to start, and is started again.
+
+A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use. Write the plugin for those too.
+
+Everything in the process is gone after such a restart: variables, timers, caches, open sockets. The menus, windows and panels come back because `activate` creates them again. **Keep state that must survive a restart in session storage (or persistent storage):**
+
+| Where | Survives a restart of the plugin | Survives the player quitting | Cleared when |
+| --- | --- | --- | --- |
+| Variables in the process | no | no | the process stops |
+| {@linkcode "@vestra-player/sdk"!SessionStorage plugin.storage.session} (player 0.5.5) | yes | no | the user disables or uninstalls the plugin; the player quits |
+| {@linkcode "@vestra-player/sdk"!Storage.json plugin.storage.json}, files in the [data directory](#the-data-directory) | yes | yes | uninstalling with `removeData` |
+
+Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
+
+Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
+
 ## The data directory
 
 {@link "@vestra-player/sdk"!Plugin.dataDirectory | plugin.dataDirectory} is a writable directory for the plugin's own files (settings, caches, remembered folders). It needs no capability; the player creates it before it starts the plugin.
@@ -156,7 +177,7 @@ Three properties make failures predictable:
 ## API on this page
 
 - Entry and scopes: {@link "@vestra-player/sdk"!Plugin | Plugin}, {@link "@vestra-player/sdk"!Scope | Scope}, {@link "@vestra-player/sdk"!Disposable | Disposable}, {@link "@vestra-player/sdk"!Bindable | Bindable}
-- Files and settings: {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!Secrets | Secrets}, {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}
+- Files and settings: {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!SessionStorage | SessionStorage}, {@link "@vestra-player/sdk"!Secrets | Secrets}, {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}
 - The player and system: {@link "@vestra-player/sdk"!App | App}, {@link "@vestra-player/sdk"!SystemInfo | SystemInfo}
 - Errors: {@link "@vestra-player/sdk"!PluginError | PluginError}, {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}
 
