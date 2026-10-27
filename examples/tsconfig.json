@@ -9,7 +9,12 @@
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "plugins": [
+      {
+        "name": "@vestra-player/sdk/ts-plugin"
+      }
+    ]
   },
   "include": ["*/*.ts", "*/tests/*.ts"]
 }

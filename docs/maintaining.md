@@ -17,7 +17,7 @@ npm run docs:tables # rewrite the generated tables in docs/ (scripts/doc-tables.
 npm run doc-lint    # documentation coverage report; fails when an enforced category is incomplete
 npm run docs:llms   # regenerate llms.txt and llms-full.txt (`-- --check`: fail when they are stale)
 npm run examples    # every examples/<name>: npm install, vestra-plugin check, test, pack (needs dist/)
-npm pack --dry-run  # package contents: README.md, CHANGELOG.md, LICENSE, llms.txt, llms-full.txt, package.json, bin/, dist/, slint/
+npm pack --dry-run  # package contents: README.md, CHANGELOG.md, LICENSE, llms.txt, llms-full.txt, package.json, bin/, dist/, slint/, ts-plugin/
 npm pack && npm run pack:check -- vestra-player-sdk-<version>.tgz   # allow list, exports, bin
 npm run pack:smoke -- vestra-player-sdk-<version>.tgz               # install into a fresh project, tsc + vestra-plugin check/test
 ```
@@ -163,5 +163,6 @@ To switch to trusted publishing (npm account with publish rights on `@vestra-pla
 ## Kept in sync with the player
 
 - **Slint widget copy.** `slint/palette.slint`, `slint/vestra/theme.slint`, `slint/vestra/widgets.slint` and `slint/vestra/markdown.slint` are read-only copies of the player's `@vestra/` library (`src/host/ui/palette.slint` and `src/host/ui/vestra/` in the `vestra-player` repository), used only to compile and preview plugin user interfaces in an editor. The player is the source: when it changes the library, copy the same files here and release. The player's consistency test checks that the installed SDK copy is byte-identical to its own.
-- The capability table and `API_VERSION` (`src/capabilities.ts`) and the command limits (`src/commands.ts`, `COMMAND_LIMITS`) must match the player; its tests check that too.
+- **Capability table.** `src/host-capabilities.ts` (`HOST_CAPABILITIES`) is a copy of the player's generated `src/host/capabilities.json` (which request needs which capability, the labels, `requires`); write it with `npm run capabilities:sync -- <player repository>` and check it with `npm run capabilities:sync -- <player repository> --check`. `src/api-requests.ts` (`API_REQUESTS`) is the SDK's half: the requests each public member sends. `CAPABILITY_INFO`, `vestra-plugin check` and the TypeScript plugin (`ts-plugin/`, `src/ts-plugin.ts`, `src/capability-check.ts`) are built from the two (`src/capability-rules.ts`). A new member that needs a capability gets a line in `API_REQUESTS`; `test/capability-check.test.ts` checks every method and parameter against the copy. The player's agreement test compares the installed SDK's `HOST_CAPABILITIES` with its JSON, so a player change to its capabilities fails there until the SDK is synced and released.
+- `API_VERSION` (`src/capabilities.ts`) and the command limits (`src/commands.ts`, `COMMAND_LIMITS`) must match the player; its tests check that too.
 - `THEME_PALETTES` (`src/palettes.ts`): the colours of `vestra` and `vestra-light`, copied from the player's `src/host/src/theme.rs`. `slint/palette.slint` holds only the `vestra` defaults, so the `vestra-light` values exist in the SDK only here; the unit tests check `vestra` against `palette.slint`, and the player's agreement test must check both against `theme.rs`.

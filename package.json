@@ -1,6 +1,6 @@
 {
   "name": "@vestra-player/sdk",
-  "version": "1.5.25",
+  "version": "1.5.26",
   "description": "Plugin API types, test host and plugin CLI for Vestra Player (apiVersion vestra/1)",
   "license": "Apache-2.0",
   "repository": {
@@ -24,6 +24,10 @@
       "types": "./dist/player-runtime.d.ts",
       "default": "./dist/player-runtime.js"
     },
+    "./ts-plugin": {
+      "types": "./ts-plugin/index.d.ts",
+      "default": "./ts-plugin/index.js"
+    },
     "./llms.txt": "./llms.txt",
     "./llms-full.txt": "./llms-full.txt",
     "./package.json": "./package.json"
@@ -35,6 +39,7 @@
     "dist",
     "bin",
     "slint",
+    "ts-plugin",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
@@ -43,6 +48,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
+    "capabilities:sync": "node scripts/capabilities-sync.mjs",
     "check": "tsc -p tsconfig.check.json",
     "doc-lint": "node scripts/doc-lint.mjs",
     "docs": "typedoc",
@@ -50,8 +56,8 @@
     "docs:llms": "node scripts/llms.mjs",
     "docs:tables": "node scripts/doc-tables.mjs",
     "examples": "node scripts/check-examples.mjs",
-    "format": "prettier --write \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
-    "format:check": "prettier --check \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
+    "format": "prettier --write \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" ts-plugin/index.js ts-plugin/index.d.ts package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
+    "format:check": "prettier --check \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" ts-plugin/index.js ts-plugin/index.d.ts package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
     "lint": "oxlint --deny-warnings",
     "pack:check": "node scripts/check-pack.mjs",
     "pack:smoke": "node scripts/smoke-pack.mjs",

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.26
+
+**Who must change: authors whose plugin uses a member without one of the capabilities it needs, and only to `check`, `build` or `pack` again.** No API changes, `apiVersion` stays `vestra/1`, no player version needed, and packages already built keep running as before: the player decides at run time exactly as it did. What changes is that `vestra-plugin check` (and so `build` and `pack`) now fails on such a use, including uses that never failed at run time: a listener (`onChange`) without `events` never fires instead of failing; a subtitle change (`select`, `load`, `remove`, `setStyle`) without `subtitles.read` fails only when it reads the current selection; a capability's **Also needs** (`processing.video` without `playback.read`) was documented but not enforced. Such a plugin packed with 1.5.25 and stops packing with 1.5.26 until the missing capability is added to `manifest.json` (or the use removed). The player's built-in plugins and the plugin repository's plugins were checked with this release: no findings.
+
+- **Undeclared capabilities are caught while writing and packing** (user ruling of 2026-10-27, doc/process/rounds/2026-10-capability-check.md in the player repository): every use of an API member whose capability `manifest.json` does not declare, with `file:line:column`, the member, the capability and the request. Type-aware: found through aliases, destructuring, parameters typed `Player` and so on; not through computed names, `any` or plain JavaScript. A member also needs its capabilities' **Also needs** (`requires`). Tests are not checked.
+  - **`vestra-plugin check`** runs it after the type check and fails on any finding; `build` and `pack` run `check` first. **`check --json`** prints the findings as JSON.
+  - **`@vestra-player/sdk/ts-plugin`**, a TypeScript language-service plugin: the same findings as errors in the editor, with the quick fix "Add '<capability>' to manifest.json". List it in `tsconfig.json` (`"plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]`) and use the workspace's TypeScript (VS Code: **Use Workspace Version**).
+- **One rule with the player.** The SDK carries a copy of the player's generated capability table (`src/host/capabilities.json`: which request needs which capability, by event name or processing stage where it depends on one) and the requests each member sends. `CAPABILITY_INFO` is now built from them; its contents are unchanged. `HOST_CAPABILITIES` (`@vestra-player/sdk/runtime`, for the player's agreement test) is the copy.
+- Docs: *Capabilities* gains *Catching a missing capability*; *Getting started* adds the `tsconfig.json` with the plugin and the VS Code step; *Command line* (the rule and `--json`); *Subtitles* and *Capabilities*: changes also need `subtitles.read` (they read the current selection first; the table now says so). `examples/tsconfig.json` lists the plugin. `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.25
 
 **Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: `plugin.storage.json` and every other API do what they did. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.5.
