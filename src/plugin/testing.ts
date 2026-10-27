@@ -1774,6 +1774,18 @@ export class TestHost implements Transport {
     /** The new position. */
     landed: number;
   }[] = [];
+  /**
+   * Every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest
+   * last, with the mode it asked for. The test host lands on the exact
+   * target either way (the player lands a `keyframes` seek on the last
+   * keyframe at or before it); the core's step seeks are in `coreSeeks`.
+   */
+  readonly seeks: {
+    /** The target. */
+    seconds: number;
+    /** `Scrub.seek(seconds, { keyframes: true })` (SDK 1.5.22). */
+    keyframes: boolean;
+  }[] = [];
   /** Every `player.step`, newest last. */
   readonly steps: {
     /** `"frame"` or `"keyframe"`. */
@@ -3783,6 +3795,18 @@ export class TestHost implements Transport {
     "source.state": () => this.source,
     "source.submit": (p) => {
       const intent = p.intent as Record<string, Json>;
+      const control = intent.control as Record<string, Json> | undefined;
+      if (intent.kind === "control" && control?.kind === "seek") {
+        if (
+          control.keyframes !== undefined &&
+          typeof control.keyframes !== "boolean"
+        )
+          throw new HostError("invalid", "keyframes must be a boolean");
+        this.seeks.push({
+          seconds: Number(control.seconds),
+          keyframes: control.keyframes === true,
+        });
+      }
       const ticket = this.#intent(intent);
       const operation = Number(p.operationId);
       // A file this plugin's file resolver claims: pending until it answers.

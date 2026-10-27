@@ -67,7 +67,7 @@ Without this rule, a "jump to bookmark" that arrives a moment late would seek a 
 Two controls follow other rules because they are about the device or a gesture, not the source:
 
 - {@link "@vestra-player/sdk"!Player.setOutput | setOutput} (volume and mute) is last-write-wins and resolves `false` when a newer value replaced it.
-- {@link "@vestra-player/sdk"!Player.scrub | scrub()} starts a drag gesture on a seek bar: each seek in the gesture is conditional on the previous one, only the newest target is kept, and any outside change ends the gesture. Use it for a slider instead of calling `seek` on every move.
+- {@link "@vestra-player/sdk"!Player.scrub | scrub()} starts a drag gesture on a seek bar: each seek in the gesture is conditional on the previous one, only the newest target is kept, and any outside change ends the gesture. Use it for a slider instead of calling `seek` on every move. {@link "@vestra-player/sdk"!Scrub.seek | Scrub.seek(seconds, { keyframes: true })} (player 0.5.3, SDK 1.5.22) lands on the last keyframe at or before the target instead of the exact frame; see [Step seeks: exact or keyframe](#step-seeks-exact-or-keyframe).
 
 ## Sources
 
@@ -128,9 +128,11 @@ The difference from the `Player` methods: a `Player` control is a precise operat
 
 ### Step seeks: exact or keyframe
 
-← / → (`seek-backward` / `seek-forward`) seek by the step that {@link "@vestra-player/sdk"!Player.setStepSeek | player.setStepSeek} sets (5 s by default). By default they land on the exact time, which on a file with keyframes far apart means decoding from the previous keyframe first: a visible stall on 4K video. `setStepSeek({ seconds, keyframes: true })` (player 0.5.1, SDK 1.5.19) makes them land on a keyframe instead: forward on the first keyframe at or after position + step, backward on the last at or before position − step, and every press moves. Presses during a seek add up and continue from where it landed, and the on-screen text shows the landed time. Sources without moving video still seek exactly. The seek bar, `player.seek`, scrubs, chapters, loops and `player.step` are never affected.
+← / → (`seek-backward` / `seek-forward`) seek by the step that {@link "@vestra-player/sdk"!Player.setStepSeek | player.setStepSeek} sets (5 s by default). By default they land on the exact time, which on a file with keyframes far apart means decoding from the previous keyframe first: a visible stall on 4K video. `setStepSeek({ seconds, keyframes: true })` (player 0.5.1, SDK 1.5.19) makes them land on a keyframe instead: forward on the first keyframe at or after position + step, backward on the last at or before position − step, and every press moves. Presses during a seek add up and continue from where it landed, and the on-screen text shows the landed time. Sources without moving video still seek exactly. `player.seek`, chapters, loops and `player.step` are never affected.
 
 For more steps of your own (Ctrl+→ and the like), call `plugin.host.run("seek-forward", { seconds: 30 })`: the same checks, mode, accumulation and text as →. In keyframe mode it resolves once the seek has landed, so `player.state.position` is current afterwards; do not show your own text for it. Set `"minPlayerVersion": "0.5.1"` when you rely on either option: older players ignore them.
+
+A seek bar follows the same switch with {@link "@vestra-player/sdk"!Scrub.seek | Scrub.seek(seconds, { keyframes })} (player 0.5.3, SDK 1.5.22): with `keyframes: true` every click and drag step lands on the last keyframe at or before the pointer, so the picture follows the pointer on any file (an exact seek decodes from the keyframe to the target first: seconds on 4K video with keyframes far apart, and a drag freezes); the position is up to one keyframe interval early, and that is what the player shows, as PotPlayer does. Do not seek twice (keyframes, then exactly): one mode per gesture, the user's choice. Older players ignore the option and seek exactly (`"minPlayerVersion": "0.5.3"` when you rely on it).
 
 ```ts
 const keyframes = true; // the plugin's own setting
@@ -139,9 +141,13 @@ const seek = (delta: number) =>
   plugin.host.run(delta < 0 ? "seek-backward" : "seek-forward", {
     seconds: Math.abs(delta),
   });
+// The seek bar: one gesture per press, every click and drag step in the same mode.
+const scrub = plugin.player.scrub();
+await scrub.seek(27.6, { keyframes });
+scrub.end();
 ```
 
-In tests, `TestHost.keyframes` models the source's keyframes, and `host.coreSeeks` records each step seek with where it landed.
+In tests, `TestHost.keyframes` models the source's keyframes, `host.coreSeeks` records each step seek with where it landed, and `host.seeks` records each `player.seek` and `Scrub.seek` with the mode it asked for (the test host lands on the exact target in both modes).
 
 ## API on this page
 

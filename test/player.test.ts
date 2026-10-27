@@ -151,6 +151,38 @@ test("scrub chains its own seeks and stops when someone else intervenes", async 
   await stop();
 });
 
+test("scrub seeks by keyframes only when asked, and sends the flag only then (SDK 1.5.22)", async () => {
+  const { host, plugin, stop } = await start();
+  await plugin.player.open("/movie.mp4");
+  host.setSource({ phase: "ready", duration: 100 });
+  await host.settle();
+  const scrub = plugin.player.scrub();
+  assert.equal(await scrub.seek(10), true);
+  assert.equal(await scrub.seek(27.6, { keyframes: true }), true);
+  assert.equal(await scrub.seek(30, { keyframes: false }), true);
+  assert.equal(host.source.position, 30, "the test host lands exactly");
+  assert.deepEqual(host.seeks, [
+    { seconds: 10, keyframes: false },
+    { seconds: 27.6, keyframes: true },
+    { seconds: 30, keyframes: false },
+  ]);
+  // The wire carries `keyframes` only when it is true: players before 0.5.3
+  // see the intent they always saw.
+  const controls = host
+    .sent("source.submit")
+    .map((p) => (p.intent as { control?: Record<string, unknown> }).control)
+    .filter((control) => control?.kind === "seek");
+  assert.deepEqual(controls, [
+    { kind: "seek", seconds: 10 },
+    { kind: "seek", seconds: 27.6, keyframes: true },
+    { kind: "seek", seconds: 30 },
+  ]);
+  await plugin.player.seek(40);
+  assert.deepEqual(host.seeks.at(-1), { seconds: 40, keyframes: false });
+  scrub.end();
+  await stop();
+});
+
 test("setOutput coalesces and applies volume before unmuting", async () => {
   const { host, plugin, stop } = await start();
   const results = await Promise.all([

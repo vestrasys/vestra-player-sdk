@@ -341,7 +341,7 @@ class ScrubHandle implements Scrub {
   #allowed: SourceStamp;
   #pending: SourceStamp | null = null;
   readonly #watch: Disposable;
-  readonly #queue: Latest<number>;
+  readonly #queue: Latest<{ seconds: number; keyframes: boolean }>;
   constructor(service: PlayerService) {
     this.#allowed = { ...service.raw.stamp };
     this.#watch = service.watch((raw) => {
@@ -351,7 +351,7 @@ class ScrubHandle implements Scrub {
       )
         this.end();
     });
-    this.#queue = new Latest(async (seconds) => {
+    this.#queue = new Latest(async ({ seconds, keyframes }) => {
       if (!this.#active) throw superseded;
       const started = Date.now();
       const expected = { ...this.#allowed };
@@ -360,9 +360,15 @@ class ScrubHandle implements Scrub {
         intentVersion: expected.intentVersion + 1,
       };
       try {
+        // `keyframes` goes on the wire only when set, so players before
+        // 0.5.3 (which ignore the field) see the same intent as before.
         const ticket = await service.submit({
           kind: "control",
-          control: { kind: "seek", seconds },
+          control: {
+            kind: "seek",
+            seconds,
+            ...(keyframes ? { keyframes } : {}),
+          },
           expected,
         });
         if (!this.#active) throw superseded;
@@ -384,10 +390,10 @@ class ScrubHandle implements Scrub {
   get active() {
     return this.#active;
   }
-  seek(seconds: number) {
+  seek(seconds: number, options: { keyframes?: boolean } = {}) {
     if (!this.#active) return Promise.resolve(false);
     return this.#queue
-      .push(seconds)
+      .push({ seconds, keyframes: options.keyframes === true })
       .catch((error) => (error === superseded ? false : Promise.reject(error)));
   }
   end() {

@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.21: full reference
+# @vestra-player/sdk 1.5.22: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -524,7 +524,7 @@ Without this rule, a "jump to bookmark" that arrives a moment late would seek a 
 Two controls follow other rules because they are about the device or a gesture, not the source:
 
 - setOutput (volume and mute) is last-write-wins and resolves `false` when a newer value replaced it.
-- scrub() starts a drag gesture on a seek bar: each seek in the gesture is conditional on the previous one, only the newest target is kept, and any outside change ends the gesture. Use it for a slider instead of calling `seek` on every move.
+- scrub() starts a drag gesture on a seek bar: each seek in the gesture is conditional on the previous one, only the newest target is kept, and any outside change ends the gesture. Use it for a slider instead of calling `seek` on every move. Scrub.seek(seconds, { keyframes: true)} (player 0.5.3, SDK 1.5.22) lands on the last keyframe at or before the target instead of the exact frame; see Step seeks: exact or keyframe.
 
 #### Sources
 
@@ -585,9 +585,11 @@ The difference from the `Player` methods: a `Player` control is a precise operat
 
 ##### Step seeks: exact or keyframe
 
-← / → (`seek-backward` / `seek-forward`) seek by the step that player.setStepSeek sets (5 s by default). By default they land on the exact time, which on a file with keyframes far apart means decoding from the previous keyframe first: a visible stall on 4K video. `setStepSeek({ seconds, keyframes: true })` (player 0.5.1, SDK 1.5.19) makes them land on a keyframe instead: forward on the first keyframe at or after position + step, backward on the last at or before position − step, and every press moves. Presses during a seek add up and continue from where it landed, and the on-screen text shows the landed time. Sources without moving video still seek exactly. The seek bar, `player.seek`, scrubs, chapters, loops and `player.step` are never affected.
+← / → (`seek-backward` / `seek-forward`) seek by the step that player.setStepSeek sets (5 s by default). By default they land on the exact time, which on a file with keyframes far apart means decoding from the previous keyframe first: a visible stall on 4K video. `setStepSeek({ seconds, keyframes: true })` (player 0.5.1, SDK 1.5.19) makes them land on a keyframe instead: forward on the first keyframe at or after position + step, backward on the last at or before position − step, and every press moves. Presses during a seek add up and continue from where it landed, and the on-screen text shows the landed time. Sources without moving video still seek exactly. `player.seek`, chapters, loops and `player.step` are never affected.
 
 For more steps of your own (Ctrl+→ and the like), call `plugin.host.run("seek-forward", { seconds: 30 })`: the same checks, mode, accumulation and text as →. In keyframe mode it resolves once the seek has landed, so `player.state.position` is current afterwards; do not show your own text for it. Set `"minPlayerVersion": "0.5.1"` when you rely on either option: older players ignore them.
+
+A seek bar follows the same switch with Scrub.seek(seconds, { keyframes)} (player 0.5.3, SDK 1.5.22): with `keyframes: true` every click and drag step lands on the last keyframe at or before the pointer, so the picture follows the pointer on any file (an exact seek decodes from the keyframe to the target first: seconds on 4K video with keyframes far apart, and a drag freezes); the position is up to one keyframe interval early, and that is what the player shows, as PotPlayer does. Do not seek twice (keyframes, then exactly): one mode per gesture, the user's choice. Older players ignore the option and seek exactly (`"minPlayerVersion": "0.5.3"` when you rely on it).
 
 ```ts
 const keyframes = true; // the plugin's own setting
@@ -596,9 +598,13 @@ const seek = (delta: number) =>
   plugin.host.run(delta < 0 ? "seek-backward" : "seek-forward", {
     seconds: Math.abs(delta),
   });
+// The seek bar: one gesture per press, every click and drag step in the same mode.
+const scrub = plugin.player.scrub();
+await scrub.seek(27.6, { keyframes });
+scrub.end();
 ```
 
-In tests, `TestHost.keyframes` models the source's keyframes, and `host.coreSeeks` records each step seek with where it landed.
+In tests, `TestHost.keyframes` models the source's keyframes, `host.coreSeeks` records each step seek with where it landed, and `host.seeks` records each `player.seek` and `Scrub.seek` with the mode it asked for (the test host lands on the exact target in both modes).
 
 ## Concept: Video and audio processing
 
@@ -960,6 +966,7 @@ The API is the same on macOS and Windows; what differs is the system's own part:
 - **Hard-coded colours.** They do not follow the palette. Use `Theme.*`, and `Theme.danger` for errors.
 - **A `Ctrl+W` default binding.** It never fires in tool windows and floating panels. Pick another key.
 - **Two of a kind.** One panel per plugin, one backdrop per player, one OSD info block per plugin, one open dialog at a time (`busy`).
+- **An `if` that flips under the pointer.** `if touch.has-hover: Rectangle { … }` (a hover highlight, an accent bar, a tooltip-like box that follows the pointer) creates and destroys an element on every hover change. While a video plays, each such change costs the player's UI thread far more than a property change: the player's accessibility tree (screen readers, UI Automation) is rebuilt for the whole window each time, measured at 100–160 ms per hover on Windows, enough to drop the video to 10–15 frames a second while the pointer moves. Keep the element and change properties instead: `Rectangle { visible: touch.has-hover; … }` or `opacity:`. Use `if` for things that change rarely (a mode, a selection made with a click, a list that was loaded), never for something that follows the pointer or a hover.
 - **Slot state without `events`.** PanelSlot.state, appearance.theme and their `onChange` listeners follow other plugins and the user only with the `events` capability.
 
 #### Testing
@@ -2177,6 +2184,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.4.3 | CommandOptions.path, PropValue, View.set, Appearance.setLanguage, TemplateArgs, Text, ConfirmOptions.args, OsdPanel.set, OsdPanelOptions.maxColumns, Osd.show |
 | 0.5.1 | ImageRef, ImageOptions.maxSide, PropValue, Ui.image, Ui.remoteImage, SlotState.reason, Panel.setInteraction, PlaybackStats.presentedFps, Player.setStepSeek, Host.run, Packages.reload |
 | 0.5.2 | HostAction |
+| 0.5.3 | Scrub.seek |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -4948,8 +4956,27 @@ the gesture.
 
 ```ts
 interface Scrub {
-  /** Resolves `true` when this exact target was applied, `false` when a newer target superseded it or the gesture ended. Rejects on a host failure. */
-  seek(seconds: number): Promise<boolean>;
+  /**
+   * Seek within the gesture. Resolves `true` when this target was applied,
+   * `false` when a newer target superseded it or the gesture ended. Rejects
+   * on a host failure.
+   *
+   * `keyframes: true` (player 0.5.3, SDK 1.5.22): land on the last keyframe
+   * at or before `seconds` instead of decoding up to that exact frame. The
+   * picture appears at once on any file (tens of milliseconds instead of
+   * seconds on 4K video with keyframes far apart), up to one keyframe
+   * interval before the target; the position the player reports is the
+   * keyframe's. Use it when the user chose keyframe seeks (the same switch
+   * as Player.setStepSeek), and the exact seek otherwise. The player
+   * sends a repeated target of the same gesture only once while the seek is
+   * still running (a click is a press and a release), but an exact seek to
+   * the target of a keyframe seek is always sent. Omitted or `false`: exact,
+   * as before. Older players ignore the option and seek exactly: set
+   * `"minPlayerVersion": "0.5.3"` when you rely on it.
+   */
+  seek(seconds: number, options?: {
+    keyframes?: boolean;
+  }): Promise<boolean>;
   /** False once anyone else changed the source; later seeks are ignored. */
   readonly active: boolean;
   /** End the gesture; later seeks resolve `false`. */
@@ -5238,10 +5265,11 @@ interface Player {
    * step, backward on the last at or before position − step, and they
    * always move. Presses during a seek add up and continue from where it
    * landed; the on-screen text shows the landed time. Sources without moving
-   * video seek exactly. The seek bar, Player.seek, scrubs, chapters,
-   * loops and Player.step are unaffected. Omitted or `false`: exact
-   * seeks, as before. `seconds` and `keyframes` are written as a pair: the
-   * newest call sets both.
+   * video seek exactly. Player.seek, chapters, loops and
+   * Player.step are unaffected, and so is a scrub unless it asks for
+   * keyframes itself (Scrub.seek with `keyframes: true`, SDK 1.5.22).
+   * Omitted or `false`: exact seeks, as before. `seconds` and `keyframes`
+   * are written as a pair: the newest call sets both.
    *
    * Older players ignore `keyframes`: set `"minPlayerVersion": "0.5.1"` in
    * the manifest when you rely on it.
@@ -7443,6 +7471,15 @@ class TestHost implements Transport {
     keyframes: boolean;
     /** The new position. */
     landed: number;
+  }[];
+  /**
+   * Every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest last, with the mode it asked for. The test host lands on the exact target either way (the player lands a `keyframes` seek on the last keyframe at or before it); the core's step seeks are in `coreSeeks`.
+   */
+  readonly seeks: {
+    /** The target. */
+    seconds: number;
+    /** `Scrub.seek(seconds, { keyframes: true })` (SDK 1.5.22). */
+    keyframes: boolean;
   }[];
   /** Every `player.step`, newest last. */
   readonly steps: {
