@@ -244,6 +244,7 @@ The API is the same on macOS and Windows; what differs is the system's own part:
 - **Hard-coded colours.** They do not follow the palette. Use `Theme.*`, and `Theme.danger` for errors.
 - **A `Ctrl+W` default binding.** It never fires in tool windows and floating panels. Pick another key.
 - **Two of a kind.** One panel per plugin, one backdrop per player, one OSD info block per plugin, one open dialog at a time (`busy`).
+- **An `if` that flips under the pointer.** `if touch.has-hover: Rectangle { … }` (a hover highlight, an accent bar, a tooltip-like box that follows the pointer) creates and destroys an element on every hover change. While a video plays, each such change costs the player's UI thread far more than a property change: the player's accessibility tree (screen readers, UI Automation) is rebuilt for the whole window each time, measured at 100–160 ms per hover on Windows, enough to drop the video to 10–15 frames a second while the pointer moves. Keep the element and change properties instead: `Rectangle { visible: touch.has-hover; … }` or `opacity:`. Use `if` for things that change rarely (a mode, a selection made with a click, a list that was loaded), never for something that follows the pointer or a hover.
 - **Slot state without `events`.** {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and their `onChange` listeners follow other plugins and the user only with the `events` capability.
 
 ## Testing

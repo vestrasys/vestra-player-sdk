@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.22
+
+**Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: a scrub without the new option seeks exactly, as before. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.3.
+
+- **`Scrub.seek(seconds, { keyframes?: boolean })`** (player 0.5.3; requested by the playback plugin for the seek bar, user ruling of 2026-10-27: the bar follows the same "Jump to keyframes only" switch as the arrow keys, PotPlayer style, no second exact seek). With `keyframes: true` the seek lands on the last keyframe at or before `seconds` (mpv `absolute+keyframes`) instead of decoding up to the exact frame: the picture appears in tens of milliseconds on any file, up to one keyframe interval before the target, and the reported position is the keyframe's. Omitted or `false`: exact, as before. The option goes on the wire only when true (`control: { kind: "seek", seconds, keyframes: true }`); players before 0.5.3 ignore the field and seek exactly, so set `"minPlayerVersion": "0.5.3"` when you rely on it. The player sends a repeated target of the same gesture only once while that seek is still running (a click is a press and a release), keyed on the target and the mode: an exact seek to the target of a keyframe seek is always sent.
+- **`TestHost.seeks`**: every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest last, as `{ seconds, keyframes }`. The test host lands on the exact target in both modes; a non-boolean `keyframes` is `invalid`.
+- Docs: *Playback* (scrubs and the keyframe switch); *Windows, panels, settings pages* gains a pitfall: an `if` that flips under the pointer (a hover highlight created and destroyed on every hover change) rebuilds the window's accessibility tree and drops the video to 10–15 frames a second while the pointer moves; keep the element and change `visible` or `opacity`. `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.21
 
 **Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged; the additions need player 0.5.2. Additive and bug fixes; `apiVersion` stays `vestra/1`.
