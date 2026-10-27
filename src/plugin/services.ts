@@ -1,7 +1,7 @@
 /**
  * Shared services: the clipboard, sleep prevention, showing and opening files
- * and links, and secrets go to the host; external tools and settings files
- * run in this plugin's own process.
+ * and links, secrets and session storage go to the host; external tools and
+ * settings files run in this plugin's own process.
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { mkdir, open, rename, rm, stat } from "node:fs/promises";
@@ -16,10 +16,12 @@ import type {
   JsonStore,
   Power,
   Secrets,
+  SessionStorage,
   Storage,
   System,
   Tools,
 } from "./types.ts";
+import type { Json } from "../wire.ts";
 
 const MAX_OUTPUT = 16 * 1024 * 1024;
 
@@ -261,6 +263,74 @@ class Store<T> implements JsonStore<T> {
   }
 }
 
+/**
+ * The player's limits on {@link SessionStorage}. A key outside them fails
+ * with code `invalid`; a `set` that would make the plugin's keys and values
+ * larger than `bytes` fails with `limit` and changes nothing. The player's
+ * tests check that these agree with the player.
+ *
+ * @example
+ * ```ts
+ * import assert from "node:assert/strict";
+ * import { SESSION_STORAGE_LIMITS } from "@vestra-player/sdk/testing";
+ *
+ * const key = "https://example.com/a.mkv";
+ * assert.ok(Buffer.byteLength(key) <= SESSION_STORAGE_LIMITS.keyBytes);
+ * ```
+ *
+ * @since 1.5.25
+ */
+export const SESSION_STORAGE_LIMITS = Object.freeze({
+  /** UTF-8 bytes of a key (1024, at least 1; no NUL character). */
+  keyBytes: 1024,
+  /**
+   * UTF-8 bytes one plugin may hold at the same time: every key plus its
+   * value written as compact JSON (`JSON.stringify(value)`).
+   */
+  bytes: 1024 * 1024,
+} as const);
+
+function sessionStorage(scope: ScopeImpl): SessionStorage {
+  const keyed = (key: unknown) => {
+    if (
+      typeof key !== "string" ||
+      !key ||
+      key.includes("\0") ||
+      Buffer.byteLength(key) > SESSION_STORAGE_LIMITS.keyBytes
+    )
+      throw failure(
+        "invalid",
+        `session storage keys are 1–${SESSION_STORAGE_LIMITS.keyBytes} bytes of text without NUL`,
+      );
+    return key;
+  };
+  const host = () => scope.runtime.host.storageSession;
+  return {
+    async get<T = unknown>(key: string): Promise<T | undefined> {
+      const found = await host().get(keyed(key));
+      return "value" in found ? (found.value as T) : undefined;
+    },
+    async set(key, value) {
+      const name = keyed(key);
+      let text: string | undefined;
+      try {
+        text = JSON.stringify(value);
+      } catch {
+        text = undefined; // a cycle or a BigInt
+      }
+      if (text === undefined)
+        throw failure(
+          "invalid",
+          "session storage values must be JSON; delete() removes one",
+        );
+      // What the player stores, and what `get` will return.
+      await host().set(name, JSON.parse(text) as Json);
+    },
+    delete: async (key) => host().delete(keyed(key)),
+    keys: async () => host().keys(),
+  };
+}
+
 export const storage = (scope: ScopeImpl): Storage => ({
   json(name, options) {
     if (typeof name !== "string" || !NAME.test(name))
@@ -272,6 +342,7 @@ export const storage = (scope: ScopeImpl): Storage => ({
       throw failure("invalid", "debounceMs must be a non-negative number");
     return new Store(scope, scope.dataDirectory, name, options);
   },
+  session: sessionStorage(scope),
 });
 
 export function system(scope: ScopeImpl): System {

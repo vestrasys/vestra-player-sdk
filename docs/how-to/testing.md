@@ -25,7 +25,7 @@ Every test follows the same five steps:
 4. **Assert** on what the host recorded.
 5. **Stop** with `await stop()`: the plugin is disposed as when the player stops it (scopes released, stores flushed) and the host's temporary files are removed. Each test creates its own host.
 
-`startPlugin` also returns `plugin`, the object `activate` received, to call the API directly (`plugin.player.state`). Its options: `host` (a host you prepared before activation, as above), `dataDirectory` (an existing folder as `plugin.dataDirectory`, to test a restart), `locale` (play another interface language, see [Translate a plugin](i18n.md#tests)), and `id` with `capabilities` to start without a `manifest.json`.
+`startPlugin` also returns `plugin`, the object `activate` received, to call the API directly (`plugin.player.state`). Its options: `host` (a host you prepared before activation, as above), `dataDirectory` (an existing folder as `plugin.dataDirectory`, to test a restart), `sessionStorage` (the values of `plugin.storage.session` an earlier run left, to test a restart within one player session), `locale` (play another interface language, see [Translate a plugin](i18n.md#tests)), and `id` with `capabilities` to start without a `manifest.json`.
 
 ## Act like the user
 
@@ -139,5 +139,28 @@ The host checks what the player checks: the command limits, the property value l
 ## Test a restart
 
 Copy `host.dataDirectory` after the first run and pass it as `dataDirectory` to the second, to check what the plugin stored and restores; the example is on {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin}, and [Remember a window's state between runs](window-state.md) is a plugin that needs it.
+
+A restart within one player session (a reload, an upgrade, a crash) keeps {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} too. Pass the first run's `host.sessionStorage` as `sessionStorage` to the second run; leave it out to test a fresh player session, where those values are gone:
+
+```ts
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { startPlugin } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+test("goes on with the queue after a restart", async () => {
+  const first = await startPlugin(activate);
+  await first.plugin.storage.session.set("queue", ["a.mkv", "b.mkv"]);
+  const kept = first.host.sessionStorage;
+  await first.stop();
+
+  const second = await startPlugin(activate, { sessionStorage: kept });
+  assert.deepEqual(await second.plugin.storage.session.get("queue"), [
+    "a.mkv",
+    "b.mkv",
+  ]);
+  await second.stop();
+});
+```
 
 Every member of `TestHost` is in the {@link "@vestra-player/sdk/testing" | @vestra-player/sdk/testing} reference.

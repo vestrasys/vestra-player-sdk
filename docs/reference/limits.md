@@ -100,6 +100,19 @@ Counted on the text as shown, after translation and with its arguments filled in
 
 <!-- /generated -->
 
+## Session storage
+
+{@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} (player 0.5.5). A key out of its rule, or a value that is not JSON, fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing.
+
+<!-- generated:limits SESSION_STORAGE_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `SESSION_STORAGE_LIMITS.keyBytes` | 1024 (1 KiB) | UTF-8 bytes of a key. |
+| `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | UTF-8 bytes one plugin may hold at the same time: every key plus its value written as compact JSON (`JSON.stringify(value)`). |
+
+<!-- /generated -->
+
 ## Messages
 
 Every request a plugin sends travels as one protocol line. The plugin's side refuses a longer one with code `limit` before sending it; property values meet their own limits first.
