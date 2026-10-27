@@ -67,6 +67,54 @@ test("frameBlend: integer 24–120, at most one across every chain", async () =>
   await stop();
 });
 
+test("deinterlace when auto: field output only, alone among the chain's deinterlace nodes, shared across chains", async () => {
+  const auto = { kind: "deinterlace", when: "auto", output: "field" } as const;
+  assert.equal(nodeProblem("video", [auto]), null);
+  assert.match(
+    nodeProblem("video", [{ ...auto, output: "frame" }] as never)!,
+    /output must be field/,
+  );
+  for (const when of ["interlaced", "all", "auto"] as const)
+    assert.match(
+      nodeProblem("video", [
+        auto,
+        { kind: "deinterlace", when, output: "field" },
+      ] as never)!,
+      /no other deinterlace node/,
+    );
+  // The explicit modes are unchanged, also two of them in one chain.
+  assert.equal(
+    nodeProblem("video", [
+      { kind: "deinterlace", when: "interlaced", output: "frame" },
+      { kind: "deinterlace", when: "all", output: "field" },
+    ] as never),
+    null,
+  );
+  assert.ok(nodeProblem("video", [{ ...auto, when: "bob" } as never]));
+
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { plugin, stop } = await started(host);
+  const deinterlace = plugin.video.filter("deinterlace");
+  deinterlace.set([auto, { kind: "hue", degrees: 10 }]);
+  await host.settle();
+  assert.equal(deinterlace.status.state, "applied");
+  // Another chain may ask for it too.
+  const other = plugin.video.filter("other");
+  other.set([auto]);
+  await host.settle();
+  assert.equal(other.status.state, "applied");
+  deinterlace.set([{ ...auto, output: "frame" }]);
+  await host.settle();
+  const status = deinterlace.status as {
+    state: string;
+    error?: { code: string };
+  };
+  assert.equal(status.state, "failed");
+  assert.equal(status.error?.code, "invalid");
+  await stop();
+});
+
 test("video.view: owned by the first caller, merged writes, invalid stays local, dispose restores", async () => {
   const host = new TestHost();
   const { plugin, stop } = await started(host);

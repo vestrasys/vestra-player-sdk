@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.23: full reference
+# @vestra-player/sdk 1.5.24: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -667,7 +667,8 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 
 - Video nodes act on the picture after the player has applied the container's rotation, so a portrait video is upright before a plugin's `transform` rotates it.
 - `frameBlend` (frame-rate conversion by blending) always runs **last**, after every plugin's chain, wherever it is written, so temporal filters such as denoise and deinterlace still see the original frames. It changes the frame rate of exports too, and costs a lot of CPU: decide from `stats()` whether to offer it.
-- Filters need frames in memory. While any plugin has a video chain, the player decodes in hardware with a copy back to memory instead of zero-copy decoding; when the last chain is removed it switches back. The decoder restarts at each switch, so the picture may pause briefly. stats().video.hwdec shows the decoder in use.
+- Filters need frames in memory. While any plugin has a video chain, the player decodes in hardware with a copy back to memory instead of zero-copy decoding; when the last chain is removed it switches back. The decoder restarts at each switch, so the picture may pause briefly. stats().video.hwdec shows the decoder in use. The one exception is the next item.
+- `{ kind: "deinterlace", when: "auto", output: "field" }` (player 0.5.4) is not a filter in the chain but the player's own deinterlacer. The player decides per frame: frames flagged interlaced are deinterlaced, at one frame per field, by the decoder's hardware deinterlacer where frames stay on the GPU (BWDIF otherwise); progressive frames pass untouched. It needs no frames in memory, so a chain with only this node keeps zero-copy decoding: this is the node for an "Auto" setting that must cost nothing on progressive files. It runs **first**, before every plugin's chain, wherever it is written, and it is shared: it stays on while any plugin's chain has one. `output: "frame"` fails with `invalid`, and so does another `deinterlace` node in the same chain; use `when: "interlaced"` (BWDIF in the chain, with a copy back to memory) for frame-rate output. Snapshots and exports deinterlace the same frames with BWDIF at field rate.
 
 #### The display layer
 
@@ -6561,13 +6562,29 @@ type VideoNode =
   /** Mirror vertically. */
   flipV: boolean;
 }
-/** BWDIF; `field` doubles the frame rate. */
+/**
+ * Deinterlacing. `interlaced` and `all` are FFmpeg BWDIF in the chain;
+ * `field` doubles the frame rate.
+ *
+ * `when: "auto"` (player 0.5.4) is the player's own deinterlacer instead:
+ * decided per frame from the decoder's interlaced flag, with the decoder's
+ * hardware deinterlacer where frames stay on the GPU; progressive frames
+ * pass untouched. It needs no frames in memory, so a chain with only this
+ * node keeps zero-copy hardware decoding (any other node still needs a
+ * copy back to memory). It always outputs one frame per field, so it
+ * takes `output: "field"` only (`"frame"` fails with `invalid`). It runs
+ * before every plugin's chain wherever it is written, and is shared: on
+ * while any plugin's chain has one. A chain with it has no other
+ * `deinterlace` node. Snapshots and exports deinterlace the same frames
+ * with BWDIF at field rate. Players before 0.5.4 refuse `auto` with
+ * `invalid`.
+ */
  | {
   /** The node type. */
   kind: "deinterlace";
-  /** `interlaced`: only frames flagged interlaced; `all`: every frame. */
-  when: "interlaced" | "all";
-  /** One frame per frame, or one per field (double rate). */
+  /** `interlaced`: only frames flagged interlaced; `all`: every frame; `auto`: the player's deinterlacer, on frames flagged interlaced. */
+  when: "interlaced" | "all" | "auto";
+  /** One frame per frame, or one per field (double rate); `when: "auto"` takes `field` only. */
   output: "frame" | "field";
 }
 /** Crop to / pad to a display aspect; x, y place it (−1 left/top … 1 right/bottom). */

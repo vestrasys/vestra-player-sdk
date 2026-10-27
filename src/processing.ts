@@ -102,13 +102,35 @@ export type VideoNode =
       /** Mirror vertically. */
       flipV: boolean;
     }
-  /** BWDIF; `field` doubles the frame rate. */
+  /**
+   * Deinterlacing. `interlaced` and `all` are FFmpeg BWDIF in the chain;
+   * `field` doubles the frame rate.
+   *
+   * `when: "auto"` (player 0.5.4) is the player's own deinterlacer instead:
+   * decided per frame from the decoder's interlaced flag, with the decoder's
+   * hardware deinterlacer where frames stay on the GPU; progressive frames
+   * pass untouched. It needs no frames in memory, so a chain with only this
+   * node keeps zero-copy hardware decoding (any other node still needs a
+   * copy back to memory). It always outputs one frame per field, so it
+   * takes `output: "field"` only (`"frame"` fails with `invalid`). It runs
+   * before every plugin's chain wherever it is written, and is shared: on
+   * while any plugin's chain has one. A chain with it has no other
+   * `deinterlace` node. Snapshots and exports deinterlace the same frames
+   * with BWDIF at field rate. Players before 0.5.4 refuse `auto` with
+   * `invalid`.
+   */
   | {
       /** The node type. */
       kind: "deinterlace";
-      /** `interlaced`: only frames flagged interlaced; `all`: every frame. */
-      when: "interlaced" | "all";
-      /** One frame per frame, or one per field (double rate). */
+      /**
+       * `interlaced`: only frames flagged interlaced; `all`: every frame;
+       * `auto`: the player's deinterlacer, on frames flagged interlaced.
+       */
+      when: "interlaced" | "all" | "auto";
+      /**
+       * One frame per frame, or one per field (double rate); `when: "auto"`
+       * takes `field` only.
+       */
       output: "frame" | "field";
     }
   /** Crop to / pad to a display aspect; x, y place it (−1 left/top … 1 right/bottom). */
@@ -222,7 +244,10 @@ const RULES: Record<string, Rule> = {
   deblock: { strength: ["weak", "strong"] },
   deband: { threshold: [0.003, 0.5], range: [1, 64] },
   transform: { rotate: [0, 90, 180, 270], flipH: BOOL, flipV: BOOL },
-  deinterlace: { when: ["interlaced", "all"], output: ["frame", "field"] },
+  deinterlace: {
+    when: ["interlaced", "all", "auto"],
+    output: ["frame", "field"],
+  },
   reframe: { mode: ["crop", "pad"], aspect: [0.25, 4], x: [-1, 1], y: [-1, 1] },
   frameBlend: { fps: [24, 120] },
   volume: { gainDb: [-60, 0] },
@@ -282,7 +307,21 @@ export function nodeProblem(
       !Number.isInteger((node as unknown as { fps: number }).fps)
     )
       return "frameBlend.fps must be an integer";
+    if (
+      node.kind === "deinterlace" &&
+      (node as unknown as { when: string }).when === "auto" &&
+      (node as unknown as { output: string }).output !== "field"
+    )
+      return "deinterlace when auto outputs one frame per field: output must be field";
   }
+  const deinterlace = nodes.filter(
+    (node) => node.kind === "deinterlace",
+  ) as unknown as { when: string }[];
+  if (
+    deinterlace.length > 1 &&
+    deinterlace.some((node) => node.when === "auto")
+  )
+    return "a chain with a deinterlace node when auto has no other deinterlace node";
   if (nodes.filter((node) => node.kind === "frameBlend").length > 1)
     return "only one frameBlend node across all plugins";
   return null;

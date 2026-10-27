@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.24
+
+**Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: `when: "interlaced"` and `when: "all"` do what they did. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.4.
+
+- **`VideoNode` `{ kind: "deinterlace", when: "auto", output: "field" }`** (player 0.5.4; requested by the video plugin, DEINT-AUTO-1: user ruling of 2026-10-27, Auto deinterlacing must cost nothing on progressive files). The player's own deinterlacer instead of BWDIF in the chain: decided per frame from the decoder's interlaced flag, with the decoder's hardware deinterlacer where frames stay on the GPU, one output frame per field; progressive frames pass untouched. It needs no frames in memory, so a chain with only this node keeps zero-copy hardware decoding, where any other node switches to a copy back to memory. It runs before every plugin's chain wherever it is written, and it is shared: on while any plugin's chain has one, off when the last one is removed or its plugin stops. `output: "frame"` with it, or another `deinterlace` node in the same chain, fails with `invalid`. Processed snapshots and exports deinterlace the same frames with BWDIF at field rate. Players before 0.5.4 refuse `auto` with `invalid`, so set `"minPlayerVersion": "0.5.4"`.
+- **`TestHost`** validates the new value as the player does (`nodeProblem`).
+- Docs: *Processing* (ordering and side effects). `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.23
 
 **Who must change: nobody.** Republishes 1.5.22 with a clean API documentation build; 1.5.22 was tagged but never published to npm: TypeDoc treats warnings as errors and failed on two `{@link}` labels in *Playback* that contained a brace (`Scrub.seek(seconds, { keyframes })`). Documentation only; the code is the same as 1.5.22 below.
