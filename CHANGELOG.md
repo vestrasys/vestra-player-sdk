@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.23
+
+**Who must change: nobody.** Republishes 1.5.22 with a clean API documentation build; 1.5.22 was tagged but never published to npm: TypeDoc treats warnings as errors and failed on two `{@link}` labels in *Playback* that contained a brace (`Scrub.seek(seconds, { keyframes })`). Documentation only; the code is the same as 1.5.22 below.
+
 ## 1.5.22
 
 **Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: a scrub without the new option seeks exactly, as before. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.3.
