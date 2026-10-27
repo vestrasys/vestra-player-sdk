@@ -75,6 +75,7 @@ import {
   basename,
   dirname,
   extname,
+  isAbsolute,
   join,
   relative,
   resolve,
@@ -422,32 +423,45 @@ function slintCode(text) {
   return out;
 }
 
+/** Whether `path` lies inside `directory` (not a sibling sharing its prefix). */
+function inside(directory, path) {
+  const rel = relative(resolve(directory), path);
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+}
+
 /**
  * Whether the Slint file at `file` (relative to the plugin directory)
  * imports `BarButtons` from `@vestra/bar-buttons.slint`, itself or
- * through the plugin's own Slint files it imports (relative paths, any
- * depth). Comments do not count.
+ * through the plugin's own Slint files (relative paths, any depth, inside
+ * the plugin directory). Local re-exports count as such files too:
+ * `export { Row } from "row.slint"` and `export * from "row.slint"` are
+ * followed, and `export { BarButtons } from "@vestra/bar-buttons.slint"` (or
+ * `export * from` it) in a file the bar imports counts as placing it.
+ * Comments do not count.
  */
 async function importsBarButtons(target, file, seen = new Set()) {
   const path = resolve(target.directory, file);
-  if (seen.has(path) || !path.startsWith(resolve(target.directory)))
-    return false;
+  if (seen.has(path) || !inside(target.directory, path)) return false;
   seen.add(path);
   const text = await readFile(path, "utf8").catch(() => null);
   if (text === null) return false;
   const code = slintCode(text);
+  // { names (or "*"), from }: imports, and re-exports with a source file.
   const imports = [
-    ...code.matchAll(/import\s*(?:\{([^}]*)\}\s*from\s*)?"([^"]+)"/g),
-  ];
-  for (const [, names = "", from] of imports)
+    ...code.matchAll(
+      /\b(?:import|export)\s*(?:(\*)\s*from\s*|\{([^}]*)\}\s*from\s*)?"([^"]+)"/g,
+    ),
+  ].map(([, star, names, from]) => ({ names: star ?? names ?? "", from }));
+  for (const { names, from } of imports)
     if (
       from === "@vestra/bar-buttons.slint" &&
-      names
-        .split(",")
-        .some((name) => /^BarButtons(\s+as\s+[\w-]+)?$/.test(name.trim()))
+      (names === "*" ||
+        names
+          .split(",")
+          .some((name) => /^BarButtons(\s+as\s+[\w-]+)?$/.test(name.trim())))
     )
       return true;
-  for (const [, , from] of imports) {
+  for (const { from } of imports) {
     if (
       from.startsWith("@") ||
       !from.endsWith(".slint") ||
