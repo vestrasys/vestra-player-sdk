@@ -28,7 +28,11 @@ export type ResolvedResource = {
  *   async resolve(url, signal) {
  *     // The site's own API (made up here) names the streams of a page.
  *     const api = `https://video.example/api/streams?page=${encodeURIComponent(url)}`;
- *     const info = (await (await fetch(api, { signal })).json()) as {
+ *     const response = await fetch(api, { signal });
+ *     // The player shows a failed resolve's message to the user.
+ *     if (!response.ok)
+ *       throw new Error(`video.example answered ${response.status} for this page`);
+ *     const info = (await response.json()) as {
  *       title: string;
  *       video: string;
  *       audio: string;

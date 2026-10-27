@@ -451,24 +451,28 @@ export function system(scope: ScopeImpl): System {
  * The player's tests check that these agree with the player.
  *
  * @example Store an API token only when it fits
- * The plugin keeps a token the user pasted, or tells them it is too long.
- * Values are counted in UTF-8 bytes, so the check uses `Buffer.byteLength`;
- * `secrets.set` would refuse a longer one with `invalid`. The store itself
- * can still refuse (`unsupported` without a system store, `unavailable` or
- * `failed` when it denies access), so that case gets its own message.
+ * The plugin keeps a token the user pasted, or tells them it is empty or
+ * too long. Values are 1–1024 bytes counted in UTF-8, so the check uses
+ * `Buffer.byteLength`; `secrets.set` would refuse other values with
+ * `invalid`. The store itself can still refuse (`unsupported` without a
+ * system store, `unavailable` or `failed` when it denies access): only
+ * those codes get the "could not be saved" message, anything else (a
+ * missing `secrets` capability) is a bug and is thrown on.
  * ```ts
- * import type { Plugin } from "@vestra-player/sdk";
+ * import type { Plugin, PluginError } from "@vestra-player/sdk";
  * declare const plugin: Plugin;
  * declare const token: string;
  * // ---cut---
  * import { SECRET_LIMITS } from "@vestra-player/sdk/testing";
  *
- * if (Buffer.byteLength(token) > SECRET_LIMITS.valueBytes) {
- *   await plugin.osd.show("This token is too long to store.");
+ * if (!token || Buffer.byteLength(token) > SECRET_LIMITS.valueBytes) {
+ *   await plugin.osd.show("Paste a token of at most 1024 bytes.");
  * } else {
  *   try {
  *     await plugin.secrets.set("api-token", token);
- *   } catch {
+ *   } catch (error) {
+ *     const { code } = error as PluginError;
+ *     if (!["unsupported", "unavailable", "failed"].includes(code)) throw error;
  *     // No keychain or access denied: ask again next time.
  *     await plugin.osd.show("The token could not be saved.");
  *   }

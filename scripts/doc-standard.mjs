@@ -87,13 +87,17 @@ export const strictDeclarations = new Map(
  */
 export const CUT = "// ---cut---";
 
-/** The lines of a code block's body, split at {@link CUT}. */
+/**
+ * The lines of a code block's body, split at the first {@link CUT}, and how
+ * many cut lines it has (`doc-lint` flags more than one).
+ */
 export function splitCut(body) {
   const lines = body.split("\n");
   const at = lines.findIndex((line) => line.trim() === CUT);
+  const cuts = lines.filter((line) => line.trim() === CUT).length;
   return at < 0
-    ? { hidden: [], visible: lines }
-    : { hidden: lines.slice(0, at), visible: lines.slice(at + 1) };
+    ? { hidden: [], visible: lines, cuts }
+    : { hidden: lines.slice(0, at), visible: lines.slice(at + 1), cuts };
 }
 
 /** A fenced block (```` ```ts … ``` ````) without its hidden setup lines. */
@@ -116,9 +120,11 @@ export const EXAMPLE_RULES = {
   /** Shown non-blank code lines above which the code needs a comment. */
   explainAbove: 5,
   /**
-   * The share of a category's methods that may use a reference marker
+   * The share of a declaration's methods that may use a reference marker
    * (`@example See Playback.play` with `{@link Playback.play}` below it)
-   * instead of an example of their own.
+   * instead of an example of their own, rounded down. One marker per
+   * declaration is always allowed, so a handle with fewer than 5 methods
+   * may still point one trivial sibling at another.
    */
   markerShare: 0.2,
 };
@@ -134,80 +140,146 @@ export const STALE_REFERENCES = [
     why: "the built-in NES emulator left the player (SDK 1.5.28); it is the store plugin zysilm.vestranes",
   },
   {
-    pattern: /\bid:\s*"nes"|extensions:\s*\[\s*"nes"\s*\]/,
+    pattern: /\bid:\s*"nes"|extensions:\s*\[[^\]]*"\.?nes"/,
     why: "the store plugin VestraNES (zysilm.vestranes) owns .nes files; a resolver example would collide with it (`resolver-taken`); use a made-up format",
   },
 ];
 
 /**
+ * Declarations outside `STRICT_CATEGORIES` and the testing module (which
+ * is enforced as a whole) whose examples meet the standard: `doc-lint`
+ * enforces `example-lead` and `stale-refs` on them, so a regression fails.
+ */
+export const EXAMPLES_DONE = new Set([
+  "VideoNode",
+  "AudioNode",
+  "SubtitleStyle",
+  "ResolvedMedia",
+]);
+
+/**
  * Known violations of `example-lead` and `stale-refs` in the enforced
- * categories when the rules were introduced (SDK 1.5.29), by
- * `rule symbol` (`doc-lint --list example-lead` prints the names). They are
- * reported as warnings; anything not listed fails. An entry that no longer
- * fails is itself an error, so the list only shrinks; the round that fixes
- * a category removes its entries.
+ * declarations when the rules were introduced (SDK 1.5.29), one entry per
+ * problem: `<rule> <symbol>#<example number> <problem>` (`stale-refs`
+ * entries have no problem id). They are reported as warnings; anything not
+ * listed fails. An entry that no longer fails is itself an error, and
+ * test/doc-baseline.test.ts pins the largest size the list may have, so it
+ * only shrinks; the round that fixes a category removes its entries.
  */
 export const EXAMPLE_BASELINE = new Set([
-  "example-lead Appearance",
-  "example-lead Appearance.onChange",
-  "example-lead Appearance.set",
-  "example-lead Appearance.setLanguage",
-  "example-lead BackdropSlot",
-  "example-lead BackdropSlot.onChange",
-  "example-lead Dialogs",
-  "example-lead Dialogs.confirm",
-  "example-lead Dialogs.openDirectory",
-  "example-lead Dialogs.openFile",
-  "example-lead Dialogs.openFiles",
-  "example-lead Dialogs.saveFile",
-  "example-lead I18n",
-  "example-lead I18n.error",
-  "example-lead I18n.list",
-  "example-lead I18n.resolve",
-  "example-lead I18n.text",
-  "example-lead ImageRef",
-  "example-lead MarkdownRef",
-  "example-lead Osd",
-  "example-lead Osd.panel",
-  "example-lead Osd.show",
-  "example-lead OsdPanel",
-  "example-lead OsdPanel.set",
-  "example-lead Panel",
-  "example-lead Panel.onChange",
-  "example-lead Panel.onDrop",
-  "example-lead Panel.setInteraction",
-  "example-lead Panel.show",
-  "example-lead Panel.showMenu",
-  "example-lead Panel.toggle",
-  "example-lead PanelSlot",
-  "example-lead PanelSlot.activate",
-  "example-lead PanelSlot.onChange",
-  "example-lead PanelSlot.setVisible",
-  "example-lead PanelSlot.toggle",
-  "example-lead Panels",
-  "example-lead Panels.mount",
-  "example-lead PropData",
-  "example-lead Props",
-  "example-lead Settings",
-  "example-lead Settings.page",
-  "example-lead Settings.show",
-  "example-lead SettingsPage",
-  "example-lead SidebarSlot",
-  "example-lead SidebarSlot.setDetached",
-  "example-lead Ui",
-  "example-lead Ui.image",
-  "example-lead Ui.markdown",
-  "example-lead Ui.remoteImage",
-  "example-lead View",
-  "example-lead View.bind",
-  "example-lead View.on",
-  "example-lead View.set",
-  "example-lead Window",
-  "example-lead Window.close",
-  "example-lead Window.hide",
-  "example-lead Window.onClose",
-  "example-lead Window.show",
-  "example-lead Windows",
-  "example-lead Windows.create",
-  "stale-refs I18n.error",
+  "example-lead ImageRef#1 lead",
+  "example-lead ImageRef#2 lead",
+  "example-lead ImageRef#2 comment",
+  "example-lead MarkdownRef#1 lead",
+  "example-lead PropData#1 lead",
+  "example-lead Props#1 title",
+  "example-lead Props#1 lead",
+  "example-lead Ui#1 lead",
+  "example-lead Ui#1 comment",
+  "example-lead Ui.image#1 lead",
+  "example-lead Ui.remoteImage#1 lead",
+  "example-lead Ui.remoteImage#1 comment",
+  "example-lead Ui.markdown#1 lead",
+  "example-lead Ui.markdown#1 comment",
+  "example-lead Ui.markdown#2 lead",
+  "example-lead Ui.markdown#2 comment",
+  "example-lead View#1 lead",
+  "example-lead View#1 comment",
+  "example-lead View.on#1 title",
+  "example-lead View.on#1 lead",
+  "example-lead View.on#1 comment",
+  "example-lead View.set#1 lead",
+  "example-lead View.bind#1 title",
+  "example-lead View.bind#1 lead",
+  "example-lead Window#1 lead",
+  "example-lead Window#1 comment",
+  "example-lead Window#2 lead",
+  "example-lead Window#2 comment",
+  "example-lead Window.show#1 lead",
+  "example-lead Window.show#1 comment",
+  "example-lead Window.hide#1 lead",
+  "example-lead Window.hide#1 comment",
+  "example-lead Window.close#1 lead",
+  "example-lead Window.onClose#1 lead",
+  "example-lead Windows#1 title",
+  "example-lead Windows#1 lead",
+  "example-lead Windows#1 comment",
+  "example-lead Windows.create#1 lead",
+  "example-lead PanelSlot#1 lead",
+  "example-lead PanelSlot#1 comment",
+  "example-lead PanelSlot.onChange#1 title",
+  "example-lead PanelSlot.onChange#1 lead",
+  "example-lead PanelSlot.setVisible#1 title",
+  "example-lead PanelSlot.setVisible#1 lead",
+  "example-lead PanelSlot.toggle#1 title",
+  "example-lead PanelSlot.toggle#1 lead",
+  "example-lead PanelSlot.toggle#1 comment",
+  "example-lead PanelSlot.activate#1 lead",
+  "example-lead SidebarSlot#1 lead",
+  "example-lead SidebarSlot#1 comment",
+  "example-lead SidebarSlot.setDetached#1 title",
+  "example-lead SidebarSlot.setDetached#1 lead",
+  "example-lead Panel#1 lead",
+  "example-lead Panel.onChange#1 lead",
+  "example-lead Panel.show#1 title",
+  "example-lead Panel.show#1 lead",
+  "example-lead Panel.toggle#1 lead",
+  "example-lead Panel.toggle#1 comment",
+  "example-lead Panel.setInteraction#1 lead",
+  "example-lead Panel.showMenu#1 title",
+  "example-lead Panel.showMenu#1 lead",
+  "example-lead Panel.onDrop#1 lead",
+  "example-lead Panel.onDrop#1 comment",
+  "example-lead Appearance#1 lead",
+  "example-lead Appearance#1 comment",
+  "example-lead Appearance.onChange#1 title",
+  "example-lead Appearance.onChange#1 lead",
+  "example-lead Appearance.set#1 title",
+  "example-lead Appearance.set#1 lead",
+  "example-lead Appearance.setLanguage#1 title",
+  "example-lead Appearance.setLanguage#1 lead",
+  "example-lead I18n#1 lead",
+  "example-lead I18n.text#1 lead",
+  "example-lead I18n.text#1 comment",
+  "example-lead I18n.text#2 lead",
+  "example-lead I18n.list#1 title",
+  "example-lead I18n.list#1 lead",
+  "example-lead I18n.error#1 title",
+  "example-lead I18n.error#1 lead",
+  "example-lead I18n.error#1 comment",
+  "stale-refs I18n.error#1",
+  "example-lead I18n.resolve#1 title",
+  "example-lead I18n.resolve#1 lead",
+  "example-lead SettingsPage#1 lead",
+  "example-lead SettingsPage#1 comment",
+  "example-lead Settings#1 lead",
+  "example-lead Settings#1 comment",
+  "example-lead Settings.page#1 title",
+  "example-lead Settings.page#1 lead",
+  "example-lead Settings.page#1 comment",
+  "example-lead Settings.show#1 lead",
+  "example-lead BackdropSlot#1 lead",
+  "example-lead BackdropSlot.onChange#1 title",
+  "example-lead BackdropSlot.onChange#1 lead",
+  "example-lead Panels#1 lead",
+  "example-lead Panels.mount#1 lead",
+  "example-lead Dialogs#1 lead",
+  "example-lead Dialogs.confirm#1 title",
+  "example-lead Dialogs.confirm#1 lead",
+  "example-lead Dialogs.openFile#1 title",
+  "example-lead Dialogs.openFile#1 lead",
+  "example-lead Dialogs.openFiles#1 title",
+  "example-lead Dialogs.openFiles#1 lead",
+  "example-lead Dialogs.openDirectory#1 title",
+  "example-lead Dialogs.openDirectory#1 lead",
+  "example-lead Dialogs.saveFile#1 title",
+  "example-lead Dialogs.saveFile#1 lead",
+  "example-lead OsdPanel#1 lead",
+  "example-lead OsdPanel.set#1 title",
+  "example-lead OsdPanel.set#1 lead",
+  "example-lead Osd#1 lead",
+  "example-lead Osd.show#1 title",
+  "example-lead Osd.show#1 lead",
+  "example-lead Osd.panel#1 title",
+  "example-lead Osd.panel#1 lead",
 ]);

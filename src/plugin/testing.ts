@@ -205,8 +205,11 @@ export { LIST_SEPARATORS };
  * const directory = new URL("..", import.meta.url);
  * for (const locale of LOCALES.slice(1)) {
  *   const { host, stop } = await startPlugin(activate, { directory, locale });
- *   assert.notEqual(host.command("open").display.title, "Open…", locale);
- *   await stop();
+ *   try {
+ *     assert.notEqual(host.command("open").display.title, "Open…", locale);
+ *   } finally {
+ *     await stop(); // also when the assertion fails
+ *   }
  * }
  * ```
  */
@@ -1784,9 +1787,10 @@ export class TestHost implements Transport {
    *
    * @example Answer the plugin's dialogs in advance
    * The plugin's Open command gets a picked file, then a cancelled file
-   * dialog, then a confirmed question. Answers are queued and consumed in
-   * the order the plugin opens dialogs; a dialog without a queued answer of
-   * its kind fails like a lost reply, so queue one per dialog.
+   * dialog, then a confirmed question. All answers share one queue, taken
+   * from the front in the order the plugin opens dialogs of any kind: if
+   * the next queued answer is missing or of the wrong kind, the dialog
+   * fails like a lost reply, so queue them in the order the plugin asks.
    * ```ts
    * declare const host: TestHost;
    * // ---cut---
@@ -2630,8 +2634,9 @@ export class TestHost implements Transport {
    * @example Let the user open another file meanwhile
    * A state the plugin captured before stops being current once another
    * file opens. `openElsewhere` gives the source a new `sourceId`, so
-   * `isCurrent` turns false and calls made with `ifCurrent: before` fail
-   * with `stale`.
+   * `isCurrent` turns false. Promise-returning calls made with
+   * `ifCurrent: before` then reject with `stale`; calls that return nothing
+   * drop the write silently instead (`TimelineLayer.set` with `ifCurrent`).
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
@@ -4946,13 +4951,19 @@ export class TestHost implements Transport {
  *   const data = mkdtempSync(join(tmpdir(), "data-"));
  *   try {
  *     const first = await startPlugin(activate, { directory, dataDirectory: data });
- *     await first.host.command("step-10").run();
- *     await first.stop(); // flushes the plugin's stores into `data`
+ *     try {
+ *       await first.host.command("step-10").run();
+ *     } finally {
+ *       await first.stop(); // flushes the plugin's stores into `data`
+ *     }
  *
  *     // A restart: a new host and a new plugin instance on the same data.
  *     const second = await startPlugin(activate, { directory, dataDirectory: data });
- *     assert.equal(second.host.command("step-10").state.checked, true);
- *     await second.stop();
+ *     try {
+ *       assert.equal(second.host.command("step-10").state.checked, true);
+ *     } finally {
+ *       await second.stop();
+ *     }
  *   } finally {
  *     rmSync(data, { recursive: true, force: true });
  *   }

@@ -15,18 +15,22 @@ export type SubtitleStamp = {
 };
 /**
  * A subtitle style layer ({@link Subtitles.setStyle}). Sizes are at the
- * 1080p reference height and scale with the video. The effective style is
- * the layer of the plugin that set one last; it also applies to the
- * secondary subtitle.
+ * 1080p reference height and scale with the video. Each plugin has one
+ * layer; when several plugins set one, the effective style is the layer of
+ * the plugin whose manifest id sorts last (the order of the calls does not
+ * matter). It also applies to the secondary subtitle.
  *
  * @example Show large yellow subtitles a quarter second earlier
  * Subtitles turn yellow at size 44 on a 60 % opaque box, 6 % above the
- * bottom of the video, and appear 250 ms earlier. `refresh` reads the subtitle state from the
- * player, whose `fonts` lists the font ids a style may name; `setStyle`
- * then sends this plugin's style layer, which becomes the effective style
- * because it is the latest one set (`subtitles.control`, `subtitles.read`).
+ * bottom of the video, and appear 250 ms earlier. `refresh` reads the
+ * subtitle state from the player, whose `fonts` lists the font ids a style
+ * may name; `setStyle` then sends this plugin's style layer
+ * (`subtitles.control`, `subtitles.read`). It shows unless another plugin
+ * with a manifest id that sorts later has a layer too: the player picks the
+ * effective layer by manifest id, not by which call came last.
  * ```ts
  * const { fonts } = await plugin.subtitles.refresh();
+ * if (!fonts.length) return; // no font to name: leave the style alone
  * const style: SubtitleStyle = {
  *   fontId: fonts[0]!.id, // a font the player offers
  *   fontSize: 44, // at the 1080p reference height; scales with the video

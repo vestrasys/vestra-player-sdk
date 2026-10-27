@@ -4,8 +4,9 @@ import type { ListJson, TextJson } from "./i18n.ts";
 /**
  * The player's command registry caps, the same values as the player's own
  * table (the player's tests check that they agree). They are runaway guards,
- * not product limits: a command added past them fails with code `limit`
- * (its `ready` rejects; during activation, activation fails), commands
+ * not product limits: a command added past them is refused by the player
+ * with code `limit` (its `ready` rejects; during activation, activation
+ * fails; later the failure goes to `Scope.onError`), commands
  * already registered are unaffected, and disposing a command frees its slot
  * at once. {@link TestHost} enforces the same caps.
  *
@@ -14,9 +15,12 @@ import type { ListJson, TextJson } from "./i18n.ts";
  *
  * @example Cap a chapter menu well below the command limit
  * The Chapters submenu lists at most 50 chapters, however many the file
- * has. Every menu item is a command, and the player counts them per plugin:
- * past `perPlugin` an `add` fails with `limit`, so a menu built from media
- * content keeps its own cap and leaves room for the plugin's fixed commands.
+ * has. Every menu item is a command, and the player counts them per plugin.
+ * `add` itself returns at once and never throws `limit`: past `perPlugin`
+ * the player refuses the registration, which fails the activation or, later,
+ * reaches `Scope.onError`. A try/catch around `add` cannot catch that, so a
+ * menu built from media content keeps its own cap and leaves room for the
+ * plugin's fixed commands.
  * ```ts
  * declare const chapters: { title: string; time: number }[];
  * // ---cut---
