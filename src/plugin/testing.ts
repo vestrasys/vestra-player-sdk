@@ -1527,7 +1527,7 @@ export class TestHost implements Transport {
    * @example
    * ```ts
    * const host = new TestHost();
-   * host.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+   * host.otherResolvers.push({ owner: "example.emulator", extensions: ["nes"] });
    * ```
    */
   readonly otherResolvers: {
@@ -1563,7 +1563,7 @@ export class TestHost implements Transport {
    *
    * @example
    * ```ts
-   * host.otherResolvers.push({ owner: "vestra.nes", extensions: ["nes"] });
+   * host.otherResolvers.push({ owner: "example.emulator", extensions: ["nes"] });
    * host.updateFileTypes();
    * await host.settle();
    * assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);

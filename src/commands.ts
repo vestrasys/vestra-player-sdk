@@ -145,7 +145,6 @@ export const BUILTIN_SUBMENUS: readonly BuiltinSubmenu[] = Object.freeze([
   },
   { path: ["Settings", "Language"], plugins: ["vestra.preferences"] },
   { path: ["Copy to Clipboard"], plugins: ["vestra.playback"] },
-  { path: ["Emulator"], plugins: ["vestra.nes"] },
 ]);
 
 /**
@@ -276,8 +275,8 @@ vestra.subtitles | second-position-aboveMain | Subtitles ▸ Secondary Subtitle 
 vestra.subtitles | bold | Subtitles ▸ Subtitle Style ▸ Bold | Alt+B
 vestra.subtitles | size-up | Subtitles ▸ Subtitle Style ▸ Size + | Alt+PageUp
 vestra.subtitles | size-down | Subtitles ▸ Subtitle Style ▸ Size − | Alt+PageDown
-vestra.subtitles | move-up | Subtitles ▸ Subtitle Style ▸ Move Up | Alt+ArrowUp
-vestra.subtitles | move-down | Subtitles ▸ Subtitle Style ▸ Move Down | Alt+ArrowDown
+vestra.subtitles | move-up | Subtitles ▸ Subtitle Style ▸ Move Up
+vestra.subtitles | move-down | Subtitles ▸ Subtitle Style ▸ Move Down
 vestra.subtitles | move-reset | Subtitles ▸ Subtitle Style ▸ Reset Position | Alt+Home
 vestra.subtitles | shadow | Subtitles ▸ Subtitle Style ▸ Shadow
 vestra.subtitles | box | Subtitles ▸ Subtitle Style ▸ Opaque Box
@@ -417,9 +416,6 @@ vestra.audio | audio.normalize | Audio ▸ Processing ▸ Normalize | Shift+N
 vestra.audio | audio.clarity | Audio ▸ Processing ▸ Crystalizer | Shift+C
 vestra.audio | audio.reset | Audio ▸ Reset
 vestra.visualizer | audio-cover | Audio ▸ Show Album Cover for Audio Only
-vestra.nes | nes.open | Emulator ▸ Open NES ROM…
-vestra.nes | nes.stop | Emulator ▸ Stop NES
-vestra.nes | nes.window | Emulator ▸ NES Tools…
 host | fullscreen | Toggle Fullscreen | Enter, Alt+Enter, F11
 vestra.window | pip | Screen ▸ Picture-in-Picture
 vestra.window | mini | Screen ▸ Mini Size | \`

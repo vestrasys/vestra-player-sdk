@@ -77,7 +77,6 @@ The submenus that exist already, by key path. Write the same keys to add a comma
 | Settings ▸ Appearance | `vestra.preferences`, `vestra.visualizer` |
 | Settings ▸ Language | `vestra.preferences` |
 | Copy to Clipboard | `vestra.playback` |
-| Emulator | `vestra.nes` |
 
 <!-- /generated -->
 
@@ -190,8 +189,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Subtitles ▸ Subtitle Style ▸ Bold | `Alt+B` | `vestra.subtitles/bold` |
 | Subtitles ▸ Subtitle Style ▸ Size + | `Alt+PageUp` | `vestra.subtitles/size-up` |
 | Subtitles ▸ Subtitle Style ▸ Size − | `Alt+PageDown` | `vestra.subtitles/size-down` |
-| Subtitles ▸ Subtitle Style ▸ Move Up | `Alt+ArrowUp` | `vestra.subtitles/move-up` |
-| Subtitles ▸ Subtitle Style ▸ Move Down | `Alt+ArrowDown` | `vestra.subtitles/move-down` |
+| Subtitles ▸ Subtitle Style ▸ Move Up |  | `vestra.subtitles/move-up` |
+| Subtitles ▸ Subtitle Style ▸ Move Down |  | `vestra.subtitles/move-down` |
 | Subtitles ▸ Subtitle Style ▸ Reset Position | `Alt+Home` | `vestra.subtitles/move-reset` |
 | Subtitles ▸ Subtitle Style ▸ Shadow |  | `vestra.subtitles/shadow` |
 | Subtitles ▸ Subtitle Style ▸ Opaque Box |  | `vestra.subtitles/box` |
@@ -331,9 +330,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Audio ▸ Processing ▸ Crystalizer | `Shift+C` | `vestra.audio/audio.clarity` |
 | Audio ▸ Reset |  | `vestra.audio/audio.reset` |
 | Audio ▸ Show Album Cover for Audio Only |  | `vestra.visualizer/audio-cover` |
-| Emulator ▸ Open NES ROM… |  | `vestra.nes/nes.open` |
-| Emulator ▸ Stop NES |  | `vestra.nes/nes.stop` |
-| Emulator ▸ NES Tools… |  | `vestra.nes/nes.window` |
 | Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` | `host/fullscreen` |
 | Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Screen ▸ Mini Size | ``` | `vestra.window/mini` |
