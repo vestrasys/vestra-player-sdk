@@ -356,6 +356,8 @@ async function check(target, report = null) {
   }
   say(`${target.name}: capabilities declared for every API use`);
   if (report) return;
+  for (const line of await bottomBarWarnings(target))
+    console.log(`${target.name}: warning: ${line}`);
   // Translation warnings never fail the check.
   if (present(join(target.directory, "locales"))) {
     try {
@@ -397,6 +399,35 @@ async function capabilityFindings(target, config) {
   return capabilityCheck
     .findUndeclaredCapabilities(ts, program, { files, capabilities })
     .map((finding) => ({ ...finding, file: resolve(finding.file) }));
+}
+
+/**
+ * A plugin that mounts a bottom bar (`panels.mount("bottom", "<file>")`)
+ * whose Slint file does not place `BarButtons` (`@vestra/bar-buttons.slint`):
+ * while it is the bottom bar, no plugin's command button shows (SDK 1.5.29).
+ * Read from the source text: a literal file name in the mount call.
+ */
+async function bottomBarWarnings(target) {
+  const { typescript: sources } = await sourceFiles(target);
+  const files = new Set();
+  for (const file of sources) {
+    const text = await readFile(join(target.directory, file), "utf8");
+    for (const match of text.matchAll(
+      /\.mount\(\s*["'`]bottom["'`]\s*,\s*["'`]([^"'`$]+)["'`]/g,
+    ))
+      files.add(match[1]);
+  }
+  const warnings = [];
+  for (const file of files) {
+    const slint = await readFile(join(target.directory, file), "utf8").catch(
+      () => null,
+    );
+    if (slint === null || /\bBarButtons\b/.test(slint)) continue;
+    warnings.push(
+      `${file} is a bottom bar without BarButtons (import { BarButtons } from "@vestra/bar-buttons.slint"): while it is mounted, the command buttons of every plugin (and the player's sidebar toggle) show nowhere; see docs/guidelines/interface.md#writing-a-bottom-bar`,
+    );
+  }
+  return warnings;
 }
 
 /** The plugin's own production .ts / .mts and .slint files. */

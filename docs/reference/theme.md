@@ -139,6 +139,8 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `sort` | 10 × 10 | 1.5px |
 | `fullscreen` | 14 × 12 | 1.5px |
 | `exit-fullscreen` | 14 × 12 | 1.5px |
+| `store` | 14 × 12 | 1.5px |
+| `ai` | 14 × 12 | 1.5px |
 
 <!-- /generated -->
 
@@ -227,5 +229,21 @@ A component's public functions are called from your own Slint code, through an e
 Struct **`MarkdownRow`**: One table row (cells are plain text).
 
 Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through; the fields are filled by the player.
+
+<!-- /generated -->
+
+## Bar buttons
+
+`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
+
+<!-- generated:widgets bar-buttons -->
+
+**`BarButtons`**: The strip: place it at the bar's right end and give it the width you can spare; it is as wide as the cells it shows (read `width` to lay out the rest).
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `room` | in `length` |  | The width the bar can give the strip; the cells that fit show. |
+
+Struct **`BarButtonItem`**: One button as the player shows it.
 
 <!-- /generated -->

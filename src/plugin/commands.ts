@@ -1,7 +1,8 @@
 /** Menu commands: declaration, state sync (revisions hidden) and dispatch. */
 import { failure, Latest, quiet } from "./runtime.ts";
 import { checkBindings } from "./bindings.ts";
-import { MENU_IDS } from "../commands.ts";
+import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, MENU_IDS } from "../commands.ts";
+import { ImageHandle } from "./ui.ts";
 import { isTextValue, textProblem } from "../i18n.ts";
 import type {
   CommandDeclaration,
@@ -11,6 +12,7 @@ import type { ScopeImpl } from "./scope.ts";
 import type {
   Bindable,
   Command,
+  CommandButton,
   CommandOptions,
   CommandState,
   Commands,
@@ -58,7 +60,7 @@ function declare(options: CommandOptions): CommandDeclaration {
       `command ${options.id}: order must be an integer within ±1000000`,
     );
   const bindings = [...(options.bindings ?? [])];
-  return {
+  const declaration: CommandDeclaration = {
     title: title as CommandDeclaration["title"],
     path: path as CommandDeclaration["path"],
     order,
@@ -68,6 +70,48 @@ function declare(options: CommandOptions): CommandDeclaration {
     focus: options.focus ?? null,
     repeat: options.repeat ?? false,
   };
+  // Only when set: players before 0.5.10 refuse the field.
+  if (options.button !== undefined)
+    declaration.button = button(options.id, options.button, path.length > 0);
+  return declaration;
+}
+
+/** `CommandOptions.button`, checked as the player checks it, in wire form. */
+function button(
+  id: string,
+  value: CommandButton,
+  inMenu: boolean,
+): NonNullable<CommandDeclaration["button"]> {
+  const fail = (problem: string) =>
+    failure("invalid", `command ${id}: ${problem}`);
+  if (value === null || typeof value !== "object")
+    throw fail("button is { icon, order }");
+  if (!inMenu)
+    throw fail("button needs a menu path: a bar button is also a menu item");
+  const { icon, order } = value;
+  if (
+    !Number.isInteger(order) ||
+    order < 0 ||
+    order > BAR_BUTTON_LIMITS.maxOrder
+  )
+    throw fail(
+      `button order must be an integer 0–${BAR_BUTTON_LIMITS.maxOrder}`,
+    );
+  if (icon instanceof ImageHandle) {
+    if (icon.released)
+      throw fail(
+        `button image ${icon.path} was released with the scope that created it`,
+      );
+    return { icon: icon.toJSON(), order };
+  }
+  if (
+    typeof icon !== "string" ||
+    !(BAR_BUTTON_ICONS as readonly string[]).includes(icon)
+  )
+    throw fail(
+      `unknown button icon ${JSON.stringify(icon)}: a name of @vestra/icons.slint (BAR_BUTTON_ICONS) or an image from plugin.ui.image`,
+    );
+  return { icon, order };
 }
 
 /** Unregistrations in flight per plugin: re-adding an id waits for its removal. */

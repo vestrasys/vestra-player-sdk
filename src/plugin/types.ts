@@ -399,6 +399,114 @@ export type MenuId =
   "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings";
 
 /**
+ * An icon of the player's V-Line set (`@vestra/icons.slint`), by name: what
+ * a bottom-bar button may show. The list is `BAR_BUTTON_ICONS` in
+ * `@vestra-player/sdk/testing`.
+ *
+ * @since 1.5.29
+ */
+export type BarButtonIcon =
+  | "play"
+  | "pause"
+  | "stop"
+  | "back"
+  | "forward"
+  | "open"
+  | "volume"
+  | "mute"
+  | "playlist"
+  | "detach"
+  | "attach"
+  | "close"
+  | "failed"
+  | "move-top"
+  | "move-up"
+  | "move-down"
+  | "move-bottom"
+  | "search"
+  | "chapter"
+  | "bookmark"
+  | "check-task"
+  | "check-box"
+  | "menu-check"
+  | "submenu"
+  | "scroll-up"
+  | "scroll-down"
+  | "caret-down"
+  | "sort-asc"
+  | "sort-desc"
+  | "tag-remove"
+  | "preview-play"
+  | "add"
+  | "remove"
+  | "sort"
+  | "fullscreen"
+  | "exit-fullscreen"
+  | "store"
+  | "ai";
+
+/**
+ * A command's button on the bottom bar: {@link CommandOptions.button}.
+ *
+ * @remarks
+ * **Where it shows.** The bottom bar places the player's strip of command
+ * buttons, `BarButtons` from `@vestra/bar-buttons.slint`, at its right end;
+ * the player fills it with the buttons of every plugin, left to right by
+ * `order`, and its own sidebar toggle rightmost. When the window is narrow
+ * the strip drops the highest orders first (the sidebar toggle last). A
+ * bottom bar that does not place `BarButtons` shows no buttons: the
+ * command's menu entry stays, and the player logs the buttons it cannot
+ * show and whose bar hides them. The built-in bar (`vestra.playback`) places
+ * it; see
+ * [Writing a bottom bar](../../docs/guidelines/interface.md#writing-a-bottom-bar).
+ *
+ * **What it shows.** The icon, the command's title (translated, a trailing
+ * "…" removed) and its first key as the tooltip ("Plugin Store (F9)"),
+ * `enabled`, `busy` and `reason` as the menu item has them: a disabled or
+ * busy command's button is drawn disabled, its tooltip adds the reason, and
+ * a click runs nothing. A command with `checked` shows its icon in the
+ * accent colour while checked. A click runs the command exactly like a
+ * click on its menu item.
+ *
+ * **Limits.** One button per plugin and eight in the player
+ * (`BAR_BUTTON_LIMITS`): a button past them is left out (its command and
+ * menu entry stay) and the player logs it with `limit`. The button goes
+ * with its command: disposing the command, or disabling, stopping or
+ * uninstalling the plugin, removes it.
+ *
+ * @example
+ * ```ts
+ * const store = plugin.windows.create("ui/store.slint");
+ * plugin.commands.add({
+ *   id: "open",
+ *   path: ["Plugin Store…"],
+ *   button: { icon: "store", order: 200 },
+ *   run: () => store.show(),
+ * });
+ * ```
+ *
+ * @player 0.5.10; older players show the menu entry without a button
+ * (declare `"minPlayerVersion": "0.5.10"` when the button matters).
+ * @since 1.5.29
+ */
+export interface CommandButton {
+  /**
+   * A name of the player's icon set ({@link BarButtonIcon}), or an image
+   * made with {@link Ui.image} (a PNG or JPEG in your package or data
+   * directory), drawn in the 14×12 icon box, aspect kept, coloured like the
+   * player's line icons: only its alpha counts, so draw it as a dark shape
+   * on a transparent background. An unknown name fails with `invalid`.
+   */
+  icon: BarButtonIcon | ImageRef;
+  /**
+   * Place in the strip, left to right ascending: an integer 0–999. Equal
+   * orders sort by plugin id, then declaration order. Pick from the
+   * bands the player's own buttons use: AI 100, Plugin Store 200.
+   */
+  order: number;
+}
+
+/**
  * The declaration passed to {@link Commands.add}.
  *
  * Menu order: siblings sort by `order` ascending; a submenu sits where its
@@ -512,6 +620,16 @@ export interface CommandOptions {
   focus?: "panel";
   /** Fire again on keyboard auto-repeat while the key is held. Default false. */
   repeat?: boolean;
+  /**
+   * A button for this command on the bottom bar (SDK 1.5.29, player 0.5.10):
+   * an icon and a place, `{ icon: "store", order: 200 }`. Needs a `path`: the
+   * menu entry is where the command stays reachable when the bar shows no
+   * button (a bar without `BarButtons`, a narrow window, a limit). See
+   * {@link CommandButton} for where it shows, what it shows and the limits.
+   * Fails with `invalid` for an unknown icon name, an order outside 0–999 or
+   * a button without a path.
+   */
+  button?: CommandButton;
   /** Whether the command can run (default true). */
   enabled?: Bindable<boolean>;
   /** Check mark (or radio dot with `radio`); `null` (default) draws none. */

@@ -375,6 +375,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Quit | `Cmd+Q` | `host/quit` |
 | Leave Fullscreen (not in the menu) | `Escape` | `host/exit-fullscreen` |
+| Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
 | Add Files… (not in the menu) | `Ctrl+I` (panel focus) | `vestra.playlist/playlist.list-add` |
@@ -409,6 +410,23 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Playlist Settings… (not in the menu) | `F5` (panel focus) | `vestra.playlist/playlist.settings` |
 
 <!-- /generated -->
+
+## Bottom-bar buttons
+
+`button: { icon, order }` on {@link "@vestra-player/sdk"!Commands.add | commands.add} ({@link "@vestra-player/sdk"!CommandButton | CommandButton}, SDK 1.5.29, player 0.5.10) gives a command a button in the bottom bar's strip of command buttons (`BarButtons`, [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
+
+| Field | Rule |
+| --- | --- |
+| `icon` | A name of the player's icon set (the names in [Theme: Icons](theme.md#icons), `BAR_BUTTON_ICONS`), or an image from {@link "@vestra-player/sdk"!Ui.image | plugin.ui.image} drawn in the 14×12 icon box in the icon colour (only its alpha counts). Unknown name: `invalid`. |
+| `order` | Integer 0–999, left to right ascending; equal orders by plugin id, then declaration order. The built-in plugins use 100 (Vestra Player AI) and 200 (Plugin Store). |
+| `path` | Required: a button without a menu path is `invalid`. |
+
+- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: the icon in the accent colour. Accessibility: a button named by the title, with its enabled and checked state and a default action.
+- **Click**: runs the command exactly as a click on its menu item does.
+- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip drops the highest order first and the sidebar toggle last.
+- **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared), eight in the player. A button past them is left out and logged with `limit`; the command and its menu entry stay.
+- **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
+- **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
 
 ## Binding syntax
 
@@ -468,7 +486,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in [Built-in commands](#built-in-commands).
 
 ## Keys the system takes first
 

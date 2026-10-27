@@ -1,0 +1,135 @@
+// Command buttons of a bottom bar (player 0.5.10, SDK 1.5.29): the buttons
+// that plugins' commands contribute (`commands.add({ button })`) and the
+// player's sidebar toggle, rightmost. The player fills `BarButtonsHost` in
+// every window it composes and runs the clicks; a bottom bar places one
+// `BarButtons` in its own layout and gives it the width it can spare:
+//   import { BarButtons } from "@vestra/bar-buttons.slint";
+//   strip := BarButtons { x: parent.width - self.width - 4px; room: ...; }
+// It shows as many 41×40 cells as fit in `room`, the strip as wide as the
+// cells shown (`width`): the sidebar toggle stays longest, and of the
+// plugins' buttons (ascending `order`, left to right) the highest order goes
+// first. A bar without a `BarButtons` shows none of them (their menu
+// entries stay; the player logs which buttons are hidden).
+//
+// The cells look like the bar's own icon buttons: a 32×32 plate on hover
+// and press, the V-Line icon in the text colour (accent while a toggle is
+// on), the bar's tooltip (ToolTipArea). They are persistent elements shown with
+// `visible:`; nothing is created on hover or resize.
+import { Theme } from "theme.slint";
+import { Icon } from "icons.slint";
+import { ToolTipArea } from "widgets.slint";
+
+// One button as the player shows it.
+export struct BarButtonItem {
+    // What a click runs (the player's own token; "" for no button).
+    token: string,
+    // A name of @vestra/icons.slint, or "" for `image`.
+    icon: string,
+    // The plugin's image (`plugin.ui.image`), drawn in the icon colour.
+    image: image,
+    // The command's title (the accessibility label).
+    label: string,
+    // The tooltip: the title and its key, the reason it is unavailable.
+    tip: string,
+    enabled: bool,
+    // The command has a checked state; `checked` draws the icon in the accent.
+    checkable: bool,
+    checked: bool,
+    // At half opacity: on, but not shown for want of room (the sidebar).
+    dimmed: bool,
+}
+
+// Filled by the player; a bar reads it only through `BarButtons`.
+export global BarButtonsHost {
+    // The plugins' buttons, left to right, at most 8.
+    in property <[BarButtonItem]> buttons;
+    // The sidebar toggle (`token` "" while there is none).
+    in property <BarButtonItem> toggle;
+    // Set when a `BarButtons` exists in this window.
+    in-out property <bool> placed;
+    // A click on the cell with this token.
+    callback clicked(string);
+}
+
+// One 41×40 cell (the bar's BarButton). `shown`: on screen; a hidden cell
+// is not actionable from the accessibility tree either.
+component Cell inherits Rectangle {
+    in property <BarButtonItem> item;
+    in property <bool> shown;
+    private property <bool> live: root.shown && root.item.enabled;
+    private property <brush> tint: !root.item.enabled ? Theme.icon-disabled
+        : root.item.checked ? (touch.pressed ? Theme.accent-press : Theme.accent)
+        : Theme.text;
+    width: 41px;
+    height: 40px;
+    visible: root.shown;
+    opacity: root.item.dimmed ? 0.5 : 1;
+    accessible-role: button;
+    accessible-label: root.item.label;
+    accessible-description: root.item.tip;
+    accessible-enabled: root.live;
+    accessible-checkable: root.item.checkable;
+    accessible-checked: root.item.checked;
+    accessible-action-default => { if root.live { BarButtonsHost.clicked(root.item.token); } }
+    Rectangle {
+        x: 4px;
+        y: 4px;
+        width: parent.width - 9px;
+        height: parent.height - 8px;
+        border-radius: Theme.radius-panel;
+        background: !root.live ? transparent
+            : touch.pressed ? Theme.press-bg
+            : touch.has-hover ? Theme.hover-bg : transparent;
+    }
+    Icon {
+        visible: root.item.icon != "";
+        x: (root.width - 1px - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        name: root.item.icon;
+        color: root.tint;
+    }
+    // A plugin's image in the icon box (14×12), aspect kept, coloured like the icons.
+    Image {
+        visible: root.item.icon == "";
+        x: (root.width - 1px - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        width: 14px;
+        height: 12px;
+        source: root.item.image;
+        image-fit: contain;
+        colorize: root.tint;
+    }
+    ToolTipArea {
+        width: 100%;
+        height: 100%;
+        text: root.shown ? root.item.tip : "";
+        touch := TouchArea {
+            enabled: root.live;
+            clicked => { BarButtonsHost.clicked(root.item.token); }
+        }
+    }
+}
+
+// The strip: place it at the bar's right end and give it the width you can
+// spare; it is as wide as the cells it shows (read `width` to lay out the rest).
+export component BarButtons {
+    // The width the bar can give the strip; the cells that fit show.
+    in property <length> room;
+    // The cells that fit in `room`.
+    private property <int> fit: Math.max(0, Math.floor(root.room / 41px));
+    private property <bool> toggle: BarButtonsHost.toggle.token != "" && root.fit >= 1;
+    // The plugins' buttons shown: the lowest orders, after the toggle's cell.
+    private property <int> count: Math.max(0, Math.min(BarButtonsHost.buttons.length, root.fit - (root.toggle ? 1 : 0)));
+    width: (root.count + (root.toggle ? 1 : 0)) * 41px;
+    height: 40px;
+    init => { BarButtonsHost.placed = true; }
+    Cell { x: 0px; shown: root.count > 0; item: BarButtonsHost.buttons[0]; }
+    Cell { x: 41px; shown: root.count > 1; item: BarButtonsHost.buttons[1]; }
+    Cell { x: 82px; shown: root.count > 2; item: BarButtonsHost.buttons[2]; }
+    Cell { x: 123px; shown: root.count > 3; item: BarButtonsHost.buttons[3]; }
+    Cell { x: 164px; shown: root.count > 4; item: BarButtonsHost.buttons[4]; }
+    Cell { x: 205px; shown: root.count > 5; item: BarButtonsHost.buttons[5]; }
+    Cell { x: 246px; shown: root.count > 6; item: BarButtonsHost.buttons[6]; }
+    Cell { x: 287px; shown: root.count > 7; item: BarButtonsHost.buttons[7]; }
+    Cell { x: root.count * 41px; shown: root.toggle; item: BarButtonsHost.toggle; }
+}

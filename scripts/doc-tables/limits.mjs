@@ -16,6 +16,7 @@ import {
 
 const SOURCES = {
   COMMAND_LIMITS: { file: "src/commands.ts" },
+  BAR_BUTTON_LIMITS: { file: "src/commands.ts" },
   UI_VALUE_LIMITS: { file: "src/plugin/values.ts" },
   TEXT_LIMITS: { file: "src/i18n.ts" },
   MARKDOWN_LIMITS: { file: "src/plugin/markdown.ts" },

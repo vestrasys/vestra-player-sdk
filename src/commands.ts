@@ -1,5 +1,5 @@
 /** Finite candidate command registry. Host authenticates owner; no plugin supplies an owner id. */
-import type { Transport } from "./wire.ts";
+import type { Json, Transport } from "./wire.ts";
 import type { ListJson, TextJson } from "./i18n.ts";
 /**
  * The player's command registry caps, the same values as the player's own
@@ -52,6 +52,82 @@ export const MENU_IDS = [
   "screen",
   "settings",
 ] as const;
+
+/**
+ * The icons a bottom-bar button may name (`CommandOptions.button.icon`):
+ * every icon of the player's V-Line set, `@vestra/icons.slint` (draw one
+ * in your own Slint with `Icon { name: "store"; }`). The player's tests check
+ * that this list is its icon set.
+ *
+ * @example
+ * ```ts
+ * import assert from "node:assert/strict";
+ * import { BAR_BUTTON_ICONS } from "@vestra-player/sdk/testing";
+ *
+ * assert.ok(BAR_BUTTON_ICONS.includes("store"));
+ * ```
+ *
+ * @since 1.5.29
+ */
+export const BAR_BUTTON_ICONS = [
+  "play",
+  "pause",
+  "stop",
+  "back",
+  "forward",
+  "open",
+  "volume",
+  "mute",
+  "playlist",
+  "detach",
+  "attach",
+  "close",
+  "failed",
+  "move-top",
+  "move-up",
+  "move-down",
+  "move-bottom",
+  "search",
+  "chapter",
+  "bookmark",
+  "check-task",
+  "check-box",
+  "menu-check",
+  "submenu",
+  "scroll-up",
+  "scroll-down",
+  "caret-down",
+  "sort-asc",
+  "sort-desc",
+  "tag-remove",
+  "preview-play",
+  "add",
+  "remove",
+  "sort",
+  "fullscreen",
+  "exit-fullscreen",
+  "store",
+  "ai",
+] as const;
+
+/**
+ * The player's limits on bottom-bar buttons (`CommandOptions.button`), the
+ * same values as the player's (its tests check that they agree). A button
+ * past `perPlugin` or `total` is left out: its command still registers and
+ * its menu entry stays, and the player logs the button it left out
+ * (`limit`). Which ones stay: each plugin's first declared button, then the
+ * `total` lowest by order, plugin id and declaration order.
+ *
+ * @since 1.5.29
+ */
+export const BAR_BUTTON_LIMITS = {
+  /** Buttons one plugin shows (1). */
+  perPlugin: 1,
+  /** Buttons the player shows, every plugin together, besides its own sidebar toggle (8). */
+  total: 8,
+  /** The highest `order` (999; the lowest is 0). */
+  maxOrder: 999,
+} as const;
 
 /**
  * A submenu that one of the player's built-in plugins declares: an entry of
@@ -461,6 +537,7 @@ vestra.preferences | language.es | Settings ▸ Language ▸ Español
 vestra.info | info.about | About Vestra Player… | F1
 host | quit | Quit | Cmd+Q
 host | exit-fullscreen | (Leave Fullscreen) | Escape
+host | sidebar | (Toggle Sidebar)
 vestra.info | info.brief | (Brief Info) | Shift+Tab
 vestra.playlist | playlist.play | (Play) | Enter, P | panel
 vestra.playlist | playlist.list-add | (Add Files…) | Ctrl+I | panel
@@ -559,6 +636,12 @@ export type CommandDeclaration = {
   focus: "panel" | null;
   /** Fire again on keyboard auto-repeat while held. */
   repeat: boolean;
+  /**
+   * A bottom-bar button (player 0.5.10): an icon name, or an image in the
+   * `plugin.ui.image` wire form. Sent only when set: older players refuse
+   * unknown declaration fields.
+   */
+  button?: { icon: string | Json; order: number };
 };
 export function commandClient(transport: Transport) {
   return {

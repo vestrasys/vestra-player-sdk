@@ -323,3 +323,50 @@ test("an id without a prefix is only a hint", () => {
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, /hint: id "hello" has no prefix/);
 });
+
+test("a bottom bar without BarButtons is a warning, not a failure", () => {
+  const directory = project(
+    [
+      'import type { Plugin } from "@vestra-player/sdk";',
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.panels.mount("bottom", "ui/bar.slint");',
+      '  plugin.commands.add({ id: "hello", title: "Hello", run: () => plugin.osd.show("Hello") });',
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.bar",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands", "ui.osd", "ui.mount"],
+    }),
+  );
+  mkdirSync(join(directory, "ui"));
+  const bar = join(directory, "ui/bar.slint");
+  writeFileSync(
+    bar,
+    "export component Bar inherits Rectangle { height: 62px; }\n",
+  );
+  const plain = vestraPlugin(directory, "check");
+  assert.equal(plain.status, 0, plain.stdout + plain.stderr);
+  assert.match(
+    plain.stdout,
+    /warning: ui\/bar\.slint is a bottom bar without BarButtons/,
+  );
+  writeFileSync(
+    bar,
+    [
+      'import { BarButtons } from "@vestra/bar-buttons.slint";',
+      "export component Bar inherits Rectangle {",
+      "  height: 62px;",
+      "  BarButtons { x: parent.width - self.width; room: 200px; }",
+      "}",
+    ].join("\n"),
+  );
+  const placed = vestraPlugin(directory, "check");
+  assert.equal(placed.status, 0, placed.stdout + placed.stderr);
+  assert.doesNotMatch(placed.stdout, /BarButtons/);
+});

@@ -75,6 +75,29 @@ The player's picture, audio and subtitle tools share one layout; a window of the
 - **Commands of a panel go into its right-click menu**, made of the plugin's commands ({@link "@vestra-player/sdk"!Panel.showMenu | panel.showMenu}); see [Menus](menus.md).
 - **The bottom bar is icons only**: no text buttons, no source path, no status text (the source name is in the window title, status is an OSD message).
 
+### Writing a bottom bar
+
+The bottom bar holds one panel, and every plugin's command buttons ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle show inside it, in a strip the player fills. A bar that replaces the built-in one (`vestra.playback`) must place that strip, or those buttons show nowhere while it is mounted (their menu entries stay):
+
+- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many 41×40 cells as fit (the sidebar toggle stays longest; of the plugins' buttons, the highest order goes first) and is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed.
+- **Decide what goes first when the window narrows.** The built-in bar gives the strip only the room its own buttons and the time leave, so the strip shrinks first, then its Fullscreen button hides, and the time is never cut.
+- **Do not draw a sidebar toggle of your own**: the strip has the player's (**Toggle Sidebar**, `host/sidebar`), with its state.
+- `vestra-plugin check` warns when a plugin mounts a bottom bar whose Slint file does not use `BarButtons`, and the player logs the buttons a mounted bar hides.
+
+```slint
+import { BarButtons } from "@vestra/bar-buttons.slint";
+
+export component MyBar inherits Rectangle {
+    height: 40px;
+    // Your controls on the left, 3 × 41px wide …
+    strip := BarButtons {
+        x: root.width - self.width - 4px;
+        y: 0px;
+        room: max(0px, root.width - 3 * 41px - 8px);
+    }
+}
+```
+
 ## Text
 
 - **Every visible text is English source text** that the player translates ([Translate a plugin](../how-to/i18n.md)). Write short, plain sentences; one sentence per status or error.
