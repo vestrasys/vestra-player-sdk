@@ -33,10 +33,11 @@
  * with "None" or "That of".
  *
  * The rules above are a report (exit 0). The categories listed in
- * scripts/doc-standard.mjs are enforced (`example-lead` and `stale-refs`
- * also for the testing module and `EXAMPLES_DONE`, with the known
- * violations of `EXAMPLE_BASELINE` as warnings; Markdown code blocks
- * always; `--baseline` prints the keys of new problems): a symbol of such a category that
+ * scripts/doc-standard.mjs are enforced; `example-lead` and `stale-refs`
+ * are enforced for every `@example` of the API and every Markdown code
+ * block (since SDK 1.5.30), with the known violations of
+ * `EXAMPLE_BASELINE` as warnings (`--baseline` prints the keys of new
+ * problems). For the categories: a symbol of such a category that
  * misses part of the standard fails the run, and so does a declaration
  * tagged with such a `@category` that the list does not name. `--strict`
  * also fails when any summary is missing. `--list <rule>` prints every
@@ -47,7 +48,6 @@ import { join, resolve } from "node:path";
 import { Application, ReflectionKind } from "typedoc";
 import {
   EXAMPLE_BASELINE,
-  EXAMPLES_DONE,
   EXAMPLE_RULES,
   STALE_REFERENCES,
   STRICT_CATEGORIES,
@@ -335,12 +335,10 @@ for (const module of modules ?? []) {
     const declComment = commentOf(declaration);
     const category =
       categoryOf(declComment) || (testingModule ? "Testing" : "Other");
-    // The categories of STRICT_CATEGORIES, the testing module and the
-    // declarations listed in EXAMPLES_DONE.
-    const enforced =
-      testingModule ||
-      strictDeclarations.has(declaration.name) ||
-      EXAMPLES_DONE.has(declaration.name);
+    // Every example meets the standard since SDK 1.5.30: the rules hold for
+    // all of them (EXAMPLE_BASELINE takes known exceptions, if a rule is
+    // ever tightened).
+    const enforced = true;
     const row =
       coverage.get(category) ??
       coverage

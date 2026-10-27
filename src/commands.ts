@@ -80,12 +80,16 @@ export const MENU_IDS = [
  * in your own Slint with `Icon { name: "store"; }`). The player's tests check
  * that this list is its icon set.
  *
- * @example
+ * @example Check in a test that the button's icon exists
+ * The test fails before release if the plugin's bar button names an icon
+ * the player does not have. `commands.add` would refuse an unknown name
+ * with `invalid`; the player's tests keep `BAR_BUTTON_ICONS` equal to its
+ * icon set, so checking against it is the same check without a player.
  * ```ts
  * import assert from "node:assert/strict";
  * import { BAR_BUTTON_ICONS } from "@vestra-player/sdk/testing";
  *
- * assert.ok(BAR_BUTTON_ICONS.includes("store"));
+ * assert.ok(BAR_BUTTON_ICONS.includes("store")); // the icon main.ts uses
  * ```
  *
  * @since 1.5.29

@@ -871,7 +871,7 @@ const index = [
     .map(firstSentence)
     .join(
       " ",
-    )} L<n> are line numbers in llms-full.txt, next to this file: every page, declaration and example.`,
+    )} L<n>: a line of llms-full.txt (next to this file), which has every page, declaration and example.`,
   "",
   "**Rules**",
   "",
@@ -900,7 +900,7 @@ const index = [
   helloMain,
   "```",
   "",
-  "**Capabilities** (a call without one fails with `capability`)",
+  "**Capabilities** (without one a call fails: `capability`)",
   "",
   ...capabilityRows.map(
     ([cap, opens, requires]) =>
@@ -924,7 +924,7 @@ const index = [
   "",
   "## Reference",
   "",
-  `- [llms-full.txt](${fullUrl}), also node_modules/${pkg.name}/llms-full.txt; the pages are on the [site](${SITE}).`,
+  `- [llms-full.txt](${fullUrl}), also node_modules/${pkg.name}/llms-full.txt; pages: [site](${SITE}).`,
   ...[...new Set(GUIDES.map((g) => g.group))].map((group) => {
     const pages = GUIDES.filter((g) => g.group === group);
     return `- ${group}: ${pages
@@ -939,7 +939,7 @@ const index = [
   "",
   "## API",
   "",
-  "Where each module of `plugin` (`plugin.<module>`) is declared:",
+  "Where each `plugin.<module>` is declared:",
   "",
   `- ${["Plugin", "Scope", "PluginError", "Disposable"].map((t) => `${t} L${lineOf(`### ${t}`)}`).join(", ")}`,
   "- " +
@@ -962,7 +962,7 @@ const index = [
   "",
   "## Optional",
   "",
-  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments in node_modules/${pkg.name}/dist/plugin/types.d.ts (the API) and dist/plugin/testing.d.ts (TestHost); Slint library in slint/vestra/.`,
+  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments: node_modules/${pkg.name}/dist/plugin/{types,testing}.d.ts; Slint library: slint/vestra/.`,
   "",
 ].join("\n");
 

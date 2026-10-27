@@ -2975,9 +2975,17 @@ export class TestHost implements Transport {
    * Whether the bar places them is the bar's business: the list is what
    * the player hands to `BarButtons`.
    *
-   * @example
+   * @example Click the plugin's bottom-bar button in a test
+   * The test finds the plugin's Store button, clicks it and checks that the
+   * Store window opened. `barButtons` lists the buttons of the plugin's
+   * commands declared with `button`, as the bar shows them; `click()` runs
+   * the command like its menu item and waits until the host is idle, and
+   * rejects while the command is disabled or busy.
    * ```ts
-   * const [button] = host.barButtons;
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * const [button] = host.barButtons; // one button per plugin
    * assert.equal(button?.icon, "store");
    * await button?.click();
    * assert.equal(host.window("store").visible, true);

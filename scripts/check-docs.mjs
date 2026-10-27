@@ -3,7 +3,7 @@
  * Checks that the code shown in the documentation compiles, and that the
  * documents have not drifted from the code:
  *
- *   node scripts/check-docs.mjs [--strict] [--verbose]
+ *   node scripts/check-docs.mjs [--lenient] [--verbose]
  *
  * Snippets: every ```ts block in README.md and docs/**\/*.md, and every ```ts
  * block inside an `@example` of a doc comment in src/, is written to
@@ -21,10 +21,11 @@
  *   module level, before the function, so they may `import` and `declare`.
  * - ```ts nocheck marks a block that is deliberately incomplete.
  *
- * Errors in Markdown blocks fail the check, and so do errors in the
- * `@example` blocks of the categories listed in scripts/doc-standard.mjs.
- * Errors in other `@example` blocks are reported as warnings until the
- * reference rewrite reaches them; `--strict` makes them fail too.
+ * Errors in any block fail the check (since SDK 1.5.30, when every
+ * `@example` compiled). `--lenient` reports errors in `@example` blocks
+ * outside the categories of scripts/doc-standard.mjs as warnings instead,
+ * for work in progress; CI never passes it. `--strict` is accepted and is
+ * the default.
  *
  * Drift: the README Quick start equals examples/hello (main.ts verbatim,
  * manifest.json as JSON); every "Node N" / "Node.js N" in README.md and
@@ -54,7 +55,7 @@ import { withoutGenerated } from "./doc-tables.mjs";
 import { splitCut, strictDeclarations } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const strict = process.argv.includes("--strict");
+const strict = !process.argv.includes("--lenient");
 const verbose = process.argv.includes("--verbose");
 const out = join(root, ".tmp/snippets");
 const rel = (path) => relative(root, path).split("\\").join("/");

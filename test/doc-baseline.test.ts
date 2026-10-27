@@ -16,7 +16,7 @@ const { EXAMPLE_BASELINE, splitCut, STALE_REFERENCES } = (await import(
 };
 
 /** The size of EXAMPLE_BASELINE when it was last shrunk. Only lower it. */
-const MAX = 115;
+const MAX = 0;
 
 test("EXAMPLE_BASELINE does not grow", () => {
   assert.ok(
