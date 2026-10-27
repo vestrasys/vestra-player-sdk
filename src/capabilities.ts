@@ -52,13 +52,23 @@ export interface CapabilityInfo {
  * `plugin.i18n`, reading `plugin.window.state`, `plugin.appearance.theme`
  * and `plugin.packages.list`).
  *
- * @example
+ * @example Check in a test that the manifest declares every required capability
+ * The test fails, naming the missing capability, when the manifest declares
+ * a capability without one its members also need. It reads the plugin's own
+ * `manifest.json` and looks each declared name up in `CAPABILITY_INFO`,
+ * whose `requires` lists the capabilities that must be declared with it;
+ * at run time the player would refuse such a call with code `capability`.
  * ```ts
+ * import assert from "node:assert/strict";
+ * import { readFile } from "node:fs/promises";
  * import { CAPABILITY_INFO } from "@vestra-player/sdk/testing";
  *
- * const manifest = JSON.parse(await readFile("manifest.json", "utf8"));
+ * const manifest: { capabilities: string[] } = JSON.parse(
+ *   await readFile(new URL("../manifest.json", import.meta.url), "utf8"),
+ * );
  * for (const capability of manifest.capabilities)
- *   for (const needed of CAPABILITY_INFO[capability].requires)
+ *   // An unknown name has no entry: `vestra-plugin check` reports it.
+ *   for (const needed of CAPABILITY_INFO[capability]?.requires ?? [])
  *     assert.ok(manifest.capabilities.includes(needed), needed);
  * ```
  *

@@ -14,15 +14,36 @@ export type ResolvedResource = {
  * stream(s) behind a page URL. Both streams must use identical `headers`;
  * different maps fail explicitly (nothing is dropped silently).
  *
- * @example
+ * @example Play a page whose video and audio are separate streams
+ * Opening a `https://video.example/…` page plays it with its title. When
+ * the user opens a URL whose scheme and host a web resolver declares, the
+ * player calls its `resolve(url, signal)`; the plugin looks up the streams
+ * and returns them, and the player plays `primary` with the separate
+ * `audio` track, sending the `headers` with every request for both.
  * ```ts
- * const media: ResolvedMedia = {
- *   kind: "media",
- *   originalUrl: url,
- *   title: "Talk",
- *   primary: { url: videoUrl, headers: { Referer: url } },
- *   audio: { url: audioUrl, headers: { Referer: url } },
- * };
+ * plugin.resolvers.add({
+ *   id: "video-example",
+ *   schemes: ["https"],
+ *   hosts: ["video.example"],
+ *   async resolve(url, signal) {
+ *     // The site's own API (made up here) names the streams of a page.
+ *     const api = `https://video.example/api/streams?page=${encodeURIComponent(url)}`;
+ *     const info = (await (await fetch(api, { signal })).json()) as {
+ *       title: string;
+ *       video: string;
+ *       audio: string;
+ *     };
+ *     const headers = { Referer: url }; // identical for both streams
+ *     const media: ResolvedMedia = {
+ *       kind: "media",
+ *       originalUrl: url,
+ *       title: info.title,
+ *       primary: { url: info.video, headers },
+ *       audio: { url: info.audio, headers },
+ *     };
+ *     return media;
+ *   },
+ * });
  * ```
  */
 export type ResolvedMedia = {

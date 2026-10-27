@@ -32,7 +32,14 @@
  * Use it from `node:test` (what `vestra-plugin test` runs). Each test should
  * create its own host; `stop()` removes the host's temporary directories.
  *
- * @example
+ * @example Test that a menu item shows a message
+ * A complete test file: it activates the plugin against an in-memory
+ * player, picks its Hello menu item and checks what the OSD showed.
+ * `startPlugin` reads the plugin's `manifest.json` from `directory`, calls
+ * `activate` and waits for its registrations; `run()` executes the command
+ * as the menu would and waits until the host is idle. `stop()` disposes
+ * the plugin and removes the host's temporary files, even when an
+ * assertion fails.
  * ```ts
  * // tests/main.test.ts
  * import assert from "node:assert/strict";
@@ -182,13 +189,23 @@ export { LIST_SEPARATORS };
  * The player's interface languages, English (the source) first, as the
  * player's own table: `["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]`.
  *
- * @example
+ * @example Check that every language translates a menu item
+ * The test fails for each interface language in which the "Open…" item
+ * still shows English. It starts the plugin once per language except
+ * English (`LOCALES[0]`): the `locale` option loads the plugin's
+ * `locales/<locale>.po` and the host shows menu texts translated with it,
+ * which `display` reports.
  * ```ts
- * import { LOCALES } from "@vestra-player/sdk/testing";
+ * import type { Plugin } from "@vestra-player/sdk";
+ * declare function activate(plugin: Plugin): Promise<void>;
+ * // ---cut---
+ * import assert from "node:assert/strict";
+ * import { LOCALES, startPlugin } from "@vestra-player/sdk/testing";
  *
+ * const directory = new URL("..", import.meta.url);
  * for (const locale of LOCALES.slice(1)) {
  *   const { host, stop } = await startPlugin(activate, { directory, locale });
- *   assert.notEqual(host.command("open").display.title, "Open…");
+ *   assert.notEqual(host.command("open").display.title, "Open…", locale);
  *   await stop();
  * }
  * ```
@@ -239,8 +256,16 @@ type Call = { method: string; params: Record<string, Json> };
  * `plugin.windows.create(...)` window after its first `show()`. Get one with
  * {@link TestHost.window}.
  *
- * @example
+ * @example Change a setting in a tool window from a test
+ * The test opens the plugin's Picture window, moves its brightness control
+ * and checks that the plugin wrote the value back. `emit` fires a Slint
+ * callback as if the user used the control; the plugin's `on` handler runs
+ * and sets properties, which reach the host as requests, so `settle()`
+ * waits for them before `props` is read.
  * ```ts
+ * import assert from "node:assert/strict";
+ * declare const host: TestHost;
+ * // ---cut---
  * await host.command("open-picture").run(); // the plugin calls window.show()
  * const picture = host.window("picture");
  * assert.equal(picture.visible, true);
@@ -295,8 +320,16 @@ export interface FileDialogText {
  * host keeps it. Get one with {@link TestHost.command} (the plugin's own) or
  * {@link TestHost.coreAction} (the player's core actions).
  *
- * @example
+ * @example Run a checkable menu item from a test
+ * The test checks the Loop item's menu place, picks it and sees its check
+ * mark turn on. `host.command(id)` is the host's record of what the plugin
+ * declared and the state it last sent; `run()` calls the plugin's `run`
+ * like the menu, after which the SDK re-evaluates the command's state and
+ * sends it, and `run()` resolves once the host is idle again.
  * ```ts
+ * import assert from "node:assert/strict";
+ * declare const host: TestHost;
+ * // ---cut---
  * const toggle = host.command("toggle-loop");
  * assert.deepEqual(toggle.declaration.path, ["Playback", "Loop"]);
  * assert.equal(toggle.state.checked, false);
@@ -531,7 +564,13 @@ const MAX_SIDEBAR_TABS = 8;
  * `calls`) use the protocol's shapes. They are fine for assertions but are
  * not part of the plugin API: their shape may change in minor versions.
  *
- * @example
+ * @example Preset the player, then react to another plugin's file
+ * The test starts the plugin in a player with the dark theme, opens a file
+ * the way another plugin would, and checks the plugin's panel title. A host
+ * created first can be preset with data the plugin reads during
+ * activation; `startPlugin` then uses it. `openElsewhere` changes the
+ * source and broadcasts it, the plugin's listener updates its panel, and
+ * `settle()` waits for those requests before the assertion.
  * ```ts
  * import assert from "node:assert/strict";
  * import test from "node:test";
@@ -591,8 +630,15 @@ export class TestHost implements Transport {
    * is mounted there). You may change a slot directly and then call
    * `host.emit("window.state", {})` to simulate a change made elsewhere.
    *
-   * @example
+   * @example Hide the sidebar and check the player's layout
+   * With the plugin's panel in the sidebar, toggling the sidebar records
+   * that the user prefers it hidden. `toggle()` reads the slot from the
+   * player, asks for the opposite of its `preferred` flag and resolves once
+   * the player answered, so the host's `layout` already shows the new value.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * assert.equal(host.layout.sidebar?.preferred, true);
    * await plugin.panels.sidebar.toggle();
    * assert.equal(host.layout.sidebar?.preferred, false);
@@ -637,8 +683,17 @@ export class TestHost implements Transport {
    * players up to 0.4.2 showed them, so tests written for SDK 1.5.8 keep
    * passing; set `locale` to test what a user sees now.
    *
-   * @example
+   * @example Check a menu path in Simplified Chinese
+   * The test starts the plugin with a Chinese interface and checks the
+   * menu path its Blur item shows. The `locale` option sets
+   * `host.locale` before activation, so the plugin's `locales/zh-Hans.po`
+   * is loaded; the built-in menu `@video` shows in the player's own words
+   * (视频), the item's title in the plugin's translation.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare function activate(plugin: Plugin): Promise<void>;
+   * declare const directory: URL;
+   * // ---cut---
    * const { host, stop } = await startPlugin(activate, { directory, locale: "zh-Hans" });
    * assert.deepEqual(host.command("blur").display.path, ["视频", "模糊…"]);
    * await stop();
@@ -678,8 +733,14 @@ export class TestHost implements Transport {
    * @param args - Values for its placeholders.
    * @returns The shown text.
    *
-   * @example
+   * @example Compare with a translated message
+   * The test expects the text a Chinese user sees for a template the plugin
+   * shows. `translate` looks the English source up in the plugin's catalog
+   * for `host.locale` and fills in the arguments, the way the player does.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * assert.equal(host.translate("Speed {}×", [2]), "倍速 2×");
    * ```
    *
@@ -822,10 +883,16 @@ export class TestHost implements Transport {
    * What `player.stats()` returns. Fields added in later rounds may be left
    * out; the SDK fills them with `null`.
    *
-   * @example
+   * @example Pretend a 1080p H.264 video is playing
+   * The plugin's `player.stats()` now reports a 1920×1080 H.264 stream at
+   * 24 fps. The host answers `stats()` with this object as it stands, so a
+   * test sets it before the plugin asks; fields it leaves out come back as
+   * `null` from the SDK.
    * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
    * host.stats = {
-   *   ...host.stats,
+   *   ...host.stats, // keep the other fields
    *   video: { codec: "h264", width: 1920, height: 1080, fps: 24 },
    * } as typeof host.stats;
    * ```
@@ -872,12 +939,21 @@ export class TestHost implements Transport {
    * handler is not found (`available()` is false, `run()` rejects with
    * `unavailable`).
    *
-   * @example
+   * @example Fake ffprobe and a failing ffmpeg
+   * The plugin's Probe command gets an empty stream list from ffprobe, and
+   * any ffmpeg run fails as it would on a broken file. `handle` makes the
+   * tool available and answers each `tools.run` with the handler's result;
+   * a thrown `HostError` makes the run reject with that code. `calls`
+   * records every run with its arguments.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.tools.handle("ffprobe", (args) => {
-   *   assert.ok(args.includes("-show_streams"));
-   *   return { stdout: JSON.stringify({ streams: [] }) };
+   *   assert.ok(args.includes("-show_streams")); // what the plugin asked for
+   *   return { stdout: JSON.stringify({ streams: [] }) }; // a file with no streams
    * });
+   * // Every ffmpeg run rejects with code `failed`.
    * host.tools.handle("ffmpeg", () => {
    *   throw new HostError("failed", "Invalid data found when processing input");
    * });
@@ -1012,12 +1088,20 @@ export class TestHost implements Transport {
    * @param pluginId - The other plugin's manifest id.
    * @param marks - Its whole layer.
    *
-   * @example
+   * @example Let another plugin publish chapters
+   * The plugin under test sees two chapter marks another plugin put on the
+   * timeline. `setTimelineLayer` stores that plugin's whole layer and pushes
+   * `timeline.changed`; once the plugin uses `plugin.timeline` (with
+   * `events`) the SDK keeps `marks` current from that event, and `settle()`
+   * lets it arrive.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.setTimelineLayer("community.chapters", [
    *   { time: 0, kind: "chapter", title: "Intro" },
    *   { time: 95, kind: "chapter", title: "Part 1" },
-   * ]);
+   * ]); // replaces that plugin's whole layer; [] would clear it
    * await host.settle();
    * assert.equal(plugin.timeline.marks.length, 2);
    * ```
@@ -1061,8 +1145,15 @@ export class TestHost implements Transport {
    * runtime image. View properties hold images in their wire form; this
    * reads the path back.
    *
-   * @example
+   * @example Check which file a window shows as its cover
+   * The test checks that the Cover window's image comes from the plugin's
+   * data directory. An image property holds the SDK's wire form of
+   * `plugin.ui.image(path)`, not a path; `imagePath` reads the path back.
    * ```ts
+   * import assert from "node:assert/strict";
+   * import { join } from "node:path";
+   * declare const host: TestHost;
+   * // ---cut---
    * assert.equal(
    *   host.imagePath(host.window("cover").props["cover"]),
    *   join(plugin.dataDirectory, "cover.png"),
@@ -1160,9 +1251,16 @@ export class TestHost implements Transport {
    *   drop point in panel coordinates (default `{ x: 0, y: 0 }`);
    *   `modifiers`: keys held (default all `false`).
    *
-   * @example
+   * @example Drop files on the video and on the panel
+   * The first drop lands on the video area, where the files are grouped by
+   * extension and each group goes to the first provider that takes it; the
+   * second lands on the panel at a point, with Alt held, and the panel's
+   * `onDrop` gets the whole list. `drop` resolves once the host is idle.
    * ```ts
-   * await host.drop(["/media/a.srt", "/media/b.mkv"]);
+   * declare const host: TestHost;
+   * // ---cut---
+   * await host.drop(["/media/a.srt", "/media/b.mkv"]); // on the video area
+   * // On the panel, 10 px from its left and 48 px from its top, Alt held.
    * await host.drop(["/media/list.m3u"], {
    *   target: "panel",
    *   at: { x: 10, y: 48 },
@@ -1254,8 +1352,15 @@ export class TestHost implements Transport {
   /**
    * One settings page by id. Throws when it was never registered.
    *
-   * @example
+   * @example Change a value on the plugin's settings page
+   * The test sets the step on the General page and checks the page shows
+   * it. `emit` fires the page's callback as the user's input would; the
+   * plugin's handler stores the value and its `bind` function sends it back
+   * as a property, which `settle()` waits for.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * const page = host.settingsPage("general");
    * page.emit("setStep", 10);
    * await host.settle();
@@ -1297,11 +1402,20 @@ export class TestHost implements Transport {
    * @param plugin - The other plugin's manifest id.
    * @param options - `title`: its tab label (default: `plugin`).
    *
-   * @example The playlist next to this plugin's sidebar panel
+   * @example Put the playlist next to this plugin's sidebar panel
+   * The sidebar ends up with two tabs: the playlist, mounted first, and the
+   * plugin's own panel after it. `mountOther` before `startPlugin` mounts
+   * another plugin's panel as the player would, so the plugin's mount
+   * during activation becomes the second tab (in the bottom bar or the
+   * backdrop it would be refused with `conflict` instead).
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare function activate(plugin: Plugin): Promise<void>;
+   * declare const directory: URL;
+   * // ---cut---
    * const host = new TestHost();
    * host.mountOther("sidebar", "vestra.playlist", { title: "播放列表" });
-   * const { plugin } = await startPlugin(activate, { host, directory });
+   * await startPlugin(activate, { host, directory });
    * assert.equal(host.layout.sidebar?.panels?.length, 2);
    * ```
    *
@@ -1431,8 +1545,18 @@ export class TestHost implements Transport {
    * or switches to software rendering (`unsupported`, which also sets
    * `videoRender.gpu` to false). Pushed only when this plugin is the owner.
    *
-   * @example
+   * @example Make a shader fail to compile
+   * The plugin's render options report `failed`, as when mpv rejects a
+   * shader. The host pushes the failure only while this plugin owns the
+   * render options, which its first accepted `set` made it; the SDK updates
+   * the handle's `status` when the push arrives, so the test settles first.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * const render = plugin.video.render();
+   * render.set({ toneMapping: "bt.2390" }); // makes the plugin the owner
+   * await host.settle();
    * host.failVideoRender("failed", "shader compile failed: ERROR: 0:39: ...");
    * await host.settle();
    * assert.equal(render.status.state, "failed");
@@ -1451,8 +1575,15 @@ export class TestHost implements Transport {
    * versions. `resources` holds each `video.filter` / `audio.filter` chain the
    * plugin applied, keyed by the SDK's resource id.
    *
-   * @example
+   * @example Check the filter chain the plugin applied
+   * After the plugin set its picture chain, the test reads the one chain
+   * the host holds and compares its nodes. `resources` keeps each applied
+   * `video.filter` / `audio.filter` chain by the SDK's resource id, after
+   * the host validated it with the player's value ranges.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * const [chain] = [...host.processing.resources.values()];
    * assert.deepEqual(chain?.nodes, [{ kind: "hue", degrees: 30 }]);
    * ```
@@ -1560,10 +1691,14 @@ export class TestHost implements Transport {
    * extensions (or scheme + host pairs) is refused with `conflict`, which
    * does not fail activation, like the player.
    *
-   * @example
+   * @example Start with another plugin holding a file type
+   * The plugin starts in a player where another plugin already resolves
+   * `.ch8` files. Pushed before `startPlugin`, the entry makes the plugin's
+   * own resolver for `.ch8` fail with `conflict` during activation, which
+   * (as in the player) does not fail the activation.
    * ```ts
    * const host = new TestHost();
-   * host.otherResolvers.push({ owner: "example.emulator", extensions: ["nes"] });
+   * host.otherResolvers.push({ owner: "example.emulator", extensions: ["ch8"] });
    * ```
    */
   readonly otherResolvers: {
@@ -1597,12 +1732,19 @@ export class TestHost implements Transport {
    * after changing {@link TestHost.otherResolvers} (another plugin started
    * or stopped).
    *
-   * @example
+   * @example Let another plugin's file type appear while running
+   * Another plugin starts and adds `.ch8`; the plugin under test then sees
+   * it in `resolvers.fileTypes`. Changing `otherResolvers` alone pushes
+   * nothing: `updateFileTypes` sends the new list as the player does when
+   * a plugin starts or stops, and `settle()` lets the SDK apply it.
    * ```ts
-   * host.otherResolvers.push({ owner: "example.emulator", extensions: ["nes"] });
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.otherResolvers.push({ owner: "example.emulator", extensions: ["ch8"] });
    * host.updateFileTypes();
    * await host.settle();
-   * assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
+   * assert.deepEqual(plugin.resolvers.fileTypes, ["ch8"]);
    * ```
    */
   updateFileTypes() {
@@ -1640,8 +1782,14 @@ export class TestHost implements Transport {
    * For `openFile` / `openDirectory` / `saveFile` queue a one-path array;
    * for `openFiles` any number of paths.
    *
-   * @example
+   * @example Answer the plugin's dialogs in advance
+   * The plugin's Open command gets a picked file, then a cancelled file
+   * dialog, then a confirmed question. Answers are queued and consumed in
+   * the order the plugin opens dialogs; a dialog without a queued answer of
+   * its kind fails like a lost reply, so queue one per dialog.
    * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
    * host.dialogAnswers.push(["/media/movie.mkv"]); // openFile picks it
    * host.dialogAnswers.push(null); // the next file dialog is cancelled
    * host.dialogAnswers.push({ confirmed: true, checked: false }); // confirm
@@ -1834,12 +1982,20 @@ export class TestHost implements Transport {
    * source, for keyframe step seeks. `null` (the default): none modelled,
    * and step seeks are exact even with `stepSeekKeyframes`.
    *
-   * @example
+   * @example Step forward to the next keyframe
+   * With keyframe step seeks on, Forward from 0:12 lands on the keyframe at
+   * 0:20, not at 0:17, and the OSD says so. `keyframes` gives the source's
+   * keyframe times; `setStepSeek` turns on keyframe steps of 5 s, and the
+   * core action `seek-forward` seeks to the first keyframe at or after
+   * the target, as the player does.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.setSource({ phase: "ready", duration: 45, position: 12 });
    * host.keyframes = [0, 10, 20, 30, 40];
    * await plugin.player.setStepSeek({ seconds: 5, keyframes: true });
-   * await plugin.host.run("seek-forward");
+   * await plugin.host.run("seek-forward"); // target 17 s, next keyframe 20 s
    * assert.equal(host.source.position, 20);
    * assert.equal(host.osd.at(-1), "Forward 5 s: 00:20 / 00:45");
    * ```
@@ -1888,8 +2044,15 @@ export class TestHost implements Transport {
    * an unknown id. `run()` executes it with the player's checks and writes
    * its on-screen text to {@link TestHost.osd}.
    *
-   * @example
+   * @example Pause through the player's own action
+   * The test pauses playback the way the Space key does and checks that the
+   * host recorded it. Core actions belong to the player (`host/<id>`);
+   * `run()` applies the player's checks, so a source must be ready first,
+   * and every run is appended to `coreRuns`.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.setSource({ phase: "ready", duration: 100, position: 10 });
    * await host.coreAction("play-pause").run();
    * assert.equal(host.source.paused, true);
@@ -2296,12 +2459,20 @@ export class TestHost implements Transport {
    * @param method - The wire method name.
    * @param handler - Produces the reply from the request parameters.
    *
-   * @example
+   * @example Make opening a folder fail
+   * The plugin's Open Folder command meets a missing folder and must tell
+   * the user. `handle` replaces the host's answer to one wire method; the
+   * `HostError` it throws reaches the plugin as a rejection with code
+   * `missing`, like the player's refusal. `reset` restores the default
+   * behaviour for the rest of the test.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.handle("system.openPath", () => {
    *   throw new HostError("missing", "no such file");
    * });
-   * await host.command("open-folder").run();
+   * await host.command("open-folder").run(); // the plugin catches `missing`
    * assert.deepEqual(host.osd, ["Folder not found"]);
    * host.reset("system.openPath");
    * ```
@@ -2348,8 +2519,15 @@ export class TestHost implements Transport {
    * @param patch - Wire-level source fields, e.g. `phase`, `position`,
    *   `duration`, `paused`, `audioTracks`.
    *
-   * @example
+   * @example Load a file, then let it play to the end
+   * The plugin sees a one-minute source become ready, then end on its own.
+   * `setSource` changes the host's source facts and broadcasts them like
+   * the player's events; the SDK updates `player.state` when the event
+   * arrives, so the test settles before reading it.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.setSource({ phase: "ready", duration: 60, position: 0 });
    * await host.settle();
    * assert.equal(plugin.player.state.phase, "ready");
@@ -2381,8 +2559,16 @@ export class TestHost implements Transport {
    * sidebar (`effective: false`, `reason: "fullscreen"`) and leaving
    * fullscreen docks it again.
    *
-   * @example
+   * @example Go fullscreen, then report picture-in-picture support
+   * The plugin sees the main window fullscreen at 1920×1080, then learns
+   * that picture-in-picture is available. `setMainWindow` changes the
+   * host's window facts and broadcasts them as the player does when the
+   * user resizes or toggles fullscreen; entering fullscreen also collapses
+   * an attached sidebar.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.setMainWindow({ fullscreen: true, videoArea: { width: 1920, height: 1080 } });
    * await host.settle();
    * assert.equal(plugin.window.state.fullscreen, true);
@@ -2441,8 +2627,15 @@ export class TestHost implements Transport {
    * @param source - The path or URL.
    * @param phase - The phase to end in (default `"ready"`).
    *
-   * @example
+   * @example Let the user open another file meanwhile
+   * A state the plugin captured before stops being current once another
+   * file opens. `openElsewhere` gives the source a new `sourceId`, so
+   * `isCurrent` turns false and calls made with `ifCurrent: before` fail
+   * with `stale`.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * const before = plugin.player.state;
    * host.openElsewhere("/media/other.mp4");
    * await host.settle();
@@ -2463,10 +2656,16 @@ export class TestHost implements Transport {
    * @param producerId - The producer, from {@link TestHost.producers}.
    * @param message - The player's failure text.
    *
-   * @example
+   * @example Break the plugin's generated stream
+   * The plugin's stream stops with an error, as when the player loses its
+   * audio device. `failStream` puts the source into `error` with the
+   * message and retires the producer at once; the stream's `onStop`
+   * listeners get a `stream` error carrying the message.
    * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
    * const [producer] = host.producers.values();
-   * host.failStream(producer.id, "producer transport closed");
+   * host.failStream(producer!.id, "producer transport closed");
    * ```
    */
   failStream(producerId: number, message: string) {
@@ -2496,8 +2695,14 @@ export class TestHost implements Transport {
    *
    * @returns What the key did: `"ran"`, `"reason"` or `"passed"`.
    *
-   * @example
+   * @example Press a global key and a panel key
+   * Ctrl+B runs whatever is bound globally; Delete is pressed while the
+   * plugin's panel has focus, so panel bindings are tried first. `press`
+   * follows the player's binding table and resolves with what happened:
+   * `"ran"`, `"reason"` (a disabled command showed why) or `"passed"`.
    * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
    * await host.press("Ctrl+B"); // a global binding
    * await host.press("Delete", { panel: true }); // while the panel has focus
    * ```
@@ -2536,8 +2741,14 @@ export class TestHost implements Transport {
    * `[binding, winner, ...ignored]` (command ids; core actions as
    * `host/<id>`). Empty when there are none.
    *
-   * @example
+   * @example Check that no default keys collide
+   * The test fails when two commands, the player's or the plugin's, declare
+   * the same binding. Each entry is `[binding, winner, ...ignored]`, so an
+   * empty list means every key does what its command says.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * assert.deepEqual(host.conflicts, []);
    * ```
    */
@@ -2624,8 +2835,14 @@ export class TestHost implements Transport {
    * player's source rules: the same source upgrades, another source needs
    * `replace` (`conflict` otherwise), a built-in id is `unsupported`.
    *
-   * @example
+   * @example Offer a package file the plugin can install
+   * The plugin can validate and install `/downloads/someone.demo-1.0.0.vxp`
+   * as if the file existed. The host accepts only paths listed here (others
+   * fail with `missing`) and returns this manifest from `validate`; an
+   * install then follows the player's source rules.
    * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
    * host.candidates.set("/downloads/someone.demo-1.0.0.vxp", {
    *   id: "someone.demo", version: "1.0.0", apiVersion: "vestra/1",
    *   entry: "main.js", capabilities: [],
@@ -2646,8 +2863,14 @@ export class TestHost implements Transport {
    * the downloaded file. Pass a whole property value or a field of one: a
    * document nested in rows is read the same way.
    *
-   * @example
+   * @example Read back a Markdown message in a chat window
+   * The test checks the Markdown source of the first chat message. Rows
+   * hold the document in its wire form, as `plugin.ui.markdown` produced
+   * it; `markdown` reads it back, nested in a row or not.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * const rows = host.window("chat").props["messages"] as { body: Json }[];
    * assert.equal(host.markdown(rows[0]!.body)?.text, "**Hello**");
    * ```
@@ -2792,8 +3015,15 @@ export class TestHost implements Transport {
    * extension: `ui/picture.slint` → `picture`). Throws when it was never
    * opened with `show()`.
    *
-   * @example
+   * @example Press a window's Reset button from a test
+   * The Picture window's Reset callback runs and the brightness returns to
+   * 0. The window is found by its id (the `.slint` file name by default);
+   * `emit` fires the callback the plugin bound, and `settle()` waits for
+   * the property the handler wrote.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * host.window("picture").emit("reset");
    * await host.settle();
    * assert.equal(host.window("picture").props["brightness"], 0);
@@ -2809,8 +3039,14 @@ export class TestHost implements Transport {
    * none is mounted. Its `props` use Slint (kebab-case) names; `emit` fires a
    * callback on the panel's global.
    *
-   * @example
+   * @example Select a row in the plugin's sidebar panel
+   * The test checks the panel sits in the sidebar and selects its third
+   * row. `emit` fires a callback on the panel's global as a click would;
+   * the plugin's handler runs, and `settle()` waits for what it sent.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * const panel = host.mounted();
    * assert.equal(panel.slot, "sidebar");
    * panel.emit("select", 2);
@@ -2824,8 +3060,14 @@ export class TestHost implements Transport {
   /**
    * The parameters of every request of one wire method, oldest first.
    *
-   * @example
+   * @example Check the request behind an OSD message
+   * The test checks the last OSD request the plugin sent, before
+   * translation. `sent` lists the parameters of every request of one wire
+   * method, oldest first; `host.osd` holds the texts as shown instead.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
    * assert.deepEqual(host.sent("osd.show").at(-1), { text: "Saved" });
    * ```
    */
@@ -2847,14 +3089,31 @@ export class TestHost implements Transport {
    *
    * @param ms - Extra time to wait, for debounces and timers (default 0).
    *
-   * @example
+   * @example Wait past a debounced save
+   * The plugin's store writes its file 300 ms after the last `save`, so
+   * the test waits 400 ms before it checks what the plugin did next.
+   * `settle(ms)` returns when no request is in flight and at least `ms`
+   * have passed, so the store's timer has fired. The file write itself is
+   * the plugin's own work, which `settle` does not wait for: a test that
+   * reads the file calls `await store.flush()` instead.
    * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * const store = plugin.storage.json("prefs", { defaults: { step: 5 } });
    * store.save({ step: 10 });
    * await host.settle(400); // past storage.json's 300 ms debounce
    * ```
    *
-   * @example
+   * @example Poll for work the plugin does on its own
+   * The plugin reads and parses a file before it shows a status; `settle`
+   * does not wait for that (it only waits for host requests), so the test
+   * polls the property it asserts on, 20 ms at a time, for up to 2 seconds.
    * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * declare const expected: string;
+   * // ---cut---
+   * const window = host.window("import");
    * window.emit("load-file"); // the plugin reads and parses the file itself
    * for (let i = 0; i < 100 && window.props["status-text"] !== expected; i++)
    *   await host.settle(20);
@@ -4666,19 +4925,37 @@ export class TestHost implements Transport {
  *   plugin like the player stopping it (scopes released, stores flushed),
  *   wait until the host is idle and remove the host's temporary files.
  *
- * @example
+ * @example Test that a setting survives a restart
+ * The test turns on the 10-step option, stops the plugin, starts it again
+ * on the same data directory and checks the option is still on. Both runs
+ * get a directory the test made (`dataDirectory`): `stop()` disposes the
+ * plugin like the player, which writes its pending stores there, and only
+ * removes the host's own temporary directory, so the second run reads what
+ * the first one saved.
  * ```ts
+ * import assert from "node:assert/strict";
+ * import { mkdtempSync, rmSync } from "node:fs";
+ * import { tmpdir } from "node:os";
+ * import { join } from "node:path";
+ * import test from "node:test";
+ * import { startPlugin } from "@vestra-player/sdk/testing";
+ * import activate from "../main.ts";
+ *
  * test("remembers the step across restarts", async () => {
  *   const directory = new URL("..", import.meta.url);
- *   const first = await startPlugin(activate, { directory });
- *   await first.host.command("step-10").run();
  *   const data = mkdtempSync(join(tmpdir(), "data-"));
- *   cpSync(first.host.dataDirectory, data, { recursive: true });
- *   await first.stop();
+ *   try {
+ *     const first = await startPlugin(activate, { directory, dataDirectory: data });
+ *     await first.host.command("step-10").run();
+ *     await first.stop(); // flushes the plugin's stores into `data`
  *
- *   const second = await startPlugin(activate, { directory, dataDirectory: data });
- *   assert.equal(second.host.command("step-10").state.checked, true);
- *   await second.stop();
+ *     // A restart: a new host and a new plugin instance on the same data.
+ *     const second = await startPlugin(activate, { directory, dataDirectory: data });
+ *     assert.equal(second.host.command("step-10").state.checked, true);
+ *     await second.stop();
+ *   } finally {
+ *     rmSync(data, { recursive: true, force: true });
+ *   }
  * });
  * ```
  */

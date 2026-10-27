@@ -15,6 +15,10 @@
  * - Any other block is wrapped in an async function, with `plugin: Plugin`
  *   and every type the SDK exports in scope, so it may use `await` and
  *   `return`.
+ * - Lines above `// ---cut---` (scripts/doc-standard.mjs `CUT`) are hidden
+ *   setup: checked, not shown. A block is a module when its shown lines
+ *   have `import` or `export`; otherwise its hidden lines are placed at
+ *   module level, before the function, so they may `import` and `declare`.
  * - ```ts nocheck marks a block that is deliberately incomplete.
  *
  * Errors in Markdown blocks fail the check, and so do errors in the
@@ -47,7 +51,7 @@ import {
   PLACEHOLDERS,
 } from "./doc-structure.mjs";
 import { withoutGenerated } from "./doc-tables.mjs";
-import { strictDeclarations } from "./doc-standard.mjs";
+import { splitCut, strictDeclarations } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--strict");
@@ -187,13 +191,15 @@ function exportedNames() {
 }
 
 const exported = exportedNames();
-const prelude = [
+const imports = [
   `import type { ${exported.sdk.join(", ")} } from "@vestra-player/sdk";`,
   ...(exported.testing.length
     ? [
         `import { ${exported.testing.join(", ")} } from "@vestra-player/sdk/testing";`,
       ]
     : []),
+];
+const opening = [
   "declare const plugin: Plugin;",
   "export async function snippet() {",
 ];
@@ -214,14 +220,29 @@ writeFileSync(
 
 const files = new Map();
 snippets.forEach((snippet, index) => {
-  const module = /^\s*(import|export)\s/m.test(snippet.code);
+  // Hidden setup lines (above `// ---cut---`) go to module level, so they
+  // may import and declare; a block is a module when its shown lines are.
+  const { hidden, visible } = splitCut(snippet.code);
+  const module = /^\s*(import|export)\s/m.test(visible.join("\n"));
   const name = `${snippet.source.replace(/[^\w]+/g, "_")}_${snippet.line}_${index}.ts`;
   const file = join(out, "tests", name);
   const text = module
     ? snippet.code
-    : [...prelude, snippet.code, "}", ""].join("\n");
+    : [...imports, ...hidden, ...opening, ...visible, "}", ""].join("\n");
   writeFileSync(file, text);
-  files.set(resolve(file), { ...snippet, offset: module ? 0 : prelude.length });
+  // A line of the written file → its line in the block.
+  const top = imports.length + hidden.length;
+  const lineOf = module
+    ? (line) => line
+    : (line) =>
+        line < top
+          ? line - imports.length
+          : line -
+            top -
+            opening.length +
+            hidden.length +
+            (hidden.length ? 1 : 0);
+  files.set(resolve(file), { ...snippet, lineOf });
 });
 
 const program = ts.createProgram([...files.keys()], {
@@ -252,7 +273,7 @@ for (const diagnostic of ts.getPreEmitDiagnostics(program)) {
   const { line } = diagnostic.file.getLineAndCharacterOfPosition(
     diagnostic.start ?? 0,
   );
-  const at = snippet.line + line - snippet.offset;
+  const at = snippet.line + snippet.lineOf(line);
   failures[snippet.kind].push({
     at: `${snippet.source}:${at}`,
     message,

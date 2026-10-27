@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.30
+
+**Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only documentation, its checks and the generated `llms-full.txt` change.
+
+- **Examples explain what they do and how it works** (first part of the reference examples round; the rest follows category by category). The standard, in *Maintaining* ("Examples in reference comments"): every method and module gets an `@example` with a task title, a lead saying what it does and how it works, code that compiles on its own with comments on the key lines, and error handling where the user can make a call fail. Applied to every example outside `src/plugin/types.ts`: the test helpers (`TestHost` members, `startPlugin`, `HostError`), the limits and tables (`COMMAND_LIMITS`, `MENU_IDS`, `BUILTIN_SUBMENUS`, `BUILTIN_COMMANDS`, `CAPABILITY_INFO`, `BINDING_INPUTS`, `OSD_LIMITS`, `SESSION_STORAGE_LIMITS`, `SECRET_LIMITS`, `UI_VALUE_LIMITS`, `THEME_PALETTES`) and `VideoNode`, `AudioNode`, `SubtitleStyle`, `ResolvedMedia`. All of them now type check (43 did not). Corrections on the way: the restart example of `startPlugin` gives both runs the same `dataDirectory` instead of copying the data before `stop()` (which could miss a pending store write); `TestHost.settle` says the debounced store write itself is not waited for; `TestHost` resolver examples use a made-up `.ch8` type instead of `.nes`, which the store plugin VestraNES owns.
+- **`llms-full.txt` carries the examples and `@remarks`** of every declaration and member (hidden setup lines dropped, `{@includeCode}` inlined), so the plugin workshop's model sees them: 536 KB → 639 KB (about 137k → 163k tokens).
+- **Hidden setup lines**: in an `@example` code block, lines above `// ---cut---` are type checked but not shown on the site or in `llms-full.txt`.
+- **`doc-lint`** gains `example-lead` (title, lead, comments; `See` markers for trivial siblings, at most 20 % per declaration) and `stale-refs` (removed or handed-over names such as `vestra.nes`), enforced in the finished categories with the existing violations listed as a shrinking baseline, and prints per category the share of methods with an explained example.
+
 ## 1.5.29
 
 **Who must change: nobody.** Additions only, `apiVersion` stays `vestra/1`. A plugin that does not use `button` is unaffected. A plugin that uses it on a player before 0.5.10 keeps working without a button: the player builds the `plugin` object with its own SDK copy, which does not send the field, so the command and its menu entry register as before (declare `"minPlayerVersion": "0.5.10"` when the button matters). A plugin that mounts its own bottom bar should place `BarButtons` (below); until it does, `vestra-plugin check` warns and the player logs the buttons it hides.

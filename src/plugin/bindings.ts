@@ -21,12 +21,36 @@ import type { BindingRef, Bindings } from "./types.ts";
  * `"Shift+1"`). Anything else fails with code `invalid`. The player's tests
  * check that these agree with the player.
  *
- * @example
+ * @example Check in a test that the plugin's default keys are well formed
+ * The test fails on a binding the player would refuse with `invalid`, such
+ * as modifiers out of order or a misspelt key name. `isBinding` applies the
+ * same grammar as the player's parser: the part after the last `+` is the
+ * input, everything before it modifiers in the order of `modifiers`; an
+ * input is a listed name or one other printable character, and `Shift`
+ * never goes with a digit or such a character.
  * ```ts
+ * import assert from "node:assert/strict";
  * import { BINDING_INPUTS } from "@vestra-player/sdk/testing";
  *
- * assert.ok(BINDING_INPUTS.named.includes("PageUp"));
- * assert.ok(BINDING_INPUTS.mouse.includes("Mouse:WheelUp"));
+ * const { modifiers, letters, digits, functionKeys, named, mouse } = BINDING_INPUTS;
+ * const names = new Set([...letters, ...functionKeys, ...named, ...mouse]);
+ * function isBinding(binding: string): boolean {
+ *   // "Ctrl++" is not a binding: the + key is written "Plus".
+ *   const parts = binding.split("+");
+ *   const input = parts.pop()!;
+ *   const order = parts.map((m) => (modifiers as readonly string[]).indexOf(m));
+ *   // Each modifier known, at most once, in the listed order.
+ *   if (order.some((at, i) => at < 0 || (i > 0 && at <= order[i - 1]!)))
+ *     return false;
+ *   if (names.has(input)) return true; // letters are upper case: "A"
+ *   const typed = digits.includes(input) || /^[^\p{L}\p{N}\p{C}\s+]$/u.test(input);
+ *   // ">" rather than "Shift+.": the character already says Shift.
+ *   return typed && !parts.includes("Shift");
+ * }
+ * for (const binding of ["Ctrl+Shift+PageUp", "Alt+Mouse:WheelUp", ">"])
+ *   assert.ok(isBinding(binding), binding);
+ * for (const binding of ["Shift+Ctrl+A", "Ctrl+a", "Shift+."])
+ *   assert.ok(!isBinding(binding), binding);
  * ```
  *
  * @since 1.5.14

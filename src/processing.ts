@@ -13,10 +13,17 @@ import type { Transport } from "./wire.ts";
  * rotation): a portrait video is upright before `transform` runs. At most
  * 64 nodes across all plugins.
  *
- * @example
+ * @example Brighten, sharpen and rotate the picture
+ * The video plays a little brighter and more saturated, slightly sharper
+ * and turned a quarter clockwise. The nodes run in array order; `set` sends
+ * the whole chain as this plugin's desired value (last write wins), and the
+ * player applies it to every source until it changes, needing
+ * `processing.video`, `playback.read` and `events`.
  * ```ts
  * const chain: VideoNode[] = [
+ *   // Live fields: moving them later changes the picture in place.
  *   { kind: "eq", brightness: 0.05, contrast: 1.1, saturation: 1.2, gamma: 1 },
+ *   // Not live: changing `amount` later rebuilds the stage (a one-frame stall).
  *   { kind: "sharpen", amount: 0.5, size: "small" },
  *   { kind: "transform", rotate: 90, flipH: false, flipV: false },
  * ];
@@ -160,12 +167,17 @@ export type VideoNode =
  * One node of an {@link AudioFilter} chain, by `kind`. Values outside the
  * ranges fail with `invalid`; "live" fields change in place while playing.
  *
- * @example
+ * @example Lift the voices and play in mono
+ * Speech around 1 kHz is 3 dB louder and both speakers play the same mixed
+ * channel. `set` sends this plugin's whole audio chain (the nodes in order,
+ * plus an optional `delayMs`); the player joins it with other plugins'
+ * chains and applies it to every source (`processing.audio`,
+ * `playback.read`, `events`).
  * ```ts
  * plugin.audio.filter("sound").set({
  *   nodes: [
- *     { kind: "equalizer", frequency: 1000, q: 1, gainDb: 3 },
- *     { kind: "channels", mode: "mono" },
+ *     { kind: "equalizer", frequency: 1000, q: 1, gainDb: 3 }, // +3 dB at 1 kHz
+ *     { kind: "channels", mode: "mono" }, // both channels get (L + R) / 2
  *   ],
  * });
  * ```

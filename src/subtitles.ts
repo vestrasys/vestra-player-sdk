@@ -19,16 +19,22 @@ export type SubtitleStamp = {
  * the layer of the plugin that set one last; it also applies to the
  * secondary subtitle.
  *
- * @example
+ * @example Show large yellow subtitles a quarter second earlier
+ * Subtitles turn yellow at size 44 on a 60 % opaque box, 6 % above the
+ * bottom of the video, and appear 250 ms earlier. `refresh` reads the subtitle state from the
+ * player, whose `fonts` lists the font ids a style may name; `setStyle`
+ * then sends this plugin's style layer, which becomes the effective style
+ * because it is the latest one set (`subtitles.control`, `subtitles.read`).
  * ```ts
+ * const { fonts } = await plugin.subtitles.refresh();
  * const style: SubtitleStyle = {
- *   fontId: plugin.subtitles.state!.fonts[0]!.id,
- *   fontSize: 44,
+ *   fontId: fonts[0]!.id, // a font the player offers
+ *   fontSize: 44, // at the 1080p reference height; scales with the video
  *   color: "yellow",
  *   outline: 2,
- *   marginPercent: 6,
- *   offsetMs: -250,
- *   box: 60,
+ *   marginPercent: 6, // bottom margin, % of the video height
+ *   offsetMs: -250, // negative: shown earlier
+ *   box: 60, // background box opacity
  * };
  * await plugin.subtitles.setStyle(style);
  * ```
