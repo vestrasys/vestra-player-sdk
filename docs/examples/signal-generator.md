@@ -25,7 +25,7 @@ Usually the player plays a file: it decodes the picture and the sound and keeps 
 The plugin does not push frames on a timer of its own. **The player pulls them:** the SDK calls `frame()` whenever the player needs more.
 
 - `frame()` is never called twice at the same time, and not at all while the player is paused.
-- It is paced by the **audio clock**. The SDK keeps a little audio queued ahead of the sound card (about 50 ms) and calls `frame()` when the queue runs low.
+- It is paced by the **audio clock**. The SDK keeps a little audio queued ahead of the sound card (about 50 ms). Regularly, several times per frame, it checks how much the sound card has played and calls `frame()` as many times in a row as it takes to fill the queue again: two or three calls back to back are normal, so do not time anything by the gap between calls.
 - It is **synchronous**: it cannot `await`, so everything it needs must already be in memory. If it is slow, the sound drops out.
 
 Each call returns one picture and **the audio that plays while that picture is on screen**. The stream's timeline is its audio: the player plays the samples at 48 000 per second and shows each picture when the audio reaches it. A frame that carries 1600 samples therefore lasts 1600 / 48 000 s = 1/30 s. The number of samples per frame _is_ the frame rate; there is no separate setting.
