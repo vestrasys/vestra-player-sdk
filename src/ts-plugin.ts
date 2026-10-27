@@ -57,6 +57,32 @@ function manifestFor(
   }
 }
 
+/**
+ * The manifest's text for the quick fix. The TypeScript server applies a
+ * code fix only to files it knows, and editors do not hand it JSON files
+ * (VS Code does not), so the manifest is made known first; its text is then
+ * the server's: an open buffer when the editor shares one, else the file on
+ * disk (VS Code: the saved manifest, not unsaved edits).
+ */
+function manifestText(
+  ts: typeof TS,
+  info: TS.server.PluginCreateInfo,
+  path: string,
+): string | undefined {
+  const service = info.project?.projectService;
+  const script =
+    service && ts.server?.toNormalizedPath
+      ? service.getOrCreateScriptInfoForNormalizedPath(
+          ts.server.toNormalizedPath(path),
+          false,
+        )
+      : undefined;
+  const snapshot = script?.getSnapshot();
+  return snapshot
+    ? snapshot.getText(0, snapshot.getLength())
+    : ts.sys.readFile(path);
+}
+
 /** @internal The plugin factory tsserver calls (`ts-plugin/index.js`). */
 export default function init(modules: {
   typescript: typeof TS;
@@ -128,8 +154,9 @@ export default function init(modules: {
         );
         if (!errorCodes.includes(CAPABILITY_DIAGNOSTIC)) return prior;
         const manifest = manifestFor(ts, file);
-        const text = manifest && ts.sys.readFile(manifest.path);
-        if (!manifest || text === undefined) return prior;
+        if (!manifest) return prior;
+        const text = manifestText(ts, info, manifest.path);
+        if (text === undefined) return prior;
         const wanted = new Set(
           findings(file)
             .filter(

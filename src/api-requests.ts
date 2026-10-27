@@ -35,6 +35,7 @@ export interface ApiRequest {
 }
 
 const submit = [{ method: "source.submit" }, { method: "source.operation" }];
+const readsSubtitles: ApiRequest = { method: "subtitles.state", also: true };
 const listen = (event: string, also?: true): ApiRequest =>
   also
     ? { method: "events.subscribe", params: { event }, also }
@@ -77,10 +78,12 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
       { method: "subtitles.state" },
     ],
     "Subtitles.refresh": [{ method: "subtitles.state" }],
-    "Subtitles.select": [{ method: "subtitles.select" }],
-    "Subtitles.load": [{ method: "subtitles.upload.begin" }],
-    "Subtitles.remove": [{ method: "subtitles.remove" }],
-    "Subtitles.setStyle": [{ method: "subtitles.style" }],
+    // Changes read the current selection first (`refresh`), unless
+    // `ifCurrent` pins one; `load` always does.
+    "Subtitles.select": [{ method: "subtitles.select" }, readsSubtitles],
+    "Subtitles.load": [{ method: "subtitles.upload.begin" }, readsSubtitles],
+    "Subtitles.remove": [{ method: "subtitles.remove" }, readsSubtitles],
+    "Subtitles.setStyle": [{ method: "subtitles.style" }, readsSubtitles],
     "Timeline.marks": [{ method: "timeline.marks" }],
     "Timeline.onChange": [listen("timeline.changed")],
     "Timeline.layer": [{ method: "timeline.set" }],

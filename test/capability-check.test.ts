@@ -3,7 +3,7 @@
 // language-service plugin. Projects resolve @vestra-player/sdk from their
 // node_modules (a junction to this repository), so dist/ must be built.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -367,6 +367,11 @@ test("addCapabilityEdit keeps the array's layout", () => {
     apply('{\n  "capabilities": [\n    "commands"\n  ]\n}'),
     '{\n  "capabilities": [\n    "commands",\n    "events"\n  ]\n}',
   );
+  // CRLF stays CRLF.
+  assert.equal(
+    apply('{\r\n  "capabilities": [\r\n    "commands"\r\n  ]\r\n}'),
+    '{\r\n  "capabilities": [\r\n    "commands",\r\n    "events"\r\n  ]\r\n}',
+  );
   assert.equal(addCapabilityEdit(ts, '{ "id": "x" }', "events"), undefined);
 });
 
@@ -536,4 +541,107 @@ test("the TypeScript plugin leaves files without a manifest alone", () => {
     config: {},
   } as unknown as ts.server.PluginCreateInfo);
   assert.deepEqual(plugin.getSemanticDiagnostics(file), []);
+});
+
+// A real TypeScript server, as an editor runs it: the plugin comes from the
+// project's tsconfig.json, and manifest.json is a file the server was never
+// given (editors do not hand it JSON files).
+test("the TypeScript plugin in a real tsserver: diagnostic and quick fix", async () => {
+  const directory = project(
+    {
+      "main.ts": lines("plugin.player.onChange(() => {});"),
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          target: "ES2023",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          strict: true,
+          noEmit: true,
+          skipLibCheck: true,
+          types: [],
+          plugins: [{ name: "@vestra-player/sdk/ts-plugin" }],
+        },
+        include: ["*.ts"],
+      }),
+    },
+    ["commands"],
+  );
+  const file = join(directory, "main.ts").replaceAll("\\", "/");
+  const server = spawn(
+    process.execPath,
+    [
+      createRequire(import.meta.url).resolve("typescript/lib/tsserver.js"),
+      // Plugins next to the project, as with the workspace's TypeScript.
+      "--allowLocalPluginLoads",
+      "--disableAutomaticTypingAcquisition",
+    ],
+    { stdio: ["pipe", "pipe", "inherit"] },
+  );
+  test.after(() => server.kill());
+  let buffer = "";
+  const waiting = new Map<number, (body: unknown) => void>();
+  server.stdout.setEncoding("utf8");
+  server.stdout.on("data", (chunk: string) => {
+    buffer += chunk;
+    for (;;) {
+      const header = /Content-Length: (\d+)\r\n\r\n/.exec(buffer);
+      if (!header) return;
+      const start = header.index + header[0].length;
+      const bytes = Buffer.from(buffer.slice(start), "utf8");
+      const length = Number(header[1]);
+      if (bytes.length < length) return;
+      const message = JSON.parse(bytes.subarray(0, length).toString("utf8"));
+      buffer = bytes.subarray(length).toString("utf8");
+      if (message.type === "response")
+        waiting.get(message.request_seq)?.(message);
+    }
+  });
+  let seq = 0;
+  const request = (command: string, args: unknown) =>
+    new Promise<{ success: boolean; message?: string; body?: unknown }>(
+      (done) => {
+        seq += 1;
+        waiting.set(seq, done as (body: unknown) => void);
+        server.stdin.write(
+          `${JSON.stringify({ seq, type: "request", command, arguments: args })}\n`,
+        );
+      },
+    );
+  await request("open", { file, projectRootPath: directory });
+  const diagnostics = await request("semanticDiagnosticsSync", { file });
+  assert.ok(diagnostics.success, diagnostics.message ?? "");
+  const ours = (
+    diagnostics.body as {
+      code: number;
+      text: string;
+      start: { line: number; offset: number };
+      end: { line: number; offset: number };
+    }[]
+  ).filter((d) => d.code === CAPABILITY_DIAGNOSTIC);
+  assert.equal(ours.length, 1, JSON.stringify(diagnostics.body));
+  const [found] = ours;
+  assert.match(found!.text, /Player\.onChange needs the capability "events"/);
+  const fixes = await request("getCodeFixes", {
+    file,
+    startLine: found!.start.line,
+    startOffset: found!.start.offset,
+    endLine: found!.end.line,
+    endOffset: found!.end.offset,
+    errorCodes: [CAPABILITY_DIAGNOSTIC],
+  });
+  assert.ok(fixes.success, fixes.message ?? "");
+  const fix = (
+    fixes.body as {
+      fixName: string;
+      description: string;
+      changes: { fileName: string; textChanges: unknown[] }[];
+    }[]
+  ).find((each) => each.fixName === "vestraAddCapability");
+  assert.ok(fix, JSON.stringify(fixes.body));
+  assert.equal(fix.description, "Add 'events' to manifest.json");
+  assert.equal(
+    resolve(fix.changes[0]!.fileName),
+    resolve(directory, "manifest.json"),
+  );
+  server.stdin.end();
 });

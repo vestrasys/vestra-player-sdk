@@ -4531,7 +4531,8 @@ export interface SubtitleConditional {
 
 /**
  * `plugin.subtitles`: tracks, uploads and style. Reading needs
- * `subtitles.read`, changes need `subtitles.control`.
+ * `subtitles.read`; changes need `subtitles.control` and also
+ * `subtitles.read`, since they read the current selection first.
  *
  * @example Load an SRT file as the secondary subtitle
  * ```ts

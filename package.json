@@ -24,7 +24,10 @@
       "types": "./dist/player-runtime.d.ts",
       "default": "./dist/player-runtime.js"
     },
-    "./ts-plugin": "./ts-plugin/index.js",
+    "./ts-plugin": {
+      "types": "./ts-plugin/index.d.ts",
+      "default": "./ts-plugin/index.js"
+    },
     "./llms.txt": "./llms.txt",
     "./llms-full.txt": "./llms-full.txt",
     "./package.json": "./package.json"
@@ -53,8 +56,8 @@
     "docs:llms": "node scripts/llms.mjs",
     "docs:tables": "node scripts/doc-tables.mjs",
     "examples": "node scripts/check-examples.mjs",
-    "format": "prettier --write \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" ts-plugin/index.js package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
-    "format:check": "prettier --check \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" ts-plugin/index.js package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
+    "format": "prettier --write \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" ts-plugin/index.js ts-plugin/index.d.ts package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
+    "format:check": "prettier --check \"{src,test,bin,scripts,examples}/**/*.{ts,mjs}\" ts-plugin/index.js ts-plugin/index.d.ts package.json tsconfig.json tsconfig.check.json typedoc.json .oxlintrc.json examples/tsconfig.json \"examples/*/package.json\"",
     "lint": "oxlint --deny-warnings",
     "pack:check": "node scripts/check-pack.mjs",
     "pack:smoke": "node scripts/smoke-pack.mjs",

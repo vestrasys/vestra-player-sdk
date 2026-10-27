@@ -287,6 +287,9 @@ export function addCapabilityEdit(
   return {
     start: last.getEnd(),
     length: 0,
-    newText: multiline ? `,\n${indent}${quoted}` : `, ${quoted}`,
+    // The manifest's own line endings (CRLF on many Windows checkouts).
+    newText: multiline
+      ? `,${text.includes("\r\n") ? "\r\n" : "\n"}${indent}${quoted}`
+      : `, ${quoted}`,
   };
 }
