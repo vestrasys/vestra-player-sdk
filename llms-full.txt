@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.28: full reference
+# @vestra-player/sdk 1.5.29: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -498,11 +498,25 @@ The user can rebind any command, the player's own included. Those **overrides** 
 - `list()` returns every declared command with its default and current inputs, which of them another command shadows, and the overrides whose command does not exist right now (its plugin is stopped); those are kept and apply again when it returns.
 - To find a command by its place in the menu, compare BindingInfo.key (the English menu keys, the same in every language), not `path`, which is the translated text.
 
+#### Bottom-bar buttons
+
+A command can also be a button on the bottom bar: give it `button: { icon, order }` (CommandButton, player 0.5.10) besides its menu `path`. The player shows the buttons of all plugins in one strip at the bar's right end, left to right by `order`, its own **Toggle Sidebar** rightmost; in a narrow window the lowest order (leftmost) goes first and the toggle last; a click runs the command like its menu item, the tooltip is the item's title and first key, and a disabled or busy command's button is drawn disabled with the reason in its tooltip. One button per plugin and eight in the player (`BAR_BUTTON_LIMITS`). The strip lives in the bottom bar's own layout (`BarButtons`, [Writing a bottom bar): a bar that does not place it shows no buttons, which is why a button always has a menu entry too.
+
+```ts
+const store = plugin.windows.create("ui/store.slint");
+plugin.commands.add({
+  id: "open",
+  path: ["Plugin Store…"],
+  button: { icon: "store", order: 200 },
+  run: () => store.show(),
+});
+```
+
 #### The player's own commands
 
-The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Leave Fullscreen**, **Quit** and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
+The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Leave Fullscreen**, **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
 
-A plugin button that does what a core action does should run that action with plugin.host.run (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands; what they do to playback is in Playback.
+A plugin button that does what a core action does should run that action with plugin.host.run (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in Reference: commands; what they do to playback is in Playback.
 
 ## Concept: Playback state, controls and sources
 
@@ -779,7 +793,7 @@ It assumes you have written a first plugin (Getting started). For every method's
 Two rules of thumb:
 
 - **Prefer the smallest surface that works.** An OSD message before a dialog, a settings page before a tool window. Every window the user has to close is a cost.
-- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there.
+- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there. A command that needs a one-click entry point does not need a panel: give it a bottom-bar button (`button` on commands.add), which the player shows in the strip of command buttons every bottom bar places (Writing a bottom bar).
 
 #### Life cycles
 
@@ -2081,6 +2095,29 @@ The player's picture, audio and subtitle tools share one layout; a window of the
 - **Commands of a panel go into its right-click menu**, made of the plugin's commands (panel.showMenu); see Menus.
 - **The bottom bar is icons only**: no text buttons, no source path, no status text (the source name is in the window title, status is an OSD message).
 
+##### Writing a bottom bar
+
+The bottom bar holds one panel, and every plugin's command buttons (CommandOptions.button) and the player's sidebar toggle show inside it, in a strip the player fills. A bar that replaces the built-in one (`vestra.playback`) must place that strip, or those buttons show nowhere while it is mounted (their menu entries stay):
+
+- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many 41×40 cells as fit and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last. The strip is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
+- **Decide what goes first when the window narrows.** The built-in bar gives the strip only the room its own buttons and the time leave, so the strip shrinks first, then its Fullscreen button hides, and the time is never cut.
+- **Do not draw a sidebar toggle of your own**: the strip has the player's (**Toggle Sidebar**, `host/sidebar`), with its state.
+- `vestra-plugin check` warns when a plugin mounts a bottom bar whose Slint file does not import `BarButtons` from `@vestra/bar-buttons.slint`, itself or through the plugin's own Slint files it imports, and the player logs the buttons a mounted bar hides.
+
+```slint
+import { BarButtons } from "@vestra/bar-buttons.slint";
+
+export component MyBar inherits Rectangle {
+    height: 40px;
+    // Your controls on the left, 3 × 41px wide …
+    strip := BarButtons {
+        x: root.width - self.width - 4px;
+        y: 0px;
+        room: max(0px, root.width - 3 * 41px - 8px);
+    }
+}
+```
+
 #### Text
 
 - **Every visible text is English source text** that the player translates (Translate a plugin). Write short, plain sentences; one sentence per status or error.
@@ -2253,6 +2290,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.2 | HostAction |
 | 0.5.3 | Scrub.seek |
 | 0.5.5 | SessionStorage |
+| 0.5.10 | CommandButton, CommandOptions.button |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2329,6 +2367,16 @@ A command added past a limit fails with code `limit` (its `ready` rejects; durin
 | --- | --- | --- |
 | `COMMAND_LIMITS.perPlugin` | 160 | Commands one plugin instance may have at the same time. |
 | `COMMAND_LIMITS.total` | 1024 | Commands of every plugin plus the player's own, together. |
+
+#### Bottom-bar buttons
+
+A command's button (CommandOptions.button, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the eight highest orders, so the lowest go first, as in a narrow strip (equal orders: the smaller plugin id, then the earlier declaration, goes first). The player's own sidebar toggle is extra.
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `BAR_BUTTON_LIMITS.perPlugin` | 1 | Buttons one plugin shows. |
+| `BAR_BUTTON_LIMITS.total` | 8 | Buttons the player shows, every plugin together, besides its own sidebar toggle. |
+| `BAR_BUTTON_LIMITS.maxOrder` | 999 | The highest `order`. |
 
 #### Property values
 
@@ -2784,6 +2832,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Quit | `Cmd+Q` | `host/quit` |
 | Leave Fullscreen (not in the menu) | `Escape` | `host/exit-fullscreen` |
+| Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
 | Add Files… (not in the menu) | `Ctrl+I` (panel focus) | `vestra.playlist/playlist.list-add` |
@@ -2816,6 +2865,23 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Save List… (not in the menu) | `F2` (panel focus) | `vestra.playlist/playlist.list-save-list` |
 | Close List (not in the menu) | `F6` (panel focus) | `vestra.playlist/playlist.close` |
 | Playlist Settings… (not in the menu) | `F5` (panel focus) | `vestra.playlist/playlist.settings` |
+
+#### Bottom-bar buttons
+
+`button: { icon, order }` on commands.add (CommandButton, SDK 1.5.29, player 0.5.10) gives a command a button in the bottom bar's strip of command buttons (`BarButtons`, Writing a bottom bar).
+
+| Field | Rule |
+| --- | --- |
+| `icon` | A name of the player's icon set (the names in Theme: Icons, `BAR_BUTTON_ICONS`), or an image from plugin.ui.image drawn in the 14×12 icon box in the icon colour (only its alpha counts). Unknown name: `invalid`. |
+| `order` | Integer 0–999, left to right ascending; equal orders by plugin id, then declaration order. The built-in plugins use 100 (Vestra Player AI) and 200 (Plugin Store). |
+| `path` | Required: a button without a menu path is `invalid`. |
+
+- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: the icon in the accent colour. Accessibility: a button named by the title, with its enabled and checked state and a default action.
+- **Click**: runs the command exactly as a click on its menu item does.
+- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip loses cells from its outer (left) end inward: the lowest order goes first, the sidebar toggle last. `order` is position only: low is further left and goes first.
+- **Limits** (Limits): one button per plugin (its first declared), eight in the player (the highest orders; the lowest go first, ties: the smaller plugin id, then the earlier declaration). A button past them is left out and logged with `limit`; the command and its menu entry stay.
+- **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
+- **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
 
 #### Binding syntax
 
@@ -2867,7 +2933,7 @@ The player's own playback commands, which plugin.host.run runs by id (capability
 | `mute` | Audio ▸ Mute | `M` |
 | `fullscreen` | Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` |
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`); their keys are in Built-in commands.
+The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in Built-in commands.
 
 #### Keys the system takes first
 
@@ -3042,6 +3108,8 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `sort` | 10 × 10 | 1.5px |
 | `fullscreen` | 14 × 12 | 1.5px |
 | `exit-fullscreen` | 14 × 12 | 1.5px |
+| `store` | 14 × 12 | 1.5px |
+| `ai` | 14 × 12 | 1.5px |
 
 #### Widgets
 
@@ -3122,6 +3190,19 @@ A component's public functions are called from your own Slint code, through an e
 Struct **`MarkdownRow`**: One table row (cells are plain text).
 
 Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through; the fields are filled by the player.
+
+#### Bar buttons
+
+`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands (CommandOptions.button) and the player's sidebar toggle. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See Writing a bottom bar.
+
+**`BarButtons`**: The strip: place it at the bar's right end and give it the width you can spare; it is as wide as the cells it shows (read `width` to lay out the rest).
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `room` | in `length` |  | The width the bar can give the strip; the cells that fit show. |
+| `first-shown` | out `int` | `BarButtonsHost.buttons.length - root.count` | The index (in the player's list, ascending order) of the leftmost plugin button shown; the ones before it are hidden for want of room. |
+
+Struct **`BarButtonItem`**: One button as the player shows it.
 
 ## Reference: Command line
 
@@ -3494,6 +3575,35 @@ Playback, Subtitles, Video, Audio, Screen, Settings. The list is
 type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings";
 ```
 
+### BarButtonIcon
+
+An icon of the player's V-Line set (`@vestra/icons.slint`), by name: what
+a bottom-bar button may show. The list is `BAR_BUTTON_ICONS` in
+`@vestra-player/sdk/testing`.
+
+```ts
+type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai";
+```
+
+### CommandButton
+
+A command's button on the bottom bar: CommandOptions.button.
+
+- @player 0.5.10; older players show the menu entry without a button (declare `"minPlayerVersion": "0.5.10"` when the button matters).
+
+```ts
+interface CommandButton {
+  /**
+   * A name of the player's icon set (BarButtonIcon), or an image made with Ui.image (a PNG or JPEG in your package or data directory), drawn in the 14×12 icon box, aspect kept, coloured like the player's line icons: only its alpha counts, so draw it as a dark shape on a transparent background. An unknown name fails with `invalid`.
+   */
+  icon: BarButtonIcon | ImageRef;
+  /**
+   * Place in the strip, left to right ascending: an integer 0–999. It is position only: a lower order sits further left, and in a narrow window (or past the limit of eight) it is the first to go. Equal orders sort by plugin id, then declaration order. The player's own buttons use AI 100, Plugin Store 200.
+   */
+  order: number;
+}
+```
+
 ### CommandOptions
 
 The declaration passed to Commands.add.
@@ -3592,6 +3702,10 @@ interface CommandOptions {
   focus?: "panel";
   /** Fire again on keyboard auto-repeat while the key is held. Default false. */
   repeat?: boolean;
+  /**
+   * A button for this command on the bottom bar (SDK 1.5.29, player 0.5.10): an icon and a place, `{ icon: "store", order: 200 }`. Needs a `path`: the menu entry is where the command stays reachable when the bar shows no button (a bar without `BarButtons`, a narrow window, a limit). See CommandButton for where it shows, what it shows and the limits. Fails with `invalid` for an unknown icon name, an order outside 0–999 or a button without a path.
+   */
+  button?: CommandButton;
   /** Whether the command can run (default true). */
   enabled?: Bindable<boolean>;
   /** Check mark (or radio dot with `radio`); `null` (default) draws none. */
@@ -7011,6 +7125,34 @@ interface FakeCommand {
 }
 ```
 
+### FakeBarButton
+
+A command's bottom-bar button (`CommandOptions.button`) as the player shows
+it: an entry of TestHost.barButtons.
+
+```ts
+interface FakeBarButton {
+  /** The command's local id. */
+  readonly command: string;
+  /** The icon name, or the image's path for a `plugin.ui.image` icon. */
+  readonly icon: string;
+  /** `true` when the icon is the plugin's image. */
+  readonly image: boolean;
+  /** The declared `order`. */
+  readonly order: number;
+  /** Clickable: the command is enabled and not busy. */
+  readonly enabled: boolean;
+  /** Drawn in the accent colour: the command is checked. */
+  readonly checked: boolean;
+  /** The tooltip without the key: the command's shown title (trailing "…" removed), then, while it cannot run, its reason on a second line. */
+  readonly tooltip: string;
+  /**
+   * Click the button, then wait until the host is idle: runs the command as its menu item would. Rejects (with a HostError) while the button is disabled, and once the command is gone.
+   */
+  click(): Promise<void>;
+}
+```
+
 ### FakeProducer
 
 A generated stream (`plugin.player.openStream`) as the test host sees it:
@@ -7811,6 +7953,10 @@ class TestHost implements Transport {
   /** The plugin's command with this local id. Throws when it is not registered (never added, or disposed). */
   command(id: string): FakeCommand;
   /**
+   * The plugin's bottom-bar buttons (`CommandOptions.button`) as the player shows them: at most one, the first declared (`BAR_BUTTON_LIMITS`; a later one stays a menu item only). Empty once the command is disposed. Whether the bar places them is the bar's business: the list is what the player hands to `BarButtons`.
+   */
+  get barButtons(): readonly FakeBarButton[];
+  /**
    * The plugin's tool window with this id (by default the file name without extension: `ui/picture.slint` → `picture`). Throws when it was never opened with `show()`.
    */
   window(id: string): FakeWindow;
@@ -7989,6 +8135,39 @@ agrees with the player's.
 
 ```ts
 const MENU_IDS: readonly ["open", "playback", "subtitles", "video", "audio", "screen", "settings"];
+```
+
+### BAR_BUTTON_ICONS
+
+The icons a bottom-bar button may name (`CommandOptions.button.icon`):
+every icon of the player's V-Line set, `@vestra/icons.slint` (draw one
+in your own Slint with `Icon { name: "store"; }`). The player's tests check
+that this list is its icon set.
+
+```ts
+const BAR_BUTTON_ICONS: readonly ["play", "pause", "stop", "back", "forward", "open", "volume", "mute", "playlist", "detach", "attach", "close", "failed", "move-top", "move-up", "move-down", "move-bottom", "search", "chapter", "bookmark", "check-task", "check-box", "menu-check", "submenu", "scroll-up", "scroll-down", "caret-down", "sort-asc", "sort-desc", "tag-remove", "preview-play", "add", "remove", "sort", "fullscreen", "exit-fullscreen", "store", "ai"];
+```
+
+### BAR_BUTTON_LIMITS
+
+The player's limits on bottom-bar buttons (`CommandOptions.button`), the
+same values as the player's (its tests check that they agree). A button
+past `perPlugin` or `total` is left out: its command still registers and
+its menu entry stays, and the player logs the button it left out
+(`limit`). Which ones stay: each plugin's first declared button, then the
+`total` highest by order, plugin id and declaration order: as in a narrow
+strip, the lowest order goes first (equal orders: the smaller plugin id,
+then the earlier declaration, goes first).
+
+```ts
+const BAR_BUTTON_LIMITS: {
+  /** Buttons one plugin shows (1). */
+  readonly perPlugin: 1;
+  /** Buttons the player shows, every plugin together, besides its own sidebar toggle (8). */
+  readonly total: 8;
+  /** The highest `order` (999; the lowest is 0). */
+  readonly maxOrder: 999;
+};
 ```
 
 ### BuiltinSubmenu
@@ -8683,6 +8862,13 @@ type CommandDeclaration = {
   focus: "panel" | null;
   /** Fire again on keyboard auto-repeat while held. */
   repeat: boolean;
+  /**
+   * A bottom-bar button (player 0.5.10): an icon name, or an image in the `plugin.ui.image` wire form. Sent only when set: older players refuse unknown declaration fields.
+   */
+  button?: {
+    icon: string | Json;
+    order: number;
+  };
 };
 ```
 

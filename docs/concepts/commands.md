@@ -95,15 +95,29 @@ The user can rebind any command, the player's own included. Those **overrides** 
 - `list()` returns every declared command with its default and current inputs, which of them another command shadows, and the overrides whose command does not exist right now (its plugin is stopped); those are kept and apply again when it returns.
 - To find a command by its place in the menu, compare {@link "@vestra-player/sdk"!BindingInfo.key | BindingInfo.key} (the English menu keys, the same in every language), not `path`, which is the translated text.
 
+## Bottom-bar buttons
+
+A command can also be a button on the bottom bar: give it `button: { icon, order }` ({@link "@vestra-player/sdk"!CommandButton | CommandButton}, player 0.5.10) besides its menu `path`. The player shows the buttons of all plugins in one strip at the bar's right end, left to right by `order`, its own **Toggle Sidebar** rightmost; in a narrow window the lowest order (leftmost) goes first and the toggle last; a click runs the command like its menu item, the tooltip is the item's title and first key, and a disabled or busy command's button is drawn disabled with the reason in its tooltip. One button per plugin and eight in the player (`BAR_BUTTON_LIMITS`). The strip lives in the bottom bar's own layout (`BarButtons`, [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)): a bar that does not place it shows no buttons, which is why a button always has a menu entry too.
+
+```ts
+const store = plugin.windows.create("ui/store.slint");
+plugin.commands.add({
+  id: "open",
+  path: ["Plugin Store…"],
+  button: { icon: "store", order: 200 },
+  run: () => store.show(),
+});
+```
+
 ## The player's own commands
 
-The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Leave Fullscreen**, **Quit** and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
+The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Leave Fullscreen**, **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
 
 A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); what they do to playback is in [Playback](playback.md#core-actions).
 
 ## API on this page
 
-- Commands: {@link "@vestra-player/sdk"!Commands | Commands}, {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}, {@link "@vestra-player/sdk"!Command | Command}, {@link "@vestra-player/sdk"!CommandState | CommandState}, {@link "@vestra-player/sdk"!MenuId | MenuId}, {@link "@vestra-player/sdk"!Bindable | Bindable}
+- Commands: {@link "@vestra-player/sdk"!Commands | Commands}, {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}, {@link "@vestra-player/sdk"!CommandButton | CommandButton}, {@link "@vestra-player/sdk"!Command | Command}, {@link "@vestra-player/sdk"!CommandState | CommandState}, {@link "@vestra-player/sdk"!MenuId | MenuId}, {@link "@vestra-player/sdk"!Bindable | Bindable}
 - Bindings: {@link "@vestra-player/sdk"!Bindings | Bindings}, {@link "@vestra-player/sdk"!BindingInfo | BindingInfo}, {@link "@vestra-player/sdk"!BindingRef | BindingRef}
 - Core actions: {@link "@vestra-player/sdk"!Host | Host}, {@link "@vestra-player/sdk"!HostAction | HostAction}
 - Text in menus: {@link "@vestra-player/sdk"!Text | Text}, {@link "@vestra-player/sdk"!I18n | I18n}

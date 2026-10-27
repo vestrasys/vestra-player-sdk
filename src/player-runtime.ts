@@ -19,6 +19,8 @@ export {
 } from "./capabilities.ts";
 export { HOST_CAPABILITIES } from "./host-capabilities.ts";
 export {
+  BAR_BUTTON_ICONS,
+  BAR_BUTTON_LIMITS,
   BUILTIN_COMMANDS,
   BUILTIN_SUBMENUS,
   COMMAND_LIMITS,

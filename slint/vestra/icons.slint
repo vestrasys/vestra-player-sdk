@@ -48,6 +48,10 @@ export global Icons {
         // Four corners pointing out (enter) or in (leave), the default 14 × 12 box.
         if name == "fullscreen" { return "M 1.5 4.5 V 1.5 H 4.5 M 9.5 1.5 H 12.5 V 4.5 M 12.5 7.5 V 10.5 H 9.5 M 4.5 10.5 H 1.5 V 7.5"; }
         if name == "exit-fullscreen" { return "M 4.5 1.5 V 4.5 H 1.5 M 9.5 1.5 V 4.5 H 12.5 M 12.5 7.5 H 9.5 V 10.5 M 1.5 7.5 H 4.5 V 10.5"; }
+        // A shopping bag (the plugin store) and a four-point sparkle with a
+        // small cross (AI), the default 14 × 12 box; bar buttons use them.
+        if name == "store" { return "M 2.5 4 H 11.5 L 10.9 9.6 Q 10.8 10.5 9.9 10.5 H 4.1 Q 3.2 10.5 3.1 9.6 Z M 5.2 4 V 3.3 A 1.8 1.8 0 0 1 8.8 3.3 V 4"; }
+        if name == "ai" { return "M 6 1.5 Q 6.6 5.4 10.5 6 Q 6.6 6.6 6 10.5 Q 5.4 6.6 1.5 6 Q 5.4 5.4 6 1.5 Z M 11.5 1.2 V 3.8 M 10.2 2.5 H 12.8"; }
         return "";
     }
     // Line width.

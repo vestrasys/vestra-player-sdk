@@ -20,6 +20,20 @@ A command added past a limit fails with code `limit` (its `ready` rejects; durin
 
 <!-- /generated -->
 
+## Bottom-bar buttons
+
+A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the eight highest orders, so the lowest go first, as in a narrow strip (equal orders: the smaller plugin id, then the earlier declaration, goes first). The player's own sidebar toggle is extra.
+
+<!-- generated:limits BAR_BUTTON_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `BAR_BUTTON_LIMITS.perPlugin` | 1 | Buttons one plugin shows. |
+| `BAR_BUTTON_LIMITS.total` | 8 | Buttons the player shows, every plugin together, besides its own sidebar toggle. |
+| `BAR_BUTTON_LIMITS.maxOrder` | 999 | The highest `order`. |
+
+<!-- /generated -->
+
 ## Property values
 
 One value written to a window, panel or settings page property ({@link "@vestra-player/sdk"!View.set | View.set}, {@link "@vestra-player/sdk"!View.bind | View.bind} or an initial property). A value over a limit is refused whole with code `limit`; the property keeps what it showed.

@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import test from "node:test";
 
 const root = resolve(import.meta.dirname, "..");
@@ -322,4 +322,189 @@ test("an id without a prefix is only a hint", () => {
   const result = vestraPlugin(directory, "check");
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, /hint: id "hello" has no prefix/);
+});
+
+test("a bottom bar without BarButtons is a warning, not a failure", () => {
+  const directory = project(
+    [
+      'import type { Plugin } from "@vestra-player/sdk";',
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.panels.mount("bottom", "ui/bar.slint");',
+      '  plugin.commands.add({ id: "hello", title: "Hello", run: () => plugin.osd.show("Hello") });',
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.bar",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands", "ui.osd", "ui.mount"],
+    }),
+  );
+  mkdirSync(join(directory, "ui"));
+  const bar = join(directory, "ui/bar.slint");
+  writeFileSync(
+    bar,
+    "export component Bar inherits Rectangle { height: 62px; }\n",
+  );
+  const plain = vestraPlugin(directory, "check");
+  assert.equal(plain.status, 0, plain.stdout + plain.stderr);
+  assert.match(
+    plain.stdout,
+    /warning: ui\/bar\.slint is a bottom bar without BarButtons/,
+  );
+  writeFileSync(
+    bar,
+    [
+      'import { BarButtons } from "@vestra/bar-buttons.slint";',
+      "export component Bar inherits Rectangle {",
+      "  height: 62px;",
+      "  BarButtons { x: parent.width - self.width; room: 200px; }",
+      "}",
+    ].join("\n"),
+  );
+  const placed = vestraPlugin(directory, "check");
+  assert.equal(placed.status, 0, placed.stdout + placed.stderr);
+  assert.doesNotMatch(placed.stdout, /BarButtons/);
+});
+
+test("the BarButtons check reads imports, not comments, and follows the bar's own Slint imports", () => {
+  const directory = project(
+    [
+      'import type { Plugin } from "@vestra-player/sdk";',
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.panels.mount("bottom", "ui/bar.slint");',
+      '  plugin.commands.add({ id: "hello", title: "Hello", run: () => plugin.osd.show("Hello") });',
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.bar",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands", "ui.osd", "ui.mount"],
+    }),
+  );
+  mkdirSync(join(directory, "ui/parts"), { recursive: true });
+  const bar = join(directory, "ui/bar.slint");
+  const warned = () => {
+    const result = vestraPlugin(directory, "check");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    return /bottom bar without BarButtons/.test(result.stdout);
+  };
+  // Named only in comments: still a bar without the strip.
+  writeFileSync(
+    bar,
+    [
+      '// TODO: import { BarButtons } from "@vestra/bar-buttons.slint";',
+      "/* BarButtons { room: 100px; } */",
+      "export component Bar inherits Rectangle { height: 62px; }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), true);
+  // Placed inside a component of the plugin's own, two imports down.
+  writeFileSync(
+    join(directory, "ui/parts/strip.slint"),
+    [
+      'import { BarButtons as Strip } from "@vestra/bar-buttons.slint";',
+      "export component RightEnd { Strip { room: 200px; } }",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "ui/row.slint"),
+    [
+      'import { RightEnd } from "parts/strip.slint";',
+      "export component Row { RightEnd {} }",
+    ].join("\n"),
+  );
+  writeFileSync(
+    bar,
+    [
+      'import { Row } from "row.slint";',
+      "export component Bar inherits Rectangle { height: 62px; Row {} }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), false);
+});
+
+test("the BarButtons check stays inside the plugin directory and follows local re-exports", () => {
+  const directory = project(
+    [
+      'import type { Plugin } from "@vestra-player/sdk";',
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.panels.mount("bottom", "ui/bar.slint");',
+      '  plugin.commands.add({ id: "hello", title: "Hello", run: () => plugin.osd.show("Hello") });',
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.bar",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands", "ui.osd", "ui.mount"],
+    }),
+  );
+  mkdirSync(join(directory, "ui/parts"), { recursive: true });
+  const bar = join(directory, "ui/bar.slint");
+  const warned = () => {
+    const result = vestraPlugin(directory, "check");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    return /bottom bar without BarButtons/.test(result.stdout);
+  };
+  // A sibling directory whose name starts with the plugin's is outside it.
+  const sibling = `${directory}2`;
+  mkdirSync(sibling);
+  test.after(() => rmSync(sibling, { recursive: true, force: true }));
+  writeFileSync(
+    join(sibling, "strip.slint"),
+    'import { BarButtons } from "@vestra/bar-buttons.slint";\nexport component RightEnd { BarButtons { room: 200px; } }\n',
+  );
+  const name = basename(sibling);
+  writeFileSync(
+    bar,
+    [
+      `import { RightEnd } from "../../${name}/strip.slint";`,
+      "export component Bar inherits Rectangle { height: 62px; RightEnd {} }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), true);
+  // A local re-export is followed: bar → index.slint (export … from) → strip.
+  writeFileSync(
+    join(directory, "ui/parts/strip.slint"),
+    'import { BarButtons } from "@vestra/bar-buttons.slint";\nexport component RightEnd { BarButtons { room: 200px; } }\n',
+  );
+  writeFileSync(
+    join(directory, "ui/parts/index.slint"),
+    'export { RightEnd } from "strip.slint";\n',
+  );
+  writeFileSync(
+    bar,
+    [
+      'import { RightEnd } from "parts/index.slint";',
+      "export component Bar inherits Rectangle { height: 62px; RightEnd {} }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), false);
+  // So is a re-export of the strip itself, and `export *`.
+  writeFileSync(
+    join(directory, "ui/parts/index.slint"),
+    'export * from "@vestra/bar-buttons.slint";\n',
+  );
+  writeFileSync(
+    bar,
+    [
+      'import { BarButtons } from "parts/index.slint";',
+      "export component Bar inherits Rectangle { height: 62px; BarButtons { room: 100px; } }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), false);
 });

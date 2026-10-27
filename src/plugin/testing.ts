@@ -78,6 +78,8 @@ import type {
   WireSystemInfo,
 } from "../wire.ts";
 import {
+  BAR_BUTTON_ICONS,
+  BAR_BUTTON_LIMITS,
   BUILTIN_COMMANDS,
   BUILTIN_SUBMENUS,
   COMMAND_LIMITS,
@@ -138,6 +140,8 @@ import type { ListJson, TemplateArgsValue, TextJson } from "../i18n.ts";
 export { HostError };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
+/** The icons and limits of bottom-bar buttons, which the test host checks as well. */
+export { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS };
 /** The submenus of the player's built-in plugins, by key path. */
 export { BUILTIN_COMMANDS, BUILTIN_SUBMENUS };
 export type { BuiltinCommand, BuiltinSubmenu };
@@ -351,6 +355,38 @@ export interface FakeCommand {
    * busy, like the player, which does not call `run` then.
    */
   run(): Promise<void>;
+}
+
+/**
+ * A command's bottom-bar button (`CommandOptions.button`) as the player shows
+ * it: an entry of {@link TestHost.barButtons}.
+ *
+ * @since 1.5.29
+ */
+export interface FakeBarButton {
+  /** The command's local id. */
+  readonly command: string;
+  /** The icon name, or the image's path for a `plugin.ui.image` icon. */
+  readonly icon: string;
+  /** `true` when the icon is the plugin's image. */
+  readonly image: boolean;
+  /** The declared `order`. */
+  readonly order: number;
+  /** Clickable: the command is enabled and not busy. */
+  readonly enabled: boolean;
+  /** Drawn in the accent colour: the command is checked. */
+  readonly checked: boolean;
+  /**
+   * The tooltip without the key: the command's shown title (trailing "…"
+   * removed), then, while it cannot run, its reason on a second line.
+   */
+  readonly tooltip: string;
+  /**
+   * Click the button, then wait until the host is idle: runs the command
+   * as its menu item would. Rejects (with a {@link HostError}) while the
+   * button is disabled, and once the command is gone.
+   */
+  click(): Promise<void>;
 }
 
 /**
@@ -2705,6 +2741,53 @@ export class TestHost implements Transport {
     return command;
   }
   /**
+   * The plugin's bottom-bar buttons (`CommandOptions.button`) as the player
+   * shows them: at most one, the first declared (`BAR_BUTTON_LIMITS`; a
+   * later one stays a menu item only). Empty once the command is disposed.
+   * Whether the bar places them is the bar's business: the list is what
+   * the player hands to `BarButtons`.
+   *
+   * @example
+   * ```ts
+   * const [button] = host.barButtons;
+   * assert.equal(button?.icon, "store");
+   * await button?.click();
+   * assert.equal(host.window("store").visible, true);
+   * ```
+   *
+   * @since 1.5.29
+   */
+  get barButtons(): readonly FakeBarButton[] {
+    const host = this;
+    return [...this.commands]
+      .filter(([, command]) => command.declaration.button !== undefined)
+      .slice(0, BAR_BUTTON_LIMITS.perPlugin)
+      .map(([id, command]): FakeBarButton => {
+        const button = command.declaration.button!;
+        const image = typeof button.icon !== "string";
+        const reason = command.display.reason;
+        const title = command.display.title.replace(/(…|\.\.\.)\s*$/, "");
+        const enabled = command.state.enabled && !command.state.busy;
+        return Object.freeze({
+          command: id,
+          icon: image
+            ? String((button.icon as { $vestraImage?: unknown }).$vestraImage)
+            : (button.icon as string),
+          image,
+          order: button.order,
+          enabled,
+          checked: command.state.checked === true,
+          tooltip: !enabled && reason ? `${title}\n${reason}` : title,
+          async click() {
+            const current = host.commands.get(id);
+            if (current !== command)
+              throw new HostError("missing", `command ${id} is gone`);
+            await current.run();
+          },
+        });
+      });
+  }
+  /**
    * The plugin's tool window with this id (by default the file name without
    * extension: `ui/picture.slint` → `picture`). Throws when it was never
    * opened with `show()`.
@@ -3153,6 +3236,30 @@ export class TestHost implements Transport {
         throw new HostError("limit", "command registry limit reached");
       const host = this;
       const declaration = p.declaration as FakeCommand["declaration"];
+      // Player 0.5.10: a bar button needs a path, an order 0–999 and a
+      // known icon or an image of the plugin.
+      if (declaration.button !== undefined) {
+        const { icon, order } = declaration.button;
+        if (path.length === 0)
+          throw new HostError("invalid", "button needs a menu path");
+        if (
+          !Number.isInteger(order) ||
+          order < 0 ||
+          order > BAR_BUTTON_LIMITS.maxOrder
+        )
+          throw new HostError(
+            "invalid",
+            `button order must be an integer 0–${BAR_BUTTON_LIMITS.maxOrder}`,
+          );
+        if (typeof icon === "string") {
+          if (!(BAR_BUTTON_ICONS as readonly string[]).includes(icon))
+            throw new HostError("invalid", `unknown button icon "${icon}"`);
+        } else if (this.imagePath(icon) === null)
+          throw new HostError(
+            "invalid",
+            "button icon is an icon name or an image from plugin.ui.image",
+          );
+      }
       // Like the player: the menu texts and the reason are checked (and
       // shown) when they arrive.
       for (const segment of [declaration.title, ...(declaration.path ?? [])])

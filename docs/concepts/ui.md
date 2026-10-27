@@ -53,7 +53,7 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 Two rules of thumb:
 
 - **Prefer the smallest surface that works.** An OSD message before a dialog, a settings page before a tool window. Every window the user has to close is a cost.
-- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there.
+- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there. A command that needs a one-click entry point does not need a panel: give it a bottom-bar button (`button` on {@link "@vestra-player/sdk"!Commands.add | commands.add}), which the player shows in the strip of command buttons every bottom bar places ([Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
 
 ## Life cycles
 
