@@ -318,10 +318,10 @@ So `onDispose` cleanup must be quick and must not rely on the player. Media the 
 
 A plugin's process does not live as long as the player. Within one player session the player stops a plugin and starts it again, and `activate` runs again in a new process, when:
 
-- the plugin is **reloaded** (from the plugin manager) or **upgraded**;
-- it **crashed** and is started again;
-- the player **restarts plugins together**, for example the built-in plugins that share one process when one of them faults or hangs;
-- a later player stops a plugin nobody uses and starts it on its next use.
+- the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
+- it **crashed**, or failed to start, and is started again.
+
+A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use. Write the plugin for those too.
 
 Everything in the process is gone after such a restart: variables, timers, caches, open sockets. The menus, windows and panels come back because `activate` creates them again. **Keep state that must survive a restart in session storage (or persistent storage):**
 
@@ -331,7 +331,7 @@ Everything in the process is gone after such a restart: variables, timers, cache
 | plugin.storage.session (player 0.5.5) | yes | no | the user disables or uninstalls the plugin; the player quits |
 | plugin.storage.json, files in the data directory | yes | yes | uninstalling with `removeData` |
 
-Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin, and each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload or a crash keeps them.
+Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
 
 Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
 
@@ -2354,12 +2354,13 @@ plugin.secrets. A name or value out of its rule fails with code `invalid`; a new
 
 #### Session storage
 
-plugin.storage.session (player 0.5.5). A key out of its rule, or a value that is not JSON, fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing.
+plugin.storage.session (player 0.5.5). A key out of its rule, or a value that is not JSON (or has a string with a lone surrogate), fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing. Each key counts its UTF-8 bytes, its value as compact JSON and `entryBytes`. One `set` is also one message, so a single value must fit in `MESSAGE_LIMIT` with its key and the request around it.
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `SESSION_STORAGE_LIMITS.keyBytes` | 1024 (1 KiB) | UTF-8 bytes of a key. |
-| `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | UTF-8 bytes one plugin may hold at the same time: every key plus its value written as compact JSON (`JSON.stringify(value)`). |
+| `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | Bytes one plugin may hold at the same time: for every key, its UTF-8 bytes, its value written as compact JSON (`JSON.stringify(value)`) and `entryBytes`. |
+| `SESSION_STORAGE_LIMITS.entryBytes` | 128 | What each key costs on top of its text and value (128): the player's own bookkeeping, so that many tiny entries stay within `bytes` of memory. |
 
 #### Messages
 
@@ -6482,7 +6483,7 @@ interface Storage {
     debounceMs?: number;
   }): JsonStore<T>;
   /**
-   * Values the player keeps in its memory for this plugin until the player quits: they survive a restart of the plugin's process (reload, upgrade, crash) but not the player. See SessionStorage.
+   * Values the player keeps in its memory for this plugin until the player quits: they survive a restart of the plugin's process (reload, upgrade, crash, failed start) but not the player. See SessionStorage.
    */
   readonly session: SessionStorage;
 }
@@ -6496,15 +6497,18 @@ capability; needs player 0.5.5 (older players reject the calls with
 `unsupported`).
 
 `activate` can run more than once in one player session: the player stops
-and starts a plugin's process again when the plugin is reloaded or
-upgraded, after a crash, and when it restarts plugins that share a process.
-Variables do not survive that; keep state that must survive a restart here
-(or in storage.json when it must also survive the
-player quitting).
+and starts a plugin's process again when the plugin is reloaded (also a
+development load with `--plugin`) or upgraded, and after a crash or a
+failed start. A later player may also restart plugins that share a
+process, or stop an idle plugin and start it on its next use. Variables do
+not survive that; keep state that must survive a restart here (or in
+storage.json when it must also survive the player
+quitting).
 
 | | Values |
 | --- | --- |
-| The plugin's process restarts: reload, upgrade, crash, a restart by the player | kept |
+| The plugin's process restarts: reload, upgrade, crash | kept |
+| The plugin failed to start or failed, and starts again | kept |
 | The user disables the plugin, or uninstalls it | cleared |
 | The player quits | cleared |
 
@@ -6513,14 +6517,19 @@ player quitting).
   installation: a development load (`--plugin`) has its own.
 - **JSON.** `set` stores what `JSON.stringify(value)` writes, and `get`
   returns that, parsed: `undefined` object properties are dropped, a `Date`
-  comes back as a string, `NaN` as `null`. A value `JSON.stringify` cannot
-  write (`undefined`, a function, a cycle, a `BigInt`) fails with `invalid`.
-  The value is not checked when it comes back: after an upgrade an older
-  version's value may be read, so check its shape when it matters.
-- **Bounded.** Keys are 1–1024 bytes of text; all of a plugin's keys and
-  values together are at most 1 MiB
-  (SESSION_STORAGE_LIMITS). A
-  `set` beyond it fails with `limit` and changes nothing.
+  comes back as a string, `NaN` as `null`. **The order of an object's
+  properties is not kept**: they may come back in another order. A value
+  `JSON.stringify` cannot write (`undefined`, a function, a cycle, a
+  `BigInt`) or a string with a lone surrogate (`"\uD800"`) fails with
+  `invalid`. The value is not checked when it comes back: after an upgrade
+  an older version's value may be read, so check its shape when it matters.
+- **Bounded.** Keys are 1–1024 bytes of text. A plugin holds at most 1 MiB,
+  counting every key, its value as compact JSON and 128 bytes per key
+  (SESSION_STORAGE_LIMITS); a
+  `set` beyond it fails with `limit` and changes nothing. One `set` is
+  also one message to the player, at most 1 MiB with its key, so a single
+  value is a little smaller than that; a larger one fails with `limit`.
+  Split large state over several keys.
 - **Each call is one request.** A `set` is kept once its promise
   resolves, so a crash right after loses nothing; there is no debounce.
   Calls answer in order.
@@ -6529,7 +6538,9 @@ player quitting).
 interface SessionStorage {
   /** The value stored under `key`, or `undefined` when there is none. */
   get<T = unknown>(key: string): Promise<T | undefined>;
-  /** Store or replace `value` under `key`. `invalid` for a bad key or a value that is not JSON, `limit` when the plugin's values would be over 1 MiB. */
+  /**
+   * Store or replace `value` under `key`. `invalid` for a bad key or a value that is not JSON, `limit` when the plugin's values would be over 1 MiB or the request over the 1 MiB message limit.
+   */
   set(key: string, value: unknown): Promise<void>;
   /** Remove a key; removing a missing one is fine. */
   delete(key: string): Promise<void>;
@@ -7545,7 +7556,7 @@ class TestHost implements Transport {
    */
   readonly secrets: Map<string, string>;
   /**
-   * `plugin.storage.session`: key → value, as the player keeps them. Preset entries to simulate values an earlier run of the plugin stored in the same player session, or pass `startPlugin(..., { sessionStorage })`. Like the player, a key is 1–1024 bytes, and a `set` that would make the keys and their values as compact JSON larger than 1 MiB fails `limit`.
+   * `plugin.storage.session`: key → value, as the player keeps them. Preset entries to simulate values an earlier run of the plugin stored in the same player session, or pass `startPlugin(..., { sessionStorage })`. Like the player, a key is 1–1024 bytes, a `set` that would make the entries larger than 1 MiB (keys, values as compact JSON and `SESSION_STORAGE_LIMITS.entryBytes` per key) fails `limit`, and an object's properties are stored sorted, as the player hands them back.
    */
   readonly sessionStorage: Map<string, Json>;
   /** What `plugin.app.system()` reports. */
@@ -8126,16 +8137,21 @@ const OSD_LIMITS: Readonly<{
 ### SESSION_STORAGE_LIMITS
 
 The player's limits on SessionStorage. A key outside them fails
-with code `invalid`; a `set` that would make the plugin's keys and values
-larger than `bytes` fails with `limit` and changes nothing. The player's
-tests check that these agree with the player.
+with code `invalid`; a `set` that would make the plugin's entries larger
+than `bytes` fails with `limit` and changes nothing. A single `set` must
+also fit in one message to the player
+(MESSAGE_LIMIT, 1 MiB
+with the key and the request around the value). The player's tests check
+that these agree with the player.
 
 ```ts
 const SESSION_STORAGE_LIMITS: Readonly<{
   /** UTF-8 bytes of a key (1024, at least 1; no NUL character). */
   readonly keyBytes: 1024;
-  /** UTF-8 bytes one plugin may hold at the same time: every key plus its value written as compact JSON (`JSON.stringify(value)`). */
+  /** Bytes one plugin may hold at the same time: for every key, its UTF-8 bytes, its value written as compact JSON (`JSON.stringify(value)`) and `entryBytes`. */
   readonly bytes: number;
+  /** What each key costs on top of its text and value (128): the player's own bookkeeping, so that many tiny entries stay within `bytes` of memory. */
+  readonly entryBytes: 128;
 }>;
 ```
 

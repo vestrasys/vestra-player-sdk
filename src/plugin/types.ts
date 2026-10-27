@@ -5447,7 +5447,7 @@ export interface Storage {
   /**
    * Values the player keeps in its memory for this plugin until the player
    * quits: they survive a restart of the plugin's process (reload, upgrade,
-   * crash) but not the player. See {@link SessionStorage}.
+   * crash, failed start) but not the player. See {@link SessionStorage}.
    *
    * @since 1.5.25
    */
@@ -5461,15 +5461,18 @@ export interface Storage {
  * `unsupported`).
  *
  * `activate` can run more than once in one player session: the player stops
- * and starts a plugin's process again when the plugin is reloaded or
- * upgraded, after a crash, and when it restarts plugins that share a process.
- * Variables do not survive that; keep state that must survive a restart here
- * (or in {@link Storage.json | storage.json} when it must also survive the
- * player quitting).
+ * and starts a plugin's process again when the plugin is reloaded (also a
+ * development load with `--plugin`) or upgraded, and after a crash or a
+ * failed start. A later player may also restart plugins that share a
+ * process, or stop an idle plugin and start it on its next use. Variables do
+ * not survive that; keep state that must survive a restart here (or in
+ * {@link Storage.json | storage.json} when it must also survive the player
+ * quitting).
  *
  * | | Values |
  * | --- | --- |
- * | The plugin's process restarts: reload, upgrade, crash, a restart by the player | kept |
+ * | The plugin's process restarts: reload, upgrade, crash | kept |
+ * | The plugin failed to start or failed, and starts again | kept |
  * | The user disables the plugin, or uninstalls it | cleared |
  * | The player quits | cleared |
  *
@@ -5478,14 +5481,19 @@ export interface Storage {
  *   installation: a development load (`--plugin`) has its own.
  * - **JSON.** `set` stores what `JSON.stringify(value)` writes, and `get`
  *   returns that, parsed: `undefined` object properties are dropped, a `Date`
- *   comes back as a string, `NaN` as `null`. A value `JSON.stringify` cannot
- *   write (`undefined`, a function, a cycle, a `BigInt`) fails with `invalid`.
- *   The value is not checked when it comes back: after an upgrade an older
- *   version's value may be read, so check its shape when it matters.
- * - **Bounded.** Keys are 1–1024 bytes of text; all of a plugin's keys and
- *   values together are at most 1 MiB
- *   ({@link "@vestra-player/sdk/testing"!SESSION_STORAGE_LIMITS | SESSION_STORAGE_LIMITS}). A
- *   `set` beyond it fails with `limit` and changes nothing.
+ *   comes back as a string, `NaN` as `null`. **The order of an object's
+ *   properties is not kept**: they may come back in another order. A value
+ *   `JSON.stringify` cannot write (`undefined`, a function, a cycle, a
+ *   `BigInt`) or a string with a lone surrogate (`"\uD800"`) fails with
+ *   `invalid`. The value is not checked when it comes back: after an upgrade
+ *   an older version's value may be read, so check its shape when it matters.
+ * - **Bounded.** Keys are 1–1024 bytes of text. A plugin holds at most 1 MiB,
+ *   counting every key, its value as compact JSON and 128 bytes per key
+ *   ({@link "@vestra-player/sdk/testing"!SESSION_STORAGE_LIMITS | SESSION_STORAGE_LIMITS}); a
+ *   `set` beyond it fails with `limit` and changes nothing. One `set` is
+ *   also one message to the player, at most 1 MiB with its key, so a single
+ *   value is a little smaller than that; a larger one fails with `limit`.
+ *   Split large state over several keys.
  * - **Each call is one request.** A `set` is kept once its promise
  *   resolves, so a crash right after loses nothing; there is no debounce.
  *   Calls answer in order.
@@ -5506,7 +5514,8 @@ export interface SessionStorage {
   get<T = unknown>(key: string): Promise<T | undefined>;
   /**
    * Store or replace `value` under `key`. `invalid` for a bad key or a value
-   * that is not JSON, `limit` when the plugin's values would be over 1 MiB.
+   * that is not JSON, `limit` when the plugin's values would be over 1 MiB
+   * or the request over the 1 MiB message limit.
    */
   set(key: string, value: unknown): Promise<void>;
   /** Remove a key; removing a missing one is fine. */

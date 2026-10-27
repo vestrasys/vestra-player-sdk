@@ -265,9 +265,12 @@ class Store<T> implements JsonStore<T> {
 
 /**
  * The player's limits on {@link SessionStorage}. A key outside them fails
- * with code `invalid`; a `set` that would make the plugin's keys and values
- * larger than `bytes` fails with `limit` and changes nothing. The player's
- * tests check that these agree with the player.
+ * with code `invalid`; a `set` that would make the plugin's entries larger
+ * than `bytes` fails with `limit` and changes nothing. A single `set` must
+ * also fit in one message to the player
+ * ({@link "@vestra-player/sdk/testing"!MESSAGE_LIMIT | MESSAGE_LIMIT}, 1 MiB
+ * with the key and the request around the value). The player's tests check
+ * that these agree with the player.
  *
  * @example
  * ```ts
@@ -284,11 +287,31 @@ export const SESSION_STORAGE_LIMITS = Object.freeze({
   /** UTF-8 bytes of a key (1024, at least 1; no NUL character). */
   keyBytes: 1024,
   /**
-   * UTF-8 bytes one plugin may hold at the same time: every key plus its
-   * value written as compact JSON (`JSON.stringify(value)`).
+   * Bytes one plugin may hold at the same time: for every key, its UTF-8
+   * bytes, its value written as compact JSON (`JSON.stringify(value)`) and
+   * `entryBytes`.
    */
   bytes: 1024 * 1024,
+  /**
+   * What each key costs on top of its text and value (128): the player's
+   * own bookkeeping, so that many tiny entries stay within `bytes` of memory.
+   */
+  entryBytes: 128,
 } as const);
+
+/** A lone surrogate: the player's JSON parser refuses the whole message. */
+const LONE_SURROGATE = /[\uD800-\uDFFF]/u;
+
+/** Whether a parsed JSON value has a string or a property name with a lone surrogate. */
+function hasLoneSurrogate(value: Json): boolean {
+  if (typeof value === "string") return LONE_SURROGATE.test(value);
+  if (Array.isArray(value)) return value.some(hasLoneSurrogate);
+  if (value && typeof value === "object")
+    return Object.entries(value).some(
+      ([key, item]) => LONE_SURROGATE.test(key) || hasLoneSurrogate(item),
+    );
+  return false;
+}
 
 function sessionStorage(scope: ScopeImpl): SessionStorage {
   const keyed = (key: unknown) => {
@@ -296,11 +319,12 @@ function sessionStorage(scope: ScopeImpl): SessionStorage {
       typeof key !== "string" ||
       !key ||
       key.includes("\0") ||
+      LONE_SURROGATE.test(key) ||
       Buffer.byteLength(key) > SESSION_STORAGE_LIMITS.keyBytes
     )
       throw failure(
         "invalid",
-        `session storage keys are 1–${SESSION_STORAGE_LIMITS.keyBytes} bytes of text without NUL`,
+        `session storage keys are 1–${SESSION_STORAGE_LIMITS.keyBytes} bytes of well-formed text without NUL`,
       );
     return key;
   };
@@ -324,7 +348,13 @@ function sessionStorage(scope: ScopeImpl): SessionStorage {
           "session storage values must be JSON; delete() removes one",
         );
       // What the player stores, and what `get` will return.
-      await host().set(name, JSON.parse(text) as Json);
+      const json = JSON.parse(text) as Json;
+      if (hasLoneSurrogate(json))
+        throw failure(
+          "invalid",
+          "session storage values must be well-formed text: a string has a lone surrogate",
+        );
+      await host().set(name, json);
     },
     delete: async (key) => host().delete(keyed(key)),
     keys: async () => host().keys(),

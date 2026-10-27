@@ -102,14 +102,15 @@ Counted on the text as shown, after translation and with its arguments filled in
 
 ## Session storage
 
-{@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} (player 0.5.5). A key out of its rule, or a value that is not JSON, fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing.
+{@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} (player 0.5.5). A key out of its rule, or a value that is not JSON (or has a string with a lone surrogate), fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing. Each key counts its UTF-8 bytes, its value as compact JSON and `entryBytes`. One `set` is also one message, so a single value must fit in [`MESSAGE_LIMIT`](#messages) with its key and the request around it.
 
 <!-- generated:limits SESSION_STORAGE_LIMITS -->
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `SESSION_STORAGE_LIMITS.keyBytes` | 1024 (1 KiB) | UTF-8 bytes of a key. |
-| `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | UTF-8 bytes one plugin may hold at the same time: every key plus its value written as compact JSON (`JSON.stringify(value)`). |
+| `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | Bytes one plugin may hold at the same time: for every key, its UTF-8 bytes, its value written as compact JSON (`JSON.stringify(value)`) and `entryBytes`. |
+| `SESSION_STORAGE_LIMITS.entryBytes` | 128 | What each key costs on top of its text and value (128): the player's own bookkeeping, so that many tiny entries stay within `bytes` of memory. |
 
 <!-- /generated -->
 

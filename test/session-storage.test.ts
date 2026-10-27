@@ -2,7 +2,11 @@
 // the plugin's process but not the player.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SESSION_STORAGE_LIMITS, startPlugin } from "../src/plugin/testing.ts";
+import {
+  MESSAGE_LIMIT,
+  SESSION_STORAGE_LIMITS,
+  startPlugin,
+} from "../src/plugin/testing.ts";
 import type { PluginError } from "../src/plugin/index.ts";
 
 const code = (expected: string) => (error: unknown) =>
@@ -60,15 +64,27 @@ test("bad keys and values that are not JSON are invalid", async () => {
   try {
     const session = plugin.storage.session;
     const long = "k".repeat(SESSION_STORAGE_LIMITS.keyBytes + 1);
-    for (const key of ["", "a\0b", long, 7 as unknown as string]) {
+    for (const key of ["", "a\0b", "a\uD800", long, 7 as unknown as string]) {
       await assert.rejects(session.get(key), code("invalid"));
       await assert.rejects(session.set(key, 1), code("invalid"));
       await assert.rejects(session.delete(key), code("invalid"));
     }
     const cycle: Record<string, unknown> = {};
     cycle.self = cycle;
-    for (const value of [undefined, () => 1, cycle, 1n])
+    // Lone surrogates would make the player refuse the whole message.
+    for (const value of [
+      undefined,
+      () => 1,
+      cycle,
+      1n,
+      "\uDC00",
+      ["ok", { deep: "x\uD800" }],
+      { ["k\uDFFF"]: 1 },
+    ])
       await assert.rejects(session.set("k", value), code("invalid"));
+    await session.set("pair", "\uD83C\uDFAC");
+    assert.equal(await session.get("pair"), "🎬");
+    await session.delete("pair");
     assert.equal(host.sessionStorage.size, 0);
     // Multi-byte keys count bytes.
     await session.set("é".repeat(SESSION_STORAGE_LIMITS.keyBytes / 2), 1);
@@ -81,20 +97,47 @@ test("bad keys and values that are not JSON are invalid", async () => {
   }
 });
 
-test("the quota counts keys and compact JSON; a refused set changes nothing", async () => {
-  const { plugin, stop } = await startPlugin(() => {}, { capabilities: [] });
+test("the quota counts keys, compact JSON and entries; a refused set changes nothing", async () => {
+  const { plugin, host, stop } = await startPlugin(() => {}, {
+    capabilities: [],
+  });
   try {
     const session = plugin.storage.session;
-    // "k" + "\"…\"": 1 + 2 + n bytes.
-    const fill = "x".repeat(SESSION_STORAGE_LIMITS.bytes - 3);
-    await session.set("k", fill);
+    const { bytes, entryBytes } = SESSION_STORAGE_LIMITS;
+    // "kN" + "\"…\"" + entryBytes each: four of them fill the quota.
+    const quarter = bytes / 4 - 2 - 2 - entryBytes;
+    const fill = "x".repeat(quarter);
+    for (const key of ["k0", "k1", "k2", "k3"]) await session.set(key, fill);
     await assert.rejects(session.set("j", 0), code("limit"));
-    assert.deepEqual(await session.keys(), ["k"]);
+    assert.deepEqual(await session.keys(), ["k0", "k1", "k2", "k3"]);
     // Replacing counts the new value instead of the old one.
-    await assert.rejects(session.set("k", `${fill}x`), code("limit"));
-    assert.equal(((await session.get("k")) as string).length, fill.length);
-    await session.delete("k");
+    await assert.rejects(session.set("k0", `${fill}x`), code("limit"));
+    assert.equal(((await session.get("k0")) as string).length, quarter);
+    await session.delete("k0");
     await session.set("j", 0);
+    // One value must fit in one 1 MiB message: refused before it is sent.
+    const sets = host.sent("storage.session.set").length;
+    await assert.rejects(
+      session.set("big", "x".repeat(MESSAGE_LIMIT)),
+      code("limit"),
+    );
+    assert.equal(host.sent("storage.session.set").length, sets);
+  } finally {
+    await stop();
+  }
+});
+
+test("object properties come back sorted, as the player keeps them", async () => {
+  const { plugin, stop } = await startPlugin(() => {}, { capabilities: [] });
+  try {
+    await plugin.storage.session.set("o", {
+      b: 1,
+      a: { d: [{ z: 0, y: 1 }], c: 2 },
+    });
+    assert.equal(
+      JSON.stringify(await plugin.storage.session.get("o")),
+      '{"a":{"c":2,"d":[{"y":1,"z":0}]},"b":1}',
+    );
   } finally {
     await stop();
   }

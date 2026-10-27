@@ -109,10 +109,10 @@ So `onDispose` cleanup must be quick and must not rely on the player. Media the 
 
 A plugin's process does not live as long as the player. Within one player session the player stops a plugin and starts it again, and `activate` runs again in a new process, when:
 
-- the plugin is **reloaded** (from the plugin manager) or **upgraded**;
-- it **crashed** and is started again;
-- the player **restarts plugins together**, for example the built-in plugins that share one process when one of them faults or hangs;
-- a later player stops a plugin nobody uses and starts it on its next use.
+- the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
+- it **crashed**, or failed to start, and is started again.
+
+A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use. Write the plugin for those too.
 
 Everything in the process is gone after such a restart: variables, timers, caches, open sockets. The menus, windows and panels come back because `activate` creates them again. **Keep state that must survive a restart in session storage (or persistent storage):**
 
@@ -122,7 +122,7 @@ Everything in the process is gone after such a restart: variables, timers, cache
 | {@linkcode "@vestra-player/sdk"!SessionStorage plugin.storage.session} (player 0.5.5) | yes | no | the user disables or uninstalls the plugin; the player quits |
 | {@linkcode "@vestra-player/sdk"!Storage.json plugin.storage.json}, files in the [data directory](#the-data-directory) | yes | yes | uninstalling with `removeData` |
 
-Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin, and each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload or a crash keeps them.
+Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
 
 Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
 

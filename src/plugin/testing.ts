@@ -206,6 +206,28 @@ function sessionKey(key: Json | undefined): string {
     );
   return key;
 }
+/** Code point (UTF-8 byte) order, as the player sorts session keys. */
+const byCodePoint = (a: string, b: string) =>
+  Buffer.compare(Buffer.from(a), Buffer.from(b));
+/**
+ * A JSON value as the player hands it back: the player does not keep the
+ * order of object properties, it sorts them.
+ */
+function sortedJson(value: Json): Json {
+  if (Array.isArray(value)) return value.map(sortedJson);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort(byCodePoint)
+        .map((key) => [key, sortedJson((value as Record<string, Json>)[key]!)]),
+    );
+  return value;
+}
+/** What one session entry counts towards the player's quota. */
+const sessionCost = (key: string, value: Json) =>
+  Buffer.byteLength(key) +
+  Buffer.byteLength(JSON.stringify(value)) +
+  SESSION_STORAGE_LIMITS.entryBytes;
 type Call = { method: string; params: Record<string, Json> };
 
 /**
@@ -1642,8 +1664,10 @@ export class TestHost implements Transport {
    * `plugin.storage.session`: key → value, as the player keeps them. Preset
    * entries to simulate values an earlier run of the plugin stored in the
    * same player session, or pass `startPlugin(..., { sessionStorage })`.
-   * Like the player, a key is 1–1024 bytes, and a `set` that would make the
-   * keys and their values as compact JSON larger than 1 MiB fails `limit`.
+   * Like the player, a key is 1–1024 bytes, a `set` that would make the
+   * entries larger than 1 MiB (keys, values as compact JSON and
+   * `SESSION_STORAGE_LIMITS.entryBytes` per key) fails `limit`, and an
+   * object's properties are stored sorted, as the player hands them back.
    *
    * @since 1.5.25
    */
@@ -2189,6 +2213,14 @@ export class TestHost implements Transport {
    */
   async request<T>(method: string, params: Json = {}): Promise<T> {
     const record = (params ?? {}) as Record<string, Json>;
+    // The plugin runner refuses a request over the message limit before
+    // sending it (runtime/runner.ts): the player never sees it.
+    const line = JSON.stringify({ id: this.calls.length + 1, method, params });
+    if (Buffer.byteLength(line, "utf8") + 1 > MESSAGE_LIMIT)
+      throw new HostError(
+        "limit",
+        `${method}: request exceeds the player's 1 MiB message limit`,
+      );
     this.calls.push({ method, params: record });
     this.#inFlight++;
     try {
@@ -3424,24 +3456,20 @@ export class TestHost implements Transport {
       const key = sessionKey(p.key);
       if (!("value" in p))
         throw new HostError("invalid", "set needs a JSON value");
-      const size = (key: string, value: Json) =>
-        Buffer.byteLength(key) + Buffer.byteLength(JSON.stringify(value));
-      let total = size(key, p.value!);
+      let total = sessionCost(key, p.value!);
       for (const [other, value] of this.sessionStorage)
-        if (other !== key) total += size(other, value);
+        if (other !== key) total += sessionCost(other, value);
       if (total > SESSION_STORAGE_LIMITS.bytes)
         throw new HostError(
           "limit",
-          `session storage holds at most ${SESSION_STORAGE_LIMITS.bytes} bytes per plugin (keys plus JSON values); this value would make ${total}`,
+          `session storage holds at most ${SESSION_STORAGE_LIMITS.bytes} bytes per plugin (keys, JSON values and ${SESSION_STORAGE_LIMITS.entryBytes} per key); this value would make ${total}`,
         );
-      this.sessionStorage.set(key, structuredClone(p.value!));
+      this.sessionStorage.set(key, sortedJson(p.value!));
     },
     "storage.session.delete": (p) =>
       void this.sessionStorage.delete(sessionKey(p.key)),
     "storage.session.keys": () =>
-      [...this.sessionStorage.keys()].sort((a, b) =>
-        Buffer.compare(Buffer.from(a), Buffer.from(b)),
-      ),
+      [...this.sessionStorage.keys()].sort(byCodePoint),
     "app.system": () => structuredClone(this.systemInfo),
     "clipboard.readText": () => this.clipboard.text,
     "clipboard.writeText": (p) => {
@@ -4603,7 +4631,7 @@ export async function startPlugin(
   host.loadCatalog(directory);
   const data = options.dataDirectory ?? host.dataDirectory;
   for (const [key, value] of options.sessionStorage ?? [])
-    host.sessionStorage.set(key, structuredClone(value));
+    host.sessionStorage.set(key, sortedJson(value));
   mkdirSync(data, { recursive: true });
   const instance = await createPlugin(
     host,
