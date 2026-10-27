@@ -44,6 +44,7 @@ const ACTIONS = new Set<string>([
   "volume-up",
   "volume-down",
   "mute",
+  "fullscreen",
 ]);
 
 export const host = (scope: ScopeImpl): Host => ({

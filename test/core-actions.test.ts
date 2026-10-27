@@ -253,3 +253,36 @@ test("frame steps: separate directions and B07 reasons", async () => {
   );
   await stop();
 });
+
+test('host.run("fullscreen") toggles the main window: in, then out (SDK 1.5.21)', async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  const seen: boolean[] = [];
+  plugin.window.onChange((state) => seen.push(state.fullscreen));
+  assert.equal(plugin.window.state.fullscreen, false);
+  await plugin.host.run("fullscreen");
+  await host.settle();
+  assert.equal(host.mainWindow.fullscreen, true, "windowed → fullscreen");
+  assert.equal(plugin.window.state.fullscreen, true);
+  await plugin.host.run("fullscreen");
+  await host.settle();
+  assert.equal(host.mainWindow.fullscreen, false, "fullscreen → windowed");
+  assert.equal(plugin.window.state.fullscreen, false);
+  assert.deepEqual(seen, [true, false], "window.state after each toggle");
+  // No source needed, and no playback state changes.
+  assert.equal(host.source.phase, "empty");
+  assert.deepEqual(host.coreRuns, ["fullscreen", "fullscreen"]);
+  await stop();
+});
+
+test("a left click on the video is Play/Pause by default (player 0.5.2)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({ position: 3, duration: 100 });
+  const { stop } = await started(host);
+  await host.press("Mouse:LeftClick");
+  assert.equal(host.source.paused, true);
+  assert.deepEqual(host.coreRuns, ["play-pause"]);
+  await assert.rejects(host.press("Mouse:LeftDoubleClick"));
+  await stop();
+});

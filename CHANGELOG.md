@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.21
+
+**Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged; the additions need player 0.5.2. Additive and bug fixes; `apiVersion` stays `vestra/1`.
+
+- **`Host.run("fullscreen")`** (player 0.5.2; requested by the playback plugin for a bottom-bar button): toggles the main window's fullscreen exactly like the Toggle Fullscreen command (Enter, F11): in when windowed, out when fullscreen. Read the result from `window.state.fullscreen`. `unavailable` when the player has no window; players before 0.5.2 reject the id with `invalid`, so set `"minPlayerVersion": "0.5.2"`. `HostAction` gains `"fullscreen"`.
+- **Default mouse bindings** (player 0.5.2, user ruling): a left click on the video is Play/Pause (`Mouse:LeftClick`, fired on release) and nothing is bound to a double click; Toggle Fullscreen keeps `Enter`, `Alt+Enter`, `F11`. `BUILTIN_COMMANDS` says so. A plugin that declared `Mouse:LeftClick` itself is shadowed by the player's default, as for any key the player binds; users' own bindings are unchanged.
+- **`ToolTipArea` no longer swallows a press** (`slint/vestra/widgets.slint`, the player's widget library; bug fix): the tip was a `PopupWindow`, so while it showed, the first press anywhere only closed it, and it took the keyboard focus. It is now Slint's input-transparent tooltip: every press reaches the control under the pointer. It shows after about half a second (was 600 ms), and `showing` follows that delay closely. No API change.
+- **Icons `fullscreen` and `exit-fullscreen`** in `slint/vestra/icons.slint` (14 × 12, the V-Line style).
+- **`TestHost`**: `host.run("fullscreen")` flips `host.mainWindow.fullscreen` and emits `window.state` (recorded in `coreRuns`); `host/play-pause` declares `Space` and `Mouse:LeftClick`.
+- Docs: *Commands* (the player's mouse defaults), *Playback* (a fullscreen button), the Theme and widgets example (the tooltip); generated tables and `llms.txt` / `llms-full.txt` regenerated.
+
 ## 1.5.20
 
 Republishes 1.5.19, which was tagged but never published: its API documentation build failed (an example title and four undocumented `IMAGE_LIMITS` fields). Documentation only; the code is the same as 1.5.19 below.

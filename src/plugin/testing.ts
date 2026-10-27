@@ -1883,7 +1883,7 @@ export class TestHost implements Transport {
         ["Playback", "Play/Pause"],
         201,
         "domain",
-        ["Space"],
+        ["Space", "Mouse:LeftClick"],
         false,
       ],
       [
@@ -3408,6 +3408,7 @@ export class TestHost implements Transport {
         "volume-up",
         "volume-down",
         "mute",
+        "fullscreen",
       ];
       if (!actions.includes(String(p.action)))
         throw new HostError("invalid", `unknown host action ${p.action}`);
@@ -3422,6 +3423,13 @@ export class TestHost implements Transport {
         if (!validStep(p.seconds))
           throw new HostError("invalid", "seconds must be 0.1..3600 in tenths");
         seconds = p.seconds;
+      }
+      // SDK 1.5.21: the main window's Toggle Fullscreen, like Enter: in when
+      // windowed, out when fullscreen, then `window.state`.
+      if (p.action === "fullscreen") {
+        this.coreRuns.push("fullscreen");
+        this.setMainWindow({ fullscreen: !this.mainWindow.fullscreen });
+        return;
       }
       this.#runCore(String(p.action), seconds);
     },

@@ -5,15 +5,20 @@
 import { TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 
-// Hover for 600 ms to show `text` beside the pointer. The tip closes when
-// the pointer leaves or presses; it shows again on the next hover.
+// Hover for about half a second to show `text` beside the pointer. The tip
+// closes when the pointer leaves, or presses on content that does not take
+// the press itself; it shows again on the next hover. It is Slint's
+// input-transparent tooltip: every press reaches the control under the
+// pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a
+// PopupWindow, which swallowed the first press after it showed and took the
+// focus while it was open.)
 export component ToolTipArea {
     in property <string> text;
-    // The tip is showing (read-only).
+    // The tip is showing (read-only); it follows the tip's delay closely,
+    // not exactly.
     out property <bool> showing;
-    // Shown (or pressed) during this hover: wait for the pointer to leave.
-    // (Never assign the timer's `running`: that drops its binding, and the
-    // tip would show only once.)
+    // Pressed during this hover: no tip until the pointer leaves.
+    // (Never assign the timer's `running`: that drops its binding.)
     private property <bool> done;
     area := TouchArea {
         width: 100%; height: 100%;
@@ -22,40 +27,24 @@ export component ToolTipArea {
             if !self.has-hover {
                 root.done = false;
                 root.showing = false;
-                tip.close();
             }
         }
         pointer-event(event) => {
             if event.kind == PointerEventKind.down {
                 root.done = true;
                 root.showing = false;
-                tip.close();
             }
+        }
+        // Removing it closes an open tip.
+        if root.text != "" && !root.done: Tooltip {
+            // Interpolated text is plain: `*` or `_` in it are not markup.
+            text: @markdown("\{root.text}");
         }
     }
     Timer {
-        interval: 600ms;
-        running: area.has-hover && root.text != "" && !root.done;
-        triggered => {
-            root.done = true;
-            root.showing = true;
-            tip.show();
-        }
-    }
-    tip := PopupWindow {
-        x: area.mouse-x + 12px;
-        y: area.mouse-y + 16px;
-        close-policy: close-on-click-outside;
-        Rectangle {
-            background: Theme.bg-panel;
-            border-color: Theme.line;
-            border-width: 1px;
-            border-radius: Theme.radius-control;
-            HorizontalLayout {
-                padding-left: 5px; padding-right: 5px; padding-top: 2px; padding-bottom: 2px;
-                Text { text: root.text; color: Theme.text; font-size: Theme.font-body; }
-            }
-        }
+        interval: 500ms;
+        running: area.has-hover && root.text != "" && !root.done && !root.showing;
+        triggered => { root.showing = true; }
     }
 }
 
