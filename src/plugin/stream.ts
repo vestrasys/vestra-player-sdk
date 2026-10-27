@@ -20,8 +20,33 @@ type Socket = Awaited<
   ReturnType<PlayerService["runtime"]["host"]["producer"]["connect"]>
 >;
 
-/** Frames of audio buffered ahead of the device before rendering pauses. */
+/**
+ * Frames of audio buffered ahead of the device before rendering pauses
+ * (50 ms). Each pump refills the whole lead, so it must outlast one pump
+ * period: the pump itself (a `producer.state` round trip and the frames),
+ * plus a Windows timer tick (15.6 ms) unless the pump rendered and already
+ * took {@link PERIOD}. Measured with a
+ * real-time clock, round trips up to about 30 ms never let the device run
+ * dry; near 50 ms they do now and then. A larger lead would add latency
+ * between input and picture.
+ */
 const AHEAD = 2400;
+/**
+ * At most this many frames per pump. A lead is a few frames (three of
+ * 1/60 s); the cap only stops a plugin whose frames carry next to no audio
+ * from rendering without pause.
+ */
+const BATCH = 16;
+/**
+ * Milliseconds from the start of one pump to the start of the next. A pump
+ * that rendered frames and already took longer is followed at once: a timer
+ * on top would add a whole Windows tick (15.6 ms; a timer there never fires
+ * sooner) to every pump while playing, and the period must stay well inside
+ * the lead. A pump that rendered nothing (paused, lead full, a control not
+ * yet acknowledged) waits this long after it ends, so an idle stream polls
+ * the player no more often than it always did.
+ */
+const PERIOD = 5;
 /** Frames written before the host is asked to select the stream. */
 const PREROLL = 2048;
 
@@ -39,6 +64,7 @@ class StreamHandle implements Stream {
   #sample: number;
   #sequence: number;
   #timer: ReturnType<typeof setTimeout> | undefined;
+  #immediate: ReturnType<typeof setImmediate> | undefined;
   #pumping: Promise<void> = Promise.resolve();
   constructor(
     scope: ScopeImpl,
@@ -76,6 +102,7 @@ class StreamHandle implements Stream {
   }
   async #pump() {
     const producer = this.#service.runtime.host.producer;
+    const begun = performance.now();
     try {
       const state = await producer.state(this.#producer);
       if (!this.#running) return;
@@ -93,18 +120,36 @@ class StreamHandle implements Stream {
       }
       if (state.input?.pending) await producer.ackInput(state.input.pending);
       const paused = control ? control.paused : state.paused;
+      let rendered = 0;
+      // Refill the whole lead now, not one frame per pump: a pump period (a
+      // round trip, and a timer tick after a short pump: 16–40 ms on Windows)
+      // is longer than a 1/60 s frame. No control lands while this loop runs: the next one is
+      // read by the next pump, at a frame boundary.
       if (
         !control &&
         state.acknowledged &&
         state.epoch === this.#epoch &&
-        !paused &&
-        this.#sample - state.consumedFrames < AHEAD
+        !paused
       )
-        await this.#render();
-      if (this.#running)
-        this.#timer = setTimeout(() => {
-          this.#pumping = this.#pump();
-        }, 5);
+        while (
+          this.#running &&
+          rendered < BATCH &&
+          this.#sample - state.consumedFrames < AHEAD
+        ) {
+          const before = this.#sample;
+          await this.#render();
+          // A frame without audio does not move the clock: wait for the next
+          // pump, after a full PERIOD (it does not count as rendered).
+          if (this.#sample === before) break;
+          rendered++;
+        }
+      if (!this.#running) return;
+      const next = () => {
+        this.#pumping = this.#pump();
+      };
+      const wait = rendered ? PERIOD - (performance.now() - begun) : PERIOD;
+      if (wait > 0) this.#timer = setTimeout(next, wait);
+      else this.#immediate = setImmediate(next);
     } catch (error) {
       const retired = await retirement(this.#service, this.#generation, error);
       void this.#end(retired === undefined ? toError(error) : retired);
@@ -139,6 +184,7 @@ class StreamHandle implements Stream {
     this.#stopping ??= (async () => {
       this.#running = false;
       clearTimeout(this.#timer);
+      clearImmediate(this.#immediate);
       await this.#pumping.catch(() => {});
       try {
         await this.#service.closeIfCurrent(this.#generation);
