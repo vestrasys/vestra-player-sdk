@@ -11,6 +11,7 @@ description: The vestra-plugin commands and options, the rules of build and pack
 
 ```text
 usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]
+       vestra-plugin check [plugin-dir...] --json
        vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...
        vestra-plugin i18n check [plugin-dir...]
 ```
@@ -21,7 +22,7 @@ usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [
 
 | Command | Does |
 | --- | --- |
-| `vestra-plugin check` | strict type check of the plugin's .ts files and tests/*.ts |
+| `vestra-plugin check` | strict type check of the plugin's .ts files and tests/*.ts (then every use of an API member whose capability manifest.json does not declare: file:line, member, capability; fails on any; --json prints the findings as JSON) |
 | `vestra-plugin build` | check, then write dist/: .ts → .js with types stripped, other package files copied, dist/manifest.json with `version` |
 | `vestra-plugin test` | node --test on tests/*.test.{ts,mjs} |
 | `vestra-plugin pack` | build, then dist/ → <out>/<id>-<version>.vxp (a zip; default out: the current directory) with its sha256 and size |
@@ -36,6 +37,7 @@ Exit codes: 0 on success, 1 when a command failed for any of the directories (ea
 
 - **The manifest first.** Every command checks `manifest.json` against the player's own rules ([Manifest](manifest.md)) before anything else. `check` also prints hints that do not fail, such as an id without the `<owner>.` prefix the official repository needs.
 - **Type checking** extends the nearest `tsconfig.json` at or above the plugin directory (up to the repository root), else built-in strict settings (`strict`, `NodeNext`, `verbatimModuleSyntax`, `erasableSyntaxOnly`). Only the plugin's own files and `tests/` are checked, with the SDK's own TypeScript 5.x.
+- **Capabilities.** After the type check, `check` reports every use of an API member whose capability `manifest.json` does not declare (`file:line:column`, the member, the capability, the request) and fails; `build` and `pack` run `check` first. Only the plugin's own code is checked, not `tests/`. The same check runs in the editor ([Capabilities](capabilities.md#catching-a-missing-capability)). `check --json` prints, instead of the text, one JSON array with an entry per plugin directory: `directory`, `plugin`, `findings` (each with `file`, `line`, `column`, `api`, `capability`, `method`, `message`, and `requiredBy` when the capability is another one's **Also needs**) and `error` when the directory failed.
 - **`import type` only.** A plugin never imports SDK code at run time; `build` fails when the output still refers to `@vestra-player/sdk`. Tests import `@vestra-player/sdk/testing` freely.
 - **Translations.** With a `locales/` folder, `check` prints the `i18n check` problems as warnings and `build` compiles each `locales/<lang>.po` to `dist/locales/<lang>.json` ([Translate a plugin](../how-to/i18n.md)).
 

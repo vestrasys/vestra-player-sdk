@@ -31,6 +31,7 @@ const ALLOWED = [
   /^llms(-full)?\.txt$/,
   /^bin\/[\w-]+\.mjs$/,
   /^slint\/[\w/-]+\.slint$/,
+  /^ts-plugin\/(index\.js|package\.json)$/,
   /^dist\/[\w/-]+\.(js|d\.ts)$/,
 ];
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.26
+
+**Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged, and no API changes. A plugin that calls a member whose capability its manifest does not declare already failed at run time; `vestra-plugin check` (and therefore `build` and `pack`) now fails on it before. Additive tooling; `apiVersion` stays `vestra/1`, no player version needed.
+
+- **Undeclared capabilities are caught while writing and packing** (user ruling of 2026-10-27, doc/process/rounds/2026-10-capability-check.md in the player repository): every use of an API member whose capability `manifest.json` does not declare, with `file:line:column`, the member, the capability and the request. Type-aware: found through aliases, destructuring, parameters typed `Player` and so on; not through computed names, `any` or plain JavaScript. A member also needs its capabilities' **Also needs** (`requires`). Tests are not checked.
+  - **`vestra-plugin check`** runs it after the type check and fails on any finding; `build` and `pack` run `check` first. **`check --json`** prints the findings as JSON.
+  - **`@vestra-player/sdk/ts-plugin`**, a TypeScript language-service plugin: the same findings as errors in the editor, with the quick fix "Add '<capability>' to manifest.json". List it in `tsconfig.json` (`"plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]`) and use the workspace's TypeScript (VS Code: **Use Workspace Version**).
+- **One rule with the player.** The SDK carries a copy of the player's generated capability table (`src/host/capabilities.json`: which request needs which capability, by event name or processing stage where it depends on one) and the requests each member sends. `CAPABILITY_INFO` is now built from them; its contents are unchanged. `HOST_CAPABILITIES` (`@vestra-player/sdk/runtime`, for the player's agreement test) is the copy.
+- Docs: *Capabilities* gains *Catching a missing capability*; *Getting started* adds the `tsconfig.json` with the plugin and the VS Code step; *Command line* (the rule and `--json`). `examples/tsconfig.json` lists the plugin. `llms.txt` and `llms-full.txt` regenerated.
+
 ## 1.5.25
 
 **Who must change: nobody.** Plugins built on earlier SDKs keep working unchanged: `plugin.storage.json` and every other API do what they did. Additive; `apiVersion` stays `vestra/1`. The addition needs player 0.5.5.

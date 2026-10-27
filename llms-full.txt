@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.25: full reference
+# @vestra-player/sdk 1.5.26: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -65,6 +65,29 @@ my-plugin/
 }
 ```
 
+Add a `tsconfig.json` for your editor. The `plugins` entry turns on the SDK's TypeScript plugin, which marks a call whose capability the manifest does not declare as you type (Capabilities):
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]
+  },
+  "include": ["*.ts", "tests/*.ts"]
+}
+```
+
+In VS Code, open a `.ts` file, run **TypeScript: Select TypeScript Version** and pick **Use Workspace Version** (the TypeScript the SDK installed): editors load a project's language-service plugins only with the project's own TypeScript.
+
 #### The manifest
 
 ```json
@@ -81,7 +104,7 @@ my-plugin/
 - `version` is `x.y.z`; `vestra-plugin build` writes it into the package.
 - `apiVersion` is always `"vestra/1"` for this major version of the SDK.
 - `entry` is the entry module: `.ts` while you develop, `.js` after building.
-- `capabilities` lists what the plugin may do. A call to a member whose capability is missing fails with `code: "capability"`.
+- `capabilities` lists what the plugin may do. A call to a member whose capability is missing fails with `code: "capability"`; the editor (with the `tsconfig.json` above) and `vestra-plugin check` point such calls out before the plugin runs.
 
 Optional display fields (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `readme`, `changelog`, `sourceUrl`, `license`) are shown by the plugin store and the plugin manager, and `minPlayerVersion` names the oldest player that can load the plugin. Every field with its exact rules is in Manifest.
 
@@ -2279,6 +2302,19 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 
 A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading window.state, appearance.theme and packages.list. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest (CAPABILITY_INFO).
 
+#### Catching a missing capability
+
+The player refuses a request whose capability the manifest does not declare, at run time. The SDK finds such calls earlier, with one rule: the player's own table of which request needs which capability (copied from the player), and the requests each member above sends. Nothing has to be remembered:
+
+| Where                                     | How                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The editor                                | An error at the member, "`Player.seek` needs the capability "playback.control", which manifest.json does not declare", with the quick fix **Add 'playback.control' to manifest.json**. It comes from the TypeScript plugin `@vestra-player/sdk/ts-plugin`, listed in the project's `tsconfig.json` (`"plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]`, as in Getting started). In VS Code, run **TypeScript: Select TypeScript Version** → **Use Workspace Version**: editors load a project's plugins only with the project's own TypeScript. `tsc` ignores language-service plugins. |
+| `vestra-plugin check`, `build` and `pack` | `check` reports each use as `file:line:column` with the member, the capability and the request, and fails; `build` and `pack` run `check` first, so a package cannot be made with a missing capability. `check --json` prints the findings as JSON (Command line).                                                                                                                                                                                                                                                                                                                                                      |
+
+The manifest is the nearest `manifest.json` above the file. Only the plugin's own code is checked: `tests/` (tests choose their capabilities in `startPlugin`), `node_modules/`, `dist/` and `vendor/` are not. A member needs the capabilities its requests need and those capabilities' **Also needs**, so a `video.filter` without `playback.read` is reported too.
+
+The check follows types, not names: `plugin.player.seek`, `const { player } = plugin; player.seek(…)`, a function taking a `Player`, `plugin.clipboard["readText"]` and members of objects other members return (`panel.onChange` on a mounted panel) are all found. Not found: access with a computed name (`player[name]`), values typed `any`, plain JavaScript without types, and options that need more than the member (a `processed` capture, a file resolver). The player's check at run time stays: it is the boundary, since a plugin can bypass the SDK.
+
 ## Reference: Limits
 
 The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for: a plugin that needs to come close to one usually needs a different design (send the rows near the view, not the whole list). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too (TestHost enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
@@ -3095,13 +3131,14 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 ```text
 usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]
+       vestra-plugin check [plugin-dir...] --json
        vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...
        vestra-plugin i18n check [plugin-dir...]
 ```
 
 | Command | Does |
 | --- | --- |
-| `vestra-plugin check` | strict type check of the plugin's .ts files and tests/*.ts |
+| `vestra-plugin check` | strict type check of the plugin's .ts files and tests/*.ts (then every use of an API member whose capability manifest.json does not declare: file:line, member, capability; fails on any; --json prints the findings as JSON) |
 | `vestra-plugin build` | check, then write dist/: .ts → .js with types stripped, other package files copied, dist/manifest.json with `version` |
 | `vestra-plugin test` | node --test on tests/*.test.{ts,mjs} |
 | `vestra-plugin pack` | build, then dist/ → <out>/<id>-<version>.vxp (a zip; default out: the current directory) with its sha256 and size |
@@ -3114,6 +3151,7 @@ Exit codes: 0 on success, 1 when a command failed for any of the directories (ea
 
 - **The manifest first.** Every command checks `manifest.json` against the player's own rules (Manifest) before anything else. `check` also prints hints that do not fail, such as an id without the `<owner>.` prefix the official repository needs.
 - **Type checking** extends the nearest `tsconfig.json` at or above the plugin directory (up to the repository root), else built-in strict settings (`strict`, `NodeNext`, `verbatimModuleSyntax`, `erasableSyntaxOnly`). Only the plugin's own files and `tests/` are checked, with the SDK's own TypeScript 5.x.
+- **Capabilities.** After the type check, `check` reports every use of an API member whose capability `manifest.json` does not declare (`file:line:column`, the member, the capability, the request) and fails; `build` and `pack` run `check` first. Only the plugin's own code is checked, not `tests/`. The same check runs in the editor (Capabilities). `check --json` prints, instead of the text, one JSON array with an entry per plugin directory: `directory`, `plugin`, `findings` (each with `file`, `line`, `column`, `api`, `capability`, `method`, `message`, and `requiredBy` when the capability is another one's **Also needs**) and `error` when the directory failed.
 - **`import type` only.** A plugin never imports SDK code at run time; `build` fails when the output still refers to `@vestra-player/sdk`. Tests import `@vestra-player/sdk/testing` freely.
 - **Translations.** With a `locales/` folder, `check` prints the `i18n check` problems as warnings and `build` compiles each `locales/<lang>.po` to `dist/locales/<lang>.json` (Translate a plugin).
 
@@ -7892,8 +7930,11 @@ interface CapabilityInfo {
 
 Every manifest capability the player knows (`vestra/1`), in the player's
 order, with the members it opens, the capabilities they also need and the
-store's wording. The player's tests check that the names agree with the
-player's `host/src/plugins.rs` and the labels with its plugin store.
+store's wording. Built from the player's own capability table (its
+`src/host/capabilities.json`, copied into the SDK) and the requests each
+member sends, the same rule `vestra-plugin check` and the SDK's
+TypeScript plugin apply; the player's tests check that the copy is
+current.
 
 A member not listed under any capability needs none (`plugin.tools`,
 `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui`,

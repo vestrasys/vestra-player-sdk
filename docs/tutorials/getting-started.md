@@ -62,6 +62,29 @@ my-plugin/
 }
 ```
 
+Add a `tsconfig.json` for your editor. The `plugins` entry turns on the SDK's TypeScript plugin, which marks a call whose capability the manifest does not declare as you type ([Capabilities](../reference/capabilities.md#catching-a-missing-capability)):
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]
+  },
+  "include": ["*.ts", "tests/*.ts"]
+}
+```
+
+In VS Code, open a `.ts` file, run **TypeScript: Select TypeScript Version** and pick **Use Workspace Version** (the TypeScript the SDK installed): editors load a project's language-service plugins only with the project's own TypeScript.
+
 ## The manifest
 
 ```json
@@ -78,7 +101,7 @@ my-plugin/
 - `version` is `x.y.z`; `vestra-plugin build` writes it into the package.
 - `apiVersion` is always `"vestra/1"` for this major version of the SDK.
 - `entry` is the entry module: `.ts` while you develop, `.js` after building.
-- `capabilities` lists what the plugin may do. A call to a member whose capability is missing fails with `code: "capability"`.
+- `capabilities` lists what the plugin may do. A call to a member whose capability is missing fails with `code: "capability"`; the editor (with the `tsconfig.json` above) and `vestra-plugin check` point such calls out before the plugin runs.
 
 Optional display fields (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `readme`, `changelog`, `sourceUrl`, `license`) are shown by the plugin store and the plugin manager, and `minPlayerVersion` names the oldest player that can load the plugin. Every field with its exact rules is in [Manifest](../reference/manifest.md#fields).
 

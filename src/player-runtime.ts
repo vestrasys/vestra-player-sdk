@@ -17,6 +17,7 @@ export {
   CAPABILITY_INFO,
   MESSAGE_LIMIT,
 } from "./capabilities.ts";
+export { HOST_CAPABILITIES } from "./host-capabilities.ts";
 export {
   BUILTIN_COMMANDS,
   BUILTIN_SUBMENUS,
