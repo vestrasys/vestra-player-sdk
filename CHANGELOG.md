@@ -10,6 +10,7 @@
 - **Hidden setup lines**: in an `@example` code block, lines above `// ---cut---` are type checked but not shown on the site or in `llms-full.txt`.
 - **Checks.** `docs:check` fails on any block that does not compile (it only warned for most examples; `--lenient` keeps the old behaviour for work in progress). `doc-lint` gains `example-lead` (task title, lead, comments, one `// ---cut---` at most; `See` markers for trivial siblings, whose link must resolve, at most 20 % of a declaration's methods) and `stale-refs` (removed or handed-over names such as `vestra.nes`, `.nes` resolvers), enforced for every example and Markdown code block, and prints per category the share of methods with an explained example. `EXAMPLE_BASELINE` keeps known violations per problem when a rule is tightened; it is empty, and `test/doc-baseline.test.ts` keeps it from growing.
 - The parts of `examples/bookmark`, `examples/markdown` and `examples/panel-menu` that the reference includes gained comments on their key lines.
+- Test only: the storage test in `test/round2.test.ts` waits for the debounced file to appear and for `flush()` instead of a fixed 60 ms, and stops its plugins before removing their data directory, so it no longer fails now and then with `ENOENT` on a loaded machine.
 
 ## 1.5.29
 

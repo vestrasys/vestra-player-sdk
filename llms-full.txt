@@ -6637,9 +6637,9 @@ Example: Describe the player and the system for a bug report
 
 The plugin builds a line such as "Vestra 0.5.10 on macOS 26.2" to copy
 into a bug report. `app.version` is known from the start; each
-`system()` call asks the player, which reads the displays at that moment
-and reports the operating system's name and version as it determined
-them once when it started.
+`system()` call asks the player, which reads the displays at that moment.
+The operating system's name and version it works out once, at the first
+call, and reuses them.
 ```ts
 const system = await plugin.app.system();
 const text = `Vestra ${plugin.app.version} on ${system.name} ${system.version ?? ""}`;
