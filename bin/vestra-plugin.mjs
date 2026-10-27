@@ -401,11 +401,71 @@ async function capabilityFindings(target, config) {
     .map((finding) => ({ ...finding, file: resolve(finding.file) }));
 }
 
+/** Slint source without its comments (string literals kept as they are). */
+function slintCode(text) {
+  let out = "";
+  for (let i = 0; i < text.length;) {
+    if (text[i] === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
+      out += text.slice(i, j + 1);
+      i = j + 1;
+    } else if (text.startsWith("//", i)) {
+      const next = text.indexOf("\n", i);
+      i = next < 0 ? text.length : next;
+    } else if (text.startsWith("/*", i)) {
+      const close = text.indexOf("*/", i + 2);
+      i = close < 0 ? text.length : close + 2;
+      out += " ";
+    } else out += text[i++];
+  }
+  return out;
+}
+
+/**
+ * Whether the Slint file at `file` (relative to the plugin directory)
+ * imports `BarButtons` from `@vestra/bar-buttons.slint`, itself or
+ * through the plugin's own Slint files it imports (relative paths, any
+ * depth). Comments do not count.
+ */
+async function importsBarButtons(target, file, seen = new Set()) {
+  const path = resolve(target.directory, file);
+  if (seen.has(path) || !path.startsWith(resolve(target.directory)))
+    return false;
+  seen.add(path);
+  const text = await readFile(path, "utf8").catch(() => null);
+  if (text === null) return false;
+  const code = slintCode(text);
+  const imports = [
+    ...code.matchAll(/import\s*(?:\{([^}]*)\}\s*from\s*)?"([^"]+)"/g),
+  ];
+  for (const [, names = "", from] of imports)
+    if (
+      from === "@vestra/bar-buttons.slint" &&
+      names
+        .split(",")
+        .some((name) => /^BarButtons(\s+as\s+[\w-]+)?$/.test(name.trim()))
+    )
+      return true;
+  for (const [, , from] of imports) {
+    if (
+      from.startsWith("@") ||
+      !from.endsWith(".slint") ||
+      from === "std-widgets.slint"
+    )
+      continue;
+    if (await importsBarButtons(target, join(dirname(file), from), seen))
+      return true;
+  }
+  return false;
+}
+
 /**
  * A plugin that mounts a bottom bar (`panels.mount("bottom", "<file>")`)
- * whose Slint file does not place `BarButtons` (`@vestra/bar-buttons.slint`):
- * while it is the bottom bar, no plugin's command button shows (SDK 1.5.29).
- * Read from the source text: a literal file name in the mount call.
+ * whose Slint file does not import `BarButtons` (`@vestra/bar-buttons.slint`),
+ * itself or through its local imports: while it is the bottom bar, no
+ * plugin's command button shows (SDK 1.5.29). The mount is read from the
+ * source text: a literal file name in the call.
  */
 async function bottomBarWarnings(target) {
   const { typescript: sources } = await sourceFiles(target);
@@ -419,10 +479,8 @@ async function bottomBarWarnings(target) {
   }
   const warnings = [];
   for (const file of files) {
-    const slint = await readFile(join(target.directory, file), "utf8").catch(
-      () => null,
-    );
-    if (slint === null || /\bBarButtons\b/.test(slint)) continue;
+    if (!present(join(target.directory, file))) continue;
+    if (await importsBarButtons(target, file)) continue;
     warnings.push(
       `${file} is a bottom bar without BarButtons (import { BarButtons } from "@vestra/bar-buttons.slint"): while it is mounted, the command buttons of every plugin (and the player's sidebar toggle) show nowhere; see docs/guidelines/interface.md#writing-a-bottom-bar`,
     );

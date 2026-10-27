@@ -370,3 +370,65 @@ test("a bottom bar without BarButtons is a warning, not a failure", () => {
   assert.equal(placed.status, 0, placed.stdout + placed.stderr);
   assert.doesNotMatch(placed.stdout, /BarButtons/);
 });
+
+test("the BarButtons check reads imports, not comments, and follows the bar's own Slint imports", () => {
+  const directory = project(
+    [
+      'import type { Plugin } from "@vestra-player/sdk";',
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.panels.mount("bottom", "ui/bar.slint");',
+      '  plugin.commands.add({ id: "hello", title: "Hello", run: () => plugin.osd.show("Hello") });',
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.bar",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["commands", "ui.osd", "ui.mount"],
+    }),
+  );
+  mkdirSync(join(directory, "ui/parts"), { recursive: true });
+  const bar = join(directory, "ui/bar.slint");
+  const warned = () => {
+    const result = vestraPlugin(directory, "check");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    return /bottom bar without BarButtons/.test(result.stdout);
+  };
+  // Named only in comments: still a bar without the strip.
+  writeFileSync(
+    bar,
+    [
+      '// TODO: import { BarButtons } from "@vestra/bar-buttons.slint";',
+      "/* BarButtons { room: 100px; } */",
+      "export component Bar inherits Rectangle { height: 62px; }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), true);
+  // Placed inside a component of the plugin's own, two imports down.
+  writeFileSync(
+    join(directory, "ui/parts/strip.slint"),
+    [
+      'import { BarButtons as Strip } from "@vestra/bar-buttons.slint";',
+      "export component RightEnd { Strip { room: 200px; } }",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "ui/row.slint"),
+    [
+      'import { RightEnd } from "parts/strip.slint";',
+      "export component Row { RightEnd {} }",
+    ].join("\n"),
+  );
+  writeFileSync(
+    bar,
+    [
+      'import { Row } from "row.slint";',
+      "export component Bar inherits Rectangle { height: 62px; Row {} }",
+    ].join("\n"),
+  );
+  assert.equal(warned(), false);
+});
