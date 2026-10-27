@@ -137,6 +137,8 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `add` | 10 × 10 | 1.5px |
 | `remove` | 10 × 10 | 1.5px |
 | `sort` | 10 × 10 | 1.5px |
+| `fullscreen` | 14 × 12 | 1.5px |
+| `exit-fullscreen` | 14 × 12 | 1.5px |
 
 <!-- /generated -->
 
@@ -146,12 +148,12 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 
 <!-- generated:widgets widgets -->
 
-**`ToolTipArea`**: Hover for 600 ms to show `text` beside the pointer. The tip closes when the pointer leaves or presses; it shows again on the next hover.
+**`ToolTipArea`**: Hover for about half a second to show `text` beside the pointer. The tip closes when the pointer leaves, or presses on content that does not take the press itself; it shows again on the next hover. It is Slint's input-transparent tooltip: every press reaches the control under the pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a PopupWindow, which swallowed the first press after it showed and took the focus while it was open.)
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `text` | in `string` |  |  |
-| `showing` | out `bool` |  | The tip is showing (read-only). |
+| `showing` | out `bool` |  | The tip is showing (read-only); it follows the tip's delay closely, not exactly. |
 
 **`Button`**: Dialog button: text (21px, or 18px when `small`), or an icon button when `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height viewbox (filled, or 1.5px round-capped lines when `stroked`, as the @vestra/icons.slint set). The caller sizes icon buttons.
 

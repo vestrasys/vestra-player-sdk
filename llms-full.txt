@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.20: full reference
+# @vestra-player/sdk 1.5.21: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -445,7 +445,7 @@ Key names describe keys, not characters, with two deliberate exceptions:
 - **Option combinations match the physical key**, so `Alt+O` fires for ⌥O although that key types `ø`, and dead keys (⌥E, ⌥N…) fire too. On layouts that need Option to type a symbol (German ⌥5 = ``, ⌥L = `@`), a binding for the typed symbol (`"["`, `"@"`) wins over one for the physical key (`Alt+5`).
 - **`Ctrl` is portable, `Cmd` is not.** On macOS `Ctrl+X` fires for both ⌃X and ⌘X, `Cmd+X` only for ⌘X. On Windows `Cmd` is the Windows logo key, which the system mostly keeps, so write `Ctrl+…` for a binding that works on both systems.
 
-Mouse bindings apply only over the video area. `Mouse:LeftDoubleClick:LeftHalf` and `:RightHalf` win over the plain double click; wheel bindings count accumulated scroll steps. The right button is reserved for the context menu, and a left drag in window mode moves the window instead of clicking. A `Mouse:LeftClick` fires on release, except when the same modifiers also have a double-click binding and the click's command is not checkable: then the player waits the system's double-click interval to tell a click from a double click. (A checkable command such as play/pause runs at once; a double click runs it twice, which restores its state, and the double-click binding still fires.)
+Mouse bindings apply only over the video area. `Mouse:LeftDoubleClick:LeftHalf` and `:RightHalf` win over the plain double click; wheel bindings count accumulated scroll steps. The right button is reserved for the context menu, and a left drag in window mode moves the window instead of clicking. A `Mouse:LeftClick` fires on release, except when the same modifiers also have a double-click binding and the click's command is not checkable: then the player waits the system's double-click interval to tell a click from a double click. (A checkable command such as play/pause runs at once; a double click runs it twice, which restores its state, and the double-click binding still fires.) The player's defaults (player 0.5.2): a left click on the video is Play/Pause and nothing is bound to a double click (up to 0.5.1 a double click was Toggle Fullscreen); a click whose command is disabled does nothing.
 
 ##### The user's bindings
 
@@ -579,7 +579,7 @@ The player's **Previous** and **Next** (menu, keys, the bottom bar) are not tied
 
 #### Core actions
 
-Play/pause, stop, previous/next, frame steps, relative seeks, speed, volume and mute are **core actions**: commands the player registers itself, so they work with no plugin running. plugin.host.run(action) runs one exactly as its menu item or key would, with the same checks and the same on-screen text. A plugin's play button should call `host.run("play-pause")` rather than `setPaused`, so that it behaves like the Space key in every case (restart after the end, the "Paused" message, disabled without a source).
+Play/pause, stop, previous/next, frame steps, relative seeks, speed, volume and mute are **core actions**: commands the player registers itself, so they work with no plugin running. plugin.host.run(action) runs one exactly as its menu item or key would, with the same checks and the same on-screen text. A plugin's play button should call `host.run("play-pause")` rather than `setPaused`, so that it behaves like the Space key in every case (restart after the end, the "Paused" message, disabled without a source). A fullscreen button calls `host.run("fullscreen")` (player 0.5.2), which toggles the main window like Enter; show the button's state from `window.state.fullscreen`.
 
 The difference from the `Player` methods: a `Player` control is a precise operation the plugin is responsible for (conditional, silent, its own error handling); a core action is the user's action, performed on the plugin's behalf. The action ids, menu places and default keys are in Reference: commands; how keys reach them is in Commands, menus and key bindings.
 
@@ -2176,6 +2176,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.4.2 | Resolvers.fileTypes, Resolvers.onFileTypesChange |
 | 0.4.3 | CommandOptions.path, PropValue, View.set, Appearance.setLanguage, TemplateArgs, Text, ConfirmOptions.args, OsdPanel.set, OsdPanelOptions.maxColumns, Osd.show |
 | 0.5.1 | ImageRef, ImageOptions.maxSide, PropValue, Ui.image, Ui.remoteImage, SlotState.reason, Panel.setInteraction, PlaybackStats.presentedFps, Player.setStepSeek, Host.run, Packages.reload |
+| 0.5.2 | HostAction |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2410,7 +2411,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Copy to Clipboard ▸ File Name |  | `vestra.playback/copy-name` |
 | Copy to Clipboard ▸ Folder Path |  | `vestra.playback/copy-folder` |
 | Copy to Clipboard ▸ Full Path |  | `vestra.playback/copy-path` |
-| Playback ▸ Play/Pause | `Space` | `host/play-pause` |
+| Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
 | Playback ▸ Previous | `PageUp`, `Mouse:X1` | `host/previous` |
 | Playback ▸ Next | `PageDown`, `Mouse:X2` | `host/next` |
 | Playback ▸ Seek ▸ Previous Frame | `D` | `host/frame-back` |
@@ -2640,7 +2641,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Emulator ▸ Open NES ROM… |  | `vestra.nes/nes.open` |
 | Emulator ▸ Stop NES |  | `vestra.nes/nes.stop` |
 | Emulator ▸ NES Tools… |  | `vestra.nes/nes.window` |
-| Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11`, `Mouse:LeftDoubleClick` | `host/fullscreen` |
+| Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` | `host/fullscreen` |
 | Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Screen ▸ Mini Size | ``` | `vestra.window/mini` |
 | Screen ▸ 0.5× | `1` | `vestra.window/size.0.5` |
@@ -2753,7 +2754,7 @@ The player's own playback commands, which plugin.host.run runs by id (capability
 | Action | Menu item | Default bindings |
 | --- | --- | --- |
 | `stop` | Close | `F4` |
-| `play-pause` | Playback ▸ Play/Pause | `Space` |
+| `play-pause` | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` |
 | `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X1` |
 | `next` | Playback ▸ Next | `PageDown`, `Mouse:X2` |
 | `frame-back` | Playback ▸ Seek ▸ Previous Frame | `D` |
@@ -2766,6 +2767,7 @@ The player's own playback commands, which plugin.host.run runs by id (capability
 | `volume-up` | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` |
 | `volume-down` | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` |
 | `mute` | Audio ▸ Mute | `M` |
+| `fullscreen` | Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` |
 
 The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`); their keys are in Built-in commands.
 
@@ -2940,17 +2942,19 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `add` | 10 × 10 | 1.5px |
 | `remove` | 10 × 10 | 1.5px |
 | `sort` | 10 × 10 | 1.5px |
+| `fullscreen` | 14 × 12 | 1.5px |
+| `exit-fullscreen` | 14 × 12 | 1.5px |
 
 #### Widgets
 
 `@vestra/widgets.slint`: compact controls drawn with the theme. Other controls come from `std-widgets.slint`.
 
-**`ToolTipArea`**: Hover for 600 ms to show `text` beside the pointer. The tip closes when the pointer leaves or presses; it shows again on the next hover.
+**`ToolTipArea`**: Hover for about half a second to show `text` beside the pointer. The tip closes when the pointer leaves, or presses on content that does not take the press itself; it shows again on the next hover. It is Slint's input-transparent tooltip: every press reaches the control under the pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a PopupWindow, which swallowed the first press after it showed and took the focus while it was open.)
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `text` | in `string` |  |  |
-| `showing` | out `bool` |  | The tip is showing (read-only). |
+| `showing` | out `bool` |  | The tip is showing (read-only); it follows the tip's delay closely, not exactly. |
 
 **`Button`**: Dialog button: text (21px, or 18px when `small`), or an icon button when `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height viewbox (filled, or 1.5px round-capped lines when `stroked`, as the @vestra/icons.slint set). The caller sizes icon buttons.
 
@@ -5278,23 +5282,29 @@ interface Player {
 
 ### HostAction
 
-The core's basic playback actions (menu commands owned by the player).
+The core's basic playback actions (menu commands owned by the player),
+and the main window's fullscreen toggle.
 
 | action | default bindings | behaviour |
 | --- | --- | --- |
 | `stop` | F4 | close the source |
-| `play-pause` | Space | pause / resume, replay after the end |
+| `play-pause` | Space, a left click on the video (player 0.5.2) | pause / resume, replay after the end |
 | `previous` / `next` | PageUp, Mouse:X1 / PageDown, Mouse:X2 | ask the sequence provider |
 | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
 | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
 | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
 | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
 | `mute` | M | toggle mute |
+| `fullscreen` | Enter, Alt+Enter, F11 | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
 
-In the binding overlay their keys are `host/<action>`.
+In the binding overlay their keys are `host/<action>`. `fullscreen`
+changes no playback state: read the result from `window.state.fullscreen`
+(`plugin.window.onChange`), which also changes when the user toggles it.
+Players before 0.5.2 reject it with `invalid`: set
+`"minPlayerVersion": "0.5.2"` when you use it.
 
 ```ts
-type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute";
+type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute" | "fullscreen";
 ```
 
 ### Host
@@ -9730,7 +9740,7 @@ From top to bottom:
 - **The window.** A fixed `width`; `Theme.bg-panel` instead of a hard-coded colour, so the background follows the player's palette.
 - **The properties.** `level` is `in-out` because both the plugin and the user change it; `label` is only written by the plugin. `level-changed` reports a drag; `reset` reports the reset buttons.
 - **The layout.** `Theme.dialog-padding` and `Theme.font-body` give the spacing and text size of the player's dialogs.
-- **`ToolTipArea`** shows its `text` after the pointer rests on its content for 600 ms.
+- **`ToolTipArea`** shows its `text` after the pointer rests on its content for about half a second (600 ms before player 0.5.2). The tip never takes a press or the keyboard focus: a click goes to the control under the pointer even while the tip shows.
 - **The sliders** are bound _two-way_ to `level` with `<=>`, so dragging one moves the other at once, inside Slint. `changed` passes the value to the plugin. A one-way binding (`value: root.level`) would be broken by Slint the first time the user moved the slider. `panel: true` is the panel style; without it, the bar style.
 - **`Button`** with `text` is a dialog button; `small: true` is the 18-pixel one.
 - **Icon buttons** have no `text`; `icon` is SVG-style path data drawn in an `icon-width` × `icon-height` box (14×12 by default). `stroked: true` draws lines instead of filling. `checked` draws the icon in the accent colour.

@@ -190,7 +190,7 @@ vestra.playback | reopen | Reopen Current/Last File | Ctrl+Y
 vestra.playback | copy-name | Copy to Clipboard ▸ File Name
 vestra.playback | copy-folder | Copy to Clipboard ▸ Folder Path
 vestra.playback | copy-path | Copy to Clipboard ▸ Full Path
-host | play-pause | Playback ▸ Play/Pause | Space
+host | play-pause | Playback ▸ Play/Pause | Space, Mouse:LeftClick
 host | previous | Playback ▸ Previous | PageUp, Mouse:X1
 host | next | Playback ▸ Next | PageDown, Mouse:X2
 host | frame-back | Playback ▸ Seek ▸ Previous Frame | D
@@ -420,7 +420,7 @@ vestra.visualizer | audio-cover | Audio ▸ Show Album Cover for Audio Only
 vestra.nes | nes.open | Emulator ▸ Open NES ROM…
 vestra.nes | nes.stop | Emulator ▸ Stop NES
 vestra.nes | nes.window | Emulator ▸ NES Tools…
-host | fullscreen | Toggle Fullscreen | Enter, Alt+Enter, F11, Mouse:LeftDoubleClick
+host | fullscreen | Toggle Fullscreen | Enter, Alt+Enter, F11
 vestra.window | pip | Screen ▸ Picture-in-Picture
 vestra.window | mini | Screen ▸ Mini Size | \`
 vestra.window | size.0.5 | Screen ▸ 0.5× | 1

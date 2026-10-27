@@ -104,7 +104,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Copy to Clipboard ▸ File Name |  | `vestra.playback/copy-name` |
 | Copy to Clipboard ▸ Folder Path |  | `vestra.playback/copy-folder` |
 | Copy to Clipboard ▸ Full Path |  | `vestra.playback/copy-path` |
-| Playback ▸ Play/Pause | `Space` | `host/play-pause` |
+| Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
 | Playback ▸ Previous | `PageUp`, `Mouse:X1` | `host/previous` |
 | Playback ▸ Next | `PageDown`, `Mouse:X2` | `host/next` |
 | Playback ▸ Seek ▸ Previous Frame | `D` | `host/frame-back` |
@@ -334,7 +334,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Emulator ▸ Open NES ROM… |  | `vestra.nes/nes.open` |
 | Emulator ▸ Stop NES |  | `vestra.nes/nes.stop` |
 | Emulator ▸ NES Tools… |  | `vestra.nes/nes.window` |
-| Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11`, `Mouse:LeftDoubleClick` | `host/fullscreen` |
+| Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` | `host/fullscreen` |
 | Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Screen ▸ Mini Size | ``` | `vestra.window/mini` |
 | Screen ▸ 0.5× | `1` | `vestra.window/size.0.5` |
@@ -455,7 +455,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | Action | Menu item | Default bindings |
 | --- | --- | --- |
 | `stop` | Close | `F4` |
-| `play-pause` | Playback ▸ Play/Pause | `Space` |
+| `play-pause` | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` |
 | `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X1` |
 | `next` | Playback ▸ Next | `PageDown`, `Mouse:X2` |
 | `frame-back` | Playback ▸ Seek ▸ Previous Frame | `D` |
@@ -468,6 +468,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | `volume-up` | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` |
 | `volume-down` | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` |
 | `mute` | Audio ▸ Mute | `M` |
+| `fullscreen` | Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` |
 
 <!-- /generated -->
 

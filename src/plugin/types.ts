@@ -3980,20 +3980,26 @@ export interface Player {
 }
 
 /**
- * The core's basic playback actions (menu commands owned by the player).
+ * The core's basic playback actions (menu commands owned by the player),
+ * and the main window's fullscreen toggle.
  *
  * | action | default bindings | behaviour |
  * | --- | --- | --- |
  * | `stop` | F4 | close the source |
- * | `play-pause` | Space | pause / resume, replay after the end |
+ * | `play-pause` | Space, a left click on the video (player 0.5.2) | pause / resume, replay after the end |
  * | `previous` / `next` | PageUp, Mouse:X1 / PageDown, Mouse:X2 | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
  * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
  * | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
  * | `mute` | M | toggle mute |
+ * | `fullscreen` | Enter, Alt+Enter, F11 | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
  *
- * In the binding overlay their keys are `host/<action>`.
+ * In the binding overlay their keys are `host/<action>`. `fullscreen`
+ * changes no playback state: read the result from `window.state.fullscreen`
+ * (`plugin.window.onChange`), which also changes when the user toggles it.
+ * Players before 0.5.2 reject it with `invalid`: set
+ * `"minPlayerVersion": "0.5.2"` when you use it.
  */
 export type HostAction =
   | "play-pause"
@@ -4009,7 +4015,8 @@ export type HostAction =
   | "rate-normal"
   | "volume-up"
   | "volume-down"
-  | "mute";
+  | "mute"
+  | "fullscreen";
 
 /** `plugin.host`: the player's own core actions. */
 export interface Host {
