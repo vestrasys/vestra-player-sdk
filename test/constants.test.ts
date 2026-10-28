@@ -77,6 +77,7 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "ui.settings",
     "ui.theme",
     "secrets",
+    "rendering.manage",
   ]);
   assert.ok(Object.isFrozen(CAPABILITY_INFO));
   assert.ok(Object.isFrozen(CAPABILITIES));
@@ -89,6 +90,7 @@ test("CAPABILITY_INFO: labels, highlighted ones and requirements", () => {
     "clipboard",
     "bindings.manage",
     "secrets",
+    "rendering.manage",
   ]);
   for (const [name, info] of Object.entries(CAPABILITY_INFO)) {
     assert.match(info.label, /^[A-Z][^\n]*[^.\s]$/, name);

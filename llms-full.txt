@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.34: full reference
+# @vestra-player/sdk 1.5.35: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -1613,6 +1613,127 @@ export default async function activate(plugin: Plugin) {
 - **Preferences rather than state:** a choice such as "reopen my windows at startup" belongs on a settings page (plugin.settings.page) that reads and writes the same store (the `SettingsPage` reference has an example).
 - **Large or binary data:** write your own files in plugin.dataDirectory (to a temporary name, then rename) and keep only small settings in `storage.json`.
 
+## How-to: Offer a GPU rendering switch
+
+**Goal:** a settings menu item "GPU Rendering (Experimental)" that shows whether the player will draw on the GPU, is greyed out with the player's reason where the GPU cannot be chosen, saves the user's choice, says "(Restart to Apply)" while the choice waits for a restart, and offers that restart.
+
+The player keeps the choice itself, like a browser's hardware acceleration switch: setPreference saves it in the player's settings at once, the running player keeps its renderer, and the next start uses the choice **whether or not the user restarts now**. Your plugin stores nothing. Reading the state needs no capability; saving a choice and restarting need `rendering.manage`, which needs player 0.5.13.
+
+#### The complete example
+
+`manifest.json`:
+
+```json
+{
+  "id": "examples.gpu-switch",
+  "version": "1.0.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.5.13",
+  "capabilities": ["commands", "rendering.manage"]
+}
+```
+
+`main.ts`:
+
+```ts
+import type { Plugin, PluginError, RenderingState, Scope } from "@vestra-player/sdk";
+
+const TITLE = "GPU Rendering (Experimental)";
+
+export default async function activate(plugin: Plugin) {
+  let state: RenderingState = await plugin.rendering.state();
+  let menu: Scope | null = null;
+  let shownPending: boolean | null = null;
+
+  // A command's title cannot change in place, so the items live in a child
+  // scope that is rebuilt when `restartPending` flips.
+  async function build() {
+    if (state.restartPending === shownPending) return;
+    shownPending = state.restartPending;
+    await menu?.dispose();
+    menu = plugin.scope();
+    menu.commands.add({
+      id: "gpu-rendering",
+      path: ["@settings", state.restartPending ? `${TITLE} (Restart to Apply)` : TITLE],
+      // Checked when the next start draws on the GPU (also for "auto").
+      checked: () => state.nextMode === "gpu",
+      // Greyed out with the player's reason where "gpu" cannot be chosen.
+      enabled: () => state.gpu.available,
+      reason: () => state.gpu.reason?.message ?? null,
+      run: async () => {
+        const choice = state.nextMode === "gpu" ? "software" : "gpu";
+        try {
+          state = await plugin.rendering.setPreference(choice);
+        } catch (error) {
+          // `unavailable`: the GPU was ruled out after the state was read.
+          state = await plugin.rendering.state(); // the item now says why
+          if ((error as PluginError).code !== "unavailable") throw error; // `failed`: not saved
+        } finally {
+          await build();
+        }
+      },
+    });
+    if (state.restartPending)
+      menu.commands.add({
+        id: "restart",
+        path: ["@settings", "Restart Player to Apply"],
+        run: async () => {
+          // Resolves once the player accepted; it then quits and starts again.
+          await plugin.rendering.restartPlayer();
+        },
+      });
+  }
+
+  await build();
+}
+```
+
+#### How it works
+
+- **`state()` describes now and the next start.** `mode` and `reason` are the renderer drawing now and why; `preference` is the saved choice (`"auto"`, `"gpu"` or `"software"`); `nextMode` and `nextReason` are what the next start will use as far as the player knows, after the environment, the driver denylist and an earlier GPU crash. The item is checked by `nextMode`, so with `"auto"` on a system where the GPU is the default it shows checked.
+- **`gpu.available` decides whether the item can be used.** Where this player has no GPU renderer (`no-gpu-backend`, Windows today), without a user interface (`headless`), for a graphics driver on the player's denylist (`denylist`) or after a GPU crash at an earlier start (`previous-crash`), it is `false` and `gpu.reason.message` explains why; the item shows that as its disabled reason. `"software"` and `"auto"` are always accepted, so a user can always leave the GPU.
+- **`restartPending`** is true while the next start's mode differs from the mode this run started with. When the user changes the choice back, it turns false again and the "(Restart to Apply)" title and the restart item go away.
+- **`restartPlayer()`** resolves once the player has accepted. The player then quits normally, which stops every plugin, yours included, and starts again with the same plugins; a local file continues at its position, paused or playing as it was (a stream is not reopened). It rejects with `busy` while a restart is under way and with `failed` when the new process could not start (the player keeps running).
+
+The restart is only a shortcut. A user who ignores it gets the new renderer the next time they start the player.
+
+#### Older players
+
+A player before 0.5.13 does not load a plugin that declares `rendering.manage`, so the manifest above sets `minPlayerVersion`. A plugin that only reads the state, without the capability, gets `unsupported` from `state()` on an older player:
+
+```ts
+const state = await plugin.rendering.state().catch((error: PluginError) => {
+  if (error.code === "unsupported") return null; // a player before 0.5.13
+  throw error;
+});
+```
+
+To know only whether render options work now, read rendering from `plugin.app.system()` instead; `renderingReason` there is the same reason as `state().reason`.
+
+#### Test it
+
+TestHost.rendering models the player: preset `gpu`, `reason` and `startedWith` before the plugin starts (`videoRender.gpu` is the mode drawing now), then drive the item and check the saved choice.
+
+```ts
+import assert from "node:assert/strict";
+import { startPlugin, TestHost } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+const host = new TestHost(); // a GPU player, "auto", started on the GPU
+const { stop } = await startPlugin(activate, {
+  directory: new URL("..", import.meta.url),
+  host,
+});
+await host.command("gpu-rendering").run(); // unchecks: saves "software"
+assert.equal(host.rendering.preference, "software");
+await host.command("restart").run(); // offered while the restart is pending
+assert.equal(host.rendering.restarts, 1);
+await stop();
+```
+
+Set `host.rendering.gpu = { available: false, reason: { code: "denylist", message: "…" } }` to see the item greyed out, and refuse a call with `host.handle("rendering.restart", () => { throw new HostError("failed", "…"); })`.
+
 ## How-to: Translate a plugin
 
 Vestra Player (0.4.3 or later) shows its interface in one of seven languages. The user picks one in **Settings ▸ Language** (or follows the system); the choice takes effect at the next start, and the language stays the same for the whole run. A plugin joins in by shipping one gettext file per language. It writes **no translation code**: the player translates.
@@ -2044,7 +2165,7 @@ The test decides what the player is doing:
 - `host.openElsewhere(path, phase?)`: the user or another plugin opened a source (a new source id, then `phase`, `"ready"` by default). Calls the plugin made against the old state now fail with `stale`.
 - `host.setSource({ phase, position, duration, paused, audioTracks, … })`: the state changed (the user paused, playback reached the end). Before `startPlugin`, it presets the source the plugin finds at activation.
 - `host.setMainWindow({ fullscreen, videoArea })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the main window, the colour scheme, the installed plugins changed.
-- Preset data the player would return: `host.stats` (`player.stats()`), `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`; `host.tools.handle("ffprobe", (args) => ({ stdout }))` makes a tool available and answers its runs.
+- Preset data the player would return: `host.stats` (`player.stats()`), `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`, `host.rendering` (the GPU or software choice, see Offer a GPU rendering switch); `host.tools.handle("ffprobe", (args) => ({ stdout }))` makes a tool available and answers its runs.
 
 #### Inject failures
 
@@ -2568,6 +2689,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.5 | SessionStorage |
 | 0.5.10 | CommandButton, CommandOptions.button |
 | 0.5.12 | SystemInfo.rendering |
+| 0.5.13 | SystemInfo.renderingReason, RenderingMode, RenderingPreference, RenderingReasonCode, RenderingReason, RenderingState, Rendering |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2604,6 +2726,7 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 | `ui.settings` | Settings.page, Settings.show | — | Add pages to the Options window |  |
 | `ui.theme` | Appearance.set, Appearance.setLanguage | — | Change the player's palette |  |
 | `secrets` | Secrets.get, Secrets.set, Secrets.delete | — | Store sign-in details in the system keychain | yes |
+| `rendering.manage` | Rendering.setPreference, Rendering.restartPlayer | — | Choose GPU or software rendering and restart the player | yes |
 
 **Also needs** applies to every member of the row: declare those capabilities as well. A few members or options need one more, documented at the member:
 
@@ -2615,7 +2738,7 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 
 #### Without a capability
 
-A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading window.state, appearance.theme and packages.list. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest (CAPABILITY_INFO).
+A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading window.state, appearance.theme, packages.list and rendering.state. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest (CAPABILITY_INFO).
 
 #### Catching a missing capability
 
@@ -3264,6 +3387,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | Snapshots and exports (MediaCapture) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams (Player.openStream) | A Unix socket. | Loopback TCP with a token. |
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
+| plugin.rendering (player 0.5.13) | `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`). | `gpu.available` is `false` (`no-gpu-backend`); `setPreference("gpu")` fails with `unsupported`. |
 | Render options (RenderOptions) | Available; `peakDetect` has no effect. | `unsupported` (software rendering). |
 | Bindings | `Ctrl` also matches ⌘; `Cmd` is ⌘. | `Cmd` is the Windows logo key; `Cmd+Q` does not quit. |
 | Keys taken first, standard close keys | See Keys the system takes first. | See Keys the system takes first. |
@@ -3802,6 +3926,8 @@ interface Scope extends Disposable {
   readonly window: MainWindow;
   /** The player's version and components, and the system it runs on. */
   readonly app: App;
+  /** GPU or software rendering: read the choice, change it (`rendering.manage`). */
+  readonly rendering: Rendering;
   /** Every command's bindings and the user's overrides (`bindings.manage`). */
   readonly bindings: Bindings;
   /** Runtime images for Slint `image` properties. */
@@ -7328,6 +7454,27 @@ interface SystemInfo {
    * ```
    */
   readonly rendering?: "gpu" | "software";
+  /**
+   * Why SystemInfo.rendering is what it is now: the same reason as
+   * RenderingState.reason (`default`, `no-gpu-backend`,
+   * `preference`, `denylist`, `window-fallback`…, see
+   * RenderingReasonCode). Read at each call, like `rendering`.
+   *
+   * Absent (`undefined`) on players before 0.5.13.
+   * @player 0.5.13; older players leave it out (declare `"minPlayerVersion": "0.5.13"` when the plugin relies on it).
+   * @example Say why the video is drawn in software
+   * An About page explains a software renderer with the player's own words,
+   * for example that the graphics driver is on the player's denylist.
+   * `system()` reports the renderer and its reason together, with no
+   * capability; the message is English text that may name the adapter and
+   * the driver version.
+   * ```ts
+   * const { rendering, renderingReason } = await plugin.app.system();
+   * if (rendering === "software" && renderingReason)
+   *   console.log(`Rendering: software (${renderingReason.message})`);
+   * ```
+   */
+  readonly renderingReason?: RenderingReason;
 }
 ```
 
@@ -11368,6 +11515,298 @@ if (token === null) {
 }
 ```
 
+### RenderingMode
+
+Which renderer draws the video: `"gpu"` (the GPU renderer, where
+render options apply) or `"software"` (they fail
+with `unsupported`). The same values as SystemInfo.rendering.
+
+- @player 0.5.13
+
+```ts
+type RenderingMode = "gpu" | "software";
+```
+
+Example: Tell the user which renderer draws the video
+
+The plugin shows "Rendering: GPU" or "Rendering: software" on the
+video. `state()` asks the player; `mode` is the renderer drawing now,
+which can differ from the saved choice until the next start.
+```ts
+const { mode } = await plugin.rendering.state();
+const label: Record<RenderingMode, string> = { gpu: "GPU", software: "software" };
+await plugin.osd.show("Rendering: {}", [label[mode]]);
+```
+
+### RenderingPreference
+
+The user's saved rendering choice: `"auto"` (the player decides: the GPU
+where this system has a GPU renderer that is not ruled out, software
+elsewhere), `"gpu"` or `"software"`. It applies from the next start.
+
+- @player 0.5.13
+
+```ts
+type RenderingPreference = "auto" | "gpu" | "software";
+```
+
+Example: Describe the saved choice on a settings page
+
+The plugin turns the saved choice into the words its settings page
+shows. `preference` is what the user chose, not what draws now:
+RenderingState.nextMode says what the next start will use.
+```ts
+const { preference } = await plugin.rendering.state();
+// One word per choice; the Record type makes sure none is missing.
+const words: Record<RenderingPreference, string> = {
+  auto: "Automatic",
+  gpu: "GPU",
+  software: "Software",
+};
+console.log(words[preference]);
+```
+
+### RenderingReasonCode
+
+Why the player renders the way it does, as a stable kebab-case code. A
+newer player may add codes: compare with the ones you handle and show
+RenderingReason.message for the rest. The codes of player 0.5.13:
+
+| Code | Meaning |
+| --- | --- |
+| `default` | Nothing ruled the GPU out; the platform's default. |
+| `pending` | GPU rendering is starting. |
+| `headless` | The player runs without a user interface. |
+| `no-gpu-backend` | This player has no GPU renderer on this system (Windows today). |
+| `env` | The environment chose it (`VESTRA_RENDER`, `VESTRA_SOFTWARE_RENDER`). |
+| `preference` | The user chose it (Rendering.setPreference). |
+| `denylist` | The graphics driver is on the player's denylist. |
+| `previous-crash` | GPU rendering crashed at an earlier start; it is tried again after a driver or player update, or after 7 days. |
+| `init-failed` | GPU rendering could not start. |
+| `window-fallback` | A window could not show GPU frames; the player switched to software during the run. |
+
+- @player 0.5.13
+
+```ts
+type RenderingReasonCode = "default" | "pending" | "headless" | "no-gpu-backend" | "env" | "preference" | "denylist" | "previous-crash" | "init-failed" | "window-fallback" | (string & {});
+```
+
+Example: Explain a driver problem differently from a user choice
+
+The plugin adds advice only when the graphics driver is the cause.
+`reason.code` is looked up among the codes the plugin knows; an unknown
+code from a newer player falls through to the player's own message.
+```ts
+const { reason } = await plugin.rendering.state();
+// Advice for the codes this plugin knows; any other code shows the message.
+const advice: Partial<Record<RenderingReasonCode, string>> = {
+  denylist: "Update the graphics driver to use the GPU.",
+  "previous-crash": "The GPU renderer crashed earlier; it is retried after an update.",
+};
+console.log(advice[reason.code] ?? reason.message);
+```
+
+### RenderingReason
+
+Why the player renders, or will render, the way it does: a stable
+RenderingReasonCode to branch on and a sentence to show.
+
+- @player 0.5.13
+
+```ts
+interface RenderingReason {
+  /** The reason as a stable kebab-case code; branch on this. */
+  readonly code: RenderingReasonCode;
+  /** The reason as English text for people, for example with the graphics adapter's name and driver version; never branch on it. */
+  readonly message: string;
+}
+```
+
+Example: Show why GPU rendering is off
+
+The plugin logs the player's explanation when the video is drawn in
+software. `message` is the player's English text and may name the
+graphics adapter and driver version; `code` is for decisions.
+```ts
+const { mode, reason } = await plugin.rendering.state();
+if (mode === "software") console.log(`${reason.code}: ${reason.message}`);
+```
+
+### RenderingState
+
+What Rendering.state and Rendering.setPreference report:
+the renderer drawing now and why, the saved choice, what the next start
+will use, and whether `"gpu"` can be chosen.
+
+- @player 0.5.13
+
+```ts
+interface RenderingState {
+  /** The renderer drawing the video now; the same as SystemInfo.rendering. */
+  readonly mode: RenderingMode;
+  /** Why RenderingState.mode is what it is now. */
+  readonly reason: RenderingReason;
+  /** The saved choice; it applies from the next start. */
+  readonly preference: RenderingPreference;
+  /** The renderer the next start will use, as far as the player knows now: from the saved choice, the environment, the driver denylist and an earlier GPU crash. */
+  readonly nextMode: RenderingMode;
+  /** Why the next start will use RenderingState.nextMode. */
+  readonly nextReason: RenderingReason;
+  /**
+   * `true` while RenderingState.nextMode differs from the mode this run started with, so a restart would change the renderer; `false` again when the user changes the choice back.
+   */
+  readonly restartPending: boolean;
+  /** Whether the user can choose `"gpu"` now. */
+  readonly gpu: {
+    /** `true` when `setPreference("gpu")` would be accepted. */
+    readonly available: boolean;
+    /** Why `"gpu"` cannot be chosen (`no-gpu-backend`, `headless`, `denylist`, `previous-crash`…); `null` while it is available. */
+    readonly reason: RenderingReason | null;
+  };
+}
+```
+
+Example: Label a menu item while a change waits for a restart
+
+The plugin adds "(Restart to Apply)" to its GPU item after the user
+changed the choice. `restartPending` compares the mode the next start
+will use with the mode this run started with, so it turns false again
+when the user changes the choice back.
+```ts
+const state = await plugin.rendering.state();
+const title = state.restartPending
+  ? "GPU Rendering (Experimental) (Restart to Apply)"
+  : "GPU Rendering (Experimental)";
+console.log(title, state.nextMode, state.nextReason.message);
+```
+
+### Rendering
+
+`plugin.rendering`: the player's rendering choice, GPU or software.
+Reading it needs no capability; changing the saved choice and restarting
+the player need `rendering.manage`.
+
+The choice works like a browser's hardware acceleration switch: the
+player saves it in its own settings at once, and the running player
+keeps its renderer. The next start uses it, whether the user restarts
+now through Rendering.restartPlayer or quits and starts the
+player later. The player can still rule the GPU out at a start (an
+environment variable, a graphics driver on its denylist, a GPU crash at
+an earlier start); RenderingState.nextMode and
+RenderingState.nextReason say what the next start will do.
+
+The renderer is a choice for the whole player and a restart stops every
+plugin, so change it only when the user asks. A plugin that only needs
+to know whether render options work reads SystemInfo.rendering.
+
+Players before 0.5.13 do not know these requests: `state()` rejects with
+`unsupported`, and they do not load a plugin that declares
+`rendering.manage` (an unknown capability). Declare
+`"minPlayerVersion": "0.5.13"` when the plugin needs this.
+
+- @capability None to read the state; `rendering.manage` to change the choice or restart the player.
+- @player 0.5.13; older players reject the requests as unknown (`unsupported`).
+
+```ts
+interface Rendering {
+  /**
+   * Read the renderer drawing now, the saved choice, what the next start will use and whether `"gpu"` can be chosen. No capability.
+   * @capability None.
+   * @throws unsupported (rejects) A player before 0.5.13, which does not know the request.
+   * @example Find out whether the GPU can be chosen
+   * The plugin reads the state once while it starts and keeps it for its
+   * menu. Each call asks the player; `gpu.available` is false, with a
+   * reason, where this player has no GPU renderer, without a user
+   * interface, or when the driver is ruled out. An older player rejects
+   * with `unsupported`, and the plugin then offers nothing.
+   * ```ts
+   * const state = await plugin.rendering.state().catch((error: PluginError) => {
+   *   if (error.code === "unsupported") return null; // a player before 0.5.13
+   *   throw error;
+   * });
+   * if (state && !state.gpu.available) console.log(state.gpu.reason?.message);
+   * ```
+   */
+  state(): Promise<RenderingState>;
+  /**
+   * Save the user's rendering choice. The player writes it to its settings at once; the running player keeps its renderer, and the next start uses the choice whether or not the user restarts now. `"auto"` and `"software"` are always accepted.
+   * @param preference - `"auto"`, `"gpu"` or `"software"`.
+   * @returns The new state; RenderingState.restartPending tells whether a restart would change the renderer.
+   * @capability rendering.manage
+   * @throws invalid (rejects) `preference` is not `"auto"`, `"gpu"` or `"software"`.
+   * @throws unsupported (rejects) `"gpu"` where this player has no GPU renderer on this system, or runs without a user interface; also any value on a player before 0.5.13.
+   * @throws unavailable (rejects) `"gpu"` while it is ruled out: the graphics driver is on the player's denylist, or GPU rendering crashed at an earlier start. The message says which, with the adapter's name and the driver version.
+   * @throws failed (rejects) The player could not write its settings file.
+   * @throws capability (rejects) The manifest does not declare `rendering.manage`.
+   * @example Switch back to the automatic choice
+   * A Reset item returns the renderer to the player's own choice and tells
+   * the user when it takes effect. `setPreference` saves the choice and
+   * resolves with the new state; `restartPending` is true when the next
+   * start will draw differently from this run. A refused save leaves the
+   * old choice in place.
+   * ```ts
+   * try {
+   *   const state = await plugin.rendering.setPreference("auto");
+   *   if (state.restartPending) await plugin.osd.show("Applies after a restart");
+   * } catch (error) {
+   *   // `failed`: the player's settings file could not be written.
+   *   await plugin.osd.show("Not saved ({})", [(error as PluginError).code]);
+   * }
+   * ```
+   */
+  setPreference(preference: RenderingPreference): Promise<RenderingState>;
+  /**
+   * Restart the player so that a changed choice applies now. Resolves once the player has accepted; the player then quits normally, which stops every plugin (this one included), and starts again with the same plugins. A local file that was open continues at its position, paused or playing as it was; a stream or another source that is not a file is not reopened.
+   * @capability rendering.manage
+   * @throws unsupported (rejects) The player runs without a user interface; also a player before 0.5.13.
+   * @throws busy (rejects) A restart is already under way.
+   * @throws failed (rejects) The new player process could not be started; the player keeps running.
+   * @throws capability (rejects) The manifest does not declare `rendering.manage`.
+   * @example Restart after asking the user
+   * After the user changed the renderer, the plugin offers to restart now.
+   * `confirm` asks first, because a restart closes every window (it needs
+   * `ui.dialog`); once `restartPlayer` resolves, the player is quitting and
+   * will stop this plugin, so nothing else is started after it.
+   * ```ts
+   * const { confirmed } = await plugin.dialogs.confirm({
+   *   message: "Restart the player now?",
+   *   detail: "The new renderer is used from the restart on. The video continues where it is.",
+   *   confirm: "Restart",
+   * });
+   * if (confirmed)
+   *   await plugin.rendering.restartPlayer().catch((error: PluginError) => {
+   *     // `failed`: the new player could not start; this one keeps running.
+   *     void plugin.osd.show("Could not restart ({})", [error.code]);
+   *   });
+   * ```
+   */
+  restartPlayer(): Promise<void>;
+}
+```
+
+Example: Offer GPU rendering as a menu item
+
+Settings ▸ GPU Rendering (Experimental) carries a check mark while the
+next start will draw on the GPU, is greyed out with the player's reason
+where the GPU cannot be chosen, and saves the other choice when picked.
+`state()` reads the player's view once; `setPreference` saves the choice
+and resolves with the new state, which the item's bound values read
+again after the handler. The how-to guide adds the restart.
+```ts
+let state = await plugin.rendering.state();
+plugin.commands.add({
+  id: "gpu-rendering",
+  path: ["@settings", "GPU Rendering (Experimental)"],
+  checked: () => state.nextMode === "gpu", // also for "auto" on a GPU system
+  enabled: () => state.gpu.available,
+  reason: () => state.gpu.reason?.message ?? null, // shown while disabled
+  run: async () => {
+    const choice = state.nextMode === "gpu" ? "software" : "gpu";
+    state = await plugin.rendering.setPreference(choice);
+  },
+});
+```
+
 ### VideoNode
 
 One node of a VideoFilter chain, by `kind`. Values outside the
@@ -12064,7 +12503,7 @@ Members fall into a few groups:
   TestHost.app, TestHost.systemInfo,
   TestHost.chapters, TestHost.audioDevices,
   TestHost.secrets, TestHost.clipboard,
-  TestHost.tools.
+  TestHost.tools, TestHost.rendering.
 - **Assert** on records: TestHost.osd, TestHost.calls,
   TestHost.sent, TestHost.conflicts,
   TestHost.layout, TestHost.menus, and many more.
@@ -12658,7 +13097,7 @@ class TestHost implements Transport {
    */
   setVideoRenderOwner(pluginId: string | null): void;
   /**
-   * What the player pushes when mpv cannot compile a shader (code `failed`) or switches to software rendering (`unsupported`, which also sets `videoRender.gpu` to false). Pushed only when this plugin is the owner.
+   * What the player pushes when mpv cannot compile a shader (code `failed`) or switches to software rendering (`unsupported`, which also sets `videoRender.gpu` to false and `rendering.reason` to `window-fallback` with `message`). Pushed only when this plugin is the owner.
    * @capability None.
    * @example Make a shader fail to compile
    * The plugin's render options report `failed`, as when mpv rejects a
@@ -12884,9 +13323,9 @@ class TestHost implements Transport {
    */
   readonly sessionStorage: Map<string, Json>;
   /**
-   * What `plugin.app.system()` reports. Its `rendering` follows videoRender.gpu (`"gpu"` or `"software"`), so one switch covers the render options and the fact.
+   * What `plugin.app.system()` reports. Its `rendering` follows videoRender.gpu (`"gpu"` or `"software"`), so one switch covers the render options and the fact; its `renderingReason` is rendering.reason.
    */
-  systemInfo: Omit<WireSystemInfo, "rendering">;
+  systemInfo: Omit<WireSystemInfo, "rendering" | "renderingReason">;
   /** What `plugin.app` reports. Set it before startPlugin: the plugin receives it once at start-up. */
   app: {
     /** The player version. */
@@ -12902,6 +13341,70 @@ class TestHost implements Transport {
       /** The Slint version. */
       slint: string;
     };
+  };
+  /**
+   * The player's rendering choice behind `plugin.rendering` (player
+   * 0.5.13). The mode drawing now is videoRender.gpu, as for `plugin.app.system()`; the rest is preset here
+   * and changed by the plugin's calls, as the player would:
+   *
+   * - `setPreference` saves `preference` and never changes the mode. It
+   *   refuses `"gpu"` while `gpu.available` is false: with `unsupported`
+   *   when `gpu.reason.code` is `no-gpu-backend` or `headless`, otherwise
+   *   with `unavailable`, the reason's message in both cases.
+   * - The next start uses `"software"` for the `"software"` choice, else
+   *   software with `gpu.reason` while the GPU is not available, else the
+   *   GPU (code `preference` for a `"gpu"` choice, `default` for
+   *   `"auto"`). `restartPending` compares that with `startedWith`.
+   * - `restartPlayer` counts in `restarts` and leaves the plugin running
+   *   (call `stop()` yourself); a second one rejects with `busy`, as a
+   *   restart is then under way.
+   *
+   * Inject other refusals (`failed` for an unwritable settings file or a
+   * new process that could not start) with `host.handle("rendering.setPreference", …)`
+   * or `host.handle("rendering.restart", …)`. The defaults are a macOS
+   * player on the GPU: `"auto"`, available, started on the GPU.
+   * @example Test a GPU switch on a system without a GPU renderer
+   * The plugin's GPU menu item is greyed out with the player's reason when
+   * the GPU cannot be chosen. The host is preset before the plugin starts,
+   * because the plugin reads the state while activating; software
+   * rendering is `videoRender.gpu = false`, and `gpu` says why the GPU
+   * cannot be chosen.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * import { startPlugin, TestHost } from "@vestra-player/sdk/testing";
+   * import activate from "../main.ts";
+   *
+   * const host = new TestHost();
+   * host.videoRender.gpu = false; // software draws now (Windows)
+   * host.rendering.startedWith = "software";
+   * host.rendering.reason = { code: "no-gpu-backend", message: "No GPU renderer on Windows" };
+   * host.rendering.gpu = { available: false, reason: host.rendering.reason };
+   * const { stop } = await startPlugin(activate, {
+   *   directory: new URL("..", import.meta.url),
+   *   host,
+   * });
+   * const item = host.command("gpu-rendering");
+   * assert.equal(item.state.enabled, false);
+   * assert.equal(item.state.reason, "No GPU renderer on Windows");
+   * await stop();
+   * ```
+   */
+  readonly rendering: {
+    /** Why the mode drawing now is what it is (`RenderingState.reason`, `SystemInfo.renderingReason`). */
+    reason: RenderingReason;
+    /** The saved choice: `"auto"`, `"gpu"` or `"software"`. */
+    preference: RenderingPreference;
+    /** The mode this run started with; `restartPending` compares the next start's mode with it. */
+    startedWith: RenderingMode;
+    /** Whether the plugin may choose `"gpu"`, and why not (`null` while available). */
+    gpu: {
+      /** `false`: `setPreference("gpu")` is refused. */
+      available: boolean;
+      /** Why the GPU cannot be chosen; `null` while it can. */
+      reason: RenderingReason | null;
+    };
+    /** Accepted `restartPlayer` calls. */
+    restarts: number;
   };
   /** What `player.chapters()` lists while media is ready. */
   chapters: {
@@ -13591,8 +14094,8 @@ current.
 
 A member not listed under any capability needs none (`plugin.tools`,
 `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui`,
-`plugin.i18n`, reading `plugin.window.state`, `plugin.appearance.theme`
-and `plugin.packages.list`).
+`plugin.i18n`, reading `plugin.window.state`, `plugin.appearance.theme`,
+`plugin.packages.list` and `plugin.rendering.state`).
 
 ```ts
 const CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>>;
@@ -14685,6 +15188,8 @@ interface WireSystemInfo {
   }[];
   /** Player 0.5.12; older players leave it out. */
   rendering?: "gpu" | "software";
+  /** Why `rendering` is what it is (player 0.5.13; older players leave it out). */
+  renderingReason?: WireRenderingReason;
 }
 ```
 

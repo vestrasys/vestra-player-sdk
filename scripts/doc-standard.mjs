@@ -156,8 +156,16 @@ export const STRICT_CATEGORIES = {
       "System",
       "Tools",
       "Power",
+      "Rendering",
     ],
-    data: ["ToolResult"],
+    data: [
+      "ToolResult",
+      "RenderingState",
+      "RenderingReason",
+      "RenderingReasonCode",
+      "RenderingMode",
+      "RenderingPreference",
+    ],
   },
   Subtitles: {
     full: ["Subtitles"],

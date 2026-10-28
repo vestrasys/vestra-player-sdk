@@ -354,6 +354,17 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       residency: "none",
       risky: true,
     },
+    {
+      label: "Choose GPU or software rendering and restart the player",
+      methods: [
+        { name: "rendering.setPreference", needs: "rendering.manage" },
+        { name: "rendering.restart", needs: "rendering.manage" },
+      ],
+      name: "rendering.manage",
+      requires: [],
+      residency: "none",
+      risky: true,
+    },
   ],
   uncapable: [
     { name: "packages.list", needs: null },
@@ -367,5 +378,6 @@ export const HOST_CAPABILITIES: HostCapabilities = {
     { name: "storage.session.set", needs: null },
     { name: "storage.session.delete", needs: null },
     { name: "storage.session.keys", needs: null },
+    { name: "rendering.state", needs: null },
   ],
 };

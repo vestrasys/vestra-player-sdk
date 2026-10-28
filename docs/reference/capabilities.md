@@ -36,6 +36,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 | `ui.settings` | {@linkcode "@vestra-player/sdk"!Settings.page Settings.page}, {@linkcode "@vestra-player/sdk"!Settings.show Settings.show} | — | Add pages to the Options window |  |
 | `ui.theme` | {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set}, {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage} | — | Change the player's palette |  |
 | `secrets` | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | — | Store sign-in details in the system keychain | yes |
+| `rendering.manage` | {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference}, {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} | — | Choose GPU or software rendering and restart the player | yes |
 
 <!-- /generated -->
 
@@ -49,7 +50,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 
 ## Without a capability
 
-A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading {@link "@vestra-player/sdk"!MainWindow.state | window.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and {@link "@vestra-player/sdk"!Packages.list | packages.list}. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest ({@link "@vestra-player/sdk/testing"!CAPABILITY_INFO | CAPABILITY_INFO}).
+A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading {@link "@vestra-player/sdk"!MainWindow.state | window.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme}, {@link "@vestra-player/sdk"!Packages.list | packages.list} and {@link "@vestra-player/sdk"!Rendering.state | rendering.state}. The table is `CAPABILITY_INFO`, which tests can import from `@vestra-player/sdk/testing` to check a manifest ({@link "@vestra-player/sdk/testing"!CAPABILITY_INFO | CAPABILITY_INFO}).
 
 ## Catching a missing capability
 

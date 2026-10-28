@@ -75,7 +75,7 @@ The test decides what the player is doing:
 - `host.openElsewhere(path, phase?)`: the user or another plugin opened a source (a new source id, then `phase`, `"ready"` by default). Calls the plugin made against the old state now fail with `stale`.
 - `host.setSource({ phase, position, duration, paused, audioTracks, … })`: the state changed (the user paused, playback reached the end). Before `startPlugin`, it presets the source the plugin finds at activation.
 - `host.setMainWindow({ fullscreen, videoArea })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the main window, the colour scheme, the installed plugins changed.
-- Preset data the player would return: `host.stats` (`player.stats()`), `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`; `host.tools.handle("ffprobe", (args) => ({ stdout }))` makes a tool available and answers its runs.
+- Preset data the player would return: `host.stats` (`player.stats()`), `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`, `host.rendering` (the GPU or software choice, see [Offer a GPU rendering switch](gpu-rendering.md)); `host.tools.handle("ffprobe", (args) => ({ stdout }))` makes a tool available and answers its runs.
 
 ## Inject failures
 

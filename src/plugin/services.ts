@@ -1,7 +1,7 @@
 /**
  * Shared services: the clipboard, sleep prevention, showing and opening files
- * and links, secrets and session storage go to the host; external tools and
- * settings files run in this plugin's own process.
+ * and links, secrets, session storage and the rendering choice go to the
+ * host; external tools and settings files run in this plugin's own process.
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { mkdir, open, rename, rm, stat } from "node:fs/promises";
@@ -15,6 +15,8 @@ import type {
   Host,
   JsonStore,
   Power,
+  Rendering,
+  RenderingState,
   Secrets,
   SessionStorage,
   Storage,
@@ -527,5 +529,36 @@ export const secrets = (scope: ScopeImpl): Secrets => {
       await scope.runtime.host.secrets.set(named(name), value);
     },
     delete: async (name) => scope.runtime.host.secrets.delete(named(name)),
+  };
+};
+
+const PREFERENCES = new Set<string>(["auto", "gpu", "software"]);
+
+export const rendering = (scope: ScopeImpl): Rendering => {
+  const manage = () => {
+    if (!scope.runtime.can("rendering.manage"))
+      throw failure(
+        "capability",
+        "rendering.manage must be declared in manifest",
+      );
+  };
+  return {
+    state: async () =>
+      (await scope.runtime.host.rendering.state()) as RenderingState,
+    async setPreference(preference) {
+      manage();
+      if (typeof preference !== "string" || !PREFERENCES.has(preference))
+        throw failure(
+          "invalid",
+          'the rendering preference is "auto", "gpu" or "software"',
+        );
+      return (await scope.runtime.host.rendering.setPreference(
+        preference,
+      )) as RenderingState;
+    },
+    async restartPlayer() {
+      manage();
+      await scope.runtime.host.rendering.restart();
+    },
   };
 };

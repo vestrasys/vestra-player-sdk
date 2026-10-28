@@ -23,6 +23,7 @@ import {
   clipboard,
   host,
   power,
+  rendering,
   secrets,
   storage,
   system,
@@ -74,6 +75,7 @@ export class ScopeImpl implements Plugin {
   readonly storage = storage(this);
   readonly system = system(this);
   readonly secrets = secrets(this);
+  readonly rendering = rendering(this);
   readonly window = mainWindow(this);
   readonly bindings = bindingsApi(this);
   readonly ui = ui(this);

@@ -73,6 +73,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.5 | {@linkcode "@vestra-player/sdk"!SessionStorage SessionStorage} |
 | 0.5.10 | {@linkcode "@vestra-player/sdk"!CommandButton CommandButton}, {@linkcode "@vestra-player/sdk"!CommandOptions.button CommandOptions.button} |
 | 0.5.12 | {@linkcode "@vestra-player/sdk"!SystemInfo.rendering SystemInfo.rendering} |
+| 0.5.13 | {@linkcode "@vestra-player/sdk"!SystemInfo.renderingReason SystemInfo.renderingReason}, {@linkcode "@vestra-player/sdk"!RenderingMode RenderingMode}, {@linkcode "@vestra-player/sdk"!RenderingPreference RenderingPreference}, {@linkcode "@vestra-player/sdk"!RenderingReasonCode RenderingReasonCode}, {@linkcode "@vestra-player/sdk"!RenderingReason RenderingReason}, {@linkcode "@vestra-player/sdk"!RenderingState RenderingState}, {@linkcode "@vestra-player/sdk"!Rendering Rendering} |
 
 <!-- /generated -->
 
