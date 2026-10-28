@@ -35,7 +35,11 @@ export type { Json, AudioNode, VideoNode, SubtitleStyle, ResolvedMedia };
  * unsubscribed. A {@link Media} is the exception: disposing its scope does
  * **not** close the media; call {@link Media.close} for that.
  *
- * @example Releasing a listener early
+ * @example Stop listening once the file is ready
+ * The listener reacts to the first time the source becomes ready and then
+ * stops being called. Every registration returns a `Disposable`;
+ * disposing it removes just that listener, before the scope that owns it
+ * ends.
  * ```ts
  * const subscription = plugin.player.onChange((state) => {
  *   if (state.phase === "ready") void subscription.dispose();
@@ -103,7 +107,11 @@ export interface Disposable {
  * the plugin process. Requests have no client-side timeout: the player
  * answers every request or stops the plugin.
  *
- * @example
+ * @example Ignore a seek that lost a race, rethrow anything else
+ * The plugin seeks to 0:30 and stays quiet when another file was opened in
+ * between. Every failure is an `Error` with a stable `code`; `stale` means
+ * the source changed since the state the call was based on and nothing
+ * was done, so it is safe to drop. Other codes are real failures.
  * ```ts
  * try {
  *   await plugin.player.seek(30);
@@ -133,7 +141,11 @@ export type PluginError = Error & {
  * `.theme`, {@link Scope.ui}, {@link Scope.tools}, {@link Scope.storage} and
  * {@link Scope.system} needs none.
  *
- * @example Rebuilding a dynamic submenu with a child scope
+ * @example Rebuild a dynamic submenu with a child scope
+ * Subtitles ▸ Track lists the current file's subtitle tracks and is
+ * rebuilt whenever they change. Commands added through a child scope
+ * belong to it; disposing the scope removes all of them at once, and a
+ * new child scope collects the next set.
  * ```ts
  * let tracks = plugin.scope();
  * plugin.subtitles.onChange(async (state) => {
@@ -267,9 +279,12 @@ export interface Scope extends Disposable {
    * @returns A handle that cancels the registration early (without
    *   running `cleanup`).
    *
-   * @example
+   * @example Stop a timer when the plugin stops
+   * A once-a-second refresh runs as long as the plugin does. `onDispose`
+   * runs the cleanup when the scope is disposed, which for `plugin` is
+   * when the player stops the plugin, so the timer never outlives it.
    * ```ts
-   * const timer = setInterval(() => plugin.update(), 1000);
+   * const timer = setInterval(() => plugin.update(), 1000); // re-evaluate bindings
    * plugin.onDispose(() => clearInterval(timer));
    * ```
    */
@@ -283,10 +298,14 @@ export interface Scope extends Disposable {
    * registrations made after activation (a command whose `ready` rejects,
    * a property write the player refused).
    *
-   * @example
+   * @example Show errors from handlers on the OSD
+   * When a menu command, a window callback or a listener of the plugin
+   * fails, the user sees why. The SDK catches what those handlers throw
+   * (and their rejected promises) and passes it here instead of only
+   * logging it; the message is data in a translated template.
    * ```ts
    * plugin.onError((error) => {
-   *   void plugin.osd.show(`Bookmarks: ${error.message}`);
+   *   void plugin.osd.show("Bookmarks: {}", [error.message]);
    * });
    * ```
    */
@@ -320,7 +339,11 @@ export interface Scope extends Disposable {
  * process that has not exited after 300 ms is killed. Media the plugin
  * opened with {@link Player.open} keeps playing.
  *
- * @example A minimal plugin: main.ts, with capabilities commands and ui.osd
+ * @example Write a minimal plugin with one menu item
+ * Tools ▸ Say hello, or Ctrl+H, shows "Hello from" and the plugin's id.
+ * The player imports `main.ts`, calls its default export with the
+ * `Plugin` object, and keeps the registrations made during activation;
+ * the manifest declares the capabilities `commands` and `ui.osd`.
  * ```ts
  * import type { Plugin } from "@vestra-player/sdk";
  *
@@ -328,8 +351,8 @@ export interface Scope extends Disposable {
  *   plugin.commands.add({
  *     id: "hello",
  *     path: ["Tools", "Say hello"],
- *     bindings: ["Ctrl+H"],
- *     run: () => plugin.osd.show(`Hello from ${plugin.id}`),
+ *     bindings: ["Ctrl+H"], // a default the user can change
+ *     run: () => plugin.osd.show("Hello from {}", [plugin.id]),
  *   });
  * }
  * ```
@@ -376,7 +399,11 @@ export interface CommandState {
  * A value, or a function the SDK re-evaluates on every update pass (see
  * {@link Scope.update}); only changes are sent to the player.
  *
- * @example
+ * @example Mix a computed state with a fixed one
+ * The Loop item carries a check mark while a loop is set and is always
+ * enabled. A function is evaluated again in every update pass (after each
+ * handler and player state change) and only changes are sent; a plain
+ * value never changes.
  * ```ts
  * plugin.commands.add({
  *   id: "loop",
@@ -475,12 +502,17 @@ export type BarButtonIcon =
  * with its command: disposing the command, or disabling, stopping or
  * uninstalling the plugin, removes it.
  *
- * @example
+ * @example Give a command a button in the bottom bar
+ * A Store icon appears in the bottom bar's button strip; a click opens
+ * the store window, exactly like the menu item. The player draws the
+ * button from the command's title, keys and state, and places it by
+ * `order` (200 is where the player's own Plugin Store button sits); a
+ * bar that does not place `BarButtons` shows only the menu item.
  * ```ts
  * const store = plugin.windows.create("ui/store.slint");
  * plugin.commands.add({
  *   id: "open",
- *   path: ["Plugin Store…"],
+ *   path: ["Plugin Store…"], // a button needs a menu path
  *   button: { icon: "store", order: 200 },
  *   run: () => store.show(),
  * });
@@ -567,10 +599,19 @@ export interface CommandOptions {
    * ({})", [n, codec])`. The menu shows it translated and filled in; it
    * merges by its English rendering ("Track 2 (opus)").
    *
-   * @example
+   * @example Put items into built-in menus, one with a track number
+   * "Blur" appears in the Video menu and "Track 2 (opus)" under Audio ▸
+   * Audio Track, both in the user's language. `@video` and `@audio` name
+   * the built-in menus by id; "Audio Track" is a submenu key that merges
+   * with any other plugin's same key; the `text()` segment is translated
+   * with the plugin's catalog and then filled in with the number and codec.
    * ```ts
+   * declare function toggle(): void;
+   * declare function select(): void;
+   * // ---cut---
    * plugin.commands.add({ id: "blur", path: ["@video", "Blur"], run: toggle });
    * const { text } = plugin.i18n;
+   * // A segment with data: translated as "Track {} ({})", then filled in.
    * plugin.commands.add({
    *   id: "track-2",
    *   path: ["@audio", "Audio Track", text("Track {} ({})", [2, "opus"])],
@@ -663,9 +704,26 @@ export interface Command extends Disposable {
   /**
    * Replace some state fields (values or functions). Last write wins.
    *
-   * @example
+   * @example Show a command as busy while it works
+   * The Export item shows as busy with "Exporting…" as its reason while the
+   * export runs, then returns to normal. `set` replaces only the fields it
+   * names and the SDK sends the new state to the player; a busy command's
+   * menu item and key do not run it again until it is set back.
    * ```ts
-   * exportCommand.set({ busy: true, reason: "Exporting…" });
+   * declare function runExport(): Promise<void>;
+   * // ---cut---
+   * const exportCommand = plugin.commands.add({
+   *   id: "export",
+   *   path: ["@video", "Export…"],
+   *   run: async () => {
+   *     exportCommand.set({ busy: true, reason: "Exporting…" });
+   *     try {
+   *       await runExport();
+   *     } finally {
+   *       exportCommand.set({ busy: false, reason: null }); // also on failure
+   *     }
+   *   },
+   * });
    * ```
    */
   set(
@@ -694,12 +752,17 @@ export interface Commands {
    *   unknown `@` menu id), order, group or binding; `conflict` for an id this
    *   plugin has already declared and not disposed.
    *
-   * @example
+   * @example Pause playback from a menu item
+   * Playback ▸ Pause (and Ctrl+P) pauses and resumes, shows a check mark
+   * while paused and is greyed out when nothing can be paused. The player
+   * calls `run` when the user picks the item or presses its key; `enabled`
+   * and `checked` are functions the SDK evaluates again after every
+   * handler and player state change, sending only what changed.
    * ```ts
    * const toggle = plugin.commands.add({
    *   id: "toggle-pause",
    *   path: ["Playback", "Pause"],
-   *   order: 210,
+   *   order: 210, // position among the Playback menu's items
    *   bindings: ["Ctrl+P"],
    *   enabled: () => plugin.player.state.can.pause,
    *   checked: () => plugin.player.state.paused,
@@ -720,8 +783,8 @@ export interface Commands {
  * {@link View.bind}: the whole value of an `image` property or, from SDK
  * 1.5.19 (player 0.5.1), an `image` field at any depth, such as the logo of
  * each row of a list. Making the reference does not read the file: the
- * player checks and decodes it each time a view uses it ({@link Ui.image}
- * has the rules and limits).
+ * player checks and decodes it each time it receives the value (a property
+ * write, a window opening; {@link Ui.image} has the rules and limits).
  *
  * A reference belongs to the {@link Scope} that created it. Once that scope
  * is disposed, writing the reference fails with `invalid` (reported to
@@ -729,13 +792,24 @@ export interface Commands {
  * property changes or the view closes.
  *
  * @example Show a cover image from the data directory
+ * A window opens showing `cover.png`, which the plugin saved in its data
+ * directory. `ui.image` only makes a reference, without reading the file;
+ * the player checks and decodes the file when it receives the value, so a
+ * missing file fails that write with `missing` (here: `show` rejects, as
+ * it is an initial property). A missing image nested inside a value is
+ * drawn empty instead.
  * ```ts
  * const cover = plugin.windows.create("ui/cover.slint");
+ * // `art` is an `image` property in ui/cover.slint.
  * cover.set({ art: plugin.ui.image(`${plugin.dataDirectory}/cover.png`) });
  * await cover.show();
  * ```
  *
- * @example A logo in each row
+ * @example Show a logo in each row of a list
+ * Each row of the list draws its own small logo next to its name. An
+ * `ImageRef` may sit in any field of a property value (SDK 1.5.19, player
+ * 0.5.1), so the rows carry their icons; `maxSide: 64` decodes each logo
+ * at most 64 px wide, which keeps the view's image memory small.
  * ```slint
  * export struct Row { key: string, name: string, icon: image }
  * ```
@@ -746,6 +820,7 @@ export interface Commands {
  *   rows: items.map((item) => ({
  *     key: item.id,
  *     name: item.name,
+ *     // About twice the drawn size (32 px) stays sharp on dense screens.
  *     icon: plugin.ui.image(item.iconPath, { maxSide: 64 }),
  *   })),
  * }));
@@ -798,7 +873,11 @@ export interface ImageOptions {
  * scope that created it: once that scope is disposed, writing it fails with
  * `invalid`, wherever it is in the value.
  *
- * @example Chat messages, one document per row
+ * @example Show chat messages, one document per row
+ * The chat window shows a formatted assistant message. `ui.markdown`
+ * resolves once the document is ready (here without downloading images);
+ * the reference goes into the `body` field of a row, whose Slint type is
+ * `[MarkdownBlock]`, and the player parses and draws it.
  * ```ts
  * const chat = plugin.windows.create("ui/chat.slint");
  * const body = await plugin.ui.markdown("**Hello**", { remoteImages: false });
@@ -895,7 +974,11 @@ export type PropValue = PropData | ImageRef;
  * JSON whose values may also be Markdown documents and (SDK 1.5.19) images,
  * at any depth: the part of {@link PropValue} that nests.
  *
- * @example A message list whose rows carry a document
+ * @example Type a message list whose rows carry a document
+ * A property value for a chat's message list, typed so that TypeScript
+ * accepts a Markdown document inside each row. `PropData` is the JSON a
+ * property takes plus documents and images at any depth; the player turns
+ * each object into a Slint struct by its field names.
  * ```ts
  * const messages: PropData = [
  *   { id: "m1", role: "user", body: await plugin.ui.markdown("Hi") },
@@ -926,7 +1009,11 @@ export type PropData =
  * kebab-case are kept. Only the property names are converted, not the
  * fields of struct values.
  *
- * @example
+ * @example Prepare a window's initial properties
+ * An object of property values by name, as `windows.create` and
+ * `View.set` take them. Names match the Slint file (`canMark` for
+ * `can-mark`), and each value becomes the Slint type of its property: a
+ * boolean, and an array of structs for a model.
  * ```ts
  * const props: Props = { canMark: true, rows: [{ rowId: "a", title: "First" }] };
  * ```
@@ -951,7 +1038,13 @@ export type Props = Record<string, PropValue>;
  *
  * @capability None.
  *
- * @example A window that shows a Markdown file (examples/markdown)
+ * @example Show a Markdown file in a window (examples/markdown)
+ * A menu item opens a window with a formatted Markdown file that ships
+ * with the plugin. The plugin reads the file, turns it into a document
+ * with `ui.markdown` (relative images resolve against the plugin's
+ * directory through `base`) and writes it to the window's `doc` property,
+ * which the Slint file hands to `MarkdownView`.
+ *
  * {@includeCode ../../examples/markdown/main.ts#document}
  *
  * `ui/document.slint`:
@@ -968,8 +1061,8 @@ export interface Ui {
    *
    * @remarks
    * Returns at once without touching the file. The player checks the file
-   * each time a view uses the reference (a property write, a window opening,
-   * the main window being rebuilt): it must be inside this plugin's package
+   * each time it receives the reference (a property write, a window or
+   * settings page opening, the main window being rebuilt): it must be inside this plugin's package
    * directory or {@link Plugin.dataDirectory} after following links, at most
    * 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
    * does not matter). A failed check of a whole-value image is a failed
@@ -981,9 +1074,10 @@ export interface Ui {
    * the value is shown, as a Markdown image shows its alt text.
    *
    * The player caches decoded images per plugin (up to 64 MB, least recently
-   * used first) and does not watch files. Every call returns a new value, so
-   * after rewriting a file under the same path, call `image()` again and
-   * write the new reference.
+   * used first) by path, size and modification time, and does not watch
+   * files. After rewriting a file under the same path, call `image()` again
+   * and write the new reference: the SDK does not send a value that did not
+   * change, so the player would not look at the file again.
    *
    * @capability None.
    *
@@ -997,6 +1091,12 @@ export interface Ui {
    *   `maxSide` is not an integer 1–4096.
    *
    * @example Show a thumbnail the plugin rendered
+   * A window shows a PNG the plugin wrote into its data directory. The file
+   * must be inside the package or data directory; `image` returns at once.
+   * The player decodes the file when it receives the value and notices a
+   * rewritten file by its size and modification time; the plugin still
+   * calls `image()` again after rewriting it, because the SDK does not send
+   * a value that did not change.
    * ```ts
    * const window = plugin.windows.create("ui/thumbnail.slint");
    * const file = `${plugin.dataDirectory}/thumbnail.png`;
@@ -1034,7 +1134,12 @@ export interface Ui {
    *   large, or is not a PNG or JPEG image; or the plugin has no data
    *   directory.
    *
-   * @example Search results with thumbnails
+   * @example Show search results with downloaded thumbnails
+   * A results window lists each hit with its thumbnail, or a placeholder
+   * when a thumbnail cannot be fetched. `remoteImage` downloads the image
+   * in the plugin's process into the data directory's cache (at most 4 at a
+   * time) and resolves with a local reference; a failed download rejects
+   * with `unavailable`, which the `catch` turns into the placeholder.
    * ```ts
    * const results = [{ title: "A", thumbnailUrl: "https://example.com/a.jpg" }];
    * const placeholder = plugin.ui.image(`${plugin.dataDirectory}/blank.png`);
@@ -1043,7 +1148,7 @@ export interface Ui {
    *     title: r.title,
    *     thumb: await plugin.ui
    *       .remoteImage(r.thumbnailUrl, { maxSide: 320 })
-   *       .catch(() => placeholder),
+   *       .catch(() => placeholder), // `unavailable`: download failed
    *   })),
    * );
    * plugin.windows.create("ui/results.slint").set({ rows });
@@ -1096,7 +1201,14 @@ export interface Ui {
    *   `base` is neither an `http(s):` address nor an absolute path.
    * @throws `unsupported` (rejects) The player is older than 0.2.0.
    *
-   * @example A chat: one Markdown document per row, with Copy buttons
+   * @example Build a chat with one Markdown document per row
+   * A chat window lists messages as formatted text, with a Copy button on
+   * each code block that puts the code on the clipboard. Each row's `body`
+   * is a document from `ui.markdown`; the whole list is written again on
+   * each change, and the player parses only the documents that changed.
+   * `MarkdownBlocks` with `code-copy` calls `copy-code`, which the plugin
+   * handles with `on("copyCode")`.
+   *
    * `ui/chat.slint`:
    *
    * ```slint
@@ -1123,6 +1235,7 @@ export interface Ui {
    * const chat = plugin.windows.create("ui/chat.slint");
    * const history: { id: string; role: string; text: string }[] = [];
    * chat.on("copyCode", (code: string) => plugin.clipboard.writeText(code));
+   * // Re-send the whole list: unchanged documents cost the player nothing.
    * async function render() {
    *   const messages = [];
    *   for (const { id, role, text } of history)
@@ -1135,10 +1248,19 @@ export interface Ui {
    * ```
    *
    * @example Show a README from the web
+   * A window shows a README downloaded from the web, its images included,
+   * and clicked links open in the browser. `base` makes relative links and
+   * images resolve against the README's address; `markdown` resolves after
+   * its `https:` images are downloaded. A click on a link makes
+   * `MarkdownView` call `link-clicked`, which `ui/readme.slint` forwards as
+   * `open-link`; the plugin opens the address with `openUrl`.
    * ```ts
    * const readmeUrl = "https://example.com/plugin/README.md";
-   * const text = await (await fetch(readmeUrl)).text();
+   * const response = await fetch(readmeUrl);
+   * if (!response.ok) throw new Error(`README: HTTP ${response.status}`);
+   * const text = await response.text();
    * const window = plugin.windows.create("ui/readme.slint");
+   * // Bound before the first `show`, as a tool window requires.
    * window.on("openLink", (url: string) => plugin.system.openUrl(url));
    * window.set({ doc: await plugin.ui.markdown(text, { base: readmeUrl }) });
    * await window.show();
@@ -1182,7 +1304,13 @@ export interface Ui {
  *
  * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
  *
- * @example A window with a label, two buttons and their callbacks (examples/bookmark)
+ * @example Wire a window's label and buttons to the plugin (examples/bookmark)
+ * A Bookmark window shows the saved position and two buttons that save
+ * it and jump back to it. `bind` keeps the label and the buttons' enabled
+ * state equal to the plugin's state: the SDK evaluates the function again
+ * after every handler and player change and sends only what changed. The
+ * buttons' Slint callbacks reach the plugin through `on`.
+ *
  * {@includeCode ../../examples/bookmark/main.ts#window}
  *
  * `ui/bookmark.slint`:
@@ -1227,10 +1355,16 @@ export interface View {
    * @throws `Error` without a code (throws) On an open {@link Window}, for a
    *   name that has no handler yet.
    *
-   * @example
+   * @example Keep a slider and the plugin's value in step
+   * Moving the window's brightness slider updates the plugin's value, and
+   * the slider shows it back. The Slint callback `brightness-changed`
+   * reaches the handler with the slider's value as JSON; after the handler
+   * returns, the SDK runs an update pass and `bind` sends the new value.
+   * Callbacks of a tool window must be bound before its first `show`.
    * ```ts
    * const picture = plugin.windows.create("ui/picture.slint");
    * let brightness = 0;
+   * // camelCase here, `brightness-changed` in the Slint file.
    * picture.on("brightnessChanged", (value: number) => {
    *   brightness = value;
    * });
@@ -1272,6 +1406,10 @@ export interface View {
    * @param props - Properties by name; see {@link Props}.
    *
    * @example Put a drop-down back when the user picks an entry the plugin refuses
+   * Choosing "Custom" snaps the drop-down back to the last real preset.
+   * The plugin cannot read a property back, only hear the callback; `set`
+   * sends the value even though it equals the one sent before, which is
+   * what pulls a control the user moved back to the plugin's value.
    * ```ts
    * const window = plugin.windows.create("ui/presets.slint");
    * let presetIndex = 0;
@@ -1307,7 +1445,11 @@ export interface View {
    * @param props - Returns the properties, by name.
    * @returns A handle that stops this binding (the values last sent stay).
    *
-   * @example
+   * @example Show what is playing and whether it can seek
+   * The status window always shows the current file and enables its seek
+   * controls only for seekable sources. The SDK calls the function right
+   * away and again in every update pass (after player state changes and
+   * after each handler) and sends only the values that changed.
    * ```ts
    * const status = plugin.windows.create("ui/status.slint");
    * status.bind(() => ({
@@ -1358,10 +1500,19 @@ export interface View {
  *
  * @capability ui.window
  *
- * @example A menu command that opens a window (examples/bookmark)
+ * @example Open a window from a menu command (examples/bookmark)
+ * Playback ▸ Bookmark… opens the Bookmark window. `create` only makes a
+ * handle; the command's `run` calls `show`, which compiles the Slint file
+ * and opens the window with the bound properties the first time, and
+ * brings back the same window afterwards.
+ *
  * {@includeCode ../../examples/bookmark/main.ts#window,command}
  *
  * @example Stop work when the user closes the window
+ * A clock window ticks every second while it is open and stops costing
+ * anything once the user closes it. `plugin.update()` makes the SDK
+ * evaluate the bound time again from a timer; `onClose` runs only for the
+ * user's close, so the plugin stops the timer there.
  * ```ts
  * const clock = plugin.windows.create("ui/clock.slint");
  * let timer: NodeJS.Timeout | undefined;
@@ -1375,6 +1526,7 @@ export interface View {
  *   path: ["@screen", "Clock…"],
  *   run: async () => {
  *     await clock.show();
+ *     // Re-evaluate `bind` once a second: bound values change only then.
  *     timer ??= setInterval(() => plugin.update(), 1000);
  *   },
  * });
@@ -1416,12 +1568,17 @@ export interface Window extends View, Disposable {
    *   JPEG.
    *
    * @example Tell the user why a window did not open
+   * When the inspector cannot open, the user sees why on the OSD instead
+   * of nothing happening. `show` compiles the Slint file and opens the
+   * window; it rejects with a code, such as `host` for a Slint file that
+   * does not compile or `unavailable` without a user interface.
    * ```ts
    * const window = plugin.windows.create("ui/inspector.slint");
    * try {
    *   await window.show();
    * } catch (error) {
-   *   await plugin.osd.show(`Cannot open the inspector (${(error as PluginError).code})`);
+   *   // The code is data; `message` has the details for the log.
+   *   await plugin.osd.show("Cannot open the inspector ({})", [(error as PluginError).code]);
    * }
    * ```
    *
@@ -1443,10 +1600,14 @@ export interface Window extends View, Disposable {
    * @throws `missing` (rejects) The user closed the window just before (the
    *   close had not reached the plugin yet).
    *
-   * @example A command that shows and hides a window
+   * @example Show and hide a window from a checkable menu item
+   * Audio ▸ Levels shows the window with a check mark and hides it again.
+   * `hide` keeps the window's instance and state, so showing it again is
+   * instant; the check mark follows `visible`, and `onClose` resets it when
+   * the user closes the window with its title-bar button.
    * ```ts
    * const levels = plugin.windows.create("ui/levels.slint");
-   * let visible = false;
+   * let visible = false; // what the check mark shows
    * plugin.commands.add({
    *   id: "levels",
    *   path: ["@audio", "Levels"],
@@ -1479,6 +1640,10 @@ export interface Window extends View, Disposable {
    * @throws `missing` (rejects) The user closed the window just before.
    *
    * @example Close the window from its own button
+   * The editor's Done button closes the editor window. `close` destroys
+   * the window instance but keeps the handle, its handlers and bindings,
+   * so the next `show` opens a fresh window; `onClose` is not called for
+   * the plugin's own close.
    * ```ts
    * const editor = plugin.windows.create("ui/editor.slint");
    * editor.on("done", () => editor.close());
@@ -1511,7 +1676,12 @@ export interface Window extends View, Disposable {
    * @param listener - Called with no arguments; may be async.
    * @returns A handle that removes the listener.
    *
-   * @example Remember that the user closed it
+   * @example Remember that the user closed the window
+   * The plugin records that the notes window was closed, so it does not
+   * reopen it at the next start. `onClose` runs for the title-bar button,
+   * the player's close keys (Cmd+W, Ctrl+W, Ctrl+F4) and the system's own
+   * close request such as Alt+F4 (not for the plugin's own `close`); the
+   * store writes the change to `window.json` shortly after.
    * ```ts
    * const store = plugin.storage.json("window", { defaults: { open: false } });
    * const window = plugin.windows.create("ui/notes.slint");
@@ -1538,7 +1708,11 @@ export interface Window extends View, Disposable {
  *
  * @capability ui.window
  *
- * @example
+ * @example Create a window and open it from a menu (examples/bookmark)
+ * A Bookmark window opens from Playback ▸ Bookmark…. `create` returns a
+ * handle without opening anything; its bindings and callbacks are set up
+ * first, and `show` opens the window when the command runs.
+ *
  * {@includeCode ../../examples/bookmark/main.ts#window,command}
  *
  * @see {@link Window}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
@@ -1573,7 +1747,10 @@ export interface Windows {
    * @throws `conflict` (throws) This plugin already has a window with this id
    *   (SDK 1.3.0; before, a plain `Error` without `code`).
    *
-   * @example One file, two windows
+   * @example Open two windows from one Slint file
+   * Two compare windows open side by side, one labelled A and one B. A
+   * window's id defaults to its file name, so the second window of the
+   * same file needs its own `id`; each handle has its own properties.
    * ```ts
    * const left = plugin.windows.create("ui/compare.slint", { id: "compare-left" });
    * const right = plugin.windows.create("ui/compare.slint", { id: "compare-right" });
@@ -1676,12 +1853,18 @@ export interface PanelState {
  *
  * @capability ui.mount; `events` to follow changes made elsewhere.
  *
- * @example A "Show sidebar" menu item that works with any sidebar panel
+ * @example Add a "Show sidebar" item that works with any sidebar panel
+ * Tools ▸ Show sidebar shows or hides the sidebar, whichever plugin's
+ * panel is in it, with a check mark while it is shown. The position does
+ * not belong to the plugin that mounted the panel: `state` is `null`
+ * while nobody has a panel there (the item is disabled then), and
+ * `toggle` flips the user's remembered preference.
  * ```ts
  * const sidebar = plugin.panels.sidebar;
  * plugin.commands.add({
  *   id: "sidebar",
  *   path: ["Tools", "Show sidebar"],
+ *   // `state` is null while no plugin has a panel in the sidebar.
  *   checked: () => sidebar.state?.preferred ?? false,
  *   enabled: () => sidebar.state !== null,
  *   run: () => sidebar.toggle(),
@@ -1724,9 +1907,14 @@ export interface PanelSlot {
    * @param listener - Receives the new state.
    * @returns A handle that removes the listener.
    *
-   * @example
+   * @example Tell the user when the window is too narrow for the sidebar
+   * When the sidebar should show but the window has no room for it, the
+   * OSD says so. With `events`, the listener runs on every change of the
+   * position, whoever caused it. The player reports `reason: "space"` when
+   * the preference is to show the sidebar but the window is too small.
    * ```ts
    * plugin.panels.sidebar.onChange((state) => {
+   *   // `null`: no panel is mounted in the sidebar any more.
    *   if (state?.reason === "space") void plugin.osd.show("Widen the window to see the playlist");
    * });
    * ```
@@ -1752,9 +1940,15 @@ export interface PanelSlot {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
-   * @example
+   * @example Hide the bottom bar for a clean picture
+   * The control bar disappears, as if the user had hidden it from the menu,
+   * and stays hidden at the next start because the preference is
+   * remembered. `setVisible` rejects with `missing` when no panel is in the
+   * bottom bar, which this plugin treats as nothing to hide.
    * ```ts
-   * await plugin.panels.bottom.setVisible(false);
+   * await plugin.panels.bottom.setVisible(false).catch((error: PluginError) => {
+   *   if (error.code !== "missing") throw error; // no bar mounted: nothing to do
+   * });
    * ```
    *
    * @since 1.0.0
@@ -1775,11 +1969,16 @@ export interface PanelSlot {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
-   * @example
+   * @example Toggle the control bar from a checkable menu item
+   * Screen ▸ Control bar shows or hides the bottom bar and carries a check
+   * mark while it is shown. `toggle` reads the player's current preference
+   * first, so it is right even without `events`; `checked` is evaluated
+   * again after the command runs and follows `state`.
    * ```ts
    * plugin.commands.add({
    *   id: "toggle-bar",
    *   path: ["@screen", "Control bar"],
+   *   // The user's preference, remembered across launches.
    *   checked: () => plugin.panels.bottom.state?.preferred ?? false,
    *   run: () => plugin.panels.bottom.toggle(),
    * });
@@ -1811,7 +2010,11 @@ export interface PanelSlot {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
-   * @example A command that shows the playlist's tab
+   * @example Switch the sidebar to the playlist's tab
+   * A command makes the playlist the sidebar's current tab without showing
+   * or hiding the sidebar, like a click on its tab. `activate` takes the
+   * manifest id of the plugin whose tab to show and rejects with
+   * `missing` when that plugin has no panel there.
    * ```ts
    * plugin.commands.add({
    *   id: "to-playlist",
@@ -1838,12 +2041,17 @@ export interface PanelSlot {
  *
  * @capability ui.mount
  *
- * @example A "Detach sidebar" menu item
+ * @example Add a "Detach sidebar" item
+ * Tools ▸ Detach sidebar floats the sidebar in its own window and docks
+ * it again, with a check mark while it floats. `setDetached` moves all
+ * the sidebar's tabs; the floating window holds new instances of the
+ * panels, which keep the plugins' properties and callbacks.
  * ```ts
  * const sidebar = plugin.panels.sidebar;
  * plugin.commands.add({
  *   id: "detach",
  *   path: ["Tools", "Detach sidebar"],
+ *   // Detaching moves every tab of the sidebar into the floating window.
  *   checked: () => sidebar.state?.detached ?? false,
  *   enabled: () => sidebar.state !== null,
  *   run: () => sidebar.setDetached(!sidebar.state?.detached),
@@ -1866,7 +2074,10 @@ export interface SidebarSlot extends PanelSlot {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
-   * @example
+   * @example Float the sidebar or dock it back
+   * The sidebar moves into its own window, or back into the main window
+   * when it already floats. `state` says whether it is detached now;
+   * `setDetached` resolves once the layout changed, with `state` refreshed.
    * ```ts
    * const sidebar = plugin.panels.sidebar;
    * await sidebar.setDetached(!sidebar.state?.detached);
@@ -1900,7 +2111,13 @@ export interface SidebarSlot extends PanelSlot {
  *
  * @capability ui.mount
  *
- * @example A sidebar list with a right-click menu (examples/panel-menu)
+ * @example Mount a sidebar list with a right-click menu (examples/panel-menu)
+ * The sidebar gets an "Example list" tab whose rows can be selected and
+ * have a context menu. `mount` returns at once and the player adds the
+ * panel when it rebuilds its main window; `bind` keeps the rows and the
+ * selection on the panel's bridge global, and the `context-menu` callback
+ * opens a menu of the plugin's commands where the user clicked.
+ *
  * {@includeCode ../../examples/panel-menu/main.ts#mount,menu}
  *
  * `ui/panel.slint`:
@@ -1975,7 +2192,12 @@ export interface Panel extends View, Disposable {
    * @param listener - Receives the new state.
    * @returns A handle that removes the listener.
    *
-   * @example Say when the user switched to another tab
+   * @example Notice when the list moves to a background tab
+   * The plugin logs when the user switches the sidebar to another plugin's
+   * tab, for example to pause work the list does. With `events` the
+   * listener runs on every change. `reason: "otherTab"` exists only in a
+   * panel's own state: the SDK sets it when the sidebar's current tab is
+   * another plugin's (the position's state never has it).
    * ```ts
    * const panel = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
    * panel.onChange((state) => {
@@ -2005,7 +2227,10 @@ export interface Panel extends View, Disposable {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws The errors of {@link Panel.ready} (rejects) The mount failed.
    *
-   * @example
+   * @example Bring the plugin's sidebar panel to the front
+   * A command shows the List tab: it becomes the current tab and the
+   * sidebar is shown, and the preference is remembered. `show` waits for
+   * the mount first, so it can run right after `mount`.
    * ```ts
    * const list = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
    * plugin.commands.add({ id: "show", title: "Show the list", run: () => list.show() });
@@ -2033,13 +2258,18 @@ export interface Panel extends View, Disposable {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws The errors of {@link Panel.ready} (rejects) The mount failed.
    *
-   * @example A toggle command for a sidebar panel (the playlist's F6)
+   * @example Toggle a sidebar panel with F6, like the playlist
+   * F6 and Screen ▸ List show the List tab, or hide the sidebar when the
+   * list is already in front. `toggle` reads the player's state first:
+   * it hides the position only when it is shown and this panel's tab is
+   * the current one, otherwise it shows the panel.
    * ```ts
    * const list = plugin.panels.mount("sidebar", "ui/list.slint", { title: "List" });
    * plugin.commands.add({
    *   id: "list",
    *   path: ["@screen", "List"],
    *   bindings: ["F6"],
+   *   // Checked while the sidebar is shown with this list in front.
    *   checked: () => (list.state?.preferred ?? false) && (list.state?.active ?? false),
    *   run: () => list.toggle(),
    * });
@@ -2068,7 +2298,12 @@ export interface Panel extends View, Disposable {
    *
    * @param locks - The locks to change; omitted ones keep their value.
    *
-   * @example Keep the bar while a search field has focus
+   * @example Keep the bar on screen while a search field has focus
+   * In fullscreen the bottom bar stays visible while the user types in
+   * its search field, instead of hiding when the pointer leaves it. The
+   * Slint side reports the field's focus through a callback, and
+   * `setInteraction` sets or clears the `focused` lock; other locks keep
+   * their values.
    * ```ts
    * const panel = plugin.panels.mount("bottom", "ui/bar.slint");
    * panel.on("searchFocused", (focused: boolean) => panel.setInteraction({ focused }));
@@ -2112,7 +2347,12 @@ export interface Panel extends View, Disposable {
    *   finite.
    * @throws The errors of {@link Panel.ready} (rejects) The mount failed.
    *
-   * @example
+   * @example Open a context menu where the user right-clicked (examples/panel-menu)
+   * Right-clicking the list opens a menu with "Select the first item" and
+   * "Remove the selected item". The Slint file passes the pointer position
+   * in window pixels with its `context-menu` callback; `showMenu` opens the
+   * plugin's commands there, and picking one runs that command.
+   *
    * {@includeCode ../../examples/panel-menu/main.ts#menu}
    *
    * @since 1.0.0
@@ -2145,12 +2385,16 @@ export interface Panel extends View, Disposable {
    * @returns A handle that removes the listener.
    *
    * @example Add dropped files to a list
+   * Files dropped on the Files panel are added to its list. While the
+   * listener exists, drops on the panel come here as one group instead of
+   * going to the drop providers; after the listener returns, the SDK runs
+   * an update pass and `bind` sends the longer list.
    * ```ts
    * const files: string[] = [];
    * const panel = plugin.panels.mount("sidebar", "ui/list.slint", { title: "Files" });
    * panel.bind(() => ({ rows: files }));
    * panel.onDrop(({ paths }) => {
-   *   files.push(...paths);
+   *   files.push(...paths); // in the order the file manager gave them
    * });
    * ```
    *
@@ -2195,16 +2439,27 @@ export interface Drops {
    * Take files dropped on the video area. The first provider registered for
    * an extension gets it; files nobody takes are ignored.
    *
-   * Paths are grouped by extension (case-insensitive) in the order the file
+   * Paths are grouped by provider (an extension, case-insensitive, belongs
+   * to the provider that registered it first) in the order the file
    * manager gave them, one call per provider. Folders are not expanded.
    *
    * @throws `invalid` synchronously for malformed extensions.
    *
-   * @example
+   * @example Load dropped subtitle files
+   * Dropping .srt or .ass files on the video loads each one as a subtitle
+   * track. Each extension belongs to the provider that registered it first;
+   * the player groups the dropped paths by provider and calls each provider
+   * once with all of its paths, so .srt and .ass files dropped together
+   * arrive in one call. (A panel under the pointer that listens with
+   * `onDrop` takes the whole drop first.) The plugin reads each file itself
+   * and uploads its bytes with `subtitles.load`.
    * ```ts
+   * import { readFile } from "node:fs/promises";
+   * // ---cut---
    * plugin.drops.provide({
    *   extensions: ["srt", "ass"],
    *   drop: async ({ paths }) => {
+   *     // Only .srt and .ass files reach this provider.
    *     for (const path of paths)
    *       await plugin.subtitles.load(await readFile(path), {
    *         format: path.endsWith(".ass") ? "ass" : "srt",
@@ -2252,12 +2507,16 @@ export type ThemeId = "vestra" | "vestra-light";
  * @capability None to read `theme`; `events` to follow changes; `ui.theme`
  *   to change it.
  *
- * @example A menu item that selects the light palette
+ * @example Offer the light palette as a menu item
+ * Settings ▸ Light colours switches every view of the player to the light
+ * palette and carries a radio mark while it is in use. `set` asks the
+ * player to switch (it saves the choice); `theme` holds the palette in use,
+ * and `checked` reads it again after every handler.
  * ```ts
  * plugin.commands.add({
  *   id: "light-colours",
  *   path: ["@settings", "Light colours"],
- *   radio: true,
+ *   radio: true, // a round mark instead of a check mark
  *   checked: () => plugin.appearance.theme === "vestra-light",
  *   run: () => plugin.appearance.set("vestra-light"),
  * });
@@ -2288,10 +2547,16 @@ export interface Appearance {
    * @param listener - Receives the new palette.
    * @returns A handle that removes the listener.
    *
-   * @example
+   * @example Redraw a picture the plugin renders when the palette changes
+   * The plugin renders a chart image in the palette's colours and draws it
+   * again when the user or another plugin switches palettes. Views that use
+   * `Theme` follow on their own; this listener (which needs `events`) is
+   * for what the plugin draws itself.
    * ```ts
+   * declare function renderChart(dark: boolean): Promise<void>;
+   * // ---cut---
    * plugin.appearance.onChange((theme) => {
-   *   void plugin.osd.show(`Palette: ${theme}`);
+   *   void renderChart(theme === "vestra"); // the dark default
    * });
    * ```
    *
@@ -2314,7 +2579,11 @@ export interface Appearance {
    * @throws `invalid` (rejects) `theme` is not a {@link ThemeId}.
    * @throws `capability` (rejects) The manifest does not declare `ui.theme`.
    *
-   * @example
+   * @example Switch to the light palette
+   * Every view of the player turns light, and stays light after a restart.
+   * The player applies the palette to every open view and saves the
+   * choice; when the promise resolves, `appearance.theme` already has the
+   * new value. Without `ui.theme` it rejects with `capability`.
    * ```ts
    * await plugin.appearance.set("vestra-light");
    * ```
@@ -2355,10 +2624,14 @@ export interface Appearance {
    * @throws `capability` (rejects) The manifest does not declare `ui.theme`.
    * @throws `unsupported` (rejects) A player before 0.4.3.
    *
-   * @example
+   * @example Choose German for the next start
+   * The player will start in German next time, and the user is told so.
+   * `setLanguage` only saves the choice: the language of this run
+   * (`i18n.locale`) never changes while the player runs. Players before
+   * 0.4.3 reject it with `unsupported`.
    * ```ts
    * await plugin.appearance.setLanguage("de");
-   * await plugin.osd.show("Takes effect after restart");
+   * await plugin.osd.show("Takes effect after restart"); // translated by the player
    * ```
    *
    * @since 1.5.9
@@ -2516,6 +2789,10 @@ export type TextValue = string | Text | TextList;
  * @capability None.
  *
  * @example Format a date the way the interface language writes it
+ * The OSD shows today's date in the user's language and date format. The
+ * sentence is a template the player translates; only the data in it, the
+ * date, is formatted by the plugin, with `i18n.locale` (the language the
+ * player runs in, fixed for the whole run).
  * ```ts
  * const day = new Date().toLocaleDateString(plugin.i18n.locale);
  * await plugin.osd.show("Today is {}", [day]);
@@ -2549,17 +2826,25 @@ export interface I18n {
    * @param args - Values for its placeholders.
    * @throws `invalid` A malformed or over-limit value (`TEXT_LIMITS`).
    *
-   * @example A ComboBox model with fixed words and data
+   * @example Fill a drop-down with fixed words and data
+   * The drop-down lists "No Audio" and one "Track 7 · en" entry per track,
+   * in the user's language. A `[string]` model may hold `text()` values: the
+   * player translates each source text with the plugin's catalog and fills
+   * in its arguments, so the plugin never composes translated strings.
    * ```ts
    * const { text } = plugin.i18n;
    * const picker = plugin.windows.create("ui/clip.slint");
    * const tracks = [{ id: 7, title: "en" }];
+   * // Each entry is translated, then filled in: "Track 7 · en".
    * picker.set({
    *   labels: [text("No Audio"), ...tracks.map((t) => text("Track {} · {}", [t.id, t.title]))],
    * });
    * ```
    *
-   * @example A message built from translated parts
+   * @example Build a message from translated parts
+   * The OSD says "Download failed: Connection timed out", both parts in the
+   * user's language. An argument made with `text()` is translated too,
+   * while string arguments are shown as they are.
    * ```ts
    * await plugin.osd.show("Download failed: {}", [plugin.i18n.text("Connection timed out")]);
    * ```
@@ -2579,7 +2864,11 @@ export interface I18n {
    * @param style - `"list"` by default.
    * @throws `invalid` A malformed or over-limit value.
    *
-   * @example
+   * @example List file names the way the language joins them
+   * The OSD says "Removed missing shaders: a.glsl, b.glsl" in English and
+   * joins the names with "、" in Chinese. `list` makes a value the player
+   * joins per interface language; the names themselves are data and stay
+   * as they are.
    * ```ts
    * const missing = ["a.glsl", "b.glsl"];
    * await plugin.osd.show("Removed missing shaders: {}", [plugin.i18n.list(missing)]);
@@ -2603,13 +2892,25 @@ export interface I18n {
    * @param args - Values for its placeholders.
    * @throws `invalid` A malformed or over-limit value.
    *
-   * @example
+   * @example Fail an open with a message the user can read
+   * Opening a `.ch8` file the plugin cannot load shows "The program file
+   * was not found." in the user's language. The player shows the message of
+   * an error thrown from `resolve`; `i18n.error` makes an `Error` whose text
+   * the player translates with this plugin's catalog, while its `message`
+   * stays English for logs and older players.
    * ```ts
+   * import { readFile } from "node:fs/promises";
+   * declare function startEmulator(program: Uint8Array): ResolvedStream;
+   * // ---cut---
    * plugin.resolvers.add({
-   *   id: "nes",
-   *   extensions: ["nes"],
-   *   async resolve() {
-   *     throw plugin.i18n.error("The ROM file was not found.");
+   *   id: "chip8",
+   *   extensions: ["ch8"],
+   *   async resolve(path, signal) {
+   *     const program = await readFile(path, { signal }).catch(() => {
+   *       // Shown as the open's failure, translated (locales/<lang>.po).
+   *       throw plugin.i18n.error("The program file was not found.");
+   *     });
+   *     return startEmulator(program);
    *   },
    * });
    * ```
@@ -2635,7 +2936,11 @@ export interface I18n {
    * @returns The translated string.
    * @throws `invalid` A malformed value.
    *
-   * @example
+   * @example Copy version information in the user's language
+   * "Copy info" puts two translated lines on the clipboard. Text that
+   * leaves the player cannot be translated by it, so `resolve` turns the
+   * values into the string the player would show, using this plugin's
+   * catalog; inside the player, pass the values themselves instead.
    * ```ts
    * const { text, list, resolve } = plugin.i18n;
    * const lines = list([text("Version {}", ["1.0"]), text("Cores: {}", [8])], "lines");
@@ -2700,7 +3005,12 @@ export type SettingsCategory =
  *
  * @capability ui.settings
  *
- * @example Two preferences on a page, kept in a store
+ * @example Put two preferences on a page and keep them in a store
+ * Options ▸ Video ▸ Blur shows two check boxes whose values survive
+ * restarts. The checkboxes are bound two-way (`<=>`) to `in-out`
+ * properties of the bridge global, so the user's clicks show at once; the
+ * `toggled` callbacks tell the plugin, which saves the new value, and
+ * `bind` writes the stored values when the page opens.
  * ```ts
  * const store = plugin.storage.json("blur", {
  *   defaults: { restoreOnStart: false, messages: true },
@@ -2714,6 +3024,7 @@ export type SettingsCategory =
  *   restoreOnStart: store.value.restoreOnStart,
  *   messages: store.value.messages,
  * }));
+ * // The bridge's `restore-toggled(bool)` callback, in camelCase.
  * page.on("restoreToggled", (on: boolean) =>
  *   store.save({ ...store.value, restoreOnStart: on }),
  * );
@@ -2728,6 +3039,7 @@ export type SettingsCategory =
  * import { CheckBox } from "std-widgets.slint";
  * import { Theme } from "@vestra/theme.slint";
  *
+ * // The bridge: what the plugin writes and the callbacks it handles.
  * export global BlurPage {
  *     in-out property <bool> restore-on-start;
  *     in-out property <bool> messages: true;
@@ -2800,7 +3112,11 @@ export type SettingsPage = View &
  *
  * @capability ui.settings
  *
- * @example A page that edits stored settings
+ * @example Add a page that edits a stored setting
+ * Options ▸ Playback ▸ Resume shows the plugin's Resume switch. `page`
+ * registers the page with the Options window (compiled by the player on
+ * its own), `bind` sends the stored value, and the page's callback saves
+ * the user's change.
  * ```ts
  * const store = plugin.storage.json("settings", { defaults: { resume: true } });
  * const page = plugin.settings.page("ui/settings.slint", {
@@ -2809,6 +3125,7 @@ export type SettingsPage = View &
  *   title: "Resume",
  * });
  * page.bind(() => ({ resume: store.value.resume }));
+ * // The bridge's `resume-toggled(bool)`: save, and `bind` sends it back.
  * page.on("resumeToggled", (on: boolean) => store.save({ ...store.value, resume: on }));
  * ```
  *
@@ -2845,13 +3162,17 @@ export interface Settings {
    *   one component and one global. A file that cannot be read throws Node's
    *   file system error (`code` `ENOENT` and so on).
    *
-   * @example
+   * @example Register a page and report when the player refuses it
+   * An "My plugin" page appears under Plugins, or the reason it could not
+   * be added is logged. `page` returns at once; the player compiles the
+   * page on its own, and `ready` rejects (for example with `ui-prepare`
+   * and the compiler's diagnostics) when it refuses it.
    * ```ts
    * const page = plugin.settings.page("ui/advanced.slint", {
    *   id: "advanced",
    *   category: "plugins",
    *   title: "My plugin",
-   *   order: 10,
+   *   order: 10, // after pages with a smaller order in the category
    * });
    * page.ready.catch((error: PluginError) => console.error(error.message));
    * ```
@@ -2892,7 +3213,10 @@ export interface Settings {
    * @throws `capability` (rejects) The manifest does not declare
    *   `ui.settings`.
    *
-   * @example An "Options…" button in a tool window
+   * @example Open the plugin's page from an "Options…" button
+   * The button in the plugin's window opens the Options window at the
+   * plugin's Blur page, or brings it to the front. `show` takes the id the
+   * page was registered with and rejects with `invalid` for any other.
    * ```ts
    * const controls = plugin.windows.create("ui/window.slint");
    * controls.on("openOptions", () => plugin.settings.show("blur"));
@@ -2917,8 +3241,13 @@ export interface Settings {
  * @capability ui.mount; `events` to follow changes.
  *
  * @example React when a video picture appears
+ * The OSD says "Video is playing" when the backdrop gives way to a video
+ * picture. The player decides when the backdrop shows (nothing open,
+ * loading, audio without a picture); `effective` turns false when a video
+ * frame replaces it.
  * ```ts
  * plugin.panels.backdrop.onChange((state) => {
+ *   // `null`: no backdrop is mounted.
  *   if (state?.effective === false) void plugin.osd.show("Video is playing");
  * });
  * ```
@@ -2944,7 +3273,10 @@ export interface BackdropSlot {
    * @param listener - Receives the new state (`null`: no backdrop).
    * @returns A handle that removes the listener.
    *
-   * @example
+   * @example Log when the backdrop shows or hides
+   * The plugin's log records each change of the backdrop position. The
+   * listener runs when the player starts or stops showing the backdrop
+   * and with `null` when it is unmounted.
    * ```ts
    * plugin.panels.backdrop.onChange((state) => console.log("backdrop", state));
    * ```
@@ -2981,7 +3313,13 @@ export interface BackdropSlot {
  *
  * @capability ui.mount
  *
- * @example A sidebar list (examples/panel-menu)
+ * @example Mount a list in the sidebar (examples/panel-menu)
+ * The sidebar gets an "Example list" tab showing three rows. `mount`
+ * returns at once; the SDK sends the mount with the values bound so far,
+ * and the player rebuilds its main window with the panel. The Slint file
+ * exports the component and the bridge global whose properties `bind`
+ * writes.
+ *
  * {@includeCode ../../examples/panel-menu/main.ts#mount}
  *
  * `ui/panel.slint`:
@@ -3043,9 +3381,15 @@ export interface Panels {
    * @throws The errors of {@link Panel.ready} (rejects `ready`) The player
    *   refused the mount.
    *
-   * @example A bottom bar
+   * @example Mount a bottom bar with a seek slider
+   * The plugin's own control bar appears under the video, its slider
+   * following the playback position and seeking when dragged. Bindings and
+   * handlers made right after `mount` are part of the first values;
+   * `ready` resolves once the main window shows the bar, and rejects with
+   * `conflict` when another plugin's panel holds the bottom bar.
    * ```ts
    * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
+   * // Sent again whenever the position changes.
    * bar.bind(() => ({ position: plugin.player.state.position ?? 0 }));
    * bar.on("seek", (seconds: number) => plugin.player.seek(seconds));
    * await bar.ready;
@@ -3103,10 +3447,16 @@ export interface TimelineLayer extends Disposable {
    * the player translates (`text("Chapter {}", [n])`, SDK 1.5.11); other
    * plugins read the shown string.
    *
-   * @example
+   * @example Show the file's bookmarks on the timeline
+   * Bookmark marks appear on the seek bar at their times, titled with the
+   * user's notes. `set` replaces this plugin's whole layer; with `ifCurrent`
+   * the player drops the write if another file opened since `seen` was
+   * read, so bookmarks of the previous file never land on the new one.
    * ```ts
+   * declare const bookmarks: { time: number; note: string }[];
+   * // ---cut---
    * const layer = plugin.timeline.layer();
-   * const seen = plugin.player.state;
+   * const seen = plugin.player.state; // the file the bookmarks belong to
    * layer.set(
    *   bookmarks.map((b) => ({ time: b.time, kind: "bookmark", title: b.note })),
    *   { ifCurrent: seen },
@@ -3163,7 +3513,13 @@ export interface WindowState {
  * `onChange`; without it, it updates only at start and after this plugin's
  * `setVideoArea`.
  *
- * @example A "1:1 size" command
+ * @example Resize the window to the video's own size
+ * Screen ▸ Original size makes the video area as many logical points as
+ * the video has pixels (one pixel per pixel at a display scale of 100 %).
+ * `stats()` reports the video's size;
+ * `setVideoArea` resizes the window around the video column (bars and a
+ * docked sidebar added), scales it down if it would not fit the screen,
+ * and is refused in fullscreen, hence the `enabled` check.
  * ```ts
  * plugin.commands.add({
  *   id: "size-1x",
@@ -3171,6 +3527,7 @@ export interface WindowState {
  *   enabled: () => !plugin.window.state.fullscreen,
  *   run: async () => {
  *     const stats = await plugin.player.stats();
+ *     // No video stream (an audio file): nothing to size to.
  *     if (stats.video?.width && stats.video.height)
  *       await plugin.window.setVideoArea({ width: stats.video.width, height: stats.video.height });
  *   },
@@ -3225,7 +3582,11 @@ export interface MainWindow {
    * Where it is unsupported (Windows, Linux), `setVideoArea` plus
    * `setAlwaysOnTop` make a reasonable "mini player" fallback.
    *
-   * @example
+   * @example Toggle picture-in-picture where the system has it
+   * The video moves into a floating picture-in-picture window, or back.
+   * `state.pictureInPicture` says whether the system supports it and
+   * whether it is on; the plugin only calls `setPictureInPicture` where it
+   * is supported.
    * ```ts
    * if (plugin.window.state.pictureInPicture.supported)
    *   await plugin.window.setPictureInPicture(!plugin.window.state.pictureInPicture.active);
@@ -3255,7 +3616,12 @@ export interface AppInfo {
  * `plugin.app`: the fixed facts plus the system, read on request. No
  * capability.
  *
- * @example
+ * @example Describe the player and the system for a bug report
+ * The plugin builds a line such as "Vestra 0.5.10 on macOS 26.2" to copy
+ * into a bug report. `app.version` is known from the start; each
+ * `system()` call asks the player, which reads the displays at that moment.
+ * The operating system's name and version it works out once, at the first
+ * call, and reuses them.
  * ```ts
  * const system = await plugin.app.system();
  * const text = `Vestra ${plugin.app.version} on ${system.name} ${system.version ?? ""}`;
@@ -3358,18 +3724,28 @@ export interface ConfirmOptions {
  * at a time: another call meanwhile rejects with `busy`. Playback continues
  * while a dialog is open; command key bindings pause.
  *
+ * **Platforms:** {@link Dialogs.confirm} needs macOS or Windows (other
+ * systems reject it with `unsupported`); the file dialogs work on every
+ * system.
+ *
  * For anything more than a question or a path, use a {@link Windows | tool
  * window}.
  *
  * @capability ui.dialog
  *
  * @example Ask before deleting, remembering "Don't ask again"
+ * Deleting asks for confirmation in a system alert with a "Don't ask
+ * again" box; once the user ticks it, later deletes go ahead without
+ * asking. `confirm` resolves with the button and the checkbox when the
+ * user answers; the texts are templates the player translates, so the
+ * count goes in `args`. Remembering the box is up to the plugin.
  * ```ts
  * const store = plugin.storage.json("confirm", { defaults: { askBeforeDelete: true } });
  * async function deleteAll(count: number) {
  *   if (store.value.askBeforeDelete) {
  *     const { confirmed, checked } = await plugin.dialogs.confirm({
- *       message: `Delete ${count} bookmarks?`,
+ *       message: "Delete {} bookmarks?",
+ *       args: [count],
  *       detail: "This cannot be undone.",
  *       confirm: "Delete",
  *       destructive: true,
@@ -3416,13 +3792,22 @@ export interface Dialogs {
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
    * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
-   * @example
+   * @example Confirm before replacing the playlist
+   * The user sees "Replace the current playlist?" with a Replace button and
+   * the playlist is replaced only after a yes. The system draws the alert
+   * and the promise resolves when the user answers; only one dialog is
+   * open at a time, so a second one meanwhile rejects with `busy`.
    * ```ts
-   * const { confirmed } = await plugin.dialogs.confirm({
-   *   message: "Replace the current playlist?",
-   *   confirm: "Replace",
-   * });
-   * if (confirmed) await plugin.osd.show("Playlist replaced");
+   * try {
+   *   const { confirmed } = await plugin.dialogs.confirm({
+   *     message: "Replace the current playlist?",
+   *     confirm: "Replace",
+   *   });
+   *   if (confirmed) await plugin.osd.show("Playlist replaced");
+   * } catch (error) {
+   *   if ((error as PluginError).code !== "busy") throw error;
+   *   // Another dialog is already open: let the user finish that one.
+   * }
    * ```
    *
    * @since 1.0.0
@@ -3446,10 +3831,13 @@ export interface Dialogs {
    * @throws `invalid` (rejects) `title` is longer than 256 bytes.
    * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
-   * @example
+   * @example Let the user pick a subtitle file
+   * The system's Open dialog appears titled "Choose a subtitle file" and
+   * the chosen path is shown on the OSD. The promise resolves when the
+   * user answers: with the absolute path, or `null` when they cancelled.
    * ```ts
    * const path = await plugin.dialogs.openFile({ title: "Choose a subtitle file" });
-   * if (path !== null) await plugin.osd.show(`Chosen: ${path}`);
+   * if (path !== null) await plugin.osd.show("Chosen: {}", [path]); // a path is data
    * ```
    *
    * @since 1.0.0
@@ -3471,10 +3859,13 @@ export interface Dialogs {
    * @throws `invalid` (rejects) `title` is longer than 256 bytes.
    * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
-   * @example
+   * @example Let the user pick several files at once
+   * The Open dialog allows selecting several files; the OSD says how many
+   * were added. The promise resolves with the absolute paths, or with an
+   * empty array when the user cancelled.
    * ```ts
    * const paths = await plugin.dialogs.openFiles({ title: "Add to the playlist" });
-   * await plugin.osd.show(`${paths.length} files added`);
+   * if (paths.length) await plugin.osd.show("{} files added", [paths.length]);
    * ```
    *
    * @since 1.0.0
@@ -3496,7 +3887,10 @@ export interface Dialogs {
    * @throws `invalid` (rejects) `title` is longer than 256 bytes.
    * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
-   * @example
+   * @example Let the user choose a folder for snapshots
+   * The system's folder dialog appears titled "Save snapshots in". It
+   * resolves with the folder's absolute path, or `null` when the user
+   * cancelled, in which case the plugin stops there.
    * ```ts
    * const folder = await plugin.dialogs.openDirectory({ title: "Save snapshots in" });
    * if (folder === null) return; // cancelled
@@ -3527,7 +3921,10 @@ export interface Dialogs {
    *   or contains `/` or `\`.
    * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
-   * @example
+   * @example Ask where to save a snapshot
+   * The system's Save dialog proposes "frame.png" and returns where the
+   * user wants it. The dialog only returns the path (or `null` when
+   * cancelled); writing the file is up to the plugin afterwards.
    * ```ts
    * const path = await plugin.dialogs.saveFile({ title: "Save snapshot", fileName: "frame.png" });
    * if (path === null) return; // cancelled
@@ -3677,10 +4074,23 @@ export interface Chapter {
  * consecutive calls do not make each other stale. {@link Player.open} is
  * unconditional unless `ifCurrent` is given.
  *
- * @example
+ * @example Play the next file only if nothing else was opened
+ * When the plugin's file ends, the next one starts, unless the user or
+ * another plugin opened something in the meantime. `onEnd` passes the
+ * state at the end; `open` with `ifCurrent: ended` is refused with `stale`
+ * when the source changed after that state, so nothing is replaced.
  * ```ts
- * // Advance only if nobody changed the source since it ended.
- * media.onEnd((ended) => plugin.player.open(next, { ifCurrent: ended }));
+ * declare const media: Media;
+ * declare const next: string;
+ * // ---cut---
+ * media.onEnd(async (ended) => {
+ *   try {
+ *     await plugin.player.open(next, { ifCurrent: ended });
+ *   } catch (error) {
+ *     // Someone opened another file: leave it playing.
+ *     if ((error as PluginError).code !== "stale") throw error;
+ *   }
+ * });
  * ```
  */
 export interface Conditional {
@@ -3709,10 +4119,18 @@ export interface Media {
  * Any outside change (another plugin opens a file, the user pauses) ends
  * the gesture.
  *
- * @example
+ * @example Seek while the user drags a slider
+ * The video follows the slider while it is dragged. `scrub()` starts a
+ * gesture from the current state; each `seek` is conditional on the
+ * previous one and only the newest target is sent while one is running,
+ * so a fast drag does not queue seeks. A change from outside (another file,
+ * the user pausing) ends the gesture and later seeks resolve `false`.
  * ```ts
+ * declare const bar: Panel;
+ * // ---cut---
  * let scrub: Scrub | null = null;
  * bar.on("dragStart", () => (scrub = plugin.player.scrub()));
+ * // Latest value wins: superseded targets resolve false, not an error.
  * bar.on("dragMove", (seconds: number) => void scrub?.seek(seconds));
  * bar.on("dragEnd", () => scrub?.end());
  * ```
@@ -3736,8 +4154,15 @@ export interface Scrub {
    * as before. Older players ignore the option and seek exactly: set
    * `"minPlayerVersion": "0.5.3"` when you rely on it.
    *
-   * @example
+   * @example Scrub on keyframes for a fast picture
+   * While dragging, the picture jumps to the nearest earlier keyframe at
+   * once instead of decoding up to the exact frame. With `keyframes: true`
+   * the player lands each target on the last keyframe at or before it; the
+   * plugin follows the user's keyframe-seek setting.
    * ```ts
+   * declare const bar: Panel;
+   * declare const scrub: Scrub | null;
+   * // ---cut---
    * const keyframes = true; // the plugin's own setting
    * bar.on("dragMove", (seconds: number) => void scrub?.seek(seconds, { keyframes }));
    * ```
@@ -3938,12 +4363,17 @@ export interface PlaybackStats {
  * `stale` and do nothing when the source changed since the state you saw.
  *
  * @example Open a file and wait until it plays
+ * The file opens and the plugin learns whether it started playing within
+ * ten seconds. `open` resolves once the player accepted the load and
+ * returns a `Media` handle; `ready` waits for playback and rejects with
+ * `failed` (load error), `replaced` (another source took over) or an
+ * `AbortError` when the timeout fires, which closes the media.
  * ```ts
- * const media = await plugin.player.open("/Movies/clip.mp4");
+ * const media = await plugin.player.open("/Movies/clip.mp4"); // load accepted
  * try {
  *   await media.ready({ signal: AbortSignal.timeout(10_000) });
  * } catch (error) {
- *   void plugin.osd.show(`Cannot play: ${(error as Error).message}`);
+ *   void plugin.osd.show("Cannot play: {}", [(error as Error).message]);
  * }
  * ```
  */
@@ -3982,15 +4412,24 @@ export interface Player {
    * (`timeout`), `stream`, `device`, or `replaced` when another source
    * replaced it (or it was closed) before it ran.
    *
-   * @example
+   * @example Play pictures the plugin draws itself
+   * The player shows a 320×240 picture the plugin renders, with silence as
+   * its sound, as the current source. The SDK pulls frames on the audio
+   * clock: each `frame()` returns one picture (RGBA bytes) and the audio
+   * that plays with it, here 1/60 s, so the picture runs at 60 frames a
+   * second; `frame()` may run several times back to back to refill the
+   * lead. `onStop` tells the plugin when and why the stream ended.
    * ```ts
-   * const frame = new Uint8Array(320 * 240 * 4);
-   * const silence = new Float32Array(2 * 800); // 1/60 s of stereo
+   * declare function render(into: Uint8Array): Uint8Array;
+   * // ---cut---
+   * const frame = new Uint8Array(320 * 240 * 4); // RGBA, reused per frame
+   * const silence = new Float32Array(2 * 800); // 1/60 s of stereo at 48 kHz
    * const stream = await plugin.player.openStream({
    *   width: 320,
    *   height: 240,
    *   frame: () => ({ video: render(frame), audio: silence }),
    * });
+   * // `error` is null when the stream stopped normally.
    * stream.onStop((error) => error && plugin.osd.show(error.message));
    * ```
    */
@@ -4017,8 +4456,21 @@ export interface Player {
    * Become the sequence provider (one at a time; another provider rejects with
    * `conflict` through the scope's `onError`, or fails activation). Dispose to stop.
    *
-   * @example
+   * @example Drive the player's Next and Previous from a playlist
+   * The player's Next and Previous items and keys play the plugin's list.
+   * The player calls `next` and `previous` when the user asks; `canNext`
+   * and `canPrevious` are evaluated again after every handler the SDK runs,
+   * and while they return false the player disables its items ("No next
+   * item").
    * ```ts
+   * declare const items: string[];
+   * let index = 0;
+   * // ---cut---
+   * const playAt = async (at: number) => {
+   *   index = at;
+   *   await plugin.player.open(items[at]!);
+   * };
+   * // Called by the player's Next / Previous items, keys and buttons.
    * plugin.player.provideSequence({
    *   next: () => playAt(index + 1),
    *   previous: () => playAt(index - 1),
@@ -4170,9 +4622,22 @@ export interface Host {
    *
    * Prefer this over reimplementing playback buttons.
    *
-   * @example
+   * @example Make a bar button play and pause like Space
+   * The plugin's own Play button behaves exactly like the player's Space
+   * key, including its on-screen text. `host.run` runs the core action
+   * with the player's checks; it resolves when the action finished, and
+   * rejects with `unavailable` while the action is disabled (nothing open).
    * ```ts
-   * bar.on("playPause", () => plugin.host.run("play-pause"));
+   * declare const bar: Panel;
+   * // ---cut---
+   * bar.on("playPause", async () => {
+   *   try {
+   *     await plugin.host.run("play-pause");
+   *   } catch (error) {
+   *     if ((error as PluginError).code !== "unavailable") throw error;
+   *     // Nothing to play: the button simply does nothing.
+   *   }
+   * });
    * ```
    */
   run(action: HostAction): Promise<void>;
@@ -4193,8 +4658,14 @@ export interface Host {
    * `seconds` and seek by the `setStepSeek` step)
    * @since 1.5.19
    *
-   * @example
+   * @example Add a 30-second skip that adds up with the arrow keys
+   * The plugin's "+30 s" button seeks forward 30 seconds and shows the same
+   * text as →. Passing `seconds` makes the core step seek use that step
+   * with the player's mode (exact or keyframes); quick presses of it and of
+   * → add up into one seek.
    * ```ts
+   * declare const bar: Panel;
+   * // ---cut---
    * bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 }));
    * ```
    */
@@ -4219,11 +4690,16 @@ export interface Host {
  *
  * @capability ui.osd
  *
- * @example Live playback numbers
+ * @example Show live playback numbers over the video
+ * A block over the video shows the position and the duration, updated
+ * as playback moves. `player.onChange` runs after the SDK updated the
+ * state (with `events`); `set` never throws and sends only the newest
+ * text while one is in flight, so calling it on every change is fine.
  * ```ts
  * const info = plugin.osd.panel();
  * plugin.player.onChange((state) =>
- *   info.set(`${state.position?.toFixed(1) ?? "–"} / ${state.duration?.toFixed(1) ?? "–"} s`),
+ *   // A template with data arguments; the player translates "{} / {} s".
+ *   info.set("{} / {} s", [state.position?.toFixed(1) ?? "–", state.duration?.toFixed(1) ?? "–"]),
  * );
  * ```
  *
@@ -4250,7 +4726,10 @@ export interface OsdPanel extends Disposable {
    *   omitted for none.
    * @param options - `maxColumns`: cut long lines (SDK 1.5.11).
    *
-   * @example
+   * @example Show two loop points, then hide the block
+   * The block shows "A: 12.0 s" and "B: 18.5 s" on two lines, then
+   * disappears. The text is a template the player translates and fills
+   * in; `\n` separates lines, and `null` hides the block.
    * ```ts
    * const info = plugin.osd.panel();
    * info.set("A: {} s\nB: {} s", ["12.0", "18.5"]);
@@ -4315,7 +4794,10 @@ export interface OsdPanelOptions {
  *
  * @capability ui.osd
  *
- * @example On-screen messages that the user can turn off
+ * @example Show on-screen messages the user can turn off
+ * "Blur on" appears over the video unless the user turned messages off in
+ * the plugin's settings. `osd.show` asks the player to draw the text for a
+ * moment; the plugin checks its own stored preference before each call.
  * ```ts
  * const store = plugin.storage.json("prefs", { defaults: { messages: true } });
  * const say = (text: string) => {
@@ -4359,7 +4841,11 @@ export interface Osd {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.osd`.
    *
-   * @example
+   * @example Confirm an action and show a value
+   * The OSD shows "Bookmark added", then "Speed 1.5×" in the user's
+   * language. The text is English source the player translates with the
+   * plugin's catalog; `{}` is filled in with the argument, which stays as
+   * it is because it is data.
    * ```ts
    * await plugin.osd.show("Bookmark added");
    * await plugin.osd.show("Speed {}×", [plugin.player.state.rate]);
@@ -4381,7 +4867,10 @@ export interface Osd {
    *
    * @throws `Error` without a code (throws) This plugin already has a block.
    *
-   * @example
+   * @example Show a status block over the video
+   * A small block over the video says "Loop: off" until the plugin changes
+   * or hides it. Each plugin has one block, stacked with other plugins'
+   * blocks; a second `panel()` call throws.
    * ```ts
    * const info = plugin.osd.panel();
    * info.set("Loop: off");
@@ -4464,9 +4953,14 @@ interface Filter<T> extends Disposable {
  * Values out of range fail with `invalid` (see {@link VideoNode}). The
  * same chain applies to processed snapshots and exports.
  *
- * @example
+ * @example Brighten the picture and report when it fails
+ * Every video plays a little brighter with more contrast, and the OSD
+ * says why when the player cannot apply it. `set` records the desired
+ * chain (last write wins, one request in flight); the player reapplies it
+ * for each new source, and `onStatus` reports `applied` or `failed`.
  * ```ts
  * const picture = plugin.video.filter("picture");
+ * // `unsupported` while a generated stream plays: its frames skip filters.
  * picture.onStatus((s) => s.state === "failed" && plugin.osd.show(s.error.message));
  * picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma: 1 }]);
  * ```
@@ -4481,10 +4975,13 @@ export type VideoFilter = Filter<VideoNode[]>;
  * `delayMs` is −10000–10000 in multiples of 10; the positive and the
  * negative delays of all plugins each add up to at most 10000.
  *
- * @example
+ * @example Lower the volume and delay the sound
+ * Every file plays 6 dB quieter, with its sound 120 ms later to match a
+ * slow display. `set` sends the plugin's whole chain and delay; the
+ * player applies it to each source and adds the delays of all plugins.
  * ```ts
  * const audio = plugin.audio.filter("sound");
- * audio.set({ nodes: [{ kind: "volume", gainDb: -6 }], delayMs: 120 });
+ * audio.set({ nodes: [{ kind: "volume", gainDb: -6 }], delayMs: 120 }); // 10 ms steps
  * ```
  */
 export type AudioFilter = Filter<{
@@ -4520,7 +5017,11 @@ export interface ViewSettings {
  * Out-of-range values or unknown fields fail with `invalid` without
  * sending anything.
  *
- * @example
+ * @example Fill the window, then zoom in
+ * The video fills the video area (cropped instead of letterboxed), then
+ * zooms to 150 % shifted a little to the right. The first plugin to call
+ * `view()` owns the display layer; each `set` merges into its settings,
+ * which stay across sources until the plugin resets them or stops.
  * ```ts
  * const view = plugin.video.view();
  * view.set({ fit: "fill" });
@@ -4563,13 +5064,20 @@ export interface RenderSettings {
  * `unsupported`. macOS OpenGL 4.1 has no compute shaders, so `peakDetect`
  * is accepted but has no effect; output is always SDR.
  *
- * @example
+ * @example Tone-map HDR video and hide the menu where it cannot work
+ * On a GPU-rendering player HDR video is tone-mapped with BT.2390 for a
+ * 250-nit display; under software rendering the plugin hides its HDR menu.
+ * `set` merges the values into the plugin's render options and the
+ * player reports the result through `onStatus`: `failed` with
+ * `unsupported` means the player renders in software (Windows, Linux).
  * ```ts
+ * declare function hideHdrMenu(): void;
+ * // ---cut---
  * const render = plugin.video.render();
  * render.onStatus((s) => {
  *   if (s.state === "failed" && s.error.code === "unsupported") hideHdrMenu();
  * });
- * render.set({ toneMapping: "bt.2390", targetPeak: 250 });
+ * render.set({ toneMapping: "bt.2390", targetPeak: 250 }); // nits
  * ```
  */
 export interface RenderOptions extends Disposable {
@@ -4634,7 +5142,10 @@ export interface SubtitlesState {
     /** Font family name for display. */
     family: string;
   }[];
-  /** The effective style, from whichever plugin set it last. */
+  /**
+   * The effective style: among the plugins that set a layer, the one whose
+   * manifest id sorts last (not the most recent call); `null` without one.
+   */
   readonly style: SubtitleStyle | null;
   /** Whether the renderer confirmed the selection. */
   readonly trackConfirmation: "waiting" | "applied" | "uncertain";
@@ -4656,12 +5167,23 @@ export interface SubtitleConditional {
  * `subtitles.read`, since they read the current selection first.
  *
  * @example Load an SRT file as the secondary subtitle
+ * An English SRT file shows as a second subtitle line next to the
+ * film's own subtitles, in white with an outline. The plugin reads the
+ * file and uploads its bytes with `load`, which adds a track to the
+ * current source and selects it as the secondary subtitle; `refresh`
+ * reads the subtitle state for its font list, and `setStyle` sends this
+ * plugin's style layer naming one of those fonts.
  * ```ts
+ * import { readFile } from "node:fs/promises";
+ * declare const path: string;
+ * // ---cut---
  * const bytes = await readFile(path);
- * const track = await plugin.subtitles.load(bytes, { title: "English", select: "secondary" });
+ * await plugin.subtitles.load(bytes, { title: "English", select: "secondary" });
+ * const { fonts } = await plugin.subtitles.refresh();
+ * if (!fonts.length) return;
  * await plugin.subtitles.setStyle({
- *   fontId: plugin.subtitles.state!.fonts[0]!.id,
- *   fontSize: 40,
+ *   fontId: fonts[0]!.id,
+ *   fontSize: 40, // at the 1080p reference height
  *   color: "white",
  *   outline: 2,
  *   marginPercent: 5,
@@ -4712,7 +5234,12 @@ export interface Subtitles {
     track: SubtitleTrack,
     options?: SubtitleConditional,
   ): Promise<SubtitlesState>;
-  /** This plugin's style layer; `null` removes it. Last write wins. */
+  /**
+   * Set this plugin's style layer; `null` removes it. The newest call of
+   * this plugin replaces its earlier layer. When several plugins have a
+   * layer, the player uses the one whose manifest id sorts last, whatever
+   * the order of the calls.
+   */
   setStyle(
     style: SubtitleStyle | null,
     options?: SubtitleConditional,
@@ -4829,11 +5356,17 @@ export interface ExportJob extends Disposable {
  * `subtitles.read`). Exports decode offline and do not disturb playback.
  *
  * @example Save the current frame as JPEG
+ * The frame on screen, with the plugin's own picture effects, is saved
+ * where the user chooses. `capture` freezes the source as it was in
+ * `seen` (and fails with `stale` if the user opened another file while
+ * the dialog was open); `export` decodes offline without disturbing
+ * playback, and `done` resolves with the job's final status.
  * ```ts
  * const seen = plugin.player.state;
  * const destination = await plugin.dialogs.saveFile({ fileName: "frame.jpg" });
  * if (!destination) return;
  * const snapshot = await plugin.media.capture({ ifCurrent: seen, processed: true });
+ * // Release the frozen frame whatever happens to the export.
  * try {
  *   const job = await snapshot.export({ format: "jpeg", destination, quality: 85 });
  *   const end = await job.done;
@@ -4898,23 +5431,28 @@ export interface WebResolverOptions {
  * (the player shows a warning). When this plugin stops, its extensions are
  * free again and such files go to the player as before.
  *
- * @example
+ * @example Play CHIP-8 programs with the plugin's own emulator
+ * Opening a `.ch8` file anywhere in the player (Open dialog, playlist,
+ * recent list) runs it in the plugin's emulator instead of failing as an
+ * unknown format. The player calls `resolve` with the path; the plugin
+ * reads the program and returns a stream whose `frame()` the SDK pulls on
+ * the audio clock, one 1/60 s frame per call. `started` runs once the
+ * stream plays; `signal` aborts the read when the open is replaced or
+ * closed.
  * ```ts
- * const { readFile } = await import("node:fs/promises");
- * // The plugin's own emulator: one frame per call.
- * const emulator = (rom: Uint8Array): (() => StreamFrame) => {
- *   const video = new Uint8Array(256 * 240 * 4).fill(rom[0] ?? 0);
- *   return () => ({ video, audio: new Float32Array(1600) });
- * };
+ * import { readFile } from "node:fs/promises";
+ * // The plugin's own emulator (made up here): one frame per call.
+ * declare function emulator(program: Uint8Array): () => StreamFrame;
+ * // ---cut---
  * plugin.resolvers.add({
- *   id: "nes",
- *   extensions: ["nes"],
+ *   id: "chip8",
+ *   extensions: ["ch8"], // lower case, no dot; matches Game.CH8 too
  *   async resolve(path, signal) {
  *     const frame = emulator(await readFile(path, { signal }));
  *     return {
  *       kind: "stream",
- *       width: 256,
- *       height: 240,
+ *       width: 64, // CHIP-8's display
+ *       height: 32,
  *       frame,
  *       started: (stream) => stream.onStop((error) => error && plugin.osd.show(error.message)),
  *     };
@@ -4982,14 +5520,20 @@ export interface Resolver extends Disposable {
  * files into streams this plugin generates. Needs `source.resolve` (file
  * resolvers also `producer.av`).
  *
- * @example
+ * @example Play pages of a video site
+ * Opening a `https://video.example.com/…` page plays its video. When the
+ * user opens a URL whose scheme and host this resolver declares, the
+ * player asks the plugin first; `resolve` returns the stream's address,
+ * and `signal` aborts the lookup when the open is replaced or closed.
  * ```ts
  * plugin.resolvers.add({
  *   id: "example",
  *   schemes: ["https"],
  *   hosts: ["video.example.com"],
  *   async resolve(url, signal) {
- *     const page = await (await fetch(url, { signal })).json();
+ *     const response = await fetch(url, { signal }); // the site's JSON for the page
+ *     if (!response.ok) throw new Error(`video.example.com answered ${response.status}`);
+ *     const page = await response.json();
  *     return { kind: "media", originalUrl: url, title: page.title, primary: { url: page.stream } };
  *   },
  * });
@@ -5012,9 +5556,13 @@ export interface Resolvers {
    * Use it to accept such files beside the player's own media types, for
    * example in a playlist's drop or folder scan.
    *
-   * @example
+   * @example Accept files that a resolver plugin can play
+   * A plugin's own file filter also accepts types other plugins turn into
+   * streams. `fileTypes` lists the extensions every running file resolver
+   * claims (lower case, no dot); the SDK keeps it current with `events`.
    * ```ts
    * const MEDIA = ["mp4", "mkv", "mp3"];
+   * // Extensions compare in lower case, without the dot.
    * const accepted = (path: string) => {
    *   const extension = path.split(".").pop()?.toLowerCase() ?? "";
    *   return MEDIA.includes(extension) || plugin.resolvers.fileTypes.includes(extension);
@@ -5033,10 +5581,13 @@ export interface Resolvers {
    * @param listener - Receives the new list.
    * @returns A handle that removes the listener.
    *
-   * @example
+   * @example Say which file types became playable
+   * When a plugin with a file resolver starts or stops, the OSD lists the
+   * extra file types now accepted. The listener (which needs `events`)
+   * receives the new list each time it changes.
    * ```ts
    * plugin.resolvers.onFileTypesChange((types) => {
-   *   void plugin.osd.show(`Also accepted: ${types.join(", ")}`);
+   *   void plugin.osd.show("Also accepted: {}", [plugin.i18n.list(types)]);
    * });
    * ```
    *
@@ -5284,10 +5835,19 @@ export interface PluginWarning {
  * `plugin.packages`: the plugins the player knows. `list` and `onChange`
  * need no capability; everything else needs `plugins.manage`.
  *
- * @example
+ * @example Install a plugin from an unpacked package
+ * The plugin installs a package directory it downloaded and unpacked, and
+ * reports why when it does not work. `validate` asks the player to check
+ * the package and returns a candidate; `install` starts the change and
+ * `done` resolves with its final status: `committed` only once the new
+ * plugin reported that it is running, otherwise `failed`, `cancelled`,
+ * `failedDegraded` or `tooLate`.
  * ```ts
+ * declare const unpackedDirectory: string;
+ * // ---cut---
  * const candidate = await plugin.packages.validate(unpackedDirectory);
  * const change = await candidate.install();
+ * // `message` says why a change did not commit.
  * if ((await change.done) !== "committed") throw new Error(change.message ?? "install failed");
  * ```
  */
@@ -5406,7 +5966,11 @@ export interface BindingInfo extends BindingRef {
  * `plugin.bindings`: list and override every command's bindings, including
  * the player's. Needs `bindings.manage`.
  *
- * @example "Ignore the default shortcut" for one command
+ * @example Unbind the player's Mute key, then restore it
+ * The player's Mute command loses its default key, and later gets it
+ * back. `set` with `[]` saves an override that unbinds the command
+ * (remembered across launches); `reset` removes the override, so the
+ * command's own default bindings apply again.
  * ```ts
  * await plugin.bindings.set({ plugin: "host", command: "mute" }, []);
  * // later
@@ -5449,9 +6013,18 @@ export interface Bindings {
  * PNG. Other systems: `unsupported`. Failures: `invalid`, `missing`,
  * `unavailable`, `failed` (the system refused).
  *
- * @example
+ * @example Copy the current file and position
+ * The clipboard holds "path @ seconds" for pasting into a note. The
+ * player writes the system clipboard; it rejects with `unsupported` on
+ * systems other than macOS and Windows and `failed` when the system
+ * refuses, which the plugin reports.
  * ```ts
- * await plugin.clipboard.writeText(`${plugin.player.state.source} @ ${plugin.player.state.position}`);
+ * const { source, position } = plugin.player.state;
+ * try {
+ *   await plugin.clipboard.writeText(`${source} @ ${position}`); // data, not shown
+ * } catch (error) {
+ *   void plugin.osd.show("Could not copy: {}", [(error as PluginError).code]);
+ * }
  * ```
  */
 export interface Clipboard {
@@ -5490,15 +6063,23 @@ export interface ToolResult {
  * `plugin.tools`: ffmpeg and ffprobe, run in this plugin's process. No
  * capability.
  *
- * @example
+ * @example Read a file's format with ffprobe
+ * The plugin gets a media file's container details as JSON. `available`
+ * says whether ffprobe can be found (`VESTRA_FFPROBE`, then `PATH`); `run`
+ * starts it from the plugin's own process without a shell and resolves
+ * with its output as bytes once it exits, or rejects when it fails
+ * (`failed`, with the last stderr line) or takes longer than `timeoutMs`.
  * ```ts
+ * declare const path: string;
+ * // ---cut---
  * if (await plugin.tools.available("ffprobe")) {
  *   const { stdout } = await plugin.tools.run(
  *     "ffprobe",
  *     ["-v", "error", "-show_format", "-of", "json", path],
- *     { timeoutMs: 10_000 },
+ *     { timeoutMs: 10_000 }, // give up on a stuck file after 10 s
  *   );
  *   const info = JSON.parse(new TextDecoder().decode(stdout));
+ *   void info.format; // container, duration, bit rate…
  * }
  * ```
  */
@@ -5547,14 +6128,22 @@ export interface Storage {
    * The file is read synchronously on creation; `debounceMs` defaults to
    * 300. Files are created with mode 0600. `invalid` for a bad name.
    *
-   * @example
+   * @example Keep settings and a recent list in a JSON file
+   * The plugin remembers whether to resume and the last ten files across
+   * restarts. `json` reads `settings.json` from the data directory at once
+   * (or uses `defaults` when it is missing or fails `validate`); `save`
+   * replaces the value and writes the file 300 ms later, and stopping the
+   * plugin writes a pending save first.
    * ```ts
+   * declare const path: string;
+   * // ---cut---
    * type Settings = { resume: boolean; recent: string[] };
    * const store = plugin.storage.json<Settings>("settings", {
    *   defaults: { resume: true, recent: [] },
    *   validate: (v): v is Settings =>
    *     typeof v === "object" && v !== null && typeof (v as Settings).resume === "boolean",
    * });
+   * // Only `save` writes: changing `store.value` in place is not saved.
    * store.save({ ...store.value, recent: [path, ...store.value.recent].slice(0, 10) });
    * ```
    */
@@ -5620,7 +6209,11 @@ export interface Storage {
  *   resolves, so a crash right after loses nothing; there is no debounce.
  *   Calls answer in order.
  *
- * @example
+ * @example Keep a work queue across a plugin restart
+ * A download queue survives the plugin being reloaded or crashing, and is
+ * empty again when the player starts next time. Session storage lives in
+ * the player process for one player run; each `set` is kept once its
+ * promise resolves, so nothing is lost if the plugin dies right after.
  * ```ts
  * // A queue the plugin is working through: after a reload or a crash it
  * // goes on where it stopped, after the player quits it starts afresh.
@@ -5650,10 +6243,21 @@ export interface SessionStorage {
  * `plugin.system`: files and links, executed by the player. No capability.
  * Other systems than macOS and Windows: `unsupported`.
  *
- * @example
+ * @example Show an exported file and open the help page
+ * The file manager opens with the exported file selected, then the
+ * browser opens the plugin's help page. The player performs both on the
+ * plugin's behalf; they reject with `unsupported` on systems other than
+ * macOS and Windows, which the plugin turns into a message.
  * ```ts
- * await plugin.system.reveal(exportedFile);
- * await plugin.system.openUrl("https://example.com/help");
+ * declare const exportedFile: string;
+ * // ---cut---
+ * try {
+ *   await plugin.system.reveal(exportedFile);
+ *   await plugin.system.openUrl("https://example.com/help");
+ * } catch (error) {
+ *   if ((error as PluginError).code !== "unsupported") throw error;
+ *   await plugin.osd.show(`Saved to ${exportedFile}`); // no file manager to open
+ * }
  * ```
  */
 export interface System {
@@ -5682,12 +6286,25 @@ export interface System {
  * The user denying access and other system errors reject `failed`. Never
  * write secrets to settings files.
  *
- * @example
+ * @example Ask for an API token once and keep it in the keychain
+ * The user types the token the first time; later runs read it from the
+ * system's secret store. `get` resolves `null` when nothing is stored; a
+ * store that is missing or refuses access rejects (`unsupported`,
+ * `unavailable`, `failed`), and then the plugin keeps the token for this
+ * run only and asks again next time.
  * ```ts
- * let token = await plugin.secrets.get("api-token");
+ * declare function askUser(): Promise<string | null>;
+ * // ---cut---
+ * let token: string | null = null;
+ * try {
+ *   token = await plugin.secrets.get("api-token");
+ * } catch {
+ *   // No usable store: fall through and ask.
+ * }
  * if (token === null) {
  *   token = await askUser();
- *   await plugin.secrets.set("api-token", token);
+ *   if (token)
+ *     await plugin.secrets.set("api-token", token).catch(() => {}); // best effort
  * }
  * ```
  */

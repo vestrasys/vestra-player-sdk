@@ -15,6 +15,15 @@
  * - category  top-level declarations have `@category`
  * - since     methods have `@since`
  * - capability  methods of module entry types have `@capability`
+ * - example-lead  every `@example` has a task title of 3+ words, a lead
+ *             (a sentence under the title: what it does and how it works)
+ *             and, above 5 shown lines, a comment in the code; or it is a
+ *             `See` marker linking a sibling that has an example of its own
+ * - stale-refs  no `@example` (and no code block of README.md or docs/)
+ *             uses a name of `STALE_REFERENCES`
+ *
+ * Per `@category` it prints the share of methods with an explained example
+ * (one that passes `example-lead`).
  *
  * It also compares the error codes of the `PluginError` table with the codes
  * the SDK itself throws (`failure("…")`), and checks every `@capability`
@@ -24,7 +33,11 @@
  * with "None" or "That of".
  *
  * The rules above are a report (exit 0). The categories listed in
- * scripts/doc-standard.mjs are enforced: a symbol of such a category that
+ * scripts/doc-standard.mjs are enforced; `example-lead` and `stale-refs`
+ * are enforced for every `@example` of the API and every Markdown code
+ * block (since SDK 1.5.30), with the known violations of
+ * `EXAMPLE_BASELINE` as warnings (`--baseline` prints the keys of new
+ * problems). For the categories: a symbol of such a category that
  * misses part of the standard fails the run, and so does a declaration
  * tagged with such a `@category` that the list does not name. `--strict`
  * also fails when any summary is missing. `--list <rule>` prints every
@@ -33,7 +46,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Application, ReflectionKind } from "typedoc";
-import { STRICT_CATEGORIES, strictDeclarations } from "./doc-standard.mjs";
+import {
+  EXAMPLE_BASELINE,
+  EXAMPLE_RULES,
+  STALE_REFERENCES,
+  STRICT_CATEGORIES,
+  splitCut,
+  strictDeclarations,
+} from "./doc-standard.mjs";
 import { CAPABILITY_INFO } from "../src/capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -207,6 +227,236 @@ for (const [name, { category, kind }] of strictDeclarations) {
   }
 }
 
+// Examples: `example-lead`, `stale-refs` and the coverage of explained
+// examples (docs/maintaining.md, "Examples in reference comments").
+const partsText = (parts) => parts.map((part) => part.text).join("");
+const isFence = (part) => part.kind === "code" && /^\s*`{3}/.test(part.text);
+/** Each code block of an `@example`, split at `// ---cut---`. */
+const exampleCode = (tag) =>
+  tag.content
+    .filter(isFence)
+    .map((part) =>
+      splitCut(
+        part.text.replace(/^\s*`{3,}[^\n]*\n?/, "").replace(/\n?`{3,}\s*$/, ""),
+      ),
+    );
+/** Whether `text` holds a full sentence of at least `leadWords` words. */
+const isSentence = (text) =>
+  text.split(/\s+/).filter(Boolean).length >= EXAMPLE_RULES.leadWords &&
+  /[.!?:](\s|$)/.test(text);
+/** A resolved `{@link}` target (a reflection), not an unresolved name. */
+const isReflection = (target) =>
+  !!target && typeof target === "object" && typeof target.kindOf === "function";
+/**
+ * One `@example` tag judged by `example-lead`: `{ marker, target, problems }`,
+ * each problem `{ id, text }` (the id keys `EXAMPLE_BASELINE`). A marker
+ * (`@example See X` without code, `{@link X}` in its text) stands for the
+ * example of another member.
+ */
+function judgeExample(tag) {
+  const title = (tag.name ?? "").trim();
+  const blocks = exampleCode(tag);
+  if (!blocks.length && /^See\b/.test(title)) {
+    const link = tag.content.find(
+      (part) => part.kind === "inline-tag" && part.tag === "@link",
+    );
+    const problems = [];
+    if (!link)
+      problems.push({
+        id: "marker-link",
+        text: "a `See` marker without {@link} to the example",
+      });
+    else if (!isReflection(link.target))
+      problems.push({
+        id: "marker-unresolved",
+        text: `marker link does not resolve: ${link.text}`,
+      });
+    return {
+      marker: true,
+      target: isReflection(link?.target) ? link.target : undefined,
+      problems,
+    };
+  }
+  const problems = [];
+  const words = title.split(/\s+/).filter(Boolean).length;
+  if (words < EXAMPLE_RULES.titleWords)
+    problems.push({
+      id: "title",
+      text: title
+        ? `title "${title}" has fewer than ${EXAMPLE_RULES.titleWords} words`
+        : "no title (`@example Pause playback from a menu item`)",
+    });
+  if (!blocks.length) problems.push({ id: "code", text: "no code block" });
+  // The lead: the prose between the title and the first code block.
+  const first = tag.content.findIndex(isFence);
+  const lead = partsText(
+    first < 0 ? tag.content : tag.content.slice(0, first),
+  ).trim();
+  if (!isSentence(lead))
+    problems.push({
+      id: "lead",
+      text: "no lead (a sentence or two under the title: what it does and how it works)",
+    });
+  const shown = blocks
+    .flatMap((block) => block.visible)
+    .filter((l) => l.trim());
+  const commented = shown.some((line) => /(^|\s)(\/\/|\/\*)|^\s*\*/.test(line));
+  if (shown.length > EXAMPLE_RULES.explainAbove && !commented)
+    problems.push({
+      id: "comment",
+      text: `${shown.length} lines of code without a comment marking the key lines`,
+    });
+  if (blocks.some((block) => block.cuts > 1))
+    problems.push({
+      id: "cut",
+      text: "more than one `// ---cut---` line in a code block",
+    });
+  return { marker: false, problems };
+}
+
+/** Every `@example` of a comment, judged. */
+const examplesOf = (comment) =>
+  (comment?.blockTags ?? [])
+    .filter((block) => block.tag === "@example")
+    .map((block) => ({ block, ...judgeExample(block) }));
+
+const exampleReport = {
+  problems: [], // fail the run
+  baselined: [], // known, in EXAMPLE_BASELINE
+  open: [], // outside the enforced declarations: reported only
+  stale: [], // stale-refs outside the enforced declarations
+  newKeys: [], // the EXAMPLE_BASELINE keys of `problems` (--baseline prints them)
+};
+const coverage = new Map(); // category → { methods, explained, markers, examples, good }
+const usedBaseline = new Set();
+for (const module of modules ?? []) {
+  const testingModule = module.name.endsWith("/testing");
+  for (const declaration of module.children ?? []) {
+    const declComment = commentOf(declaration);
+    const category =
+      categoryOf(declComment) || (testingModule ? "Testing" : "Other");
+    // Every example meets the standard since SDK 1.5.30: the rules hold for
+    // all of them (EXAMPLE_BASELINE takes known exceptions, if a rule is
+    // ever tightened).
+    const enforced = true;
+    const row =
+      coverage.get(category) ??
+      coverage
+        .set(category, {
+          methods: 0,
+          explained: 0,
+          markers: 0,
+          examples: 0,
+          good: 0,
+        })
+        .get(category);
+    const subjects = [
+      [declaration.name, declComment, false],
+      ...ownMembers(declaration)
+        .filter((member) => !member.inheritedFrom)
+        .map((member) => [
+          `${declaration.name}.${member.name}`,
+          commentOf(member),
+          isMethod(member),
+        ]),
+    ];
+    if (declaration.kindOf(ReflectionKind.Function)) subjects[0][2] = true;
+    /** Report one problem: fail, baseline or (not enforced) list it. */
+    const report = (key, message, open) => {
+      if (!enforced) open.push(message);
+      else if (EXAMPLE_BASELINE.has(key)) {
+        usedBaseline.add(key);
+        exampleReport.baselined.push(message);
+      } else {
+        exampleReport.problems.push(message);
+        exampleReport.newKeys.push(key);
+      }
+    };
+    for (const [name, comment, method] of subjects) {
+      const examples = examplesOf(comment);
+      if (method) {
+        row.methods++;
+        if (examples.some((e) => !e.marker && !e.problems.length))
+          row.explained++;
+        else if (examples.some((e) => e.marker && !e.problems.length))
+          row.markers++;
+      }
+      const where = `${testingModule ? "testing!" : ""}${name}`;
+      examples.forEach((example, index) => {
+        const at = `${where}#${index + 1}`;
+        row.examples++;
+        if (!example.problems.length) row.good++;
+        for (const problem of example.problems)
+          report(
+            `example-lead ${at} ${problem.id}`,
+            `${at}: ${problem.text}`,
+            exampleReport.open,
+          );
+        if (
+          example.target &&
+          !examplesOf(commentOf(example.target)).some((e) => !e.marker)
+        )
+          report(
+            `example-lead ${at} marker-target`,
+            `${at}: its See marker points to ${example.target.name}, which has no example of its own`,
+            exampleReport.open,
+          );
+        const text = partsText(example.block.content);
+        for (const { pattern, why } of STALE_REFERENCES)
+          if (pattern.test(text))
+            report(
+              `stale-refs ${at}`,
+              `${at}: example uses "${pattern.exec(text)[0]}": ${why}`,
+              exampleReport.stale,
+            );
+      });
+    }
+    if (enforced) {
+      // Per declaration: at most markerShare of its methods, and always at
+      // least one (a declaration with fewer than 5 methods may still point
+      // one trivial sibling at another).
+      const markers = subjects.filter(([, comment]) =>
+        examplesOf(comment).some((e) => e.marker),
+      ).length;
+      const methods = subjects.filter(([, , method]) => method).length;
+      const allowed = Math.max(
+        1,
+        Math.floor(methods * EXAMPLE_RULES.markerShare),
+      );
+      if (markers > allowed)
+        exampleReport.problems.push(
+          `${declaration.name}: ${markers} See markers for ${methods} methods (at most ${allowed})`,
+        );
+    }
+  }
+}
+// Code blocks of the site's Markdown pages (always enforced; docs/maintaining.md
+// names the stale references on purpose).
+for (const path of [
+  "README.md",
+  ...readdirSync(join(root, "docs"), { recursive: true })
+    .map((p) => `docs/${String(p).split("\\").join("/")}`)
+    .filter((p) => p.endsWith(".md") && p !== "docs/maintaining.md"),
+]) {
+  const text = readFileSync(join(root, path), "utf8");
+  // A fence closes with as many backticks as it opened with.
+  for (const block of text.matchAll(
+    /^([ \t]*)(`{3,})[^\n]*\n([\s\S]*?)^\1\2[ \t]*$/gm,
+  ))
+    for (const { pattern, why } of STALE_REFERENCES)
+      if (pattern.test(block[3]))
+        exampleReport.problems.push(
+          `${path}:${text.slice(0, block.index).split("\n").length}: code uses "${pattern.exec(block[3])[0]}": ${why}`,
+        );
+}
+for (const key of EXAMPLE_BASELINE)
+  if (!usedBaseline.has(key))
+    exampleReport.problems.push(
+      `${key}: listed in EXAMPLE_BASELINE (scripts/doc-standard.mjs) but no longer fails; remove it`,
+    );
+stats["example-lead"] = { applies: 0, missing: exampleReport.open };
+stats["stale-refs"] = { applies: 0, missing: exampleReport.stale };
+
 // Error codes: the PluginError table against the codes the SDK throws.
 const types = readFileSync(join(root, "src/plugin/types.ts"), "utf8");
 const table = types.slice(
@@ -321,9 +571,45 @@ for (const [category, report] of strictReport) {
   strictFailures += report.problems.length;
 }
 
+console.log(
+  "\nExamples (example-lead, stale-refs): methods with an explained example, by @category",
+);
+console.log(
+  "category      methods  explained  See-marker   examples  pass example-lead",
+);
+const percent = (part, whole) =>
+  whole ? `${Math.round((part / whole) * 100)}%` : "-";
+const totals = { methods: 0, explained: 0, markers: 0, examples: 0, good: 0 };
+for (const [category, row] of [...coverage].sort(([a], [b]) =>
+  a.localeCompare(b),
+)) {
+  for (const key in totals) totals[key] += row[key];
+  console.log(
+    `${category.padEnd(13)} ${String(row.methods).padStart(7)}  ${`${row.explained} (${percent(row.explained, row.methods)})`.padStart(9)}  ${String(row.markers).padStart(10)}  ${String(row.examples).padStart(9)}  ${`${row.good} (${percent(row.good, row.examples)})`.padStart(17)}`,
+  );
+}
+console.log(
+  `${"all".padEnd(13)} ${String(totals.methods).padStart(7)}  ${`${totals.explained} (${percent(totals.explained, totals.methods)})`.padStart(9)}  ${String(totals.markers).padStart(10)}  ${String(totals.examples).padStart(9)}  ${`${totals.good} (${percent(totals.good, totals.examples)})`.padStart(17)}`,
+);
+console.log(
+  `Not enforced yet: example-lead ${exampleReport.open.length} problems (--list example-lead), stale-refs ${exampleReport.stale.length} (--list stale-refs). Enforced: ${exampleReport.baselined.length} known (EXAMPLE_BASELINE), ${exampleReport.problems.length} new.`,
+);
+for (const text of exampleReport.stale)
+  console.log(`::warning::stale-refs: ${text}`);
+for (const text of exampleReport.baselined)
+  console.log(`::warning::baseline: ${text}`);
+for (const text of exampleReport.problems) console.log(`::error::${text}`);
+strictFailures += exampleReport.problems.length;
+
 console.log(`\n@capability tags: ${capabilityProblems.length} problems`);
 for (const text of capabilityProblems) console.log(`::error::${text}`);
 strictFailures += capabilityProblems.length;
+
+if (process.argv.includes("--baseline")) {
+  console.log("\nEXAMPLE_BASELINE keys of the new problems:");
+  for (const key of exampleReport.newKeys)
+    console.log(`${JSON.stringify(key)},`);
+}
 
 if (listRule) {
   if (!stats[listRule]) {

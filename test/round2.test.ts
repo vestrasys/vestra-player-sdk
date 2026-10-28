@@ -360,12 +360,16 @@ const isSettings = (value: unknown): value is Settings =>
 
 test("storage: defaults, debounced atomic save, flush, broken files kept aside", async () => {
   const data = mkdtempSync(join(tmpdir(), "vestra-storage-"));
+  // Plugins still running when an assertion fails: stopped (which flushes
+  // their stores) before the directory is removed.
+  const running = new Set<() => Promise<void>>();
   try {
     let plugin!: Plugin;
     const first = await startPlugin((p: Plugin) => void (plugin = p), {
       capabilities: [],
       dataDirectory: data,
     });
+    running.add(first.stop);
     const store = plugin.storage.json<Settings>("settings", {
       defaults: { volume: 50 },
       validate: isSettings,
@@ -376,7 +380,17 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
     store.save({ volume: 70 });
     assert.deepEqual(store.value, { volume: 70 });
     assert.equal(existsSync(join(data, "settings.json")), false, "debounced");
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    // The debounce timer writes the file on its own: wait for it (the
+    // rename makes it appear whole) rather than for a fixed time, which a
+    // loaded machine or a virus scanner can outlast.
+    for (
+      const deadline = Date.now() + 5000;
+      !existsSync(join(data, "settings.json"));
+    ) {
+      assert.ok(Date.now() < deadline, "the debounced save never landed");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await store.flush(); // waits for a write still in flight
     assert.deepEqual(
       JSON.parse(readFileSync(join(data, "settings.json"), "utf8")),
       { volume: 70 },
@@ -388,6 +402,7 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
       { volume: 80 },
     );
     store.save({ volume: 90 });
+    running.delete(first.stop);
     await first.stop();
     assert.deepEqual(
       JSON.parse(readFileSync(join(data, "settings.json"), "utf8")),
@@ -404,6 +419,7 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
       capabilities: [],
       dataDirectory: data,
     });
+    running.add(second.stop);
     const broken = plugin.storage.json("settings", {
       defaults: { volume: 1 },
       validate: isSettings,
@@ -422,8 +438,10 @@ test("storage: defaults, debounced atomic save, flush, broken files kept aside",
       () => plugin.storage.json("Bad Name", { defaults: {} }),
       (e: { code?: string }) => e.code === "invalid",
     );
+    running.delete(second.stop);
     await second.stop();
   } finally {
+    for (const stop of running) await stop().catch(() => {});
     rmSync(data, { recursive: true, force: true });
   }
 });

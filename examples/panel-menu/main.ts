@@ -11,6 +11,7 @@ export default async function activate(plugin: Plugin) {
   const panel = plugin.panels.mount("sidebar", "ui/panel.slint", {
     title: "Example list",
   });
+  // Sent when the panel mounts, then whenever a value changes.
   panel.bind(() => ({ rows: items, selected }));
   // #endregion mount
 
@@ -32,7 +33,9 @@ export default async function activate(plugin: Plugin) {
   // #endregion commands
 
   // #region menu
+  // Callbacks of the bridge global; `bind` above sends the new selection.
   panel.on("select", (index: number) => (selected = index));
+  // x and y: the pointer in window pixels, from the Slint file.
   panel.on("contextMenu", (x: number, y: number) =>
     panel.showMenu([first, null, remove], { x, y }),
   );

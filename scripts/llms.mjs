@@ -13,8 +13,9 @@
  *   scripts/doc-structure.mjs except the examples (index pages left out,
  *   condensed), every public declaration of `@vestra-player/sdk` and
  *   `@vestra-player/sdk/testing` as a declaration file whose doc comments are
- *   reduced to their description and the tags `@capability`, `@player`,
- *   `@param`, `@returns`, `@throws` and `@deprecated`, then every example
+ *   reduced to their description, `@remarks`, the tags `@capability`,
+ *   `@player`, `@param`, `@returns`, `@throws` and `@deprecated`, and their
+ *   `@example`s (hidden setup lines dropped), then every example
  *   plugin's README, walkthrough notes and complete source.
  *
  * Everything comes from the sources: the declarations from an in-memory
@@ -34,6 +35,7 @@ import { MANIFEST_FIELDS, MANIFEST_LIMITS } from "../src/manifest.ts";
 import { COMMAND_LIMITS, MENU_IDS } from "../src/commands.ts";
 import { CAPABILITIES, API_VERSION } from "../src/capabilities.ts";
 import { GROUPS } from "./doc-structure.mjs";
+import { splitCut } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const check = process.argv.includes("--check");
@@ -291,16 +293,64 @@ function tagLines(tags) {
     );
 }
 
+/**
+ * An `@example`'s text: its title line, then the lead, code and closing
+ * text, with the code blocks' hidden setup lines (above `// ---cut---`)
+ * dropped and `{@includeCode}` replaced by the code.
+ */
+function exampleText(text) {
+  return text
+    .replace(
+      /\{@includeCode\s+\.\.\/\.\.\/([^#}\s]+)(?:#([\w,-]+))?\s*\}/g,
+      (_, path, names) =>
+        fence(
+          LANG[extname(path)] ?? "",
+          names
+            ? names
+                .split(",")
+                .map((name) => region(path, name))
+                .join("\n\n")
+            : region(path),
+        ),
+    )
+    .replace(
+      /^(`{3,})([^\n]*)\n([\s\S]*?)\n\1[ \t]*$/gm,
+      (_, marks, info, body) =>
+        `${marks}${info}\n${splitCut(body).visible.join("\n")}\n${marks}`,
+    );
+}
+/** The `@remarks` of a doc comment, as lines. */
+const remarkLines = (tags) =>
+  tags
+    .filter(({ tag }) => tag === "remarks")
+    .flatMap(({ text }) => text.split("\n"));
+/** Each `@example` of a doc comment: `{ title, body }`. */
+const examplesOf = (tags) =>
+  tags
+    .filter(({ tag }) => tag === "example")
+    .map(({ text }) => {
+      const lines = exampleText(text).split("\n");
+      // An example without a title starts with its code.
+      const title = /^\s*`{3}/.test(lines[0]) ? "" : lines.shift().trim();
+      return { title, body: lines.join("\n").trim() };
+    });
+
 /** A member's doc comment, condensed and re-indented. */
 function condense(comment, indent) {
   const { description, tags } = parseDoc(comment);
+  const remarks = remarkLines(tags);
   const lines = [
     ...(description
       ? simple(description)
         ? [oneLine(description)]
         : description.split("\n")
       : []),
+    ...(remarks.length ? ["", ...remarks] : []),
     ...tagLines(tags),
+    ...examplesOf(tags).flatMap(({ title, body }) => [
+      `@example ${title}`.trim(),
+      ...body.split("\n"),
+    ]),
   ];
   if (!lines.length) return "";
   if (lines.length === 1 && lines[0].length + indent.length < 160)
@@ -376,14 +426,13 @@ function declarationBlock(item, heading = "###") {
   const doc = parseDoc(docBefore(file, statements[0]));
   const parts = [`${heading} ${item.name}`, ""];
   if (doc.description) parts.push(doc.description, "");
+  const remarks = remarkLines(doc.tags).join("\n").trim();
+  if (remarks) parts.push(remarks, "");
   const tags = tagLines(doc.tags);
   if (tags.length) parts.push(tags.map((t) => `- ${t}`).join("\n"), "");
-  parts.push(
-    "```ts",
-    statements.map((s) => code(file, s)).join("\n"),
-    "```",
-    "",
-  );
+  parts.push(fence("ts", statements.map((s) => code(file, s)).join("\n")), "");
+  for (const { title, body } of examplesOf(doc.tags))
+    parts.push(title ? `Example: ${title}` : "Example:", "", body, "");
   return parts.join("\n");
 }
 
@@ -700,7 +749,7 @@ const summary = `> Everything needed to write a Vestra Player plugin (plugin API
 emit([title, "", summary, ""].join("\n"));
 emit(
   [
-    "How to read this file: the declarations are TypeScript declaration files whose doc comments keep only the description and the tags @capability (the manifest capability a call needs), @player (the oldest player version), @param, @returns, @throws (`code` (throws | rejects) condition) and @deprecated. Examples and longer remarks are in the documentation site and in node_modules/@vestra-player/sdk/dist/**/*.d.ts. Only what is declared here exists; do not use other members.",
+    "How to read this file: the declarations are TypeScript declaration files whose doc comments keep the description, @remarks, the tags @capability (the manifest capability a call needs), @player (the oldest player version), @param, @returns, @throws (`code` (throws | rejects) condition) and @deprecated, and every @example (a task title, a lead saying what it does and how it works, then code). @see, @since and the rest are on the documentation site and in node_modules/@vestra-player/sdk/dist/**/*.d.ts. Only what is declared here exists; do not use other members.",
     "",
     `Limits: ${COMMAND_LIMITS.perPlugin} commands per plugin and ${COMMAND_LIMITS.total} in the player (\`limit\`); menu ids for the first path segment: ${MENU_IDS.map((id) => `\`@${id}\``).join(", ")}; manifest: ${manifestLimits()}.`,
     "",
@@ -822,7 +871,7 @@ const index = [
     .map(firstSentence)
     .join(
       " ",
-    )} L<n> are line numbers in llms-full.txt, next to this file: every page, declaration and example.`,
+    )} L<n>: a line of llms-full.txt (next to this file), which has every page, declaration and example.`,
   "",
   "**Rules**",
   "",
@@ -851,7 +900,7 @@ const index = [
   helloMain,
   "```",
   "",
-  "**Capabilities** (a call without one fails with `capability`)",
+  "**Capabilities** (without one a call fails: `capability`)",
   "",
   ...capabilityRows.map(
     ([cap, opens, requires]) =>
@@ -875,7 +924,7 @@ const index = [
   "",
   "## Reference",
   "",
-  `- [llms-full.txt](${fullUrl}), also node_modules/${pkg.name}/llms-full.txt; the pages are on the [site](${SITE}).`,
+  `- [llms-full.txt](${fullUrl}), also node_modules/${pkg.name}/llms-full.txt; pages: [site](${SITE}).`,
   ...[...new Set(GUIDES.map((g) => g.group))].map((group) => {
     const pages = GUIDES.filter((g) => g.group === group);
     return `- ${group}: ${pages
@@ -890,7 +939,7 @@ const index = [
   "",
   "## API",
   "",
-  "Where each module of `plugin` (`plugin.<module>`) is declared:",
+  "Where each `plugin.<module>` is declared:",
   "",
   `- ${["Plugin", "Scope", "PluginError", "Disposable"].map((t) => `${t} L${lineOf(`### ${t}`)}`).join(", ")}`,
   "- " +
@@ -913,7 +962,7 @@ const index = [
   "",
   "## Optional",
   "",
-  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments in node_modules/${pkg.name}/dist/plugin/types.d.ts (the API) and dist/plugin/testing.d.ts (TestHost); Slint library in slint/vestra/.`,
+  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments: node_modules/${pkg.name}/dist/plugin/{types,testing}.d.ts; Slint library: slint/vestra/.`,
   "",
 ].join("\n");
 

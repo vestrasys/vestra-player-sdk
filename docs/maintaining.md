@@ -55,8 +55,10 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 @returns   When it resolves and what has taken effect by then.
 @throws    `code` (throws | rejects) Condition. One tag per code (or per condition);
            only codes from the PluginError table; a plain Error is "`Error` without a code".
-@example   Title on the first line, then a ```ts block that compiles on its own
-           (`plugin` and every SDK type are in scope) or {@includeCode ../../examples/…#region}.
+@example   Task title (3+ words), a lead saying what it does and how it works, then a
+           ```ts block that compiles on its own (`plugin` and every SDK type are in
+           scope; hidden setup above `// ---cut---`) or {@includeCode ../../examples/…#region};
+           see "Examples in reference comments" below.
 @see       Related symbols and the concept page: [title](../../docs/concepts/<page>.md).
 @since     The SDK version that added it (git tags; CHANGELOG).
 @category  The API category (UI, Playback, …).
@@ -64,7 +66,31 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 
 Modules and handles (`full` in `scripts/doc-standard.mjs`) carry all of it; their methods carry the summary, `@example`, `@capability`, `@since` and `@throws` (for a Promise). Data types (`data`) carry a summary, `@since`, `@category` and a summary per field with its unit and range. When a category is done, list its symbols in `scripts/doc-standard.mjs` so CI keeps it complete.
 
-**Known gap:** only `UI` has reached the standard so far, so the API reference still shows most symbols of `@vestra-player/sdk` under "Other" and `@vestra-player/sdk/testing` by kind. Giving every symbol a business `@category` (Plugin, Commands, Playback, UI, Processing, Subtitles, Media, Sources, Packages, Services, Text, Testing) is a later round, one category per patch release.
+### Examples in reference comments
+
+The reference is read by people who want to get a task done and by the plugin workshop's model, which sees the examples in `llms-full.txt` and copies them. An example therefore teaches the task, not only the call.
+
+**Which symbols have one.** Every method of a module or handle, every module entry type (a `Plugin` / `Scope` property), every `TestHost` method and `startPlugin` has its own `@example`. An option or data type (`CommandOptions`, `StreamOptions`, `PlayerState`) has one example on the type, and its fields get a summary with unit and range only. A trivial sibling (`Window.close` next to `Window.hide`) may instead point at its sibling's example with a marker (below), for at most 20 % of a declaration's methods, rounded down (one marker per declaration is always allowed).
+
+**What an example contains**, in this order:
+
+1. **A task title** on the `@example` line, at least 3 words, phrased as what the reader wants to do: `@example Pause playback from a menu item`, not `@example pause()`.
+2. **A lead** of 1–3 sentences under the title, before the code, saying both:
+   - **what it does**: what the user sees or what the plugin achieves;
+   - **how it works**: which calls do what and in what order, and the mechanism the reader must understand to use them correctly. For example: "`run` is called when the user picks the item or presses its key; `checked` is evaluated again after every handler", "`player.state` is a snapshot the SDK keeps current from player events; `onChange` fires after it updates", "the request goes to the player process; it rejects with `stale` if the source changed meanwhile", "frames are pulled on the audio clock, so `frame()` may run several times back to back".
+3. **Code that compiles on its own** (checked by `docs:check`). A block without `import`/`export` runs inside an async function with `plugin: Plugin` and every SDK type in scope (and the values of `@vestra-player/sdk/testing`); a block with imports is a module and declares what it uses. Setup the reader does not need goes above a `// ---cut---` line (the convention of TypeScript's twoslash): those lines are type checked but not shown on the site or in `llms-full.txt`. In a block without its own imports they sit at module level, so they may `import` and `declare` (`declare const host: TestHost;`); in a module block keep the imports the reader copies below the line.
+4. **Comments on the key lines** (required when more than 5 lines are shown): units, why a value was chosen, which line does the step the lead names.
+5. **Error handling** for promise-returning calls whose failure the user can cause (`stale`, `busy`, `capability`, `limit`, a cancelled dialog): catch the code, say what the plugin does instead.
+
+Do not invent mechanisms: every claim in a lead is checked against the SDK in `src/` and, for what the player does, the player's `src/host/src/` before it is written.
+
+**Reference markers.** `@example See Window.hide` with `{@link Window.hide}` on the next line (TypeDoc takes the title line literally, so the link cannot go on it) stands for the sibling's example; the link must resolve and the sibling must have an example of its own.
+
+**Stale references.** `STALE_REFERENCES` in `scripts/doc-standard.mjs` lists ids and names examples must not use any more (removed built-ins such as `vestra.nes`, a resolver for `.nes` files the store plugin VestraNES owns). Add an entry when a release removes or hands over something examples may still name.
+
+**Checks.** `npm run doc-lint` applies `example-lead` (title, lead, comments, at most one `// ---cut---` per block), `stale-refs` and the marker rules to every `@example` of the API and every Markdown code block, and fails the run on any problem; it prints per `@category` the share of methods with an explained example (`--list example-lead` lists what fails). `EXAMPLE_BASELINE` (empty since SDK 1.5.30) is for the day a rule is tightened: it lists the old violations, one entry per problem (`example-lead Osd.show#1 lead`; `doc-lint --baseline` prints the keys of new problems), reported as warnings. An entry that no longer fails is an error, and `test/doc-baseline.test.ts` pins the largest size the list may have, so it only shrinks: the change that fixes entries removes them and lowers that number. `docs:check` type checks every block (with its hidden lines) and fails on any error (`--lenient` reports errors in examples outside the strict categories as warnings, for work in progress); `scripts/typedoc-plugin.mjs` and `scripts/llms.mjs` drop the hidden lines.
+
+**Known gap:** only `UI` has reached the whole standard so far. Every existing example meets the example standard (SDK 1.5.30), but many methods outside `UI` still have no example, `@throws`, `@since` or `@capability`, so the API reference still shows most symbols of `@vestra-player/sdk` under "Other" and `@vestra-player/sdk/testing` by kind. Giving every symbol a business `@category` (Plugin, Commands, Playback, UI, Processing, Subtitles, Media, Sources, Packages, Services, Text, Testing) and moving it into `STRICT_CATEGORIES` is the rest of the round, one category per patch release.
 
 ## Documentation structure
 

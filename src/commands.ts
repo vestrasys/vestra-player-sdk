@@ -4,18 +4,29 @@ import type { ListJson, TextJson } from "./i18n.ts";
 /**
  * The player's command registry caps, the same values as the player's own
  * table (the player's tests check that they agree). They are runaway guards,
- * not product limits: a command added past them fails with code `limit`
- * (its `ready` rejects; during activation, activation fails), commands
+ * not product limits: a command added past them is refused by the player
+ * with code `limit` (its `ready` rejects; during activation, activation
+ * fails; later the failure goes to `Scope.onError`), commands
  * already registered are unaffected, and disposing a command frees its slot
  * at once. {@link TestHost} enforces the same caps.
  *
  * For menus built from media content (tracks, chapters, presets), set your
  * own sensible display cap well below `perPlugin`.
  *
- * @example
+ * @example Cap a chapter menu well below the command limit
+ * The Chapters submenu lists at most 50 chapters, however many the file
+ * has. Every menu item is a command, and the player counts them per plugin.
+ * `add` itself returns at once and never throws `limit`: past `perPlugin`
+ * the player refuses the registration, which fails the activation or, later,
+ * reaches `Scope.onError`. A try/catch around `add` cannot catch that, so a
+ * menu built from media content keeps its own cap and leaves room for the
+ * plugin's fixed commands.
  * ```ts
+ * declare const chapters: { title: string; time: number }[];
+ * // ---cut---
  * import { COMMAND_LIMITS } from "@vestra-player/sdk/testing";
  *
+ * // 20 slots stay free for the plugin's own commands.
  * const shown = chapters.slice(0, Math.min(50, COMMAND_LIMITS.perPlugin - 20));
  * ```
  */
@@ -36,11 +47,21 @@ export const COMMAND_LIMITS = {
  * `@video` as a menu of its own. The player's tests check that this list
  * agrees with the player's.
  *
- * @example
+ * @example Put a command into the built-in Video menu
+ * "Blur" appears in the player's Video menu in every interface language.
+ * The player replaces a leading `@video` with that menu's key ("Video")
+ * before it merges paths, so the item joins the built-in menu; an id that
+ * is not in `MENU_IDS` makes `add` fail with `invalid`, which a test can
+ * rule out ahead of time.
  * ```ts
+ * import type { Plugin } from "@vestra-player/sdk";
+ * declare const plugin: Plugin;
+ * // ---cut---
+ * import assert from "node:assert/strict";
  * import { MENU_IDS } from "@vestra-player/sdk/testing";
  *
- * assert.ok(MENU_IDS.includes("video"));
+ * plugin.commands.add({ id: "blur", path: ["@video", "Blur"], run() {} });
+ * assert.ok(MENU_IDS.includes("video")); // a menu id, not a title
  * ```
  */
 export const MENU_IDS = [
@@ -59,12 +80,16 @@ export const MENU_IDS = [
  * in your own Slint with `Icon { name: "store"; }`). The player's tests check
  * that this list is its icon set.
  *
- * @example
+ * @example Check in a test that the button's icon exists
+ * The test fails before release if the plugin's bar button names an icon
+ * the player does not have. `commands.add` would refuse an unknown name
+ * with `invalid`; the player's tests keep `BAR_BUTTON_ICONS` equal to its
+ * icon set, so checking against it is the same check without a player.
  * ```ts
  * import assert from "node:assert/strict";
  * import { BAR_BUTTON_ICONS } from "@vestra-player/sdk/testing";
  *
- * assert.ok(BAR_BUTTON_ICONS.includes("store"));
+ * assert.ok(BAR_BUTTON_ICONS.includes("store")); // the icon main.ts uses
  * ```
  *
  * @since 1.5.29
@@ -159,13 +184,23 @@ export interface BuiltinSubmenu {
  * listed. The player's tests check that this list agrees with what its
  * built-in plugins declare.
  *
- * @example
+ * @example Add an item to the built-in Snapshot submenu
+ * "Copy Snapshot" appears in Video ▸ Snapshot next to the built-in capture
+ * plugin's items. Paths merge by their English keys, so a command whose
+ * path continues with the submenu's keys (`["Video", "Snapshot"]`, the menu
+ * written as `@video`) lands in the same submenu whatever the interface
+ * language.
  * ```ts
+ * import type { Plugin } from "@vestra-player/sdk";
+ * declare const plugin: Plugin;
+ * declare function copySnapshot(): Promise<void>;
+ * // ---cut---
  * import { BUILTIN_SUBMENUS } from "@vestra-player/sdk/testing";
  *
  * const snapshot = BUILTIN_SUBMENUS.find((menu) => menu.path.at(-1) === "Snapshot")!;
  * plugin.commands.add({
  *   id: "snapshot-to-clipboard",
+ *   // ["@video", "Snapshot", "Copy Snapshot"]; @video stands for "Video".
  *   path: ["@video", ...snapshot.path.slice(1), "Copy Snapshot"],
  *   run: copySnapshot,
  * });
@@ -584,7 +619,12 @@ vestra.playlist | playlist.settings | (Playlist Settings…) | F5 | panel
  * placeholders (`No Audio Tracks`) are. The player's tests check that this
  * list agrees with what the player and its built-in plugins register.
  *
- * @example
+ * @example Check in a test that a default key is still free
+ * The test fails if the player or a built-in plugin already binds Ctrl+K
+ * globally, before users ever see a conflict. It collects the default
+ * bindings of every built-in command that is not limited to its panel's
+ * focus (`focus: null`) and looks for the key the plugin wants; bindings
+ * are canonical, so compare them as the player writes them.
  * ```ts
  * import assert from "node:assert/strict";
  * import { BUILTIN_COMMANDS } from "@vestra-player/sdk/testing";

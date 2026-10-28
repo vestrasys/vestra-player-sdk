@@ -11,11 +11,25 @@
  * the palette (`slint/palette.slint`); the player's tests check both
  * palettes against its own.
  *
- * @example
+ * @example Check in a test that a colour stays readable in both themes
+ * The test fails if the plugin's own highlight colour gets too close to
+ * the panel background of either palette. Plugins draw with `Theme` tokens
+ * in Slint and the player switches palettes; a colour the plugin picks
+ * itself does not switch, so a test compares it with each palette's values
+ * (hex strings, `#rrggbb`).
  * ```ts
+ * import assert from "node:assert/strict";
  * import { THEME_PALETTES } from "@vestra-player/sdk/testing";
  *
- * const accent = THEME_PALETTES["vestra-light"].accent; // "#d4128a"
+ * const highlight = "#e07000"; // the plugin's own orange
+ * const luminance = (hex: string) => {
+ *   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+ *   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!; // rough, without gamma
+ * };
+ * for (const [name, palette] of Object.entries(THEME_PALETTES)) {
+ *   const gap = Math.abs(luminance(highlight) - luminance(palette["bg-panel"]!));
+ *   assert.ok(gap > 0.3, `${name}: highlight too close to bg-panel`);
+ * }
  * ```
  *
  * @since 1.5.14
