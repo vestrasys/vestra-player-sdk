@@ -79,7 +79,7 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 
 {@link "@vestra-player/sdk"!Scope.video | plugin.video.render()} returns the {@link "@vestra-player/sdk"!RenderOptions | RenderOptions} of the GPU renderer: HDR to SDR tone mapping and the display's brightness, user shaders (`.glsl` files) and motion interpolation. Like the display layer they act at display time only, have one owner (independent of the display layer's owner) and merge writes.
 
-- **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see [Reference: platforms](../reference/platforms.md) for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error.
+- **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see [Reference: platforms](../reference/platforms.md) for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error. To know before creating the handle, read {@link "@vestra-player/sdk"!SystemInfo.rendering | rendering} from `plugin.app.system()` (player 0.5.12, no capability): `"gpu"` or `"software"`.
 - A shader that does not compile is reported later: the status first becomes `applied`, then `failed` with code `failed` and the compiler's first error line once mpv first uses the shader.
 
 ## API on this page

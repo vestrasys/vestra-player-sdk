@@ -23,6 +23,7 @@ const SOURCES = {
   OSD_LIMITS: { file: "src/plugin/osd.ts" },
   SECRET_LIMITS: { file: "src/plugin/services.ts" },
   SESSION_STORAGE_LIMITS: { file: "src/plugin/services.ts" },
+  SUBTITLE_LIMITS: { file: "src/plugin/subtitles.ts" },
   MANIFEST_LIMITS: { file: "src/manifest.ts" },
   MESSAGE_LIMIT: { file: "src/capabilities.ts", value: true },
   MAX_SHADERS: {

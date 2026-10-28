@@ -11,7 +11,12 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import {
+  HostError,
+  startPlugin,
+  SUBTITLE_LIMITS,
+  TestHost,
+} from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { systemServices } from "../src/plugin/local.ts";
 import { canonical } from "../src/plugin/bindings.ts";
@@ -183,6 +188,104 @@ test("subtitle load takes format, title and select; tracks carry codec, text and
     plugin.subtitles.load(ass, { format: "vtt" as "srt" }),
     "invalid",
   );
+  await stop();
+});
+
+test("TestHost checks a subtitle commit in the player's order: stale before the content", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/movie.mkv");
+  const { plugin, stop } = await started(host);
+  const before = await plugin.subtitles.refresh();
+  await plugin.subtitles.select(null); // the selection moves on
+  const notAss = Buffer.from("1\n00:00:00,000 --> 00:00:01,000\nHi\n");
+  await rejects(
+    plugin.subtitles.load(notAss, { format: "ass", ifCurrent: before }),
+    "stale",
+  );
+  await rejects(plugin.subtitles.load(notAss, { format: "ass" }), "invalid");
+  await host.settle();
+  assert.equal(host.uploads.size, 0, "both uploads discarded");
+  await stop();
+});
+
+test("TestHost enforces the player's subtitle limits with its codes (SUBTITLE_LIMITS)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/movie.mkv");
+  const { plugin, stop } = await started(host);
+  const srt = (n: number) =>
+    Buffer.from(`1\n00:00:00,000 --> 00:00:01,000\nLine ${n}\n`);
+  // A refused load rejects at once; its discard follows (settle for it).
+  const busy = async (promise: Promise<unknown>) => {
+    await rejects(promise, "busy");
+    await host.settle();
+  };
+  const seen = () => host.sent("subtitles.commit").length;
+
+  // 4 tracks of this plugin at once; removing one frees its place.
+  const tracks = [];
+  for (let n = 0; n < SUBTITLE_LIMITS.tracksPerPlugin; n++)
+    tracks.push(await plugin.subtitles.load(srt(n), { select: "none" }));
+  await busy(plugin.subtitles.load(srt(4), { select: "none" }));
+  assert.equal(host.uploads.size, 0, "the refused upload is discarded");
+  // Refused twice: neither keeps one of the plugin's two upload slots, so
+  // after removing a track the next load still goes through.
+  await busy(plugin.subtitles.load(srt(4), { select: "none" }));
+  assert.equal(host.uploads.size, 0);
+  assert.equal(
+    host.sent("subtitles.upload.discard").length,
+    2,
+    "one discard per refused commit",
+  );
+  await plugin.subtitles.remove(tracks.shift()!);
+  tracks.push(await plugin.subtitles.load(srt(5), { select: "none" }));
+
+  // 16 loads per source, removed ones included.
+  for (let n = 6; n < 6 + 11; n++) {
+    await plugin.subtitles.remove(tracks.shift()!);
+    tracks.push(await plugin.subtitles.load(srt(n), { select: "none" }));
+  }
+  // Two refused commits above: 18 sent, 16 loads.
+  assert.equal(seen() - 2, SUBTITLE_LIMITS.loadsPerPlugin, "16 committed");
+  await plugin.subtitles.remove(tracks.shift()!);
+  await busy(plugin.subtitles.load(srt(17), { select: "none" }));
+
+  // Another source starts from zero.
+  host.openElsewhere("/next.mkv");
+  await plugin.subtitles.refresh();
+  await plugin.subtitles.load(srt(18), { select: "none" });
+
+  // 16 tracks of every plugin in the source: other plugins hold 15 here.
+  for (let n = 0; n < 15; n++)
+    host.subtitles.tracks.push({
+      target: {
+        kind: "external",
+        owner: 2,
+        resourceId: `other-${n}`,
+        contentRevision: 1,
+      },
+      title: "Other",
+      language: null,
+      styleSupported: true,
+      styleReason: null,
+    });
+  await plugin.subtitles.refresh();
+  await busy(plugin.subtitles.load(srt(19), { select: "none" }));
+  host.subtitles.tracks.splice(-15);
+
+  // A file over 2 MiB is invalid.
+  await rejects(
+    plugin.subtitles.load(Buffer.alloc(SUBTITLE_LIMITS.fileBytes + 1, 0x41)),
+    "invalid",
+  );
+
+  // Two loads of one plugin in progress at once; a third is refused.
+  host.openElsewhere("/third.mkv");
+  await plugin.subtitles.refresh();
+  host.uploads.set(900, { bytes: [], expected: 1 });
+  host.uploads.set(901, { bytes: [], expected: 1 });
+  await busy(plugin.subtitles.load(srt(20), { select: "none" }));
+  host.uploads.clear();
+  await plugin.subtitles.load(srt(21), { select: "none" });
   await stop();
 });
 

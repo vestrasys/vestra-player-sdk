@@ -18,7 +18,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | {@link "@vestra-player/sdk"!DropModifiers | DropModifiers} | The pointer and ⌥ ⇧ ⌘ (`cmd` is ⌘). | The pointer and Alt, Shift, Ctrl (`cmd` is Ctrl). |
 | {@link "@vestra-player/sdk"!System | plugin.system} (open, reveal) | Opened by the system; revealing several files selects all of them in one Finder window. | Opened by the shell; one Explorer window per folder. |
 | {@link "@vestra-player/sdk"!Secrets | plugin.secrets} | The login keychain. | The Credential Manager. |
-| {@link "@vestra-player/sdk"!App.system | App.system()} | Version, build, model and displays. | Version, build, model and displays. |
+| {@link "@vestra-player/sdk"!App.system | App.system()} | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"`. |
 | Snapshots and exports ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams ({@link "@vestra-player/sdk"!Player.openStream | Player.openStream}) | A Unix socket. | Loopback TCP with a token. |
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |

@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.33: full reference
+# @vestra-player/sdk 1.5.34: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -740,7 +740,7 @@ plugin.video.view() returns the VideoView: aspect override, fit (keep with bars,
 
 plugin.video.render() returns the RenderOptions of the GPU renderer: HDR to SDR tone mapping and the display's brightness, user shaders (`.glsl` files) and motion interpolation. Like the display layer they act at display time only, have one owner (independent of the display layer's owner) and merge writes.
 
-- **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see Reference: platforms for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error.
+- **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see Reference: platforms for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error. To know before creating the handle, read rendering from `plugin.app.system()` (player 0.5.12, no capability): `"gpu"` or `"software"`.
 - A shader that does not compile is reported later: the status first becomes `applied`, then `failed` with code `failed` and the compiler's first error line once mpv first uses the shader.
 
 ## Concept: Windows, panels, settings pages, dialogs and the OSD
@@ -1272,7 +1272,7 @@ if (english)
 
 #### Upload a file
 
-`load` takes the file's bytes: UTF-8 SRT, or ASS/SSA with `format: "ass"`, at most 2 MiB (SRT up to 10,000 cues, ASS up to 20,000 `Dialogue:` lines). Convert other formats (WebVTT, SAMI) to SRT first. The player adds an `external` track to the current source only, selects it unless `select: "none"`, and resolves with the track once the upload is committed.
+`load` takes the file's bytes: UTF-8 SRT, or ASS/SSA with `format: "ass"`, at most 2 MiB (SRT up to 10,000 cues, ASS up to 20,000 `Dialogue:` lines). Convert other formats (WebVTT, SAMI) to SRT first. The player adds an `external` track to the current source only, selects it unless `select: "none"`, and resolves with the track once the upload is committed. A plugin has at most 4 such tracks on a source at once and loads at most 16 files into it (removed ones count); past that `load` fails with `busy` (Limits).
 
 ```ts
 import { readFile } from "node:fs/promises";
@@ -2567,6 +2567,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.3 | Scrub.seek |
 | 0.5.5 | SessionStorage |
 | 0.5.10 | CommandButton, CommandOptions.button |
+| 0.5.12 | SystemInfo.rendering |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2723,6 +2724,21 @@ plugin.storage.session (player 0.5.5). A key out of its rule, or a value that is
 | `SESSION_STORAGE_LIMITS.keyBytes` | 1024 (1 KiB) | UTF-8 bytes of a key. |
 | `SESSION_STORAGE_LIMITS.bytes` | 1048576 (1 MiB) | Bytes one plugin may hold at the same time: for every key, its UTF-8 bytes, its value written as compact JSON (`JSON.stringify(value)`) and `entryBytes`. |
 | `SESSION_STORAGE_LIMITS.entryBytes` | 128 | What each key costs on top of its text and value (128): the player's own bookkeeping, so that many tiny entries stay within `bytes` of memory. |
+
+#### Subtitle files
+
+Subtitles.load uploads a file as a track of the current source. A file over `fileBytes` fails with `invalid`; every other limit fails with `busy` and nothing is loaded. The counts are per source, so another file starts from zero. Removing a track frees its place among the tracks and their bytes, but a load stays counted until the source changes.
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `SUBTITLE_LIMITS.fileBytes` | 2097152 (2 MiB) | UTF-8 bytes of one file; a larger one fails with `invalid`. |
+| `SUBTITLE_LIMITS.tracksPerPlugin` | 4 | Tracks one plugin has loaded into the current source at the same time. |
+| `SUBTITLE_LIMITS.tracks` | 16 | Loaded tracks of every plugin in the current source at the same time. |
+| `SUBTITLE_LIMITS.totalBytes` | 16777216 (16 MiB) | Bytes of the loaded tracks of every plugin in the current source together. |
+| `SUBTITLE_LIMITS.loadsPerPlugin` | 16 | Loads by one plugin into the current source, removed tracks included. |
+| `SUBTITLE_LIMITS.loads` | 128 | Loads by every plugin into the current source, removed tracks included. |
+| `SUBTITLE_LIMITS.uploadsPerPlugin` | 2 | Loads of one plugin in progress at the same time. |
+| `SUBTITLE_LIMITS.uploads` | 8 | Loads of every plugin in progress at the same time. |
 
 #### Messages
 
@@ -3244,7 +3260,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | DropModifiers | The pointer and ⌥ ⇧ ⌘ (`cmd` is ⌘). | The pointer and Alt, Shift, Ctrl (`cmd` is Ctrl). |
 | plugin.system (open, reveal) | Opened by the system; revealing several files selects all of them in one Finder window. | Opened by the shell; one Explorer window per folder. |
 | plugin.secrets | The login keychain. | The Credential Manager. |
-| App.system() | Version, build, model and displays. | Version, build, model and displays. |
+| App.system() | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"`. |
 | Snapshots and exports (MediaCapture) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams (Player.openStream) | A Unix socket. | Loopback TCP with a token. |
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
@@ -7227,7 +7243,7 @@ worked out once, at the first call, and reused.
 ```ts
 interface App extends AppInfo {
   /**
-   * The operating system and the displays, read when called (displays come and go). No capability. CPU and memory: Node's `os` module.
+   * The operating system, the displays and the renderer, read when called (displays come and go; the renderer can fall back from GPU to software once). No capability. CPU and memory: Node's `os` module.
    * @capability None.
    * @throws busy (rejects) The player could not start the request (no thread available).
    * @example Choose a size for the primary display
@@ -7276,6 +7292,42 @@ interface SystemInfo {
   readonly arch: string;
   /** Primary display first; empty without a user interface. */
   readonly displays: readonly DisplayInfo[];
+  /**
+   * Which renderer draws the video now: `"gpu"` (the GPU renderer, so
+   * render options apply) or `"software"` (they
+   * fail with `unsupported`). Read at each call. It changes at most once
+   * while the player runs, from `"gpu"` to `"software"` when a window
+   * cannot show GPU frames; the owner of the render options hears that
+   * switch through RenderOptions.onStatus.
+   *
+   * Absent (`undefined`) on players before 0.5.12, which do not report it:
+   * the renderer is then unknown, not software.
+   *
+   * Today the player renders on the GPU on macOS and in software on
+   * Windows, Linux and without a user interface (see
+   * Platforms); test this field
+   * rather than SystemInfo.os.
+   * @player 0.5.12; older players leave it out (declare `"minPlayerVersion": "0.5.12"` when the plugin relies on it).
+   * @example Offer the HDR menu only where render options work
+   * The plugin adds its HDR command only when the player renders on the
+   * GPU, instead of creating the render options just to find out from a
+   * failed status. `system()` asks the player, which reports the renderer
+   * drawing at that moment; no capability is needed to ask. A player before
+   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly (an
+   * older player gets no HDR command).
+   * ```ts
+   * const { rendering } = await plugin.app.system();
+   * if (rendering === "gpu") {
+   *   const render = plugin.video.render(); // one handle, kept
+   *   plugin.commands.add({
+   *     id: "hdr",
+   *     path: ["@video", "HDR Tone Mapping"],
+   *     run: () => render.set({ toneMapping: "bt.2390", targetPeak: 250 }),
+   *   });
+   * }
+   * ```
+   */
+  readonly rendering?: "gpu" | "software";
 }
 ```
 
@@ -9142,8 +9194,10 @@ independent handles.
 
 Platforms: only macOS renders on the GPU. Under software rendering
 (Windows, Linux, headless, fallback) every `set` fails with
-`unsupported`. macOS OpenGL 4.1 has no compute shaders, so `peakDetect`
-is accepted but has no effect; output is always SDR.
+`unsupported`; SystemInfo.rendering tells which renderer draws
+without creating the handle. macOS OpenGL 4.1 has no
+compute shaders, so `peakDetect` is accepted but has no effect; output
+is always SDR.
 
 GPU renderer options (tone mapping, peak detection, shaders,
 interpolation). Only the GPU renderer has them, which today means macOS;
@@ -9373,13 +9427,16 @@ interface Subtitles {
    *
    * Limits: SRT ≤ 2 MiB and ≤ 10,000 cues; ASS ≤ 2 MiB with `[Script Info]`
    * and `[Events]` and 1–20,000 `Dialogue:` lines. Convert other formats
-   * (VTT, SAMI) to SRT first.
+   * (VTT, SAMI) to SRT first. Per source, a plugin has at most 4 loaded
+   * tracks at once and loads at most 16 files (removed ones count), and
+   * every plugin together at most 16 tracks; see `SUBTITLE_LIMITS` in
+   * `@vestra-player/sdk/testing`.
    * @capability subtitles.control and subtitles.read
    * @throws invalid (rejects) A bad `format` or `title`, or a file over the limits.
    * @throws stale (rejects) With `ifCurrent`: the source changed since that state.
    * @throws unavailable (rejects) Nothing loaded, or the source is still loading.
    * @throws aborted (rejects) `signal` aborted before the commit (an `AbortError`); the upload is discarded.
-   * @throws busy (rejects) Too many subtitle operations at once.
+   * @throws busy (rejects) Too many subtitle operations at once, or a limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin, 16 loads of this plugin or 16 tracks in the source, or another of its limits); nothing is loaded.
    * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
    * @example Load a downloaded SRT and select it
    * A subtitle file the plugin downloaded becomes a track of the current file
@@ -12582,7 +12639,7 @@ class TestHost implements Transport {
     owner: string | null;
     /** The values the player holds. */
     values: RenderSettings;
-    /** `true`: GPU rendering; `false`: software rendering (`unsupported`). */
+    /** `true`: GPU rendering; `false`: software rendering (`unsupported`). `plugin.app.system()` reports it as `rendering`. */
     gpu: boolean;
   };
   /**
@@ -12671,6 +12728,8 @@ class TestHost implements Transport {
     bytes: Buffer[];
     /** The announced total size in bytes. */
     expected: number;
+    /** The source generation it was begun for; like the player, a new source drops the uploads of the old one. */
+    generation?: number;
   }>;
   /** Snapshots taken with `media.capture`, by snapshot id. Wire-level. */
   readonly snapshots: Map<number, Json>;
@@ -12824,8 +12883,10 @@ class TestHost implements Transport {
    * `plugin.storage.session`: key → value, as the player keeps them. Preset entries to simulate values an earlier run of the plugin stored in the same player session, or pass `startPlugin(..., { sessionStorage })`. Like the player, a key is 1–1024 bytes, a `set` that would make the entries larger than 1 MiB (keys, values as compact JSON and `SESSION_STORAGE_LIMITS.entryBytes` per key) fails `limit`, and an object's properties are stored sorted, as the player hands them back.
    */
   readonly sessionStorage: Map<string, Json>;
-  /** What `plugin.app.system()` reports. */
-  systemInfo: WireSystemInfo;
+  /**
+   * What `plugin.app.system()` reports. Its `rendering` follows videoRender.gpu (`"gpu"` or `"software"`), so one switch covers the render options and the fact.
+   */
+  systemInfo: Omit<WireSystemInfo, "rendering">;
   /** What `plugin.app` reports. Set it before startPlugin: the plugin receives it once at start-up. */
   app: {
     /** The player version. */
@@ -14061,6 +14122,61 @@ if (!token || Buffer.byteLength(token) > SECRET_LIMITS.valueBytes) {
 }
 ```
 
+### SUBTITLE_LIMITS
+
+The player's limits on subtitle files a plugin loads with
+Subtitles.load, which `TestHost` enforces with the player's codes.
+The track counts are per source: opening another file starts from zero.
+A file over `fileBytes` fails with `invalid`; every other limit fails with
+`busy`, and nothing is loaded.
+
+Each `load` uses a new resource on the source, and removing the track
+frees its place among the live tracks (`tracksPerPlugin`, `tracks`,
+`totalBytes`) but not among the loads (`loadsPerPlugin`, `loads`). So one
+plugin loads at most 16 files into one source, with at most 4 of them
+present at once.
+
+```ts
+const SUBTITLE_LIMITS: Readonly<{
+  /** UTF-8 bytes of one file; a larger one fails with `invalid` (2 MiB). */
+  readonly fileBytes: number;
+  /** Tracks one plugin has loaded into the current source at the same time (4). */
+  readonly tracksPerPlugin: 4;
+  /** Loaded tracks of every plugin in the current source at the same time (16). */
+  readonly tracks: 16;
+  /** Bytes of the loaded tracks of every plugin in the current source together (16 MiB). */
+  readonly totalBytes: number;
+  /** Loads by one plugin into the current source, removed tracks included (16). */
+  readonly loadsPerPlugin: 16;
+  /** Loads by every plugin into the current source, removed tracks included (128). */
+  readonly loads: 128;
+  /** Loads of one plugin in progress at the same time (2). */
+  readonly uploadsPerPlugin: 2;
+  /** Loads of every plugin in progress at the same time (8). */
+  readonly uploads: 8;
+}>;
+```
+
+Example: Replace the plugin's oldest subtitle when it has four
+
+The plugin keeps the files it loaded, newest last, and removes the oldest
+before a fifth would be refused with `busy`. A load the player still
+refuses (the source holds 16 tracks of every plugin, or this plugin
+already loaded 16 files into it) is reported on the OSD.
+```ts
+import { SUBTITLE_LIMITS } from "@vestra-player/sdk/testing";
+
+const loaded: SubtitleTrack[] = []; // this source's, newest last
+if (loaded.length >= SUBTITLE_LIMITS.tracksPerPlugin)
+  await plugin.subtitles.remove(loaded.shift()!);
+try {
+  loaded.push(await plugin.subtitles.load(bytes));
+} catch (error) {
+  if ((error as PluginError).code !== "busy") throw error;
+  await plugin.osd.show("No room for another subtitle on this file.");
+}
+```
+
 ### UI_VALUE_LIMITS
 
 The player's limits on one property value (a `PropValue` as written
@@ -14549,7 +14665,7 @@ interface SubtitleState {
 
 ### WireSystemInfo
 
-`app.system`: the operating system and the displays.
+`app.system`: the operating system, the displays and the renderer.
 
 ```ts
 interface WireSystemInfo {
@@ -14567,6 +14683,8 @@ interface WireSystemInfo {
     refreshRate: number | null;
     primary: boolean;
   }[];
+  /** Player 0.5.12; older players leave it out. */
+  rendering?: "gpu" | "software";
 }
 ```
 

@@ -4117,8 +4117,9 @@ export interface AppInfo {
  */
 export interface App extends AppInfo {
   /**
-   * The operating system and the displays, read when called (displays come
-   * and go). No capability. CPU and memory: Node's `os` module.
+   * The operating system, the displays and the renderer, read when called
+   * (displays come and go; the renderer can fall back from GPU to software
+   * once). No capability. CPU and memory: Node's `os` module.
    *
    * @capability None.
    * @throws `busy` (rejects) The player could not start the request (no
@@ -4161,6 +4162,46 @@ export interface SystemInfo {
   readonly arch: string;
   /** Primary display first; empty without a user interface. */
   readonly displays: readonly DisplayInfo[];
+  /**
+   * Which renderer draws the video now: `"gpu"` (the GPU renderer, so
+   * {@link RenderOptions | render options} apply) or `"software"` (they
+   * fail with `unsupported`). Read at each call. It changes at most once
+   * while the player runs, from `"gpu"` to `"software"` when a window
+   * cannot show GPU frames; the owner of the render options hears that
+   * switch through {@link RenderOptions.onStatus}.
+   *
+   * Absent (`undefined`) on players before 0.5.12, which do not report it:
+   * the renderer is then unknown, not software.
+   *
+   * Today the player renders on the GPU on macOS and in software on
+   * Windows, Linux and without a user interface (see
+   * [Platforms](../../docs/reference/platforms.md)); test this field
+   * rather than {@link SystemInfo.os}.
+   *
+   * @example Offer the HDR menu only where render options work
+   * The plugin adds its HDR command only when the player renders on the
+   * GPU, instead of creating the render options just to find out from a
+   * failed status. `system()` asks the player, which reports the renderer
+   * drawing at that moment; no capability is needed to ask. A player before
+   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly (an
+   * older player gets no HDR command).
+   * ```ts
+   * const { rendering } = await plugin.app.system();
+   * if (rendering === "gpu") {
+   *   const render = plugin.video.render(); // one handle, kept
+   *   plugin.commands.add({
+   *     id: "hdr",
+   *     path: ["@video", "HDR Tone Mapping"],
+   *     run: () => render.set({ toneMapping: "bt.2390", targetPeak: 250 }),
+   *   });
+   * }
+   * ```
+   *
+   * @player 0.5.12; older players leave it out (declare
+   * `"minPlayerVersion": "0.5.12"` when the plugin relies on it).
+   * @since 1.5.34
+   */
+  readonly rendering?: "gpu" | "software";
 }
 
 /**
@@ -6469,8 +6510,10 @@ export interface RenderSettings {
  *
  * Platforms: only macOS renders on the GPU. Under software rendering
  * (Windows, Linux, headless, fallback) every `set` fails with
- * `unsupported`. macOS OpenGL 4.1 has no compute shaders, so `peakDetect`
- * is accepted but has no effect; output is always SDR.
+ * `unsupported`; {@link SystemInfo.rendering} tells which renderer draws
+ * without creating the handle. macOS OpenGL 4.1 has no
+ * compute shaders, so `peakDetect` is accepted but has no effect; output
+ * is always SDR.
  *
  * @example Tone-map HDR video and hide the menu where it cannot work
  * On a GPU-rendering player HDR video is tone-mapped with BT.2390 for a
@@ -6773,7 +6816,10 @@ export interface Subtitles {
    *
    * Limits: SRT ≤ 2 MiB and ≤ 10,000 cues; ASS ≤ 2 MiB with `[Script Info]`
    * and `[Events]` and 1–20,000 `Dialogue:` lines. Convert other formats
-   * (VTT, SAMI) to SRT first.
+   * (VTT, SAMI) to SRT first. Per source, a plugin has at most 4 loaded
+   * tracks at once and loads at most 16 files (removed ones count), and
+   * every plugin together at most 16 tracks; see `SUBTITLE_LIMITS` in
+   * `@vestra-player/sdk/testing`.
    *
    * @capability subtitles.control and subtitles.read
    * @throws `invalid` (rejects) A bad `format` or `title`, or a file over the
@@ -6784,7 +6830,10 @@ export interface Subtitles {
    *   loading.
    * @throws `aborted` (rejects) `signal` aborted before the commit (an
    *   `AbortError`); the upload is discarded.
-   * @throws `busy` (rejects) Too many subtitle operations at once.
+   * @throws `busy` (rejects) Too many subtitle operations at once, or a
+   *   limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin, 16
+   *   loads of this plugin or 16 tracks in the source, or another of its
+   *   limits); nothing is loaded.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
    *
