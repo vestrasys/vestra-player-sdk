@@ -370,12 +370,16 @@ export function subtitles(scope: ScopeImpl): Subtitles {
         if (!loaded) throw failure("missing", "已提交的字幕轨不在当前状态中");
         return loaded;
       } catch (error) {
-        // Free the upload's slot (2 per plugin). After a refused commit
-        // the player still holds the upload; after one that took effect it
-        // was consumed and the discard is a harmless no-op.
-        await host()
+        // Free the upload's slot (2 per plugin). Before the commit the
+        // discard is awaited, as it always was (an abort resolves once the
+        // upload is gone). After a refused commit the player still holds
+        // the upload; after one that took effect it was consumed and the
+        // discard is a harmless no-op. Sent, not awaited: the player handles
+        // it before any later request of this plugin.
+        const discard = host()
           .discard(uploadId)
           .catch(() => {});
+        if (!committing) await discard;
         if (committing && (error as { code?: string }).code !== "missing")
           svc.owned.delete(resourceId);
         throw error;

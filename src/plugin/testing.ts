@@ -5238,8 +5238,8 @@ export class TestHost implements Transport {
     "subtitles.upload.discard": (p) =>
       void this.uploads.delete(Number(p.uploadId)),
     "subtitles.commit": (p) => {
-      const upload = this.uploads.get(Number(p.uploadId));
-      if (!upload) throw new HostError("missing", "upload");
+      // The player's order: the request's own fields, then `stale`, then
+      // the upload and its content, then the limits.
       const format = p.format === "ass" ? "ass" : "srt";
       const select =
         p.select === "none"
@@ -5257,6 +5257,9 @@ export class TestHost implements Transport {
           "invalid",
           "subtitle title needs 1..200 characters",
         );
+      this.#subtitleExpected(p.expected!);
+      const upload = this.uploads.get(Number(p.uploadId));
+      if (!upload) throw new HostError("missing", "upload");
       const bytes = Buffer.concat(upload.bytes);
       if (
         format === "ass" &&
@@ -5269,7 +5272,6 @@ export class TestHost implements Transport {
           "invalid",
           "ASS requires [Script Info] and [Events] sections",
         );
-      this.#subtitleExpected(p.expected!);
       this.#subtitleRoom(String(p.resourceId));
       this.#subtitleChange(p.expected!);
       this.#loadedSubtitles().set(String(p.resourceId), bytes.length);

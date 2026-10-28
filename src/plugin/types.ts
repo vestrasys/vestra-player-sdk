@@ -4170,6 +4170,9 @@ export interface SystemInfo {
    * cannot show GPU frames; the owner of the render options hears that
    * switch through {@link RenderOptions.onStatus}.
    *
+   * Absent (`undefined`) on players before 0.5.12, which do not report it:
+   * the renderer is then unknown, not software.
+   *
    * Today the player renders on the GPU on macOS and in software on
    * Windows, Linux and without a user interface (see
    * [Platforms](../../docs/reference/platforms.md)); test this field
@@ -4180,7 +4183,8 @@ export interface SystemInfo {
    * GPU, instead of creating the render options just to find out from a
    * failed status. `system()` asks the player, which reports the renderer
    * drawing at that moment; no capability is needed to ask. A player before
-   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly.
+   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly (an
+   * older player gets no HDR command).
    * ```ts
    * const { rendering } = await plugin.app.system();
    * if (rendering === "gpu") {
@@ -4197,7 +4201,7 @@ export interface SystemInfo {
    * `"minPlayerVersion": "0.5.12"` when the plugin relies on it).
    * @since 1.5.34
    */
-  readonly rendering: "gpu" | "software";
+  readonly rendering?: "gpu" | "software";
 }
 
 /**
@@ -6827,8 +6831,9 @@ export interface Subtitles {
    * @throws `aborted` (rejects) `signal` aborted before the commit (an
    *   `AbortError`); the upload is discarded.
    * @throws `busy` (rejects) Too many subtitle operations at once, or a
-   *   track limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin,
-   *   16 loads of this plugin or 16 tracks in the source); nothing is loaded.
+   *   limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin, 16
+   *   loads of this plugin or 16 tracks in the source, or another of its
+   *   limits); nothing is loaded.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
    *

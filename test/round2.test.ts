@@ -191,13 +191,34 @@ test("subtitle load takes format, title and select; tracks carry codec, text and
   await stop();
 });
 
+test("TestHost checks a subtitle commit in the player's order: stale before the content", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/movie.mkv");
+  const { plugin, stop } = await started(host);
+  const before = await plugin.subtitles.refresh();
+  await plugin.subtitles.select(null); // the selection moves on
+  const notAss = Buffer.from("1\n00:00:00,000 --> 00:00:01,000\nHi\n");
+  await rejects(
+    plugin.subtitles.load(notAss, { format: "ass", ifCurrent: before }),
+    "stale",
+  );
+  await rejects(plugin.subtitles.load(notAss, { format: "ass" }), "invalid");
+  await host.settle();
+  assert.equal(host.uploads.size, 0, "both uploads discarded");
+  await stop();
+});
+
 test("TestHost enforces the player's subtitle limits with its codes (SUBTITLE_LIMITS)", async () => {
   const host = new TestHost();
   host.openElsewhere("/movie.mkv");
   const { plugin, stop } = await started(host);
   const srt = (n: number) =>
     Buffer.from(`1\n00:00:00,000 --> 00:00:01,000\nLine ${n}\n`);
-  const busy = (promise: Promise<unknown>) => rejects(promise, "busy");
+  // A refused load rejects at once; its discard follows (settle for it).
+  const busy = async (promise: Promise<unknown>) => {
+    await rejects(promise, "busy");
+    await host.settle();
+  };
   const seen = () => host.sent("subtitles.commit").length;
 
   // 4 tracks of this plugin at once; removing one frees its place.

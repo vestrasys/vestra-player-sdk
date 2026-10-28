@@ -3260,7 +3260,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | DropModifiers | The pointer and ⌥ ⇧ ⌘ (`cmd` is ⌘). | The pointer and Alt, Shift, Ctrl (`cmd` is Ctrl). |
 | plugin.system (open, reveal) | Opened by the system; revealing several files selects all of them in one Finder window. | Opened by the shell; one Explorer window per folder. |
 | plugin.secrets | The login keychain. | The Credential Manager. |
-| App.system() | Version, build, model and displays; `rendering` is `"gpu"`. | Version, build, model and displays; `rendering` is `"software"`. |
+| App.system() | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"`. |
 | Snapshots and exports (MediaCapture) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams (Player.openStream) | A Unix socket. | Loopback TCP with a token. |
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
@@ -7300,6 +7300,9 @@ interface SystemInfo {
    * cannot show GPU frames; the owner of the render options hears that
    * switch through RenderOptions.onStatus.
    *
+   * Absent (`undefined`) on players before 0.5.12, which do not report it:
+   * the renderer is then unknown, not software.
+   *
    * Today the player renders on the GPU on macOS and in software on
    * Windows, Linux and without a user interface (see
    * Platforms); test this field
@@ -7310,7 +7313,8 @@ interface SystemInfo {
    * GPU, instead of creating the render options just to find out from a
    * failed status. `system()` asks the player, which reports the renderer
    * drawing at that moment; no capability is needed to ask. A player before
-   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly.
+   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly (an
+   * older player gets no HDR command).
    * ```ts
    * const { rendering } = await plugin.app.system();
    * if (rendering === "gpu") {
@@ -7323,7 +7327,7 @@ interface SystemInfo {
    * }
    * ```
    */
-  readonly rendering: "gpu" | "software";
+  readonly rendering?: "gpu" | "software";
 }
 ```
 
@@ -9432,7 +9436,7 @@ interface Subtitles {
    * @throws stale (rejects) With `ifCurrent`: the source changed since that state.
    * @throws unavailable (rejects) Nothing loaded, or the source is still loading.
    * @throws aborted (rejects) `signal` aborted before the commit (an `AbortError`); the upload is discarded.
-   * @throws busy (rejects) Too many subtitle operations at once, or a track limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin, 16 loads of this plugin or 16 tracks in the source); nothing is loaded.
+   * @throws busy (rejects) Too many subtitle operations at once, or a limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin, 16 loads of this plugin or 16 tracks in the source, or another of its limits); nothing is loaded.
    * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
    * @example Load a downloaded SRT and select it
    * A subtitle file the plugin downloaded becomes a track of the current file
