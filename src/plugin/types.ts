@@ -4121,8 +4121,8 @@ export interface App extends AppInfo {
    * and go). No capability. CPU and memory: Node's `os` module.
    *
    * @capability None.
-   * @throws `busy` (rejects) The player is still answering an earlier
-   *   request of this kind.
+   * @throws `busy` (rejects) The player could not start the request (no
+   *   thread available).
    *
    * @example Choose a size for the primary display
    * The plugin sizes its picture for the primary display. `system()` asks
@@ -8120,8 +8120,8 @@ export interface Packages {
    * @throws `unsupported` (rejects) A built-in plugin or a development load.
    * @throws `missing` (rejects) An unknown id.
    * @throws `invalid` (rejects) The calling plugin itself.
-   * @throws `busy` (rejects) The plugin library is being cleaned up, or the
-   *   player already keeps 64 change records.
+   * @throws `busy` (rejects) The plugin library is being cleaned up, or that
+   *   plugin is being installed or reloaded.
    * @throws `revisionConflict` (rejects) The installed revision of that
    *   plugin changed meanwhile; call `uninstall` again.
    * @throws `capability` (rejects) The manifest does not declare
