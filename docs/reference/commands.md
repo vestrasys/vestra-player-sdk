@@ -303,6 +303,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Video ▸ Saturation +1% | `U` | `vestra.video/video.saturation.up` |
 | Video ▸ Hue -1% | `I` | `vestra.video/video.hue.down` |
 | Video ▸ Hue +1% | `O` | `vestra.video/video.hue.up` |
+| Video ▸ GPU Rendering (Experimental) |  | `vestra.video/video.gpu-rendering` |
 | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` | `host/volume-up` |
 | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` | `host/volume-down` |
 | Audio ▸ Mute | `M` | `host/mute` |

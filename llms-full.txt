@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.35: full reference
+# @vestra-player/sdk 1.5.36: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -3175,6 +3175,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Video ▸ Saturation +1% | `U` | `vestra.video/video.saturation.up` |
 | Video ▸ Hue -1% | `I` | `vestra.video/video.hue.down` |
 | Video ▸ Hue +1% | `O` | `vestra.video/video.hue.up` |
+| Video ▸ GPU Rendering (Experimental) |  | `vestra.video/video.gpu-rendering` |
 | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` | `host/volume-up` |
 | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` | `host/volume-down` |
 | Audio ▸ Mute | `M` | `host/mute` |
@@ -14329,7 +14330,10 @@ menu last): their key paths, default bindings and owners. Use it to pick
 a menu place and default keys that do not collide with the player's (the
 user's own changes come on top; see Bindings). Menu items built
 from content (tracks, recent files, output devices) are not listed; their
-placeholders (`No Audio Tracks`) are. The player's tests check that this
+placeholders (`No Audio Tracks`) are. Items that appear only in a
+passing state are not listed either: the Picture Adjustments plugin's
+`Video ▸ Restart Player to Apply` (`video.gpu-rendering.restart`), shown
+while a rendering choice waits for the next start. The player's tests check that this
 list agrees with what the player and its built-in plugins register.
 
 ```ts

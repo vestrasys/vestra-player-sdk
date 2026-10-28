@@ -518,6 +518,7 @@ vestra.video | video.saturation.down | Video ▸ Saturation -1% | Y
 vestra.video | video.saturation.up | Video ▸ Saturation +1% | U
 vestra.video | video.hue.down | Video ▸ Hue -1% | I
 vestra.video | video.hue.up | Video ▸ Hue +1% | O
+vestra.video | video.gpu-rendering | Video ▸ GPU Rendering (Experimental)
 host | volume-up | Audio ▸ Volume + | ArrowUp, Mouse:WheelUp
 host | volume-down | Audio ▸ Volume − | ArrowDown, Mouse:WheelDown
 host | mute | Audio ▸ Mute | M
@@ -632,7 +633,10 @@ vestra.playlist | playlist.settings | (Playlist Settings…) | F5 | panel
  * a menu place and default keys that do not collide with the player's (the
  * user's own changes come on top; see {@link @vestra-player/sdk!Bindings | Bindings}). Menu items built
  * from content (tracks, recent files, output devices) are not listed; their
- * placeholders (`No Audio Tracks`) are. The player's tests check that this
+ * placeholders (`No Audio Tracks`) are. Items that appear only in a
+ * passing state are not listed either: the Picture Adjustments plugin's
+ * `Video ▸ Restart Player to Apply` (`video.gpu-rendering.restart`), shown
+ * while a rendering choice waits for the next start. The player's tests check that this
  * list agrees with what the player and its built-in plugins register.
  *
  * @example Check in a test that a default key is still free
