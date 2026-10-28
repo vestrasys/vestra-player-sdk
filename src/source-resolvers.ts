@@ -49,6 +49,9 @@ export type ResolvedResource = {
  *   },
  * });
  * ```
+ *
+ * @since 1.0.0
+ * @category Sources
  */
 export type ResolvedMedia = {
   /** Always `"media"`. */

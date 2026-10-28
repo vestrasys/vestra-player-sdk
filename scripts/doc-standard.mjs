@@ -37,6 +37,7 @@ export const STRICT_CATEGORIES = {
       "OsdPanel",
       "Osd",
       "I18n",
+      "Drops",
     ],
     data: [
       "ImageRef",
@@ -62,10 +63,12 @@ export const STRICT_CATEGORIES = {
       "TextValue",
       "TextError",
       "OsdPanelOptions",
+      "DropModifiers",
+      "DropHandler",
     ],
   },
   Commands: {
-    full: ["Commands", "Command", "Host"],
+    full: ["Commands", "Command", "Host", "Bindings"],
     data: [
       "CommandState",
       "Bindable",
@@ -74,10 +77,12 @@ export const STRICT_CATEGORIES = {
       "CommandButton",
       "CommandOptions",
       "HostAction",
+      "BindingRef",
+      "BindingInfo",
     ],
   },
   Playback: {
-    full: ["Player", "Media", "Scrub", "Stream"],
+    full: ["Player", "Media", "Scrub", "Stream", "Timeline", "TimelineLayer"],
     data: [
       "PlayerState",
       "AudioTrack",
@@ -89,6 +94,8 @@ export const STRICT_CATEGORIES = {
       "StreamStartError",
       "SequenceProvider",
       "PlaybackStats",
+      "MarkKind",
+      "TimelineMark",
     ],
   },
   Services: {
@@ -103,6 +110,51 @@ export const STRICT_CATEGORIES = {
       "Power",
     ],
     data: ["ToolResult"],
+  },
+  Subtitles: {
+    full: ["Subtitles"],
+    data: [
+      "SubtitleTrack",
+      "SubtitlesState",
+      "SubtitleConditional",
+      "SubtitleStyle",
+    ],
+  },
+  Sources: {
+    full: ["Resolvers", "Resolver"],
+    data: [
+      "ResolverOptions",
+      "WebResolverOptions",
+      "FileResolverOptions",
+      "ResolvedStream",
+      "ResolvedMedia",
+    ],
+  },
+  Media: {
+    full: ["MediaCapture", "Snapshot", "ExportJob"],
+    data: ["CaptureOptions", "ExportOptions", "JobState"],
+  },
+  Packages: {
+    full: ["Packages", "PackageCandidate", "PackageChange"],
+    data: [
+      "PackageManifest",
+      "PackageSource",
+      "InstallOptions",
+      "PackageChangeStatus",
+      "PluginInfo",
+      "PluginDisplay",
+      "PluginWarning",
+    ],
+  },
+  Processing: {
+    full: ["VideoFilter", "AudioFilter", "VideoView", "RenderOptions"],
+    data: [
+      "FilterStatus",
+      "ViewSettings",
+      "RenderSettings",
+      "VideoNode",
+      "AudioNode",
+    ],
   },
 };
 

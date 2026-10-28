@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.31: full reference
+# @vestra-player/sdk 1.5.32: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -1228,6 +1228,85 @@ Names are 1–64 of `a-z 0-9 . _ -`, values 1–1024 bytes, at most 256 names. H
 #### Your own files
 
 For anything larger (a cache, downloaded files), write under `plugin.dataDirectory` with Node's `fs`. The player deletes the directory only when the plugin is uninstalled together with its data (`packages.uninstall` with `removeData`).
+
+## How-to: Load subtitles from a plugin
+
+**Goal:** your plugin finds subtitles for the playing file (on disk, on a website, by converting another format), adds them as a track, selects them, and optionally styles them.
+
+#### Capabilities
+
+```json
+{
+  "capabilities": ["subtitles.read", "subtitles.control", "events"]
+}
+```
+
+`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` keeps `plugin.subtitles.state` current when the user or another plugin changes something.
+
+#### Read the tracks
+
+`plugin.subtitles.state` is `null` until first read; `refresh()` reads it from the player. Each track has an `id` (compare tracks by id), a `kind` (`embedded` in the file or `external`, loaded from a file), a `title` and a `language`.
+
+```ts
+const state = plugin.subtitles.state ?? (await plugin.subtitles.refresh());
+for (const track of state.tracks)
+  console.log(track.id, track.kind, track.language ?? "?", track.title);
+// The primary and the secondary subtitle; null when off.
+console.log(state.selected?.id, state.secondary?.id);
+```
+
+#### Select a track, and handle `stale`
+
+Changes act on the selection your plugin last saw. When the user picked another track or another file opened in between, the change fails with `stale` and does nothing:
+
+```ts
+const state = await plugin.subtitles.refresh();
+const english = state.tracks.find((track) => track.language === "en");
+if (english)
+  await plugin.subtitles.select(english).catch((error: PluginError) => {
+    if (error.code !== "stale") throw error; // the user changed it meanwhile
+  });
+```
+
+`select(track, { role: "secondary" })` sets the second line shown together with the primary one (a text track other than the primary); `select(null)` turns a role off. A new source clears the secondary subtitle.
+
+#### Upload a file
+
+`load` takes the file's bytes: UTF-8 SRT, or ASS/SSA with `format: "ass"`, at most 2 MiB (SRT up to 10,000 cues, ASS up to 20,000 `Dialogue:` lines). Convert other formats (WebVTT, SAMI) to SRT first. The player adds an `external` track to the current source only, selects it unless `select: "none"`, and resolves with the track once the upload is committed.
+
+```ts
+import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
+declare const path: string;
+// ---cut---
+const bytes = await readFile(path);
+const track = await plugin.subtitles.load(bytes, {
+  format: path.endsWith(".ass") ? "ass" : "srt",
+  title: basename(path), // data: shown as it is
+  select: "primary",
+  signal: AbortSignal.timeout(30_000), // discards the upload if not committed in time
+});
+await plugin.osd.show("Loaded {}", [track.title]);
+```
+
+A title that mixes words with data is a text value the player translates: `title: plugin.i18n.text("{} · {}", [plugin.i18n.text("Downloaded"), name])`. `remove(track)` takes away a track this plugin loaded; the next source removes it anyway.
+
+#### Style the subtitles
+
+`setStyle` sets this plugin's style layer: font (one of `state.fonts`), size at the 1080p reference height, colour, outline, margin, timing offset, box. Each plugin has one layer and its newest call replaces it. When several plugins set a layer, the player shows the one whose **manifest id sorts last**, whatever the order of the calls; `setStyle(null)` takes yours off.
+
+```ts
+const { fonts } = await plugin.subtitles.refresh();
+if (fonts.length)
+  await plugin.subtitles.setStyle({
+    fontId: fonts[0]!.id,
+    fontSize: 40,
+    color: "white",
+    outline: 2,
+    marginPercent: 5,
+    offsetMs: 0, // positive shows them later
+  });
+```
 
 ## How-to: Keep a slider responsive while dragging
 
@@ -5787,6 +5866,13 @@ interface DropHandler {
 
 `plugin.drops`: files dropped on the video area. Needs `ui.drop`.
 
+Files dropped on the video area go to providers by extension: each
+extension belongs to the provider registered for it first, and each
+provider gets one call with all of its paths. Files nobody takes are
+ignored. A panel with Panel.onDrop takes drops on itself first.
+
+- @capability ui.drop
+
 ```ts
 interface Drops {
   /**
@@ -5797,6 +5883,7 @@ interface Drops {
    * to the provider that registered it first) in the order the file
    * manager gave them, one call per provider. Folders are not expanded.
    * @throws invalid synchronously for malformed extensions.
+   * @capability ui.drop
    * @example Load dropped subtitle files
    * Dropping .srt or .ass files on the video loads each one as a subtitle
    * track. Each extension belongs to the provider that registered it first;
@@ -5820,6 +5907,22 @@ interface Drops {
    */
   provide(handler: DropHandler): Disposable;
 }
+```
+
+Example: Add dropped videos to a list
+
+Video files dropped on the player are added to the plugin's list
+instead of replacing what plays. The provider claims the extensions; the
+player calls `drop` with the dropped paths of those types, in the order
+the file manager gave them.
+```ts
+const queue: string[] = [];
+plugin.drops.provide({
+  extensions: ["mp4", "mkv"],
+  drop: ({ paths }) => {
+    queue.push(...paths); // only .mp4 and .mkv files reach here
+  },
+});
 ```
 
 ### ThemeId
@@ -6693,10 +6796,18 @@ interface TimelineMark {
 
 This plugin's own marks; disposing it removes them.
 
+This plugin's marks on the seek bar, from Timeline.layer. `set`
+replaces the whole layer and never throws: the newest write wins, and a
+refused one is reported to `onError`. Disposing the layer, its scope or
+stopping the plugin removes the marks.
+
+- @capability timeline.marks
+
 ```ts
 interface TimelineLayer extends Disposable {
   /**
    * Replace the layer (last write wins; `[]` clears it). At most 1000 marks, titles ≤ 100 characters, times within the media. Failures go to `onError`; with `ifCurrent`, a write for another source is dropped silently. A title is data (a chapter's or bookmark's own name), or a Text the player translates (`text("Chapter {}", [n])`, SDK 1.5.11); other plugins read the shown string.
+   * @capability timeline.marks
    * @example Show the file's bookmarks on the timeline
    * Bookmark marks appear on the seek bar at their times, titled with the
    * user's notes. `set` replaces this plugin's whole layer; with `ifCurrent`
@@ -6721,20 +6832,73 @@ interface TimelineLayer extends Disposable {
 }
 ```
 
+Example: Clear the plugin's marks
+
+The plugin's marks disappear from the seek bar while it keeps its
+layer for later. An empty list clears the layer; other plugins' marks
+stay.
+```ts
+plugin.timeline.layer().set([]);
+```
+
 ### Timeline
 
 `plugin.timeline`: marks on the seek bar. Every plugin publishes one
 layer; the player merges them. A new source clears every layer.
 
+Marks on the player's seek bar: chapters, bookmarks, loop points. Each
+plugin publishes one layer with Timeline.layer; the player merges
+the layers by time and shows them. A new source clears every layer, so a
+plugin publishes again for each file. `marks` is the merged list, which
+any plugin can read.
+
+- @capability `timeline.marks` to publish; `playback.read` to read; `events` to follow changes.
+
 ```ts
 interface Timeline {
   /** Every layer merged, by time (`playback.read`). Empty on a new source. */
   readonly marks: readonly TimelineMark[];
-  /** The merged list changed (needs `events`; at most every 100 ms). */
+  /**
+   * The merged list changed (needs `events`; at most every 100 ms).
+   * @capability events and playback.read
+   * @example Follow the marks as they change
+   * A panel lists the seek bar's marks and updates when any plugin publishes
+   * or a new file clears them. The listener gets the merged list, at most
+   * every 100 ms.
+   * ```ts
+   * plugin.timeline.onChange((marks) => {
+   *   console.log(marks.map((mark) => `${mark.time}s ${mark.title ?? mark.kind}`));
+   * });
+   * ```
+   */
   onChange(listener: (marks: readonly TimelineMark[]) => void): Disposable;
-  /** This plugin's layer (`timeline.marks`); a second call throws. */
+  /**
+   * This plugin's layer (`timeline.marks`); a second call throws.
+   * @capability timeline.marks
+   * @example Publish this plugin's marks
+   * The plugin gets its one layer and puts two chapter marks on the seek
+   * bar. A second `layer()` call throws; disposing the layer removes the
+   * marks.
+   * ```ts
+   * const layer = plugin.timeline.layer();
+   * layer.set([
+   *   { time: 0, kind: "chapter", title: "Intro" },
+   *   { time: 95, kind: "chapter", title: "Part 1" }, // seconds
+   * ]);
+   * ```
+   */
   layer(): TimelineLayer;
 }
+```
+
+Example: Count the chapter marks other plugins published
+
+The plugin reads how many chapter marks the seek bar shows, whoever
+published them. `marks` is the merged list of every layer, sorted by
+time, with each mark's `plugin`.
+```ts
+const chapters = plugin.timeline.marks.filter((mark) => mark.kind === "chapter");
+await plugin.osd.show("{} chapters", [chapters.length]);
 ```
 
 ### WindowState
@@ -8611,6 +8775,14 @@ one request is in flight at a time and only the newest value is sent.
 Values out of range fail with `invalid` (see VideoNode). The
 same chain applies to processed snapshots and exports.
 
+Members: `set(nodes)` records the desired chain (last write wins) and
+sends it, one request at a time and only the newest; `status` and
+`onStatus` report `waiting`, `applying`, `applied` or `failed`; `retry`
+applies the current value again; `dispose` withdraws the chain. `set`
+never throws: a refused chain shows as `failed` in `status`.
+
+- @capability processing.video, playback.read and events
+
 ```ts
 type VideoFilter = Filter<VideoNode[]>;
 ```
@@ -8637,6 +8809,12 @@ VideoFilter.
 
 `delayMs` is −10000–10000 in multiples of 10; the positive and the
 negative delays of all plugins each add up to at most 10000.
+
+The same members and rules as VideoFilter: `set` records the
+desired value and never throws, `status` and `onStatus` report the
+result, `retry` applies it again, `dispose` withdraws it.
+
+- @capability processing.audio, playback.read and events
 
 ```ts
 type AudioFilter = Filter<{
@@ -8688,13 +8866,46 @@ needed); disposing or stopping the owner restores the defaults.
 Out-of-range values or unknown fields fail with `invalid` without
 sending anything.
 
+Not part of snapshots or exports: it changes how the picture sits in the
+video area, not the picture. `set` merges into the current settings and
+never throws: an out-of-range value or unknown field shows as `failed`
+(`invalid`) in `status` and is reported to `onError`, without sending
+anything.
+
+- @capability processing.video
+
 ```ts
 interface VideoView extends Disposable {
-  /** Merged into the current settings; last write wins. */
+  /**
+   * Merged into the current settings; last write wins.
+   * @capability processing.video
+   * @example Stretch a 4:3 video to fill the window
+   * A 4:3 video fills a 16:9 window, distorted, as the user asked. Each
+   * `set` merges the given fields into this plugin's view settings; the
+   * newest write wins, and the settings stay for later files until the
+   * plugin resets them or stops.
+   * ```ts
+   * plugin.video.view().set({ fit: "stretch" });
+   * ```
+   */
   set(value: Partial<ViewSettings>): void;
   /** Current status (the same four states as filters). */
   readonly status: FilterStatus;
-  /** The status changed. */
+  /**
+   * The status changed.
+   * @capability processing.video
+   * @example Tell the user another plugin owns the view
+   * When another plugin already controls the display layer, the OSD says
+   * so. The first plugin to call `view()` owns it; this plugin's handle
+   * then reports `failed` with `conflict`, and tries again on its next `set`.
+   * ```ts
+   * const view = plugin.video.view();
+   * view.onStatus((status) => {
+   *   if (status.state === "failed" && status.error.code === "conflict")
+   *     void plugin.osd.show("Another plugin controls the picture size");
+   * });
+   * ```
+   */
   onStatus(listener: (status: FilterStatus) => void): Disposable;
 }
 ```
@@ -8742,13 +8953,44 @@ Platforms: only macOS renders on the GPU. Under software rendering
 `unsupported`. macOS OpenGL 4.1 has no compute shaders, so `peakDetect`
 is accepted but has no effect; output is always SDR.
 
+GPU renderer options (tone mapping, peak detection, shaders,
+interpolation). Only the GPU renderer has them, which today means macOS;
+under software rendering every `set` fails with `unsupported`. Single
+owner, like VideoView. `set` never throws; the result shows in
+`status`.
+
+- @capability processing.video
+
 ```ts
 interface RenderOptions extends Disposable {
-  /** Merged into the current settings; last write wins. */
+  /**
+   * Merged into the current settings; last write wins.
+   * @capability processing.video
+   * @example Turn on motion interpolation
+   * Motion becomes smoother on the GPU renderer. `set` merges the field into
+   * the plugin's render options; under software rendering the status turns
+   * `failed` with `unsupported` instead.
+   * ```ts
+   * plugin.video.render().set({ interpolation: true });
+   * ```
+   */
   set(value: Partial<RenderSettings>): void;
   /** `failed` with `unsupported` while the player renders in software; `failed` with `failed` when mpv cannot compile a shader (pushed later). */
   readonly status: FilterStatus;
-  /** The status changed (including later pushes such as shader compile errors). */
+  /**
+   * The status changed (including later pushes such as shader compile errors).
+   * @capability processing.video
+   * @example Report a shader that does not compile
+   * The OSD shows mpv's message when a shader the plugin set fails to
+   * compile. The player pushes that failure after the `set` was accepted, so
+   * it arrives through `onStatus`, not as a rejected call.
+   * ```ts
+   * const render = plugin.video.render();
+   * render.onStatus((status) => {
+   *   if (status.state === "failed") void plugin.osd.show("Render: {}", [status.error.message]);
+   * });
+   * ```
+   */
   onStatus(listener: (status: FilterStatus) => void): Disposable;
 }
 ```
@@ -8850,16 +9092,67 @@ interface SubtitleConditional {
 `subtitles.read`; changes need `subtitles.control` and also
 `subtitles.read`, since they read the current selection first.
 
+The subtitle tracks of the current source, the primary and secondary
+selection, uploaded files and the style. `state` is the SDK's snapshot of
+the player's subtitle state (`null` until first read), kept current from
+events with `events`. Changes act on the selection the plugin last saw:
+when the user or another plugin changed it meanwhile they fail with
+`stale` (pass `ifCurrent` to pin an older state). Each change is one
+operation the player confirms; the promise resolves with the new state.
+
+- @capability `subtitles.read` to read; `subtitles.control` and `subtitles.read` to change; `events` to follow changes made elsewhere.
+
 ```ts
 interface Subtitles {
   /** `null` until first read. */
   readonly state: SubtitlesState | null;
-  /** The subtitle state changed. */
+  /**
+   * The subtitle state changed.
+   * @capability events and subtitles.read
+   * @example Show the selected subtitle's language
+   * The OSD names the language of the subtitle the user picks. The SDK
+   * updates `state` from the player's events and then calls the listener;
+   * `selected` is the primary subtitle, `null` when subtitles are off.
+   * ```ts
+   * plugin.subtitles.onChange((state) => {
+   *   // A track's language is null when the file does not say.
+   *   void plugin.osd.show("Subtitles: {}", [state.selected?.language ?? "off"]);
+   * });
+   * ```
+   */
   onChange(listener: (state: SubtitlesState) => void): Disposable;
-  /** Read the state from the player now. */
+  /**
+   * Read the state from the player now.
+   * @capability subtitles.read
+   * @throws capability (rejects) The manifest does not declare `subtitles.read`.
+   * @example Count the subtitle tracks of the file
+   * The plugin reads how many subtitle tracks the file has before building a
+   * menu. `refresh` asks the player and resolves with the current state, also
+   * without `events`; `state` holds it afterwards.
+   * ```ts
+   * const { tracks } = await plugin.subtitles.refresh();
+   * await plugin.osd.show("{} subtitle tracks", [tracks.length]);
+   * ```
+   */
   refresh(): Promise<SubtitlesState>;
   /**
    * `role: "secondary"` sets the secondary subtitle: a text track that is not the primary one (`invalid` otherwise). A new source clears it. `track: null` turns the role off.
+   * @capability subtitles.control and subtitles.read
+   * @throws stale (rejects) The source or the subtitle selection changed since the state the call is based on.
+   * @throws invalid (rejects) An unknown track, or a secondary that is not a text track or is the primary one.
+   * @throws unavailable (rejects) Nothing is loaded to select from.
+   * @throws busy (rejects) Too many subtitle operations at once.
+   * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
+   * @example Turn on the first English subtitle
+   * The first English track becomes the primary subtitle. The track comes
+   * from `state.tracks` (compare tracks by `id`); `select` is conditional on
+   * the state it read, so it fails with `stale` instead of selecting in a
+   * file the user has just left.
+   * ```ts
+   * const state = plugin.subtitles.state ?? (await plugin.subtitles.refresh());
+   * const english = state.tracks.find((track) => track.language === "en");
+   * if (english) await plugin.subtitles.select(english); // role: "primary"
+   * ```
    */
   select(track: SubtitleTrack | null, options?: SubtitleConditional & {
     role?: "primary" | "secondary";
@@ -8876,6 +9169,24 @@ interface Subtitles {
    * Limits: SRT ≤ 2 MiB and ≤ 10,000 cues; ASS ≤ 2 MiB with `[Script Info]`
    * and `[Events]` and 1–20,000 `Dialogue:` lines. Convert other formats
    * (VTT, SAMI) to SRT first.
+   * @capability subtitles.control and subtitles.read
+   * @throws invalid (rejects) A bad `format` or `title`, or a file over the limits.
+   * @throws stale (rejects) The source changed since the state the call is based on.
+   * @throws aborted (rejects) `signal` aborted before the commit (an `AbortError`); the upload is discarded.
+   * @throws busy (rejects) Too many subtitle operations at once.
+   * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
+   * @example Load a downloaded SRT and select it
+   * A subtitle file the plugin downloaded becomes a track of the current file
+   * and is selected. The plugin passes the file's bytes; the player parses
+   * them, adds an `external` track for this source only and resolves with
+   * it once the upload is committed.
+   * ```ts
+   * const response = await fetch(url);
+   * if (!response.ok) throw new Error(`subtitles: HTTP ${response.status}`);
+   * const bytes = new Uint8Array(await response.arrayBuffer());
+   * const track = await plugin.subtitles.load(bytes, { title: "Downloaded" }); // selected
+   * await plugin.osd.show("Loaded {}", [track.title]);
+   * ```
    */
   load(bytes: Uint8Array, options?: SubtitleConditional & {
     format?: "srt" | "ass";
@@ -8883,10 +9194,35 @@ interface Subtitles {
     select?: "primary" | "secondary" | "none";
     signal?: AbortSignal;
   }): Promise<SubtitleTrack>;
-  /** Remove a track this plugin loaded. */
+  /**
+   * Remove a track this plugin loaded.
+   * @capability subtitles.control and subtitles.read
+   * @throws invalid (rejects) The track was not loaded by this plugin.
+   * @throws stale (rejects) The source changed since the state the call is based on.
+   * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
+   * @example Remove the subtitle the plugin loaded
+   * The plugin's downloaded subtitle disappears from the track list. A plugin
+   * can remove only tracks it loaded itself; a new source removes them
+   * anyway.
+   * ```ts
+   * await plugin.subtitles.remove(loaded);
+   * ```
+   */
   remove(track: SubtitleTrack, options?: SubtitleConditional): Promise<SubtitlesState>;
   /**
    * Set this plugin's style layer; `null` removes it. The newest call of this plugin replaces its earlier layer. When several plugins have a layer, the player uses the one whose manifest id sorts last, whatever the order of the calls.
+   * @capability subtitles.control and subtitles.read
+   * @throws invalid (rejects) A value out of range, or a font id the player does not list.
+   * @throws unsupported (rejects) The font is not available.
+   * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
+   * @example Take the plugin's style off again
+   * The plugin removes its style layer, so the subtitles go back to the
+   * player's default (or to another plugin's layer). `null` removes only this
+   * plugin's layer; the effective layer is the one whose manifest id sorts
+   * last among the plugins that still have one.
+   * ```ts
+   * await plugin.subtitles.setStyle(null);
+   * ```
    */
   setStyle(style: SubtitleStyle | null, options?: SubtitleConditional): Promise<SubtitlesState>;
 }
@@ -8937,6 +9273,14 @@ interface CaptureOptions extends Conditional {
 
 A frozen, immutable input for exports. Dispose to release it.
 
+A frozen input, from MediaCapture.capture: the source, the time
+and (processed) the effects and subtitle as they were. Exports read it in
+the player's offline worker, so one snapshot can be exported several
+times and playback is unaffected. Disposing it releases the player's
+copy; an export using it after that fails with `released`.
+
+- @capability media.read and media.control
+
 ```ts
 interface Snapshot extends Disposable {
   /** Without or with effects. */
@@ -8958,8 +9302,41 @@ interface Snapshot extends Disposable {
   } | null;
   /** The frozen processing revision (processed snapshots). */
   readonly processingRevision: number | null;
-  /** Start exporting; the job runs in the host's offline worker. One snapshot can be exported several times. */
+  /**
+   * Start exporting; the job runs in the host's offline worker. One snapshot can be exported several times.
+   * @capability media.read and media.control
+   * @throws released (rejects) The snapshot was already released.
+   * @throws invalid (rejects) Bad options (`quality` outside 1–100, a relative destination, a clip end before the snapshot time).
+   * @throws busy (rejects) The player runs too many media operations.
+   * @throws capability (rejects) The manifest does not declare `media.read` and `media.control`.
+   * @example Export a 30-second clip
+   * A clip from the snapshot time to 30 seconds later is written as MP4.
+   * `export` resolves once the job is accepted; the job then runs in the
+   * player's offline worker, and `done` resolves with its terminal state,
+   * whose `outcome` has the destination or the error.
+   * ```ts
+   * const job = await snapshot.export({ format: "mp4", destination: "/tmp/clip.mp4", end: snapshot.time + 30 });
+   * const end = await job.done;
+   * if (end.status !== "completed") await plugin.osd.show("Export {}", [end.status]);
+   * ```
+   */
   export(options: ExportOptions): Promise<ExportJob>;
+}
+```
+
+Example: Export one frame as PNG and as JPEG
+
+The same frozen frame is written twice, lossless and compressed. Each
+`export` starts a job of its own; the snapshot is released after both
+are done.
+```ts
+const snapshot = await plugin.media.capture();
+try {
+  const png = await snapshot.export({ format: "png", destination: "/tmp/frame.png" });
+  const jpeg = await snapshot.export({ format: "jpeg", destination: "/tmp/frame.jpg", quality: 85 });
+  await Promise.all([png.done, jpeg.done]); // terminal states, not errors
+} finally {
+  await snapshot.dispose();
 }
 ```
 
@@ -9015,19 +9392,78 @@ type JobState = Omit<MediaJob, "jobId">;
 
 An export, from Snapshot.export. Disposing an unfinished job cancels it.
 
+One export, from Snapshot.export. `state` is the SDK's last copy
+of the job's state: the SDK polls the player about every 350 ms until the
+job ends, and `refresh` reads it at once. `done` resolves
+once the job is terminal (`completed`, `failed` or `cancelled`) and never
+rejects for a failed export: the failure is in `outcome`. Disposing an
+unfinished job cancels it.
+
+- @capability media.read and media.control
+
 ```ts
 interface ExportJob extends Disposable {
   /** Latest state. */
   readonly state: JobState;
-  /** The state changed. */
+  /**
+   * The state changed.
+   * @capability media.read
+   * @example Log each state of an export
+   * The plugin's log records each status the job goes through (`queued`,
+   * `running`, then a terminal one). The listener runs when the SDK learns a
+   * new state from its polling.
+   * ```ts
+   * job.onChange((state) => console.log("export", state.status));
+   * ```
+   */
   onChange(listener: (state: JobState) => void): Disposable;
-  /** Resolves with the terminal state (completed, failed or cancelled). */
+  /**
+   * Resolves with the terminal state (completed, failed or cancelled).
+   * @throws disposed (rejects) The job handle was disposed while waiting.
+   */
   readonly done: Promise<JobState>;
-  /** Ask to cancel: `requested`, `tooLate` (already publishing) or `terminal` (already over). */
+  /**
+   * Ask to cancel: `requested`, `tooLate` (already publishing) or `terminal` (already over).
+   * @capability media.control
+   * @throws rejected (rejects) The player did not accept the request.
+   * @throws capability (rejects) The manifest does not declare `media.control`.
+   * @example Cancel an export the user no longer wants
+   * The running export stops, unless it is already writing its file.
+   * `cancel` resolves `requested` when the worker will stop (the job ends
+   * `cancelled`), `tooLate` when it is already publishing the file, and
+   * `terminal` when the job had already ended.
+   * ```ts
+   * const answer = await job.cancel();
+   * if (answer === "tooLate") await plugin.osd.show("Too late: the file is being written");
+   * ```
+   */
   cancel(): Promise<"requested" | "tooLate" | "terminal">;
-  /** Read the state from the player now. */
+  /**
+   * Read the state from the player now.
+   * @capability media.read
+   * @throws capability (rejects) The manifest does not declare `media.read`.
+   * @example Read a job's state now
+   * The plugin reads the newest state of an export without waiting for an
+   * event. `refresh` asks the player and resolves with the state, which
+   * `state` then holds.
+   * ```ts
+   * const state = await job.refresh();
+   * console.log(state.status);
+   * ```
+   */
   refresh(): Promise<JobState>;
 }
+```
+
+Example: Show export progress and cancel on request
+
+The OSD shows the job's status while it runs, and a Cancel command stops
+it. `onChange` follows the state; `cancel` asks the worker to stop and
+says whether it was in time.
+```ts
+job.onChange((state) => void plugin.osd.show("Export: {}", [state.status]));
+plugin.commands.add({ id: "cancel-export", title: "Cancel export", run: () => job.cancel() });
+await job.done; // completed, failed or cancelled
 ```
 
 ### MediaCapture
@@ -9036,10 +9472,39 @@ interface ExportJob extends Disposable {
 `media.control` (processed snapshots also `playback.read` and
 `subtitles.read`). Exports decode offline and do not disturb playback.
 
+Exports run in the player's offline worker from a frozen
+Snapshot: a still frame or a clip, raw or with this plugin's
+effects (and the primary subtitle). Playback is not disturbed. A plugin
+holds at most 4 snapshots at a time (16 in the player); release them
+when done.
+
+- @capability media.read and media.control (processed snapshots also `playback.read` and `subtitles.read`)
+
 ```ts
 interface MediaCapture {
   /**
    * Freeze the current source (and optionally this plugin set's effects) as an input for exports. Fails `stale` when the source changed since `ifCurrent`; `unsupported` for an external ASS track with subtitles; `noSource` when nothing is playing.
+   * @capability media.read and media.control
+   * @throws stale (rejects) The source changed since `ifCurrent`.
+   * @throws noSource (rejects) Nothing is playing.
+   * @throws invalid (rejects) `at` at or after the end of the source.
+   * @throws busy (rejects) This plugin holds 4 snapshots (or the player 16); release one.
+   * @throws unavailable (rejects) A processed snapshot while the picture is still being prepared.
+   * @throws unsupported (rejects) A processed snapshot the player cannot freeze (an external ASS track with subtitles, a picture over its size limits).
+   * @throws capability (rejects) The manifest does not declare `media.read` and `media.control`.
+   * @example Freeze the frame at the 10-second mark
+   * The plugin freezes the frame at 0:10 of the open file, raw, to export it
+   * later. `capture` resolves with a `Snapshot` once the player has frozen
+   * that input; the snapshot stays valid when playback moves on or the file
+   * changes, until it is released.
+   * ```ts
+   * const snapshot = await plugin.media.capture({ at: 10 }); // seconds
+   * try {
+   *   // … export it …
+   * } finally {
+   *   await snapshot.dispose(); // frees one of the plugin's 4 snapshot slots
+   * }
+   * ```
    */
   capture(options?: CaptureOptions): Promise<Snapshot>;
 }
@@ -9192,13 +9657,42 @@ interface ResolvedStream {
 
 A registered resolver. Disposing it unregisters it and aborts resolutions in flight.
 
+A registered resolver, from Resolvers.add. Disposing it, its
+scope or stopping the plugin unregisters it and aborts resolutions in
+flight; the extensions or hosts are free again for other plugins.
+
+- @capability source.resolve
+
 ```ts
 interface Resolver extends Disposable {
   /**
    * Resolves when the player registered it; rejects otherwise: `conflict` when another resolver has the extension or the scheme + host (another plugin's: activation goes on; this plugin's own: activation fails), `invalid` for a malformed declaration (a player before 0.4.1 also for `extensions`).
+   * @throws conflict (rejects) Another resolver has the extension or the scheme + host.
+   * @throws invalid (rejects) A malformed declaration.
+   * @throws capability (rejects) The manifest does not declare `source.resolve`.
    */
   readonly ready: Promise<void>;
 }
+```
+
+Example: Report when another plugin already handles the format
+
+The plugin tells the user when its `.ch8` resolver could not register
+because another plugin holds that extension. `ready` rejects with
+`conflict`; for another plugin's claim that does not fail activation, so
+the plugin keeps running without the resolver.
+```ts
+const resolver = plugin.resolvers.add({
+  id: "chip8",
+  extensions: ["ch8"],
+  async resolve() {
+    throw plugin.i18n.error("Not ready yet.");
+  },
+});
+// Rejects with `conflict` when the extension is taken.
+resolver.ready.catch((error: PluginError) => {
+  if (error.code === "conflict") void plugin.osd.show("Another plugin plays .ch8 files");
+});
 ```
 
 ### Resolvers
@@ -9207,10 +9701,39 @@ interface Resolver extends Disposable {
 files into streams this plugin generates. Needs `source.resolve` (file
 resolvers also `producer.av`).
 
+A resolver turns something the player cannot play by itself into
+something it can: a web page address into stream URLs
+(WebResolverOptions), or a local file of a format the plugin
+understands into a stream the plugin generates
+(FileResolverOptions). The player asks the resolver whenever
+anyone opens a matching address or file (the Open dialog, the playlist,
+another plugin), so the plugin does not intercept opens itself.
+
+- @capability source.resolve (file resolvers also `producer.av`)
+
 ```ts
 interface Resolvers {
   /**
    * Register a resolver. When anyone opens a matching URL or file the player calls `resolve`; `signal` aborts when the open is cancelled or replaced. One scheme + host pair, and one extension, has one resolver (`conflict` otherwise). A rejected `resolve` fails the open with the error's message.
+   * @capability source.resolve
+   * @example Play a site's pages through the plugin
+   * Opening a `https://video.example.com/…` address plays the page's video.
+   * `add` returns at once and registers in the background (`ready` reports
+   * the answer); from then on the player calls `resolve` for every matching
+   * open, and the error a rejected `resolve` carries is what the user sees.
+   * ```ts
+   * plugin.resolvers.add({
+   *   id: "example",
+   *   schemes: ["https"],
+   *   hosts: ["video.example.com"], // exact host names
+   *   async resolve(url, signal) {
+   *     const response = await fetch(url, { signal });
+   *     if (!response.ok) throw new Error(`the page answered ${response.status}`);
+   *     const page = (await response.json()) as { title: string; stream: string };
+   *     return { kind: "media", originalUrl: url, title: page.title, primary: { url: page.stream } };
+   *   },
+   * });
+   * ```
    */
   add(options: ResolverOptions): Resolver;
   /**
@@ -9363,6 +9886,14 @@ interface InstallOptions {
 
 A validated package directory, from Packages.validate.
 
+A package the player has checked, from Packages.validate or
+Packages.validateArchive: its manifest, digest and the checks
+it passed. Installing it starts a PackageChange; the player keeps
+only the 32 most recent candidates, and one whose files changed since
+the check fails with `staleDigest`.
+
+- @capability plugins.manage
+
 ```ts
 interface PackageCandidate {
   /** The package directory. */
@@ -9375,9 +9906,35 @@ interface PackageCandidate {
   readonly checks: string[];
   /**
    * Install it. The same source upgrades the installed plugin (its data stays); another source fails with `conflict` unless `replace` is set; a built-in id fails with `unsupported` (built-ins update with the player). A reserved id (`vestra` or `vestra.*`, which every built-in uses) fails with `reserved` (player 0.4.1; already when validated), as only the player installs built-in plugins.
+   * @capability plugins.manage
+   * @throws conflict (rejects) The plugin is installed from another source and `replace` is not set.
+   * @throws unsupported (rejects) A built-in plugin's id.
+   * @throws reserved (rejects) A reserved id (`vestra`, `vestra.*`).
+   * @throws staleDigest (rejects) The package's files changed after it was validated.
+   * @throws stale (rejects) The candidate is older than the 32 the player keeps.
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Replace a plugin installed from another source
+   * The new package replaces the installed plugin even though it came from
+   * another source. Without `replace` the player refuses with `conflict`;
+   * the same source simply upgrades and keeps the plugin's data.
+   * ```ts
+   * const change = await candidate.install({ replace: true });
+   * await change.done; // "committed" once the new plugin runs
+   * ```
    */
   install(options?: InstallOptions): Promise<PackageChange>;
 }
+```
+
+Example: Show what a package asks for before installing it
+
+Before installing, the plugin shows the package's name and the
+capabilities it declares. The candidate's `manifest` is the manifest
+as the player read it.
+```ts
+const candidate = await plugin.packages.validate(directory);
+const { id, version, capabilities } = candidate.manifest;
+await plugin.osd.show("{} {}: {}", [id, version, capabilities.join(", ")]);
 ```
 
 ### PackageChangeStatus
@@ -9393,19 +9950,65 @@ type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed
 An install or uninstall in progress. The SDK never submits a
 change twice: after a lost reply it only queries the same request.
 
+An install or uninstall the player carries out in steps (`preparing`,
+`activating`, possibly `restoring`) until a terminal status. The SDK
+asks the player for the status about every 400 ms until then; `done`
+resolves with the terminal status and does not reject for a failed
+change: `message` says why.
+
+- @capability plugins.manage
+
 ```ts
 interface PackageChange {
   /** Current status. */
   readonly status: PackageChangeStatus;
   /** Details for failures, `null` otherwise. */
   readonly message: string | null;
-  /** The status changed. */
+  /**
+   * The status changed.
+   * @capability plugins.manage
+   * @example Close a progress window when the change ends
+   * The plugin's progress window closes once the install is over, whatever
+   * the outcome. The listener receives each new status; the terminal ones
+   * are `committed`, `cancelled`, `failed`, `failedDegraded` and `tooLate`.
+   * ```ts
+   * change.onChange((status) => {
+   *   if (["committed", "cancelled", "failed", "failedDegraded", "tooLate"].includes(status))
+   *     void progress.close();
+   * });
+   * ```
+   */
   onChange(listener: (status: PackageChangeStatus) => void): Disposable;
-  /** Resolves with the final status. */
+  /**
+   * Resolves with the final status.
+   * @throws Error (rejects) Only when the player refuses to report the change's status; a failed change is a terminal status, not a rejection.
+   */
   readonly done: Promise<PackageChangeStatus>;
-  /** Ask to cancel (it may be `tooLate`). */
+  /**
+   * Ask to cancel (it may be `tooLate`).
+   * @capability plugins.manage
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Cancel an install the user no longer wants
+   * The install stops if it has not gone too far. `cancel` asks the player;
+   * the change then ends `cancelled`, or `tooLate` when it was already
+   * being committed.
+   * ```ts
+   * await change.cancel();
+   * console.log(await change.done); // "cancelled" or "tooLate"
+   * ```
+   */
   cancel(): Promise<void>;
 }
+```
+
+Example: Report each step of an install
+
+The OSD shows each step of the install and the end result. `onChange`
+runs for every new status; `done` resolves when the change is over.
+```ts
+change.onChange((status) => void plugin.osd.show("Install: {}", [status]));
+const end = await change.done;
+if (end !== "committed") await plugin.osd.show("Not installed: {}", [change.message ?? end]);
 ```
 
 ### PluginInfo
@@ -9489,6 +10092,14 @@ interface PluginWarning {
 `plugin.packages`: the plugins the player knows. `list` and `onChange`
 need no capability; everything else needs `plugins.manage`.
 
+The plugins the player knows: installed, built-in and this run's
+development loads. Reading the list needs no capability; installing,
+enabling, reloading and uninstalling need `plugins.manage` and act on
+other plugins, never on the calling one. Built-in plugins update with
+the player and cannot be installed, disabled or uninstalled.
+
+- @capability None for `list` and `onChange`; plugins.manage for the rest.
+
 ```ts
 interface Packages {
   /**
@@ -9499,18 +10110,85 @@ interface Packages {
    * The player keeps the 32 most recent candidates of all plugins; an
    * older one's `install` fails with `stale` (validate again). Before
    * player 0.4.2 the 33rd validation of a run failed with `busy` instead.
+   * @capability plugins.manage
+   * @throws invalid (rejects) Not a package directory, or a manifest that breaks the rules.
+   * @throws reserved (rejects) A reserved id (`vestra`, `vestra.*`).
+   * @throws versionMismatch (rejects) The package needs a newer player or another `apiVersion`.
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Check a package directory before installing it
+   * The plugin checks a folder it unpacked and installs it if the player
+   * accepts it. `validate` runs the player's checks and resolves with a
+   * candidate; a package that fails them rejects with the reason.
+   * ```ts
+   * try {
+   *   // Rejects with the reason when the package fails the checks.
+   *   const candidate = await plugin.packages.validate(directory);
+   *   await (await candidate.install()).done;
+   * } catch (error) {
+   *   await plugin.osd.show("Not a valid plugin: {}", [(error as Error).message]);
+   * }
+   * ```
    */
   validate(directory: string): Promise<PackageCandidate>;
   /**
    * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the same checks as Packages.validate after unpacking. Check the file's sha256 yourself before calling when you know it. A reserved id fails with `reserved`, as in Packages.validate.
+   * @capability plugins.manage
+   * @throws invalid (rejects) Not a `.vxp` file, or its contents break the rules.
+   * @throws reserved (rejects) A reserved id.
+   * @throws versionMismatch (rejects) The package needs a newer player or another `apiVersion`.
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Install a downloaded package file
+   * A `.vxp` the plugin downloaded is checked and installed. The player
+   * unpacks and checks it like a directory; checking the file's sha256
+   * first, when the store publishes one, is up to the plugin.
+   * ```ts
+   * const candidate = await plugin.packages.validateArchive(file); // a .vxp path
+   * const change = await candidate.install();
+   * await plugin.osd.show("Install: {}", [await change.done]);
+   * ```
    */
   validateArchive(file: string): Promise<PackageCandidate>;
-  /** Every plugin: running, installed, and this run's development loads. No capability. */
+  /**
+   * Every plugin: running, installed, and this run's development loads. No capability.
+   * @capability None.
+   * @throws Error (rejects) Only when the player cannot be asked; no capability is needed.
+   * @example Show which plugins are running
+   * The plugin lists the running plugins by name. `list` asks the player
+   * and resolves with every plugin it knows, with its state, origin and
+   * display texts in the interface language.
+   * ```ts
+   * const plugins = await plugin.packages.list();
+   * const running = plugins.filter((info) => info.state === "running");
+   * console.log(running.map((info) => info.display?.name ?? info.id));
+   * ```
+   */
   list(): Promise<PluginInfo[]>;
-  /** The new list after any start, stop, failure, install or uninstall. No capability. */
+  /**
+   * The new list after any start, stop, failure, install or uninstall. No capability.
+   * @capability None.
+   * @example Refresh a plugin list after any change
+   * A store window's list updates when a plugin starts, stops, fails, is
+   * installed or uninstalled. The listener receives the new list each time.
+   * ```ts
+   * plugin.packages.onChange((plugins) => console.log(plugins.length, "plugins"));
+   * ```
+   */
   onChange(listener: (plugins: PluginInfo[]) => void): Disposable;
   /**
    * Stop or start a plugin (`plugins.manage`). An installed plugin stays disabled across launches; a development load only for this run. `invalid` to disable oneself, `missing` unknown. `busy` while it is being installed. `unsupported` to disable a built-in (PluginInfo.builtin): users manage third-party plugins only (players released with SDK 1.5.18 on; older ones disabled built-ins too).
+   * @capability plugins.manage
+   * @throws invalid (rejects) The calling plugin itself.
+   * @throws missing (rejects) An unknown id.
+   * @throws busy (rejects) The plugin is being installed.
+   * @throws unsupported (rejects) A built-in plugin.
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Turn a third-party plugin off
+   * The plugin stops another plugin and keeps it disabled across launches
+   * until it is enabled again. Built-in plugins cannot be disabled
+   * (`unsupported`).
+   * ```ts
+   * await plugin.packages.setEnabled("someone.demo", false);
+   * ```
    */
   setEnabled(id: string, enabled: boolean): Promise<void>;
   /**
@@ -9528,10 +10206,36 @@ interface Packages {
    * `invalid` for oneself or a disabled plugin (enable it instead),
    * `missing` unknown, `busy` while it is being installed or reloaded.
    * @player 0.5.1; older players reject it as an unknown request (`unsupported`).
+   * @capability plugins.manage
+   * @throws invalid (rejects) The calling plugin itself, or a disabled plugin.
+   * @throws missing (rejects) An unknown id.
+   * @throws busy (rejects) The plugin is being installed or reloaded.
+   * @throws unsupported (rejects) A player before 0.5.1.
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Restart a plugin that misbehaves
+   * The other plugin is stopped and started again from the same package and
+   * data. `reload` resolves once the old process is stopped and the start is
+   * scheduled; `onChange` then shows `starting` and `running` (or `failed`).
+   * ```ts
+   * await plugin.packages.reload("someone.demo");
+   * ```
    */
   reload(id: string): Promise<void>;
   /**
    * Remove an installed plugin (`plugins.manage`); `removeData` also deletes its data directory, otherwise reinstalling it from the same source reconnects to its data. Its user bindings stay (as orphans). `unsupported` for built-ins and development loads, `missing` unknown, `invalid` for oneself.
+   * @capability plugins.manage
+   * @throws unsupported (rejects) A built-in plugin or a development load.
+   * @throws missing (rejects) An unknown id.
+   * @throws invalid (rejects) The calling plugin itself.
+   * @throws capability (rejects) The manifest does not declare `plugins.manage`.
+   * @example Uninstall a plugin together with its data
+   * The other plugin is removed and its data directory deleted, so a later
+   * reinstall starts fresh. Without `removeData` a reinstall from the same
+   * source finds its data again.
+   * ```ts
+   * const change = await plugin.packages.uninstall("someone.demo", { removeData: true });
+   * await change.done;
+   * ```
    */
   uninstall(id: string, options?: {
     removeData?: boolean;
@@ -9606,9 +10310,31 @@ interface BindingInfo extends BindingRef {
 `plugin.bindings`: list and override every command's bindings, including
 the player's. Needs `bindings.manage`.
 
+The player's binding table: every command's default keys (from
+CommandOptions.bindings, the player's own as `host/<action>`)
+and the user's overrides on top, saved across launches. A key-settings
+plugin lists the table, writes overrides and resets them; the player
+applies the change at once to every running plugin.
+
+- @capability bindings.manage
+
 ```ts
 interface Bindings {
-  /** Every declared command, and overrides whose command is gone. */
+  /**
+   * Every declared command, and overrides whose command is gone.
+   * @capability bindings.manage
+   * @throws capability (rejects) The manifest does not declare `bindings.manage`.
+   * @example Find the commands that use a key
+   * A key-settings window shows which commands Ctrl+K is bound to now. `list`
+   * resolves with every declared command and its current bindings (the
+   * defaults with the user's overrides applied) and with the overrides
+   * whose command is not running (`orphans`).
+   * ```ts
+   * const { commands } = await plugin.bindings.list();
+   * const users = commands.filter((command) => command.current.includes("Ctrl+K"));
+   * console.log(users.map((command) => `${command.plugin}/${command.command}`)); // "host" for the player
+   * ```
+   */
   list(): Promise<{
     /** Every declared command (running plugins and the player). */
     commands: BindingInfo[];
@@ -9622,11 +10348,46 @@ interface Bindings {
   }>;
   /**
    * Override a command's bindings (`[]` unbinds it); saved across launches. `invalid` for a bad binding, `missing` for an unknown command that has no override either. At most 16 inputs, syntax as CommandOptions.bindings.
+   * @capability bindings.manage
+   * @throws invalid (rejects) A malformed binding, or more than 16.
+   * @throws missing (rejects) An unknown command that has no override either.
+   * @throws capability (rejects) The manifest does not declare `bindings.manage`.
+   * @example Give the player's Mute command a second key
+   * Mute now answers to M and to Ctrl+M. `set` replaces the command's
+   * bindings with the list given (an override saved across launches), so it
+   * repeats the default it keeps; `[]` would unbind it.
+   * ```ts
+   * await plugin.bindings.set({ plugin: "host", command: "mute" }, ["M", "Ctrl+M"]);
+   * ```
    */
   set(ref: BindingRef, inputs: string[]): Promise<void>;
-  /** Back to the defaults: one command, or every override when omitted. */
+  /**
+   * Back to the defaults: one command, or every override when omitted.
+   * @capability bindings.manage
+   * @throws capability (rejects) The manifest does not declare `bindings.manage`.
+   * @example Restore every default key
+   * A "Restore defaults" button removes all of the user's overrides, so
+   * every command has its declared keys again. Without an argument `reset`
+   * clears every override; with a reference only that command's.
+   * ```ts
+   * await plugin.bindings.reset(); // every override
+   * ```
+   */
   reset(ref?: BindingRef): Promise<void>;
-  /** Declarations or overrides changed (read `list()` again). At most every 200 ms. */
+  /**
+   * Declarations or overrides changed (read `list()` again). At most every 200 ms.
+   * @capability bindings.manage
+   * @example Refresh a key list when bindings change
+   * The plugin's key list stays current when the user changes a key in the
+   * player or another plugin starts. The listener carries no data and runs
+   * at most every 200 ms; the plugin reads the table again with `list`.
+   * ```ts
+   * plugin.bindings.onChange(async () => {
+   *   const { commands } = await plugin.bindings.list(); // read the new table
+   *   render(commands);
+   * });
+   * ```
+   */
   onChange(listener: () => void): Disposable;
 }
 ```

@@ -19,6 +19,12 @@ A plugin has three places to keep data, all private to it: settings files (`stor
 
 [Read the guide](store-data.md)
 
+## Load subtitles from a plugin
+
+A subtitle plugin reads the tracks of the playing file, selects one (and handles `stale` when the user changed the selection meanwhile), uploads a file it found or converted (SRT or ASS, with the limits), and can set a style layer. The guide also explains which plugin's style the player shows when several set one.
+
+[Read the guide](subtitles.md)
+
 ## Keep a slider responsive while dragging
 
 A slider reports every pointer move, often more than 60 times a second, so a slider that drives a video filter, the volume or a preview can lag or queue up requests. The guide builds a Brightness window and shows the four habits that keep it smooth: the callback records the newest value and never awaits; the expensive part is a call that keeps only the latest value (`filter.set`, `player.setOutput`, `Scrub.seek`); the slider's value is bound with `bind`, not `set`, so the plugin never fights the pointer; and one-off work waits for the release. It ends with a small helper that gives your own slow work latest-value behaviour, and with when to call `plugin.update()`.

@@ -42,6 +42,9 @@ export type SubtitleStamp = {
  * };
  * await plugin.subtitles.setStyle(style);
  * ```
+ *
+ * @since 1.0.0
+ * @category Subtitles
  */
 export type SubtitleStyle = {
   /** A font id from {@link SubtitlesState.fonts}. */

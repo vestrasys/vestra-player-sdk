@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.32
+
+**Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only documentation, its checks and the generated `llms-full.txt` change.
+
+- **Five more categories reach the full reference standard** and join `STRICT_CATEGORIES`: Subtitles (`Subtitles` and its state and track types), Sources (`Resolvers`, `Resolver` and the resolver option and result types), Media (`MediaCapture`, `Snapshot`, `ExportJob` and their options), Processing (`VideoFilter`, `AudioFilter`, `VideoView`, `RenderOptions` and the node and settings types) and Packages (`Packages`, `PackageCandidate`, `PackageChange` and the manifest and plugin-info types); `Bindings` joins Commands, `Timeline` and `TimelineLayer` join Playback, `Drops` joins UI. Every method has an example (what it does and how it works), `@capability`, `@since` and a `@throws` per error code, checked against the SDK and the player's source; every type has `@category`. Methods with an explained example: 121 of 191 → 153.
+- Facts the reference now states, from the source: an `ExportJob` and a `PackageChange` are polled (about every 350 ms and 400 ms) until they end, and their `done` resolves with a failed outcome rather than rejecting; a plugin holds at most 4 snapshots (16 in the player); `VideoView.set`, `RenderOptions.set` and the filters' `set` never throw (a refusal shows in `status` and goes to `onError`); `Resolver.ready` rejects with `conflict` without failing activation when another plugin holds the extension or host.
+- New how-to guide: *Load subtitles from a plugin* (reading tracks, selecting with `stale`, uploading SRT/ASS with the limits, the style layer and which plugin's layer the player shows).
+
 ## 1.5.31
 
 **Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only documentation, its checks and the generated `llms-full.txt` change.
