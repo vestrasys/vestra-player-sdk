@@ -90,7 +90,6 @@ export interface Disposable {
  * | code | meaning |
  * | --- | --- |
  * | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link Conditional}. |
- * | `staleDigest` | {@link PackageCandidate.install}: the package's files changed after it was validated; validate it again. |
  * | `capability` | The manifest does not declare the capability the call needs. |
  * | `invalid` | A bad argument (out of range, malformed, unknown id). |
  * | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
@@ -110,7 +109,7 @@ export interface Disposable {
  * | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
  * | `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link PropValue}, or a request is longer than the player's 1 MiB message. |
  * | `reserved` | {@link Packages.validate}, {@link PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use (player 0.4.1). |
- * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`) or another `apiVersion`. |
+ * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`). |
  * | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
  * | `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. Also reported to {@link Scope.onError} without a request: a callback whose arguments the player could not convert, a property it could not show again when it rebuilt a view (an image file removed since). |
  * | `host` | Any other failure inside the player; `message` is the player's reason. |
@@ -246,7 +245,7 @@ export interface Scope extends Disposable {
     /**
      * The GPU renderer's options (needs `processing.video`), owned like the
      * display layer. Under software rendering the handle is `failed` with
-     * `unsupported` as soon as it is created, and `onError` hears it.
+     * `unsupported` after the player's first answer, and `onError` hears it.
      *
      * @throws `capability` (throws) The manifest does not declare
      *   `processing.video`.
@@ -2695,8 +2694,9 @@ export interface DropHandler {
  * provider claims the extension; the player calls `drop` with the dropped
  * paths of that type, in the order the file manager gave them. Extensions
  * go to the first provider: the built-in playlist claims every audio and
- * video extension when it starts, so a provider for those only gets them
- * while the playlist is disabled.
+ * video extension when it starts, and a built-in plugin cannot be disabled,
+ * so another plugin's provider for those never gets them (except a
+ * development load that replaces the playlist under its id).
  * ```ts
  * const queue: string[] = [];
  * plugin.drops.provide({
@@ -4057,7 +4057,8 @@ export interface MainWindow {
    * @capability window.control
    * @throws `unsupported` (rejects) The system has no picture-in-picture
    *   (`supported` is false).
-   * @throws `unavailable` (rejects) No video.
+   * @throws `unavailable` (rejects) No video, or no user interface.
+   * @throws `invalid` (rejects) `on` is not a boolean.
    * @throws `busy` (rejects) The previous call is still switching.
    * @throws `failed` (rejects) The system refused.
    * @throws `capability` (rejects) The manifest does not declare
@@ -4120,7 +4121,8 @@ export interface App extends AppInfo {
    * and go). No capability. CPU and memory: Node's `os` module.
    *
    * @capability None.
-   * @throws `Error` (rejects) Only when the player cannot be asked.
+   * @throws `busy` (rejects) The player is still answering an earlier
+   *   request of this kind.
    *
    * @example Choose a size for the primary display
    * The plugin sizes its picture for the primary display. `system()` asks
@@ -6489,8 +6491,8 @@ export interface RenderSettings {
  * @remarks
  * GPU renderer options (tone mapping, peak detection, shaders,
  * interpolation). Only the GPU renderer has them, which today means macOS;
- * under software rendering the handle is `failed` with `unsupported` as
- * soon as `render()` creates it (reported to `onError` too), and so is
+ * under software rendering the handle is `failed` with `unsupported` after
+ * the player's first answer to `render()` (reported to `onError` too), and so is
  * every `set`. Single owner, like {@link VideoView}. `set` never throws; the
  * result shows in `status`.
  *
@@ -6819,7 +6821,8 @@ export interface Subtitles {
    * @throws `invalid` (rejects) The track was not loaded by this plugin.
    * @throws `stale` (rejects) With `ifCurrent`: the source changed since
    *   that state.
-   * @throws `unavailable` (rejects) The source is still loading.
+   * @throws `unavailable` (rejects) Nothing is loaded, or the source is
+   *   still loading.
    * @throws `busy` (rejects) Too many subtitle operations at once.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
@@ -6848,10 +6851,12 @@ export interface Subtitles {
    *
    * @capability subtitles.control and subtitles.read
    * @throws `invalid` (rejects) A field out of range.
-   * @throws `unsupported` (rejects) A font that is not in `state.fonts`.
+   * @throws `unsupported` (rejects) A font that is not in `state.fonts`, or a
+   *   primary subtitle that is a bitmap track.
    * @throws `stale` (rejects) With `ifCurrent`: the subtitle state changed
    *   since that state.
-   * @throws `unavailable` (rejects) The source is still loading.
+   * @throws `unavailable` (rejects) Nothing is loaded, or the source is
+   *   still loading.
    * @throws `busy` (rejects) Too many subtitle operations at once.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
@@ -7172,7 +7177,9 @@ export interface MediaCapture {
   /**
    * Freeze the current source (and optionally this plugin set's effects)
    * as an input for exports. Fails `stale` when the source changed since
-   * `ifCurrent`; `unsupported` for an external ASS track with subtitles; `noSource` when nothing is playing.
+   * `ifCurrent`; `unsupported` for subtitles that cannot be flattened (only
+   * plain SRT text can) or a picture over the size limits; `noSource` when
+   * nothing is playing.
    *
    * @capability media.read and media.control
    * @throws `stale` (rejects) The source changed since `ifCurrent`.
@@ -7660,9 +7667,11 @@ export interface PackageCandidate {
    *   and `replace` is not set.
    * @throws `unsupported` (rejects) A built-in plugin's id.
    * @throws `reserved` (rejects) A reserved id (`vestra`, `vestra.*`).
-   * @throws `busy` (rejects) Another change of this plugin is in progress.
-   * @throws `revisionConflict` (rejects) The installed plugins changed in a
-   *   way that conflicts with this change; validate and try again.
+   * @throws `busy` (rejects) The plugin library is being cleaned up, or the
+   *   player already keeps 64 change records.
+   * @throws `revisionConflict` (rejects) The installed revision of this
+   *   plugin changed meanwhile; call `install` again (no new validation
+   *   needed).
    * @throws `stale` (rejects) The candidate is older than the 32 the player
    *   keeps.
    * @throws `capability` (rejects) The manifest does not declare
@@ -7775,7 +7784,8 @@ export interface PackageChange {
    * The install stops if it has not gone too far. `cancel` asks the player;
    * the change then ends `cancelled`. When the change had already committed
    * the player answers `tooLate` and `done` still resolves `committed`; a
-   * change that is restoring cannot be cancelled and ends `failed`.
+   * change that is restoring cannot be cancelled and ends `failed` or
+   * `failedDegraded`.
    * ```ts
    * declare const change: PackageChange;
    * // ---cut---
@@ -7971,9 +7981,11 @@ export interface Packages {
    * fails with `reserved`, as in {@link Packages.validate}.
    *
    * @capability plugins.manage
-   * @throws `invalid` (rejects) The path does not end in `.vxp`.
-   * @throws `host` (rejects) The archive or its manifest breaks the rules;
-   *   `message` says why.
+   * @throws `invalid` (rejects) The path does not end in `.vxp`, or the
+   *   archive cannot be unpacked (over 64 MB, too many files, a damaged zip,
+   *   an unsafe path).
+   * @throws `host` (rejects) The unpacked package or its manifest breaks the
+   *   rules; `message` says why.
    * @throws `javascript` (rejects) The entry module does not parse.
    * @throws `slint` (rejects) A Slint file does not compile.
    * @throws `reserved` (rejects) A reserved id.
@@ -8037,7 +8049,7 @@ export interface Packages {
    * Stop or start a plugin (`plugins.manage`). An installed plugin stays
    * disabled across launches; a development load only for this run.
    * `invalid` to disable oneself, `missing` unknown.
-   * `busy` while it is being installed. `unsupported` to disable a built-in
+   * `busy` while it is being installed or reloaded. `unsupported` to disable a built-in
    * ({@link PluginInfo.builtin}): users manage third-party plugins only
    * (players released with SDK 1.5.18 on; older ones disabled built-ins too).
    *
@@ -8108,9 +8120,10 @@ export interface Packages {
    * @throws `unsupported` (rejects) A built-in plugin or a development load.
    * @throws `missing` (rejects) An unknown id.
    * @throws `invalid` (rejects) The calling plugin itself.
-   * @throws `busy` (rejects) Another change of that plugin is in progress.
-   * @throws `revisionConflict` (rejects) The installed plugins changed in a
-   *   way that conflicts with this change.
+   * @throws `busy` (rejects) The plugin library is being cleaned up, or the
+   *   player already keeps 64 change records.
+   * @throws `revisionConflict` (rejects) The installed revision of that
+   *   plugin changed meanwhile; call `uninstall` again.
    * @throws `capability` (rejects) The manifest does not declare
    *   `plugins.manage`.
    *

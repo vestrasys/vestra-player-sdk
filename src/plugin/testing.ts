@@ -484,15 +484,15 @@ export interface FakeCommand {
  *
  * @example Check a bar button's tooltip while it is disabled
  * The test checks that the Export button shows why it cannot be clicked.
- * The tooltip is the command's title, plus its reason on a second line
- * while the command is disabled or busy.
+ * The tooltip is the command's title; while the command is disabled or
+ * busy and has a non-empty `reason`, the reason follows on a second line.
  * ```ts
  * import assert from "node:assert/strict";
  * declare const host: TestHost;
  * // ---cut---
  * const [button] = host.barButtons;
  * assert.equal(button?.enabled, false);
- * assert.match(button?.tooltip ?? "", /\n/); // title, then the reason
+ * assert.match(button?.tooltip ?? "", /\n/); // the command declares a reason
  * ```
  *
  * @category Testing
@@ -1023,11 +1023,14 @@ export class TestHost implements Transport {
    * @example Simulate the user choosing French for the next start
    * The plugin hears that the saved interface language changed. The host
    * pushes `appearance.changed`, which a plugin with `events` sees in
-   * `appearance.language`; this run's language does not change.
+   * `appearance.language` once it has read it and subscribed; this run's
+   * language does not change.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
    * // ---cut---
+   * void plugin.appearance.language; // read once: the SDK then follows it
+   * plugin.appearance.onChange(() => {}); // subscribes to appearance events
    * host.setLanguage("fr");
    * await host.settle();
    * assert.equal(plugin.appearance.language, "fr");
@@ -1525,9 +1528,11 @@ export class TestHost implements Transport {
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
    * // ---cut---
+   * const themes: ThemeId[] = [];
+   * plugin.appearance.onChange((theme) => themes.push(theme)); // subscribes (`events`)
    * host.setAppearance("vestra-light");
    * await host.settle();
-   * assert.equal(plugin.appearance.theme, "vestra-light");
+   * assert.deepEqual(themes, ["vestra-light"]);
    * ```
    *
    * @since 1.0.0
@@ -2376,8 +2381,10 @@ export class TestHost implements Transport {
   /**
    * One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...)
    * that the test host registers like the player, as `host/<id>`. Throws for
-   * an unknown id. `run()` executes it with the player's checks and writes
-   * its on-screen text to {@link TestHost.osd}.
+   * an unknown id. `run()` executes it like its menu item: a disabled
+   * action rejects with `command`, as in the player (`plugin.host.run`
+   * rejects with `unavailable` instead); otherwise it runs with the
+   * player's checks and writes its on-screen text to {@link TestHost.osd}.
    *
    * @example Pause through the player's own action
    * The test pauses playback the way the Space key does and checks that the
@@ -2606,6 +2613,13 @@ export class TestHost implements Transport {
         set state(_value) {},
         revision: 1,
         async run() {
+          // Like the player's menu: a disabled or busy command does not run.
+          const state = host.#coreState(id);
+          if (state.busy || !state.enabled)
+            throw new HostError(
+              "command",
+              `host/${id} is ${state.busy ? "busy" : "disabled"}`,
+            );
           await host.request("host.run", { action: id });
           await host.settle();
         },
@@ -2867,7 +2881,7 @@ export class TestHost implements Transport {
    * ```ts
    * declare const host: TestHost;
    * // ---cut---
-   * host.emit("window.state", {}); // the host fills in its own layout
+   * host.emit("window.state", {}); // no facts: the SDK reads window.state again
    * await host.settle();
    * ```
    *
@@ -3093,11 +3107,12 @@ export class TestHost implements Transport {
    * the conflict rule orders them. A disabled command lets the key pass to
    * the next command bound to it (SDK 1.5.12, as player 0.4.3): the one it
    * shadowed, then the global scope. The first enabled one runs; `press`
-   * resolves after it ran (`"ran"`), or rejects when it is busy. When only
-   * disabled commands hold the key, the first one with a `reason` shows the
-   * reason on the OSD and eats the key (`"reason"`, see `host.osd`);
-   * without a reason the key goes on to the focused control (`"passed"`,
-   * nothing runs). Rejects when nothing is bound. Bindings use the
+   * resolves after it ran (`"ran"`). When only disabled commands hold the
+   * key, the first of them decides, as in the player: with a `reason` it
+   * shows the reason on the OSD and eats the key (`"reason"`, see
+   * `host.osd`); without one the key goes on to the focused control
+   * (`"passed"`, nothing runs). Unlike the player, which only logs a key
+   * that reaches a busy command, `press` then rejects, so a test notices. Rejects when nothing is bound. Bindings use the
    * reference syntax (`"Space"`, `"Ctrl+O"`, `"Mouse:WheelUp"`), and user
    * overrides in `bindings.overlay` apply.
    *
@@ -3117,7 +3132,7 @@ export class TestHost implements Transport {
    *
    * @capability None.
    * @throws `command` (rejects) A `HostError`: the command that would run is
-   *   busy.
+   *   busy (the player only logs this).
    * @throws `Error` (rejects) Nothing is bound to the key.
    * @since 1.0.0
    */
@@ -3139,14 +3154,15 @@ export class TestHost implements Transport {
       await command(enabled).run();
       return "ran";
     }
-    for (const id of ids) {
-      const reason = this.commands.has(id)
-        ? command(id).display.reason
-        : command(id).state.reason;
-      if (typeof reason === "string" && reason !== "") {
-        this.osd.push(reason);
-        return "reason";
-      }
+    // Like the player: only the first disabled command counts; without a
+    // reason the key goes on to the focused control.
+    const first = ids[0]!;
+    const reason = this.commands.has(first)
+      ? command(first).display.reason
+      : command(first).state.reason;
+    if (typeof reason === "string" && reason !== "") {
+      this.osd.push(reason);
+      return "reason";
     }
     return "passed";
   }

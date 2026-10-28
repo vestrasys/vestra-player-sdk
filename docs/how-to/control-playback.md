@@ -105,7 +105,7 @@ bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 })); // 
 
 ## Next and previous
 
-The player's Next and Previous items, keys and buttons ask the **sequence provider**, one plugin at a time, first come first served. The built-in playlist registers as provider when it starts, so a plugin with its own list becomes the provider only while no other plugin holds it (for example with the playlist disabled). Any plugin can ask the provider with `player.next()` and `player.previous()`:
+The player's Next and Previous items, keys and buttons ask the **sequence provider**, one plugin at a time, first come first served. The built-in playlist registers as provider when it starts and a built-in plugin cannot be disabled, so in practice another plugin's `provideSequence` is refused (`sequence-taken`); only a development load that replaces the playlist under its id gets it. Any plugin can ask the provider with `player.next()` and `player.previous()`:
 
 ```ts
 declare const items: string[];
