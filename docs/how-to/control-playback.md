@@ -46,7 +46,7 @@ plugin.commands.add({
 
 ## Control it, and handle `stale`
 
-A control without options is conditional on `player.state` as it is when you call. `stale` means another file was opened (or the source closed) after that; nothing happened, and usually that is the right outcome:
+A control without options is conditional on `player.state` as it is when you call. `stale` means the source changed after that: another file, a close, or any pause, seek or speed change by the user or another plugin. Nothing happened, and usually that is the right outcome:
 
 ```ts
 try {
@@ -73,7 +73,7 @@ Other codes: `invalid` for a value out of range (a negative seek, a speed outsid
 
 ## Open a file and follow it
 
-`open` resolves once the player accepted the load and returns a `Media` handle for that source. `ready()` waits until it plays; `onEnd` fires when it ends on its own.
+`open` resolves once the player accepted the load (for an address a resolver plugin handles, once the resolver has answered) and returns a `Media` handle for that source. `ready()` waits until it plays; `onEnd` fires when it ends on its own.
 
 ```ts
 const media = await plugin.player.open("/Movies/clip.mp4");
@@ -105,7 +105,7 @@ bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 })); // 
 
 ## Next and previous
 
-The player's Next and Previous items, keys and buttons ask the **sequence provider**, one plugin at a time (the built-in playlist, usually). A plugin with its own list becomes the provider; any plugin can ask it with `player.next()` and `player.previous()`:
+The player's Next and Previous items, keys and buttons ask the **sequence provider**, one plugin at a time, first come first served. The built-in playlist registers as provider when it starts, so a plugin with its own list becomes the provider only while no other plugin holds it (for example with the playlist disabled). Any plugin can ask the provider with `player.next()` and `player.previous()`:
 
 ```ts
 declare const items: string[];
@@ -123,7 +123,7 @@ plugin.player.provideSequence({
 });
 ```
 
-A second provider is refused with `conflict` (reported to `onError`, or failing activation).
+A second provider is refused with `conflict` (`sequence-taken`). During activation that does not fail the plugin: it runs without Next and Previous and the player shows a warning; a refusal after activation goes to `onError`.
 
 ## Sliders, loops and the output
 

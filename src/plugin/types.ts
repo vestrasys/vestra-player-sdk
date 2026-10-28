@@ -791,7 +791,8 @@ export interface Command extends Disposable {
    * to await it: during activation a failure fails activation, later it
    * goes to {@link Scope.onError}.
    *
-   * @throws `conflict` (rejects) Another command already has this menu path.
+   * @throws `conflict` (rejects) Another command already has this menu path,
+   *   or the path would be both a menu item and a submenu.
    * @throws `invalid` (rejects) The player refused the declaration.
    * @throws `limit` (rejects) More than 160 commands in this plugin, or 1024 in
    *   the player.
@@ -4389,6 +4390,10 @@ export interface Scrub {
    * @capability playback.control
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
+   * @throws `stale` (rejects) The source changed from outside while this
+   *   seek was being sent (a superseded target or an ended gesture resolves
+   *   `false` instead).
+   * @throws `unsupported` (rejects) The source is a generated stream.
    * @throws `backend` (rejects) The player failed the seek.
    * @since 1.0.0
    */
@@ -4548,9 +4553,9 @@ export interface Stream extends Disposable {
    * deactivation do the same.
    *
    * @capability producer.av and playback.control
-   * @throws `capability` (rejects) Closing the player's source failed, for
-   *   example without `playback.control`; the frame connection and the
-   *   producer are released either way. A stream already gone just resolves.
+   * @throws Whatever code closing the player's source failed with (the
+   *   frame connection and the producer are released either way). A
+   *   stream that is no longer the source just resolves.
    *
    * @example Stop the stream when the plugin's window closes
    * Closing the generator window stops the stream it feeds. `stop` closes
@@ -4715,7 +4720,8 @@ export interface PlaybackStats {
  * from the player's events (with `events`) and refreshes after this
  * plugin's own calls; `onChange` runs after it changed. Every control is
  * conditional: it acts on the state the plugin last saw and fails with
- * `stale` when someone else changed the source meanwhile (see
+ * `stale` when the source changed meanwhile: another file, a close, or any
+ * pause, seek or speed change by the user or another plugin (see
  * {@link Conditional}). The player keeps the source when a plugin stops;
  * only the plugin's own handles (a stream, its sequence provider, its
  * output device) are withdrawn.
@@ -4779,7 +4785,8 @@ export interface Player {
    * @example Drop a result that arrives after the file changed
    * A slow lookup for the current file is shown only if that file is still
    * open. `isCurrent` compares the snapshot taken before the work with the
-   * SDK's newest state; it is false once anyone opened or closed a source.
+   * SDK's newest state; it is false once the source changed in any way:
+   * another file, a close, or a pause, seek or speed change by anyone.
    * ```ts
    * declare function lookUpTitle(path: string): Promise<string>;
    * // ---cut---
@@ -4803,6 +4810,8 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `stale` (rejects) `ifCurrent` no longer holds; nothing was opened.
+   * @throws `replaced` (rejects) Accepted, then another source took over
+   *   before it finished (for example while a URL was still being resolved).
    * @throws `invalid` (rejects) An empty `source`.
    * @throws `aborted` (rejects) `signal` aborted (an `AbortError`); the
    *   source is closed.
@@ -4866,6 +4875,8 @@ export interface Player {
    * @throws `replaced` (rejects) Another source replaced it, or it was closed,
    *   before it ran.
    * @throws `invalid` (rejects) Bad options (a size or a frame function).
+   * @throws `aborted` (rejects) `signal` aborted, or the scope was disposed,
+   *   while the stream was starting (an `AbortError`).
    * @since 1.0.0
    */
   openStream(options: StreamOptions): Promise<Stream>;
@@ -4874,8 +4885,11 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on; nothing was done.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
    * @throws `invalid` (rejects) Nothing is open.
+   * @throws `busy` (rejects) A generated stream is still handling a previous
+   *   control.
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -4900,9 +4914,14 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on; nothing was done.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
    * @throws `invalid` (rejects) Nothing is open, or `seconds` is negative or
    *   not finite.
+   * @throws `unsupported` (rejects) The source is a generated stream, which
+   *   cannot seek.
+   * @throws `busy` (rejects) A generated stream is still handling a previous
+   *   control.
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -4925,9 +4944,14 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on; nothing was done.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
    * @throws `invalid` (rejects) Nothing is open, or `rate` is outside
    *   0.05–10.
+   * @throws `unsupported` (rejects) The source is a generated stream, which
+   *   cannot change speed.
+   * @throws `busy` (rejects) A generated stream is still handling a previous
+   *   control.
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -4950,8 +4974,11 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on; nothing was done.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
    * @throws `invalid` (rejects) Nothing is open.
+   * @throws `unsupported` (rejects) The source is a generated stream, which
+   *   cannot restart.
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -4971,7 +4998,8 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on; nothing was done.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -5042,8 +5070,12 @@ export interface Player {
    */
   setOutput(output: { volume?: number; muted?: boolean }): Promise<boolean>;
   /**
-   * Become the sequence provider (one at a time; another provider rejects with
-   * `conflict` through the scope's `onError`, or fails activation). Dispose to stop.
+   * Become the sequence provider, first come first served: while another
+   * plugin holds it (the built-in playlist registers at activation), this
+   * one is refused with `conflict` (`sequence-taken`). That does not fail
+   * activation: the player shows a warning ({@link PluginInfo.warnings});
+   * a refusal after activation goes to the scope's `onError`. Dispose to
+   * stop.
    *
    * @example Drive the player's Next and Previous from a playlist
    * The player's Next and Previous items and keys play the plugin's list.
@@ -5181,8 +5213,10 @@ export interface Player {
    *
    * @capability playback.control
    * @throws `invalid` (rejects) No track with this id.
+   * @throws `unavailable` (rejects) No ready media.
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -5210,11 +5244,14 @@ export interface Player {
    * in flight rejects `busy`.
    *
    * @capability playback.control
-   * @throws `unsupported` (rejects) No moving video, or a backward step on a
-   *   source that cannot seek.
+   * @throws `unsupported` (rejects) Nothing playable to step through (no
+   *   moving video: audio only, cover art, a generated stream), a backward
+   *   frame step on a source that cannot seek, or a keyframe step in either
+   *   direction on a source that cannot seek.
    * @throws `busy` (rejects) A step is still in flight.
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -5315,7 +5352,8 @@ export interface Player {
    *   stream.
    * @throws `unavailable` (rejects) No ready media.
    * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on.
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
@@ -6907,7 +6945,9 @@ export interface Clipboard {
    * @capability clipboard
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
-   * @throws `failed` (rejects) The system refused.
+   * @throws `failed` (rejects) The system refused (Windows).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `clipboard`.
    *
    * @example Open a URL the user copied
    * A "Paste and play" command opens the address on the clipboard. `readText`
@@ -6929,6 +6969,8 @@ export interface Clipboard {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
    * @throws `failed` (rejects) The system refused.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `clipboard`.
    *
    * @example Copy the playing file's path
    * The path of the playing file is put on the clipboard, replacing what was
@@ -6946,11 +6988,13 @@ export interface Clipboard {
    *
    * @capability clipboard
    * @throws `missing` (rejects) The file does not exist.
-   * @throws `invalid` (rejects) Not an absolute path, not PNG or JPEG, or over
-   *   16 MB.
+   * @throws `invalid` (rejects) Not an absolute path, not PNG or JPEG, over
+   *   16 MB, or (Windows) an image the system cannot decode.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
    * @throws `failed` (rejects) The system refused.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `clipboard`.
    *
    * @example Copy a snapshot to the clipboard
    * A frame the plugin saved as PNG is put on the clipboard, ready to paste
@@ -7058,9 +7102,11 @@ export interface ToolResult {
  * ```
  *
  * @remarks
- * ffmpeg and ffprobe run as child processes of the plugin, found through
- * `VESTRA_FFMPEG` / `VESTRA_FFPROBE` and then `PATH`; a found path is kept
- * for the plugin's run, a miss is looked up again next time. Disposing the
+ * ffmpeg and ffprobe run as child processes of the plugin. When
+ * `VESTRA_FFMPEG` / `VESTRA_FFPROBE` is set, only that path is used (an
+ * invalid one means the tool is not found); otherwise the tool is searched
+ * on `PATH`. A found path is kept for the plugin's run, a miss is looked up
+ * again next time. Disposing the
  * scope ends a running process.
  *
  * @capability None.
@@ -7069,8 +7115,8 @@ export interface ToolResult {
  */
 export interface Tools {
   /**
-   * Run ffmpeg or ffprobe (found through `VESTRA_FFMPEG` / `VESTRA_FFPROBE`,
-   * then `PATH`) without a shell. Rejects `unavailable` (not found), `timeout`,
+   * Run ffmpeg or ffprobe (`VESTRA_FFMPEG` / `VESTRA_FFPROBE` when set, else
+   * found on `PATH`) without a shell. Rejects `unavailable` (not found), `timeout`,
    * `failed` (non-zero exit; `message` is the last stderr line), `invalid`
    * (output over `maxOutput`, default 16 MiB), `aborted` (`signal`). Timeout,
    * `signal` and disposing the scope end the process.
@@ -7192,8 +7238,9 @@ export interface JsonStore<T> extends Disposable {
    * Write a pending save now.
    *
    * @capability None.
-   * @throws `Error` without a code (rejects) Node's file system error when the
-   *   file cannot be written (`code` `ENOSPC`, `EACCES` and so on).
+   * @throws `Error` (rejects) Node's file system error when the file cannot
+   *   be written; its `code` is Node's (`ENOSPC`, `EACCES` and so on), not a
+   *   player error code.
    *
    * @example Write the file now before copying it
    * Before exporting its settings, the plugin makes sure the file on disk has
@@ -7274,6 +7321,8 @@ export interface Storage {
    * ```
    *
    * @capability None.
+   * @throws `invalid` (throws) A bad `name`, or a `debounceMs` that is not a
+   *   non-negative number.
    * @since 1.0.0
    */
   json<T>(
@@ -7366,7 +7415,10 @@ export interface SessionStorage {
    * The value stored under `key`, or `undefined` when there is none.
    *
    * @capability None.
-   * @throws `invalid` (rejects) A bad key (empty, over 1024 bytes, with NUL).
+   * @throws `invalid` (rejects) A bad key (empty, over 1024 bytes, with NUL
+   *   or a lone surrogate).
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
    *
    * @example Pick up where the plugin stopped after a reload
    * After a reload the plugin resumes the item it was working on. `get`
@@ -7387,7 +7439,10 @@ export interface SessionStorage {
    * or the request over the 1 MiB message limit.
    *
    * @capability None.
-   * @throws `invalid` (rejects) A bad key, or a value JSON cannot hold.
+   * @throws `invalid` (rejects) A bad key, or a value JSON cannot hold (or a
+   *   string with a lone surrogate).
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
    * @throws `limit` (rejects) The plugin's values would pass 1 MiB, or the
    *   request the 1 MiB message limit; nothing changes.
    *
@@ -7407,6 +7462,8 @@ export interface SessionStorage {
    *
    * @capability None.
    * @throws `invalid` (rejects) A bad key.
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
    *
    * @example Forget the item once it is done
    * When the work finishes, the plugin removes the entry so that a later
@@ -7422,7 +7479,8 @@ export interface SessionStorage {
    * The keys stored, in code point order.
    *
    * @capability None.
-   * @throws `Error` (rejects) Only when the player cannot be reached.
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
    *
    * @example Clear everything the plugin stored for this run
    * The plugin starts its session state over. `keys` lists the plugin's own
@@ -7477,6 +7535,8 @@ export interface System {
    * @capability None.
    * @throws `missing` (rejects) None of the paths exists.
    * @throws `invalid` (rejects) No paths, or more than 256.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `timeout` (rejects) macOS did not answer within 10 s.
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
    *
    * @example Show the exported files in the file manager
@@ -7498,6 +7558,8 @@ export interface System {
    * @capability None.
    * @throws `missing` (rejects) The path does not exist.
    * @throws `invalid` (rejects) An empty path.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `timeout` (rejects) macOS did not answer within 10 s.
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
    *
    * @example Open the plugin's data folder
@@ -7516,7 +7578,8 @@ export interface System {
    *
    * @capability None.
    * @throws `invalid` (rejects) Not an `http:` or `https:` address.
-   * @throws `timeout` (rejects) The browser did not take it within 10 s.
+   * @throws `timeout` (rejects) macOS did not hand it to the browser within
+   *   10 s.
    * @throws `failed` (rejects) The system refused.
    * @throws `unsupported` (rejects) A system other than macOS and Windows.
    *
@@ -7536,7 +7599,8 @@ export interface System {
  * Per-plugin secrets (API keys, passwords) in the system's secret store:
  * the login keychain on macOS, the Credential Manager on Windows. Needs
  * `secrets`. `unsupported` on systems without a store, `unavailable` when
- * the store refuses access: keep a fallback (or ask again).
+ * the store cannot be reached (no keychain, a read-only store, no logged-in
+ * session on Windows): keep a fallback (or ask again).
  *
  * The user denying access and other system errors reject `failed`. Never
  * write secrets to settings files.
@@ -7579,9 +7643,12 @@ export interface Secrets {
    *
    * @capability secrets
    * @throws `unsupported` (rejects) The system has no secret store.
-   * @throws `unavailable` (rejects) The store refused access.
+   * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
+   *   a read-only store, no logged-in session on Windows).
    * @throws `failed` (rejects) The user denied access, or another system
    *   error.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `secrets`.
    * @throws `invalid` (rejects) A bad name.
    *
    * @example Read a stored token
@@ -7605,9 +7672,12 @@ export interface Secrets {
    *   or is over 1024 bytes.
    * @throws `limit` (rejects) A new name beyond 256.
    * @throws `unsupported` (rejects) The system has no secret store.
-   * @throws `unavailable` (rejects) The store refused access.
+   * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
+   *   a read-only store, no logged-in session on Windows).
    * @throws `failed` (rejects) The user denied access, or another system
    *   error.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `secrets`.
    *
    * @example Save the token the user entered
    * The token the user typed is kept in the system's secret store for later
@@ -7631,9 +7701,12 @@ export interface Secrets {
    * @capability secrets
    * @throws `invalid` (rejects) A bad name.
    * @throws `unsupported` (rejects) The system has no secret store.
-   * @throws `unavailable` (rejects) The store refused access.
+   * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
+   *   a read-only store, no logged-in session on Windows).
    * @throws `failed` (rejects) The user denied access, or another system
    *   error.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `secrets`.
    *
    * @example Sign out by removing the token
    * Signing out removes the stored token, so the next start asks again.

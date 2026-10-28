@@ -10,8 +10,8 @@ description: Choose between settings files, session values and the secret store,
 | What | Where | Lasts | Capability |
 | --- | --- | --- | --- |
 | Settings, history, small state | `plugin.storage.json(name)`: a JSON file in the data directory | Across player restarts and plugin upgrades | none |
-| Work in progress for this run | `plugin.storage.session`: values in the player's memory | Across plugin restarts (reload, crash, upgrade), not across player restarts | none |
-| Tokens, passwords | `plugin.secrets`: the system's keychain or Credential Manager | Until deleted | `secrets` |
+| Work in progress for this run | `plugin.storage.session`: values in the player's memory | Across plugin restarts (reload, crash, upgrade); cleared when the player quits or the plugin is disabled or uninstalled | none |
+| Tokens, passwords | `plugin.secrets`: the system's keychain or Credential Manager | Until deleted, or until the plugin is uninstalled with its data | `secrets` |
 | Anything else (caches, downloads) | Your own files under `plugin.dataDirectory` | Until you delete them | none |
 
 All four are private to the plugin; another plugin never reads them.
@@ -30,7 +30,7 @@ const prefs = plugin.storage.json<Prefs>("prefs", {
 prefs.save({ ...prefs.value, step: 10 }); // never change prefs.value in place
 ```
 
-Stopping the plugin writes a pending save first, so a quit right after `save` loses nothing. Call `await prefs.flush()` before you read or copy the file yourself. See [Remember a window's state between runs](window-state.md) for a complete window built on a store.
+Stopping the plugin writes a pending save first, but only within the short time the player gives a stopping plugin (about 300 ms for a plugin in its own process), and a crash loses it; call `await prefs.flush()` after a save that must not be lost. Also flush before you read or copy the file yourself. See [Remember a window's state between runs](window-state.md) for a complete window built on a store.
 
 ## Work in progress: session values
 
@@ -59,13 +59,13 @@ let token = await plugin.secrets.get("api-token").catch(() => null); // no store
 if (token === null) {
   token = "…"; // ask the user, for example in a tool window
   await plugin.secrets.set("api-token", token).catch((error: PluginError) => {
-    // `unsupported` (no store), `unavailable` or `failed` (access denied).
+    // `unsupported` (no store), `unavailable` (store unreachable), `failed` (access denied).
     void plugin.osd.show("The token is not kept for next time ({})", [error.code]);
   });
 }
 ```
 
-Names are 1–64 of `a-z 0-9 . _ -`, values 1–1024 bytes, at most 256 names. Have a fallback: some systems have no store, and the user can deny access.
+Names are 1–64 of `a-z 0-9 . _ -`, values 1–1024 bytes, at most 256 names. Have a fallback: some systems have no store, a store can be unreachable (no keychain, read-only, no logged-in session on Windows), and the user can deny access.
 
 ## Your own files
 
