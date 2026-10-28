@@ -15,7 +15,7 @@ description: List and select subtitle tracks, upload a subtitle file the plugin 
 }
 ```
 
-`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` keeps `plugin.subtitles.state` current when the user or another plugin changes something.
+`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` makes the SDK read `plugin.subtitles.state` again when the source or its phase changes. The player has no subtitle event: a selection the user or another plugin changes shows only after `refresh()`.
 
 ## Read the tracks
 
@@ -31,13 +31,13 @@ console.log(state.selected?.id, state.secondary?.id);
 
 ## Select a track, and handle `stale`
 
-Changes act on the selection your plugin last saw. When the user picked another track or another file opened in between, the change fails with `stale` and does nothing:
+Without options a change reads the newest state itself and applies to it, so it almost never fails. Embedded tracks are chosen by number, though: a `select` after another file opened would pick that file's track with the same number. Pass the state you looked at as `ifCurrent`; then the change fails with `stale`, and does nothing, when the user picked another track or another file opened in between:
 
 ```ts
 const state = await plugin.subtitles.refresh();
 const english = state.tracks.find((track) => track.language === "en");
 if (english)
-  await plugin.subtitles.select(english).catch((error: PluginError) => {
+  await plugin.subtitles.select(english, { ifCurrent: state }).catch((error: PluginError) => {
     if (error.code !== "stale") throw error; // the user changed it meanwhile
   });
 ```

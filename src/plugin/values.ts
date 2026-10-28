@@ -51,6 +51,8 @@ import type { Json } from "../wire.ts";
  * ```
  *
  * @since 1.5.10
+ *
+ * @category Testing
  */
 export const UI_VALUE_LIMITS = {
   /** Nesting depth; the value itself is depth 0 (8). */
@@ -88,6 +90,9 @@ function documentText(value: Json): string | null {
  * The player's runtime image limits (`src/host/src/ui/ui_image.rs`): a file's
  * bytes and sides, the decoded pixels each plugin caches, and (SDK 1.5.19,
  * player 0.5.1) the decoded pixels the nested images of one view may show.
+ *
+ * @since 1.5.19
+ * @category Testing
  */
 export const IMAGE_LIMITS = Object.freeze({
   /** The largest image file the player reads, in bytes. */

@@ -29,6 +29,9 @@ import type { ListJson, TextJson } from "./i18n.ts";
  * // 20 slots stay free for the plugin's own commands.
  * const shown = chapters.slice(0, Math.min(50, COMMAND_LIMITS.perPlugin - 20));
  * ```
+ *
+ * @since 1.0.0
+ * @category Testing
  */
 export const COMMAND_LIMITS = {
   /**
@@ -63,6 +66,9 @@ export const COMMAND_LIMITS = {
  * plugin.commands.add({ id: "blur", path: ["@video", "Blur"], run() {} });
  * assert.ok(MENU_IDS.includes("video")); // a menu id, not a title
  * ```
+ *
+ * @since 1.3.0
+ * @category Testing
  */
 export const MENU_IDS = [
   "open",
@@ -93,6 +99,8 @@ export const MENU_IDS = [
  * ```
  *
  * @since 1.5.29
+ *
+ * @category Testing
  */
 export const BAR_BUTTON_ICONS = [
   "play",
@@ -146,6 +154,8 @@ export const BAR_BUTTON_ICONS = [
  * then the earlier declaration, goes first).
  *
  * @since 1.5.29
+ *
+ * @category Testing
  */
 export const BAR_BUTTON_LIMITS = {
   /** Buttons one plugin shows (1). */
@@ -161,6 +171,8 @@ export const BAR_BUTTON_LIMITS = {
  * {@link BUILTIN_SUBMENUS}.
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export interface BuiltinSubmenu {
   /**
@@ -207,6 +219,8 @@ export interface BuiltinSubmenu {
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const BUILTIN_SUBMENUS: readonly BuiltinSubmenu[] = Object.freeze([
   { path: ["Open", "Recently Played"], plugins: ["vestra.history"] },
@@ -265,6 +279,8 @@ export const BUILTIN_SUBMENUS: readonly BuiltinSubmenu[] = Object.freeze([
  * of {@link BUILTIN_COMMANDS}.
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export interface BuiltinCommand {
   /** `"host"` for the player's own commands, else the built-in plugin's id. */
@@ -635,6 +651,8 @@ vestra.playlist | playlist.settings | (Playlist Settings…) | F5 | panel
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const BUILTIN_COMMANDS: readonly BuiltinCommand[] = Object.freeze(
   BUILTIN_COMMAND_TABLE.trim()

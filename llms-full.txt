@@ -1241,7 +1241,7 @@ For anything larger (a cache, downloaded files), write under `plugin.dataDirecto
 }
 ```
 
-`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` keeps `plugin.subtitles.state` current when the user or another plugin changes something.
+`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` makes the SDK read `plugin.subtitles.state` again when the source or its phase changes. The player has no subtitle event: a selection the user or another plugin changes shows only after `refresh()`.
 
 #### Read the tracks
 
@@ -1257,13 +1257,13 @@ console.log(state.selected?.id, state.secondary?.id);
 
 #### Select a track, and handle `stale`
 
-Changes act on the selection your plugin last saw. When the user picked another track or another file opened in between, the change fails with `stale` and does nothing:
+Without options a change reads the newest state itself and applies to it, so it almost never fails. Embedded tracks are chosen by number, though: a `select` after another file opened would pick that file's track with the same number. Pass the state you looked at as `ifCurrent`; then the change fails with `stale`, and does nothing, when the user picked another track or another file opened in between:
 
 ```ts
 const state = await plugin.subtitles.refresh();
 const english = state.tracks.find((track) => track.language === "en");
 if (english)
-  await plugin.subtitles.select(english).catch((error: PluginError) => {
+  await plugin.subtitles.select(english, { ifCurrent: state }).catch((error: PluginError) => {
     if (error.code !== "stale") throw error; // the user changed it meanwhile
   });
 ```
@@ -3573,9 +3573,32 @@ flushes, a running `tools.run` process is killed and a listener is
 unsubscribed. A Media is the exception: disposing its scope does
 **not** close the media; call Media.close for that.
 
+Every handle a plugin creates is a `Disposable` owned by the scope that
+created it; disposing the scope (or stopping the plugin) disposes them in
+reverse creation order, so a plugin rarely calls `dispose` itself.
+
+- @capability None of its own: that of the handle.
+
 ```ts
 interface Disposable {
-  /** Release the resource. Resolves once the player confirmed the release (or immediately for purely local resources). Never rejects. */
+  /**
+   * Release the resource. Resolves once the player confirmed the release (or immediately for purely local resources). Never rejects.
+   * @capability None of its own: that of the handle.
+   * @throws Never.
+   * @example Remove a command when its feature is turned off
+   * A "Turn feature off" item removes the feature's own menu item at once,
+   * before the plugin stops. `dispose` takes the command out of the menu and
+   * the binding table and resolves once the player confirmed it; the id can
+   * be added again later.
+   * ```ts
+   * const extra = plugin.commands.add({ id: "extra", path: ["Tools", "Extra"], run() {} });
+   * plugin.commands.add({
+   *   id: "extra-off",
+   *   path: ["Tools", "Turn extra off"],
+   *   run: () => extra.dispose(), // never rejects
+   * });
+   * ```
+   */
   dispose(): Promise<void>;
 }
 ```
@@ -3684,6 +3707,14 @@ Reading Scope.window, Scope.app, Scope.appearance
 `.theme`, Scope.ui, Scope.tools, Scope.storage and
 Scope.system needs none.
 
+Every module of the API (`commands`, `windows`, `player`…) is reachable
+from a scope, and every handle made through it belongs to it. A child
+scope from Scope.scope is the unit for features that come and
+go: dispose the child and everything it created is released, while the
+rest of the plugin keeps running.
+
+- @capability That of each module (see the modules).
+
 ```ts
 interface Scope extends Disposable {
   /** Menu commands and their default bindings (`commands`). */
@@ -3707,10 +3738,16 @@ interface Scope extends Disposable {
      */
     filter(id: string): VideoFilter;
     /**
-     * The display layer (needs `processing.video`). The first plugin to call it owns the layer; another plugin's view fails with `conflict` until the owner disposes or stops. A second call in the same plugin throws.
+     * The display layer (needs `processing.video`). The first plugin to call it owns the layer; another plugin's view fails with `conflict` until the owner disposes or stops.
+     * @throws capability (throws) The manifest does not declare `processing.video`.
+     * @throws Error without a code (throws) A second call in the same plugin while the first view is not disposed.
      */
     view(): VideoView;
-    /** The GPU renderer's options (needs `processing.video`), owned like the display layer. `failed` with `unsupported` under software rendering. */
+    /**
+     * The GPU renderer's options (needs `processing.video`), owned like the display layer. Under software rendering the handle is `failed` with `unsupported` as soon as it is created, and `onError` hears it.
+     * @throws capability (throws) The manifest does not declare `processing.video`.
+     * @throws Error without a code (throws) A second call in the same plugin while the first handle is not disposed.
+     */
     render(): RenderOptions;
   };
   /** Audio processing: this plugin's filter chain and delay (`processing.audio`, `playback.read` and `events`, as for VideoFilter). */
@@ -3764,17 +3801,57 @@ interface Scope extends Disposable {
   readonly i18n: I18n;
   /** Pages in the player's options window (`ui.settings`). */
   readonly settings: Settings;
-  /** A child scope; disposing it releases only what was created through it. The child is itself owned by this scope. */
+  /**
+   * A child scope; disposing it releases only what was created through it. The child is itself owned by this scope.
+   * @capability None.
+   * @example Tie a temporary window and its timer to one feature
+   * A "Live stats" feature opens a window and starts a timer; turning it off
+   * releases both together. Everything made through the child scope, and
+   * cleanups registered on it, go when the child is disposed; the parent
+   * scope is untouched.
+   * ```ts
+   * let live: Scope | null = null;
+   * plugin.commands.add({
+   *   id: "live-stats",
+   *   path: ["Tools", "Live stats"],
+   *   checked: () => live !== null,
+   *   run: async () => {
+   *     if (live) {
+   *       await live.dispose(); // closes the window, stops the timer
+   *       live = null;
+   *       return;
+   *     }
+   *     live = plugin.scope();
+   *     const window = live.windows.create("ui/stats.slint");
+   *     const timer = setInterval(() => live?.update(), 1000);
+   *     live.onDispose(() => clearInterval(timer));
+   *     await window.show();
+   *   },
+   * });
+   * ```
+   */
   scope(): Scope;
   /**
    * Adopt an existing handle: it is disposed together with this scope.
    * @param item - Any Disposable, for example a handle created through another scope.
    * @returns `item` itself, for chaining.
+   * @capability None.
+   * @example Dispose a handle from another scope together with this one
+   * A filter made through the root scope is withdrawn when a child feature
+   * ends. `add` hands an existing disposable to this scope, which then
+   * disposes it with its own handles; it returns the same handle for
+   * chaining.
+   * ```ts
+   * const feature = plugin.scope();
+   * const blur = feature.add(plugin.video.filter("blur")); // now ends with `feature`
+   * blur.set([{ kind: "gblur", sigma: 4, steps: 3 }]);
+   * ```
    */
   add<T extends Disposable>(item: T): T;
   /**
    * Run `cleanup` when this scope is disposed (for example `clearInterval` or closing a socket). It may be async; errors are logged.
    * @returns A handle that cancels the registration early (without running `cleanup`).
+   * @capability None.
    * @example Stop a timer when the plugin stops
    * A once-a-second refresh runs as long as the plugin does. `onDispose`
    * runs the cleanup when the scope is disposed, which for `plugin` is
@@ -3793,6 +3870,7 @@ interface Scope extends Disposable {
    * Rejections of async handlers count too, and so do failures of
    * registrations made after activation (a command whose `ready` rejects,
    * a property write the player refused).
+   * @capability None.
    * @example Show errors from handlers on the OSD
    * When a menu command, a window callback or a listener of the plugin
    * fails, the user sees why. The SDK catches what those handlers throw
@@ -3812,6 +3890,23 @@ interface Scope extends Disposable {
    * changing state from your own timers or between awaits of a long task.
    *
    * Several calls within one microtask are merged into one pass.
+   * @capability None.
+   * @example Show progress from a long task between awaits
+   * A progress label moves while a long download runs, not only when it
+   * ends. The SDK re-evaluates bound values after each handler and when its
+   * promise settles; state changed between the awaits of a long handler
+   * shows only after an explicit `update()`.
+   * ```ts
+   * let done = 0;
+   * window.bind(() => ({ progress: done }));
+   * window.on("start", async () => {
+   *   for (let part = 0; part < 10; part++) {
+   *     await downloadPart(part);
+   *     done = part + 1;
+   *     plugin.update(); // send `progress` now, not when the handler ends
+   *   }
+   * });
+   * ```
    */
   update(): void;
 }
@@ -3859,6 +3954,12 @@ resolvers, streams); pending requests then fail with `disabled` and the
 root scope is disposed for local cleanup (timers, signals, sockets). A
 process that has not exited after 300 ms is killed. Media the plugin
 opened with Player.open keeps playing.
+
+The root scope: disposing it is what stopping the plugin does. Besides
+the modules of Scope, it carries the plugin's `id` and its
+`dataDirectory`.
+
+- @capability That of each module (see the modules).
 
 ```ts
 interface Plugin extends Scope {
@@ -5909,18 +6010,20 @@ interface Drops {
 }
 ```
 
-Example: Add dropped videos to a list
+Example: Collect dropped CHIP-8 programs
 
-Video files dropped on the player are added to the plugin's list
-instead of replacing what plays. The provider claims the extensions; the
-player calls `drop` with the dropped paths of those types, in the order
-the file manager gave them.
+`.ch8` files dropped on the player are added to the plugin's list. The
+provider claims the extension; the player calls `drop` with the dropped
+paths of that type, in the order the file manager gave them. Extensions
+go to the first provider: the built-in playlist claims every audio and
+video extension when it starts, so a provider for those only gets them
+while the playlist is disabled.
 ```ts
 const queue: string[] = [];
 plugin.drops.provide({
-  extensions: ["mp4", "mkv"],
+  extensions: ["ch8"],
   drop: ({ paths }) => {
-    queue.push(...paths); // only .mp4 and .mkv files reach here
+    queue.push(...paths); // only .ch8 files reach here
   },
 });
 ```
@@ -6877,7 +6980,8 @@ interface Timeline {
    * @capability timeline.marks
    * @example Publish this plugin's marks
    * The plugin gets its one layer and puts two chapter marks on the seek
-   * bar. A second `layer()` call throws; disposing the layer removes the
+   * bar. Calling `layer()` again while the first layer is not disposed
+   * throws; disposing the layer removes the
    * marks.
    * ```ts
    * const layer = plugin.timeline.layer();
@@ -6936,11 +7040,28 @@ With `events`, `state` follows the window from the first read or
 `onChange`; without it, it updates only at start and after this plugin's
 `setVideoArea`.
 
+`plugin.window` is the player's main window: its size, fullscreen,
+picture-in-picture and the video area. Reading it needs no capability;
+changing it needs `window.control`. Changes that last only while the
+plugin runs (always on top, pointer auto-hide) revert when it stops.
+
+- @capability None to read; window.control to change; events to follow outside changes.
+
 ```ts
 interface MainWindow {
   /** Latest state; zero video area without a native window. */
   readonly state: WindowState;
-  /** The window state changed (needs `events` for outside changes). */
+  /**
+   * The window state changed (needs `events` for outside changes).
+   * @capability events (for outside changes)
+   * @example Fit a panel to fullscreen
+   * The plugin's panel uses larger text while the player is fullscreen. The
+   * listener runs after the SDK updated `state` from the player's events
+   * (with `events`; without it only after this plugin's own changes).
+   * ```ts
+   * plugin.window.onChange((state) => bar.set({ large: state.fullscreen }));
+   * ```
+   */
   onChange(listener: (state: WindowState) => void): Disposable;
   /**
    * Resize the window so the video column is `width`×`height` (the bottom bar
@@ -6952,6 +7073,18 @@ interface MainWindow {
    * Sizes are 1–16384 logical points; the minimum video area is 318×120.
    * The visible area excludes the menu bar and Dock on macOS; on Windows it
    * is the whole display. `unavailable` without a user interface too.
+   * @capability window.control
+   * @throws unavailable (rejects) Fullscreen, or no user interface.
+   * @throws invalid (rejects) A size outside 1–16384 logical points.
+   * @throws capability (rejects) The manifest does not declare `window.control`.
+   * @example Make the video area 1280×720 points
+   * The window resizes so that the video column is 1280×720 logical points,
+   * the bars and a docked sidebar added around it. A request that does not
+   * fit the screen is scaled down keeping the aspect, and `clamped` says so.
+   * ```ts
+   * const applied = await plugin.window.setVideoArea({ width: 1280, height: 720 });
+   * if (applied.clamped) await plugin.osd.show("{}×{}", [applied.width, applied.height]);
+   * ```
    */
   setVideoArea(size: {
     width: number;
@@ -6964,10 +7097,42 @@ interface MainWindow {
     /** The request was scaled down or raised to fit. */
     clamped: boolean;
   }>;
-  /** Float the player's windows above other applications. Newest call wins; reverts when this plugin stops. `unavailable` without a user interface. */
+  /**
+   * Float the player's windows above other applications. Newest call wins; reverts when this plugin stops. `unavailable` without a user interface.
+   * @capability window.control
+   * @throws unavailable (rejects) No user interface.
+   * @throws invalid (rejects) `onTop` is not a boolean.
+   * @throws capability (rejects) The manifest does not declare `window.control`.
+   * @example Keep the player above other windows
+   * The player's windows (tool windows too) float above other applications
+   * while the plugin's "Always on top" item is checked. The newest call of
+   * any plugin wins, and the setting reverts when this plugin stops.
+   * ```ts
+   * let onTop = false;
+   * plugin.commands.add({
+   *   id: "on-top",
+   *   path: ["@screen", "Always on top"],
+   *   checked: () => onTop,
+   *   run: async () => {
+   *     onTop = !onTop;
+   *     await plugin.window.setAlwaysOnTop(onTop); // reverts when this plugin stops
+   *   },
+   * });
+   * ```
+   */
   setAlwaysOnTop(onTop: boolean): Promise<void>;
   /**
    * `"playing"`: hide the pointer over the video after 3 idle seconds while playing, in a window too (not only fullscreen). Newest call wins; reverts to `"fullscreen"` when this plugin stops.
+   * @capability window.control
+   * @throws invalid (rejects) A mode other than `"fullscreen"` or `"playing"`.
+   * @throws capability (rejects) The manifest does not declare `window.control`.
+   * @example Hide the pointer over playing video in a window too
+   * The pointer disappears after 3 idle seconds over playing video, not only
+   * in fullscreen. The newest call wins; when this plugin stops the player
+   * goes back to hiding it in fullscreen only.
+   * ```ts
+   * await plugin.window.setCursorAutoHide("playing");
+   * ```
    */
   setCursorAutoHide(mode: "fullscreen" | "playing"): Promise<void>;
   /**
@@ -6982,6 +7147,12 @@ interface MainWindow {
    *
    * Where it is unsupported (Windows, Linux), `setVideoArea` plus
    * `setAlwaysOnTop` make a reasonable "mini player" fallback.
+   * @capability window.control
+   * @throws unsupported (rejects) The system has no picture-in-picture (`supported` is false).
+   * @throws unavailable (rejects) No video.
+   * @throws busy (rejects) The previous call is still switching.
+   * @throws failed (rejects) The system refused.
+   * @throws capability (rejects) The manifest does not declare `window.control`.
    * @example Toggle picture-in-picture where the system has it
    * The video moves into a floating picture-in-picture window, or back.
    * `state.pictureInPicture` says whether the system supports it and
@@ -7045,9 +7216,29 @@ interface AppInfo {
 `plugin.app`: the fixed facts plus the system, read on request. No
 capability.
 
+`plugin.app` holds facts fixed for the player's run (its version, build,
+library versions) and reads the system's on request: `system()` reads
+the displays at each call; the operating system's name and version are
+worked out once, at the first call, and reused.
+
+- @capability None.
+
 ```ts
 interface App extends AppInfo {
-  /** The operating system and the displays, read when called (displays come and go). No capability. CPU and memory: Node's `os` module. */
+  /**
+   * The operating system and the displays, read when called (displays come and go). No capability. CPU and memory: Node's `os` module.
+   * @capability None.
+   * @throws Error (rejects) Only when the player cannot be asked.
+   * @example Choose a size for the primary display
+   * The plugin sizes its picture for the primary display. `system()` asks
+   * the player; `displays` lists the displays present now, the primary one
+   * first (empty without a user interface).
+   * ```ts
+   * const { displays } = await plugin.app.system();
+   * const primary = displays[0];
+   * if (primary) console.log(primary.width, primary.height);
+   * ```
+   */
   system(): Promise<SystemInfo>;
 }
 ```
@@ -8872,7 +9063,7 @@ never throws: an out-of-range value or unknown field shows as `failed`
 (`invalid`) in `status` and is reported to `onError`, without sending
 anything.
 
-- @capability processing.video
+- @capability processing.video, playback.read and events (like VideoFilter)
 
 ```ts
 interface VideoView extends Disposable {
@@ -8883,7 +9074,7 @@ interface VideoView extends Disposable {
    * A 4:3 video fills a 16:9 window, distorted, as the user asked. Each
    * `set` merges the given fields into this plugin's view settings; the
    * newest write wins, and the settings stay for later files until the
-   * plugin resets them or stops.
+   * plugin disposes the view or stops.
    * ```ts
    * plugin.video.view().set({ fit: "stretch" });
    * ```
@@ -8915,7 +9106,7 @@ Example: Fill the window, then zoom in
 The video fills the video area (cropped instead of letterboxed), then
 zooms to 150 % shifted a little to the right. The first plugin to call
 `view()` owns the display layer; each `set` merges into its settings,
-which stay across sources until the plugin resets them or stops.
+which stay across sources until the plugin disposes the view or stops.
 ```ts
 const view = plugin.video.view();
 view.set({ fit: "fill" });
@@ -8955,11 +9146,12 @@ is accepted but has no effect; output is always SDR.
 
 GPU renderer options (tone mapping, peak detection, shaders,
 interpolation). Only the GPU renderer has them, which today means macOS;
-under software rendering every `set` fails with `unsupported`. Single
-owner, like VideoView. `set` never throws; the result shows in
-`status`.
+under software rendering the handle is `failed` with `unsupported` as
+soon as `render()` creates it (reported to `onError` too), and so is
+every `set`. Single owner, like VideoView. `set` never throws; the
+result shows in `status`.
 
-- @capability processing.video
+- @capability processing.video, playback.read and events (like VideoFilter)
 
 ```ts
 interface RenderOptions extends Disposable {
@@ -9094,13 +9286,17 @@ interface SubtitleConditional {
 
 The subtitle tracks of the current source, the primary and secondary
 selection, uploaded files and the style. `state` is the SDK's snapshot of
-the player's subtitle state (`null` until first read), kept current from
-events with `events`. Changes act on the selection the plugin last saw:
-when the user or another plugin changed it meanwhile they fail with
-`stale` (pass `ifCurrent` to pin an older state). Each change is one
-operation the player confirms; the promise resolves with the new state.
+the player's subtitle state (`null` until first read). The player has no
+subtitle event: the SDK reads the state again when the source, its phase
+or the backend changes (with `events`) and after this plugin's own
+changes, so a selection the user or another plugin changed shows only
+after `refresh()`. A change without `ifCurrent` reads the state first
+and applies to it; pass `ifCurrent` to make it fail with `stale` when the
+selection changed since that state. Each change is one operation the
+player confirms; `select`, `remove` and `setStyle` resolve with the new
+state, `load` with the new track.
 
-- @capability `subtitles.read` to read; `subtitles.control` and `subtitles.read` to change; `events` to follow changes made elsewhere.
+- @capability `subtitles.read` to read; `subtitles.control` and `subtitles.read` to change; `events` to re-read on source changes.
 
 ```ts
 interface Subtitles {
@@ -9109,10 +9305,12 @@ interface Subtitles {
   /**
    * The subtitle state changed.
    * @capability events and subtitles.read
-   * @example Show the selected subtitle's language
-   * The OSD names the language of the subtitle the user picks. The SDK
-   * updates `state` from the player's events and then calls the listener;
-   * `selected` is the primary subtitle, `null` when subtitles are off.
+   * @example Show the subtitle language after a new file opens
+   * When a new file starts, the OSD names the language of its primary
+   * subtitle. The SDK reads the subtitle state again when the source or its
+   * phase changes (there is no subtitle event, so a selection changed in the
+   * player shows only after `refresh()`) and then calls the listener;
+   * `selected` is `null` when subtitles are off.
    * ```ts
    * plugin.subtitles.onChange((state) => {
    *   // A track's language is null when the file does not say.
@@ -9138,20 +9336,26 @@ interface Subtitles {
   /**
    * `role: "secondary"` sets the secondary subtitle: a text track that is not the primary one (`invalid` otherwise). A new source clears it. `track: null` turns the role off.
    * @capability subtitles.control and subtitles.read
-   * @throws stale (rejects) The source or the subtitle selection changed since the state the call is based on.
-   * @throws invalid (rejects) An unknown track, or a secondary that is not a text track or is the primary one.
-   * @throws unavailable (rejects) Nothing is loaded to select from.
+   * @throws stale (rejects) With `ifCurrent`: the source or the subtitle selection changed since that state.
+   * @throws invalid (rejects) An unknown track; as secondary, a bitmap track or the primary one; as primary, the current secondary.
+   * @throws missing (rejects) The track is not in the current source.
+   * @throws unavailable (rejects) Nothing loaded, or the source is still loading or not yet confirmed.
    * @throws busy (rejects) Too many subtitle operations at once.
    * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
    * @example Turn on the first English subtitle
-   * The first English track becomes the primary subtitle. The track comes
-   * from `state.tracks` (compare tracks by `id`); `select` is conditional on
-   * the state it read, so it fails with `stale` instead of selecting in a
-   * file the user has just left.
+   * The first English track becomes the primary subtitle, but only in the
+   * file the plugin looked at. Embedded tracks are chosen by number, so
+   * without `ifCurrent` a select after another file opened would pick that
+   * file's track with the same number; with `ifCurrent: state` it fails with
+   * `stale` instead. Without `ifCurrent`, `select` reads the newest state
+   * itself and almost never fails with `stale`.
    * ```ts
-   * const state = plugin.subtitles.state ?? (await plugin.subtitles.refresh());
+   * const state = await plugin.subtitles.refresh();
    * const english = state.tracks.find((track) => track.language === "en");
-   * if (english) await plugin.subtitles.select(english); // role: "primary"
+   * if (english)
+   *   await plugin.subtitles.select(english, { ifCurrent: state }).catch((error: PluginError) => {
+   *     if (error.code !== "stale") throw error; // another file or selection now
+   *   });
    * ```
    */
   select(track: SubtitleTrack | null, options?: SubtitleConditional & {
@@ -9171,7 +9375,8 @@ interface Subtitles {
    * (VTT, SAMI) to SRT first.
    * @capability subtitles.control and subtitles.read
    * @throws invalid (rejects) A bad `format` or `title`, or a file over the limits.
-   * @throws stale (rejects) The source changed since the state the call is based on.
+   * @throws stale (rejects) With `ifCurrent`: the source changed since that state.
+   * @throws unavailable (rejects) Nothing loaded, or the source is still loading.
    * @throws aborted (rejects) `signal` aborted before the commit (an `AbortError`); the upload is discarded.
    * @throws busy (rejects) Too many subtitle operations at once.
    * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
@@ -9198,7 +9403,9 @@ interface Subtitles {
    * Remove a track this plugin loaded.
    * @capability subtitles.control and subtitles.read
    * @throws invalid (rejects) The track was not loaded by this plugin.
-   * @throws stale (rejects) The source changed since the state the call is based on.
+   * @throws stale (rejects) With `ifCurrent`: the source changed since that state.
+   * @throws unavailable (rejects) The source is still loading.
+   * @throws busy (rejects) Too many subtitle operations at once.
    * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
    * @example Remove the subtitle the plugin loaded
    * The plugin's downloaded subtitle disappears from the track list. A plugin
@@ -9212,8 +9419,11 @@ interface Subtitles {
   /**
    * Set this plugin's style layer; `null` removes it. The newest call of this plugin replaces its earlier layer. When several plugins have a layer, the player uses the one whose manifest id sorts last, whatever the order of the calls.
    * @capability subtitles.control and subtitles.read
-   * @throws invalid (rejects) A value out of range, or a font id the player does not list.
-   * @throws unsupported (rejects) The font is not available.
+   * @throws invalid (rejects) A field out of range.
+   * @throws unsupported (rejects) A font that is not in `state.fonts`.
+   * @throws stale (rejects) With `ifCurrent`: the subtitle state changed since that state.
+   * @throws unavailable (rejects) The source is still loading.
+   * @throws busy (rejects) Too many subtitle operations at once.
    * @throws capability (rejects) The manifest does not declare `subtitles.control` and `subtitles.read`.
    * @example Take the plugin's style off again
    * The plugin removes its style layer, so the subtitles go back to the
@@ -9306,8 +9516,9 @@ interface Snapshot extends Disposable {
    * Start exporting; the job runs in the host's offline worker. One snapshot can be exported several times.
    * @capability media.read and media.control
    * @throws released (rejects) The snapshot was already released.
-   * @throws invalid (rejects) Bad options (`quality` outside 1–100, a relative destination, a clip end before the snapshot time).
-   * @throws busy (rejects) The player runs too many media operations.
+   * @throws invalid (rejects) Bad options (`quality` outside 1–100, a relative destination, a clip `end` not after the snapshot time or past the duration).
+   * @throws busy (rejects) This plugin runs 2 exports (or the player 8).
+   * @throws unavailable (rejects) No FFmpeg, or the export worker could not start.
    * @throws capability (rejects) The manifest does not declare `media.read` and `media.control`.
    * @example Export a 30-second clip
    * A clip from the snapshot time to 30 seconds later is written as MP4.
@@ -9410,7 +9621,7 @@ interface ExportJob extends Disposable {
    * @capability media.read
    * @example Log each state of an export
    * The plugin's log records each status the job goes through (`queued`,
-   * `running`, then a terminal one). The listener runs when the SDK learns a
+   * `running`, `cancelling` after a cancel, then a terminal one). The listener runs when the SDK learns a
    * new state from its polling.
    * ```ts
    * job.onChange((state) => console.log("export", state.status));
@@ -9458,8 +9669,10 @@ interface ExportJob extends Disposable {
 Example: Show export progress and cancel on request
 
 The OSD shows the job's status while it runs, and a Cancel command stops
-it. `onChange` follows the state; `cancel` asks the worker to stop and
-says whether it was in time.
+it. `onChange` follows the state (`queued`, `running`, `cancelling`,
+then a terminal one); `cancel` asks the worker to stop. After
+`requested` the job usually ends `cancelled`, or `failed` when the
+cleanup failed.
 ```ts
 job.onChange((state) => void plugin.osd.show("Export: {}", [state.status]));
 plugin.commands.add({ id: "cancel-export", title: "Cancel export", run: () => job.cancel() });
@@ -9490,7 +9703,7 @@ interface MediaCapture {
    * @throws invalid (rejects) `at` at or after the end of the source.
    * @throws busy (rejects) This plugin holds 4 snapshots (or the player 16); release one.
    * @throws unavailable (rejects) A processed snapshot while the picture is still being prepared.
-   * @throws unsupported (rejects) A processed snapshot the player cannot freeze (an external ASS track with subtitles, a picture over its size limits).
+   * @throws unsupported (rejects) A processed snapshot the player cannot freeze: subtitles that cannot be flattened (only plain SRT text can), or a picture over the size limits.
    * @throws capability (rejects) The manifest does not declare `media.read` and `media.control`.
    * @example Freeze the frame at the 10-second mark
    * The plugin freezes the frame at 0:10 of the open file, raw, to export it
@@ -9667,7 +9880,8 @@ flight; the extensions or hosts are free again for other plugins.
 interface Resolver extends Disposable {
   /**
    * Resolves when the player registered it; rejects otherwise: `conflict` when another resolver has the extension or the scheme + host (another plugin's: activation goes on; this plugin's own: activation fails), `invalid` for a malformed declaration (a player before 0.4.1 also for `extensions`).
-   * @throws conflict (rejects) Another resolver has the extension or the scheme + host.
+   * @throws conflict (rejects) Another resolver has the extension or the scheme + host, or this plugin already registered this id.
+   * @throws busy (rejects) The player already holds 16 resolvers.
    * @throws invalid (rejects) A malformed declaration.
    * @throws capability (rejects) The manifest does not declare `source.resolve`.
    */
@@ -9888,9 +10102,10 @@ A validated package directory, from Packages.validate.
 
 A package the player has checked, from Packages.validate or
 Packages.validateArchive: its manifest, digest and the checks
-it passed. Installing it starts a PackageChange; the player keeps
-only the 32 most recent candidates, and one whose files changed since
-the check fails with `staleDigest`.
+it passed. The player copies the whole package when it checks it and
+installs that copy, so later changes to the directory do not matter.
+Installing starts a PackageChange; the player keeps only the 32
+most recent candidates.
 
 - @capability plugins.manage
 
@@ -9910,7 +10125,8 @@ interface PackageCandidate {
    * @throws conflict (rejects) The plugin is installed from another source and `replace` is not set.
    * @throws unsupported (rejects) A built-in plugin's id.
    * @throws reserved (rejects) A reserved id (`vestra`, `vestra.*`).
-   * @throws staleDigest (rejects) The package's files changed after it was validated.
+   * @throws busy (rejects) Another change of this plugin is in progress.
+   * @throws revisionConflict (rejects) The installed plugins changed in a way that conflicts with this change; validate and try again.
    * @throws stale (rejects) The candidate is older than the 32 the player keeps.
    * @throws capability (rejects) The manifest does not declare `plugins.manage`.
    * @example Replace a plugin installed from another source
@@ -9970,7 +10186,9 @@ interface PackageChange {
    * @example Close a progress window when the change ends
    * The plugin's progress window closes once the install is over, whatever
    * the outcome. The listener receives each new status; the terminal ones
-   * are `committed`, `cancelled`, `failed`, `failedDegraded` and `tooLate`.
+   * are `committed`, `cancelled`, `failed`, `failedDegraded` and `tooLate`
+   * (`tooLate` only answers a `cancel` of a change that had committed, and
+   * `committed` may follow it).
    * ```ts
    * change.onChange((status) => {
    *   if (["committed", "cancelled", "failed", "failedDegraded", "tooLate"].includes(status))
@@ -9981,7 +10199,7 @@ interface PackageChange {
   onChange(listener: (status: PackageChangeStatus) => void): Disposable;
   /**
    * Resolves with the final status.
-   * @throws Error (rejects) Only when the player refuses to report the change's status; a failed change is a terminal status, not a rejection.
+   * @throws missing (rejects) The player no longer knows the change (a `HostError` with that code); a failed change is a terminal status, not a rejection.
    */
   readonly done: Promise<PackageChangeStatus>;
   /**
@@ -9990,11 +10208,12 @@ interface PackageChange {
    * @throws capability (rejects) The manifest does not declare `plugins.manage`.
    * @example Cancel an install the user no longer wants
    * The install stops if it has not gone too far. `cancel` asks the player;
-   * the change then ends `cancelled`, or `tooLate` when it was already
-   * being committed.
+   * the change then ends `cancelled`. When the change had already committed
+   * the player answers `tooLate` and `done` still resolves `committed`; a
+   * change that is restoring cannot be cancelled and ends `failed`.
    * ```ts
    * await change.cancel();
-   * console.log(await change.done); // "cancelled" or "tooLate"
+   * console.log(await change.done); // "cancelled"; "committed" when it was too late
    * ```
    */
   cancel(): Promise<void>;
@@ -10111,9 +10330,13 @@ interface Packages {
    * older one's `install` fails with `stale` (validate again). Before
    * player 0.4.2 the 33rd validation of a run failed with `busy` instead.
    * @capability plugins.manage
-   * @throws invalid (rejects) Not a package directory, or a manifest that breaks the rules.
+   * @throws host (rejects) Not a package directory, or a manifest that breaks the rules (another `apiVersion` included); `message` says why.
+   * @throws invalid (rejects) A bad request (a path that is not a string).
+   * @throws javascript (rejects) The entry module does not parse.
+   * @throws slint (rejects) A Slint file does not compile.
    * @throws reserved (rejects) A reserved id (`vestra`, `vestra.*`).
-   * @throws versionMismatch (rejects) The package needs a newer player or another `apiVersion`.
+   * @throws versionMismatch (rejects) The package's `minPlayerVersion` is newer than the player.
+   * @throws disabled (rejects) The calling plugin is stopping.
    * @throws capability (rejects) The manifest does not declare `plugins.manage`.
    * @example Check a package directory before installing it
    * The plugin checks a folder it unpacked and installs it if the player
@@ -10133,9 +10356,13 @@ interface Packages {
   /**
    * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the same checks as Packages.validate after unpacking. Check the file's sha256 yourself before calling when you know it. A reserved id fails with `reserved`, as in Packages.validate.
    * @capability plugins.manage
-   * @throws invalid (rejects) Not a `.vxp` file, or its contents break the rules.
+   * @throws invalid (rejects) The path does not end in `.vxp`.
+   * @throws host (rejects) The archive or its manifest breaks the rules; `message` says why.
+   * @throws javascript (rejects) The entry module does not parse.
+   * @throws slint (rejects) A Slint file does not compile.
    * @throws reserved (rejects) A reserved id.
-   * @throws versionMismatch (rejects) The package needs a newer player or another `apiVersion`.
+   * @throws versionMismatch (rejects) The package's `minPlayerVersion` is newer than the player.
+   * @throws disabled (rejects) The calling plugin is stopping.
    * @throws capability (rejects) The manifest does not declare `plugins.manage`.
    * @example Install a downloaded package file
    * A `.vxp` the plugin downloaded is checked and installed. The player
@@ -10177,9 +10404,9 @@ interface Packages {
   /**
    * Stop or start a plugin (`plugins.manage`). An installed plugin stays disabled across launches; a development load only for this run. `invalid` to disable oneself, `missing` unknown. `busy` while it is being installed. `unsupported` to disable a built-in (PluginInfo.builtin): users manage third-party plugins only (players released with SDK 1.5.18 on; older ones disabled built-ins too).
    * @capability plugins.manage
-   * @throws invalid (rejects) The calling plugin itself.
+   * @throws invalid (rejects) Disabling the calling plugin itself.
    * @throws missing (rejects) An unknown id.
-   * @throws busy (rejects) The plugin is being installed.
+   * @throws busy (rejects) The plugin is being installed or reloaded.
    * @throws unsupported (rejects) A built-in plugin.
    * @throws capability (rejects) The manifest does not declare `plugins.manage`.
    * @example Turn a third-party plugin off
@@ -10227,6 +10454,8 @@ interface Packages {
    * @throws unsupported (rejects) A built-in plugin or a development load.
    * @throws missing (rejects) An unknown id.
    * @throws invalid (rejects) The calling plugin itself.
+   * @throws busy (rejects) Another change of that plugin is in progress.
+   * @throws revisionConflict (rejects) The installed plugins changed in a way that conflicts with this change.
    * @throws capability (rejects) The manifest does not declare `plugins.manage`.
    * @example Uninstall a plugin together with its data
    * The other plugin is removed and its data directory deleted, so a later
@@ -10364,6 +10593,7 @@ interface Bindings {
   /**
    * Back to the defaults: one command, or every override when omitted.
    * @capability bindings.manage
+   * @throws missing (rejects) A command that has no override and is not declared.
    * @throws capability (rejects) The manifest does not declare `bindings.manage`.
    * @example Restore every default key
    * A "Restore defaults" button removes all of the user's overrides, so
@@ -11478,6 +11708,13 @@ A tool window as the test host keeps it: the record of a
 `plugin.windows.create(...)` window after its first `show()`. Get one with
 TestHost.window.
 
+A record, not a window: no Slint file is compiled and nothing is drawn.
+`props` holds what the plugin wrote, by Slint name; `emit` fires a
+callback the way the user's input would; `userClose` closes it the way
+the title-bar button would.
+
+- @capability None.
+
 ```ts
 interface FakeWindow {
   /** The `.slint` file the window was created from (package-relative). */
@@ -11492,10 +11729,32 @@ interface FakeWindow {
   callbacks: string[];
   /**
    * Fire a Slint callback as if the user triggered it in the window. The name may be kebab-case or camelCase; `args` are the callback arguments. Follow it with `await host.settle()` before asserting.
+   * @capability None.
+   * @example Type into a window's search field
+   * The test types "cat" into the window's search box and checks the
+   * plugin's results. `emit` delivers the Slint callback `search-changed`
+   * with its argument to the plugin's `on` handler; `settle()` waits for the
+   * properties the handler wrote.
+   * ```ts
+   * const search = host.window("search");
+   * search.emit("searchChanged", "cat"); // camelCase or kebab-case
+   * await host.settle();
+   * assert.ok((search.props["results"] as unknown[]).length > 0);
+   * ```
    */
   emit(callback: string, ...args: Json[]): void;
   /**
    * The user closes the window with its title-bar button: the window closes and the plugin's `window.onClose` listeners run (unlike the plugin's own `close()`).
+   * @capability None.
+   * @example Close a window the way the user does
+   * The test closes the plugin's window with its title-bar button and checks
+   * that the plugin stopped its timer. Unlike the plugin's own `close()`,
+   * `userClose` runs the plugin's `onClose` listeners.
+   * ```ts
+   * host.window("clock").userClose();
+   * await host.settle();
+   * assert.equal(host.window("clock").visible, false);
+   * ```
    */
   userClose(): void;
 }
@@ -11538,6 +11797,13 @@ A command the plugin registered with `plugin.commands.add`, as the test
 host keeps it. Get one with TestHost.command (the plugin's own) or
 TestHost.coreAction (the player's core actions).
 
+The host's record of one command: what the plugin declared, the state
+it last sent, and how the menu shows it in TestHost.locale.
+Read it again after `settle()` to see changes; `run` executes it as the
+menu would.
+
+- @capability None.
+
 ```ts
 interface FakeCommand {
   /** What the plugin declared: id, menu path, title, order, group, default bindings, focus and repeat. Wire-level shape; it may gain fields in minor versions. */
@@ -11570,6 +11836,15 @@ interface FakeCommand {
   revision: number;
   /**
    * Execute the command the way the menu would, then wait until the host is idle. Rejects (with a HostError) when the command is disabled or busy, like the player, which does not call `run` then.
+   * @capability None.
+   * @throws command (rejects) A `HostError`: the command is disabled or busy (the message says which).
+   * @example Check that a disabled item refuses to run
+   * The test checks that Export cannot run while nothing is open. Like the
+   * player, the host does not call `run` for a disabled or busy command;
+   * the promise rejects with a `HostError`.
+   * ```ts
+   * await assert.rejects(host.command("export").run());
+   * ```
    */
   run(): Promise<void>;
 }
@@ -11595,6 +11870,13 @@ assert.equal(host.command("toggle-loop").state.checked, true);
 A command's bottom-bar button (`CommandOptions.button`) as the player shows
 it: an entry of TestHost.barButtons.
 
+A bottom-bar button as the player would show it, derived from the
+command's declaration and state each time it is read: clickable while
+the command is enabled and not busy, accent-coloured while checked, with
+the command's title (and reason) as the tooltip.
+
+- @capability None.
+
 ```ts
 interface FakeBarButton {
   /** The command's local id. */
@@ -11613,9 +11895,30 @@ interface FakeBarButton {
   readonly tooltip: string;
   /**
    * Click the button, then wait until the host is idle: runs the command as its menu item would. Rejects (with a HostError) while the button is disabled, and once the command is gone.
+   * @capability None.
+   * @throws command (rejects) A `HostError`: the command is disabled or busy.
+   * @throws missing (rejects) A `HostError`: the command is gone.
+   * @example Click the button and wait for its effect
+   * The test clicks the plugin's button and checks the OSD. `click` runs the
+   * command like its menu item and resolves once the host is idle.
+   * ```ts
+   * await host.barButtons[0]?.click();
+   * assert.ok(host.osd.length > 0);
+   * ```
    */
   click(): Promise<void>;
 }
+```
+
+Example: Check a bar button's tooltip while it is disabled
+
+The test checks that the Export button shows why it cannot be clicked.
+The tooltip is the command's title, plus its reason on a second line
+while the command is disabled or busy.
+```ts
+const [button] = host.barButtons;
+assert.equal(button?.enabled, false);
+assert.match(button?.tooltip ?? "", /\n/); // title, then the reason
 ```
 
 ### FakeProducer
@@ -11623,6 +11926,13 @@ interface FakeBarButton {
 A generated stream (`plugin.player.openStream`) as the test host sees it:
 the fake player end of the frame connection. Assertion surface; see
 TestHost.producers.
+
+The player's end of a generated stream's frame connection
+(TestHost.producers): how many frames arrived and whether the
+plugin released it or the player retired it. Tests assert on it; nothing
+is played.
+
+- @capability None.
 
 ```ts
 interface FakeProducer {
@@ -11643,6 +11953,18 @@ interface FakeProducer {
    */
   droppedWhileSelected: boolean;
 }
+```
+
+Example: Check that the stream delivers frames
+
+The test starts the plugin's generator and checks that video and audio
+arrive. The counters grow as the SDK pulls frames and sends them over
+the fake connection.
+```ts
+await host.command("start-generator").run();
+await host.settle(200); // let a few frames through
+const [producer] = host.producers.values();
+assert.ok((producer?.videoFrames ?? 0) > 0 && (producer?.receivedFrames ?? 0) > 0);
 ```
 
 ### MarkdownWire
@@ -11698,6 +12020,15 @@ Fields that mirror player state at the wire level (`source`, `subtitles`,
 `processing`, `snapshots`, `jobs`, `producers`, `uploads`, `resolvers`,
 `calls`) use the protocol's shapes. They are fine for assertions but are
 not part of the plugin API: their shape may change in minor versions.
+
+An in-memory player that speaks the real wire protocol, so the SDK's own
+logic runs as it does in the player; only the player side is simulated
+(no decoding, no Slint, no windows). Make one per test, preset it if the
+plugin reads something during activation, start the plugin with
+startPlugin, drive it, `settle()`, and assert on what it
+recorded.
+
+- @capability None.
 
 ```ts
 class TestHost implements Transport {
@@ -11781,6 +12112,15 @@ class TestHost implements Transport {
   /**
    * Read the plugin's translations for TestHost.locale from a package directory, as the player would (`locales/<locale>.json` of a built package, else the source `locales/<locale>.po`); `startPlugin` does this. None for English; a missing file means none; a broken `.po` throws.
    * @param directory - The package directory (holding `locales/`).
+   * @capability None.
+   * @example Load the translations after changing the language
+   * The test switches the host to German before starting the plugin and
+   * loads that catalog itself (`startPlugin` does the same). Texts are then
+   * shown in German.
+   * ```ts
+   * host.locale = "de";
+   * host.loadCatalog(directory); // locales/de.po (or de.json)
+   * ```
    */
   loadCatalog(directory: string): void;
   /**
@@ -11788,6 +12128,7 @@ class TestHost implements Transport {
    * @param text - English source text or template.
    * @param args - Values for its placeholders.
    * @returns The shown text.
+   * @capability None.
    * @example Compare with a translated message
    * The test expects the text a Chinese user sees for a template the plugin
    * shows. `translate` looks the English source up in the plugin's catalog
@@ -11802,6 +12143,16 @@ class TestHost implements Transport {
   /**
    * Simulate another plugin (or the user) saving the interface language: pushes `appearance.changed`.
    * @param language - `"system"` or a locale.
+   * @capability None.
+   * @example Simulate the user choosing French for the next start
+   * The plugin hears that the saved interface language changed. The host
+   * pushes `appearance.changed`, which a plugin with `events` sees in
+   * `appearance.language`; this run's language does not change.
+   * ```ts
+   * host.setLanguage("fr");
+   * await host.settle();
+   * assert.equal(plugin.appearance.language, "fr");
+   * ```
    */
   setLanguage(language: LanguagePreference): void;
   /**
@@ -11958,6 +12309,7 @@ class TestHost implements Transport {
    * Simulate another plugin publishing its timeline layer (or clearing it with `[]`); pushes `timeline.changed` when the plugin subscribed.
    * @param pluginId - The other plugin's manifest id.
    * @param marks - Its whole layer.
+   * @capability None.
    * @example Let another plugin publish chapters
    * The plugin under test sees two chapter marks another plugin put on the
    * timeline. `setTimelineLayer` stores that plugin's whole layer and pushes
@@ -11991,6 +12343,7 @@ class TestHost implements Transport {
   }[];
   /**
    * The file an image property shows, or `null` when the value is not a runtime image. View properties hold images in their wire form; this reads the path back.
+   * @capability None.
    * @example Check which file a window shows as its cover
    * The test checks that the Cover window's image comes from the plugin's
    * data directory. An image property holds the SDK's wire form of
@@ -12016,6 +12369,8 @@ class TestHost implements Transport {
    * Drop files like the player: on a panel with an `onDrop` listener the whole list goes there; otherwise (and on the video area) each path goes to the first provider of its extension (`folder` for existing directories), one call per provider with all of its paths. Files nobody takes are ignored. Resolves once the host is idle again.
    * @param paths - The dropped paths, in the order the file manager gives.
    * @param options - `target`: `"video"` (default) or `"panel"`; `at`: the drop point in panel coordinates (default `{ x: 0, y: 0 }`); `modifiers`: keys held (default all `false`).
+   * @capability None.
+   * @throws Never: files nobody takes are ignored, as in the player.
    * @example Drop files on the video and on the panel
    * The first drop lands on the video area: each extension belongs to the
    * provider that registered it first, and each provider gets one call with
@@ -12046,7 +12401,18 @@ class TestHost implements Transport {
   }): Promise<void>;
   /** The palette (`plugin.appearance.theme`); `setAppearance` changes it elsewhere. */
   appearance: ThemeId;
-  /** Simulate another plugin switching the palette: updates TestHost.appearance and pushes `appearance.changed`. */
+  /**
+   * Simulate another plugin switching the palette: updates TestHost.appearance and pushes `appearance.changed`.
+   * @capability None.
+   * @example Simulate another plugin switching to the light palette
+   * The plugin hears the palette change. The host updates `appearance` and
+   * pushes `appearance.changed` to a plugin that listens with `events`.
+   * ```ts
+   * host.setAppearance("vestra-light");
+   * await host.settle();
+   * assert.equal(plugin.appearance.theme, "vestra-light");
+   * ```
+   */
   setAppearance(theme: ThemeId): void;
   /** Settings pages by id (`plugin.settings.page`), every `show` (page id or null), and the page the options window shows. */
   readonly settings: {
@@ -12078,6 +12444,7 @@ class TestHost implements Transport {
   };
   /**
    * One settings page by id. Throws when it was never registered.
+   * @capability None.
    * @example Change a value on the plugin's settings page
    * The test sets the step on the General page and checks the page shows
    * it. `emit` fires the page's callback as the user's input would; the
@@ -12115,13 +12482,26 @@ class TestHost implements Transport {
     /** Whether it shows now (no video frame). `true` when mounted. */
     effective: boolean;
   } | null;
-  /** Simulate the backdrop's `effective` changing (`false`: a video frame appeared; `true`: there is none again); pushed to the plugin. */
+  /**
+   * Simulate the backdrop's `effective` changing (`false`: a video frame appeared; `true`: there is none again); pushed to the plugin.
+   * @capability None.
+   * @example Make a video picture replace the backdrop
+   * The plugin's backdrop hears that a video frame now covers it. `false`
+   * means a picture appeared; the change is pushed like the player's
+   * `window.state`.
+   * ```ts
+   * host.setBackdropEffective(false);
+   * await host.settle();
+   * assert.equal(plugin.panels.backdrop.state?.effective, false);
+   * ```
+   */
   setBackdropEffective(effective: boolean): void;
   /**
    * Simulate another plugin mounting a panel, before or after the plugin under test, as the player handles it: in the sidebar it is another tab (after the existing ones; the first panel's tab is current); the bottom bar and the backdrop take one panel, so the plugin's own mount there then rejects with `conflict` (not an activation failure, as in the player). Pushed as a `window.state` change.
    * @param slot - The position.
    * @param plugin - The other plugin's manifest id.
    * @param options - `title`: its tab label (default: `plugin`).
+   * @capability None.
    * @example Put the playlist next to this plugin's sidebar panel
    * The sidebar ends up with two tabs: the playlist, mounted first, and the
    * plugin's own panel after it. `mountOther` before `startPlugin` mounts
@@ -12138,10 +12518,31 @@ class TestHost implements Transport {
   mountOther(slot: "bottom" | "sidebar" | "backdrop", plugin: string, options?: {
     title?: string;
   }): void;
-  /** Simulate another plugin's panel going away (TestHost.mountOther): when its tab was current, the next tab (else the previous one) is. */
+  /**
+   * Simulate another plugin's panel going away (TestHost.mountOther): when its tab was current, the next tab (else the previous one) is.
+   * @capability None.
+   * @example Let the playlist's tab go away
+   * The other plugin's sidebar tab disappears and the plugin's own tab
+   * becomes current. When the removed tab was current, the next tab (else
+   * the previous one) becomes current, as in the player.
+   * ```ts
+   * host.unmountOther("vestra.playlist");
+   * await host.settle();
+   * assert.equal(host.layout.sidebar?.panels?.length, 1);
+   * ```
+   */
   unmountOther(plugin: string): void;
   /**
    * Simulate the user clicking a sidebar tab: `plugin`'s panel (the plugin under test's `manifestId`, or one of TestHost.mountOther) becomes the current tab. Pushed as a `window.state` change.
+   * @capability None.
+   * @example Click another plugin's sidebar tab
+   * The user switches the sidebar to the playlist; the plugin's panel is in
+   * a background tab now. The change is pushed as `window.state`.
+   * ```ts
+   * host.selectTab("vestra.playlist");
+   * await host.settle();
+   * assert.notEqual(host.layout.sidebar?.owner, 1); // the plugin under test is owner 1
+   * ```
    */
   selectTab(plugin: string): void;
   /** The display layer (`plugin.video.view()`): who owns it (this plugin is `manifestId`) and the values the player holds. */
@@ -12153,6 +12554,17 @@ class TestHost implements Transport {
   };
   /**
    * Simulate another plugin taking the display layer first (the plugin's `video.view()` then fails with `conflict`), or, with `null`, releasing it (values reset to the defaults).
+   * @capability None.
+   * @example Let another plugin own the display layer
+   * The plugin's `video.view()` fails with `conflict` because another plugin
+   * took the display layer first. `null` releases it again.
+   * ```ts
+   * host.setVideoViewOwner("someone.zoom");
+   * const view = plugin.video.view();
+   * view.set({ zoom: 2 });
+   * await host.settle();
+   * assert.equal(view.status.state, "failed");
+   * ```
    */
   setVideoViewOwner(pluginId: string | null): void;
   /**
@@ -12168,10 +12580,22 @@ class TestHost implements Transport {
   };
   /**
    * Simulate another plugin owning the render options (the plugin's `video.render()` then fails with `conflict`), or, with `null`, releasing them (values reset to the defaults).
+   * @capability None.
+   * @example Let another plugin own the render options
+   * The plugin's render options report `conflict` while another plugin owns
+   * them; `null` releases them and resets the values to the defaults.
+   * ```ts
+   * host.setVideoRenderOwner("someone.hdr");
+   * const render = plugin.video.render();
+   * render.set({ toneMapping: "bt.2390" });
+   * await host.settle();
+   * assert.equal(render.status.state, "failed");
+   * ```
    */
   setVideoRenderOwner(pluginId: string | null): void;
   /**
    * What the player pushes when mpv cannot compile a shader (code `failed`) or switches to software rendering (`unsupported`, which also sets `videoRender.gpu` to false). Pushed only when this plugin is the owner.
+   * @capability None.
    * @example Make a shader fail to compile
    * The plugin's render options report `failed`, as when mpv rejects a
    * shader. The host pushes the failure only while this plugin owns the
@@ -12292,10 +12716,21 @@ class TestHost implements Transport {
     /** Exact host names it resolves (a web resolver), with `schemes`. */
     hosts?: string[];
   }[];
-  /** What `plugin.resolvers.fileTypes` reports: the extensions of this plugin's file resolvers and of TestHost.otherResolvers, sorted, each once. */
+  /**
+   * What `plugin.resolvers.fileTypes` reports: the extensions of this plugin's file resolvers and of TestHost.otherResolvers, sorted, each once.
+   * @capability None.
+   * @example Check the file types a resolver adds
+   * The test checks the list the plugin will read as
+   * `resolvers.fileTypes`: the extensions of its own file resolvers and of
+   * `otherResolvers`, sorted, each once.
+   * ```ts
+   * assert.deepEqual(host.fileTypes(), ["ch8"]);
+   * ```
+   */
   fileTypes(): string[];
   /**
    * Push `resolvers.fileTypes` when TestHost.fileTypes changed: called after this plugin's resolvers come and go; call it yourself after changing TestHost.otherResolvers (another plugin started or stopped).
+   * @capability None.
    * @example Let another plugin's file type appear while running
    * Another plugin starts and adds `.ch8`; the plugin under test then sees
    * it in `resolvers.fileTypes`. Changing `otherResolvers` alone pushes
@@ -12413,6 +12848,9 @@ class TestHost implements Transport {
   readonly dataDirectory: string;
   /** The manifest id of the plugin under test (set by startPlugin; `"test.plugin"` by default). */
   manifestId: string;
+  /**
+   * A fresh in-memory player: nothing open, no plugin, the player's core actions registered. Preset what the plugin reads during activation, then pass it to startPlugin as `host`.
+   */
   constructor();
   /** The `player.setStepSeek` value in effect (default 5). */
   stepSeek: number;
@@ -12469,6 +12907,7 @@ class TestHost implements Transport {
   readonly coreRuns: string[];
   /**
    * One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...) that the test host registers like the player, as `host/<id>`. Throws for an unknown id. `run()` executes it with the player's checks and writes its on-screen text to TestHost.osd.
+   * @capability None.
    * @example Pause through the player's own action
    * The test pauses playback the way the Space key does and checks that the
    * host recorded it. Core actions belong to the player (`host/<id>`);
@@ -12495,6 +12934,7 @@ class TestHost implements Transport {
    * find the one a call uses.
    * @param method - The wire method name.
    * @param handler - Produces the reply from the request parameters.
+   * @capability None.
    * @example Make opening a folder fail
    * The plugin's Open Folder command meets a missing folder and must tell
    * the user. `handle` replaces the host's answer to one wire method; the
@@ -12511,17 +12951,43 @@ class TestHost implements Transport {
    * ```
    */
   handle(method: string, handler: Handler): void;
-  /** Restore the default behaviour of a method replaced with TestHost.handle. */
+  /**
+   * Restore the default behaviour of a method replaced with TestHost.handle.
+   * @capability None.
+   * @example Restore the default answer after a simulated failure
+   * The first write fails, the second succeeds. `reset` removes the handler
+   * that `handle` installed, so the method is answered by the test host
+   * again.
+   * ```ts
+   * host.handle("clipboard.writeText", () => {
+   *   throw new HostError("failed", "denied");
+   * });
+   * await assert.rejects(plugin.clipboard.writeText("x"));
+   * host.reset("clipboard.writeText");
+   * await plugin.clipboard.writeText("x"); // the default handler again
+   * ```
+   */
   reset(method: string): void;
   /**
    * Deliver a host event to the plugin. Like the player, subscription-based events (`source.state`, `playback.backend`, `window.state`, `timeline.changed`, `appearance.changed`) are delivered only when the plugin subscribed (it declared `events` and listens). Most tests use the higher-level helpers (`setSource`, `setMainWindow`, ...) instead.
    * @param event - The wire event name.
    * @param data - The event payload (wire-level shape).
+   * @capability None.
+   * @example Deliver a raw event the helpers do not cover
+   * The test pushes a `window.state` event after changing `layout` by hand.
+   * Like the player, the host delivers it only when the plugin subscribed;
+   * most tests use `setSource`, `setMainWindow` and the other helpers
+   * instead.
+   * ```ts
+   * host.emit("window.state", {}); // the host fills in its own layout
+   * await host.settle();
+   * ```
    */
   emit(event: string, data: unknown): void;
   /**
    * Change the source facts and broadcast them, as if the player's state changed (the user paused, playback reached the end, a file finished loading). Any phase other than `empty` also turns on the source capabilities (pause, seek, rate, ...) unless the patch sets them. `phase: "loading"` makes a mounted backdrop effective, like the player.
    * @param patch - Wire-level source fields, e.g. `phase`, `position`, `duration`, `paused`, `audioTracks`.
+   * @capability None.
    * @example Load a file, then let it play to the end
    * The plugin sees a one-minute source become ready, then end on its own.
    * `setSource` changes the host's source facts and broadcasts them like
@@ -12538,6 +13004,7 @@ class TestHost implements Transport {
   setSource(patch: Partial<SourceState>): void;
   /**
    * Simulate the user changing the main window (resizing it, entering or leaving fullscreen, closing the picture-in-picture window) and broadcast it. Like the player, entering fullscreen collapses an attached, visible sidebar (`effective: false`, `reason: "fullscreen"`) and leaving fullscreen docks it again.
+   * @capability None.
    * @example Go fullscreen, then report picture-in-picture support
    * The plugin sees the main window fullscreen at 1920×1080, then learns
    * that picture-in-picture is available. `setMainWindow` changes the
@@ -12564,12 +13031,23 @@ class TestHost implements Transport {
   }>): void;
   /**
    * The pointer reached the right edge in fullscreen (`true`) or left the popped-out sidebar (`false`): the attached sidebar pops out or collapses (reference §6.3). No effect outside fullscreen, when hidden or floating.
+   * @capability None.
+   * @example Pop the sidebar out in fullscreen
+   * The pointer reaches the right edge in fullscreen and the attached
+   * sidebar pops out over the video. Outside fullscreen, or with the
+   * sidebar hidden or floating, nothing happens.
+   * ```ts
+   * host.setMainWindow({ fullscreen: true });
+   * host.popSidebar(true);
+   * await host.settle();
+   * ```
    */
   popSidebar(popped: boolean): void;
   /**
    * Simulate another plugin (or the user) opening a source: a new `sourceId`, then the given phase. Calls the plugin made against the old state now fail with `stale`.
    * @param source - The path or URL.
    * @param phase - The phase to end in (default `"ready"`).
+   * @capability None.
    * @example Let the user open another file meanwhile
    * A state the plugin captured before stops being current once another
    * file opens. `openElsewhere` gives the source a new `sourceId`, so
@@ -12588,6 +13066,7 @@ class TestHost implements Transport {
    * Simulate a generated stream failing in the player (its audio device lost, its frame connection broken), like the player: the source fails with `message` (`phase: "error"`) and the producer is retired at once. The stream's `onStop` listeners get a `stream` error with `message`.
    * @param producerId - The producer, from TestHost.producers.
    * @param message - The player's failure text.
+   * @capability None.
    * @example Break the plugin's generated stream
    * The plugin's stream stops with an error, as when the player loses its
    * audio device. `failStream` puts the source into `error` with the
@@ -12602,6 +13081,9 @@ class TestHost implements Transport {
   /**
    * Press a binding like the host's table would: panel-focus bindings first when `panel` is true, then global ones; within a scope the earliest registration first (the player's own commands before the plugin's), as the conflict rule orders them. A disabled command lets the key pass to the next command bound to it (SDK 1.5.12, as player 0.4.3): the one it shadowed, then the global scope. The first enabled one runs; `press` resolves after it ran (`"ran"`), or rejects when it is busy. When only disabled commands hold the key, the first one with a `reason` shows the reason on the OSD and eats the key (`"reason"`, see `host.osd`); without a reason the key goes on to the focused control (`"passed"`, nothing runs). Rejects when nothing is bound. Bindings use the reference syntax (`"Space"`, `"Ctrl+O"`, `"Mouse:WheelUp"`), and user overrides in `bindings.overlay` apply.
    * @returns What the key did: `"ran"`, `"reason"` or `"passed"`.
+   * @capability None.
+   * @throws command (rejects) A `HostError`: the command that would run is busy.
+   * @throws Error (rejects) Nothing is bound to the key.
    * @example Press a global key and a panel key
    * Ctrl+B runs whatever is bound globally; Delete is pressed while the
    * plugin's panel has focus, so panel bindings are tried first. `press`
@@ -12692,6 +13174,7 @@ class TestHost implements Transport {
   readonly remoteImages: Map<string, string | null>;
   /**
    * The Markdown document a value holds (its wire form read back), or `null` when the value is not one. `images` maps each remote address to the downloaded file. Pass a whole property value or a field of one: a document nested in rows is read the same way.
+   * @capability None.
    * @example Read back a Markdown message in a chat window
    * The test checks the Markdown source of the first chat message. Rows
    * hold the document in its wire form, as `plugin.ui.markdown` produced
@@ -12709,13 +13192,47 @@ class TestHost implements Transport {
     /** The system's name for it. */
     name: string;
   }[];
-  /** Replace the plugin list and push `packages.changed` (another plugin started, stopped, was installed or removed). */
+  /**
+   * Replace the plugin list and push `packages.changed` (another plugin started, stopped, was installed or removed).
+   * @capability None.
+   * @example Simulate another plugin starting
+   * The plugin's store window hears that a plugin is running now. The list
+   * replaces `packages` and is pushed as `packages.changed`, which the
+   * plugin's `packages.onChange` listeners receive.
+   * ```ts
+   * host.setPackages([...host.packages]); // edit a copy, then push it
+   * await host.settle();
+   * ```
+   */
   setPackages(list: TestHost["packages"]): void;
   /**
    * Simulate another plugin calling `player.next()` / `previous()`: the host asks this plugin's sequence provider. Rejects with `unavailable` when there is no provider or its flag is false.
+   * @capability None.
+   * @throws unavailable (rejects) A `HostError`: there is no sequence provider, or its flag is false.
+   * @example Ask the plugin's provider for the next item
+   * Another plugin calls `player.next()`; the host asks the plugin under
+   * test, which is the sequence provider, and the test checks what it
+   * opened.
+   * ```ts
+   * await host.step("next");
+   * await host.settle();
+   * assert.equal(host.source.source, "/media/b.mp4");
+   * ```
    */
   step(direction: "next" | "previous"): Promise<unknown>;
-  /** The plugin's command with this local id. Throws when it is not registered (never added, or disposed). */
+  /**
+   * The plugin's command with this local id. Throws when it is not registered (never added, or disposed).
+   * @capability None.
+   * @example Read a command's state after a change
+   * The test checks that Export becomes enabled once a file is ready. The
+   * record is updated as the plugin sends new state; read it after
+   * `settle()`.
+   * ```ts
+   * host.setSource({ phase: "ready", duration: 60 });
+   * await host.settle();
+   * assert.equal(host.command("export").state.enabled, true); // throws if not registered
+   * ```
+   */
   command(id: string): FakeCommand;
   /**
    * The plugin's bottom-bar buttons (`CommandOptions.button`) as the player shows them: at most one, the first declared (`BAR_BUTTON_LIMITS`; a later one stays a menu item only). Empty once the command is disposed. Whether the bar places them is the bar's business: the list is what the player hands to `BarButtons`.
@@ -12735,6 +13252,7 @@ class TestHost implements Transport {
   get barButtons(): readonly FakeBarButton[];
   /**
    * The plugin's tool window with this id (by default the file name without extension: `ui/picture.slint` → `picture`). Throws when it was never opened with `show()`.
+   * @capability None.
    * @example Press a window's Reset button from a test
    * The Picture window's Reset callback runs and the brightness returns to
    * 0. The window is found by its id (the `.slint` file name by default);
@@ -12749,6 +13267,7 @@ class TestHost implements Transport {
   window(id: string): FakeWindow;
   /**
    * The plugin's mounted panel (bottom bar, sidebar or backdrop). Throws when none is mounted. Its `props` use Slint (kebab-case) names; `emit` fires a callback on the panel's global.
+   * @capability None.
    * @example Select a row in the plugin's sidebar panel
    * The test checks the panel sits in the sidebar and selects its third
    * row. `emit` fires a callback on the panel's global as a click would;
@@ -12770,6 +13289,7 @@ class TestHost implements Transport {
   };
   /**
    * The parameters of every request of one wire method, oldest first.
+   * @capability None.
    * @example Check the request behind an OSD message
    * The test checks the last OSD request the plugin sent, before
    * translation. `sent` lists the parameters of every request of one wire
@@ -12790,6 +13310,8 @@ class TestHost implements Transport {
    * for: on a loaded machine it can finish after `settle()` returns. Poll
    * the result you assert on instead (second example).
    * @param ms - Extra time to wait, for debounces and timers (default 0).
+   * @capability None.
+   * @throws Never.
    * @example Wait past a debounced save
    * The plugin's store writes its file 300 ms after the last `save`, so
    * the test waits 400 ms before it checks what the plugin did next.
@@ -12815,7 +13337,22 @@ class TestHost implements Transport {
    * ```
    */
   settle(ms?: number): Promise<void>;
-  /** Close the fake stream servers and delete the host's temporary directories. `stop()` from startPlugin calls it. */
+  /**
+   * Close the fake stream servers and delete the host's temporary directories. `stop()` from startPlugin calls it.
+   * @capability None.
+   * @example Clean up a host that was never started
+   * A test that made a host but failed before `startPlugin` removes the
+   * host's temporary directories itself. `stop()` from `startPlugin` calls
+   * `close` for you otherwise.
+   * ```ts
+   * const host = new TestHost();
+   * try {
+   *   // … preset the host; the test fails here …
+   * } finally {
+   *   host.close(); // deletes the host's temporary data
+   * }
+   * ```
+   */
   close(): void;
 }
 ```
@@ -12865,9 +13402,14 @@ throws, or when a registration made during activation fails (for example
 `limit`, `conflict`, `invalid`), which is when the player would fail the
 activation.
 
+The way into a plugin's tests: one call starts the plugin the way the
+player's runner does and returns the host to drive, the `plugin` object
+to call directly, and `stop` to end it like the player.
+
 - @param activate - The plugin's default-exported `activate` function.
 - @param options - Where the plugin lives and how to start it.
 - @returns `host`: the TestHost; `plugin`: the object passed to `activate` (call the plugin API on it directly); `stop()`: dispose the plugin like the player stopping it (scopes released, stores flushed), wait until the host is idle and remove the host's temporary files.
+- @capability None.
 
 ```ts
 function startPlugin(activate: (plugin: Plugin) => unknown, options?: {
@@ -13612,11 +14154,17 @@ Common codes: `stale` (the condition no longer holds; nothing was done),
 `timeout`, `aborted`, `limit` (a player limit such as the command count),
 `disabled` (the plugin is stopping).
 
+A definite refusal, as opposed to a lost reply: the SDK does not retry
+it, and the plugin sees an `Error` with `code`.
+
+- @capability None.
+
 ```ts
 class HostError extends Error {
   /** The stable error code, e.g. `"invalid"`, `"stale"`, `"unavailable"`. */
   code: string;
   /**
+   * A refusal with this code, as the player would send it.
    * @param code - The stable error code the caller will see as `error.code`.
    * @param message - Human-readable detail (not for branching on).
    */

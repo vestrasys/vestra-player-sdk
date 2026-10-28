@@ -45,11 +45,39 @@ export type { Json, AudioNode, VideoNode, SubtitleStyle, ResolvedMedia };
  *   if (state.phase === "ready") void subscription.dispose();
  * });
  * ```
+ *
+ * @remarks
+ * Every handle a plugin creates is a `Disposable` owned by the scope that
+ * created it; disposing the scope (or stopping the plugin) disposes them in
+ * reverse creation order, so a plugin rarely calls `dispose` itself.
+ *
+ * @capability None of its own: that of the handle.
+ * @since 1.0.0
+ * @category Plugin
  */
 export interface Disposable {
   /**
    * Release the resource. Resolves once the player confirmed the release
    * (or immediately for purely local resources). Never rejects.
+   *
+   * @capability None of its own: that of the handle.
+   * @throws Never.
+   *
+   * @example Remove a command when its feature is turned off
+   * A "Turn feature off" item removes the feature's own menu item at once,
+   * before the plugin stops. `dispose` takes the command out of the menu and
+   * the binding table and resolves once the player confirmed it; the id can
+   * be added again later.
+   * ```ts
+   * const extra = plugin.commands.add({ id: "extra", path: ["Tools", "Extra"], run() {} });
+   * plugin.commands.add({
+   *   id: "extra-off",
+   *   path: ["Tools", "Turn extra off"],
+   *   run: () => extra.dispose(), // never rejects
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   dispose(): Promise<void>;
 }
@@ -120,6 +148,9 @@ export interface Disposable {
  *   throw error;
  * }
  * ```
+ *
+ * @since 1.0.0
+ * @category Plugin
  */
 export type PluginError = Error & {
   /** The stable failure code (see the table above). */
@@ -163,6 +194,17 @@ export type PluginError = Error & {
  *   );
  * });
  * ```
+ *
+ * @remarks
+ * Every module of the API (`commands`, `windows`, `player`…) is reachable
+ * from a scope, and every handle made through it belongs to it. A child
+ * scope from {@link Scope.scope} is the unit for features that come and
+ * go: dispose the child and everything it created is released, while the
+ * rest of the plugin keeps running.
+ *
+ * @capability That of each module (see the modules).
+ * @since 1.0.0
+ * @category Plugin
  */
 export interface Scope extends Disposable {
   /** Menu commands and their default bindings (`commands`). */
@@ -193,12 +235,23 @@ export interface Scope extends Disposable {
     /**
      * The display layer (needs `processing.video`). The first plugin to call
      * it owns the layer; another plugin's view fails with `conflict` until the
-     * owner disposes or stops. A second call in the same plugin throws.
+     * owner disposes or stops.
+     *
+     * @throws `capability` (throws) The manifest does not declare
+     *   `processing.video`.
+     * @throws `Error` without a code (throws) A second call in the same plugin
+     *   while the first view is not disposed.
      */
     view(): VideoView;
     /**
      * The GPU renderer's options (needs `processing.video`), owned like the
-     * display layer. `failed` with `unsupported` under software rendering.
+     * display layer. Under software rendering the handle is `failed` with
+     * `unsupported` as soon as it is created, and `onError` hears it.
+     *
+     * @throws `capability` (throws) The manifest does not declare
+     *   `processing.video`.
+     * @throws `Error` without a code (throws) A second call in the same plugin
+     *   while the first handle is not disposed.
      */
     render(): RenderOptions;
   };
@@ -262,6 +315,36 @@ export interface Scope extends Disposable {
   /**
    * A child scope; disposing it releases only what was created through it.
    * The child is itself owned by this scope.
+   *
+   * @capability None.
+   *
+   * @example Tie a temporary window and its timer to one feature
+   * A "Live stats" feature opens a window and starts a timer; turning it off
+   * releases both together. Everything made through the child scope, and
+   * cleanups registered on it, go when the child is disposed; the parent
+   * scope is untouched.
+   * ```ts
+   * let live: Scope | null = null;
+   * plugin.commands.add({
+   *   id: "live-stats",
+   *   path: ["Tools", "Live stats"],
+   *   checked: () => live !== null,
+   *   run: async () => {
+   *     if (live) {
+   *       await live.dispose(); // closes the window, stops the timer
+   *       live = null;
+   *       return;
+   *     }
+   *     live = plugin.scope();
+   *     const window = live.windows.create("ui/stats.slint");
+   *     const timer = setInterval(() => live?.update(), 1000);
+   *     live.onDispose(() => clearInterval(timer));
+   *     await window.show();
+   *   },
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   scope(): Scope;
   /**
@@ -270,6 +353,21 @@ export interface Scope extends Disposable {
    * @param item - Any {@link Disposable}, for example a handle created
    *   through another scope.
    * @returns `item` itself, for chaining.
+   *
+   * @capability None.
+   *
+   * @example Dispose a handle from another scope together with this one
+   * A filter made through the root scope is withdrawn when a child feature
+   * ends. `add` hands an existing disposable to this scope, which then
+   * disposes it with its own handles; it returns the same handle for
+   * chaining.
+   * ```ts
+   * const feature = plugin.scope();
+   * const blur = feature.add(plugin.video.filter("blur")); // now ends with `feature`
+   * blur.set([{ kind: "gblur", sigma: 4, steps: 3 }]);
+   * ```
+   *
+   * @since 1.0.0
    */
   add<T extends Disposable>(item: T): T;
   /**
@@ -287,6 +385,9 @@ export interface Scope extends Disposable {
    * const timer = setInterval(() => plugin.update(), 1000); // re-evaluate bindings
    * plugin.onDispose(() => clearInterval(timer));
    * ```
+   *
+   * @capability None.
+   * @since 1.0.0
    */
   onDispose(cleanup: () => void | Promise<void>): Disposable;
   /**
@@ -308,6 +409,9 @@ export interface Scope extends Disposable {
    *   void plugin.osd.show("Bookmarks: {}", [error.message]);
    * });
    * ```
+   *
+   * @capability None.
+   * @since 1.0.0
    */
   onError(listener: (error: PluginError) => void): Disposable;
   /**
@@ -317,6 +421,30 @@ export interface Scope extends Disposable {
    * changing state from your own timers or between awaits of a long task.
    *
    * Several calls within one microtask are merged into one pass.
+   *
+   * @capability None.
+   *
+   * @example Show progress from a long task between awaits
+   * A progress label moves while a long download runs, not only when it
+   * ends. The SDK re-evaluates bound values after each handler and when its
+   * promise settles; state changed between the awaits of a long handler
+   * shows only after an explicit `update()`.
+   * ```ts
+   * declare const window: Window;
+   * declare function downloadPart(part: number): Promise<void>;
+   * // ---cut---
+   * let done = 0;
+   * window.bind(() => ({ progress: done }));
+   * window.on("start", async () => {
+   *   for (let part = 0; part < 10; part++) {
+   *     await downloadPart(part);
+   *     done = part + 1;
+   *     plugin.update(); // send `progress` now, not when the handler ends
+   *   }
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   update(): void;
 }
@@ -356,6 +484,16 @@ export interface Scope extends Disposable {
  *   });
  * }
  * ```
+ *
+ * @remarks
+ * The root scope: disposing it is what stopping the plugin does. Besides
+ * the modules of {@link Scope}, it carries the plugin's `id` and its
+ * `dataDirectory`.
+ *
+ * @capability That of each module (see the modules).
+ * @see [How a plugin runs](../../docs/concepts/plugins.md)
+ * @since 1.0.0
+ * @category Plugin
  */
 export interface Plugin extends Scope {
   /** The manifest id, e.g. `"community.bookmark"`. */
@@ -2552,17 +2690,19 @@ export interface DropHandler {
  *
  * @capability ui.drop
  *
- * @example Add dropped videos to a list
- * Video files dropped on the player are added to the plugin's list
- * instead of replacing what plays. The provider claims the extensions; the
- * player calls `drop` with the dropped paths of those types, in the order
- * the file manager gave them.
+ * @example Collect dropped CHIP-8 programs
+ * `.ch8` files dropped on the player are added to the plugin's list. The
+ * provider claims the extension; the player calls `drop` with the dropped
+ * paths of that type, in the order the file manager gave them. Extensions
+ * go to the first provider: the built-in playlist claims every audio and
+ * video extension when it starts, so a provider for those only gets them
+ * while the playlist is disabled.
  * ```ts
  * const queue: string[] = [];
  * plugin.drops.provide({
- *   extensions: ["mp4", "mkv"],
+ *   extensions: ["ch8"],
  *   drop: ({ paths }) => {
- *     queue.push(...paths); // only .mp4 and .mkv files reach here
+ *     queue.push(...paths); // only .ch8 files reach here
  *   },
  * });
  * ```
@@ -3697,7 +3837,8 @@ export interface Timeline {
    *
    * @example Publish this plugin's marks
    * The plugin gets its one layer and puts two chapter marks on the seek
-   * bar. A second `layer()` call throws; disposing the layer removes the
+   * bar. Calling `layer()` again while the first layer is not disposed
+   * throws; disposing the layer removes the
    * marks.
    * ```ts
    * const layer = plugin.timeline.layer();
@@ -3712,7 +3853,13 @@ export interface Timeline {
   layer(): TimelineLayer;
 }
 
-/** The main window as `plugin.window.state` reports it (logical points). */
+/**
+ * The main window as `plugin.window.state` reports it (logical points).
+ *
+ * @see {@link MainWindow.state}
+ * @since 1.0.0
+ * @category Plugin
+ */
 export interface WindowState {
   /** The main window is fullscreen. */
   readonly fullscreen: boolean;
@@ -3763,11 +3910,38 @@ export interface WindowState {
  *   },
  * });
  * ```
+ *
+ * @remarks
+ * `plugin.window` is the player's main window: its size, fullscreen,
+ * picture-in-picture and the video area. Reading it needs no capability;
+ * changing it needs `window.control`. Changes that last only while the
+ * plugin runs (always on top, pointer auto-hide) revert when it stops.
+ *
+ * @capability None to read; window.control to change; events to follow
+ * outside changes.
+ * @since 1.0.0
+ * @category Plugin
  */
 export interface MainWindow {
   /** Latest state; zero video area without a native window. */
   readonly state: WindowState;
-  /** The window state changed (needs `events` for outside changes). */
+  /**
+   * The window state changed (needs `events` for outside changes).
+   *
+   * @capability events (for outside changes)
+   *
+   * @example Fit a panel to fullscreen
+   * The plugin's panel uses larger text while the player is fullscreen. The
+   * listener runs after the SDK updated `state` from the player's events
+   * (with `events`; without it only after this plugin's own changes).
+   * ```ts
+   * declare const bar: Panel;
+   * // ---cut---
+   * plugin.window.onChange((state) => bar.set({ large: state.fullscreen }));
+   * ```
+   *
+   * @since 1.0.0
+   */
   onChange(listener: (state: WindowState) => void): Disposable;
   /**
    * Resize the window so the video column is `width`×`height` (the bottom bar
@@ -3779,6 +3953,23 @@ export interface MainWindow {
    * Sizes are 1–16384 logical points; the minimum video area is 318×120.
    * The visible area excludes the menu bar and Dock on macOS; on Windows it
    * is the whole display. `unavailable` without a user interface too.
+   *
+   * @capability window.control
+   * @throws `unavailable` (rejects) Fullscreen, or no user interface.
+   * @throws `invalid` (rejects) A size outside 1–16384 logical points.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `window.control`.
+   *
+   * @example Make the video area 1280×720 points
+   * The window resizes so that the video column is 1280×720 logical points,
+   * the bars and a docked sidebar added around it. A request that does not
+   * fit the screen is scaled down keeping the aspect, and `clamped` says so.
+   * ```ts
+   * const applied = await plugin.window.setVideoArea({ width: 1280, height: 720 });
+   * if (applied.clamped) await plugin.osd.show("{}×{}", [applied.width, applied.height]);
+   * ```
+   *
+   * @since 1.0.0
    */
   setVideoArea(size: { width: number; height: number }): Promise<{
     /** The applied video area width, logical points. */
@@ -3791,12 +3982,53 @@ export interface MainWindow {
   /**
    * Float the player's windows above other applications. Newest call wins; reverts when this plugin stops.
    * `unavailable` without a user interface.
+   *
+   * @capability window.control
+   * @throws `unavailable` (rejects) No user interface.
+   * @throws `invalid` (rejects) `onTop` is not a boolean.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `window.control`.
+   *
+   * @example Keep the player above other windows
+   * The player's windows (tool windows too) float above other applications
+   * while the plugin's "Always on top" item is checked. The newest call of
+   * any plugin wins, and the setting reverts when this plugin stops.
+   * ```ts
+   * let onTop = false;
+   * plugin.commands.add({
+   *   id: "on-top",
+   *   path: ["@screen", "Always on top"],
+   *   checked: () => onTop,
+   *   run: async () => {
+   *     onTop = !onTop;
+   *     await plugin.window.setAlwaysOnTop(onTop); // reverts when this plugin stops
+   *   },
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   setAlwaysOnTop(onTop: boolean): Promise<void>;
   /**
    * `"playing"`: hide the pointer over the video after 3 idle seconds while
    * playing, in a window too (not only fullscreen). Newest call wins;
    * reverts to `"fullscreen"` when this plugin stops.
+   *
+   * @capability window.control
+   * @throws `invalid` (rejects) A mode other than `"fullscreen"` or
+   *   `"playing"`.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `window.control`.
+   *
+   * @example Hide the pointer over playing video in a window too
+   * The pointer disappears after 3 idle seconds over playing video, not only
+   * in fullscreen. The newest call wins; when this plugin stops the player
+   * goes back to hiding it in fullscreen only.
+   * ```ts
+   * await plugin.window.setCursorAutoHide("playing");
+   * ```
+   *
+   * @since 1.0.0
    */
   setCursorAutoHide(mode: "fullscreen" | "playing"): Promise<void>;
   /**
@@ -3821,11 +4053,26 @@ export interface MainWindow {
    * if (plugin.window.state.pictureInPicture.supported)
    *   await plugin.window.setPictureInPicture(!plugin.window.state.pictureInPicture.active);
    * ```
+   *
+   * @capability window.control
+   * @throws `unsupported` (rejects) The system has no picture-in-picture
+   *   (`supported` is false).
+   * @throws `unavailable` (rejects) No video.
+   * @throws `busy` (rejects) The previous call is still switching.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `window.control`.
+   * @since 1.0.0
    */
   setPictureInPicture(on: boolean): Promise<void>;
 }
 
-/** `plugin.app`: fixed for the life of the plugin process. */
+/**
+ * `plugin.app`: fixed for the life of the plugin process.
+ *
+ * @since 1.0.0
+ * @category Plugin
+ */
 export interface AppInfo {
   /** The player's version, e.g. `"1.0.0"`. */
   readonly version: string;
@@ -3856,16 +4103,47 @@ export interface AppInfo {
  * const system = await plugin.app.system();
  * const text = `Vestra ${plugin.app.version} on ${system.name} ${system.version ?? ""}`;
  * ```
+ *
+ * @remarks
+ * `plugin.app` holds facts fixed for the player's run (its version, build,
+ * library versions) and reads the system's on request: `system()` reads
+ * the displays at each call; the operating system's name and version are
+ * worked out once, at the first call, and reused.
+ *
+ * @capability None.
+ * @since 1.0.0
+ * @category Plugin
  */
 export interface App extends AppInfo {
   /**
    * The operating system and the displays, read when called (displays come
    * and go). No capability. CPU and memory: Node's `os` module.
+   *
+   * @capability None.
+   * @throws `Error` (rejects) Only when the player cannot be asked.
+   *
+   * @example Choose a size for the primary display
+   * The plugin sizes its picture for the primary display. `system()` asks
+   * the player; `displays` lists the displays present now, the primary one
+   * first (empty without a user interface).
+   * ```ts
+   * const { displays } = await plugin.app.system();
+   * const primary = displays[0];
+   * if (primary) console.log(primary.width, primary.height);
+   * ```
+   *
+   * @since 1.0.0
    */
   system(): Promise<SystemInfo>;
 }
 
-/** What {@link App.system} reports. */
+/**
+ * What {@link App.system} reports.
+ *
+ * @see {@link App.system}
+ * @since 1.0.0
+ * @category Plugin
+ */
 export interface SystemInfo {
   /** The operating system family. */
   readonly os: "macos" | "windows" | "linux" | "other";
@@ -3883,7 +4161,12 @@ export interface SystemInfo {
   readonly displays: readonly DisplayInfo[];
 }
 
-/** One display in {@link SystemInfo.displays}. */
+/**
+ * One display in {@link SystemInfo.displays}.
+ *
+ * @since 1.0.0
+ * @category Plugin
+ */
 export interface DisplayInfo {
   /** The system's name for it, `null` when it has none. */
   readonly name: string | null;
@@ -6095,7 +6378,7 @@ export interface ViewSettings {
  * The video fills the video area (cropped instead of letterboxed), then
  * zooms to 150 % shifted a little to the right. The first plugin to call
  * `view()` owns the display layer; each `set` merges into its settings,
- * which stay across sources until the plugin resets them or stops.
+ * which stay across sources until the plugin disposes the view or stops.
  * ```ts
  * const view = plugin.video.view();
  * view.set({ fit: "fill" });
@@ -6109,7 +6392,8 @@ export interface ViewSettings {
  * (`invalid`) in `status` and is reported to `onError`, without sending
  * anything.
  *
- * @capability processing.video
+ * @capability processing.video, playback.read and events (like
+ * {@link VideoFilter})
  * @see [Video and audio processing](../../docs/concepts/processing.md)
  * @since 1.0.0
  * @category Processing
@@ -6124,7 +6408,7 @@ export interface VideoView extends Disposable {
    * A 4:3 video fills a 16:9 window, distorted, as the user asked. Each
    * `set` merges the given fields into this plugin's view settings; the
    * newest write wins, and the settings stay for later files until the
-   * plugin resets them or stops.
+   * plugin disposes the view or stops.
    * ```ts
    * plugin.video.view().set({ fit: "stretch" });
    * ```
@@ -6205,11 +6489,13 @@ export interface RenderSettings {
  * @remarks
  * GPU renderer options (tone mapping, peak detection, shaders,
  * interpolation). Only the GPU renderer has them, which today means macOS;
- * under software rendering every `set` fails with `unsupported`. Single
- * owner, like {@link VideoView}. `set` never throws; the result shows in
- * `status`.
+ * under software rendering the handle is `failed` with `unsupported` as
+ * soon as `render()` creates it (reported to `onError` too), and so is
+ * every `set`. Single owner, like {@link VideoView}. `set` never throws; the
+ * result shows in `status`.
  *
- * @capability processing.video
+ * @capability processing.video, playback.read and events (like
+ * {@link VideoFilter})
  * @see [Video and audio processing](../../docs/concepts/processing.md)
  * @since 1.0.0
  * @category Processing
@@ -6375,14 +6661,18 @@ export interface SubtitleConditional {
  * @remarks
  * The subtitle tracks of the current source, the primary and secondary
  * selection, uploaded files and the style. `state` is the SDK's snapshot of
- * the player's subtitle state (`null` until first read), kept current from
- * events with `events`. Changes act on the selection the plugin last saw:
- * when the user or another plugin changed it meanwhile they fail with
- * `stale` (pass `ifCurrent` to pin an older state). Each change is one
- * operation the player confirms; the promise resolves with the new state.
+ * the player's subtitle state (`null` until first read). The player has no
+ * subtitle event: the SDK reads the state again when the source, its phase
+ * or the backend changes (with `events`) and after this plugin's own
+ * changes, so a selection the user or another plugin changed shows only
+ * after `refresh()`. A change without `ifCurrent` reads the state first
+ * and applies to it; pass `ifCurrent` to make it fail with `stale` when the
+ * selection changed since that state. Each change is one operation the
+ * player confirms; `select`, `remove` and `setStyle` resolve with the new
+ * state, `load` with the new track.
  *
  * @capability `subtitles.read` to read; `subtitles.control` and
- * `subtitles.read` to change; `events` to follow changes made elsewhere.
+ * `subtitles.read` to change; `events` to re-read on source changes.
  *
  * @see [Load subtitles from a plugin](../../docs/how-to/subtitles.md)
  * @since 1.0.0
@@ -6396,10 +6686,12 @@ export interface Subtitles {
    *
    * @capability events and subtitles.read
    *
-   * @example Show the selected subtitle's language
-   * The OSD names the language of the subtitle the user picks. The SDK
-   * updates `state` from the player's events and then calls the listener;
-   * `selected` is the primary subtitle, `null` when subtitles are off.
+   * @example Show the subtitle language after a new file opens
+   * When a new file starts, the OSD names the language of its primary
+   * subtitle. The SDK reads the subtitle state again when the source or its
+   * phase changes (there is no subtitle event, so a selection changed in the
+   * player shows only after `refresh()`) and then calls the listener;
+   * `selected` is `null` when subtitles are off.
    * ```ts
    * plugin.subtitles.onChange((state) => {
    *   // A track's language is null when the file does not say.
@@ -6435,24 +6727,31 @@ export interface Subtitles {
    * `track: null` turns the role off.
    *
    * @capability subtitles.control and subtitles.read
-   * @throws `stale` (rejects) The source or the subtitle selection changed
-   *   since the state the call is based on.
-   * @throws `invalid` (rejects) An unknown track, or a secondary that is not
-   *   a text track or is the primary one.
-   * @throws `unavailable` (rejects) Nothing is loaded to select from.
+   * @throws `stale` (rejects) With `ifCurrent`: the source or the subtitle
+   *   selection changed since that state.
+   * @throws `invalid` (rejects) An unknown track; as secondary, a bitmap
+   *   track or the primary one; as primary, the current secondary.
+   * @throws `missing` (rejects) The track is not in the current source.
+   * @throws `unavailable` (rejects) Nothing loaded, or the source is still
+   *   loading or not yet confirmed.
    * @throws `busy` (rejects) Too many subtitle operations at once.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
    *
    * @example Turn on the first English subtitle
-   * The first English track becomes the primary subtitle. The track comes
-   * from `state.tracks` (compare tracks by `id`); `select` is conditional on
-   * the state it read, so it fails with `stale` instead of selecting in a
-   * file the user has just left.
+   * The first English track becomes the primary subtitle, but only in the
+   * file the plugin looked at. Embedded tracks are chosen by number, so
+   * without `ifCurrent` a select after another file opened would pick that
+   * file's track with the same number; with `ifCurrent: state` it fails with
+   * `stale` instead. Without `ifCurrent`, `select` reads the newest state
+   * itself and almost never fails with `stale`.
    * ```ts
-   * const state = plugin.subtitles.state ?? (await plugin.subtitles.refresh());
+   * const state = await plugin.subtitles.refresh();
    * const english = state.tracks.find((track) => track.language === "en");
-   * if (english) await plugin.subtitles.select(english); // role: "primary"
+   * if (english)
+   *   await plugin.subtitles.select(english, { ifCurrent: state }).catch((error: PluginError) => {
+   *     if (error.code !== "stale") throw error; // another file or selection now
+   *   });
    * ```
    *
    * @since 1.0.0
@@ -6477,8 +6776,10 @@ export interface Subtitles {
    * @capability subtitles.control and subtitles.read
    * @throws `invalid` (rejects) A bad `format` or `title`, or a file over the
    *   limits.
-   * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on.
+   * @throws `stale` (rejects) With `ifCurrent`: the source changed since
+   *   that state.
+   * @throws `unavailable` (rejects) Nothing loaded, or the source is still
+   *   loading.
    * @throws `aborted` (rejects) `signal` aborted before the commit (an
    *   `AbortError`); the upload is discarded.
    * @throws `busy` (rejects) Too many subtitle operations at once.
@@ -6516,8 +6817,10 @@ export interface Subtitles {
    *
    * @capability subtitles.control and subtitles.read
    * @throws `invalid` (rejects) The track was not loaded by this plugin.
-   * @throws `stale` (rejects) The source changed since the state the call is
-   *   based on.
+   * @throws `stale` (rejects) With `ifCurrent`: the source changed since
+   *   that state.
+   * @throws `unavailable` (rejects) The source is still loading.
+   * @throws `busy` (rejects) Too many subtitle operations at once.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
    *
@@ -6544,9 +6847,12 @@ export interface Subtitles {
    * the order of the calls.
    *
    * @capability subtitles.control and subtitles.read
-   * @throws `invalid` (rejects) A value out of range, or a font id the player
-   *   does not list.
-   * @throws `unsupported` (rejects) The font is not available.
+   * @throws `invalid` (rejects) A field out of range.
+   * @throws `unsupported` (rejects) A font that is not in `state.fonts`.
+   * @throws `stale` (rejects) With `ifCurrent`: the subtitle state changed
+   *   since that state.
+   * @throws `unavailable` (rejects) The source is still loading.
+   * @throws `busy` (rejects) Too many subtitle operations at once.
    * @throws `capability` (rejects) The manifest does not declare
    *   `subtitles.control` and `subtitles.read`.
    *
@@ -6644,8 +6950,11 @@ export interface Snapshot extends Disposable {
    * @capability media.read and media.control
    * @throws `released` (rejects) The snapshot was already released.
    * @throws `invalid` (rejects) Bad options (`quality` outside 1–100, a
-   *   relative destination, a clip end before the snapshot time).
-   * @throws `busy` (rejects) The player runs too many media operations.
+   *   relative destination, a clip `end` not after the snapshot time or
+   *   past the duration).
+   * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
+   * @throws `unavailable` (rejects) No FFmpeg, or the export worker could not
+   *   start.
    * @throws `capability` (rejects) The manifest does not declare
    *   `media.read` and `media.control`.
    *
@@ -6733,8 +7042,10 @@ export type JobState = Omit<MediaJob, "jobId">;
  *
  * @example Show export progress and cancel on request
  * The OSD shows the job's status while it runs, and a Cancel command stops
- * it. `onChange` follows the state; `cancel` asks the worker to stop and
- * says whether it was in time.
+ * it. `onChange` follows the state (`queued`, `running`, `cancelling`,
+ * then a terminal one); `cancel` asks the worker to stop. After
+ * `requested` the job usually ends `cancelled`, or `failed` when the
+ * cleanup failed.
  * ```ts
  * declare const job: ExportJob;
  * // ---cut---
@@ -6756,7 +7067,7 @@ export interface ExportJob extends Disposable {
    *
    * @example Log each state of an export
    * The plugin's log records each status the job goes through (`queued`,
-   * `running`, then a terminal one). The listener runs when the SDK learns a
+   * `running`, `cancelling` after a cancel, then a terminal one). The listener runs when the SDK learns a
    * new state from its polling.
    * ```ts
    * declare const job: ExportJob;
@@ -6872,8 +7183,8 @@ export interface MediaCapture {
    * @throws `unavailable` (rejects) A processed snapshot while the picture is
    *   still being prepared.
    * @throws `unsupported` (rejects) A processed snapshot the player cannot
-   *   freeze (an external ASS track with subtitles, a picture over its size
-   *   limits).
+   *   freeze: subtitles that cannot be flattened (only plain SRT text can),
+   *   or a picture over the size limits.
    * @throws `capability` (rejects) The manifest does not declare
    *   `media.read` and `media.control`.
    *
@@ -7069,7 +7380,8 @@ export interface Resolver extends Disposable {
    * `extensions`).
    *
    * @throws `conflict` (rejects) Another resolver has the extension or the
-   *   scheme + host.
+   *   scheme + host, or this plugin already registered this id.
+   * @throws `busy` (rejects) The player already holds 16 resolvers.
    * @throws `invalid` (rejects) A malformed declaration.
    * @throws `capability` (rejects) The manifest does not declare
    *   `source.resolve`.
@@ -7304,9 +7616,10 @@ export interface InstallOptions {
  * @remarks
  * A package the player has checked, from {@link Packages.validate} or
  * {@link Packages.validateArchive}: its manifest, digest and the checks
- * it passed. Installing it starts a {@link PackageChange}; the player keeps
- * only the 32 most recent candidates, and one whose files changed since
- * the check fails with `staleDigest`.
+ * it passed. The player copies the whole package when it checks it and
+ * installs that copy, so later changes to the directory do not matter.
+ * Installing starts a {@link PackageChange}; the player keeps only the 32
+ * most recent candidates.
  *
  * @capability plugins.manage
  *
@@ -7347,8 +7660,9 @@ export interface PackageCandidate {
    *   and `replace` is not set.
    * @throws `unsupported` (rejects) A built-in plugin's id.
    * @throws `reserved` (rejects) A reserved id (`vestra`, `vestra.*`).
-   * @throws `staleDigest` (rejects) The package's files changed after it was
-   *   validated.
+   * @throws `busy` (rejects) Another change of this plugin is in progress.
+   * @throws `revisionConflict` (rejects) The installed plugins changed in a
+   *   way that conflicts with this change; validate and try again.
    * @throws `stale` (rejects) The candidate is older than the 32 the player
    *   keeps.
    * @throws `capability` (rejects) The manifest does not declare
@@ -7426,7 +7740,9 @@ export interface PackageChange {
    * @example Close a progress window when the change ends
    * The plugin's progress window closes once the install is over, whatever
    * the outcome. The listener receives each new status; the terminal ones
-   * are `committed`, `cancelled`, `failed`, `failedDegraded` and `tooLate`.
+   * are `committed`, `cancelled`, `failed`, `failedDegraded` and `tooLate`
+   * (`tooLate` only answers a `cancel` of a change that had committed, and
+   * `committed` may follow it).
    * ```ts
    * declare const change: PackageChange;
    * declare const progress: Window;
@@ -7443,8 +7759,9 @@ export interface PackageChange {
   /**
    * Resolves with the final status.
    *
-   * @throws `Error` (rejects) Only when the player refuses to report the
-   *   change's status; a failed change is a terminal status, not a rejection.
+   * @throws `missing` (rejects) The player no longer knows the change (a
+   *   `HostError` with that code); a failed change is a terminal status,
+   *   not a rejection.
    */
   readonly done: Promise<PackageChangeStatus>;
   /**
@@ -7456,13 +7773,14 @@ export interface PackageChange {
    *
    * @example Cancel an install the user no longer wants
    * The install stops if it has not gone too far. `cancel` asks the player;
-   * the change then ends `cancelled`, or `tooLate` when it was already
-   * being committed.
+   * the change then ends `cancelled`. When the change had already committed
+   * the player answers `tooLate` and `done` still resolves `committed`; a
+   * change that is restoring cannot be cancelled and ends `failed`.
    * ```ts
    * declare const change: PackageChange;
    * // ---cut---
    * await change.cancel();
-   * console.log(await change.done); // "cancelled" or "tooLate"
+   * console.log(await change.done); // "cancelled"; "committed" when it was too late
    * ```
    *
    * @since 1.0.0
@@ -7615,11 +7933,15 @@ export interface Packages {
    * player 0.4.2 the 33rd validation of a run failed with `busy` instead.
    *
    * @capability plugins.manage
-   * @throws `invalid` (rejects) Not a package directory, or a manifest that
-   *   breaks the rules.
+   * @throws `host` (rejects) Not a package directory, or a manifest that
+   *   breaks the rules (another `apiVersion` included); `message` says why.
+   * @throws `invalid` (rejects) A bad request (a path that is not a string).
+   * @throws `javascript` (rejects) The entry module does not parse.
+   * @throws `slint` (rejects) A Slint file does not compile.
    * @throws `reserved` (rejects) A reserved id (`vestra`, `vestra.*`).
-   * @throws `versionMismatch` (rejects) The package needs a newer player or
-   *   another `apiVersion`.
+   * @throws `versionMismatch` (rejects) The package's `minPlayerVersion` is
+   *   newer than the player.
+   * @throws `disabled` (rejects) The calling plugin is stopping.
    * @throws `capability` (rejects) The manifest does not declare
    *   `plugins.manage`.
    *
@@ -7649,11 +7971,15 @@ export interface Packages {
    * fails with `reserved`, as in {@link Packages.validate}.
    *
    * @capability plugins.manage
-   * @throws `invalid` (rejects) Not a `.vxp` file, or its contents break the
-   *   rules.
+   * @throws `invalid` (rejects) The path does not end in `.vxp`.
+   * @throws `host` (rejects) The archive or its manifest breaks the rules;
+   *   `message` says why.
+   * @throws `javascript` (rejects) The entry module does not parse.
+   * @throws `slint` (rejects) A Slint file does not compile.
    * @throws `reserved` (rejects) A reserved id.
-   * @throws `versionMismatch` (rejects) The package needs a newer player or
-   *   another `apiVersion`.
+   * @throws `versionMismatch` (rejects) The package's `minPlayerVersion` is
+   *   newer than the player.
+   * @throws `disabled` (rejects) The calling plugin is stopping.
    * @throws `capability` (rejects) The manifest does not declare
    *   `plugins.manage`.
    *
@@ -7716,9 +8042,9 @@ export interface Packages {
    * (players released with SDK 1.5.18 on; older ones disabled built-ins too).
    *
    * @capability plugins.manage
-   * @throws `invalid` (rejects) The calling plugin itself.
+   * @throws `invalid` (rejects) Disabling the calling plugin itself.
    * @throws `missing` (rejects) An unknown id.
-   * @throws `busy` (rejects) The plugin is being installed.
+   * @throws `busy` (rejects) The plugin is being installed or reloaded.
    * @throws `unsupported` (rejects) A built-in plugin.
    * @throws `capability` (rejects) The manifest does not declare
    *   `plugins.manage`.
@@ -7782,6 +8108,9 @@ export interface Packages {
    * @throws `unsupported` (rejects) A built-in plugin or a development load.
    * @throws `missing` (rejects) An unknown id.
    * @throws `invalid` (rejects) The calling plugin itself.
+   * @throws `busy` (rejects) Another change of that plugin is in progress.
+   * @throws `revisionConflict` (rejects) The installed plugins changed in a
+   *   way that conflicts with this change.
    * @throws `capability` (rejects) The manifest does not declare
    *   `plugins.manage`.
    *
@@ -7946,6 +8275,8 @@ export interface Bindings {
    * Back to the defaults: one command, or every override when omitted.
    *
    * @capability bindings.manage
+   * @throws `missing` (rejects) A command that has no override and is not
+   *   declared.
    * @throws `capability` (rejects) The manifest does not declare
    *   `bindings.manage`.
    *

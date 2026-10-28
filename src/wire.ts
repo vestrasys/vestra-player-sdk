@@ -23,6 +23,9 @@ export const API_VERSION = "vestra/1" as const;
 /**
  * A JSON value: what crosses the wire to the player. Slint property values,
  * callback arguments and protocol parameters are all `Json`.
+ *
+ * @since 1.0.0
+ * @category Plugin
  */
 export type Json =
   null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -112,11 +115,21 @@ export interface UiCallback {
  * host.reset("clipboard.writeText"); // writes succeed again
  * await stop();
  * ```
+ *
+ * @remarks
+ * A definite refusal, as opposed to a lost reply: the SDK does not retry
+ * it, and the plugin sees an `Error` with `code`.
+ *
+ * @capability None.
+ * @since 1.0.0
+ * @category Testing
  */
 export class HostError extends Error {
   /** The stable error code, e.g. `"invalid"`, `"stale"`, `"unavailable"`. */
   code: string;
   /**
+   * A refusal with this code, as the player would send it.
+   *
    * @param code - The stable error code the caller will see as `error.code`.
    * @param message - Human-readable detail (not for branching on).
    */

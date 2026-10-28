@@ -19,6 +19,53 @@
  * `example-lead` and `stale-refs` (`doc-lint`; below).
  */
 export const STRICT_CATEGORIES = {
+  Plugin: {
+    full: ["Plugin", "Scope", "Disposable", "MainWindow", "App"],
+    data: [
+      "PluginError",
+      "WindowState",
+      "AppInfo",
+      "SystemInfo",
+      "DisplayInfo",
+      "Json",
+    ],
+  },
+  Testing: {
+    full: [
+      "TestHost",
+      "startPlugin",
+      "FakeWindow",
+      "FakeCommand",
+      "FakeBarButton",
+      "FakeProducer",
+      "HostError",
+    ],
+    data: [
+      "CapabilityInfo",
+      "CAPABILITY_INFO",
+      "MESSAGE_LIMIT",
+      "COMMAND_LIMITS",
+      "MENU_IDS",
+      "BAR_BUTTON_ICONS",
+      "BAR_BUTTON_LIMITS",
+      "BuiltinSubmenu",
+      "BUILTIN_SUBMENUS",
+      "BuiltinCommand",
+      "BUILTIN_COMMANDS",
+      "LOCALES",
+      "LIST_SEPARATORS",
+      "TEXT_LIMITS",
+      "THEME_PALETTES",
+      "BINDING_INPUTS",
+      "OSD_LIMITS",
+      "SESSION_STORAGE_LIMITS",
+      "SECRET_LIMITS",
+      "FileDialogText",
+      "MarkdownWire",
+      "UI_VALUE_LIMITS",
+      "IMAGE_LIMITS",
+    ],
+  },
   UI: {
     full: [
       "Ui",
