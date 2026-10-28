@@ -22,6 +22,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | Snapshots and exports ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams ({@link "@vestra-player/sdk"!Player.openStream | Player.openStream}) | A Unix socket. | Loopback TCP with a token. |
 | Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
+| {@link "@vestra-player/sdk"!Rendering | plugin.rendering} (player 0.5.13) | `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`). | `gpu.available` is `false` (`no-gpu-backend`); `setPreference("gpu")` fails with `unsupported`. |
 | Render options ({@link "@vestra-player/sdk"!RenderOptions | RenderOptions}) | Available; `peakDetect` has no effect. | `unsupported` (software rendering). |
 | Bindings | `Ctrl` also matches ⌘; `Cmd` is ⌘. | `Cmd` is the Windows logo key; `Cmd+Q` does not quit. |
 | Keys taken first, standard close keys | See [Keys the system takes first](commands.md#keys-the-system-takes-first). | See [Keys the system takes first](commands.md#keys-the-system-takes-first). |

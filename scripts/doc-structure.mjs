@@ -124,6 +124,10 @@ export const GROUPS = [
         why: "One task: remember a window's state between runs.",
       },
       {
+        file: "gpu-rendering.md",
+        why: "One task: offer the player's GPU or software rendering choice and its restart.",
+      },
+      {
         file: "i18n.md",
         why: "One task: translate a plugin.",
       },

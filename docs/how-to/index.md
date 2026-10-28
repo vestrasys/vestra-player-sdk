@@ -37,6 +37,12 @@ A tool window keeps nothing by itself: closing it destroys it, and the plugin pr
 
 [Read the guide](window-state.md)
 
+## Offer a GPU rendering switch
+
+The player can draw the video on the GPU or in software, and keeps the user's choice itself, applied from the next start. The guide builds a settings item "GPU Rendering (Experimental)" from `plugin.rendering.state()`: checked when the next start uses the GPU, greyed out with the player's reason where the GPU cannot be chosen, "(Restart to Apply)" while a change waits, and a restart item that calls `restartPlayer()`. It also covers older players and testing with `TestHost.rendering`.
+
+[Read the guide](gpu-rendering.md)
+
 ## Translate a plugin
 
 The player shows its interface in seven languages, chosen at start-up. A plugin writes every text in English (menu paths and titles, `@tr("…")` in its Slint files, templates such as `osd.show("Speed {}×", [rate])`) and ships one gettext file per language in `locales/`; the player translates, and the plugin contains no translation code. The guide covers the three places text lives, `vestra-plugin i18n extract` and `check`, and testing in another language.

@@ -51,8 +51,8 @@ export interface CapabilityInfo {
  *
  * A member not listed under any capability needs none (`plugin.tools`,
  * `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui`,
- * `plugin.i18n`, reading `plugin.window.state`, `plugin.appearance.theme`
- * and `plugin.packages.list`).
+ * `plugin.i18n`, reading `plugin.window.state`, `plugin.appearance.theme`,
+ * `plugin.packages.list` and `plugin.rendering.state`).
  *
  * @example Check in a test that the manifest declares every required capability
  * The test fails, naming the missing capability, when the manifest declares
