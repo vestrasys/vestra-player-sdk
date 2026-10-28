@@ -104,6 +104,14 @@ export const GROUPS = [
     pages: [
       { file: "index.md", why: "Group index." },
       {
+        file: "control-playback.md",
+        why: "One task: open files and control playback without acting on a source the user has left.",
+      },
+      {
+        file: "store-data.md",
+        why: "One task: choose between settings files, session values and secrets, and use each.",
+      },
+      {
         file: "slider.md",
         why: "One task: keep a slider responsive while dragging.",
       },

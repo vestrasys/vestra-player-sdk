@@ -380,7 +380,13 @@ export interface Plugin extends Scope {
 
 // ---------------------------------------------------------------- commands
 
-/** The state of a command's menu item, as the player shows it. */
+/**
+ * The state of a command's menu item, as the player shows it.
+ *
+ * @see {@link Command.set}, {@link CommandOptions}
+ * @since 1.0.0
+ * @category Commands
+ */
 export interface CommandState {
   /** False greys the item out; the player then never calls `run` (bound keys are swallowed). Default true. */
   enabled: boolean;
@@ -413,6 +419,9 @@ export interface CommandState {
  *   run: () => plugin.player.setLoop(null),
  * });
  * ```
+ *
+ * @since 1.0.0
+ * @category Commands
  */
 export type Bindable<T> = T | (() => T);
 
@@ -421,6 +430,9 @@ export type Bindable<T> = T | (() => T);
  * `@<id>` or by its English key (see {@link CommandOptions.path}): Open,
  * Playback, Subtitles, Video, Audio, Screen, Settings. The list is
  * `MENU_IDS` in `@vestra-player/sdk/testing`.
+ *
+ * @since 1.3.0
+ * @category Commands
  */
 export type MenuId =
   "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings";
@@ -431,6 +443,8 @@ export type MenuId =
  * `@vestra-player/sdk/testing`.
  *
  * @since 1.5.29
+ *
+ * @category Commands
  */
 export type BarButtonIcon =
   | "play"
@@ -521,6 +535,8 @@ export type BarButtonIcon =
  * @player 0.5.10; older players show the menu entry without a button
  * (declare `"minPlayerVersion": "0.5.10"` when the button matters).
  * @since 1.5.29
+ *
+ * @category Commands
  */
 export interface CommandButton {
   /**
@@ -570,6 +586,10 @@ export interface CommandButton {
  * {@link Commands.add} throws `invalid` synchronously for a bad path,
  * order, group or binding. The same path registered twice, or a path that
  * is both an item and a submenu, fails with `conflict` (through `ready`).
+ *
+ * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @since 1.0.0
+ * @category Commands
  */
 export interface CommandOptions {
   /** Local id, unique within the plugin (the global id is `<manifest id>/<id>`). */
@@ -697,6 +717,38 @@ export interface CommandOptions {
 /**
  * A registered command, from {@link Commands.add}. Disposing it removes it
  * from the menu and the binding table; the id can be added again right away.
+ *
+ * @remarks
+ * The handle of one menu item and its keys. Its state (`enabled`, `checked`,
+ * `busy`, `reason`) is bound: functions given to {@link Commands.add} or
+ * {@link Command.set} are evaluated again in every update pass and only
+ * changes reach the player. Its title, path, bindings and button cannot
+ * change in place; dispose the command (or a child {@link Scope}) and add it
+ * again. Disposing it, its scope or stopping the plugin removes the menu
+ * item, its keys and its bar button.
+ *
+ * @capability commands
+ *
+ * @example Enable an item only while a file is open
+ * Video ▸ Export… is greyed out until a file is open. `set` replaces the
+ * `enabled` field with a function; the SDK evaluates it again after every
+ * player state change and sends the new state when it changes, so the
+ * item follows the player without further code.
+ * ```ts
+ * declare function runExport(): Promise<void>;
+ * // ---cut---
+ * const exportCommand = plugin.commands.add({
+ *   id: "export",
+ *   path: ["@video", "Export…"],
+ *   run: runExport,
+ * });
+ * // A function: re-evaluated in every update pass.
+ * exportCommand.set({ enabled: () => plugin.player.state.phase === "ready" });
+ * ```
+ *
+ * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @since 1.0.0
+ * @category Commands
  */
 export interface Command extends Disposable {
   /** The local id given in {@link CommandOptions.id}. */
@@ -725,6 +777,9 @@ export interface Command extends Disposable {
    *   },
    * });
    * ```
+   *
+   * @capability commands
+   * @since 1.0.0
    */
   set(
     state: Partial<{ [K in keyof CommandState]: Bindable<CommandState[K]> }>,
@@ -735,11 +790,50 @@ export interface Command extends Disposable {
    * commands in this plugin, or 1024 in the whole player). You rarely need
    * to await it: during activation a failure fails activation, later it
    * goes to {@link Scope.onError}.
+   *
+   * @throws `conflict` (rejects) Another command already has this menu path,
+   *   or the path would be both a menu item and a submenu.
+   * @throws `capability` (rejects) The manifest does not declare `commands`.
+   * @throws `invalid` (rejects) The player refused the declaration.
+   * @throws `limit` (rejects) More than 160 commands in this plugin, or 1024 in
+   *   the player.
    */
   readonly ready: Promise<void>;
 }
 
-/** `plugin.commands`: menu commands with default bindings. Needs `commands`. */
+/**
+ * `plugin.commands`: menu commands with default bindings. Needs `commands`.
+ *
+ * @remarks
+ * A command is one action of the plugin with a menu item (`path`), default
+ * keys (`bindings`), optionally a bottom-bar button (`button`) and a state
+ * the menu shows (`enabled`, `checked`, `busy`, `reason`). The player owns
+ * the menu, the binding table and the user's key overrides: it calls `run`
+ * when the user picks the item, presses a key or clicks the button.
+ * Commands of all plugins merge into the player's menus by their English
+ * path keys. Registration is asynchronous: `add` returns at once, and
+ * {@link Command.ready} reports the player's answer (during activation a
+ * refusal fails activation).
+ *
+ * @capability commands
+ *
+ * @example Add a menu item with a default key
+ * Tools ▸ Say hello, or Ctrl+H, shows a greeting. `add` declares the item;
+ * the player calls `run` when the user picks it or presses its key, and the
+ * user can change the key in the player's key settings.
+ * ```ts
+ * plugin.commands.add({
+ *   id: "hello",
+ *   path: ["Tools", "Say hello"],
+ *   bindings: ["Ctrl+H"], // a default; the user may override it
+ *   run: () => plugin.osd.show("Hello"),
+ * });
+ * ```
+ *
+ * @see {@link Command}, {@link CommandOptions}, [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @since 1.0.0
+ * @category Commands
+ */
 export interface Commands {
   /**
    * Declare a command. It is registered and kept in sync; `dispose()` removes
@@ -769,6 +863,9 @@ export interface Commands {
    *   run: () => plugin.player.setPaused(!plugin.player.state.paused),
    * });
    * ```
+   *
+   * @capability commands
+   * @since 1.0.0
    */
   add(options: CommandOptions): Command;
 }
@@ -3947,7 +4044,12 @@ export interface Dialogs {
 
 // ---------------------------------------------------------------- player
 
-/** One audio track of the current media ({@link PlayerState.audioTracks}). */
+/**
+ * One audio track of the current media ({@link PlayerState.audioTracks}).
+ *
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface AudioTrack {
   /** The backend's track id; pass it to {@link Player.selectAudioTrack}. */
   id: number;
@@ -3970,6 +4072,10 @@ export interface AudioTrack {
  *
  * Without `events`, {@link Player.state} only updates at start and after
  * this plugin's own operations.
+ *
+ * @see {@link Player.state}, [Playback state, controls and sources](../../docs/concepts/playback.md)
+ * @since 1.0.0
+ * @category Playback
  */
 export interface PlayerState {
   /** Changes every time a source is opened, even the same file again. */
@@ -4048,7 +4154,12 @@ export interface PlayerState {
   };
 }
 
-/** An audio output device (`player.audioDevices`). */
+/**
+ * An audio output device (`player.audioDevices`).
+ *
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface AudioDevice {
   /** Stable id to pass to `setAudioDevice` (e.g. `coreaudio/<UID>`). */
   id: string;
@@ -4056,7 +4167,12 @@ export interface AudioDevice {
   name: string;
 }
 
-/** One chapter of the current media. */
+/**
+ * One chapter of the current media.
+ *
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface Chapter {
   /** Chapter title, `null` without one. */
   title: string | null;
@@ -4092,13 +4208,42 @@ export interface Chapter {
  *   }
  * });
  * ```
+ *
+ * @see [Playback state, controls and sources](../../docs/concepts/playback.md)
+ * @since 1.0.0
+ * @category Playback
  */
 export interface Conditional {
   /** The state the call is conditional on; default: the current `player.state`. */
   ifCurrent?: PlayerState;
 }
 
-/** A source this plugin opened. */
+/**
+ * A source this plugin opened.
+ *
+ * @remarks
+ * A source this plugin opened with {@link Player.open}. It does not own
+ * the source: the user or another plugin can replace it at any time, and
+ * `current` then turns false. `ready` and `onEnd` follow the player state:
+ * with `events` they react to the player's events, without it `ready`
+ * polls the state every 100 ms (which needs `playback.read`). Disposing the
+ * scope that opened it does not close the media; call `close` for that.
+ *
+ * @capability That of {@link Player.open} (`playback.control`); `ready` and
+ * `onEnd` follow the state through `events` and `playback.read`.
+ *
+ * @example Open a file and say when it ends
+ * The file opens and plays, and the OSD says "Finished" when it reaches its
+ * end on its own. The handle belongs to this source: `onEnd` fires only
+ * for a natural end of this media, not when someone opens another file.
+ * ```ts
+ * const media = await plugin.player.open("/Movies/clip.mp4");
+ * media.onEnd(() => void plugin.osd.show("Finished")); // natural ends only
+ * ```
+ *
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface Media {
   /** Still the player's source (a restart keeps it current). */
   readonly current: boolean;
@@ -4106,11 +4251,75 @@ export interface Media {
    * Resolves when it is playing. Rejects with code `failed` (load error),
    * `replaced` (another source took over) or `ended`; with `AbortError` when
    * the signal aborts, after closing the media.
+   *
+   * @capability That of {@link Player.open}; `playback.read` or `events` to
+   * see the state change.
+   * @throws `failed` (rejects) The media could not be loaded.
+   * @throws `replaced` (rejects) Another source took over first.
+   * @throws `ended` (rejects) The media already played to the end.
+   * @throws `aborted` (rejects) `signal` aborted (an `AbortError`); the media
+   *   is closed.
+   *
+   * @example Wait at most ten seconds for a stream to start
+   * A network stream gets ten seconds to start playing; otherwise it is
+   * closed and the user is told. Aborting the signal makes `ready` reject
+   * with an `AbortError` after closing the media.
+   * ```ts
+   * const media = await plugin.player.open("https://example.com/live.m3u8");
+   * // The timeout's abort closes the media and rejects with an AbortError.
+   * try {
+   *   await media.ready({ signal: AbortSignal.timeout(10_000) });
+   * } catch (error) {
+   *   await plugin.osd.show("Not playing: {}", [(error as Error).message]);
+   * }
+   * ```
+   *
+   * @since 1.0.0
    */
   ready(options?: { signal?: AbortSignal }): Promise<void>;
-  /** Called once each time a playthrough of this media ends naturally. */
+  /**
+   * Called once each time a playthrough of this media ends naturally.
+   *
+   * @capability That of {@link Player.open}; `events` to hear the end.
+   *
+   * @example Play the next file when this one ends
+   * When the plugin's file ends naturally, the next one opens. The listener
+   * gets the state at the end; passing it as `ifCurrent` makes the next
+   * `open` fail with `stale` (and do nothing) if the user opened something
+   * else in the meantime.
+   * ```ts
+   * declare const media: Media;
+   * declare const next: string;
+   * // ---cut---
+   * media.onEnd((ended) =>
+   *   plugin.player.open(next, { ifCurrent: ended }).catch((error: PluginError) => {
+   *     if (error.code !== "stale") throw error; // the user opened something else
+   *   }),
+   * );
+   * ```
+   *
+   * @since 1.0.0
+   */
   onEnd(listener: (state: PlayerState) => void): Disposable;
-  /** Close it if it is still the player's source; otherwise do nothing. */
+  /**
+   * Close it if it is still the player's source; otherwise do nothing.
+   *
+   * @capability That of {@link Player.open} (`playback.control`).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Close the preview the plugin opened
+   * The plugin closes the preview it opened, but leaves alone anything the
+   * user opened since. `close` acts only while this media is still the
+   * player's source and does nothing otherwise.
+   * ```ts
+   * declare const preview: Media;
+   * // ---cut---
+   * await preview.close(); // a no-op when something else is playing now
+   * ```
+   *
+   * @since 1.0.0
+   */
   close(): Promise<void>;
 }
 
@@ -4134,6 +4343,18 @@ export interface Media {
  * bar.on("dragMove", (seconds: number) => void scrub?.seek(seconds));
  * bar.on("dragEnd", () => scrub?.end());
  * ```
+ *
+ * @remarks
+ * A drag gesture on a seek slider. Each `seek` is conditional on the
+ * previous one and only the newest target is sent while a seek is
+ * running, so a fast drag never queues seeks. Any outside change (another
+ * file, the user pausing) ends the gesture: `active` turns false and later
+ * seeks resolve `false`.
+ *
+ * @capability playback.control
+ * @see [Keep a slider responsive while dragging](../../docs/how-to/slider.md)
+ * @since 1.0.0
+ * @category Playback
  */
 export interface Scrub {
   /**
@@ -4166,11 +4387,38 @@ export interface Scrub {
    * const keyframes = true; // the plugin's own setting
    * bar.on("dragMove", (seconds: number) => void scrub?.seek(seconds, { keyframes }));
    * ```
+   *
+   * @capability playback.control
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   * @throws `stale` (rejects) The source changed from outside while this
+   *   seek was being sent (a superseded target or an ended gesture resolves
+   *   `false` instead).
+   * @throws `unsupported` (rejects) The source is a generated stream.
+   * @throws `backend` (rejects) The player failed the seek.
+   * @since 1.0.0
    */
   seek(seconds: number, options?: { keyframes?: boolean }): Promise<boolean>;
   /** False once anyone else changed the source; later seeks are ignored. */
   readonly active: boolean;
-  /** End the gesture; later seeks resolve `false`. */
+  /**
+   * End the gesture; later seeks resolve `false`.
+   *
+   * @capability playback.control
+   *
+   * @example End the gesture when the user lets go
+   * Releasing the slider ends the gesture, so a late `dragMove` cannot move
+   * playback any more. After `end`, `seek` resolves `false` without doing
+   * anything.
+   * ```ts
+   * declare const bar: Panel;
+   * declare const scrub: Scrub;
+   * // ---cut---
+   * bar.on("dragEnd", () => scrub.end()); // later seeks resolve false
+   * ```
+   *
+   * @since 1.0.0
+   */
   end(): void;
 }
 
@@ -4185,6 +4433,9 @@ export interface Scrub {
  *
  * The SDK copies the frame once before `frame()` is called again, so you
  * may reuse the same buffers for every frame.
+ *
+ * @since 1.0.0
+ * @category Playback
  */
 export interface StreamFrame {
   /** `width × height × 4` bytes of RGBA, at most 4 MiB. */
@@ -4197,7 +4448,13 @@ export interface StreamFrame {
   audio: Float32Array;
 }
 
-/** Options of {@link Player.openStream}. */
+/**
+ * Options of {@link Player.openStream}.
+ *
+ * @see {@link Player.openStream}
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface StreamOptions {
   /** Frame width in pixels. */
   width: number;
@@ -4213,13 +4470,49 @@ export interface StreamOptions {
  * `openStream` start-up timeouts: code `timeout` with the step that ran out
  * of time, the first buffers (`prefill`) or the host's activation.
  * Both limits are 10 seconds.
+ *
+ * @since 1.0.0
+ * @category Playback
  */
 export type StreamStartError = PluginError & {
   /** The start-up step that timed out. */
   stage: "prefill" | "activation";
 };
 
-/** A generated source, from {@link Player.openStream}. Disposing it stops it. */
+/**
+ * A generated source, from {@link Player.openStream}. Disposing it stops it.
+ *
+ * @remarks
+ * A source whose frames this plugin generates, from
+ * {@link Player.openStream}. The SDK pulls frames on the audio clock over
+ * a local connection and handles prefill, activation and pausing; the plugin
+ * only supplies `frame()`. A stream ends when the plugin stops it, when
+ * another source replaces it or the user closes it (`onStop` with `null`),
+ * or when it fails (`onStop` with the error).
+ *
+ * @capability producer.av and playback.control
+ *
+ * @example Stop the stream from a menu item
+ * A menu item ends the plugin's generated stream and closes it as the
+ * player's source. `stop` closes the source first and then the frame
+ * connection, so the user never sees a playback error; `onStop` is not
+ * called for the plugin's own stop.
+ * ```ts
+ * declare const stream: Stream;
+ * // ---cut---
+ * // Enabled while the stream produces frames.
+ * plugin.commands.add({
+ *   id: "stop-generator",
+ *   path: ["@playback", "Stop generator"],
+ *   enabled: () => stream.running,
+ *   run: () => stream.stop(),
+ * });
+ * ```
+ *
+ * @see {@link Player.openStream}
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface Stream extends Disposable {
   /** The stream is producing frames. */
   readonly running: boolean;
@@ -4235,6 +4528,23 @@ export interface Stream extends Disposable {
    * (before 1.5.7 a replaced or closed stream could get `unavailable`
    * "producer absent"). Without `playback.read` a failure the SDK has not
    * seen yet is reported as null.
+   *
+   * @capability producer.av
+   *
+   * @example Tell the user why the stream stopped
+   * The OSD explains a failure, and nothing is said when the user simply
+   * opened another file. The listener runs only for stops from outside the
+   * plugin: `null` for a replacement or the user's close, an error (such as
+   * `stream` with the player's text) for a failure.
+   * ```ts
+   * declare const stream: Stream;
+   * // ---cut---
+   * stream.onStop((error) => {
+   *   if (error) void plugin.osd.show("Generator stopped: {}", [error.message]);
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   onStop(listener: (error: PluginError | null) => void): Disposable;
   /**
@@ -4242,11 +4552,35 @@ export interface Stream extends Disposable {
    * The source closes first, then the frame connection, then the producer,
    * so stopping never shows as a playback failure. `dispose()` and
    * deactivation do the same.
+   *
+   * @capability producer.av and playback.control
+   * @throws Whatever code closing the player's source failed with (the
+   *   frame connection and the producer are released either way). A
+   *   stream that is no longer the source just resolves.
+   *
+   * @example Stop the stream when the plugin's window closes
+   * Closing the generator window stops the stream it feeds. `stop` closes
+   * the player's source if it is still this stream and then the frame
+   * connection; it resolves once both are closed.
+   * ```ts
+   * declare const stream: Stream;
+   * declare const window: Window;
+   * // ---cut---
+   * window.onClose(() => stream.stop());
+   * ```
+   *
+   * @since 1.0.0
    */
   stop(): Promise<void>;
 }
 
-/** The plugin that owns "next / previous" (a playlist). */
+/**
+ * The plugin that owns "next / previous" (a playlist).
+ *
+ * @see {@link Player.provideSequence}
+ * @since 1.0.0
+ * @category Playback
+ */
 export interface SequenceProvider {
   /** Go to the next item (called in the provider's scope). */
   next(): unknown;
@@ -4261,6 +4595,10 @@ export interface SequenceProvider {
 /**
  * What {@link Player.stats} reports. Every field is the backend's own value
  * (libmpv properties), `null` when it has none; nothing is converted.
+ *
+ * @see {@link Player.stats}
+ * @since 1.0.0
+ * @category Playback
  */
 export interface PlaybackStats {
   /**
@@ -4376,15 +4714,90 @@ export interface PlaybackStats {
  *   void plugin.osd.show("Cannot play: {}", [(error as Error).message]);
  * }
  * ```
+ *
+ * @remarks
+ * `plugin.player` is the player's one source: what is open, its phase and
+ * position, and the controls. `state` is a snapshot the SDK keeps current
+ * from the player's events (with `events`) and refreshes after this
+ * plugin's own calls; `onChange` runs after it changed. Every control is
+ * conditional: it acts on the state the plugin last saw and fails with
+ * `stale` when the source changed meanwhile: another file, a close, or any
+ * pause, seek or speed change by the user or another plugin (see
+ * {@link Conditional}). The player keeps the source when a plugin stops;
+ * only the plugin's own handles (a stream, its sequence provider, its
+ * output device) are withdrawn.
+ *
+ * @capability `playback.read` to read; `playback.control` to control;
+ * `events` to follow changes made elsewhere; `producer.av` for
+ * {@link Player.openStream}.
+ *
+ * @see [Playback state, controls and sources](../../docs/concepts/playback.md), [Control playback](../../docs/how-to/control-playback.md)
+ * @since 1.0.0
+ * @category Playback
  */
 export interface Player {
   /** Latest state; always newer than anything delivered before. */
   readonly state: PlayerState;
-  /** The state changed (needs `events` for outside changes). */
+  /**
+   * The state changed (needs `events` for outside changes).
+   *
+   * @capability events (for changes made elsewhere; without it the listener
+   * runs only after this plugin's own calls)
+   *
+   * @example Show the position while it plays
+   * The OSD block shows the position, updated as playback moves. The SDK
+   * updates `player.state` from the player's events and then calls the
+   * listener with the new snapshot; the handler only reads it.
+   * ```ts
+   * const info = plugin.osd.panel();
+   * plugin.player.onChange((state) => {
+   *   // `position` is null while nothing is open.
+   *   info.set(state.position === null ? null : "{} s", [state.position?.toFixed(0) ?? ""]);
+   * });
+   * ```
+   *
+   * @since 1.0.0
+   */
   onChange(listener: (state: PlayerState) => void): Disposable;
-  /** Read the state from the player now (`playback.read`). */
+  /**
+   * Read the state from the player now (`playback.read`).
+   *
+   * @capability playback.read
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.read`.
+   *
+   * @example Read the state before deciding
+   * A command reads the newest state from the player before acting, even
+   * without `events`. `refresh` asks the player and resolves with the new
+   * snapshot; `player.state` holds it afterwards.
+   * ```ts
+   * const state = await plugin.player.refresh();
+   * if (state.phase === "ready") await plugin.osd.show("{} s left", [((state.duration ?? 0) - (state.position ?? 0)).toFixed(0)]);
+   * ```
+   *
+   * @since 1.0.0
+   */
   refresh(): Promise<PlayerState>;
-  /** True if nothing changed the source since `state` was observed. */
+  /**
+   * True if nothing changed the source since `state` was observed.
+   *
+   * @capability None.
+   *
+   * @example Drop a result that arrives after the file changed
+   * A slow lookup for the current file is shown only if that file is still
+   * open. `isCurrent` compares the snapshot taken before the work with the
+   * SDK's newest state; it is false once the source changed in any way:
+   * another file, a close, or a pause, seek or speed change by anyone.
+   * ```ts
+   * declare function lookUpTitle(path: string): Promise<string>;
+   * // ---cut---
+   * const seen = plugin.player.state;
+   * const title = await lookUpTitle(seen.source ?? "");
+   * if (plugin.player.isCurrent(seen)) await plugin.osd.show("{}", [title]); // still the same file
+   * ```
+   *
+   * @since 1.0.0
+   */
   isCurrent(state: PlayerState): boolean;
   /**
    * Open a path or URL, replacing the current source (unless `ifCurrent` no
@@ -4395,6 +4808,37 @@ export interface Player {
    * {@link Resolver} are resolved first, and so are local files of an
    * extension a file resolver claims (the source is then a stream that
    * plugin generates; `paused` reaches it).
+   *
+   * @capability playback.control
+   * @throws `stale` (rejects) `ifCurrent` no longer holds; nothing was opened.
+   * @throws `replaced` (rejects) Accepted, then another source took over
+   *   before it finished (for example while a URL was still being resolved).
+   * @throws `invalid` (rejects) An empty `source`.
+   * @throws `aborted` (rejects) `signal` aborted (an `AbortError`); the
+   *   source is closed if it was opened.
+   * @throws `busy` (rejects) The address needs a resolver plugin and the
+   *   player is already resolving 32 addresses.
+   * @throws `backend` (rejects) A resolver plugin handled the address or
+   *   file and failed (its message), or the resolution was cancelled or
+   *   expired.
+   * @throws `unsupported` (rejects) The player refused what a resolver
+   *   returned (for example split streams with different headers).
+   * @throws `unavailable` (rejects) The stream a file resolver prepared was
+   *   not ready to play.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Open a file paused
+   * The file opens at its start without playing. `open` resolves once the
+   * player accepted the load and returns a {@link Media} handle for that
+   * source; `ready` then waits until it can play (here: until it is loaded
+   * and paused).
+   * ```ts
+   * const media = await plugin.player.open("/Movies/clip.mp4", { paused: true });
+   * await media.ready(); // rejects `failed` when the file cannot be loaded
+   * ```
+   *
+   * @since 1.0.0
    */
   open(
     source: string,
@@ -4432,29 +4876,216 @@ export interface Player {
    * // `error` is null when the stream stopped normally.
    * stream.onStop((error) => error && plugin.osd.show(error.message));
    * ```
+   *
+   * @capability producer.av and playback.control
+   * @throws `timeout` (rejects) A {@link StreamStartError}: the stream did not
+   *   start in time.
+   * @throws `stream` (rejects) The player failed to start the stream.
+   * @throws `device` (rejects) The audio device was not ready.
+   * @throws `replaced` (rejects) Another source replaced it, or it was closed,
+   *   before it ran.
+   * @throws `invalid` (rejects) Bad options (a size or a frame function).
+   * @throws `aborted` (rejects) `signal` aborted, or the scope was disposed,
+   *   while the stream was starting (an `AbortError`).
+   * @since 1.0.0
    */
   openStream(options: StreamOptions): Promise<Stream>;
-  /** Pause or resume. */
+  /**
+   * Pause or resume.
+   *
+   * @capability playback.control
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
+   * @throws `invalid` (rejects) Nothing is open.
+   * @throws `busy` (rejects) A generated stream is still handling a previous
+   *   control.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Pause, but only the file the user was watching
+   * A "pause on lock" helper pauses the current file and does nothing when
+   * another file was opened in between. The call is conditional on
+   * `player.state` by default; `stale` means the source changed and the
+   * pause was not applied, which is the intended outcome here.
+   * ```ts
+   * try {
+   *   await plugin.player.setPaused(true);
+   * } catch (error) {
+   *   if ((error as PluginError).code !== "stale") throw error; // another file now
+   * }
+   * ```
+   *
+   * @since 1.0.0
+   */
   setPaused(paused: boolean, options?: Conditional): Promise<void>;
-  /** Jump to `seconds`. */
+  /**
+   * Jump to `seconds`.
+   *
+   * @capability playback.control
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
+   * @throws `invalid` (rejects) Nothing is open, or `seconds` is negative or
+   *   not finite.
+   * @throws `unsupported` (rejects) The source is a generated stream, which
+   *   cannot seek.
+   * @throws `busy` (rejects) A generated stream is still handling a previous
+   *   control.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Jump back ten seconds
+   * Playback jumps ten seconds back, never before the start. The target is
+   * computed from the snapshot the call is conditional on, so if the user
+   * opened another file meanwhile the seek fails with `stale` instead of
+   * landing in the wrong file.
+   * ```ts
+   * const { position } = plugin.player.state;
+   * if (position !== null && plugin.player.state.can.seek)
+   *   await plugin.player.seek(Math.max(0, position - 10)); // seconds
+   * ```
+   *
+   * @since 1.0.0
+   */
   seek(seconds: number, options?: Conditional): Promise<void>;
-  /** Set the playback speed. */
+  /**
+   * Set the playback speed.
+   *
+   * @capability playback.control
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
+   * @throws `invalid` (rejects) Nothing is open, or `rate` is outside
+   *   0.05–10.
+   * @throws `unsupported` (rejects) The source is a generated stream, which
+   *   cannot change speed.
+   * @throws `busy` (rejects) A generated stream is still handling a previous
+   *   control.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Play at one and a half times the speed
+   * Playback speeds up to 1.5×, with the speed on the OSD. `setRate` sets
+   * the speed directly (the player's own keys step it by 0.1 within
+   * 0.25–4); `state.can.rate` is false for sources that cannot change speed.
+   * ```ts
+   * if (plugin.player.state.can.rate) {
+   *   await plugin.player.setRate(1.5);
+   *   await plugin.osd.show("Speed {}×", [1.5]);
+   * }
+   * ```
+   *
+   * @since 1.0.0
+   */
   setRate(rate: number, options?: Conditional): Promise<void>;
-  /** Play from the start (the "replay" after the end). */
+  /**
+   * Play from the start (the "replay" after the end).
+   *
+   * @capability playback.control
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
+   * @throws `invalid` (rejects) Nothing is open.
+   * @throws `unsupported` (rejects) The source is a generated stream, which
+   *   cannot restart.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Replay a file after it ended
+   * A Replay button starts the file again from its start once it has ended.
+   * `restart` plays the current source from the beginning and keeps it the
+   * same source, so a {@link Media} handle stays current.
+   * ```ts
+   * if (plugin.player.state.phase === "ended") await plugin.player.restart();
+   * ```
+   *
+   * @since 1.0.0
+   */
   restart(options?: Conditional): Promise<void>;
-  /** Close the current source. */
+  /**
+   * Close the current source.
+   *
+   * @capability playback.control
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin); nothing was done.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Close the file when the sleep timer runs out
+   * After 30 minutes the open file is closed, unless the user opened another
+   * one meanwhile. The snapshot taken when the timer started is passed as
+   * `ifCurrent`, so the close applies only to that source; `stale` means it
+   * was replaced.
+   * ```ts
+   * const seen = plugin.player.state;
+   * setTimeout(() => {
+   *   // Only the source that was open when the timer started.
+   *   plugin.player.close({ ifCurrent: seen }).catch((error: PluginError) => {
+   *     if (error.code !== "stale") plugin.osd.show("Could not close: {}", [error.code]);
+   *   });
+   * }, 30 * 60 * 1000);
+   * ```
+   *
+   * @since 1.0.0
+   */
   close(options?: Conditional): Promise<void>;
-  /** Start a drag gesture from the current state. */
+  /**
+   * Start a drag gesture from the current state.
+   *
+   * @capability playback.control
+   *
+   * @example Start a gesture when the user grabs the slider
+   * A drag on the plugin's seek slider becomes one gesture whose seeks never
+   * pile up. `scrub()` captures the current state; the gesture's seeks are
+   * conditional on it and on each other, and it ends on its own when
+   * someone else changes the source.
+   * ```ts
+   * declare const bar: Panel;
+   * // ---cut---
+   * let scrub: Scrub | null = null;
+   * bar.on("dragStart", () => (scrub = plugin.player.scrub()));
+   * bar.on("dragEnd", () => scrub?.end());
+   * ```
+   *
+   * @see [Keep a slider responsive while dragging](../../docs/how-to/slider.md)
+   * @since 1.0.0
+   */
   scrub(): Scrub;
   /**
    * Device output; last write wins and volume is applied before mute.
    * Resolves `true` when this request was applied, `false` if superseded.
    * `volume` is 0–200.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) `volume` outside 0–200, or `muted` not a
+   *   boolean.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Duck the volume during an announcement
+   * The volume drops to 30 while the plugin's announcement plays, then
+   * returns. Writes are "latest wins": the promise resolves `true` when this
+   * write was applied and `false` when a newer one replaced it first, which
+   * is not an error.
+   * ```ts
+   * const before = plugin.player.state.volume; // 0–200
+   * await plugin.player.setOutput({ volume: 30 });
+   * // … the announcement …
+   * await plugin.player.setOutput({ volume: before });
+   * ```
+   *
+   * @since 1.0.0
    */
   setOutput(output: { volume?: number; muted?: boolean }): Promise<boolean>;
   /**
-   * Become the sequence provider (one at a time; another provider rejects with
-   * `conflict` through the scope's `onError`, or fails activation). Dispose to stop.
+   * Become the sequence provider, first come first served: while another
+   * plugin holds it (the built-in playlist registers at activation), this
+   * one is refused with `conflict` (`sequence-taken`). That does not fail
+   * activation: the player shows a warning ({@link PluginInfo.warnings});
+   * a refusal after activation goes to the scope's `onError`. Dispose to
+   * stop.
    *
    * @example Drive the player's Next and Previous from a playlist
    * The player's Next and Previous items and keys play the plugin's list.
@@ -4478,15 +5109,82 @@ export interface Player {
    *   canPrevious: () => index > 0,
    * });
    * ```
+   *
+   * @capability playback.control
+   * @since 1.0.0
    */
   provideSequence(provider: SequenceProvider): Disposable;
-  /** Ask the provider to go forward / back. Rejects `unavailable` when it cannot. */
+  /**
+   * Ask the provider to go forward / back. Rejects `unavailable` when it cannot.
+   *
+   * @capability playback.control
+   * @throws `unavailable` (rejects) There is no sequence provider, or it has
+   *   no next item.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Skip to the next item from a plugin button
+   * The plugin's own Next button plays the next item of whichever plugin
+   * provides the sequence (the playlist, usually). `next` asks the
+   * provider, the same as the player's Next key; `unavailable` means there
+   * is no next item, which the button treats as the end of the list.
+   * ```ts
+   * try {
+   *   await plugin.player.next(); // as the player's Next key does
+   * } catch (error) {
+   *   if ((error as PluginError).code !== "unavailable") throw error;
+   *   await plugin.osd.show("End of the list");
+   * }
+   * ```
+   *
+   * @since 1.0.0
+   */
   next(): Promise<void>;
-  /** Ask the provider to go back. Rejects `unavailable` when it cannot. */
+  /**
+   * Ask the provider to go back. Rejects `unavailable` when it cannot.
+   *
+   * @capability playback.control
+   * @throws `unavailable` (rejects) There is no sequence provider, or it has
+   *   no previous item.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Go back to the previous item
+   * The plugin's Previous button asks the sequence provider for the item
+   * before the current one, like the player's PageUp. It is disabled while
+   * `state.can.previous` is false, which the provider's `canPrevious`
+   * decides.
+   * ```ts
+   * plugin.commands.add({
+   *   id: "previous",
+   *   title: "Previous item",
+   *   // The provider's `canPrevious`, as the player reports it.
+   *   enabled: () => plugin.player.state.can.previous,
+   *   run: () => plugin.player.previous(),
+   * });
+   * ```
+   *
+   * @since 1.0.0
+   */
   previous(): Promise<void>;
   /**
    * Codec, size, frame counts and backend of the current playback.
    * `playback.read`; `video` and `audio` are `null` without a source.
+   *
+   * @capability playback.read
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.read`.
+   *
+   * @example Show the video codec and size
+   * The OSD shows something like "h264 1920×1080". `stats` asks the player
+   * for the backend's own values at that moment; `video` is `null` without
+   * a video stream (nothing open, an audio file).
+   * ```ts
+   * const { video } = await plugin.player.stats();
+   * if (video) await plugin.osd.show("{} {}×{}", [video.codec ?? "?", video.width ?? 0, video.height ?? 0]);
+   * ```
+   *
+   * @since 1.0.0
    */
   stats(): Promise<PlaybackStats>;
   /**
@@ -4494,12 +5192,57 @@ export interface Player {
    * unless `select: false`, select it. Resolves with the new track (`external`,
    * not exportable). It stays until the source changes. Rejects `invalid` for a
    * bad path, `unavailable` without ready media, `backend` when it cannot load.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) Not an absolute path to a file.
+   * @throws `unavailable` (rejects) No ready media.
+   * @throws `backend` (rejects) The player could not load the file.
+   * @throws `stale` (rejects) `ifCurrent` no longer holds.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Add a dubbed audio file and switch to it
+   * A separate audio file plays with the film instead of its own sound.
+   * `addAudioTrack` attaches the file to the current media and selects it;
+   * the track stays until another source opens.
+   * ```ts
+   * declare const dubPath: string;
+   * // ---cut---
+   * const track = await plugin.player.addAudioTrack(dubPath); // selected too
+   * await plugin.osd.show("Audio: {}", [track.title ?? dubPath]);
+   * ```
+   *
+   * @since 1.0.0
    */
   addAudioTrack(
     path: string,
     options?: { select?: boolean } & Conditional,
   ): Promise<AudioTrack>;
-  /** Select one of `state.audioTracks` by id; `invalid` for an unknown id. */
+  /**
+   * Select one of `state.audioTracks` by id; `invalid` for an unknown id.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) No track with this id.
+   * @throws `unavailable` (rejects) No ready media.
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Switch to the next audio track
+   * Each press of the plugin's key moves to the next audio track of the
+   * file. The tracks and the selected one are in `state.audioTracks`;
+   * `selectAudioTrack` resolves with the new state.
+   * ```ts
+   * const audioTracks = plugin.player.state.audioTracks ?? []; // null: not known yet
+   * const at = audioTracks.findIndex((track) => track.selected);
+   * const next = audioTracks[(at + 1) % audioTracks.length];
+   * if (next) await plugin.player.selectAudioTrack(next.id);
+   * ```
+   *
+   * @since 1.0.0
+   */
   selectAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
   /**
    * One frame or to the next / previous keyframe (pauses for frames). Rejects
@@ -4509,6 +5252,29 @@ export interface Player {
    * Resolves once the new position is in effect, so `player.state.position`
    * is current afterwards. One step at a time: a second call while one is
    * in flight rejects `busy`.
+   *
+   * @capability playback.control
+   * @throws `unsupported` (rejects) Nothing playable to step through (no
+   *   moving video: audio only, cover art, a generated stream), a backward
+   *   frame step on a source that cannot seek, or a keyframe step in either
+   *   direction on a source that cannot seek.
+   * @throws `busy` (rejects) A step is still in flight.
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Step one frame forward for a close look
+   * The picture advances by one frame and playback pauses. `step` resolves
+   * once the new position is in effect, so `state.position` is current
+   * afterwards; a second step while one is running rejects with `busy`.
+   * ```ts
+   * await plugin.player.step("frame", "forward");
+   * await plugin.osd.show("{} s", [plugin.player.state.position?.toFixed(3) ?? "?"]);
+   * ```
+   *
+   * @since 1.0.0
    */
   step(
     unit: "frame" | "keyframe",
@@ -4535,12 +5301,46 @@ export interface Player {
    *
    * Older players ignore `keyframes`: set `"minPlayerVersion": "0.5.1"` in
    * the manifest when you rely on it.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) `seconds` outside 0.1–3600 or not in tenths,
+   *   or `keyframes` not a boolean.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Make ← and → jump 10 seconds to keyframes
+   * The arrow keys now jump 10 seconds and land on keyframes, which is fast
+   * on large files. The newest call of any plugin wins and is withdrawn
+   * when that plugin stops, so a plugin offering this as a setting applies
+   * it on activation.
+   * ```ts
+   * await plugin.player.setStepSeek({ seconds: 10, keyframes: true });
+   * ```
+   *
+   * @since 1.0.0
    */
   setStepSeek(options: { seconds: number; keyframes?: boolean }): Promise<void>;
   /**
    * The chapters of the current media (empty without media or chapters),
    * read on demand; `sourceId` tells which source they belong to.
    * `playback.read`.
+   *
+   * @capability playback.read
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.read`.
+   *
+   * @example List the chapters of the open file
+   * The plugin reads the chapter titles of the current file to show them in
+   * its panel. `chapters` asks the player when called; `sourceId` says which
+   * source they belong to, so a reply for a file that was replaced meanwhile
+   * can be dropped.
+   * ```ts
+   * const { sourceId, chapters } = await plugin.player.chapters();
+   * if (sourceId === plugin.player.state.sourceId) // still the same file
+   *   console.log(chapters.map((chapter) => chapter.title));
+   * ```
+   *
+   * @since 1.0.0
    */
   chapters(): Promise<{
     /** The source the chapters belong to (compare with `state.sourceId`). */
@@ -4554,12 +5354,58 @@ export interface Player {
    * stops it. After the last jump back `state.loop` becomes null.
    * `invalid` out of range, `unsupported` for a source that cannot seek,
    * `unavailable` without ready media. A new source clears it.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) `a`/`b` out of range or `count` not a positive
+   *   integer.
+   * @throws `unsupported` (rejects) The source cannot seek, or is a generated
+   *   stream.
+   * @throws `unavailable` (rejects) No ready media.
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Loop a passage three times
+   * Playback repeats 1:00–1:30 three times, then goes on. The player jumps
+   * back to `a` each time it reaches `b`; after the last repeat
+   * `state.loop` becomes `null`, and a new source clears the loop.
+   * ```ts
+   * await plugin.player.setLoop({ a: 60, b: 90, count: 3 }); // seconds
+   * ```
+   *
+   * @since 1.0.0
    */
   setLoop(
     loop: { a: number; b: number; count?: number } | null,
     options?: Conditional,
   ): Promise<void>;
-  /** The output devices present now (not the system default entry). `playback.read`. */
+  /**
+   * The output devices present now (not the system default entry). `playback.read`.
+   *
+   * @capability playback.read
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.read`.
+   *
+   * @example Offer the audio output devices in a menu
+   * A submenu lists the output devices present now, with a radio mark on the
+   * one in use. `audioDevices` asks the player when called (devices come and
+   * go), and `state.audioOutput` tells which one is active.
+   * ```ts
+   * // The devices present now; build the menu again when they change.
+   * for (const device of await plugin.player.audioDevices())
+   *   plugin.commands.add({
+   *     id: `device.${device.id}`,
+   *     path: ["@audio", "Output", device.name],
+   *     radio: true,
+   *     checked: () => plugin.player.state.audioOutput?.active === device.id,
+   *     run: () => plugin.player.setAudioDevice(device.id),
+   *   });
+   * ```
+   *
+   * @since 1.0.0
+   */
   audioDevices(): Promise<AudioDevice[]>;
   /**
    * Play on this device while it is present, else on the system default
@@ -4569,6 +5415,23 @@ export interface Player {
    * Unknown ids are accepted (`state.audioOutput.active` stays `null`); a
    * malformed id is `invalid`. Reverts to the default when this plugin
    * stops; save the choice yourself to restore it on activation.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) A malformed id.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Restore the user's output device on start
+   * The plugin plays on the device the user picked last time, or on the
+   * system default when it is not connected. The choice lasts only for
+   * this run and is withdrawn when the plugin stops, so the plugin saves
+   * it itself and sets it again on activation.
+   * ```ts
+   * const store = plugin.storage.json("output", { defaults: { device: null as string | null } });
+   * await plugin.player.setAudioDevice(store.value.device); // null: the system default
+   * ```
+   *
+   * @since 1.0.0
    */
   setAudioDevice(id: string | null): Promise<void>;
 }
@@ -4594,6 +5457,10 @@ export interface Player {
  * (`plugin.window.onChange`), which also changes when the user toggles it.
  * Players before 0.5.2 reject it with `invalid`: set
  * `"minPlayerVersion": "0.5.2"` when you use it.
+ *
+ * @see {@link Host.run}
+ * @since 1.0.0
+ * @category Commands
  */
 export type HostAction =
   | "play-pause"
@@ -4612,7 +5479,39 @@ export type HostAction =
   | "mute"
   | "fullscreen";
 
-/** `plugin.host`: the player's own core actions. */
+/**
+ * `plugin.host`: the player's own core actions.
+ *
+ * @remarks
+ * The player's core actions (play/pause, stop, step seeks, speed, volume,
+ * fullscreen…) are commands of the player itself, `host/<action>` in the
+ * binding table. Running them through `host.run` gives a plugin's own
+ * buttons exactly the player's behaviour: the same checks, the same
+ * accumulation of repeated presses and the same on-screen text, instead of
+ * reimplementing them with {@link Player} calls.
+ *
+ * @capability commands
+ *
+ * @example Give a custom bar the player's own Stop and Mute
+ * The plugin's bar buttons stop playback and mute exactly as the player's
+ * own keys do, with the same on-screen text. Each callback runs a core
+ * action; the player applies its checks and rejects with `unavailable`
+ * while the action is disabled, which the bar ignores.
+ * ```ts
+ * declare const bar: Panel;
+ * // ---cut---
+ * const run = (action: HostAction) =>
+ *   plugin.host.run(action).catch((error: PluginError) => {
+ *     if (error.code !== "unavailable") throw error; // disabled right now
+ *   });
+ * bar.on("stop", () => run("stop"));
+ * bar.on("mute", () => run("mute"));
+ * ```
+ *
+ * @see {@link HostAction}, {@link Player}
+ * @since 1.0.0
+ * @category Commands
+ */
 export interface Host {
   /**
    * Run a core action exactly like its menu item or key: same checks, same
@@ -4639,6 +5538,14 @@ export interface Host {
    *   }
    * });
    * ```
+   *
+   * @capability commands
+   * @throws `unavailable` (rejects) The action is disabled right now (nothing
+   *   open, no window for `fullscreen`).
+   * @throws `invalid` (rejects) An unknown action, or `seconds` out of range.
+   * @throws `capability` (rejects) The manifest does not declare `commands`.
+   *
+   * @since 1.0.0
    */
   run(action: HostAction): Promise<void>;
   /**
@@ -4668,6 +5575,12 @@ export interface Host {
    * // ---cut---
    * bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 }));
    * ```
+   *
+   * @capability commands
+   * @throws `unavailable` (rejects) The action is disabled right now (nothing
+   *   open, no window for `fullscreen`).
+   * @throws `invalid` (rejects) An unknown action, or `seconds` out of range.
+   * @throws `capability` (rejects) The manifest does not declare `commands`.
    */
   run(
     action: "seek-backward" | "seek-forward",
@@ -6026,17 +6939,110 @@ export interface Bindings {
  *   void plugin.osd.show("Could not copy: {}", [(error as PluginError).code]);
  * }
  * ```
+ *
+ * @remarks
+ * The player reads and writes the system clipboard on the plugin's behalf.
+ * Text is plain text; images are written from a PNG or JPEG file.
+ *
+ * @capability clipboard
+ * @since 1.0.0
+ * @category Services
  */
 export interface Clipboard {
-  /** Plain text on the clipboard; `null` when it holds none. */
+  /**
+   * Plain text on the clipboard; `null` when it holds none.
+   *
+   * @capability clipboard
+   * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   * @throws `failed` (rejects) The system refused (Windows).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `clipboard`.
+   *
+   * @example Open a URL the user copied
+   * A "Paste and play" command opens the address on the clipboard. `readText`
+   * resolves with the clipboard's text, or `null` when it holds none (an
+   * image, nothing).
+   * ```ts
+   * const text = await plugin.clipboard.readText();
+   * if (text?.startsWith("https://")) await plugin.player.open(text.trim());
+   * ```
+   *
+   * @since 1.0.0
+   */
   readText(): Promise<string | null>;
-  /** Replace the clipboard with text (at most 1 MiB of UTF-8). */
+  /**
+   * Replace the clipboard with text (at most 1 MiB of UTF-8).
+   *
+   * @capability clipboard
+   * @throws `invalid` (rejects) More than 1 MiB of UTF-8.
+   * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `clipboard`.
+   *
+   * @example Copy the playing file's path
+   * The path of the playing file is put on the clipboard, replacing what was
+   * there. It resolves once the system has it.
+   * ```ts
+   * const { source } = plugin.player.state;
+   * if (source) await plugin.clipboard.writeText(source);
+   * ```
+   *
+   * @since 1.0.0
+   */
   writeText(text: string): Promise<void>;
-  /** Replace the clipboard with a PNG or JPEG file (absolute path, at most 16 MB). */
+  /**
+   * Replace the clipboard with a PNG or JPEG file (absolute path, at most 16 MB).
+   *
+   * @capability clipboard
+   * @throws `missing` (rejects) The file does not exist.
+   * @throws `invalid` (rejects) Not an absolute path, not PNG or JPEG, over
+   *   16 MB, or (Windows) an image the system cannot decode.
+   * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `clipboard`.
+   *
+   * @example Copy a snapshot to the clipboard
+   * A frame the plugin saved as PNG is put on the clipboard, ready to paste
+   * into another application. The player reads the file and writes the
+   * image (macOS: its original bytes; Windows: a bitmap plus PNG).
+   * ```ts
+   * declare const pngPath: string;
+   * // ---cut---
+   * await plugin.clipboard.writeImage(pngPath); // absolute path, at most 16 MB
+   * await plugin.osd.show("Snapshot copied");
+   * ```
+   *
+   * @since 1.0.0
+   */
   writeImage(path: string): Promise<void>;
 }
 
-/** Keeping the computer awake (`playback.control`). */
+/**
+ * Keeping the computer awake (`playback.control`).
+ *
+ * @remarks
+ * A request, not a command: the player keeps the system awake while any
+ * plugin asks for it and a source plays, and withdraws a plugin's request
+ * when it stops.
+ *
+ * @capability playback.control
+ *
+ * @example Keep the display on while playing
+ * The screen does not dim or sleep while a video plays, and may again when
+ * it is paused or ends. The player takes the system's assertion only while
+ * a source is ready and not paused.
+ * ```ts
+ * await plugin.power.preventSleep("playing"); // "off" withdraws the request
+ * ```
+ *
+ * @since 1.0.0
+ * @category Services
+ */
 export interface Power {
   /**
    * `"playing"`: while a source is ready and not paused, keep the display
@@ -6047,11 +7053,33 @@ export interface Power {
    * take the system assertion are logged by the player, not reported.
    * macOS uses `caffeinate`, Windows the thread execution state; elsewhere
    * it has no effect.
+   *
+   * @capability playback.control
+   * @throws `invalid` (rejects) A mode other than `"off"` or `"playing"`.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `playback.control`.
+   *
+   * @example Follow the plugin's own "Keep awake" setting
+   * The plugin keeps the display awake during playback only while its
+   * setting is on. Each call replaces this plugin's request; `"off"`
+   * withdraws it, and other plugins' requests still count.
+   * ```ts
+   * const store = plugin.storage.json("power", { defaults: { keepAwake: true } });
+   * await plugin.power.preventSleep(store.value.keepAwake ? "playing" : "off");
+   * ```
+   *
+   * @since 1.0.0
    */
   preventSleep(mode: "off" | "playing"): Promise<void>;
 }
 
-/** The output of {@link Tools.run}. */
+/**
+ * The output of {@link Tools.run}.
+ *
+ * @see {@link Tools.run}
+ * @since 1.0.0
+ * @category Services
+ */
 export interface ToolResult {
   /** Standard output (at most `maxOutput` bytes). */
   stdout: Uint8Array;
@@ -6082,11 +7110,23 @@ export interface ToolResult {
  *   void info.format; // container, duration, bit rate…
  * }
  * ```
+ *
+ * @remarks
+ * ffmpeg and ffprobe run as child processes of the plugin. When
+ * `VESTRA_FFMPEG` / `VESTRA_FFPROBE` is set, only that path is used (an
+ * invalid one means the tool is not found); otherwise the tool is searched
+ * on `PATH`. A found path is kept for the plugin's run, a miss is looked up
+ * again next time. Disposing the
+ * scope ends a running process.
+ *
+ * @capability None.
+ * @since 1.0.0
+ * @category Services
  */
 export interface Tools {
   /**
-   * Run ffmpeg or ffprobe (found through `VESTRA_FFMPEG` / `VESTRA_FFPROBE`,
-   * then `PATH`) without a shell. Rejects `unavailable` (not found), `timeout`,
+   * Run ffmpeg or ffprobe (`VESTRA_FFMPEG` / `VESTRA_FFPROBE` when set, else
+   * found on `PATH`) without a shell. Rejects `unavailable` (not found), `timeout`,
    * `failed` (non-zero exit; `message` is the last stderr line), `invalid`
    * (output over `maxOutput`, default 16 MiB), `aborted` (`signal`). Timeout,
    * `signal` and disposing the scope end the process.
@@ -6094,30 +7134,173 @@ export interface Tools {
    * Arguments are passed as-is (no quoting needed). On Windows `PATHEXT` is
    * honoured. Ending sends SIGTERM, then SIGKILL after 300 ms (immediate on
    * Windows).
+   *
+   * @capability None.
+   * @throws `unavailable` (rejects) The tool was not found.
+   * @throws `timeout` (rejects) It ran longer than `timeoutMs`; the process is
+   *   ended.
+   * @throws `failed` (rejects) A non-zero exit; `message` is the last stderr
+   *   line.
+   * @throws `invalid` (rejects) Bad arguments or options, or output over
+   *   `maxOutput`.
+   * @throws `aborted` (rejects) `signal` aborted, or the scope was disposed.
+   *
+   * @example Cut a clip without re-encoding
+   * The plugin writes the first ten seconds of the file to a new file. `run`
+   * starts ffmpeg without a shell (arguments pass as they are, no quoting)
+   * and resolves with its output once it exits with 0; a failure rejects
+   * with the last line ffmpeg printed.
+   * ```ts
+   * declare const input: string;
+   * declare const output: string;
+   * // ---cut---
+   * await plugin.tools.run(
+   *   "ffmpeg",
+   *   ["-y", "-i", input, "-t", "10", "-c", "copy", output],
+   *   { timeoutMs: 60_000 }, // give up after a minute
+   * );
+   * ```
+   *
+   * @since 1.0.0
    */
   run(
     tool: "ffmpeg" | "ffprobe",
     args: string[],
     options: { timeoutMs: number; maxOutput?: number; signal?: AbortSignal },
   ): Promise<ToolResult>;
-  /** Whether the tool can be found. */
+  /**
+   * Whether the tool can be found.
+   *
+   * @capability None.
+   * @throws Never; it resolves `false` when the tool cannot be found.
+   *
+   * @example Grey out a command when ffmpeg is missing
+   * The Export item is disabled with a reason when ffmpeg is not installed.
+   * `available` looks the tool up (a found path is kept, a miss is looked
+   * up again on the next call, so installing it later is noticed).
+   * ```ts
+   * const hasFfmpeg = await plugin.tools.available("ffmpeg");
+   * plugin.commands.add({
+   *   id: "export",
+   *   path: ["@video", "Export…"],
+   *   enabled: hasFfmpeg,
+   *   // Shown with the greyed-out item.
+   *   reason: hasFfmpeg ? null : "Install ffmpeg to export",
+   *   run() {},
+   * });
+   * ```
+   *
+   * @since 1.0.0
+   */
   available(tool: "ffmpeg" | "ffprobe"): Promise<boolean>;
 }
 
-/** A JSON file `dataDirectory/<name>.json`, loaded once and saved debounced. */
+/**
+ * A JSON file `dataDirectory/<name>.json`, loaded once and saved debounced.
+ *
+ * @remarks
+ * One JSON file, `<dataDirectory>/<name>.json`, made by
+ * {@link Storage.json}. `value` is read once when the store is made;
+ * `save` replaces it in memory at once and writes the file `debounceMs`
+ * later (300 by default) through a temporary file and a rename, so a
+ * crash never leaves half a file. Writes to one file run one at a time,
+ * newest last. Disposing the store, its scope or stopping the plugin
+ * writes a pending save first.
+ *
+ * @capability None.
+ *
+ * @example Count how often the plugin was started
+ * The counter grows by one at every start and is kept in `stats.json`. The
+ * store reads the file when it is made (the defaults when there is none),
+ * and `save` writes the new count a moment later.
+ * ```ts
+ * const stats = plugin.storage.json("stats", { defaults: { starts: 0 } });
+ * stats.save({ starts: stats.value.starts + 1 }); // written 300 ms later
+ * ```
+ *
+ * @since 1.0.0
+ * @category Services
+ */
 export interface JsonStore<T> extends Disposable {
   /** The loaded value, or `defaults` when the file was missing or broken. */
   readonly value: T;
   /**
    * Replace the value now and write it after `debounceMs`.
    * Only `save` writes: mutating `value` in place is not saved.
+   *
+   * @capability None.
+   *
+   * @example Save a slider value without writing on every move
+   * Dragging the plugin's volume slider updates the stored value at once but
+   * writes the file only once the user stops for 300 ms. Each `save`
+   * replaces the value and restarts the debounce timer.
+   * ```ts
+   * declare const window: Window;
+   * // ---cut---
+   * const store = plugin.storage.json("prefs", { defaults: { volume: 100 } });
+   * window.on("volumeChanged", (volume: number) => store.save({ ...store.value, volume }));
+   * ```
+   *
+   * @since 1.0.0
    */
   save(next: T): void;
-  /** Write a pending save now. */
+  /**
+   * Write a pending save now.
+   *
+   * @capability None.
+   * @throws `Error` (rejects) Node's file system error when the file cannot
+   *   be written; its `code` is Node's (`ENOSPC`, `EACCES` and so on), not a
+   *   player error code.
+   *
+   * @example Write the file now before copying it
+   * Before exporting its settings, the plugin makes sure the file on disk has
+   * the latest value. `flush` writes a pending save at once (or waits for
+   * the write in progress) and resolves when the file is written.
+   * ```ts
+   * import { copyFile } from "node:fs/promises";
+   * import { join } from "node:path";
+   * declare const exportPath: string;
+   * // ---cut---
+   * const store = plugin.storage.json("settings", { defaults: { step: 5 } });
+   * await store.flush(); // the file now has the newest value
+   * await copyFile(join(plugin.dataDirectory, "settings.json"), exportPath);
+   * ```
+   *
+   * @since 1.0.0
+   */
   flush(): Promise<void>;
 }
 
-/** `plugin.storage`: JSON settings files. No capability. */
+/**
+ * `plugin.storage`: JSON settings files. No capability.
+ *
+ * @remarks
+ * Two kinds of storage, both private to the plugin and needing no
+ * capability. {@link Storage.json} keeps settings in JSON files in the
+ * plugin's data directory: they last across player restarts and upgrades,
+ * and are written by the plugin's own process. {@link Storage.session}
+ * keeps values in the player's memory for one player run: they survive a
+ * restart of the plugin's process but not of the player. Secrets belong in
+ * {@link Secrets}, never in either.
+ *
+ * @capability None.
+ *
+ * @example Keep a setting across restarts and a queue for this run
+ * The plugin's step size survives a restart of the player; its work queue
+ * survives a reload of the plugin but starts empty with the next player
+ * run. The JSON store reads its file at once and writes it shortly after
+ * each `save`; session values live in the player process.
+ * ```ts
+ * const settings = plugin.storage.json("settings", { defaults: { step: 5 } });
+ * const queue = (await plugin.storage.session.get<string[]>("queue")) ?? [];
+ * void settings.value.step; // read synchronously, from the file or the defaults
+ * void queue;
+ * ```
+ *
+ * @see [Store a plugin's data](../../docs/how-to/store-data.md), [Remember a window's state between runs](../../docs/how-to/window-state.md)
+ * @since 1.0.0
+ * @category Services
+ */
 export interface Storage {
   /**
    * Open `<name>.json` (`name`: 1–64 of `a-z 0-9 -`). A file that cannot be
@@ -6146,6 +7329,11 @@ export interface Storage {
    * // Only `save` writes: changing `store.value` in place is not saved.
    * store.save({ ...store.value, recent: [path, ...store.value.recent].slice(0, 10) });
    * ```
+   *
+   * @capability None.
+   * @throws `invalid` (throws) A bad `name`, or a `debounceMs` that is not a
+   *   non-negative number.
+   * @since 1.0.0
    */
   json<T>(
     name: string,
@@ -6223,19 +7411,97 @@ export interface Storage {
  * ```
  *
  * @since 1.5.25
+ *
+ * @remarks
+ * The player keeps the values in its own memory, per plugin, until it
+ * quits; the plugin's process may restart in between. Each call is one
+ * request to the player, answered in order, with no debounce.
+ *
+ * @capability None.
+ * @category Services
  */
 export interface SessionStorage {
-  /** The value stored under `key`, or `undefined` when there is none. */
+  /**
+   * The value stored under `key`, or `undefined` when there is none.
+   *
+   * @capability None.
+   * @throws `invalid` (rejects) A bad key (empty, over 1024 bytes, with NUL
+   *   or a lone surrogate).
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
+   *
+   * @example Pick up where the plugin stopped after a reload
+   * After a reload the plugin resumes the item it was working on. `get`
+   * asks the player and resolves with the value parsed from JSON, or
+   * `undefined` when nothing is stored; the value is not checked, so its
+   * shape is checked here.
+   * ```ts
+   * const current = await plugin.storage.session.get<{ url: string }>("current");
+   * if (typeof current?.url === "string") await plugin.osd.show("Resuming {}", [current.url]);
+   * ```
+   *
+   * @since 1.5.25
+   */
   get<T = unknown>(key: string): Promise<T | undefined>;
   /**
    * Store or replace `value` under `key`. `invalid` for a bad key or a value
    * that is not JSON, `limit` when the plugin's values would be over 1 MiB
    * or the request over the 1 MiB message limit.
+   *
+   * @capability None.
+   * @throws `invalid` (rejects) A bad key, or a value JSON cannot hold (or a
+   *   string with a lone surrogate).
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
+   * @throws `limit` (rejects) The plugin's values would pass 1 MiB, or the
+   *   request the 1 MiB message limit; nothing changes.
+   *
+   * @example Remember the item being worked on
+   * The plugin records the URL it is processing, so a reload can continue
+   * with it. The value is stored as `JSON.stringify` writes it, and is kept
+   * once the promise resolves.
+   * ```ts
+   * await plugin.storage.session.set("current", { url: "https://example.com/a.mkv" });
+   * ```
+   *
+   * @since 1.5.25
    */
   set(key: string, value: unknown): Promise<void>;
-  /** Remove a key; removing a missing one is fine. */
+  /**
+   * Remove a key; removing a missing one is fine.
+   *
+   * @capability None.
+   * @throws `invalid` (rejects) A bad key.
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
+   *
+   * @example Forget the item once it is done
+   * When the work finishes, the plugin removes the entry so that a later
+   * reload does not resume it. Removing a key that is not there is fine.
+   * ```ts
+   * await plugin.storage.session.delete("current");
+   * ```
+   *
+   * @since 1.5.25
+   */
   delete(key: string): Promise<void>;
-  /** The keys stored, in code point order. */
+  /**
+   * The keys stored, in code point order.
+   *
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
+   * @throws `unsupported` (rejects) A player before 0.5.5.
+   *
+   * @example Clear everything the plugin stored for this run
+   * The plugin starts its session state over. `keys` lists the plugin's own
+   * keys in code point order; each `delete` is a request of its own.
+   * ```ts
+   * const session = plugin.storage.session;
+   * for (const key of await session.keys()) await session.delete(key);
+   * ```
+   *
+   * @since 1.5.25
+   */
   keys(): Promise<string[]>;
 }
 
@@ -6259,6 +7525,15 @@ export interface SessionStorage {
  *   await plugin.osd.show(`Saved to ${exportedFile}`); // no file manager to open
  * }
  * ```
+ *
+ * @remarks
+ * The player opens files, folders and links with the system's own
+ * applications for the plugin, so the plugin never runs `open`,
+ * `explorer` or a shell itself.
+ *
+ * @capability None.
+ * @since 1.0.0
+ * @category Services
  */
 export interface System {
   /**
@@ -6266,13 +7541,66 @@ export interface System {
    * for all, so several files of one folder are all highlighted; Windows:
    * one Explorer window per folder, selecting its first path). Paths that do
    * not exist are skipped; `missing` when none exists; at most 256.
+   *
+   * @capability None.
+   * @throws `missing` (rejects) None of the paths exists.
+   * @throws `invalid` (rejects) No paths, or more than 256.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `timeout` (rejects) macOS did not answer within 10 s.
+   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   *
+   * @example Show the exported files in the file manager
+   * After an export, the file manager opens with the new files selected.
+   * Paths that no longer exist are skipped; the call rejects with `missing`
+   * only when none of them exists.
+   * ```ts
+   * declare const exported: string[];
+   * // ---cut---
+   * await plugin.system.reveal(exported); // macOS: one Finder window for all
+   * ```
+   *
+   * @since 1.0.0
    */
   reveal(paths: string | string[]): Promise<void>;
-  /** Open the file or folder with its default application. `missing` if absent. */
+  /**
+   * Open the file or folder with its default application. `missing` if absent.
+   *
+   * @capability None.
+   * @throws `missing` (rejects) The path does not exist.
+   * @throws `invalid` (rejects) An empty path.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `timeout` (rejects) macOS did not answer within 10 s.
+   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   *
+   * @example Open the plugin's data folder
+   * A "Show data folder" command opens the plugin's data directory in the
+   * file manager, which is the default application for a folder.
+   * ```ts
+   * await plugin.system.openPath(plugin.dataDirectory);
+   * ```
+   *
+   * @since 1.0.0
+   */
   openPath(path: string): Promise<void>;
   /**
    * Open an http(s) address in the default browser. `invalid` for another
    * protocol or a malformed address; `timeout` after 10 s, `failed` otherwise.
+   *
+   * @capability None.
+   * @throws `invalid` (rejects) Not an `http:` or `https:` address.
+   * @throws `timeout` (rejects) macOS did not hand it to the browser within
+   *   10 s.
+   * @throws `failed` (rejects) The system refused.
+   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   *
+   * @example Open the plugin's help page
+   * A Help command opens the plugin's documentation in the default browser.
+   * Only `http:` and `https:` addresses are opened.
+   * ```ts
+   * await plugin.system.openUrl("https://example.com/plugin/help");
+   * ```
+   *
+   * @since 1.0.0
    */
   openUrl(url: string): Promise<void>;
 }
@@ -6281,7 +7609,8 @@ export interface System {
  * Per-plugin secrets (API keys, passwords) in the system's secret store:
  * the login keychain on macOS, the Credential Manager on Windows. Needs
  * `secrets`. `unsupported` on systems without a store, `unavailable` when
- * the store refuses access: keep a fallback (or ask again).
+ * the store cannot be reached (no keychain, a read-only store, no logged-in
+ * session on Windows): keep a fallback (or ask again).
  *
  * The user denying access and other system errors reject `failed`. Never
  * write secrets to settings files.
@@ -6307,16 +7636,96 @@ export interface System {
  *     await plugin.secrets.set("api-token", token).catch(() => {}); // best effort
  * }
  * ```
+ *
+ * @remarks
+ * Values are stored by the player in the system's secret store under this
+ * plugin's id: other plugins cannot read them. Names are 1–64 of
+ * `a-z 0-9 . _ -`, values 1–1024 bytes of text, at most 256 names per
+ * plugin (`SECRET_LIMITS`).
+ *
+ * @capability secrets
+ * @since 1.0.0
+ * @category Services
  */
 export interface Secrets {
-  /** The stored value, `null` when there is none. */
+  /**
+   * The stored value, `null` when there is none.
+   *
+   * @capability secrets
+   * @throws `unsupported` (rejects) The system has no secret store.
+   * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
+   *   a read-only store, no logged-in session on Windows).
+   * @throws `failed` (rejects) The user denied access, or another system
+   *   error.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `secrets`.
+   * @throws `invalid` (rejects) A bad name.
+   *
+   * @example Read a stored token
+   * The plugin uses the token the user saved earlier, or asks for one when
+   * there is none. `get` resolves with the stored text or `null`.
+   * ```ts
+   * const token = await plugin.secrets.get("api-token");
+   * if (token === null) await plugin.osd.show("Sign in first");
+   * ```
+   *
+   * @since 1.0.0
+   */
   get(name: string): Promise<string | null>;
   /**
    * Store or replace (`name`: 1–64 of `a-z 0-9 . _ -`; value 1–1024 bytes).
    * At most 256 different names per plugin: a new name beyond that rejects
    * `limit`. Uninstalling with `removeData` deletes them.
+   *
+   * @capability secrets
+   * @throws `invalid` (rejects) A bad name, or a value that is empty, has NUL
+   *   or is over 1024 bytes.
+   * @throws `limit` (rejects) A new name beyond 256.
+   * @throws `unsupported` (rejects) The system has no secret store.
+   * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
+   *   a read-only store, no logged-in session on Windows).
+   * @throws `failed` (rejects) The user denied access, or another system
+   *   error.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `secrets`.
+   *
+   * @example Save the token the user entered
+   * The token the user typed is kept in the system's secret store for later
+   * runs. `set` stores or replaces it; the store can refuse, in which case
+   * the plugin keeps the token for this run only.
+   * ```ts
+   * declare const token: string;
+   * // ---cut---
+   * await plugin.secrets.set("api-token", token).catch((error: PluginError) => {
+   *   // No store, or access denied: the token is not kept for next time.
+   *   void plugin.osd.show("The token could not be saved ({})", [error.code]);
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   set(name: string, value: string): Promise<void>;
-  /** Remove; removing a missing secret is fine. */
+  /**
+   * Remove; removing a missing secret is fine.
+   *
+   * @capability secrets
+   * @throws `invalid` (rejects) A bad name.
+   * @throws `unsupported` (rejects) The system has no secret store.
+   * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
+   *   a read-only store, no logged-in session on Windows).
+   * @throws `failed` (rejects) The user denied access, or another system
+   *   error.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `secrets`.
+   *
+   * @example Sign out by removing the token
+   * Signing out removes the stored token, so the next start asks again.
+   * Removing a name that is not stored is fine.
+   * ```ts
+   * await plugin.secrets.delete("api-token");
+   * ```
+   *
+   * @since 1.0.0
+   */
   delete(name: string): Promise<void>;
 }

@@ -455,7 +455,8 @@ export function system(scope: ScopeImpl): System {
  * too long. Values are 1–1024 bytes counted in UTF-8, so the check uses
  * `Buffer.byteLength`; `secrets.set` would refuse other values with
  * `invalid`. The store itself can still refuse (`unsupported` without a
- * system store, `unavailable` or `failed` when it denies access): only
+ * system store, `unavailable` when it cannot be reached, `failed` when the
+ * user denies access): only
  * those codes get the "could not be saved" message, anything else (a
  * missing `secrets` capability) is a bug and is thrown on.
  * ```ts

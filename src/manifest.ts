@@ -1,6 +1,6 @@
 /**
  * The manifest rules `vestra-plugin check` applies; the same table as the
- * player's `host/src/manifest.rs` (the player's tests compare the limits).
+ * player's `src/host/src/packages/manifest.rs` (the player's tests compare the limits).
  * Paths in the manifest are checked against the plugin directory.
  */
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
