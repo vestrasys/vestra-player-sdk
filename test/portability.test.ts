@@ -112,6 +112,28 @@ test("plugin.app.system() asks the player; the facts stay plain data", async () 
   await stop();
 });
 
+test("plugin.app.system() reports the renderer, following TestHost.videoRender.gpu", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(
+    ["processing.video", "playback.read", "events"],
+    host,
+  );
+  assert.equal((await plugin.app.system()).rendering, "gpu");
+  // The player falls back to software rendering (a window without GPU frames).
+  host.failVideoRender(
+    "unsupported",
+    "the player switched to software rendering",
+  );
+  assert.equal((await plugin.app.system()).rendering, "software");
+  const render = plugin.video.render();
+  render.set({ interpolation: true });
+  await host.settle();
+  assert.equal(render.status.state, "failed");
+  host.videoRender.gpu = true;
+  assert.equal((await plugin.app.system()).rendering, "gpu");
+  await stop();
+});
+
 test("snapshots export JPEG with a quality and BMP", async () => {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");

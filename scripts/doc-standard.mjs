@@ -60,6 +60,7 @@ export const STRICT_CATEGORIES = {
       "OSD_LIMITS",
       "SESSION_STORAGE_LIMITS",
       "SECRET_LIMITS",
+      "SUBTITLE_LIMITS",
       "FileDialogText",
       "MarkdownWire",
       "UI_VALUE_LIMITS",

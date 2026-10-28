@@ -292,7 +292,7 @@ export interface LocalServices {
   ): Promise<Uint8Array>;
 }
 
-/** `app.system`: the operating system and the displays. */
+/** `app.system`: the operating system, the displays and the renderer. */
 export interface WireSystemInfo {
   os: "macos" | "windows" | "linux" | "other";
   name: string;
@@ -308,6 +308,8 @@ export interface WireSystemInfo {
     refreshRate: number | null;
     primary: boolean;
   }[];
+  /** Player 0.5.12; older players leave it out. */
+  rendering?: "gpu" | "software";
 }
 /**
  * Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`,

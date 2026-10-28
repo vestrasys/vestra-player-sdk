@@ -46,7 +46,7 @@ if (english)
 
 ## Upload a file
 
-`load` takes the file's bytes: UTF-8 SRT, or ASS/SSA with `format: "ass"`, at most 2 MiB (SRT up to 10,000 cues, ASS up to 20,000 `Dialogue:` lines). Convert other formats (WebVTT, SAMI) to SRT first. The player adds an `external` track to the current source only, selects it unless `select: "none"`, and resolves with the track once the upload is committed.
+`load` takes the file's bytes: UTF-8 SRT, or ASS/SSA with `format: "ass"`, at most 2 MiB (SRT up to 10,000 cues, ASS up to 20,000 `Dialogue:` lines). Convert other formats (WebVTT, SAMI) to SRT first. The player adds an `external` track to the current source only, selects it unless `select: "none"`, and resolves with the track once the upload is committed. A plugin has at most 4 such tracks on a source at once and loads at most 16 files into it (removed ones count); past that `load` fails with `busy` ([Limits](../reference/limits.md#subtitle-files)).
 
 ```ts
 import { readFile } from "node:fs/promises";

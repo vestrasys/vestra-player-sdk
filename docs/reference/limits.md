@@ -128,6 +128,25 @@ Counted on the text as shown, after translation and with its arguments filled in
 
 <!-- /generated -->
 
+## Subtitle files
+
+{@link "@vestra-player/sdk"!Subtitles.load | Subtitles.load} uploads a file as a track of the current source. A file over `fileBytes` fails with `invalid`; every other limit fails with `busy` and nothing is loaded. The counts are per source, so another file starts from zero. Removing a track frees its place among the tracks and their bytes, but a load stays counted until the source changes.
+
+<!-- generated:limits SUBTITLE_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `SUBTITLE_LIMITS.fileBytes` | 2097152 (2 MiB) | UTF-8 bytes of one file; a larger one fails with `invalid`. |
+| `SUBTITLE_LIMITS.tracksPerPlugin` | 4 | Tracks one plugin has loaded into the current source at the same time. |
+| `SUBTITLE_LIMITS.tracks` | 16 | Loaded tracks of every plugin in the current source at the same time. |
+| `SUBTITLE_LIMITS.totalBytes` | 16777216 (16 MiB) | Bytes of the loaded tracks of every plugin in the current source together. |
+| `SUBTITLE_LIMITS.loadsPerPlugin` | 16 | Loads by one plugin into the current source, removed tracks included. |
+| `SUBTITLE_LIMITS.loads` | 128 | Loads by every plugin into the current source, removed tracks included. |
+| `SUBTITLE_LIMITS.uploadsPerPlugin` | 2 | Loads of one plugin in progress at the same time. |
+| `SUBTITLE_LIMITS.uploads` | 8 | Loads of every plugin in progress at the same time. |
+
+<!-- /generated -->
+
 ## Messages
 
 Every request a plugin sends travels as one protocol line. The plugin's side refuses a longer one with code `limit` before sending it; property values meet their own limits first.

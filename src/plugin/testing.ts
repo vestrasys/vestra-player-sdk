@@ -97,6 +97,7 @@ import { CAPABILITY_INFO, MESSAGE_LIMIT } from "../capabilities.ts";
 import type { CapabilityInfo } from "../capabilities.ts";
 import { OSD_LIMITS } from "./osd.ts";
 import { SECRET_LIMITS, SESSION_STORAGE_LIMITS } from "./services.ts";
+import { SUBTITLE_LIMITS } from "./subtitles.ts";
 import { BINDING_INPUTS } from "./bindings.ts";
 import { THEME_PALETTES } from "../palettes.ts";
 import { IMAGE_LIMITS, UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
@@ -163,6 +164,8 @@ export { OSD_LIMITS };
 export { SECRET_LIMITS };
 /** The player's limits on `plugin.storage.session`. */
 export { SESSION_STORAGE_LIMITS };
+/** The player's limits on loaded subtitle files, which the test host enforces as well. */
+export { SUBTITLE_LIMITS };
 /** The names bindings are made of. */
 export { BINDING_INPUTS };
 /** The colours of the player's palettes, by `Theme` token. */
@@ -1822,7 +1825,10 @@ export class TestHost implements Transport {
     owner: string | null;
     /** The values the player holds. */
     values: RenderSettings;
-    /** `true`: GPU rendering; `false`: software rendering (`unsupported`). */
+    /**
+     * `true`: GPU rendering; `false`: software rendering (`unsupported`).
+     * `plugin.app.system()` reports it as `rendering`.
+     */
     gpu: boolean;
   } = { owner: null, values: { ...RENDER_DEFAULTS, shaders: [] }, gpu: true };
   /**
@@ -1956,6 +1962,13 @@ export class TestHost implements Transport {
       bytes: Buffer[];
       /** The announced total size in bytes. */
       expected: number;
+      /**
+       * The source generation it was begun for; like the player, a new
+       * source drops the uploads of the old one.
+       *
+       * @since 1.5.34
+       */
+      generation?: number;
     }
   >();
   /** Snapshots taken with `media.capture`, by snapshot id. Wire-level. */
@@ -2191,8 +2204,12 @@ export class TestHost implements Transport {
    * @since 1.5.25
    */
   readonly sessionStorage = new Map<string, Json>();
-  /** What `plugin.app.system()` reports. */
-  systemInfo: WireSystemInfo = {
+  /**
+   * What `plugin.app.system()` reports. Its `rendering` follows
+   * {@link TestHost.videoRender | videoRender.gpu} (`"gpu"` or
+   * `"software"`), so one switch covers the render options and the fact.
+   */
+  systemInfo: Omit<WireSystemInfo, "rendering"> = {
     os: "macos",
     name: "macOS",
     version: "26.2",
@@ -3975,7 +3992,8 @@ export class TestHost implements Transport {
       throw new HostError("unavailable", "audio tracks need ready media");
   }
 
-  #subtitleChange(expected: Json) {
+  /** `stale` unless `expected` is the current subtitle stamp. */
+  #subtitleExpected(expected: Json) {
     const stamp = this.subtitles.selection.stamp;
     const want = expected as { generation: number; revision: number };
     if (
@@ -3983,6 +4001,53 @@ export class TestHost implements Transport {
       want.revision !== stamp.revision
     )
       throw new HostError("stale", "subtitle selection changed");
+  }
+
+  /**
+   * The resources this plugin loaded into the current source (resource id →
+   * bytes), removed ones included: like the player, a removed track frees
+   * its place among the live tracks but not among the loads.
+   */
+  #subtitleResources = { generation: -1, bytes: new Map<string, number>() };
+  #loadedSubtitles() {
+    const generation = this.source.stamp.generation;
+    if (this.#subtitleResources.generation !== generation)
+      this.#subtitleResources = { generation, bytes: new Map() };
+    return this.#subtitleResources.bytes;
+  }
+
+  /**
+   * The player's `SUBTITLE_LIMITS` for a new resource (`busy`, as the
+   * player reports them). External tracks in `subtitles.tracks` that this
+   * plugin did not load count as other plugins'. `totalBytes` is not
+   * modelled: one plugin's 4 files of at most 2 MiB stay below it, and the
+   * bytes of other plugins' tracks are unknown.
+   */
+  #subtitleRoom(resourceId: string) {
+    const loaded = this.#loadedSubtitles();
+    if (loaded.has(resourceId)) return;
+    const external = this.subtitles.tracks.filter(
+      (t) => t.target.kind === "external",
+    );
+    const own = external.filter(
+      (t) => t.target.kind === "external" && loaded.has(t.target.resourceId),
+    );
+    const others = external.length - own.length;
+    if (
+      loaded.size >= SUBTITLE_LIMITS.loadsPerPlugin ||
+      loaded.size + others >= SUBTITLE_LIMITS.loads ||
+      own.length >= SUBTITLE_LIMITS.tracksPerPlugin ||
+      external.length >= SUBTITLE_LIMITS.tracks
+    )
+      throw new HostError(
+        "busy",
+        "subtitle resource or counter limit exceeded",
+      );
+  }
+
+  #subtitleChange(expected: Json) {
+    this.#subtitleExpected(expected);
+    const stamp = this.subtitles.selection.stamp;
     this.subtitles.selection.stamp = {
       generation: this.source.stamp.generation,
       revision: stamp.revision + 1,
@@ -4358,7 +4423,10 @@ export class TestHost implements Transport {
       void this.sessionStorage.delete(sessionKey(p.key)),
     "storage.session.keys": () =>
       [...this.sessionStorage.keys()].sort(byCodePoint),
-    "app.system": () => structuredClone(this.systemInfo),
+    "app.system": (): WireSystemInfo => ({
+      ...structuredClone(this.systemInfo),
+      rendering: this.videoRender.gpu ? "gpu" : "software",
+    }),
     "clipboard.readText": () => this.clipboard.text,
     "clipboard.writeText": (p) => {
       if (typeof p.text !== "string")
@@ -5125,9 +5193,34 @@ export class TestHost implements Transport {
     "subtitles.upload.begin": (p) => {
       if (p.generation !== this.source.stamp.generation)
         throw new HostError("stale", "source generation changed");
+      const expectedBytes = Number(p.expectedBytes);
+      if (
+        !Number.isSafeInteger(expectedBytes) ||
+        expectedBytes < 1 ||
+        expectedBytes > SUBTITLE_LIMITS.fileBytes
+      )
+        throw new HostError(
+          "invalid",
+          `a subtitle file has 1..${SUBTITLE_LIMITS.fileBytes} bytes`,
+        );
+      // Like the player: a new source drops the old one's uploads. A commit
+      // the player refused leaves its upload for `subtitles.upload.discard`,
+      // which the SDK sends after any failed load.
+      for (const [id, upload] of this.uploads)
+        if (
+          upload.generation !== undefined &&
+          upload.generation !== this.source.stamp.generation
+        )
+          this.uploads.delete(id);
+      if (this.uploads.size >= SUBTITLE_LIMITS.uploadsPerPlugin)
+        throw new HostError(
+          "busy",
+          "upload memory, owner or active-token limit reached",
+        );
       this.uploads.set(Number(p.uploadId), {
         bytes: [],
-        expected: Number(p.expectedBytes),
+        expected: expectedBytes,
+        generation: this.source.stamp.generation,
       });
       return {
         generation: p.generation!,
@@ -5176,7 +5269,10 @@ export class TestHost implements Transport {
           "invalid",
           "ASS requires [Script Info] and [Events] sections",
         );
+      this.#subtitleExpected(p.expected!);
+      this.#subtitleRoom(String(p.resourceId));
       this.#subtitleChange(p.expected!);
+      this.#loadedSubtitles().set(String(p.resourceId), bytes.length);
       const target = {
         kind: "external" as const,
         owner: 1,
