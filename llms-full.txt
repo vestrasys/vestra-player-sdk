@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.32: full reference
+# @vestra-player/sdk 1.5.33: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 

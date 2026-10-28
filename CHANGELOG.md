@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.5.32
+## 1.5.33
+
+1.5.32 was not published (a tag error).
 
 **Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only documentation, its checks and the generated `llms-full.txt` change.
 

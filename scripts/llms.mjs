@@ -9,7 +9,7 @@
  *   layout, a manifest and its fields, `activate`, every capability, the
  *   test host, the command line, the error codes, and where each topic is in
  *   llms-full.txt (line numbers). It stays at most 10 KB (10,240 bytes,
- *   raised from 9 KB in SDK 1.5.32 to leave room for about 20 more how-to
+ *   raised from 9 KB in SDK 1.5.33 to leave room for about 20 more how-to
  *   pages in its index; still under 2.6k tokens).
  * - llms-full.txt: the documentation pages of every group in
  *   scripts/doc-structure.mjs except the examples (index pages left out,
