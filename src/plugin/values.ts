@@ -85,7 +85,7 @@ function documentText(value: Json): string | null {
 }
 
 /**
- * The player's runtime image limits (`host/src/ui_image.rs`): a file's
+ * The player's runtime image limits (`src/host/src/ui/ui_image.rs`): a file's
  * bytes and sides, the decoded pixels each plugin caches, and (SDK 1.5.19,
  * player 0.5.1) the decoded pixels the nested images of one view may show.
  */
@@ -103,7 +103,7 @@ export const IMAGE_LIMITS = Object.freeze({
 /**
  * Why the player would refuse `value` (in wire form) as a property value,
  * or `null`. The same checks, order and messages as the player's
- * conversion (`host/src/ui_values.rs`). An image reference as the whole
+ * conversion (`src/host/src/ui/ui_values.rs`). An image reference as the whole
  * value is not counted (the player loads it instead).
  */
 export function valueLimitProblem(value: Json): string | null {

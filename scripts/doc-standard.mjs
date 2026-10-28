@@ -64,6 +64,46 @@ export const STRICT_CATEGORIES = {
       "OsdPanelOptions",
     ],
   },
+  Commands: {
+    full: ["Commands", "Command", "Host"],
+    data: [
+      "CommandState",
+      "Bindable",
+      "MenuId",
+      "BarButtonIcon",
+      "CommandButton",
+      "CommandOptions",
+      "HostAction",
+    ],
+  },
+  Playback: {
+    full: ["Player", "Media", "Scrub", "Stream"],
+    data: [
+      "PlayerState",
+      "AudioTrack",
+      "AudioDevice",
+      "Chapter",
+      "Conditional",
+      "StreamFrame",
+      "StreamOptions",
+      "StreamStartError",
+      "SequenceProvider",
+      "PlaybackStats",
+    ],
+  },
+  Services: {
+    full: [
+      "Storage",
+      "JsonStore",
+      "SessionStorage",
+      "Secrets",
+      "Clipboard",
+      "System",
+      "Tools",
+      "Power",
+    ],
+    data: ["ToolResult"],
+  },
 };
 
 /** Exported name → `{ category, kind }` for every strict declaration. */

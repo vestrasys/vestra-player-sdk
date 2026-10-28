@@ -7,6 +7,18 @@ description: Short guides that each answer one practical question about writing,
 
 How-to guides are short answers to one practical question each: "how do I do X?". They assume you already know the basics from [Getting started](../tutorials/getting-started.md).
 
+## Control playback
+
+Every control of `plugin.player` is conditional: it acts on the state the plugin last saw and fails with `stale`, doing nothing, when the user or another plugin changed the source meanwhile. The guide shows how to read and follow the state, bind menu items to `state.can`, handle `stale` and pass `ifCurrent` across slow work, open a file and follow it with its `Media` handle, use the player's own core actions for buttons, provide Next and Previous, and where sliders, loops and the output fit in.
+
+[Read the guide](control-playback.md)
+
+## Store a plugin's data
+
+A plugin has three places to keep data, all private to it: settings files (`storage.json`, across player restarts), session values (`storage.session`, across plugin restarts within one player run) and the system's secret store (`secrets`, for tokens). The guide says which to use for what, how each one writes and fails (debounced atomic files, the 1 MiB session limit, a missing or refused keychain), and where larger files go.
+
+[Read the guide](store-data.md)
+
 ## Keep a slider responsive while dragging
 
 A slider reports every pointer move, often more than 60 times a second, so a slider that drives a video filter, the volume or a preview can lag or queue up requests. The guide builds a Brightness window and shows the four habits that keep it smooth: the callback records the newest value and never awaits; the expensive part is a call that keeps only the latest value (`filter.set`, `player.setOutput`, `Scrub.seek`); the slider's value is bound with `bind`, not `set`, so the plugin never fights the pointer; and one-off work waits for the release. It ends with a small helper that gives your own slow work latest-value behaviour, and with when to call `plugin.update()`.

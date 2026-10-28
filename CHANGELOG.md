@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.31
+
+**Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only documentation, its checks and the generated `llms-full.txt` change.
+
+- **The Commands, Playback and Services categories reach the full reference standard** (they are now in `STRICT_CATEGORIES`, so CI keeps them complete): `Commands`, `Command`, `Host` and their option types; `Player`, `Media`, `Scrub`, `Stream` and the playback state and stream types; `Storage`, `JsonStore`, `SessionStorage`, `Secrets`, `Clipboard`, `System`, `Tools`, `Power`. Every method has an example (what it does and how it works), `@capability`, `@since` and a `@throws` per error code it can reject with, checked against the SDK and the player's source; every type has `@category`, so the API reference lists them under their category instead of "Other". Methods with an explained example: 75 of 191 → 121.
+- Error codes the reference now names, from the player's source: a control while nothing is open is `invalid` (`close` is not: closing with nothing open just succeeds); `setRate` takes 0.05–10 (the player's own keys stay within 0.25–4); `setOutput`'s volume outside 0–200 is `invalid`; `Stream.stop` rejects only when closing the source fails, and releases the stream either way.
+- New how-to guides: *Control playback* (reading and following the state, `stale` and `ifCurrent`, `Media`, core actions, Next and Previous) and *Store a plugin's data* (settings files, session values, secrets, your own files).
+- `doc-lint`: `--list explained` lists the methods without an explained example; its summary line no longer says "Not enforced yet" (every example has been enforced since 1.5.30).
+- Comments and docs name the player's host files at their new places (`src/host/src/packages/manifest.rs`, `ui/ui_image.rs`, `ui/ui_values.rs`, `playback/effects.rs`, `ui/theme.rs`).
+
 ## 1.5.30
 
 **Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only documentation, its checks and the generated `llms-full.txt` change.

@@ -3826,7 +3826,7 @@ export class TestHost implements Transport {
       this.secrets.set(name, String(p.value));
     },
     "secrets.delete": (p) => void this.secrets.delete(String(p.name)),
-    // As the player (host/src/session_storage.rs).
+    // As the player (src/host/src/session_storage.rs).
     "storage.session.get": (p) => {
       const key = sessionKey(p.key);
       return this.sessionStorage.has(key)

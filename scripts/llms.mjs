@@ -908,7 +908,7 @@ const index = [
   ),
   `- ${noCapability.replace(/^A member not in the table needs no capability:/, "No capability:").replace(/`plugin\./g, "`")} Details: ${rangeOf("## Reference: Capabilities")}.`,
   "",
-  `**Test**: \`tests/*.test.ts\` with \`node:test\`, run by \`vestra-plugin test\`. \`startPlugin(activate, { directory: new URL("..", import.meta.url) })\` from \`@vestra-player/sdk/testing\` returns \`{ host, stop }\`; \`host\` is a TestHost (an in-memory player): \`host.setSource(…)\`, \`host.command(id).run()\`, \`host.press(key)\`, \`await host.settle()\`, then assert on \`host.osd\`, \`host.window(id).props\`… Guide: ${rangeOf("## How-to: Test a plugin")}; TestHost: L${lineOf("### TestHost")}.`,
+  `**Test**: \`tests/*.test.ts\` with \`node:test\`, run by \`vestra-plugin test\`. \`startPlugin(activate, { directory: new URL("..", import.meta.url) })\` from \`@vestra-player/sdk/testing\` returns \`{ host, stop }\`, \`host\` an in-memory player (TestHost): act (\`host.command(id).run()\`, \`host.press(key)\`), \`await host.settle()\`, assert on \`host.osd\`, \`host.window(id).props\`… Guide: ${rangeOf("## How-to: Test a plugin")}; TestHost: L${lineOf("### TestHost")}.`,
   "",
   "**Command line**",
   "",
@@ -962,7 +962,7 @@ const index = [
   "",
   "## Optional",
   "",
-  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments: node_modules/${pkg.name}/dist/plugin/{types,testing}.d.ts; Slint library: slint/vestra/.`,
+  `- [Changelog](${REPO}/blob/main/CHANGELOG.md); full doc comments in the package's dist/plugin/*.d.ts; Slint library in slint/vestra/.`,
   "",
 ].join("\n");
 

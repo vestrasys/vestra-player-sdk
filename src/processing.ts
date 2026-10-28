@@ -236,7 +236,7 @@ type Rule = Record<
   [number, number] | readonly (string | number | boolean)[]
 >;
 const BOOL = [true, false] as const;
-/** Value ranges, the same as the host's `effects.rs` (the host is authoritative). */
+/** Value ranges, the same as the host's `src/host/src/playback/effects.rs` (the host is authoritative). */
 const RULES: Record<string, Rule> = {
   eq: {
     brightness: [-1, 1],

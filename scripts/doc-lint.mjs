@@ -323,12 +323,14 @@ const examplesOf = (comment) =>
 const exampleReport = {
   problems: [], // fail the run
   baselined: [], // known, in EXAMPLE_BASELINE
-  open: [], // outside the enforced declarations: reported only
-  stale: [], // stale-refs outside the enforced declarations
+  open: [], // every example-lead problem, for --list example-lead
+  stale: [], // every stale-refs problem, for --list stale-refs
   newKeys: [], // the EXAMPLE_BASELINE keys of `problems` (--baseline prints them)
 };
 const coverage = new Map(); // category → { methods, explained, markers, examples, good }
 const usedBaseline = new Set();
+/** Methods without an explained example (or a marker): `--list explained`. */
+const unexplained = [];
 for (const module of modules ?? []) {
   const testingModule = module.name.endsWith("/testing");
   for (const declaration of module.children ?? []) {
@@ -361,10 +363,11 @@ for (const module of modules ?? []) {
         ]),
     ];
     if (declaration.kindOf(ReflectionKind.Function)) subjects[0][2] = true;
-    /** Report one problem: fail, baseline or (not enforced) list it. */
-    const report = (key, message, open) => {
-      if (!enforced) open.push(message);
-      else if (EXAMPLE_BASELINE.has(key)) {
+    /** Report one problem: list it (`--list`), and fail or baseline it. */
+    const report = (key, message, list) => {
+      list.push(message);
+      if (!enforced) return;
+      if (EXAMPLE_BASELINE.has(key)) {
         usedBaseline.add(key);
         exampleReport.baselined.push(message);
       } else {
@@ -380,6 +383,7 @@ for (const module of modules ?? []) {
           row.explained++;
         else if (examples.some((e) => e.marker && !e.problems.length))
           row.markers++;
+        else unexplained.push(`${testingModule ? "testing!" : ""}${name}`);
       }
       const where = `${testingModule ? "testing!" : ""}${name}`;
       examples.forEach((example, index) => {
@@ -455,6 +459,7 @@ for (const key of EXAMPLE_BASELINE)
       `${key}: listed in EXAMPLE_BASELINE (scripts/doc-standard.mjs) but no longer fails; remove it`,
     );
 stats["example-lead"] = { applies: 0, missing: exampleReport.open };
+stats.explained = { applies: 0, missing: unexplained };
 stats["stale-refs"] = { applies: 0, missing: exampleReport.stale };
 
 // Error codes: the PluginError table against the codes the SDK throws.
@@ -592,10 +597,8 @@ console.log(
   `${"all".padEnd(13)} ${String(totals.methods).padStart(7)}  ${`${totals.explained} (${percent(totals.explained, totals.methods)})`.padStart(9)}  ${String(totals.markers).padStart(10)}  ${String(totals.examples).padStart(9)}  ${`${totals.good} (${percent(totals.good, totals.examples)})`.padStart(17)}`,
 );
 console.log(
-  `Not enforced yet: example-lead ${exampleReport.open.length} problems (--list example-lead), stale-refs ${exampleReport.stale.length} (--list stale-refs). Enforced: ${exampleReport.baselined.length} known (EXAMPLE_BASELINE), ${exampleReport.problems.length} new.`,
+  `Every example and Markdown code block: example-lead ${exampleReport.open.length} problems (--list example-lead), stale-refs ${exampleReport.stale.length} (--list stale-refs); ${exampleReport.baselined.length} of them known (EXAMPLE_BASELINE), ${exampleReport.problems.length} failing.`,
 );
-for (const text of exampleReport.stale)
-  console.log(`::warning::stale-refs: ${text}`);
 for (const text of exampleReport.baselined)
   console.log(`::warning::baseline: ${text}`);
 for (const text of exampleReport.problems) console.log(`::error::${text}`);
