@@ -9276,7 +9276,7 @@ export type RenderingPreference = "auto" | "gpu" | "software";
  * | `headless` | The player runs without a user interface. |
  * | `no-gpu-backend` | This player has no GPU renderer on this system (Windows today). |
  * | `env` | The environment chose it (`VESTRA_RENDER`, `VESTRA_SOFTWARE_RENDER`). |
- * | `preference` | The user chose it ({@link Rendering.setPreference}). |
+ * | `preference` | The user chose software rendering ({@link Rendering.setPreference}); GPU chosen and available reports `default`. |
  * | `denylist` | The graphics driver is on the player's denylist. |
  * | `previous-crash` | GPU rendering crashed at an earlier start; it is tried again after a driver or player update, or after 7 days. |
  * | `init-failed` | GPU rendering could not start. |
@@ -9530,7 +9530,9 @@ export interface Rendering {
    * @capability rendering.manage
    * @throws `unsupported` (rejects) The player runs without a user
    *   interface; also a player before 0.5.13.
-   * @throws `busy` (rejects) A restart is already under way.
+   * @throws `busy` (rejects) A restart is already under way, or this player
+   *   was itself started by a restart less than 30 seconds ago (so a plugin
+   *   that restarts on activation cannot make a loop).
    * @throws `failed` (rejects) The new player process could not be started;
    *   the player keeps running.
    * @throws `capability` (rejects) The manifest does not declare

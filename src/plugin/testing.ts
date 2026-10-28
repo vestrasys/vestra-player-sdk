@@ -2334,7 +2334,7 @@ export class TestHost implements Transport {
     /** Accepted `restartPlayer` calls. */
     restarts: number;
   } = {
-    reason: { code: "default", message: "GPU rendering is the default" },
+    reason: { code: "default", message: "nothing rules GPU rendering out" },
     preference: "auto",
     startedWith: "gpu",
     gpu: { available: true, reason: null },
@@ -4143,13 +4143,22 @@ export class TestHost implements Transport {
   /** `rendering.state` from {@link TestHost.rendering} and `videoRender.gpu`. */
   #renderingState(): WireRenderingState {
     const { reason, preference, startedWith, gpu } = this.rendering;
-    const next: { mode: RenderingMode; reason: RenderingReason } =
-      preference === "software"
+    // The player's order (render_mode.rs decide): no windows or no GPU
+    // renderer first, then the preference `software`, then what keeps GPU
+    // rendering off (denylist, crash), else GPU with the reason `default`
+    // (also when the preference is `gpu`).
+    const system =
+      !gpu.available &&
+      (gpu.reason?.code === "headless" ||
+        gpu.reason?.code === "no-gpu-backend");
+    const next: { mode: RenderingMode; reason: RenderingReason } = system
+      ? { mode: "software", reason: gpu.reason! }
+      : preference === "software"
         ? {
             mode: "software",
             reason: {
               code: "preference",
-              message: "Software rendering chosen",
+              message: "chosen in the player's settings",
             },
           }
         : !gpu.available
@@ -4157,21 +4166,16 @@ export class TestHost implements Transport {
               mode: "software",
               reason: gpu.reason ?? {
                 code: "default",
-                message: "Software rendering is the default",
+                message: "nothing rules GPU rendering out",
               },
             }
-          : preference === "gpu"
-            ? {
-                mode: "gpu",
-                reason: { code: "preference", message: "GPU rendering chosen" },
-              }
-            : {
-                mode: "gpu",
-                reason: {
-                  code: "default",
-                  message: "GPU rendering is the default",
-                },
-              };
+          : {
+              mode: "gpu",
+              reason: {
+                code: "default",
+                message: "nothing rules GPU rendering out",
+              },
+            };
     return {
       mode: this.videoRender.gpu ? "gpu" : "software",
       reason: { ...reason },

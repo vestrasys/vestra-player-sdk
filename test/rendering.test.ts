@@ -54,10 +54,10 @@ test("state() needs no capability and reports the defaults of a GPU player", asy
   const { plugin, host, stop } = await started([]);
   assert.deepEqual(await plugin.rendering.state(), {
     mode: "gpu",
-    reason: { code: "default", message: "GPU rendering is the default" },
+    reason: { code: "default", message: "nothing rules GPU rendering out" },
     preference: "auto",
     nextMode: "gpu",
-    nextReason: { code: "default", message: "GPU rendering is the default" },
+    nextReason: { code: "default", message: "nothing rules GPU rendering out" },
     restartPending: false,
     gpu: { available: true, reason: null },
   });
@@ -69,7 +69,7 @@ test("state() needs no capability and reports the defaults of a GPU player", asy
   assert.equal(system.rendering, "gpu");
   assert.deepEqual(system.renderingReason, {
     code: "default",
-    message: "GPU rendering is the default",
+    message: "nothing rules GPU rendering out",
   });
   await stop();
 });
@@ -108,7 +108,8 @@ test("setPreference saves the choice; restartPending follows it back and forth",
   });
   state = await plugin.rendering.setPreference("gpu");
   assert.equal(state.nextMode, "gpu");
-  assert.equal(state.nextReason.code, "preference");
+  // As the player: GPU chosen and available is the reason `default`.
+  assert.equal(state.nextReason.code, "default");
   assert.equal(state.restartPending, false);
   state = await plugin.rendering.setPreference("auto");
   assert.equal(state.nextReason.code, "default");
@@ -152,6 +153,8 @@ test("GPU unavailable: unsupported without a GPU renderer, unavailable when rule
   // "auto" and "software" are always accepted.
   state = await plugin.rendering.setPreference("software");
   assert.equal(state.restartPending, false);
+  // As the player: no GPU renderer comes before the preference.
+  assert.equal(state.nextReason.code, "no-gpu-backend");
   host.rendering.gpu = {
     available: false,
     reason: {
