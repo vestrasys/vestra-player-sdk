@@ -793,6 +793,7 @@ export interface Command extends Disposable {
    *
    * @throws `conflict` (rejects) Another command already has this menu path,
    *   or the path would be both a menu item and a submenu.
+   * @throws `capability` (rejects) The manifest does not declare `commands`.
    * @throws `invalid` (rejects) The player refused the declaration.
    * @throws `limit` (rejects) More than 160 commands in this plugin, or 1024 in
    *   the player.
@@ -4814,7 +4815,16 @@ export interface Player {
    *   before it finished (for example while a URL was still being resolved).
    * @throws `invalid` (rejects) An empty `source`.
    * @throws `aborted` (rejects) `signal` aborted (an `AbortError`); the
-   *   source is closed.
+   *   source is closed if it was opened.
+   * @throws `busy` (rejects) The address needs a resolver plugin and the
+   *   player is already resolving 32 addresses.
+   * @throws `backend` (rejects) A resolver plugin handled the address or
+   *   file and failed (its message), or the resolution was cancelled or
+   *   expired.
+   * @throws `unsupported` (rejects) The player refused what a resolver
+   *   returned (for example split streams with different headers).
+   * @throws `unavailable` (rejects) The stream a file resolver prepared was
+   *   not ready to play.
    * @throws `capability` (rejects) The manifest does not declare
    *   `playback.control`.
    *
