@@ -6,6 +6,8 @@ import { capabilityInfo } from "./capability-rules.ts";
  * entry of {@link CAPABILITY_INFO}.
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export interface CapabilityInfo {
   /**
@@ -73,6 +75,8 @@ export interface CapabilityInfo {
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>> =
   Object.freeze(
@@ -109,5 +113,7 @@ export const API_VERSION = "vestra/1";
  * {@link UI_VALUE_LIMITS} before this.
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const MESSAGE_LIMIT = 1024 * 1024;

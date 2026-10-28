@@ -54,6 +54,8 @@ import type { BindingRef, Bindings } from "./types.ts";
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const BINDING_INPUTS = Object.freeze({
   /**

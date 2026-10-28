@@ -300,6 +300,8 @@ class Store<T> implements JsonStore<T> {
  * ```
  *
  * @since 1.5.25
+ *
+ * @category Testing
  */
 export const SESSION_STORAGE_LIMITS = Object.freeze({
   /** UTF-8 bytes of a key (1024, at least 1; no NUL character). */
@@ -481,6 +483,8 @@ export function system(scope: ScopeImpl): System {
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const SECRET_LIMITS = Object.freeze({
   /**

@@ -8,7 +8,9 @@
  * - llms.txt: the short index. What a plugin is, the rules, the folder
  *   layout, a manifest and its fields, `activate`, every capability, the
  *   test host, the command line, the error codes, and where each topic is in
- *   llms-full.txt (line numbers). It stays below 9 KB.
+ *   llms-full.txt (line numbers). It stays at most 10 KB (10,240 bytes,
+ *   raised from 9 KB in SDK 1.5.33 to leave room for about 20 more how-to
+ *   pages in its index; still under 2.6k tokens).
  * - llms-full.txt: the documentation pages of every group in
  *   scripts/doc-structure.mjs except the examples (index pages left out,
  *   condensed), every public declaration of `@vestra-player/sdk` and
@@ -47,7 +49,7 @@ const pkg = JSON.parse(read("package.json"));
 const SITE = "https://vestrasys.github.io/vestra-player-sdk/";
 const REPO = "https://github.com/vestrasys/vestra-player-sdk";
 /** llms.txt must stay below this size (bytes). */
-const INDEX_LIMIT = 9 * 1024;
+const INDEX_LIMIT = 10 * 1024;
 const fail = (message) => {
   console.error(`::error::llms: ${message}`);
   process.exit(1);

@@ -178,7 +178,14 @@ const strictReport = new Map(
   ]),
 );
 const sdk = modules?.find((module) => module.name === "@vestra-player/sdk");
-for (const declaration of sdk?.children ?? []) {
+const testing = modules?.find(
+  (module) => module.name === "@vestra-player/sdk/testing",
+);
+// A strict name is looked up in the SDK first, then in the testing module.
+for (const declaration of [
+  ...(sdk?.children ?? []),
+  ...(testing?.children ?? []),
+]) {
   const tagged = categoryOf(commentOf(declaration));
   if (strictReport.has(tagged) && !strictDeclarations.has(declaration.name))
     strictReport
@@ -193,7 +200,8 @@ for (const [name, { category, kind }] of strictDeclarations) {
     report.checks++;
     if (!ok) report.problems.push(`${what}: ${label}`);
   };
-  const declaration = sdk?.getChildByName(name);
+  const declaration =
+    sdk?.getChildByName(name) ?? testing?.getChildByName(name);
   if (!declaration) {
     report.problems.push(
       `${name}: listed in scripts/doc-standard.mjs but not exported`,

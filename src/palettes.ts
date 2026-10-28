@@ -33,6 +33,8 @@
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const THEME_PALETTES: Readonly<
   Record<"vestra" | "vestra-light", Readonly<Record<string, string>>>

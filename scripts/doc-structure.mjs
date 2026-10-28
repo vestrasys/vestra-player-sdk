@@ -112,6 +112,10 @@ export const GROUPS = [
         why: "One task: choose between settings files, session values and secrets, and use each.",
       },
       {
+        file: "subtitles.md",
+        why: "One task: find, upload, select and style subtitles from a plugin.",
+      },
+      {
         file: "slider.md",
         why: "One task: keep a slider responsive while dragging.",
       },

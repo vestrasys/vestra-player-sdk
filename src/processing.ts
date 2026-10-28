@@ -29,6 +29,9 @@ import type { Transport } from "./wire.ts";
  * ];
  * plugin.video.filter("picture").set(chain);
  * ```
+ *
+ * @since 1.0.0
+ * @category Processing
  */
 export type VideoNode =
   /** FFmpeg `eq`; every field is live. */
@@ -181,6 +184,9 @@ export type VideoNode =
  *   ],
  * });
  * ```
+ *
+ * @since 1.0.0
+ * @category Processing
  */
 export type AudioNode =
   /** FFmpeg `volume`. */

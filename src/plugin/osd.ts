@@ -41,6 +41,8 @@ import type { ArgJson } from "../i18n.ts";
  * ```
  *
  * @since 1.5.14
+ *
+ * @category Testing
  */
 export const OSD_LIMITS = Object.freeze({
   /**

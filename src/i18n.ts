@@ -16,6 +16,9 @@ import type { ListStyle, Locale } from "./plugin/types.ts";
  * The player's interface languages: English (the source language) first,
  * then the translations, as the player's own table (its tests check that
  * they agree).
+ *
+ * @since 1.5.9
+ * @category Testing
  */
 export const LOCALES = ["en", "zh-Hans", "ja", "ko", "de", "fr", "es"] as const;
 
@@ -388,6 +391,9 @@ export const LIST_STYLES: readonly ListStyle[] = [
 /**
  * The separator of each list style per interface language, as the player's
  * table (`i18n::text::SEPARATORS`; its tests check that they agree).
+ *
+ * @since 1.5.11
+ * @category Testing
  */
 export const LIST_SEPARATORS: Readonly<
   Record<Locale, Readonly<Record<ListStyle, string>>>
@@ -448,6 +454,9 @@ export const LIST_SEPARATORS: Readonly<
  * {@link @vestra-player/sdk!Text | Text} or
  * {@link @vestra-player/sdk!TextList | TextList} with everything nested in it), as the player's
  * `i18n::text` (its tests check that they agree).
+ *
+ * @since 1.5.11
+ * @category Testing
  */
 export const TEXT_LIMITS = {
   /** Nesting depth of texts and lists; the value itself is depth 0 (8). */
