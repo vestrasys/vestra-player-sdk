@@ -6637,9 +6637,12 @@ export interface RenderOptions extends Disposable {
  * | `rendering` | The player renders in software, or GPU rendering is still starting; upscaling needs GPU rendering ({@link Rendering}). |
  * | `adapter` | GPU rendering runs on another GPU than the one that can upscale (a laptop with two GPUs; Windows: choose the high-performance GPU for Vestra in Settings ▸ System ▸ Display ▸ Graphics). |
  * | `decoding` | The video is not decoded on the GPU that renders it: copy-back or software decoding, for example while a {@link VideoFilter} needs the frames in memory. |
+ * | `unchecked` | The player has not checked the GPU yet. Only in the answer to `set(false)`, which never starts the check; `state()` and `set(true)` always check first. |
  *
- * `decoding`, and `rendering` while GPU rendering starts, can pass during
- * the run; the others hold until the player restarts.
+ * `decoding` and `rendering` while GPU rendering is still starting can pass
+ * during the run, so `set(true)` accepts them and keeps the request; every
+ * other reason holds until the player restarts, and `set(true)` rejects it.
+ * Turning upscaling off is always accepted.
  *
  * @example Advise the user by reason
  * The plugin shows its own advice for the reasons the user can act on and
@@ -6668,6 +6671,7 @@ export type UpscalingReasonCode =
   | "rendering"
   | "adapter"
   | "decoding"
+  | "unchecked"
   // Any other string: a newer player's code (the names above stay suggested).
   | (string & {});
 
@@ -6764,9 +6768,10 @@ export interface UpscalingState {
  * @remarks
  * The player checks the GPU once, when a plugin first asks, and keeps the
  * answer: the check wakes a sleeping discrete GPU, so call
- * {@link VideoUpscaling.state} when the plugin needs the answer (to show its
- * upscaling item), and do not poll it. It works only with GPU rendering, on the GPU the upscaler
- * runs on, with the video decoded on that GPU; {@link UpscalingReasonCode}
+ * {@link VideoUpscaling.state} when the plugin first needs the answer (the
+ * first time the user picks its upscaling item), not while the plugin
+ * starts, and do not poll it. `set(false)` never starts the check. It works
+ * only with GPU rendering, on the GPU the upscaler runs on, with the video decoded on that GPU; {@link UpscalingReasonCode}
  * lists what can stand in the way.
  *
  * While some plugin has it on and it works, the player puts the upscaler
@@ -6789,19 +6794,23 @@ export interface UpscalingState {
  * plugin that declares it: declare `"minPlayerVersion": "0.5.16"`.
  *
  * @example Offer AI upscaling as a menu item
- * A Video menu item turns upscaling on and off; it is greyed out with the
- * player's reason where it cannot work. The state is read when the item is
- * first shown and again after each pick; `set` resolves with the new state,
- * or rejects with `unsupported` where upscaling cannot work in this run.
+ * A Video menu item turns upscaling on and off; once the player said it
+ * cannot work here, the item is greyed out with the player's reason. The
+ * state is read the first time the user picks the item (that runs the
+ * player's GPU check, so nothing wakes the GPU while the plugin starts) and
+ * again after each pick; `set` resolves with the new state, or rejects with
+ * `unsupported` where upscaling cannot work in this run.
  * ```ts
- * let state: UpscalingState | null = null;
+ * let state: UpscalingState | null = null; // unknown until first picked
  * plugin.commands.add({
  *   id: "upscaling",
  *   path: ["@video", "AI Upscaling"],
  *   checked: () => state?.enabled ?? false,
- *   enabled: () => state?.available ?? false,
+ *   // Greyed only once the player said it cannot work (`decoding` can pass).
+ *   enabled: () => state === null || state.available || state.reason?.code === "decoding",
  *   reason: () => state?.reason?.message ?? null, // shown while disabled
  *   run: async () => {
+ *     state ??= await plugin.video.upscaling.state(); // the first pick checks the GPU
  *     try {
  *       state = await plugin.video.upscaling.set(!(state?.enabled ?? false));
  *     } catch (error) {
@@ -6811,7 +6820,6 @@ export interface UpscalingState {
  *     }
  *   },
  * });
- * state = await plugin.video.upscaling.state(); // runs the player's GPU check once
  * ```
  *
  * @capability video.upscaling
@@ -6832,8 +6840,8 @@ export interface VideoUpscaling {
    *   `video.upscaling`.
    *
    * @example Find out whether upscaling can work here
-   * The plugin reads the state when the user opens its menu and keeps it
-   * for the item. The first call makes the player check the GPU (which
+   * The plugin reads the state the first time the user picks its upscaling
+   * item and keeps it for the item. The first call makes the player check the GPU (which
    * wakes a sleeping discrete GPU) and later calls reuse the answer; the
    * rest (GPU rendering, the GPU it runs on, the decoding) is read at
    * each call.
@@ -6864,9 +6872,12 @@ export interface VideoUpscaling {
    *   `video.upscaling`.
    * @throws `invalid` (rejects) `enabled` is not a boolean.
    * @throws `unsupported` (rejects) `true` where upscaling cannot work in
-   *   this run (any {@link UpscalingReasonCode} but `decoding`, and
-   *   `rendering` while GPU rendering is starting); `message` is the reason.
-   *   Nothing changes.
+   *   this run: every {@link UpscalingReasonCode} except `decoding`, and
+   *   except `rendering` while GPU rendering is still starting (those two
+   *   are accepted and the request is kept until they pass); `message` is
+   *   the reason. Nothing changes. `false` is always accepted and answered
+   *   at once without the GPU check (before any check, `available` is
+   *   `false` with `unchecked`).
    *
    * @example Turn upscaling on and explain what is needed
    * The plugin turns upscaling on from its settings and tells the user what

@@ -86,7 +86,7 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 
 {@link "@vestra-player/sdk"!VideoUpscaling | plugin.video.upscaling} (capability `video.upscaling`, player 0.5.16) turns on the GPU's AI upscaler, NVIDIA RTX Video Super Resolution on Windows. It is not a handle: `set(true)` is the plugin's request, and the player keeps the upscaler last in the filter chain, after every plugin's chain, while any plugin has it on and it can work, scaled to the area the video is shown in. Like render options it acts at display time only.
 
-- **Ask when needed.** The player checks the GPU at the first `state()` or `set()` and keeps the answer; the check wakes a sleeping discrete GPU.
+- **Ask when needed.** The player checks the GPU at the first `state()` or `set(true)` and keeps the answer; the check wakes a sleeping discrete GPU, so ask on the first pick of the item, not while the plugin starts. `set(false)` never checks.
 - **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone.
 - **No sign that it runs.** `requested` says the player asked the driver; on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read.
 

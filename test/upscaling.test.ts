@@ -154,3 +154,34 @@ test("a refusal injected with handle reaches the plugin", async () => {
   await assert.rejects(plugin.video.upscaling.set(true), code("backend"));
   await stop();
 });
+
+test("set(false) checks nothing; before any check it reports unchecked", async () => {
+  const { plugin, host, stop } = await started(["video.upscaling"]);
+  const state = await plugin.video.upscaling.set(false);
+  assert.equal(host.upscaling.checked, false, "no GPU check");
+  assert.equal(state.available, false);
+  assert.equal(state.reason?.code, "unchecked");
+  assert.equal(state.enabled, false);
+  // The first state() checks.
+  assert.equal((await plugin.video.upscaling.state()).available, true);
+  assert.equal(host.upscaling.checked, true);
+  await stop();
+});
+
+test("set(true) keeps the request while GPU rendering is still starting", async () => {
+  const host = new TestHost();
+  host.upscaling.reason = {
+    code: "rendering",
+    message: "upscaling needs GPU rendering, which is starting",
+  };
+  host.upscaling.renderingStarting = true;
+  const { plugin, stop } = await started(["video.upscaling"], host);
+  const kept = await plugin.video.upscaling.set(true);
+  assert.equal(kept.enabled, true);
+  assert.equal(kept.requested, false);
+  // Software rendering for the rest of the run: refused.
+  host.upscaling.renderingStarting = false;
+  await plugin.video.upscaling.set(false);
+  await assert.rejects(plugin.video.upscaling.set(true), code("unsupported"));
+  await stop();
+});
