@@ -167,7 +167,27 @@ Every request a plugin sends travels as one protocol line. The plugin's side ref
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
-| Entries of `RenderSettings.shaders` | 16 | mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. |
+| Entries of `RenderSettings.shaders` | 16 | mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. They run before the shaders of every plugin's `VideoShaders` handles. |
+
+<!-- /generated -->
+
+## Video primitives
+
+The `convolution` and `lut3d` {@link "@vestra-player/sdk"!VideoNode | VideoNode}s and the shader channel {@link "@vestra-player/sdk"!VideoShaders | VideoShaders} (player 0.5.20). Values beyond them fail with `invalid`; more shaders than `shaders` across all plugins fail with `limit`.
+
+<!-- generated:limits VIDEO_PROCESSING_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `VIDEO_PROCESSING_LIMITS.shaders` | 16 | Shaders across every plugin's `plugin.video.shaders()` handles. |
+| `VIDEO_PROCESSING_LIMITS.shaderBytes` | 16777216 (16 MiB) | Bytes of one shader file. |
+| `VIDEO_PROCESSING_LIMITS.shaderIdBytes` | 128 | Bytes of a shader handle's id. |
+| `VIDEO_PROCESSING_LIMITS.lutBytes` | 16777216 (16 MiB) | Bytes of one `lut3d` `.cube` file. |
+| `VIDEO_PROCESSING_LIMITS.lutSize` | 65 | Largest `LUT_3D_SIZE` of a `lut3d` file, points per axis. |
+| `VIDEO_PROCESSING_LIMITS.lutPathBytes` | 4096 (4 KiB) | Bytes of a `lut3d` file path. |
+| `VIDEO_PROCESSING_LIMITS.matrixValue` | 1024 | Largest magnitude of a `convolution` matrix entry. |
+| `VIDEO_PROCESSING_LIMITS.rdiv` | 256 | Largest `convolution` `rdiv`. |
+| `VIDEO_PROCESSING_LIMITS.bias` | 65535 | Largest `convolution` `bias`. |
 
 <!-- /generated -->
 

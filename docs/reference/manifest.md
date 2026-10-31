@@ -75,6 +75,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.12 | {@linkcode "@vestra-player/sdk"!SystemInfo.rendering SystemInfo.rendering} |
 | 0.5.13 | {@linkcode "@vestra-player/sdk"!SystemInfo.renderingReason SystemInfo.renderingReason}, {@linkcode "@vestra-player/sdk"!RenderingMode RenderingMode}, {@linkcode "@vestra-player/sdk"!RenderingPreference RenderingPreference}, {@linkcode "@vestra-player/sdk"!RenderingReasonCode RenderingReasonCode}, {@linkcode "@vestra-player/sdk"!RenderingReason RenderingReason}, {@linkcode "@vestra-player/sdk"!RenderingState RenderingState}, {@linkcode "@vestra-player/sdk"!Rendering Rendering} |
 | 0.5.16 | {@linkcode "@vestra-player/sdk"!UpscalingReasonCode UpscalingReasonCode}, {@linkcode "@vestra-player/sdk"!UpscalingReason UpscalingReason}, {@linkcode "@vestra-player/sdk"!UpscalingState UpscalingState}, {@linkcode "@vestra-player/sdk"!VideoUpscaling VideoUpscaling} |
+| 0.5.20 | {@linkcode "@vestra-player/sdk"!VideoShaders VideoShaders} |
 | 0.5.21 | {@linkcode "@vestra-player/sdk"!Scope.when Scope.when}, {@linkcode "@vestra-player/sdk"!When When}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange} |
 
 <!-- /generated -->

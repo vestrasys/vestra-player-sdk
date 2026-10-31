@@ -497,6 +497,15 @@ export function createWire(transport: Transport) {
           { values },
         ),
       renderRelease: () => transport.request<void>("video.render.release"),
+      /**
+       * One shader channel handle's list (`plugin.video.shaders(id)`, player
+       * 0.5.20); `[]` removes it.
+       */
+      shadersSet: (id: string, paths: string[]) =>
+        transport.request<{ state: "applied" | "waiting" }>(
+          "video.shaders.set",
+          { id, paths },
+        ),
       /** The GPU's video upscaler (`plugin.video.upscaling`, player 0.5.16). */
       upscalingState: () =>
         transport.request<WireUpscalingState>("video.upscaling.state"),
