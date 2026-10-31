@@ -333,7 +333,7 @@ export const SHAPES = {
   explanation:
     "no numbered sections, no `Steps`, `Next`, `Testing`, `Common pitfalls` or `FAQ` sections and no numbered lists",
   guideline:
-    "rules only: no tables, colour values (`#rrggbb`), pixel values (`12px`) or generated blocks outside code blocks; values are in the Reference",
+    "rules only: no tables, colour values (`#rrggbb`), sizes (`12px`, `41×40`, or any number of three or more digits) or generated blocks outside code blocks; values are in the Reference (a small count such as `at most 8` is a rule)",
   example:
     "a `## What it demonstrates` section that links to the tutorial or how-to guide teaching it",
   upgrading: "first section `## Who must change`",
@@ -484,6 +484,17 @@ export function shapeProblems(shape, body, raw = body) {
       if (pixels)
         problems.push(
           `a pixel value ${pixels[0]} at line ${lineOf(pixels.index)}`,
+        );
+      // Sizes written as plain numbers: "41×40", "at least 317", "440".
+      // Small counts ("at most 8") are rules, not values; code points
+      // (U+2026) and dotted versions are not values either.
+      const size = /\b\d+(?:\.\d+)?\s*[×x]\s*\d+\b/.exec(plain);
+      if (size)
+        problems.push(`a size ${size[0]} at line ${lineOf(size.index)}`);
+      const number = /(?<![\w+.-])\d{3,}(?:[.,]\d+)?\b(?![.-]\d)/.exec(plain);
+      if (number)
+        problems.push(
+          `a numeric value ${number[0]} at line ${lineOf(number.index)}`,
         );
       if (/<!--\s*generated:/.test(raw))
         problems.push("a generated block (values go in the Reference)");

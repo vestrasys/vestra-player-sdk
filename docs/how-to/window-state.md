@@ -11,25 +11,25 @@ A tool window keeps nothing by itself: closing it destroys the window instance, 
 
 ## Steps
 
-### Load once, at activation
+### Load the stored state at activation
 
-`storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin. Always pass a `validate` function: the file is outside your control.
+Create the store with `plugin.storage.json(name, { defaults, validate })` at the start of `activate`, with the window's values and an `open` flag in it. Always pass `validate`: the file is outside your control.
 
-### Bind the stored value, not a copy
+### Bind the window to the stored value
 
-`window.bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window, and a window opened later starts with the current values.
+Write the window's properties with `window.bind(() => …)` reading `store.value`, not a copy of it, so every change and every later opening shows the current values.
 
-### Save on every change; the store debounces
+### Save on every change
 
-`save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename). Dragging the slider writes the file once, after the drag. When the plugin stops (the player quits, the user disables the plugin), the store is flushed, so the last value is not lost.
+In each callback that changes a value, call `store.save({ ...store.value, … })`. Do not debounce it yourself, and do not change `store.value` in place.
 
-### "Open" means "the user did not close it"
+### Record whether the window is open
 
-`onClose` runs only when the user closes the window (the title-bar button or the [standard close keys](../reference/commands.md#keys-the-system-takes-first)). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
+Save `open: true` when your command shows the window, and `open: false` in `window.onClose`. Do nothing on stop.
 
-### Restore after binding
+### Reopen it after binding
 
-The window is created and bound before `open()` runs, so it opens with the stored values and without flashing defaults. If it cannot open (for example in a player without a user interface), the plugin forgets that it was open instead of failing activation.
+At the end of `activate`, after the window is created and bound, show it if `store.value.open` is true; if that fails, save `open: false` instead of failing activation.
 
 ## Complete example
 
@@ -135,6 +135,14 @@ export default async function activate(plugin: Plugin) {
   if (store.value.open) await open().catch(() => remember({ open: false }));
 }
 ```
+
+## How it works
+
+- `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin.
+- `bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window.
+- `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename): dragging the slider writes the file once, after the drag. When the plugin stops, the store is flushed, so the last value is not lost.
+- `onClose` runs only when the user closes the window (the title-bar button or the [standard close keys](../reference/commands.md#keys-the-system-takes-first)). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time, as users expect from an application's tool windows.
+- The window is created and bound before it opens, so it shows the stored values without flashing defaults.
 
 ## What you cannot restore
 

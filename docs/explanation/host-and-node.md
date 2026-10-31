@@ -11,13 +11,19 @@ Nothing here is API. The protocol is internal to the player and the SDK version 
 
 ## Two ways to run a plugin
 
-```text
-vestra-host ──stdin/stdout──▶ node runner.js <plugin dir>       third-party, development loads
-            ──stdin/stdout──▶ node runner.js <plugin dir>       (one process each)
-            ──stdin/stdout──▶ node --max-old-space-size=1024 shared-runner.js
-                                ├─ vestra.playlist   (g 12)     trusted built-ins,
-                                ├─ vestra.video      (g 13)     one V8 isolate
-                                └─ …
+```mermaid
+flowchart LR
+    HOST["vestra-host"]
+    A["node runner.js (plugin directory)<br/>a third-party plugin"]
+    B["node runner.js (plugin directory)<br/>a development load"]
+    subgraph SHARED["node --max-old-space-size=1024 shared-runner.js (one V8 isolate)"]
+        P1["vestra.playlist (g 12)"]
+        P2["vestra.video (g 13)"]
+        P3["… other trusted built-ins"]
+    end
+    HOST -- "stdin/stdout, one pipe pair" --> A
+    HOST -- "stdin/stdout, one pipe pair" --> B
+    HOST -- "stdin/stdout, every line tagged with g" --> SHARED
 ```
 
 - **An own process** (`src/runtime/runner.ts`): one plugin, one Node.js process, one pipe each way. Every third-party plugin and every development load (`--plugin`) runs like this.
@@ -46,7 +52,7 @@ pub fn node_command(&self) -> Command {
 
 Source: src/host/src/process/runtime_paths.rs
 
-`NO_WEB_STORAGE` is `--no-experimental-webstorage`, which is why `localStorage` does not exist in a plugin. Removing `NODE_OPTIONS` keeps a user's `--require` out of every plugin.
+`NO_WEB_STORAGE` is `--no-experimental-webstorage`, which is why `localStorage` does not exist in a plugin. In a packaged player, removing `NODE_OPTIONS` and `NODE_PATH` keeps a user's `--require` and module paths out of every plugin; a development build passes the environment on as it is.
 
 ### An own process
 
@@ -139,7 +145,7 @@ The runner (`boot.ts`) refuses an oversized request with `code: "limit"` before 
 
 ### Requests, replies and events
 
-There are three message shapes. A **request** from the plugin has exactly `id`, `method` and `params`; the host rejects unknown fields (`#[serde(deny_unknown_fields)]` on `Request` in `host/rpc.rs`) and stops a plugin that sends a malformed request. The examples below are wrapped for reading:
+There are three message shapes. A **request** from the plugin has `id` and `method`, and `params` unless there are none (`#[serde(default)]`: a missing `params` is `null`); the host rejects any other field (`#[serde(deny_unknown_fields)]` on `Request` in `host/rpc.rs`) and stops a plugin that sends a malformed request. The examples below are wrapped for reading:
 
 ```json
 {"id":3,"method":"commands.update","params":{"id":"hello","revision":2,
@@ -151,11 +157,13 @@ Shape from SDK src/commands.ts
 A **reply** carries the request's `id` and either `result` or `error`:
 
 ```json
-{"id":3,"result":{"revision":2}}
+{"id":3,"result":{"revision":57}}
 {"id":4,"error":{"code":"capability","message":"capability must be declared in manifest"}}
 ```
 
-Shape from src/host/src/host/dispatch.rs
+Shape from src/host/src/host/dispatch.rs and src/host/src/capabilities/commands.rs
+
+The `revision` in this result is not an echo of the command's own revision in the request: `commands.register` and `commands.update` answer with the revision of the player's whole command table (`host.commands.revision()`), which grows with every change any plugin makes to its commands.
 
 An error always has a stable `code` and a `message`; some carry more fields, like this refusal of a taken slot:
 

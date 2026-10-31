@@ -9,7 +9,7 @@ In this tutorial you write a plugin for Vestra Player: a menu item **Tools ▸ W
 
 ## Before you start
 
-You need Node.js 26 or newer, a terminal, an editor, and Vestra Player 0.2 or newer with a video to play. Why the steps work the way they do is explained in [How a plugin runs](../explanation/plugins.md); you do not need it to follow along.
+You need Node.js 26 or newer, a terminal, an editor, and Vestra Player 0.4.3 or newer (the third tutorial needs its translations) with a video to play. Why the steps work the way they do is explained in [How a plugin runs](../explanation/plugins.md); you do not need it to follow along.
 
 ## 1. Set up the folder
 

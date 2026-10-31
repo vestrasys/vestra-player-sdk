@@ -12,7 +12,7 @@ In this tutorial you write a plugin for Vestra Player: a menu item **Tools ▸ W
 
 #### Before you start
 
-You need Node.js 26 or newer, a terminal, an editor, and Vestra Player 0.2 or newer with a video to play. Why the steps work the way they do is explained in How a plugin runs; you do not need it to follow along.
+You need Node.js 26 or newer, a terminal, an editor, and Vestra Player 0.4.3 or newer (the third tutorial needs its translations) with a video to play. Why the steps work the way they do is explained in How a plugin runs; you do not need it to follow along.
 
 #### 1. Set up the folder
 
@@ -219,13 +219,30 @@ In this tutorial the plugin from Add a window gets a page in the player's Option
 
 Finish Add a window. Why settings pages are built the way they are is explained in Windows, panels, settings pages, dialogs and the OSD; where else a plugin can keep data is in Store a plugin's data.
 
-#### 1. Declare the capability
+#### 1. Update the manifest
 
-A settings page needs `ui.settings`. Add it to the `capabilities` in `manifest.json`, after `"playback.control"`:
+A settings page needs the capability `ui.settings`, and the translated templates and text values of this tutorial need player 0.4.3 or newer. Add both to `manifest.json`:
 
 ```json
-"ui.settings"
+{
+  "id": "me.hello",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.4.3",
+  "capabilities": [
+    "commands",
+    "ui.osd",
+    "playback.read",
+    "events",
+    "ui.window",
+    "playback.control",
+    "ui.settings"
+  ]
+}
 ```
+
+An older player does not load the plugin; it would show the templates without filling them in (Player versions).
 
 #### 2. Write the settings page
 
@@ -802,36 +819,36 @@ A slider reports every pointer movement, often more than 60 times a second. Each
 
 #### Steps
 
-##### The callback does not wait
+##### Bind the slider two-way to an `in-out` property
 
-`brightnessChanged` updates a variable and calls `filter.set()`, which returns at once. The SDK runs the next callback as soon as it arrives.
+In the Slint file, declare the value `in-out` and bind the slider's value with `<=>`, and report moves and the release through two callbacks:
 
-##### The expensive part keeps only the newest value
+```slint
+in-out property <float> brightness;
+callback brightness-changed(float);  // every pointer move
+callback brightness-released(float); // once, when the button is released
+Slider {
+    value <=> root.brightness;       // two-way: never `value: root.brightness`
+    changed(value) => { root.brightness-changed(value); }
+    released(value) => { root.brightness-released(value); }
+}
+```
 
-`filter.set()` has _latest-value_ semantics: while one request is in flight, newer values replace each other and only the last one is sent. A fast drag costs a request per round trip to the player, not one per pointer move, and the video ends exactly where the slider stopped.
+##### Record the newest value, without awaiting
 
-##### The slider's value is bound, not set
+In the `changed` callback, store the value in your model and return; do not `await` anything there. Do one-off work (the on-screen message, saving, logging) in the `released` callback instead, which fires once per drag.
 
-`bind` sends `brightness` only when it differs from what was sent last, and the player skips a write that equals what the slider already shows. So the plugin never fights the user's pointer, yet Reset (which changes the model) moves the thumb.
+##### Hand it to a call that keeps only the newest value
 
-The Slint side needs two things: an `in-out` property and a two-way binding (`value <=> root.brightness`). With a one-way binding (`value: root.brightness`) Slint breaks the binding the first time the user drags, and Reset stops moving the thumb.
+Pass the value on with a call that has latest-value semantics, such as `filter.set()`, `player.setOutput()` or `Scrub.seek`. Do not call one-request-per-call methods (`player.seek`, `player.setRate`, `osd.show`) on every move: use `player.scrub()` for a seek slider.
 
-##### Work that should happen once happens on release
+##### Bind the derived values instead of setting them
 
-The on-screen message (and anything like saving or logging) waits for `brightnessReleased`, which fires once per drag.
+Send the slider's value and its label with `window.bind(() => …)`, not `set`, so an unchanged value is never written back under the user's pointer; a Reset that changes the model still moves the thumb.
 
-##### Which calls keep only the newest value
+##### Give your own slow work latest-value behaviour
 
-| Latest value wins (safe on every move)                                                                                 | One request per call (do not call on every move)                                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VideoFilter`.set`, AudioFilter`.set` | player.seek: use player.scrub() and `Scrub.seek` for a seek slider |
-| player.setOutput (volume, mute)                                          | `player.setRate` and other player controls                                                                                                            |
-| `Scrub.seek` (about one seek per display frame)                                                                        | osd.show: show a message on release                                                                             |
-| View properties (`bind`, `set`), OsdPanel.set                                | `JsonStore.save` is debounced (300 ms), so it is fine; anything you write yourself is not                                                             |
-
-##### When the slow part is your own code
-
-If a move triggers your own asynchronous work (rendering a preview with `plugin.tools.run`, a network request), do not `await` it per callback: the SDK starts every callback without waiting for the previous one, so slow runs overlap and can finish out of order, leaving an _older_ result on screen. Give that work latest-value semantics yourself:
+If a move triggers your own asynchronous work (a preview rendered with `plugin.tools.run`, a network request), run it through a helper that keeps one run at a time and only the newest value, and call `plugin.update()` when a result arrives after an `await`:
 
 ```ts
 import type { Plugin } from "@vestra-player/sdk";
@@ -869,8 +886,6 @@ export default async function activate(plugin: Plugin) {
   window.on("strengthChanged", (strength: number) => refresh(strength));
 }
 ```
-
-`plugin.update()` matters here. The SDK re-evaluates bound properties after a callback returns and again when its promise settles; a value you change **after an `await`** inside a longer task is otherwise shown only when that task ends. Call `plugin.update()` whenever such a task has something new to show.
 
 #### Complete example
 
@@ -965,7 +980,7 @@ export default async function activate(plugin: Plugin) {
     apply(); // …and hand it on; no await
   });
   window.on("brightnessReleased", () => {
-    void plugin.osd.show(`Brightness ${brightness.toFixed(2)}`); // once per drag
+    void plugin.osd.show("Brightness {}", [brightness.toFixed(2)]); // once per drag
   });
   window.on("reset", () => {
     brightness = 0; // the bound value moves the slider back
@@ -980,6 +995,10 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
+#### How it works
+
+A slider reports every pointer move, and the SDK runs each callback as soon as it arrives. The callback only records the value and returns, so callbacks never queue. `filter.set()` keeps one request in flight and replaces waiting values with newer ones, so a fast drag costs one request per round trip to the player, not one per move, and the video ends exactly where the slider stopped. `bind` sends a value only when it differs from the last one sent, and the player skips a write the slider already shows, so the plugin never fights the pointer. A one-way binding in Slint (`value: root.brightness`) is broken the first time the user drags, after which Reset no longer moves the thumb. Work you start yourself has no such semantics: overlapping runs can finish out of order and leave an older result on screen, and a value changed after an `await` shows only when the handler ends unless you call `plugin.update()` (set, bind and the update pass).
+
 ## How-to: Remember a window's state between runs
 
 **Goal:** a tool window comes back the way the user left it: its controls hold the last values, and if it was open when the player quit, it opens again at the next start.
@@ -988,25 +1007,25 @@ A tool window keeps nothing by itself: closing it destroys the window instance, 
 
 #### Steps
 
-##### Load once, at activation
+##### Load the stored state at activation
 
-`storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin. Always pass a `validate` function: the file is outside your control.
+Create the store with `plugin.storage.json(name, { defaults, validate })` at the start of `activate`, with the window's values and an `open` flag in it. Always pass `validate`: the file is outside your control.
 
-##### Bind the stored value, not a copy
+##### Bind the window to the stored value
 
-`window.bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window, and a window opened later starts with the current values.
+Write the window's properties with `window.bind(() => …)` reading `store.value`, not a copy of it, so every change and every later opening shows the current values.
 
-##### Save on every change; the store debounces
+##### Save on every change
 
-`save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename). Dragging the slider writes the file once, after the drag. When the plugin stops (the player quits, the user disables the plugin), the store is flushed, so the last value is not lost.
+In each callback that changes a value, call `store.save({ ...store.value, … })`. Do not debounce it yourself, and do not change `store.value` in place.
 
-##### "Open" means "the user did not close it"
+##### Record whether the window is open
 
-`onClose` runs only when the user closes the window (the title-bar button or the standard close keys). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
+Save `open: true` when your command shows the window, and `open: false` in `window.onClose`. Do nothing on stop.
 
-##### Restore after binding
+##### Reopen it after binding
 
-The window is created and bound before `open()` runs, so it opens with the stored values and without flashing defaults. If it cannot open (for example in a player without a user interface), the plugin forgets that it was open instead of failing activation.
+At the end of `activate`, after the window is created and bound, show it if `store.value.open` is true; if that fails, save `open: false` instead of failing activation.
 
 #### Complete example
 
@@ -1112,6 +1131,14 @@ export default async function activate(plugin: Plugin) {
   if (store.value.open) await open().catch(() => remember({ open: false }));
 }
 ```
+
+#### How it works
+
+- `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin.
+- `bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window.
+- `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename): dragging the slider writes the file once, after the drag. When the plugin stops, the store is flushed, so the last value is not lost.
+- `onClose` runs only when the user closes the window (the title-bar button or the standard close keys). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time, as users expect from an application's tool windows.
+- The window is created and bound before it opens, so it shows the stored values without flashing defaults.
 
 #### What you cannot restore
 
@@ -1676,45 +1703,97 @@ The store shows the newest version's manifest fields, so what you write there is
 
 ## How-to: Troubleshooting
 
-Each section starts from what you see. The cause links to the page that explains the mechanism; the error codes are in Reference: error codes.
+Each section starts from what you see, then gives the cause and the fix. The cause links to the page that explains the mechanism; the error codes are in Reference: error codes.
 
-#### The interface
+#### Binding a window callback throws
 
-- **A window callback bound after the first `show()`.** It throws. Bind all callbacks right after `create()`; re-binding a name that already has a handler is fine.
-- **A one-way binding on a control.** `value: root.x` stops following the plugin after the user touches the control. Use `in-out` and `<=>`.
-- **`set()` inside a frequent loop.** `set` always sends, even an unchanged value; a periodic `set` of a slider value pulls the thumb back from under the user's pointer. Use `bind` for anything derived from state.
-- **Changes after an `await` do not appear.** The update pass runs when the handler finishes; call `plugin.update()` for progress in between.
-- **State only inside a panel component.** It is lost when the main window is rebuilt or the sidebar detaches. Keep anything that matters in bridge properties written by the plugin.
-- **User edits the plugin does not record.** A settings page or tool window is rebuilt from the plugin's last written values; an `in-out` property the user changed without a callback updating your model reverts. Handle the callback and keep the value in your state (and `bind` it).
-- **Hard-coded colours.** They do not follow the palette. Use `Theme.*`, and `Theme.danger` for errors.
-- **A `Ctrl+W` default binding.** It never fires in tool windows and floating panels. Pick another key.
-- **Two of a kind.** One panel per plugin, one backdrop per player, one OSD info block per plugin, one open dialog at a time (`busy`).
-- **An `if` that flips under the pointer.** `if touch.has-hover: Rectangle { … }` (a hover highlight, an accent bar, a tooltip-like box that follows the pointer) creates and destroys an element on every hover change. While a video plays, each such change costs the player's UI thread far more than a property change: the player's accessibility tree (screen readers, UI Automation) is rebuilt for the whole window each time, measured at 100–160 ms per hover on Windows, enough to drop the video to 10–15 frames a second while the pointer moves. Keep the element and change properties instead: `Rectangle { visible: touch.has-hover; … }` or `opacity:`. Use `if` for things that change rarely (a mode, a selection made with a click, a list that was loaded), never for something that follows the pointer or a hover.
-- **Slot state without `events`.** PanelSlot.state, appearance.theme and their `onChange` listeners follow other plugins and the user only with the `events` capability.
+**Cause:** The callback was bound with `on()` after the window's first `show()`; callbacks are registered when the window opens.
+
+**Fix:** Bind every callback right after `create()`. Re-binding a name that already has a handler is fine.
+
+#### A control stops following the plugin after the user touches it
+
+**Cause:** A one-way binding in Slint (`value: root.x`), which Slint breaks the first time the user moves the control.
+
+**Fix:** Declare the property `in-out` and bind it two-way: `value <=> root.x`.
+
+#### A slider's thumb jumps back under the pointer
+
+**Cause:** The plugin writes the value with `set()` in a frequent loop; `set` always sends, even an unchanged value.
+
+**Fix:** Use `bind` for anything derived from state (Keep a slider responsive while dragging).
+
+#### A value the user changed reverts
+
+**Cause:** A settings page, tool window or panel is rebuilt from the plugin's last written values; an `in-out` property the user changed without a callback updating the plugin's model goes back to that value.
+
+**Fix:** Handle the control's callback, keep the value in your state and `bind` it.
+
+#### A panel loses its scroll position or the text in a field
+
+**Cause:** State kept only inside the panel's Slint component is lost when the main window is rebuilt (any plugin mounting or unmounting a panel) or the sidebar is detached or attached.
+
+**Fix:** Keep anything that matters in bridge properties the plugin writes (Life cycles: panel).
+
+#### Colours do not follow the palette
+
+**Cause:** Colours hard-coded in the Slint file.
+
+**Fix:** Use `Theme.*` tokens, and `Theme.danger` for errors (Reference: theme).
+
+#### A panel mount or a dialog is refused
+
+**Cause:** There is one panel per plugin, one bottom bar and one backdrop for all plugins (`conflict`), one OSD info block per plugin, and one open dialog at a time player-wide (`busy`).
+
+**Fix:** Mount only the plugin's one panel and treat a `conflict` for a shared slot as "another plugin is there"; keep one OSD info block handle and change its text; wait for an open dialog to be answered.
+
+#### The video drops frames while the pointer moves over a window
+
+**Cause:** An `if` that flips under the pointer (`if touch.has-hover: Rectangle { … }`, a hover highlight, an accent bar, a tooltip-like box) creates and destroys an element on every hover change. While a video plays, the player's accessibility tree (screen readers, UI Automation) is rebuilt for the whole window each time, measured at 100–160 ms per hover on Windows, enough to drop the video to 10–15 frames a second.
+
+**Fix:** Keep the element and change properties instead: `Rectangle { visible: touch.has-hover; … }` or `opacity:`. Use `if` only for things that change rarely (a mode, a selection made with a click, a list that was loaded).
+
+#### Panel position or palette state does not follow other plugins or the user
+
+**Cause:** The plugin lacks the `events` capability: PanelSlot.state, appearance.theme and their `onChange` listeners follow outside changes only with it.
+
+**Fix:** Declare `events` in the manifest.
 
 #### A value changed after an await does not appear
 
-The SDK sends bound values in an update pass after a handler returns and again when its promise settles. A value changed after an `await` inside a longer task appears only when that task ends. Call `plugin.update()` when such a task has something new to show (The update pass, Keep a slider responsive while dragging).
+**Cause:** The SDK sends bound values in an update pass after a handler returns and again when its promise settles; a value changed after an `await` inside a longer task appears only when that task ends.
+
+**Fix:** Call `plugin.update()` when such a task has something new to show (The update pass, Keep a slider responsive while dragging).
 
 #### A call fails with `stale`
 
-The user or another plugin changed the source (or the subtitle selection) after the state your call depended on; nothing was done. That is usually the right outcome: ignore `stale`, or read the new state and decide again. For slow work, pass the state you started from as `ifCurrent` so the call never acts on the wrong file (Conditional controls, Control playback).
+**Cause:** The user or another plugin changed the source (or the subtitle selection) after the state your call depended on; nothing was done.
+
+**Fix:** Usually ignore `stale`, or read the new state and decide again. For slow work, pass the state you started from as `ifCurrent` so the call never acts on the wrong file (Conditional controls, Control playback).
 
 #### A call fails with `capability`
 
-The manifest does not declare the capability the call needs. `vestra-plugin check` and the SDK's TypeScript plugin in the editor point such calls out before the plugin runs (Capabilities).
+**Cause:** The manifest does not declare the capability the call needs.
+
+**Fix:** Add it to `capabilities`. `vestra-plugin check` and the SDK's TypeScript plugin in the editor point such calls out before the plugin runs (Capabilities).
 
 #### A key binding does not fire
 
-Command key bindings belong to the main window (and the floating sidebar): they do not fire while a tool window or the Options window has focus, while a menu or a system dialog is open, or when a focused control takes the key (Space in a text field). The standard close keys are taken by the system first. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`. See How a key finds its command and Keys the system takes first.
+**Cause:** Command key bindings belong to the main window (and the floating sidebar): they do not fire while a tool window or the Options window has focus, while a menu or a system dialog is open, or when a focused control takes the key (Space in a text field). In a tool window, the floating sidebar or the Options window, the standard close keys (Ctrl+W and Ctrl+F4 on Windows, ⌘W on macOS) close that window before any binding sees them. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`.
+
+**Fix:** Choose a default key the system does not take, and give a disabled command a `reason` when its key should be eaten. See How a key finds its command and Keys the system takes first.
 
 #### A test passes locally and fails in CI
 
-`host.settle()` waits only for the plugin's calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine: poll the value you assert on (Test a plugin). A debounce or timer needs `host.settle(ms)` past its delay.
+**Cause:** `host.settle()` waits only for the plugin's calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine; a debounce or timer needs time too.
+
+**Fix:** Poll the value you assert on (Test a plugin), and use `host.settle(ms)` past a debounce or timer.
 
 #### State is lost when the plugin restarts
 
-Everything in the plugin's process is gone after a reload, an upgrade or a crash. Keep what must survive in `plugin.storage.session` (this run of the player) or `plugin.storage.json` (across runs), and build the interface from it in `activate` (Restarts, Store a plugin's data).
+**Cause:** Everything in the plugin's process is gone after a reload, an upgrade or a crash.
+
+**Fix:** Keep what must survive in `plugin.storage.session` (this run of the player) or `plugin.storage.json` (across runs), and build the interface from it in `activate` (Restarts, Store a plugin's data).
 
 ## Reference: Manifest
 
@@ -2783,7 +2862,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 #### Bar buttons
 
-`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands (CommandOptions.button) and the player's sidebar toggle. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See Writing a bottom bar.
+`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands (CommandOptions.button) and the player's sidebar toggle. Each button is a cell 41 wide and 40 high. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See Writing a bottom bar.
 
 **`BarButtons`**: The strip: place it at the bar's right end and give it the width you can spare; it is as wide as the cells it shows (read `width` to lay out the rest).
 
@@ -3180,13 +3259,13 @@ It assumes you have written a first plugin (Getting started). For each type's me
 
 #### In short
 
-- Each plugin runs in its own Node.js process (Node.js 26, which the player ships). It can use the Node standard library, the file system, the network and npm packages.
+- Each third-party plugin runs in its own Node.js process (Node.js 26, which the player ships); the player's built-in plugins share one. A plugin can use the Node standard library, the file system, the network and npm packages.
 - The player loads the entry module and calls its **default export** `activate(plugin)`. The plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
 - Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. There is no cleanup function to return.
 
 #### The plugin process
 
-- **One Node.js process per plugin.** The player starts each plugin in a Node.js 26 process of its own (the installed player ships that Node.js). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in one plugin does not stop the player or other plugins.
+- **A Node.js process.** The player starts each third-party plugin, and each plugin loaded with `--plugin`, in a Node.js 26 process of its own (the installed player ships that Node.js); its own built-in plugins share one process (How the player runs and talks to plugins). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in a plugin with its own process does not stop the player or other plugins.
 - **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with plugin.storage or in your own files in the data directory, and state that must outlive a restart of the plugin's process, but not the player, in plugin.storage.session (Restarts).
 - **Trusted code.** Manifest capabilities are a contract the player checks on every call (a missing one fails with `code: "capability"`), not a sandbox: the process has the user's file and network access. The full list of capabilities and the API each one opens is in Reference: capabilities.
 - **One API on every system.** The same plugin runs on macOS and Windows. Something a system cannot do fails with `unsupported`; the differences are collected in Reference: platforms.
@@ -3962,19 +4041,25 @@ It assumes How a plugin runs. How the host starts Node.js and what travels over 
 
 #### The parts at a glance
 
-```text
-┌──────────────── vestra-host (one process) ─────────────────┐
-│ UI thread (Slint event loop)                               │
-│   Host: plugins, registries, windows, menus, dispatch      │
-│        ▲ Event channel                │ Command queue      │
-│        │                              ▼                    │
-│ playback worker thread: libmpv core, sources, processing,  │
-│   subtitles, producers, offline jobs                       │
-│ render thread: libmpv software renderer, or GPU rendering  │
-│ per plugin: a writer and a reader thread on its pipes      │
-└───────────────▲────────────────────────────────────────────┘
-                │ JSON lines on stdin/stdout ("vestra/1")
-     Node.js: one shared runner (built-ins), one process per other plugin
+```mermaid
+flowchart TB
+    subgraph HOST["vestra-host (one process)"]
+        UI["UI thread (Slint event loop)<br/>Host: plugins, registries, windows, menus, dispatch"]
+        PW["playback worker thread<br/>libmpv core, sources, processing, subtitles, producers, offline jobs"]
+        RT["render thread<br/>libmpv software renderer, or GPU rendering"]
+        IO["per plugin: a writer and a reader thread on its pipes"]
+    end
+    SR["Node.js: the shared runner<br/>(the built-in plugins)"]
+    OWN["Node.js: one process per other plugin<br/>(third-party plugins, development loads)"]
+    UI -- "Command queue" --> PW
+    PW -- "Event channel" --> UI
+    RT -- "frames" --> UI
+    UI -- "replies and events" --> IO
+    IO -- "requests (Event::Request)" --> UI
+    IO -- "JSON lines on stdin (vestra/1)" --> SR
+    SR -- "JSON lines on stdout" --> IO
+    IO -- "JSON lines on stdin (vestra/1)" --> OWN
+    OWN -- "JSON lines on stdout" --> IO
 ```
 
 The host has no plugin business logic. It does not know which plugin is the playlist or the subtitle downloader; it offers shared facilities (playback, UI composition, the processing chain, subtitles, export, plugin lifecycle) and checks every request against the capabilities the plugin declared. Everything a user would call a feature lives in a plugin, built-in or not.
@@ -4133,7 +4218,7 @@ fn forward(host: &Host, reply: &Reply, method: &str, params: &Value) -> Handled 
 
 Source: src/host/src/capabilities/mod.rs
 
-`Ok(None)` means "answered later": the worker sends `Event::Reply` and the UI thread writes the reply to the plugin. The worker waits for events rather than polling: it sleeps until a command, libmpv's wake-up callback, the stop, or its next `source.state` push (every 100 ms) or audio device check (every second). Because it is one queue, requests a plugin sends to the worker are answered in the order they were sent, and a seek can never overtake the open before it.
+`Ok(None)` means "answered later": the worker sends `Event::Reply` and the UI thread writes the reply to the plugin. Most of the time the worker waits for events: it sleeps until a command, libmpv's wake-up callback, the stop, or its next `source.state` push (every 100 ms) or audio device check (every second). It polls instead, every 2 ms (`POLL`), while there is work to come back to soon: a full turn of commands (it takes a fixed number per turn so continuous controls do not starve the rest), pending core actions, a new source's picture geometry not yet published, or source work in flight (an active generated stream, a resolver's answer being opened). Host 0.5.15 made this event-driven; before, it slept 2 ms every turn. Because it is one queue, requests a plugin sends to the worker are answered in the order they were sent, and a seek can never overtake the open before it.
 
 #### Where libmpv sits
 
@@ -4281,13 +4366,19 @@ Nothing here is API. The protocol is internal to the player and the SDK version 
 
 #### Two ways to run a plugin
 
-```text
-vestra-host ──stdin/stdout──▶ node runner.js <plugin dir>       third-party, development loads
-            ──stdin/stdout──▶ node runner.js <plugin dir>       (one process each)
-            ──stdin/stdout──▶ node --max-old-space-size=1024 shared-runner.js
-                                ├─ vestra.playlist   (g 12)     trusted built-ins,
-                                ├─ vestra.video      (g 13)     one V8 isolate
-                                └─ …
+```mermaid
+flowchart LR
+    HOST["vestra-host"]
+    A["node runner.js (plugin directory)<br/>a third-party plugin"]
+    B["node runner.js (plugin directory)<br/>a development load"]
+    subgraph SHARED["node --max-old-space-size=1024 shared-runner.js (one V8 isolate)"]
+        P1["vestra.playlist (g 12)"]
+        P2["vestra.video (g 13)"]
+        P3["… other trusted built-ins"]
+    end
+    HOST -- "stdin/stdout, one pipe pair" --> A
+    HOST -- "stdin/stdout, one pipe pair" --> B
+    HOST -- "stdin/stdout, every line tagged with g" --> SHARED
 ```
 
 - **An own process** (`src/runtime/runner.ts`): one plugin, one Node.js process, one pipe each way. Every third-party plugin and every development load (`--plugin`) runs like this.
@@ -4316,7 +4407,7 @@ pub fn node_command(&self) -> Command {
 
 Source: src/host/src/process/runtime_paths.rs
 
-`NO_WEB_STORAGE` is `--no-experimental-webstorage`, which is why `localStorage` does not exist in a plugin. Removing `NODE_OPTIONS` keeps a user's `--require` out of every plugin.
+`NO_WEB_STORAGE` is `--no-experimental-webstorage`, which is why `localStorage` does not exist in a plugin. In a packaged player, removing `NODE_OPTIONS` and `NODE_PATH` keeps a user's `--require` and module paths out of every plugin; a development build passes the environment on as it is.
 
 ##### An own process
 
@@ -4409,7 +4500,7 @@ The runner (`boot.ts`) refuses an oversized request with `code: "limit"` before 
 
 ##### Requests, replies and events
 
-There are three message shapes. A **request** from the plugin has exactly `id`, `method` and `params`; the host rejects unknown fields (`#[serde(deny_unknown_fields)]` on `Request` in `host/rpc.rs`) and stops a plugin that sends a malformed request. The examples below are wrapped for reading:
+There are three message shapes. A **request** from the plugin has `id` and `method`, and `params` unless there are none (`#[serde(default)]`: a missing `params` is `null`); the host rejects any other field (`#[serde(deny_unknown_fields)]` on `Request` in `host/rpc.rs`) and stops a plugin that sends a malformed request. The examples below are wrapped for reading:
 
 ```json
 {"id":3,"method":"commands.update","params":{"id":"hello","revision":2,
@@ -4421,11 +4512,13 @@ Shape from SDK src/commands.ts
 A **reply** carries the request's `id` and either `result` or `error`:
 
 ```json
-{"id":3,"result":{"revision":2}}
+{"id":3,"result":{"revision":57}}
 {"id":4,"error":{"code":"capability","message":"capability must be declared in manifest"}}
 ```
 
-Shape from src/host/src/host/dispatch.rs
+Shape from src/host/src/host/dispatch.rs and src/host/src/capabilities/commands.rs
+
+The `revision` in this result is not an echo of the command's own revision in the request: `commands.register` and `commands.update` answer with the revision of the player's whole command table (`host.commands.revision()`), which grows with every change any plugin makes to its commands.
 
 An error always has a stable `code` and a `message`; some carry more fields, like this refusal of a taken slot:
 
@@ -4638,13 +4731,8 @@ Which surface for which purpose:
 - **Preferences that rarely change:** Settings page. Users look for preferences in Options; the player keeps the window and its navigation.
 - **A yes/no question before something destructive:** dialogs.confirm. Native look and keyboard handling (Enter, Escape); no Slint file.
 - **A file or folder from the user:** dialogs.openFile and friends. The system dialog is the only one users trust with paths.
-- **Surface:** Width. Height
-- **Tool window:** The `Window` component's `width` (fixed, not resizable), or `preferred-width` (initial) within `min-width`/`max-width`.. Same with `height`. The title is the component's `title`.
-- **Bottom bar:** The video column's width.. The component's preferred height (within its minimum and maximum). It may draw above its slot into the video area (negative `y`); the player does not clip it.
-- **Sidebar:** Set by the user with the splitter (at least 317; the video keeps at least 318).. The window's full height.
-- **Floating sidebar:** 300 by default, at least 300.. 408 by default, at least 250.
-- **Backdrop:** The whole video area.. The whole video area.
-- **Settings page:** 440.. The component's height; the Options window scrolls taller pages.
+
+The size each surface gets is in Theme: surface sizes.
 
 #### Theme
 
@@ -4703,7 +4791,7 @@ Use the layout of Theme: small adjustment windows: the same width, row height, l
 
 The bottom bar holds one panel, and every plugin's command buttons (CommandOptions.button) and the player's sidebar toggle show inside it, in a strip the player fills. A bar that replaces the built-in one (`vestra.playback`) must place that strip, or those buttons show nowhere while it is mounted (their menu entries stay):
 
-- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many 41×40 cells as fit and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last. The strip is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
+- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many button cells as fit (Theme: bar buttons) and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last. The strip is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
 - **Decide what goes first when the window narrows.** The built-in bar gives the strip only the room its own buttons and the time leave, so the strip shrinks first, then its Fullscreen button hides, and the time is never cut.
 - **Do not draw a sidebar toggle of your own**: the strip has the player's (**Toggle Sidebar**, `host/sidebar`), with its state.
 - `vestra-plugin check` warns when a plugin mounts a bottom bar whose Slint file does not import `BarButtons` from `@vestra/bar-buttons.slint`, itself or through the plugin's own Slint files it imports, and the player logs the buttons a mounted bar hides.
@@ -4757,7 +4845,7 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 #### Inside a built-in menu
 
 - **Name the menu by its id**: `["@video", "Blur"]`. The seven built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings) stay where they are whatever you put in them.
-- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use 100 and up, in the order listed in Built-in commands, and the ranges per menu are at CommandOptions.order.
+- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use the orders listed in Built-in commands, and the ranges per menu are at CommandOptions.order.
 - **Group related items** with a `group` of your own, so a separator sets them apart from the player's items.
 - **Playback ▸ Speed and Playback ▸ Seek are the player's.** You can add to them; their titles stay the player's.
 

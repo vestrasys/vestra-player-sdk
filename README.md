@@ -56,7 +56,7 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
-Run `npx vestra-plugin pack` to check and package it, or start the player with `--plugin <folder>` to try it right away. This is [`examples/hello`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello); [Getting started](https://vestrasys.github.io/vestra-player-sdk/documents/Getting_started.html) adds a window, tests and packaging.
+Run `npx vestra-plugin pack` to check and package it, or start the player with `--plugin <folder>` to try it right away. This is [`examples/hello`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello); the [Tutorials](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorials.html) build a plugin in four lessons: [Getting started](https://vestrasys.github.io/vestra-player-sdk/documents/Getting_started.html) (a menu item and an on-screen message), then a window, settings and translations, and tests, packing and publishing.
 
 ## Examples
 

@@ -140,6 +140,22 @@ test("a guideline has no values: tables, colours and pixels belong in the Refere
   assert.equal(problems.length, 3);
 });
 
+test("a guideline catches sizes written as plain numbers, not small counts", () => {
+  assert.deepEqual(
+    shapeProblems(
+      "guideline",
+      page("- At most 8 pages; `…` is U+2026; player 0.4.3 on 2026-10-25."),
+    ),
+    [],
+  );
+  const problems = shapeProblems(
+    "guideline",
+    page("- **Sidebar:** at least 317 wide.", "- Cells of 41×40."),
+  );
+  assert.ok(problems.some((p) => p.includes("317")));
+  assert.ok(problems.some((p) => p.includes("41×40")));
+});
+
 test("an example page links the guide that teaches it", () => {
   assert.deepEqual(
     shapeProblems(

@@ -271,7 +271,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 ## Bar buttons
 
-`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
+`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle. Each button is a cell 41 wide and 40 high. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
 
 <!-- generated:widgets bar-buttons -->
 

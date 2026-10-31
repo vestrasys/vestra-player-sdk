@@ -18,4 +18,4 @@ The four tutorials build one plugin, each continuing the last:
 
 After them, the [Examples](../examples/index.md) walk through complete plugins (tool windows, panels, menus, filters, generated streams, translations).
 
-You need Node.js 26 or newer and a copy of Vestra Player 0.2 or newer to try the plugins.
+You need Node.js 26 or newer and Vestra Player 0.4.3 or newer to try the plugin.

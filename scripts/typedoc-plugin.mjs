@@ -17,14 +17,45 @@
  *   the site's root.
  * - Each old address of `REDIRECTS` (scripts/doc-structure.mjs) gets a page
  *   that redirects to its new address, so links from outside keep working.
+ * - Diagrams: a ```mermaid block (typedoc.json `ignoredHighlightLanguages`)
+ *   is drawn in the browser by Mermaid, loaded from a pinned version
+ *   (`MERMAID`) only on pages that have one. Diagrams are Mermaid, with
+ *   every edge written out, so that llms-full.txt carries the same source a
+ *   language model can read.
  */
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { Converter, RendererEvent } from "typedoc";
+import { Converter, JSX, RendererEvent } from "typedoc";
 import { GROUPS, REDIRECTS } from "./doc-structure.mjs";
 import { CUT, withoutHidden } from "./doc-standard.mjs";
 
 const root = resolve(import.meta.dirname, "..");
+
+/** The Mermaid build the site loads (pinned; an ES module). */
+export const MERMAID =
+  "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+
+/**
+ * Runs in the page: each `<pre><code class="mermaid">` that TypeDoc wrote
+ * becomes a `<div class="mermaid">` with the same source, which Mermaid
+ * draws in the site's light or dark theme.
+ */
+const MERMAID_SCRIPT = `
+const blocks = [...document.querySelectorAll("pre > code.mermaid")];
+if (blocks.length) {
+  const { default: mermaid } = await import(${JSON.stringify(MERMAID)});
+  const theme = document.documentElement.dataset.theme;
+  const dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+  mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
+  for (const code of blocks) {
+    const diagram = document.createElement("div");
+    diagram.className = "mermaid";
+    diagram.textContent = code.textContent;
+    code.parentElement.replaceWith(diagram);
+  }
+  await mermaid.run({ querySelector: "div.mermaid" });
+}
+`;
 
 /** Folder under docs/ → group title. */
 const TITLES = Object.fromEntries(GROUPS.map((g) => [g.folder, g.title]));
@@ -75,6 +106,13 @@ export function load(app) {
           group.children.sort((a, b) => position(a) - position(b));
     },
     -200,
+  );
+  app.renderer.hooks.on("body.end", () =>
+    JSX.createElement(
+      "script",
+      { type: "module" },
+      JSX.createElement(JSX.Raw, { html: MERMAID_SCRIPT }),
+    ),
   );
   app.renderer.on(RendererEvent.END, (event) => {
     for (const name of ["llms.txt", "llms-full.txt"])

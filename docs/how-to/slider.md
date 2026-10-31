@@ -11,36 +11,36 @@ A slider reports every pointer movement, often more than 60 times a second. Each
 
 ## Steps
 
-### The callback does not wait
+### Bind the slider two-way to an `in-out` property
 
-`brightnessChanged` updates a variable and calls `filter.set()`, which returns at once. The SDK runs the next callback as soon as it arrives.
+In the Slint file, declare the value `in-out` and bind the slider's value with `<=>`, and report moves and the release through two callbacks:
 
-### The expensive part keeps only the newest value
+```slint
+in-out property <float> brightness;
+callback brightness-changed(float);  // every pointer move
+callback brightness-released(float); // once, when the button is released
+Slider {
+    value <=> root.brightness;       // two-way: never `value: root.brightness`
+    changed(value) => { root.brightness-changed(value); }
+    released(value) => { root.brightness-released(value); }
+}
+```
 
-`filter.set()` has _latest-value_ semantics: while one request is in flight, newer values replace each other and only the last one is sent. A fast drag costs a request per round trip to the player, not one per pointer move, and the video ends exactly where the slider stopped.
+### Record the newest value, without awaiting
 
-### The slider's value is bound, not set
+In the `changed` callback, store the value in your model and return; do not `await` anything there. Do one-off work (the on-screen message, saving, logging) in the `released` callback instead, which fires once per drag.
 
-`bind` sends `brightness` only when it differs from what was sent last, and the player skips a write that equals what the slider already shows. So the plugin never fights the user's pointer, yet Reset (which changes the model) moves the thumb.
+### Hand it to a call that keeps only the newest value
 
-The Slint side needs two things: an `in-out` property and a two-way binding (`value <=> root.brightness`). With a one-way binding (`value: root.brightness`) Slint breaks the binding the first time the user drags, and Reset stops moving the thumb.
+Pass the value on with a call that has latest-value semantics, such as `filter.set()`, `player.setOutput()` or `Scrub.seek`. Do not call one-request-per-call methods (`player.seek`, `player.setRate`, `osd.show`) on every move: use `player.scrub()` for a seek slider.
 
-### Work that should happen once happens on release
+### Bind the derived values instead of setting them
 
-The on-screen message (and anything like saving or logging) waits for `brightnessReleased`, which fires once per drag.
+Send the slider's value and its label with `window.bind(() => …)`, not `set`, so an unchanged value is never written back under the user's pointer; a Reset that changes the model still moves the thumb.
 
-### Which calls keep only the newest value
+### Give your own slow work latest-value behaviour
 
-| Latest value wins (safe on every move)                                                                                 | One request per call (do not call on every move)                                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| {@link "@vestra-player/sdk"!VideoFilter VideoFilter}`.set`, {@link "@vestra-player/sdk"!AudioFilter AudioFilter}`.set` | {@link "@vestra-player/sdk"!Player.seek player.seek}: use {@link "@vestra-player/sdk"!Player.scrub player.scrub()} and `Scrub.seek` for a seek slider |
-| {@link "@vestra-player/sdk"!Player.setOutput player.setOutput} (volume, mute)                                          | `player.setRate` and other player controls                                                                                                            |
-| `Scrub.seek` (about one seek per display frame)                                                                        | {@link "@vestra-player/sdk"!Osd.show osd.show}: show a message on release                                                                             |
-| View properties (`bind`, `set`), {@link "@vestra-player/sdk"!OsdPanel.set OsdPanel.set}                                | `JsonStore.save` is debounced (300 ms), so it is fine; anything you write yourself is not                                                             |
-
-### When the slow part is your own code
-
-If a move triggers your own asynchronous work (rendering a preview with `plugin.tools.run`, a network request), do not `await` it per callback: the SDK starts every callback without waiting for the previous one, so slow runs overlap and can finish out of order, leaving an _older_ result on screen. Give that work latest-value semantics yourself:
+If a move triggers your own asynchronous work (a preview rendered with `plugin.tools.run`, a network request), run it through a helper that keeps one run at a time and only the newest value, and call `plugin.update()` when a result arrives after an `await`:
 
 ```ts
 import type { Plugin } from "@vestra-player/sdk";
@@ -79,7 +79,6 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
-`plugin.update()` matters here. The SDK re-evaluates bound properties after a callback returns and again when its promise settles; a value you change **after an `await`** inside a longer task is otherwise shown only when that task ends. Call `plugin.update()` whenever such a task has something new to show.
 
 ## Complete example
 
@@ -174,7 +173,7 @@ export default async function activate(plugin: Plugin) {
     apply(); // …and hand it on; no await
   });
   window.on("brightnessReleased", () => {
-    void plugin.osd.show(`Brightness ${brightness.toFixed(2)}`); // once per drag
+    void plugin.osd.show("Brightness {}", [brightness.toFixed(2)]); // once per drag
   });
   window.on("reset", () => {
     brightness = 0; // the bound value moves the slider back
@@ -189,7 +188,13 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
+## How it works
+
+A slider reports every pointer move, and the SDK runs each callback as soon as it arrives. The callback only records the value and returns, so callbacks never queue. `filter.set()` keeps one request in flight and replaces waiting values with newer ones, so a fast drag costs one request per round trip to the player, not one per move, and the video ends exactly where the slider stopped. `bind` sends a value only when it differs from the last one sent, and the player skips a write the slider already shows, so the plugin never fights the pointer. A one-way binding in Slint (`value: root.brightness`) is broken the first time the user drags, after which Reset no longer moves the thumb. Work you start yourself has no such semantics: overlapping runs can finish out of order and leave an older result on screen, and a value changed after an `await` shows only when the handler ends unless you call `plugin.update()` ([set, bind and the update pass](../explanation/ui.md#set-bind-and-the-update-pass)).
+
 ## See also
+
+- Calls that keep only the newest value (safe on every move): {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}`.set`, {@link "@vestra-player/sdk"!AudioFilter | AudioFilter}`.set`, {@link "@vestra-player/sdk"!Player.setOutput | Player.setOutput}, `Scrub.seek` (about one seek per display frame), view properties (`bind`, `set`), {@link "@vestra-player/sdk"!OsdPanel.set | OsdPanel.set}, and `JsonStore.save` (debounced, 300 ms). One request per call (not on every move): {@link "@vestra-player/sdk"!Player.seek | Player.seek} (use {@link "@vestra-player/sdk"!Player.scrub | Player.scrub}), `player.setRate` and the other player controls, {@link "@vestra-player/sdk"!Osd.show | Osd.show}.
 
 - [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md): set, bind and the update pass.
 - The [blur example](../examples/blur.md) (a strength slider on a video filter).

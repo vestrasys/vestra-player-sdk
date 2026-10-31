@@ -25,7 +25,7 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 ## Inside a built-in menu
 
 - **Name the menu by its id**: `["@video", "Blur"]`. The seven built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings) stay where they are whatever you put in them.
-- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use 100 and up, in the order listed in [Built-in commands](../reference/commands.md#built-in-commands), and the ranges per menu are at {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
+- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use the orders listed in [Built-in commands](../reference/commands.md#built-in-commands), and the ranges per menu are at {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 - **Group related items** with a `group` of your own, so a separator sets them apart from the player's items.
 - **Playback ▸ Speed and Playback ▸ Seek are the player's.** You can add to them; their titles stay the player's.
 

@@ -11,19 +11,25 @@ It assumes [How a plugin runs](plugins.md). How the host starts Node.js and what
 
 ## The parts at a glance
 
-```text
-┌──────────────── vestra-host (one process) ─────────────────┐
-│ UI thread (Slint event loop)                               │
-│   Host: plugins, registries, windows, menus, dispatch      │
-│        ▲ Event channel                │ Command queue      │
-│        │                              ▼                    │
-│ playback worker thread: libmpv core, sources, processing,  │
-│   subtitles, producers, offline jobs                       │
-│ render thread: libmpv software renderer, or GPU rendering  │
-│ per plugin: a writer and a reader thread on its pipes      │
-└───────────────▲────────────────────────────────────────────┘
-                │ JSON lines on stdin/stdout ("vestra/1")
-     Node.js: one shared runner (built-ins), one process per other plugin
+```mermaid
+flowchart TB
+    subgraph HOST["vestra-host (one process)"]
+        UI["UI thread (Slint event loop)<br/>Host: plugins, registries, windows, menus, dispatch"]
+        PW["playback worker thread<br/>libmpv core, sources, processing, subtitles, producers, offline jobs"]
+        RT["render thread<br/>libmpv software renderer, or GPU rendering"]
+        IO["per plugin: a writer and a reader thread on its pipes"]
+    end
+    SR["Node.js: the shared runner<br/>(the built-in plugins)"]
+    OWN["Node.js: one process per other plugin<br/>(third-party plugins, development loads)"]
+    UI -- "Command queue" --> PW
+    PW -- "Event channel" --> UI
+    RT -- "frames" --> UI
+    UI -- "replies and events" --> IO
+    IO -- "requests (Event::Request)" --> UI
+    IO -- "JSON lines on stdin (vestra/1)" --> SR
+    SR -- "JSON lines on stdout" --> IO
+    IO -- "JSON lines on stdin (vestra/1)" --> OWN
+    OWN -- "JSON lines on stdout" --> IO
 ```
 
 The host has no plugin business logic. It does not know which plugin is the playlist or the subtitle downloader; it offers shared facilities (playback, UI composition, the processing chain, subtitles, export, plugin lifecycle) and checks every request against the capabilities the plugin declared. Everything a user would call a feature lives in a plugin, built-in or not.
@@ -182,7 +188,7 @@ fn forward(host: &Host, reply: &Reply, method: &str, params: &Value) -> Handled 
 
 Source: src/host/src/capabilities/mod.rs
 
-`Ok(None)` means "answered later": the worker sends `Event::Reply` and the UI thread writes the reply to the plugin. The worker waits for events rather than polling: it sleeps until a command, libmpv's wake-up callback, the stop, or its next `source.state` push (every 100 ms) or audio device check (every second). Because it is one queue, requests a plugin sends to the worker are answered in the order they were sent, and a seek can never overtake the open before it.
+`Ok(None)` means "answered later": the worker sends `Event::Reply` and the UI thread writes the reply to the plugin. Most of the time the worker waits for events: it sleeps until a command, libmpv's wake-up callback, the stop, or its next `source.state` push (every 100 ms) or audio device check (every second). It polls instead, every 2 ms (`POLL`), while there is work to come back to soon: a full turn of commands (it takes a fixed number per turn so continuous controls do not starve the rest), pending core actions, a new source's picture geometry not yet published, or source work in flight (an active generated stream, a resolver's answer being opened). Host 0.5.15 made this event-driven; before, it slept 2 ms every turn. Because it is one queue, requests a plugin sends to the worker are answered in the order they were sent, and a seek can never overtake the open before it.
 
 ## Where libmpv sits
 

@@ -11,13 +11,30 @@ In this tutorial the plugin from [Add a window](add-a-window.md) gets a page in 
 
 Finish [Add a window](add-a-window.md). Why settings pages are built the way they are is explained in [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md); where else a plugin can keep data is in [Store a plugin's data](../how-to/store-data.md).
 
-## 1. Declare the capability
+## 1. Update the manifest
 
-A settings page needs `ui.settings`. Add it to the `capabilities` in `manifest.json`, after `"playback.control"`:
+A settings page needs the capability `ui.settings`, and the translated templates and text values of this tutorial need player 0.4.3 or newer. Add both to `manifest.json`:
 
 ```json
-"ui.settings"
+{
+  "id": "me.hello",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.4.3",
+  "capabilities": [
+    "commands",
+    "ui.osd",
+    "playback.read",
+    "events",
+    "ui.window",
+    "playback.control",
+    "ui.settings"
+  ]
+}
 ```
+
+An older player does not load the plugin; it would show the templates without filling them in ([Player versions](../reference/manifest.md#player-versions)).
 
 ## 2. Write the settings page
 

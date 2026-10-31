@@ -873,7 +873,7 @@ const fullUrl = `${SITE}llms-full.txt`;
 const index = [
   `# Vestra Player SDK`,
   "",
-  `> ${pkg.name} ${pkg.version}: write plugins for Vestra Player in TypeScript (plugin API \`${API_VERSION}\`). A plugin is a folder with \`manifest.json\` and an entry module whose default export \`activate(plugin)\` the player calls; it runs in its own Node.js process. ${running
+  `> ${pkg.name} ${pkg.version}: write plugins for Vestra Player in TypeScript (plugin API \`${API_VERSION}\`). A plugin is a folder with \`manifest.json\` and an entry module whose default export \`activate(plugin)\` the player calls; it runs in its own Node.js process (the player's built-in plugins share one). ${running
     // How a plugin runs, In short: the process and activate are said above.
     .slice(2)
     .map(firstSentence)

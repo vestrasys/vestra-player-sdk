@@ -28,13 +28,8 @@ Which surface for which purpose:
 - **Preferences that rarely change:** Settings page. Users look for preferences in Options; the player keeps the window and its navigation.
 - **A yes/no question before something destructive:** {@link "@vestra-player/sdk"!Dialogs.confirm dialogs.confirm}. Native look and keyboard handling (Enter, Escape); no Slint file.
 - **A file or folder from the user:** {@link "@vestra-player/sdk"!Dialogs.openFile dialogs.openFile} and friends. The system dialog is the only one users trust with paths.
-- **Surface:** Width. Height
-- **Tool window:** The `Window` component's `width` (fixed, not resizable), or `preferred-width` (initial) within `min-width`/`max-width`.. Same with `height`. The title is the component's `title`.
-- **Bottom bar:** The video column's width.. The component's preferred height (within its minimum and maximum). It may draw above its slot into the video area (negative `y`); the player does not clip it.
-- **Sidebar:** Set by the user with the splitter (at least 317; the video keeps at least 318).. The window's full height.
-- **Floating sidebar:** 300 by default, at least 300.. 408 by default, at least 250.
-- **Backdrop:** The whole video area.. The whole video area.
-- **Settings page:** 440.. The component's height; the Options window scrolls taller pages.
+
+The size each surface gets is in [Theme: surface sizes](../reference/theme.md#surface-sizes).
 
 ## Theme
 
@@ -93,7 +88,7 @@ Use the layout of [Theme: small adjustment windows](../reference/theme.md#small-
 
 The bottom bar holds one panel, and every plugin's command buttons ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle show inside it, in a strip the player fills. A bar that replaces the built-in one (`vestra.playback`) must place that strip, or those buttons show nowhere while it is mounted (their menu entries stay):
 
-- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many 41×40 cells as fit and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last. The strip is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
+- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many button cells as fit ([Theme: bar buttons](../reference/theme.md#bar-buttons)) and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last. The strip is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
 - **Decide what goes first when the window narrows.** The built-in bar gives the strip only the room its own buttons and the time leave, so the strip shrinks first, then its Fullscreen button hides, and the time is never cut.
 - **Do not draw a sidebar toggle of your own**: the strip has the player's (**Toggle Sidebar**, `host/sidebar`), with its state.
 - `vestra-plugin check` warns when a plugin mounts a bottom bar whose Slint file does not import `BarButtons` from `@vestra/bar-buttons.slint`, itself or through the plugin's own Slint files it imports, and the player logs the buttons a mounted bar hides.

@@ -76,7 +76,7 @@
     "typescript",
     "rust"
   ],
-  "ignoredHighlightLanguages": ["slint", "po"],
+  "ignoredHighlightLanguages": ["slint", "po", "mermaid"],
   "jsDocCompatibility": {
     "exampleTag": false
   },

@@ -11,13 +11,13 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 
 ## In short
 
-- Each plugin runs in its own Node.js process (Node.js 26, which the player ships). It can use the Node standard library, the file system, the network and npm packages.
+- Each third-party plugin runs in its own Node.js process (Node.js 26, which the player ships); the player's built-in plugins share one. A plugin can use the Node standard library, the file system, the network and npm packages.
 - The player loads the entry module and calls its **default export** `activate(plugin)`. The plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
 - Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. There is no cleanup function to return.
 
 ## The plugin process
 
-- **One Node.js process per plugin.** The player starts each plugin in a Node.js 26 process of its own (the installed player ships that Node.js). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in one plugin does not stop the player or other plugins.
+- **A Node.js process.** The player starts each third-party plugin, and each plugin loaded with `--plugin`, in a Node.js 26 process of its own (the installed player ships that Node.js); its own built-in plugins share one process ([How the player runs and talks to plugins](host-and-node.md)). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in a plugin with its own process does not stop the player or other plugins.
 - **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage} or in your own files in the [data directory](#the-data-directory), and state that must outlive a restart of the plugin's process, but not the player, in {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} ([Restarts](#restarts-activate-can-run-more-than-once)).
 - **Trusted code.** Manifest capabilities are a contract the player checks on every call (a missing one fails with `code: "capability"`), not a sandbox: the process has the user's file and network access. The full list of capabilities and the API each one opens is in [Reference: capabilities](../reference/capabilities.md).
 - **One API on every system.** The same plugin runs on macOS and Windows. Something a system cannot do fails with `unsupported`; the differences are collected in [Reference: platforms](../reference/platforms.md).
