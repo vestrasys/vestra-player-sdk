@@ -203,13 +203,22 @@ export const STRICT_CATEGORIES = {
     ],
   },
   Processing: {
-    full: ["VideoFilter", "AudioFilter", "VideoView", "RenderOptions"],
+    full: [
+      "VideoFilter",
+      "AudioFilter",
+      "VideoView",
+      "RenderOptions",
+      "VideoUpscaling",
+    ],
     data: [
       "FilterStatus",
       "ViewSettings",
       "RenderSettings",
       "VideoNode",
       "AudioNode",
+      "UpscalingState",
+      "UpscalingReason",
+      "UpscalingReasonCode",
     ],
   },
 };

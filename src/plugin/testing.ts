@@ -84,6 +84,7 @@ import type {
   Transport,
   WireRenderingState,
   WireSystemInfo,
+  WireUpscalingState,
 } from "../wire.ts";
 import {
   BAR_BUTTON_ICONS,
@@ -118,6 +119,7 @@ import type {
   RenderingPreference,
   RenderingReason,
   RenderSettings,
+  UpscalingReason,
   ViewSettings,
 } from "./types.ts";
 import type { MediaJob } from "../media.ts";
@@ -707,7 +709,8 @@ const MAX_SIDEBAR_TABS = 8;
  *   {@link TestHost.app}, {@link TestHost.systemInfo},
  *   {@link TestHost.chapters}, {@link TestHost.audioDevices},
  *   {@link TestHost.secrets}, {@link TestHost.clipboard},
- *   {@link TestHost.tools}, {@link TestHost.rendering}.
+ *   {@link TestHost.tools}, {@link TestHost.rendering},
+ *   {@link TestHost.upscaling}.
  * - **Assert** on records: {@link TestHost.osd}, {@link TestHost.calls},
  *   {@link TestHost.sent}, {@link TestHost.conflicts},
  *   {@link TestHost.layout}, {@link TestHost.menus}, and many more.
@@ -2339,6 +2342,71 @@ export class TestHost implements Transport {
     startedWith: "gpu",
     gpu: { available: true, reason: null },
     restarts: 0,
+  };
+  /**
+   * The GPU's video upscaler behind `plugin.video.upscaling` (player
+   * 0.5.16), answered as the player would:
+   *
+   * - `state()` and `set(true)` set `checked` (the player's one GPU check; a
+   *   plugin that should not wake the GPU while it starts can assert it is
+   *   still `false`) and report `available` from `reason` (`null`: it
+   *   works), this plugin's `enabled`, and `requested` with `factor` while
+   *   enabled, available and `factor` is above 1.
+   * - `set(true)` refuses with `unsupported` and the reason's message while
+   *   `reason` is set, unless its code is `decoding`, or `rendering` with
+   *   `renderingStarting` (GPU rendering still starting): those can pass
+   *   during the run, so the player keeps the request. Nothing changes when
+   *   it refuses.
+   * - `set(false)` always succeeds and does not check the GPU: before any
+   *   check it reports `available: false` with the reason `unchecked`.
+   *
+   * Inject other answers with `host.handle("video.upscaling.set", …)`. The
+   * defaults are a player where upscaling works and a 1080p video shown
+   * full screen on a 4K display (`factor` 2), whatever `systemInfo` says.
+   *
+   * @example Test the menu item on a computer without an RTX GPU
+   * The plugin's upscaling item is greyed out with the player's reason after
+   * the user first picks it. Starting the plugin checks nothing (`checked`
+   * stays false, so no GPU wakes up); the first pick reads the state, and
+   * `set(true)` would reject with `unsupported`, as in the player.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * import { startPlugin, TestHost } from "@vestra-player/sdk/testing";
+   * import activate from "../main.ts";
+   *
+   * const host = new TestHost();
+   * host.upscaling.reason = { code: "no-gpu", message: "no NVIDIA GPU" };
+   * const { stop } = await startPlugin(activate, {
+   *   directory: new URL("..", import.meta.url),
+   *   host,
+   * });
+   * assert.equal(host.upscaling.checked, false); // starting woke no GPU
+   * const item = host.command("upscaling");
+   * await item.run(); // the first pick checks the GPU
+   * assert.equal(item.state.enabled, false); // greyed out
+   * assert.equal(item.state.reason, "no NVIDIA GPU"); // the player's message
+   * await stop();
+   * ```
+   *
+   * @since 1.5.37
+   */
+  readonly upscaling: {
+    /** Why upscaling does not work; `null` while it does. */
+    reason: UpscalingReason | null;
+    /** Whether this plugin has upscaling on (`set`); a test may preset it. */
+    enabled: boolean;
+    /** The factor the player would request; `null` or at most 1: the video needs no upscaling. */
+    factor: number | null;
+    /** Whether the plugin made the player check the GPU (`state`, `set(true)`). */
+    checked: boolean;
+    /** GPU rendering is still starting: a `rendering` reason then lets `set(true)` keep the request. */
+    renderingStarting: boolean;
+  } = {
+    reason: null,
+    enabled: false,
+    factor: 2,
+    checked: false,
+    renderingStarting: false,
   };
   /** What `player.chapters()` lists while media is ready. */
   chapters: {
@@ -4140,6 +4208,29 @@ export class TestHost implements Transport {
     };
   }
 
+  /** `video.upscaling.state` from {@link TestHost.upscaling}. */
+  #upscalingState(check = true): WireUpscalingState {
+    if (check) this.upscaling.checked = true;
+    const { enabled, factor } = this.upscaling;
+    // `set(false)` before any check: the player answers without checking.
+    const reason = this.upscaling.checked
+      ? this.upscaling.reason
+      : {
+          code: "unchecked",
+          message:
+            "the player has not checked the GPU yet; state() or set(true) checks it",
+        };
+    const requested =
+      enabled && reason === null && factor !== null && factor > 1;
+    return {
+      available: reason === null,
+      reason: reason ? { ...reason } : null,
+      enabled,
+      requested,
+      factor: requested ? factor : null,
+    };
+  }
+
   /** `rendering.state` from {@link TestHost.rendering} and `videoRender.gpu`. */
   #renderingState(): WireRenderingState {
     const { reason, preference, startedWith, gpu } = this.rendering;
@@ -4593,6 +4684,30 @@ export class TestHost implements Transport {
         throw new HostError("busy", "a restart is already under way");
       this.rendering.restarts++;
       return null;
+    },
+    // As the player 0.5.16 (see TestHost.upscaling for the model).
+    "video.upscaling.state": () => this.#upscalingState(),
+    "video.upscaling.set": (p) => {
+      if (typeof p.enabled !== "boolean")
+        throw new HostError("invalid", "enabled must be a boolean");
+      const { reason, renderingStarting } = this.upscaling;
+      // Off: always, without the GPU check.
+      if (!p.enabled) {
+        this.upscaling.enabled = false;
+        return this.#upscalingState(false);
+      }
+      const passes =
+        reason?.code === "decoding" ||
+        (reason?.code === "rendering" && renderingStarting);
+      if (reason && !passes) {
+        this.upscaling.checked = true;
+        throw new HostError(
+          "unsupported",
+          `video upscaling cannot work here: ${reason.message}`,
+        );
+      }
+      this.upscaling.enabled = true;
+      return this.#upscalingState();
     },
     "clipboard.readText": () => this.clipboard.text,
     "clipboard.writeText": (p) => {

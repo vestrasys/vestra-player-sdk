@@ -28,6 +28,7 @@ import {
   storage,
   system,
   tools,
+  videoUpscaling,
 } from "./services.ts";
 
 export class ScopeImpl implements Plugin {
@@ -61,6 +62,7 @@ export class ScopeImpl implements Plugin {
     ...videoFilters(this),
     view: () => videoView(this),
     render: () => videoRender(this),
+    upscaling: videoUpscaling(this),
   };
   readonly audio = audioFilters(this);
   readonly subtitles = subtitles(this);

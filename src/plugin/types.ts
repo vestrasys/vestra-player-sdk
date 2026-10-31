@@ -217,10 +217,11 @@ export interface Scope extends Disposable {
   /** Playback state and controls (`playback.read`, `events`, `playback.control`). */
   readonly player: Player;
   /**
-   * Video processing: this plugin's filter chain, the display layer and the
-   * GPU render options. All three need `processing.video` and
-   * `playback.read`; the filter chain also needs `events` (without it the
-   * SDK never sees the media become ready and the chain stays `waiting`).
+   * Video processing: this plugin's filter chain, the display layer, the
+   * GPU render options and the GPU's video upscaler. The first three need
+   * `processing.video` and `playback.read`; the filter chain also needs
+   * `events` (without it the SDK never sees the media become ready and the
+   * chain stays `waiting`). The upscaler needs `video.upscaling` only.
    */
   readonly video: {
     /**
@@ -253,6 +254,12 @@ export interface Scope extends Disposable {
      *   while the first handle is not disposed.
      */
     render(): RenderOptions;
+    /**
+     * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on
+     * Windows; needs `video.upscaling`, player 0.5.16): whether it works
+     * here and why not, and turning it on or off for this plugin.
+     */
+    readonly upscaling: VideoUpscaling;
   };
   /**
    * Audio processing: this plugin's filter chain and delay
@@ -6613,6 +6620,284 @@ export interface RenderOptions extends Disposable {
    * @since 1.0.0
    */
   onStatus(listener: (status: FilterStatus) => void): Disposable;
+}
+
+/**
+ * Why the GPU's video upscaler does not work, as a stable kebab-case code.
+ * A newer player may add codes: compare with the ones you handle and show
+ * {@link UpscalingReason.message} for the rest. The codes of player 0.5.16,
+ * in the order the player checks them (the first that holds is reported):
+ *
+ * | Code | Meaning |
+ * | --- | --- |
+ * | `platform` | The player has no video upscaler on this system (macOS, Linux). |
+ * | `no-gpu` | No GPU that can upscale video (Windows: no NVIDIA GPU). |
+ * | `driver` | The graphics driver is too old (Windows: an NVIDIA driver before 530). |
+ * | `gpu-unsupported` | The driver does not offer upscaling on this GPU (Windows: not an RTX GPU), or the check failed. |
+ * | `rendering` | The player renders in software, or GPU rendering is still starting; upscaling needs GPU rendering ({@link Rendering}). |
+ * | `adapter` | GPU rendering runs on another GPU than the one that can upscale (a laptop with two GPUs; Windows: choose the high-performance GPU for Vestra in Settings ▸ System ▸ Display ▸ Graphics). |
+ * | `decoding` | The video is not decoded on the GPU that renders it: copy-back or software decoding, for example while a {@link VideoFilter} needs the frames in memory. |
+ * | `unchecked` | The player has not checked the GPU yet. Only in the answer to `set(false)`, which never starts the check; `state()` and `set(true)` always check first. |
+ *
+ * `decoding` and `rendering` while GPU rendering is still starting can pass
+ * during the run, so `set(true)` accepts them and keeps the request; every
+ * other reason holds until the player restarts, and `set(true)` rejects it.
+ * Turning upscaling off is always accepted.
+ *
+ * @example Advise the user by reason
+ * The plugin shows its own advice for the reasons the user can act on and
+ * the player's message for the rest. `reason.code` is looked up among the
+ * codes the plugin knows; an unknown code from a newer player falls
+ * through to the message, which names the GPU and what to do.
+ * ```ts
+ * const { reason } = await plugin.video.upscaling.state();
+ * // Advice for the codes this plugin knows; any other code shows the message.
+ * const advice: Partial<Record<UpscalingReasonCode, string>> = {
+ *   driver: "Update the NVIDIA driver to 530 or newer.",
+ *   rendering: "Turn on Video ▸ GPU Rendering (Experimental) and restart.",
+ * };
+ * if (reason) console.log(advice[reason.code] ?? reason.message);
+ * ```
+ *
+ * @player 0.5.16
+ * @since 1.5.37
+ * @category Processing
+ */
+export type UpscalingReasonCode =
+  | "platform"
+  | "no-gpu"
+  | "driver"
+  | "gpu-unsupported"
+  | "rendering"
+  | "adapter"
+  | "decoding"
+  | "unchecked"
+  // Any other string: a newer player's code (the names above stay suggested).
+  | (string & {});
+
+/**
+ * Why the GPU's video upscaler does not work: a stable
+ * {@link UpscalingReasonCode} to branch on and a sentence to show, the same
+ * shape as {@link RenderingReason}.
+ *
+ * @example Grey out a menu item with the player's reason
+ * The plugin disables its upscaling item and shows why. `message` is the
+ * player's English text, naming the GPU and what the user can do (turn on
+ * GPU rendering, choose the other GPU, update the driver); `code` is for
+ * decisions.
+ * ```ts
+ * const { available, reason } = await plugin.video.upscaling.state();
+ * if (!available && reason) console.log(`${reason.code}: ${reason.message}`);
+ * ```
+ *
+ * @player 0.5.16
+ * @since 1.5.37
+ * @category Processing
+ */
+export interface UpscalingReason {
+  /** The reason as a stable kebab-case code; branch on this. */
+  readonly code: UpscalingReasonCode;
+  /**
+   * The reason as English text for people, for example with the GPU's name
+   * and what to change; never branch on it.
+   */
+  readonly message: string;
+}
+
+/**
+ * What {@link VideoUpscaling.state} and {@link VideoUpscaling.set} report:
+ * whether the upscaler works now and why not, whether this plugin turned
+ * it on, and whether the player asked the GPU to upscale.
+ *
+ * @remarks
+ * `requested` is as far as the player can see. The player puts the
+ * upscaler last in the video filter chain, scaling the video to the area it
+ * is shown in; the driver gives no sign that it upscales. On Windows the
+ * user must also turn on Super Resolution in the NVIDIA app (System ▸ Video
+ * ▸ RTX Video Enhancement), which no program can read: say so next to the
+ * switch.
+ *
+ * @example Label the item with what happens now
+ * The plugin's menu item says whether upscaling is on and whether the
+ * video is being upscaled. `enabled` is this plugin's own request;
+ * `requested` is true while the player has the upscaler in the filter
+ * chain, which needs a video shown larger than its own size (`factor`
+ * above 1).
+ * ```ts
+ * const state = await plugin.video.upscaling.state();
+ * // `enabled`: this plugin's request; `requested`: in the filter chain now.
+ * const label = !state.enabled
+ *   ? "AI Upscaling: Off"
+ *   : state.requested
+ *     ? `AI Upscaling: On (×${state.factor?.toFixed(2)})`
+ *     : "AI Upscaling: On (not needed for this video)";
+ * console.log(label);
+ * ```
+ *
+ * @player 0.5.16
+ * @since 1.5.37
+ * @category Processing
+ */
+export interface UpscalingState {
+  /** Whether the upscaler works now; `false` with {@link UpscalingState.reason}. */
+  readonly available: boolean;
+  /** Why it does not work now; `null` while it does. */
+  readonly reason: UpscalingReason | null;
+  /** This plugin asked for upscaling ({@link VideoUpscaling.set}) and has not turned it off. */
+  readonly enabled: boolean;
+  /**
+   * The player has the upscaler in the video filter chain now, for this
+   * plugin or another one: upscaling is enabled and available and the
+   * video is shown larger than its own size. Not a sign that the GPU
+   * upscales (see the remarks).
+   */
+  readonly requested: boolean;
+  /**
+   * The scale factor the upscaler was asked for (the area the video is
+   * shown in over the video's size, in hundredths, above 1); `null` while
+   * nothing is requested.
+   */
+  readonly factor: number | null;
+}
+
+/**
+ * `plugin.video.upscaling`: the GPU's video upscaler, NVIDIA RTX Video
+ * Super Resolution on Windows (`video.upscaling`). Read whether it works
+ * here and why not; turn it on or off for this plugin.
+ *
+ * @remarks
+ * The player checks the GPU once, when a plugin first asks, and keeps the
+ * answer: the check wakes a sleeping discrete GPU, so call
+ * {@link VideoUpscaling.state} when the plugin first needs the answer (the
+ * first time the user picks its upscaling item), not while the plugin
+ * starts, and do not poll it. `set(false)` never starts the check. It works
+ * only with GPU rendering, on the GPU the upscaler runs on, with the video decoded on that GPU; {@link UpscalingReasonCode}
+ * lists what can stand in the way.
+ *
+ * While some plugin has it on and it works, the player puts the upscaler
+ * last in the video filter chain and scales the video to the area it is
+ * shown in, following window and video size changes (a resize waits until
+ * the size holds). A video already shown at its own size or smaller is not
+ * upscaled. The upscaler stays while any plugin has it on; it goes when the
+ * last one turns it off or stops: the player revokes a stopped plugin's
+ * request.
+ *
+ * **Windows:** the user must turn on Super Resolution in the NVIDIA app
+ * (System ▸ Video ▸ RTX Video Enhancement); no program can read that
+ * switch, and the driver gives no sign that it upscales
+ * ({@link UpscalingState.requested} is as far as the player can see). It
+ * uses the NVIDIA GPU, so power use and heat go up, and on a laptop with
+ * two GPUs the whole player must run on the NVIDIA one.
+ * **macOS, Linux:** `available` is `false` with `platform`.
+ *
+ * Players before 0.5.16 do not know `video.upscaling` and do not load a
+ * plugin that declares it: declare `"minPlayerVersion": "0.5.16"`.
+ *
+ * @example Offer AI upscaling as a menu item
+ * A Video menu item turns upscaling on and off; once the player said it
+ * cannot work here, the item is greyed out with the player's reason. The
+ * state is read the first time the user picks the item (that runs the
+ * player's GPU check, so nothing wakes the GPU while the plugin starts) and
+ * again after each pick; `set` resolves with the new state, or rejects with
+ * `unsupported` where upscaling cannot work in this run.
+ * ```ts
+ * let state: UpscalingState | null = null; // unknown until first picked
+ * plugin.commands.add({
+ *   id: "upscaling",
+ *   path: ["@video", "AI Upscaling"],
+ *   checked: () => state?.enabled ?? false,
+ *   // Greyed only once the player said it cannot work (`decoding` can pass).
+ *   enabled: () => state === null || state.available || state.reason?.code === "decoding",
+ *   reason: () => state?.reason?.message ?? null, // shown while disabled
+ *   run: async () => {
+ *     state ??= await plugin.video.upscaling.state(); // the first pick checks the GPU
+ *     try {
+ *       state = await plugin.video.upscaling.set(!(state?.enabled ?? false));
+ *     } catch (error) {
+ *       // Cannot work in this run (no RTX GPU, software rendering…).
+ *       if ((error as PluginError).code !== "unsupported") throw error;
+ *       state = await plugin.video.upscaling.state();
+ *     }
+ *   },
+ * });
+ * ```
+ *
+ * @capability video.upscaling
+ * @player 0.5.16; older players do not load a plugin that declares
+ * `video.upscaling`.
+ * @since 1.5.37
+ * @category Processing
+ */
+export interface VideoUpscaling {
+  /**
+   * Read whether the upscaler works now and why not, whether this plugin
+   * turned it on and what the player asked the GPU for.
+   *
+   * @capability video.upscaling
+   * @returns The state, once the player's GPU check ran (the first call
+   *   starts it and may take a moment).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `video.upscaling`.
+   *
+   * @example Find out whether upscaling can work here
+   * The plugin reads the state the first time the user picks its upscaling
+   * item and keeps it for the item. The first call makes the player check the GPU (which
+   * wakes a sleeping discrete GPU) and later calls reuse the answer; the
+   * rest (GPU rendering, the GPU it runs on, the decoding) is read at
+   * each call.
+   * ```ts
+   * const { available, reason } = await plugin.video.upscaling.state();
+   * if (!available) console.log(reason?.message);
+   * ```
+   *
+   * @since 1.5.37
+   */
+  state(): Promise<UpscalingState>;
+  /**
+   * Turn upscaling on or off for this plugin.
+   *
+   * @remarks
+   * On stays this plugin's request until it turns it off or stops; the
+   * player upscales whenever the request can take effect (a `decoding`
+   * reason can pass with the next file). Off takes the upscaler out at
+   * once unless another plugin has it on. Upscaling is a request of the
+   * whole plugin, not of a {@link Scope}: disposing a scope does not turn
+   * it off.
+   *
+   * @capability video.upscaling
+   * @param enabled - `true` to ask for upscaling, `false` to withdraw the
+   *   request.
+   * @returns The new state.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `video.upscaling`.
+   * @throws `invalid` (rejects) `enabled` is not a boolean.
+   * @throws `unsupported` (rejects) `true` where upscaling cannot work in
+   *   this run: every {@link UpscalingReasonCode} except `decoding`, and
+   *   except `rendering` while GPU rendering is still starting (those two
+   *   are accepted and the request is kept until they pass); `message` is
+   *   the reason. Nothing changes. `false` is always accepted and answered
+   *   at once without the GPU check (before any check, `available` is
+   *   `false` with `unchecked`).
+   *
+   * @example Turn upscaling on and explain what is needed
+   * The plugin turns upscaling on from its settings and tells the user what
+   * else to switch on. `set(true)` records the request and resolves with the
+   * new state; where upscaling cannot work in this run it rejects with
+   * `unsupported` and the player's reason instead.
+   * ```ts
+   * try {
+   *   const state = await plugin.video.upscaling.set(true);
+   *   // The driver's own switch cannot be read: remind the user once.
+   *   if (state.enabled) await plugin.osd.show("Turn on Super Resolution in the NVIDIA app");
+   * } catch (error) {
+   *   if ((error as PluginError).code !== "unsupported") throw error;
+   *   await plugin.osd.show("AI upscaling: {}", [(error as PluginError).message]);
+   * }
+   * ```
+   *
+   * @since 1.5.37
+   */
+  set(enabled: boolean): Promise<UpscalingState>;
 }
 
 // ---------------------------------------------------------------- subtitles
