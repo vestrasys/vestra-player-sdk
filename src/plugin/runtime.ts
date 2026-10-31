@@ -91,6 +91,44 @@ export function quiet<T>(promise: Promise<T>): Promise<T> {
   return promise;
 }
 
+/**
+ * The fields of the SDK's state copies that a binding or listener read, by
+ * state (`player`: `plugin.player.state`). An empty set: the state was
+ * taken whole (no field read was seen), so any change of it counts.
+ */
+export type Deps = Map<string, Set<string>>;
+/** A change of the SDK's state copies: the fields that changed, by state. */
+export type Change = ReadonlyMap<string, ReadonlySet<string>>;
+
+/** Whether something that read `deps` may see a different result after `change`. */
+function affected(deps: Deps, change: Change) {
+  for (const [key, fields] of change) {
+    const read = deps.get(key);
+    if (!read) continue;
+    if (read.size === 0) return true;
+    for (const field of fields) if (read.has(field)) return true;
+  }
+  return false;
+}
+
+/** Add `from` to `into` (an empty set, the whole state, wins). */
+function merge(into: Deps, from: Deps) {
+  for (const [key, fields] of from) {
+    const set = into.get(key);
+    if (!set) into.set(key, new Set(fields));
+    else if (set.size && fields.size)
+      for (const field of fields) set.add(field);
+    else set.clear();
+  }
+}
+
+/**
+ * The longest a binding waits for a full pass while precise passes skip
+ * it: state a plugin changes outside code the SDK runs (its own timer,
+ * without `update()`) still shows within about this long.
+ */
+export const SAFETY_PASS_MS = 1000;
+
 export const same = (a: Json | undefined, b: Json | undefined) =>
   JSON.stringify(a) === JSON.stringify(b);
 
@@ -176,12 +214,29 @@ export class Runtime {
   #activating = true;
   readonly #transport: Transport;
   /** Each binding with the events whose state it read last time (held). */
-  readonly #bindings = new Map<() => void, Map<string, Disposable>>();
+  readonly #bindings = new Map<() => void, Binding>();
   /** The events read by the binding being evaluated, with who read them. */
   #reads: Map<string, Why> | undefined;
   /** Who reads now (a command's field and where it was added). */
   #reader: Reader | undefined;
   #scheduled = false;
+  /** The next pass evaluates every binding (not only a state copy changed). */
+  #full = false;
+  /** State copy changes since the last pass (a precise pass, unless `#full`). */
+  #pending = new Map<string, Set<string>>();
+  /** The change the running precise pass is for; `undefined` in a full pass. */
+  #pass: Change | undefined;
+  /** The state copy fields read by what is being evaluated now. */
+  #deps: Deps | undefined;
+  /** Each part's reads and fields last time (`part`). */
+  readonly #parts = new WeakMap<
+    object,
+    { reads: Map<string, Why>; deps: Deps }
+  >();
+  /** A precise pass skipped something: a full pass follows (`SAFETY_PASS_MS`). */
+  #safety: ReturnType<typeof setTimeout> | undefined;
+  /** The running pass skipped a binding or a part. */
+  #skipped = false;
   readonly #events = new Map<string, EventGroup>();
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
@@ -260,11 +315,12 @@ export class Runtime {
   }
   bind(evaluate: () => void): Disposable {
     const held = new Map<string, Disposable>();
-    this.#bindings.set(evaluate, held);
+    const binding: Binding = { held, deps: new Map() };
+    this.#bindings.set(evaluate, binding);
     this.invalidate();
     return {
       dispose: async () => {
-        if (this.#bindings.get(evaluate) !== held) return;
+        if (this.#bindings.get(evaluate) !== binding) return;
         this.#bindings.delete(evaluate);
         for (const hold of held.values()) await hold.dispose();
         held.clear();
@@ -289,6 +345,82 @@ export class Runtime {
       const hint = state?.when ? " — use plugin.when" : "";
       return `${reader.label} is a function that reads ${read}${at}${hint}`;
     });
+  }
+  /**
+   * A field of the SDK's copy of a state (`key`) is read; without `field`,
+   * the state is taken (`plugin.player.state`). What is being evaluated
+   * then depends on it: a precise pass after a change of that field runs
+   * it again.
+   */
+  depends(key: string, field?: string) {
+    const deps = this.#deps;
+    if (!deps) return;
+    let fields = deps.get(key);
+    if (!fields) deps.set(key, (fields = new Set()));
+    if (field !== undefined) fields.add(field);
+  }
+  /**
+   * Evaluate one part of the binding being evaluated (one `view.bind`
+   * function), identified by `token`. A precise pass skips it when nothing
+   * it read last time changed, and returns `undefined`; what it read then
+   * still counts for the binding.
+   */
+  part<T>(token: object, read: () => T): { value: T } | undefined {
+    const last = this.#parts.get(token);
+    const outerReads = this.#reads;
+    const outerDeps = this.#deps;
+    if (last && this.#pass && !affected(last.deps, this.#pass)) {
+      this.#skipped = true;
+      if (outerReads)
+        for (const [event, why] of last.reads)
+          if (!outerReads.has(event)) outerReads.set(event, why);
+      if (outerDeps) merge(outerDeps, last.deps);
+      return undefined;
+    }
+    const reads = new Map<string, Why>();
+    const deps: Deps = new Map();
+    this.#reads = outerReads && reads;
+    this.#deps = deps;
+    try {
+      return { value: read() };
+    } finally {
+      this.#reads = outerReads;
+      this.#deps = outerDeps;
+      this.#parts.set(token, { reads, deps });
+      if (outerReads)
+        for (const [event, why] of reads)
+          if (!outerReads.has(event)) outerReads.set(event, why);
+      if (outerDeps) merge(outerDeps, deps);
+    }
+  }
+  /**
+   * Run plugin code (a state listener) and return the state copy fields it
+   * read; they are not counted as a binding's.
+   */
+  observe<T>(run: () => T): { value: T; deps: Deps } {
+    const outerReads = this.#reads;
+    const outerDeps = this.#deps;
+    const deps: Deps = new Map();
+    this.#reads = undefined;
+    this.#deps = deps;
+    try {
+      return { value: run(), deps };
+    } finally {
+      this.#reads = outerReads;
+      this.#deps = outerDeps;
+    }
+  }
+  /**
+   * Whether code that read `deps` while `change` was delivered needs a full
+   * pass after it: it read a field that changed, or no field of that state
+   * at all (so the SDK cannot tell what it depends on).
+   */
+  needsFull(deps: Deps, change: Change) {
+    for (const key of change.keys()) {
+      const read = deps.get(key);
+      if (!read || read.size === 0) return true;
+    }
+    return affected(deps, change);
   }
   /**
    * Evaluate `read` as `label`, added at `where`: the state it reads is
@@ -347,17 +479,23 @@ export class Runtime {
     return undefined;
   }
   /** Evaluate one binding, holding the events whose state it read. */
-  #evaluate(evaluate: () => void, held: Map<string, Disposable>) {
+  #evaluate(evaluate: () => void, binding: Binding) {
+    const held = binding.held;
     const reads = new Map<string, Why>();
+    const deps: Deps = new Map();
     const outer = this.#reads;
+    const outerDeps = this.#deps;
     const reader = this.#reader;
     this.#reads = reads;
+    this.#deps = deps;
     this.#reader = undefined;
     try {
       evaluate();
     } finally {
       this.#reads = outer;
+      this.#deps = outerDeps;
       this.#reader = reader;
+      binding.deps = deps;
       for (const [event, hold] of held)
         if (!reads.has(event)) {
           held.delete(event);
@@ -367,21 +505,70 @@ export class Runtime {
         if (!held.has(event)) held.set(event, this.hold(event, why));
     }
   }
-  /** Coalesce: one evaluation pass per microtask turn, however many changes. */
+  /**
+   * A full pass: every binding is evaluated. Requested after plugin code
+   * the SDK ran, by `plugin.update()`, and on any change other than a state
+   * copy's fields. Coalesced: one pass per microtask turn, however many
+   * requests.
+   */
   invalidate() {
+    this.#full = true;
+    this.#schedule();
+  }
+  /**
+   * Fields of the SDK's copy of a state (`key`) changed: a precise pass
+   * evaluates only the bindings (and view bind functions) that read one of
+   * them, unless a full pass is due anyway.
+   */
+  changed(key: string, fields: Iterable<string>) {
+    let set = this.#pending.get(key);
+    if (!set) this.#pending.set(key, (set = new Set()));
+    for (const field of fields) set.add(field);
+    this.#schedule();
+  }
+  #schedule() {
     if (this.#scheduled) return;
     this.#scheduled = true;
-    queueMicrotask(() => {
-      this.#scheduled = false;
-      for (const [evaluate, held] of [...this.#bindings]) {
-        if (this.#bindings.get(evaluate) !== held) continue;
-        try {
-          this.#evaluate(evaluate, held);
-        } catch (error) {
-          console.error(`[${this.manifest.id}] binding failed:`, error);
-        }
+    queueMicrotask(() => this.#run());
+  }
+  /**
+   * One pass. A precise pass that skips anything arms a full pass
+   * `SAFETY_PASS_MS` later (unless a full pass comes first), for plugin
+   * state changed outside code the SDK ran.
+   */
+  #run() {
+    this.#scheduled = false;
+    const full = this.#full;
+    const change: Change = this.#pending;
+    this.#full = false;
+    this.#pending = new Map();
+    if (full) {
+      clearTimeout(this.#safety);
+      this.#safety = undefined;
+    }
+    this.#skipped = false;
+    for (const [evaluate, binding] of [...this.#bindings]) {
+      if (this.#bindings.get(evaluate) !== binding) continue;
+      if (!full && !affected(binding.deps, change)) {
+        this.#skipped = true;
+        continue;
       }
-    });
+      this.#pass = full ? undefined : change;
+      try {
+        this.#evaluate(evaluate, binding);
+      } catch (error) {
+        console.error(`[${this.manifest.id}] binding failed:`, error);
+      } finally {
+        this.#pass = undefined;
+      }
+    }
+    if (this.#skipped && !this.#safety) {
+      this.#safety = setTimeout(() => {
+        this.#safety = undefined;
+        this.invalidate();
+      }, SAFETY_PASS_MS);
+      this.#safety.unref?.();
+    }
   }
   /**
    * Host events with one `events.subscribe` per name, however many listeners.
@@ -501,6 +688,14 @@ export class Runtime {
     const off = this.#transport.on(event, listener);
     return { dispose: async () => off() };
   }
+}
+
+/** One `Runtime.bind` registration. */
+interface Binding {
+  /** The events whose state it read last time, held. */
+  held: Map<string, Disposable>;
+  /** The state copy fields it read last time. */
+  deps: Deps;
 }
 
 /** Who reads a service's state in a binding (`Runtime.reader`). */

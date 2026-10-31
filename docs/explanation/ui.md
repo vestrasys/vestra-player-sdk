@@ -172,7 +172,7 @@ A tool window ({@link "@vestra-player/sdk"!Window | Window}), a panel ({@link "@
 | Write fails      | Retried with back-off (0.25 s doubling up to 30 s).                                     | Not repeated until the value changes.                                                 |
 | Typical use      | One-off values: a document, a reset.                                                    | Everything derived from plugin state: labels, enabled flags, lists, status lines.     |
 
-Update passes run after every handler the SDK calls, after player and other state changes, and when you call {@link "@vestra-player/sdk"!Scope.update | plugin.update()}; several requests are merged into one pass, and each view has at most one write in flight ([The update pass](plugins.md#the-update-pass) has the details).
+Update passes run after every handler the SDK calls, after player and other state changes, and when you call {@link "@vestra-player/sdk"!Scope.update | plugin.update()}; several requests are merged into one pass, and each view has at most one write in flight. After a player state change only the bind functions that read a changed field of `plugin.player.state` run again ([The update pass](plugins.md#the-update-pass) has the details).
 
 The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md)).
 

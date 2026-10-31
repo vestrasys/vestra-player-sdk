@@ -1930,7 +1930,11 @@ export interface View {
    *
    * @remarks
    * The SDK calls `props` in every update pass (and right after `bind`) and
-   * sends the values that differ from the ones it sent last. Because an
+   * sends the values that differ from the ones it sent last. After a change
+   * of the player state alone it calls `props` only if it read a field of
+   * `plugin.player.state` that changed (SDK 1.5.45); a full pass follows
+   * after each handler, on {@link Scope.update} and at least once a second
+   * while the player state keeps changing. Because an
    * unchanged value is not sent again, text the user typed into an `in-out`
    * property stays until the plugin's value for it changes.
    *

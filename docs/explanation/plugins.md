@@ -82,13 +82,17 @@ There is no cleanup function to return from `activate`. Because every resource i
 A plugin's state is plain variables. The SDK keeps the player in step with it through **bindings** and the **update pass**:
 
 - A binding is a function the SDK calls to get a current value: {@link "@vestra-player/sdk"!View.bind | view.bind(() => props)} for a window, panel or settings page, and the function form of a command's `enabled`, `checked`, `busy` and `reason` ({@link "@vestra-player/sdk"!Bindable | Bindable}).
-- In an update pass the SDK calls every binding of the plugin, compares each result with the value it last sent, and sends only what changed.
+- In an update pass the SDK calls the bindings of the plugin, compares each result with the value it last sent, and sends only what changed.
 
-Update passes run:
+A **full pass** calls every binding. It runs:
 
 - after every handler the SDK calls returns (a command's `run`, a view callback, an `onChange`, `onStatus`, `onEnd` or `onStop` listener), and again when the promise it returned settles;
-- after the player, subtitle, panel position, filter or export state changes;
+- after the subtitle, window, panel position, timeline, appearance, filter or export state changes;
 - when the plugin calls {@link "@vestra-player/sdk"!Scope.update | plugin.update()}.
+
+A **precise pass** follows a change of the player state (SDK 1.5.45). While media plays the player sends its state about ten times a second, mostly with only `position` changed. The SDK notes which fields of `plugin.player.state` each binding read the last time it ran (each `view.bind` function on its own; a command's four functions together) and calls only the bindings that read a field that changed. A panel whose list reads nothing of the player state is not rebuilt on every position tick; a label that shows the position is. `player.isCurrent` and `Media.current` count as reading the source. A `player.onChange` listener is followed by a full pass, as above, unless it returned synchronously and read only fields that did not change.
+
+A precise pass cannot see state the plugin changed by itself. So while precise passes leave bindings out, a full pass follows at least once a second: a variable your own timer changed without `plugin.update()` appears within about a second (before SDK 1.5.45 it usually appeared at the next position tick). Call `plugin.update()` after such a change to show it at once.
 
 Several requests within one microtask are merged into one pass, and every target has at most one write in flight: values that change meanwhile are merged into the next write. A binding that changes 60 times a second therefore costs one write per round trip, never a growing queue.
 
@@ -109,7 +113,7 @@ sequenceDiagram
     S->>U: the label changes, Jump to bookmark is enabled
 ```
 
-The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers a pass; call `plugin.update()` after such a change. [Keep a slider responsive while dragging](../how-to/slider.md) shows the pattern; [How Slint and TypeScript talk](ui.md#how-slint-and-typescript-talk) explains `set` versus `bind` for views.
+The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next full pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers one (at most about a second while media plays); call `plugin.update()` after such a change. [Keep a slider responsive while dragging](../how-to/slider.md) shows the pattern; [How Slint and TypeScript talk](ui.md#how-slint-and-typescript-talk) explains `set` versus `bind` for views.
 
 ## Stopping
 

@@ -336,12 +336,22 @@ export abstract class ViewBase implements View {
       this.#binders.delete(props);
     });
   }
-  /** Current desired properties (bound values win over earlier `set`). */
+  /**
+   * Current desired properties (bound values win over earlier `set`). A
+   * precise pass (`Runtime.part`) skips a bind function that read none of
+   * the changed state: its last values stay.
+   */
   protected snapshot(): Record<string, PropValue> {
+    const runtime = this.scope.runtime;
     for (const [binder, site] of this.#binders) {
       try {
-        const props = this.scope.runtime.reader("a view's bind", site, binder);
-        for (const [key, value] of Object.entries(encode(props)))
+        // Encoded inside the part: what encoding reads counts as the
+        // function's (a state object it returned).
+        const result = runtime.part(binder, () =>
+          encode(runtime.reader("a view's bind", site, binder)),
+        );
+        if (!result) continue;
+        for (const [key, value] of Object.entries(result.value))
           this.#values.set(key, value);
       } catch (error) {
         this.scope.report(error);
