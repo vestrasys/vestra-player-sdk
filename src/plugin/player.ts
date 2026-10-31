@@ -429,7 +429,9 @@ class ScrubHandle implements Scrub {
   #pending: SourceStamp | null = null;
   readonly #watch: Disposable;
   readonly #queue: Latest<{ seconds: number; keyframes: boolean }>;
+  readonly #service: PlayerService;
   constructor(service: PlayerService) {
+    this.#service = service;
     this.#allowed = { ...service.raw.stamp };
     this.#watch = service.watch((raw) => {
       if (
@@ -488,6 +490,9 @@ class ScrubHandle implements Scrub {
     this.#active = false;
     this.#queue.stop();
     void this.#watch.dispose();
+    // `active` changed, maybe outside plugin code (a new source, a failed
+    // seek): bindings that read it see it in a full pass.
+    this.#service.runtime.invalidate();
   }
 }
 const superseded = new HostError("superseded", "gesture ended");

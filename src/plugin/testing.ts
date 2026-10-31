@@ -4145,6 +4145,13 @@ export class TestHost implements Transport {
    * for: on a loaded machine it can finish after `settle()` returns. Poll
    * the result you assert on instead (second example).
    *
+   * `settle()` does not wait for the SDK's once-a-second full update pass
+   * (SDK 1.5.45). After `setSource` (or another player state change) only
+   * the bindings that read a changed field of `plugin.player.state` run
+   * again; state the plugin changed outside a handler without
+   * `plugin.update()` shows only in the next full pass. Have the plugin
+   * call `plugin.update()` after such a change, or wait `settle(1000)`.
+   *
    * @param ms - Extra time to wait, for debounces and timers (default 0).
    *
    * @example Wait past a debounced save

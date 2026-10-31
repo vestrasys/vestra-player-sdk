@@ -23,6 +23,8 @@ function packageWith() {
       "  in property <float> position;",
       "  in property <string> note;",
       "  in property <int> rows;",
+      "  in property <[{rowId: string, label: string}]> list;",
+      "  callback poke();",
       "}",
       "export component Bar inherits Rectangle {}",
       "",
@@ -50,7 +52,7 @@ interface Counts {
 }
 
 async function setup(
-  extra: (plugin: Plugin, counts: Counts) => void = () => {},
+  extra: (plugin: Plugin, counts: Counts, panel: Panel) => void = () => {},
 ) {
   const host = new TestHost();
   host.setSource({ phase: "ready", duration: 100, position: 0 });
@@ -67,7 +69,7 @@ async function setup(
         counts.position++;
         return { position: plugin.player.state.position ?? 0 };
       });
-      extra(plugin, counts);
+      extra(plugin, counts, panel);
     },
     { host, directory: packageWith() },
   );
@@ -224,7 +226,7 @@ test("a listener that reads no field (or returns a promise) gets a full pass", a
 test("the safety pass: a full pass within SAFETY_PASS_MS of a precise pass that skipped", async () => {
   let note = "before";
   let notes = 0;
-  const { host, counts, reset, stop } = await setup((plugin) => {
+  const { host, plugin, counts, reset, stop } = await setup((plugin) => {
     plugin.commands.add({
       id: "note",
       title: "Note",
@@ -269,6 +271,10 @@ test("the safety pass: a full pass within SAFETY_PASS_MS of a precise pass that 
     mock.timers.tick(SAFETY_PASS_MS);
     await drain();
     assert.equal(notes, 2, "no safety pass after a full one");
+    // A pass armed under fake timers would never fire after the reset:
+    // leave none behind.
+    plugin.update();
+    await drain();
   } finally {
     mock.timers.reset();
   }
@@ -392,4 +398,183 @@ test("the player's runner path (createPlugin over a transport) skips and refresh
   await drain();
   assert.deepEqual(counts, { paused: 2, position: 4 }, "full pass after run");
   await instance.dispose();
+});
+
+test("a promise-returning onChange listener: a full pass now and when it settles", async () => {
+  let release!: () => void;
+  let note = "a";
+  const { host, counts, reset, stop } = await setup(
+    (plugin, _counts, panel) => {
+      panel.bind(() => ({ note }));
+      plugin.player.onChange(async (state) => {
+        void state.paused; // reads only an unchanged field, but is async
+        await new Promise<void>((resolve) => (release = resolve));
+        note = "b";
+      });
+    },
+  );
+  reset();
+  host.setSource({ position: 1 });
+  await host.settle();
+  assert.equal(counts.paused, 1, "full pass right after the listener");
+  release();
+  await host.settle();
+  assert.equal(counts.paused, 2, "and again when its promise settles");
+  assert.equal(host.mounted().props.note, "b");
+  await stop();
+});
+
+test("a full pass after a view callback", async () => {
+  let pokes = 0;
+  const { host, counts, reset, stop } = await setup(
+    (_plugin, _counts, panel) => {
+      panel.on("poke", () => {
+        pokes++;
+      });
+    },
+  );
+  reset();
+  host.mounted().emit("poke");
+  await host.settle();
+  assert.equal(pokes, 1);
+  assert.equal(counts.paused, 1);
+  assert.equal(counts.position, 1);
+  await stop();
+});
+
+test("a bind reading only module state changed by the plugin's own timer shows within about 1 s", async () => {
+  let note = "before";
+  const { host, stop } = await setup((plugin, _counts, panel) => {
+    panel.bind(() => ({ note }));
+    const timer = setTimeout(() => (note = "after"), 10); // no update()
+    plugin.onDispose(() => clearTimeout(timer));
+  });
+  await host.settle(20);
+  const started = Date.now();
+  // Playing: position ticks every 100 ms.
+  while (host.mounted().props.note !== "after" && Date.now() - started < 3000) {
+    host.setSource({ position: (Date.now() - started) / 1000 });
+    await host.settle(100);
+  }
+  const waited = Date.now() - started;
+  assert.equal(host.mounted().props.note, "after");
+  assert.ok(waited <= SAFETY_PASS_MS + 400, `${waited} ms`);
+  await stop();
+});
+
+test("precise passes and row patches: a position tick patches one row of a bound list", async () => {
+  const writes: { property: string; patch?: unknown; value?: unknown }[] = [];
+  const host = new TestHost();
+  const request = host.request.bind(host);
+  host.request = (async (
+    method: string,
+    params: Record<string, never> = {},
+  ) => {
+    if (method === "ui.setMount") writes.push(params as never);
+    return request(method, params);
+  }) as typeof host.request;
+  host.setSource({ phase: "ready", duration: 100, position: 0 });
+  let builds = 0;
+  let panel!: Panel;
+  const { stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("bottom", "bar.slint");
+      panel.bind(() => {
+        builds++;
+        const rows = Array.from({ length: 50 }, (_, i) => ({
+          rowId: `r${i}`,
+          label: `row ${i}`,
+        }));
+        rows[3]!.label = `row 3 at ${plugin.player.state.position}`;
+        return { list: rows };
+      });
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  writes.length = 0;
+  builds = 0;
+  host.setSource({ position: 5 });
+  await host.settle();
+  assert.equal(builds, 1);
+  const write = writes.find((w) => w.property === "list");
+  assert.ok(write?.patch, "a patch, not the whole list");
+  assert.deepEqual(
+    (write.patch as { ops: { op: string; at: number }[] }).ops.map((o) => [
+      o.op,
+      o.at,
+    ]),
+    [["set", 3]],
+  );
+  assert.equal(
+    (host.mounted().props.list as { label: string }[])[3]!.label,
+    "row 3 at 5",
+  );
+  host.setSource({ paused: true });
+  await host.settle();
+  assert.equal(builds, 1, "a paused change leaves the list alone");
+  await stop();
+});
+
+test("disposing the plugin cancels a pending safety pass", async () => {
+  const { createPlugin } = await import("../src/plugin/index.ts");
+  type Listener = (data: unknown) => void;
+  const listeners = new Map<string, Set<Listener>>();
+  let source = {
+    ...new TestHost().source,
+    phase: "ready" as const,
+    position: 0,
+  };
+  const transport = {
+    async request<T>(method: string): Promise<T> {
+      if (method === "source.state") return source as T;
+      return null as T;
+    },
+    on(event: string, listener: Listener) {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event)!.add(listener);
+      return () => listeners.get(event)!.delete(listener);
+    },
+  };
+  const instance = await createPlugin(
+    transport,
+    { id: "x", capabilities: ["playback.read", "events", "commands"] },
+    process.cwd(),
+  );
+  let passes = 0;
+  instance.plugin.commands.add({
+    id: "n",
+    title: "N",
+    reason: () => (passes++, "x"),
+    run: () => {},
+  });
+  // Keeps the binding alive after dispose would remove the command's own.
+  const runtime = (
+    instance.plugin as unknown as { runtime: { bind(f: () => void): unknown } }
+  ).runtime;
+  runtime.bind(() => {
+    passes++;
+  });
+  await instance.activated();
+  await drain();
+  mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    passes = 0;
+    source = {
+      ...source,
+      position: 1,
+      eventSequence: source.eventSequence + 1,
+    };
+    for (const listener of listeners.get("source.state") ?? [])
+      listener(source);
+    await drain();
+    assert.equal(passes, 0, "skipped: a safety pass is armed");
+    await instance.dispose();
+    mock.timers.tick(SAFETY_PASS_MS * 2);
+    await drain();
+    assert.equal(passes, 0, "no safety pass after dispose");
+  } finally {
+    mock.timers.reset();
+  }
 });

@@ -48,6 +48,8 @@ host.handle("processing.replace", () => {
 
 `await host.settle()` after every action that makes the plugin talk to the player; `host.settle(400)` also lets debounces and timers due by then fire. Then assert on what the host recorded: `host.window(id).props` (kebab-case names), `host.command(id).state`, `host.osd`, `host.source`.
 
+`settle` does not wait for the once-a-second full update pass (SDK 1.5.45): after `host.setSource(...)` only the bindings that read a changed field of `plugin.player.state` run again. A value your plugin changed outside a handler (a timer, a promise continuation, a child process) without `plugin.update()` shows in the next full pass, at most about a second later; call `plugin.update()` in the plugin after such a change, or wait `await host.settle(1000)` in the test.
+
 `settle` waits only for calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine; poll the value you assert on instead:
 
 ```ts nocheck

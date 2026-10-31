@@ -167,7 +167,7 @@ A tool window ({@link "@vestra-player/sdk"!Window | Window}), a panel ({@link "@
 
 |                  | `set({ x })`                                                                            | `bind(() => ({ x }))`                                                                 |
 | ---------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| When it is sent  | Immediately (in the next write).                                                        | In every update pass, if `x` differs from the last value sent.                        |
+| When it is sent  | Immediately (in the next write).                                                        | In every full update pass, and after a player state change if the function read a changed field; when `x` differs from the last value sent. |
 | Same value again | Sent again. Use this to pull a control back to the model value after the user moved it. | Not sent. A field the user edited stays as the user left it until your value changes. |
 | Write fails      | Retried with back-off (0.25 s doubling up to 30 s).                                     | Not repeated until the value changes.                                                 |
 | Typical use      | One-off values: a document, a reset.                                                    | Everything derived from plugin state: labels, enabled flags, lists, status lines.     |

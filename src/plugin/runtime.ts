@@ -237,6 +237,8 @@ export class Runtime {
   #safety: ReturnType<typeof setTimeout> | undefined;
   /** The running pass skipped a binding or a part. */
   #skipped = false;
+  /** The plugin was disposed: no safety pass is armed any more. */
+  #stopped = false;
   readonly #events = new Map<string, EventGroup>();
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
@@ -562,13 +564,19 @@ export class Runtime {
         this.#pass = undefined;
       }
     }
-    if (this.#skipped && !this.#safety) {
+    if (this.#skipped && !this.#safety && !this.#stopped) {
       this.#safety = setTimeout(() => {
         this.#safety = undefined;
         this.invalidate();
       }, SAFETY_PASS_MS);
       this.#safety.unref?.();
     }
+  }
+  /** The plugin was disposed: cancel the pending safety pass, arm no more. */
+  stop() {
+    this.#stopped = true;
+    clearTimeout(this.#safety);
+    this.#safety = undefined;
   }
   /**
    * Host events with one `events.subscribe` per name, however many listeners.

@@ -62,6 +62,9 @@ export async function createPlugin(
   return {
     plugin: root,
     activated: () => runtime.activated(),
-    dispose: () => root.dispose(),
+    dispose: async () => {
+      await root.dispose();
+      runtime.stop();
+    },
   };
 }
