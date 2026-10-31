@@ -43,6 +43,12 @@ The player can draw the video on the GPU or in software, and keeps the user's ch
 
 [Read the guide](gpu-rendering.md)
 
+## Keep a command's state without keeping the plugin running
+
+A menu item whose `enabled` or `checked` is a function that reads `plugin.player.state` keeps the plugin running, because the SDK must evaluate it on every change. The guide finds such bindings with `TestHost.keepsRunning`, replaces them with `plugin.when` conditions that the player evaluates itself (`when.can("snapshot")`, `when.theme(id)`, combined with `and`, `or`, `not`), keeps the plugin's own state as values, and tests that nothing keeps the plugin running.
+
+[Read the guide](command-state.md)
+
 ## Translate a plugin
 
 The player shows its interface in seven languages, chosen at start-up. A plugin writes every text in English (menu paths and titles, `@tr("…")` in its Slint files, templates such as `osd.show("Speed {}×", [rate])`) and ships one gettext file per language in `locales/`; the player translates, and the plugin contains no translation code. The guide covers the three places text lives, `vestra-plugin i18n extract` and `check`, and testing in another language.

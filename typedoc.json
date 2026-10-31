@@ -74,7 +74,8 @@
     "yaml",
     "tsx",
     "typescript",
-    "rust"
+    "rust",
+    "glsl"
   ],
   "ignoredHighlightLanguages": ["slint", "po", "mermaid"],
   "jsDocCompatibility": {

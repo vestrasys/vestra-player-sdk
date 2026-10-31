@@ -497,6 +497,15 @@ export function createWire(transport: Transport) {
           { values },
         ),
       renderRelease: () => transport.request<void>("video.render.release"),
+      /**
+       * One shader channel handle's list (`plugin.video.shaders(id)`, player
+       * 0.5.20); `[]` removes it.
+       */
+      shadersSet: (id: string, paths: string[]) =>
+        transport.request<{ state: "applied" | "waiting" }>(
+          "video.shaders.set",
+          { id, paths },
+        ),
       /** The GPU's video upscaler (`plugin.video.upscaling`, player 0.5.16). */
       upscalingState: () =>
         transport.request<WireUpscalingState>("video.upscaling.state"),
@@ -681,6 +690,8 @@ export function createWire(transport: Transport) {
         event: HostEvent,
         listener: (data: unknown) => void,
         mirror = false,
+        /** What listens (player 0.5.21 logs it; older players ignore it). */
+        why?: string[],
       ) {
         const off = transport.on(event, listener);
         let subscription = subscriptions.get(event);
@@ -689,7 +700,11 @@ export function createWire(transport: Transport) {
             count: 0,
             ready: transport.request(
               "events.subscribe",
-              mirror ? { event, mirror: true } : { event },
+              mirror
+                ? { event, mirror: true }
+                : why?.length
+                  ? { event, why }
+                  : { event },
             ),
           };
           subscriptions.set(event, subscription);
@@ -719,10 +734,14 @@ export function createWire(transport: Transport) {
        * again, which replaces the mark (player 0.5.18; older players keep
        * one subscription per name and ignore the mark).
        */
-      listen: (event: HostEvent, active: boolean) =>
+      listen: (event: HostEvent, active: boolean, why?: string[]) =>
         transport.request<void>(
           "events.subscribe",
-          active ? { event } : { event, mirror: true },
+          active
+            ? why?.length
+              ? { event, why }
+              : { event }
+            : { event, mirror: true },
         ),
     },
     ui: {

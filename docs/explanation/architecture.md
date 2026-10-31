@@ -238,25 +238,39 @@ Source: src/host/src/playback/render_mode.rs
 
 `gpu_opt_in` is `platform::GPU_OPT_IN`: `true` on Windows, `false` on macOS. So on macOS the player renders on the GPU unless something rules it out, and on Windows it renders in software until the user turns on **Video ▸ GPU Rendering (Experimental)**. That menu item belongs to the built-in video plugin, which saves the preference with `plugin.rendering.setPreference`; the choice applies at the next start ([Offer a GPU rendering switch](../how-to/gpu-rendering.md)). Linux has no GPU renderer and always renders in software.
 
-The decision also picks Slint's window renderer, and a GPU mode whose windows cannot be created falls back to software rendering before the first window opens:
+The decision also picks Slint's window renderer. A GPU mode whose windows cannot be created falls back to software rendering before the first window opens, and on Windows CPU mode's own Direct3D 12 windows fall back the same way, to OpenGL (femtovg) windows, or to Slint's software renderer where OpenGL is ruled out or fails (`select_cpu_windows`):
 
 ```rust
 let gpu_windows = match render.windows {
-    render_mode::WindowKind::Wgpu => {
-        // …
-        platform::select_wgpu_windows(winit)
-    }
+    render_mode::WindowKind::Wgpu if render.is_gpu() => wgpu_windows(),
     render_mode::WindowKind::OpenGl if render.is_gpu() => winit()
         .renderer_name("femtovg".into())
         .select()
         .map_err(|error| format!("the OpenGL window renderer is unavailable: {error}")),
     _ => Ok(()),
 };
+if let Err(error) = gpu_windows {
+    render = render.fall_back(render_mode::Reason::InitFailed(error));
+    // …
+}
+if !render.is_gpu() && render.windows == render_mode::WindowKind::Wgpu {
+    // CPU mode in Direct3D 12 windows: software video uploaded once
+    // per frame, flip model with vsync.
+    if let Err(error) = wgpu_windows() {
+        // …
+        render = render.without_wgpu_windows();
+    }
+}
+if !render.is_gpu() && render.windows != render_mode::WindowKind::Wgpu {
+    select_cpu_windows(render.windows, winit)?;
+}
 ```
 
 Source: src/host/src/main.rs
 
-Rendering can go from GPU to software at run time (a renderer that fails to start, a window that cannot show its frames), never back. A crash guard marks each GPU start until it has run five seconds; a start that finds the mark left behind counts as a crash and keeps GPU rendering off; on Windows a lost window device restarts the player on the same file (`host/restart.rs`).
+`wgpu_windows` is a closure that first registers the restart on a lost window device, then calls `platform::select_wgpu_windows`.
+
+Rendering can go from GPU to software at run time (a renderer that fails to start, a window that cannot show its frames), never back. A crash guard marks each GPU start, and on Windows each start of CPU mode's Direct3D 12 windows (a driver that crashes there would crash every start). GPU mode clears the mark on a timer of about five seconds; CPU mode's Direct3D 12 windows clear it once the first video picture was shown, or after three draws of the main window while no media is being opened, and otherwise on the same five-second timer (`render_state.rs`, `windows_started`). A start that finds the mark left behind counts as a crash: it keeps GPU rendering off and also CPU mode's Direct3D 12 windows; on Windows a lost window device restarts the player on the same file (`host/restart.rs`).
 
 ### Software rendering
 
@@ -298,7 +312,7 @@ frames.set_waker(Box::new(|| {
 
 Source: src/host/src/main.rs
 
-The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too by default, and fall back to software windows when the driver denylist, the crash guard, `SLINT_BACKEND` or `VESTRA_WINDOW_RENDERER` rule it out or the windows cannot be created. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
+The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too by default, unless a Direct3D 12 rule of the driver denylist, the crash guard, `SLINT_BACKEND` or `VESTRA_WINDOW_RENDERER` rules it out or the windows cannot be created. Without them the windows are femtovg on OpenGL, or Slint's software renderer under an OpenGL rule of the driver denylist or when OpenGL windows cannot be created; with `SLINT_BACKEND` set, Slint chooses CPU mode's windows, and `VESTRA_WINDOW_RENDERER=gl|software` chooses them too. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
 
 ### GPU rendering
 

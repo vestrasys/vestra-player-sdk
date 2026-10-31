@@ -3,6 +3,7 @@ import { failure, toError } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { Disposable, Plugin, PluginError, Scope } from "./types.ts";
 import { commands } from "./commands.ts";
+import { WHEN } from "./when.ts";
 import { dialogs, panels, ui, windows } from "./ui.ts";
 import { timeline } from "./timeline.ts";
 import { drops } from "./drops.ts";
@@ -12,6 +13,7 @@ import { i18n } from "./language.ts";
 import { player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { videoRender, videoView } from "./view.ts";
+import { videoShaders } from "./shaders.ts";
 import { subtitles } from "./subtitles.ts";
 import { mediaCapture } from "./media.ts";
 import { resolvers } from "./resolvers.ts";
@@ -54,6 +56,7 @@ export class ScopeImpl implements Plugin {
     return this.#disposed || (this.#parent?.disposed ?? false);
   }
   readonly commands = commands(this);
+  readonly when = WHEN;
   readonly windows = windows(this);
   readonly panels = panels(this);
   readonly dialogs = dialogs(this);
@@ -62,6 +65,7 @@ export class ScopeImpl implements Plugin {
     ...videoFilters(this),
     view: () => videoView(this),
     render: () => videoRender(this),
+    shaders: (id?: string) => videoShaders(this, id),
     upscaling: videoUpscaling(this),
   };
   readonly audio = audioFilters(this);

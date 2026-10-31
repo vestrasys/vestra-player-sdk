@@ -4,9 +4,11 @@ import { checkBindings } from "./bindings.ts";
 import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, MENU_IDS } from "../commands.ts";
 import { ImageHandle } from "./ui.ts";
 import { isTextValue, textProblem } from "../i18n.ts";
+import { conditionJson, isCondition } from "./when.ts";
 import type {
   CommandDeclaration,
   CommandState as WireState,
+  CommandWhen,
 } from "../commands.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
@@ -16,11 +18,35 @@ import type {
   CommandOptions,
   CommandState,
   Commands,
+  Condition,
 } from "./types.ts";
 
-type Spec = { [K in keyof CommandState]: Bindable<CommandState[K]> };
+type Spec = {
+  enabled: Bindable<boolean> | Condition;
+  checked: Bindable<boolean | null> | Condition;
+  busy: Bindable<boolean>;
+  reason: Bindable<CommandState["reason"]>;
+};
 const value = <T>(item: Bindable<T>): T =>
   typeof item === "function" ? (item as () => T)() : item;
+/** What a command sends: its state, and its conditions (`plugin.when`). */
+type Sent = { state: CommandState; when?: CommandWhen };
+/** A field's value, or `fallback` (and its condition noted) for a condition. */
+function field<T>(
+  item: Bindable<T> | Condition,
+  fallback: T,
+  name: "enabled" | "checked",
+  when: CommandWhen,
+): T {
+  if (!isCondition(item)) return value(item);
+  when[name] = conditionJson(item);
+  return fallback;
+}
+/** How the player's log names a command: its title, else its id. */
+const label = (options: CommandOptions) => {
+  const title = options.title ?? options.path?.at(-1);
+  return `command "${typeof title === "string" ? title : options.id}"`;
+};
 
 /** Validate options and build the wire declaration. */
 function declare(options: CommandOptions): CommandDeclaration {
@@ -131,14 +157,19 @@ class CommandHandle implements Command {
   #last = "";
   #disposed = false;
   #registered = false;
-  readonly #pump: Latest<CommandState>;
+  readonly #pump: Latest<Sent>;
+  readonly #label: string;
+  /** Where the plugin added it, for the player's log. */
+  readonly #where: () => string | undefined;
   readonly #binding;
   constructor(scope: ScopeImpl, options: CommandOptions) {
     const runtime = scope.runtime;
+    this.#where = runtime.callSite();
     if (runtime.commands.has(options.id))
       throw failure("conflict", `command ${options.id} is already declared`);
     this.id = options.id;
     this.#scope = scope;
+    this.#label = label(options);
     this.#spec = {
       enabled: options.enabled ?? true,
       checked: options.checked ?? null,
@@ -149,7 +180,7 @@ class CommandHandle implements Command {
     // The host requires a strictly increasing revision per update; the
     // registration itself is revision 1, so every later state follows it.
     const previous = removing(runtime).get(this.id);
-    this.#pump = new Latest(async (state) => {
+    this.#pump = new Latest(async ({ state, when }) => {
       const revision = ++this.#revision;
       if (revision === 1) {
         await previous;
@@ -158,6 +189,7 @@ class CommandHandle implements Command {
           1,
           declaration,
           state as WireState,
+          when,
         );
         this.#registered = true;
       } else
@@ -165,6 +197,7 @@ class CommandHandle implements Command {
           this.id,
           revision,
           state as WireState,
+          when,
         );
     });
     const initial = this.#state();
@@ -180,20 +213,45 @@ class CommandHandle implements Command {
     this.#binding = runtime.bind(() => this.#sync());
     scope.add(this);
   }
-  #state(): CommandState {
-    const reason = value(this.#spec.reason);
+  /**
+   * The state to send. A condition field is sent as a placeholder with the
+   * condition in `when`: the player evaluates it. Each function field is
+   * evaluated under its own name, so what it reads is reported as this
+   * command's (`Runtime.reader`).
+   */
+  #state(): Sent {
+    const runtime = this.#scope.runtime;
+    const spec = this.#spec;
+    const as = <T>(name: string, read: () => T) =>
+      runtime.reader(
+        `${this.#label} ${name}`,
+        this.#where,
+        read,
+        name === "enabled" || name === "checked",
+      );
+    // enabled and checked first: what they read is reported as theirs
+    // (a condition can replace them), not as the reason's.
+    const when: CommandWhen = {};
+    const enabled = as("enabled", () =>
+      field(spec.enabled, true, "enabled", when),
+    );
+    const checked = as("checked", () =>
+      field<boolean | null>(spec.checked, false, "checked", when),
+    );
+    const reason = as("reason", () => value(spec.reason));
     if (reason !== null && typeof reason !== "string") {
       const problem = isTextValue(reason)
         ? textProblem(reason)
         : "reason is a string, a text or null";
       if (problem) throw failure("invalid", `command ${this.id}: ${problem}`);
     }
-    return {
-      enabled: value(this.#spec.enabled),
-      checked: value(this.#spec.checked),
-      busy: value(this.#spec.busy),
+    const state = {
+      enabled,
+      checked,
+      busy: as("busy", () => value(spec.busy)),
       reason,
     };
+    return Object.keys(when).length ? { state, when } : { state };
   }
   #sync() {
     if (this.#disposed) return;

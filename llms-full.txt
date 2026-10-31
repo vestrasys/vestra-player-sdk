@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.38: full reference
+# @vestra-player/sdk 1.5.42: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -421,6 +421,267 @@ npm run pack     # vestra-plugin pack: build dist/, then me.hello-0.1.0.vxp
 #### 4. Publish
 
 Push the plugin to a public GitHub repository owned by the user or organization your id starts with, then register it in the plugin repository with a pull request. The registration file, the checks on the pull request and what happens after the merge are in Publish a plugin.
+
+## Tutorial: Write your own blur kernel
+
+In this tutorial you blur the video with a kernel you write yourself: nine numbers that say how much of each neighbouring pixel goes into the new one. You run the kernel twice, first as a GPU shader and then in the player's filter chain, where it also applies to snapshots and exports. Only at the end do you meet the ready-made Gaussian blur, which does the same job in one line.
+
+#### Before you start
+
+Finish Getting started, so you know the plugin folder, the manifest and `vestra-player --plugin <folder>`. You need Vestra Player 0.5.20 or newer and a video to play. The shader steps need GPU rendering: on macOS it is on unless something rules it out; on Windows turn on **Video ▸ GPU Rendering (Experimental)** and restart the player (GPU and software rendering). Everything from step 4 on works with either renderer.
+
+Start a new folder, `blur-kernel/`, set up as in Getting started, with this `manifest.json`:
+
+```json
+{
+  "id": "me.blur-kernel",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.5.20",
+  "capabilities": [
+    "commands",
+    "ui.osd",
+    "processing.video",
+    "playback.read",
+    "events",
+    "media.read",
+    "media.control",
+    "subtitles.read"
+  ]
+}
+```
+
+`processing.video` opens `plugin.video`, which also needs `playback.read` (and `events` for the filter chain, so it hears when a video becomes ready). `media.read` and `media.control` are for the snapshot in step 6; a processed snapshot also needs `subtitles.read`, because it can include the subtitle on screen. `0.5.20` is the first player with shader handles and the `convolution` node.
+
+#### 1. Understand the kernel
+
+A blur replaces every pixel with a weighted average of itself and its neighbours. The weights form a small grid centred on the pixel, the **kernel**. Here is the one you will use:
+
+```text
+1  2  1
+2  4  2
+1  2  1
+```
+
+- **The centre, 4**, is the pixel itself. It has the largest weight, so the picture stays recognisable.
+- **The edges, 2**, are the four direct neighbours (left, right, above, below). They are close, so they count half as much as the centre.
+- **The corners, 1**, are the diagonal neighbours, a little further away, so they count least.
+- **The sum is 16.** Dividing the weighted sum by 16 makes the weights add up to 1. That is **normalization**: a flat grey area stays the same grey, so the blur softens edges without making the picture brighter or darker. Divide by less and the picture brightens; by more and it darkens.
+
+The rows are `1 2 1` multiplied by `1 2 1`: a small binomial kernel, the closest whole-number cousin of a Gaussian blur. Wider kernels in step 5 come from the same idea.
+
+#### 2. Write the kernel as a shader
+
+A GPU shader runs once for every pixel on the graphics card. The player accepts mpv user shaders (`.glsl` files). Create `shaders/blur.glsl` in the plugin folder:
+
+```glsl
+//!HOOK MAIN
+//!BIND HOOKED
+//!DESC Blur 3x3 (tutorial)
+
+vec4 hook() {
+    // The kernel, row by row: each sample is the pixel at that offset
+    // (in pixels) times its weight.
+    vec4 sum = vec4(0.0);
+    sum += 1.0 * HOOKED_texOff(vec2(-1.0, -1.0));
+    sum += 2.0 * HOOKED_texOff(vec2( 0.0, -1.0));
+    sum += 1.0 * HOOKED_texOff(vec2( 1.0, -1.0));
+    sum += 2.0 * HOOKED_texOff(vec2(-1.0,  0.0));
+    sum += 4.0 * HOOKED_texOff(vec2( 0.0,  0.0));
+    sum += 2.0 * HOOKED_texOff(vec2( 1.0,  0.0));
+    sum += 1.0 * HOOKED_texOff(vec2(-1.0,  1.0));
+    sum += 2.0 * HOOKED_texOff(vec2( 0.0,  1.0));
+    sum += 1.0 * HOOKED_texOff(vec2( 1.0,  1.0));
+    // Normalization: the weights add up to 16.
+    return sum / 16.0;
+}
+```
+
+- `//!HOOK MAIN` runs the shader on the main picture, after it was converted to RGB and before it is scaled to the window.
+- `//!BIND HOOKED` makes that picture readable as `HOOKED`; `HOOKED_texOff(offset)` reads the pixel `offset` pixels away from the current one.
+- `hook()` returns the new colour of the current pixel.
+
+The file belongs to the plugin: the player only takes shaders from the plugin's package directory or its data directory, at most 16 MiB each.
+
+#### 3. Apply the shader from a menu item
+
+Write `main.ts`. A shader handle from `plugin.video.shaders()` holds this plugin's list of shader files; `set` replaces the list and `clear` empties it:
+
+```ts
+import { join } from "node:path";
+// ConvolutionPlane is for step 4.
+import type { ConvolutionPlane, Plugin } from "@vestra-player/sdk";
+
+export default function activate(plugin: Plugin) {
+  // The package directory is where main.ts is.
+  const shaderFile = join(import.meta.dirname, "shaders", "blur.glsl");
+  const shaders = plugin.video.shaders("blur");
+  let shaderOn = false;
+
+  plugin.commands.add({
+    id: "blur-shader",
+    path: ["@video", "Blur (Shader)"],
+    checked: () => shaderOn,
+    run: () => {
+      shaderOn = !shaderOn;
+      if (shaderOn) shaders.set([shaderFile]);
+      else shaders.clear();
+    },
+  });
+
+  // A shader that does not compile, or software rendering, ends up here;
+  // the player has dropped the list, so the item is unchecked again.
+  shaders.onStatus((status) => {
+    if (status.state !== "failed") return;
+    shaderOn = false;
+    void plugin.osd.show("Blur shader: {}", [status.error.message]);
+  });
+}
+```
+
+Run the player with `--plugin ./blur-kernel`, play a video and choose **Video ▸ Blur (Shader)**. The picture softens; choose it again and it is sharp.
+
+- Paths are absolute. `import.meta.dirname` is the folder of the entry module: `main.ts` in development, the built `main.js` in the installed package. Both sit at the top of the package, so it is the package directory.
+- `set` never throws: a refusal shows in `status`. `unsupported` means the player renders in software; `missing` means the file is not there; a shader with a syntax error is reported after it was accepted, which is why the plugin listens with `onStatus`. The player cannot tell whose shader failed to compile, so it tells every plugin that holds shaders: while another plugin's shaders are on too, the message may be about theirs. Under software rendering, or when the player switches to it, the status is `failed` with `unsupported` and the list is removed; that is why the listener unchecks the item.
+- Other plugins may hold shaders at the same time; the player runs every plugin's list, at most 16 shaders in all (Limits).
+
+Shaders act only where the picture is drawn on the GPU. They are not part of snapshots or exports, and they do nothing under software rendering. The next steps run the same kernel where both work.
+
+#### 4. Write the kernel as a convolution node
+
+First choose **Video ▸ Blur (Shader)** again so it is unchecked; otherwise you would see two blurs on top of each other. The player's filter chain processes every decoded frame on the CPU before it is drawn. A `convolution` node runs your own integer kernel there (FFmpeg's `convolution` filter). Add to the end of `activate`:
+
+```ts
+// The same kernel, row by row: 9 entries make a 3×3 square.
+const kernel3: ConvolutionPlane = {
+  mode: "square",
+  matrix: [
+    1, 2, 1,
+    2, 4, 2,
+    1, 2, 1,
+  ],
+  rdiv: 1 / 16, // normalization: multiply the weighted sum by 1/16
+  bias: 0, // nothing added afterwards
+};
+const filter = plugin.video.filter("blur");
+let filterOn = false;
+
+plugin.commands.add({
+  id: "blur-filter",
+  path: ["@video", "Blur (Filter)"],
+  checked: () => filterOn,
+  run: () => {
+    filterOn = !filterOn;
+    // One kernel for each plane: brightness and the two colour planes.
+    filter.set(filterOn ? [{ kind: "convolution", planes: [kernel3, kernel3, kernel3] }] : []);
+  },
+});
+```
+
+Choose **Video ▸ Blur (Filter)**: the same softening as the shader, now with either renderer.
+
+- **`planes`** has one entry per plane of the decoded picture. Most video is YUV: plane 0 is the brightness (luma), planes 1 and 2 are the colour (chroma). A `null` entry, or a missing one, leaves that plane alone, so `[kernel3]` alone would blur only the brightness.
+- **`matrix`** is the kernel row by row, whole numbers only. A `square` kernel has 9, 25 or 49 entries: 3×3, 5×5 or 7×7.
+- **`rdiv`** multiplies the weighted sum; it is the normalization the shader did with `/ 16.0`. `0` means "divide by the sum of the matrix", so `rdiv: 0` is the same here, and keeps working when you change the numbers.
+- **`bias`** is added after the multiplication, in the plane's sample units. A blur needs none; an edge-detection kernel, whose weights add up to 0, uses 128 to put "no edge" at mid grey in 8-bit video.
+- Each output is clipped to the sample range, so a kernel that is not normalized saturates instead of wrapping around.
+
+The player checks the node as it is set: entries are integers from −1024 to 1024, `rdiv` is 0–256 and `bias` 0–65535 (`VIDEO_PROCESSING_LIMITS`, in Limits); anything else fails with `invalid` and shows in `filter.status`.
+
+A filter chain needs the frames in memory, so while it is on the player decodes with copy-back instead of zero-copy. That is the price of a chain that also reaches snapshots and exports.
+
+#### 5. Make the blur wider
+
+A 3×3 kernel reaches one pixel in each direction. To blur more, use a larger binomial kernel. Its rows are the rows of Pascal's triangle, and a square kernel is a row multiplied by itself:
+
+```ts
+// Row n of Pascal's triangle: 1 4 6 4 1 for n = 4.
+function binomial(n: number): number[] {
+  const row = [1];
+  for (let k = 1; k <= n; k++) row.push((row[k - 1]! * (n - k + 1)) / k);
+  return row;
+}
+const row5 = binomial(4); // 1 4 6 4 1, sum 16
+const kernel5: ConvolutionPlane = {
+  mode: "square",
+  matrix: row5.flatMap((a) => row5.map((b) => a * b)), // 25 entries, sum 256
+  rdiv: 0, // divide by the sum
+  bias: 0,
+};
+```
+
+Use `kernel5` in place of `kernel3` in the **Blur (Filter)** command and run it again: the blur reaches two pixels in each direction. The entries are the products of the row with itself, from 1 in the corners to 36 in the centre; with `rdiv: 0` the player divides by their sum, 256.
+
+A square kernel stops at 7×7. For a wider blur use two nodes, a `row` kernel and then a `column` kernel. Blurring across and then down gives the same result as the square kernel, apart from rounding between the two passes, at a fraction of the work, and `row` and `column` take any odd number of entries up to 49:
+
+```ts
+function binomial(n: number): number[] {
+  const row = [1];
+  for (let k = 1; k <= n; k++) row.push((row[k - 1]! * (n - k + 1)) / k);
+  return row;
+}
+const filter = plugin.video.filter("blur");
+// ---cut---
+const taps = binomial(12); // 13 entries, the largest is 924
+const across = { mode: "row", matrix: taps, rdiv: 0, bias: 0 } as const;
+const down = { mode: "column", matrix: taps, rdiv: 0, bias: 0 } as const;
+filter.set([
+  { kind: "convolution", planes: [across, across, across] },
+  { kind: "convolution", planes: [down, down, down] },
+]);
+```
+
+Put this chain in the command's `filter.set` instead of the single node. The limit on entries decides how far this goes: `binomial(12)` has 924 in the middle, while `binomial(14)` would need 3432, more than the 1024 the player accepts. A binomial kernel of `n + 1` entries blurs like a Gaussian with a sigma of √n ⁄ 2: about 0.7 pixels for 3 entries, 1 for 5 and 1.7 for 13. The colour planes are often half the size of the brightness plane, so the same kernel blurs the colour twice as far; that is normal for YUV video.
+
+#### 6. Check that snapshots include it
+
+Because the convolution runs in the filter chain, a **processed** snapshot contains it, which the shader never does. Add a command that saves the current frame with this plugin's effects:
+
+```ts
+import { join } from "node:path";
+// ---cut---
+plugin.commands.add({
+  id: "save-blurred",
+  path: ["@video", "Save Blurred Frame"],
+  run: async () => {
+    const snapshot = await plugin.media.capture({
+      ifCurrent: plugin.player.state,
+      processed: true, // with this plugin's filter chain
+      subtitles: false,
+    });
+    try {
+      const destination = join(plugin.dataDirectory, "blurred.png");
+      const job = await snapshot.export({ format: "png", destination });
+      await job.done;
+      await plugin.osd.show("Saved {}", [destination]);
+    } finally {
+      await snapshot.dispose();
+    }
+  },
+});
+```
+
+With **Blur (Filter)** on, the saved PNG is blurred; with only **Blur (Shader)** on, it is sharp. Exports of clips work the same way.
+
+#### 7. Take the shortcut: gblur
+
+You now know what a blur kernel does. For everyday use the filter chain has a ready-made Gaussian blur, FFmpeg's `gblur`, which builds the kernel for you from one number:
+
+Replace the chain in the **Blur (Filter)** command's `filter.set(...)` with this one:
+
+```ts
+const filter = plugin.video.filter("blur");
+// ---cut---
+// sigma 0–10: the blur's radius, the same measure as in step 5.
+filter.set([{ kind: "gblur", sigma: 1.7, steps: 3 }]);
+```
+
+- `sigma` is live: changing it moves the blur in place without rebuilding the chain, which makes it the right choice for a slider (Keep a slider responsive while dragging). Changing a `convolution` matrix rebuilds that stage, which may stall the picture for one frame.
+- `steps` is always 3.
+- Like the convolution, it runs in the filter chain, so it reaches snapshots and exports.
+
+Use `gblur` when you want a blur; write a `convolution` when you want a kernel of your own (sharpen, emboss, edges, a directional blur); write a shader when the effect must run on the GPU and only on screen.
 
 ## How-to: Control playback
 
@@ -1277,6 +1538,163 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
+## How-to: Keep a command's state without keeping the plugin running
+
+**Goal:** a "Save Snapshot" item that is greyed out unless there is a frame to capture, and a pair of palette items with a check mark on the palette in use, all following the player while your plugin is stopped because nothing used it; plus a test that fails if something keeps the plugin running.
+
+A function such as `enabled: () => plugin.player.state.phase === "ready"` is evaluated by the SDK, inside your plugin, so the plugin must run to keep it current. A condition from plugin.when is evaluated by the player itself. Why this matters for idle plugins is in Conditions the player evaluates.
+
+#### Steps
+
+##### Require player 0.5.21
+
+`plugin.when` exists from player 0.5.21 (SDK 1.5.40); older players build the `plugin` object without it. Set `"minPlayerVersion": "0.5.21"` in the manifest. Conditions need no capability of their own; the command they are given to needs `commands`.
+
+##### Find what keeps the plugin running
+
+Start the plugin in a test and read host.keepsRunning. Each line names the event, what listens to it and where the plugin added it:
+
+```ts
+import { startPlugin } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+const { host, stop } = await startPlugin(activate, {
+  directory: new URL("..", import.meta.url),
+});
+console.log(host.keepsRunning);
+// [ 'listens to source.state: command "Save Snapshot…" enabled is a function
+//    that reads plugin.player.state (main.ts:12) — use plugin.when' ]
+await stop();
+```
+
+A function that reads the player's state subscribes to its events, so this reason appears only when the manifest declares `events`. The player's log says the same when it keeps an installed plugin running, and at the start of a development load (`--plugin`).
+
+##### Replace the function with a condition
+
+Write the same test as a condition. `when.can("snapshot")` is the player's own `PlayerState.can.snapshot`, `when.phase("ready", "ended")` the source's phase, and `when.stream` a generated stream:
+
+```ts
+declare function saveSnapshot(): Promise<void>;
+// ---cut---
+const { when } = plugin;
+plugin.commands.add({
+  id: "save",
+  path: ["@video", "Save Snapshot…"],
+  enabled: when.can("snapshot").and(when.phase("ready", "ended"), when.stream.not()),
+  reason: "No frame to capture", // shown only while disabled
+  run: saveSnapshot,
+});
+```
+
+`and`, `or` and `not()` return new conditions and leave the original as it is. With an `enabled` condition the player shows `reason` only while the item is disabled, so a fixed text is enough; a `reason` function that reads the player's state would keep the plugin running again.
+
+##### Use checked conditions for radio items
+
+`checked` takes a condition too. A radio group over the palettes needs no `appearance.onChange`:
+
+```ts
+const { when } = plugin;
+for (const [id, title] of [["vestra", "Dark"], ["vestra-light", "Light"]] as const)
+  plugin.commands.add({
+    id: `theme.${id}`,
+    path: ["Settings", "Appearance", title],
+    radio: true,
+    checked: when.theme(id),
+    run: () => plugin.appearance.set(id),
+  });
+```
+
+##### Keep the plugin's own state as values
+
+The vocabulary names only the player's state. For the plugin's own state (a setting, a mode), set a plain value with Command.set when it changes: a value is sent once and nothing listens. The player keeps the last value while the plugin is stopped; keep the state itself in `plugin.storage.session` (or `plugin.storage.json` for a setting) so `activate` starts from it again.
+
+```ts
+let skip = (await plugin.storage.session.get<boolean>("skip-intros")) === true;
+const toggle = plugin.commands.add({
+  id: "skip-intros",
+  path: ["@playback", "Skip Intros"],
+  checked: skip, // a value: nothing listens
+  run: async () => {
+    skip = !skip;
+    toggle.set({ checked: skip });
+    await plugin.storage.session.set("skip-intros", skip);
+  },
+});
+```
+
+A function that reads only the plugin's own variables (`checked: () => skip`) also listens to nothing; only functions that read `plugin.player.state`, `plugin.window.state` or another state the SDK mirrors from the player do.
+
+##### Test it
+
+TestHost evaluates conditions as the player does: `host.command(id).state` follows `setSource`, `setMainWindow` and `setAppearance` without the plugin sending anything. Assert that `keepsRunning` is empty, as in the complete example.
+
+#### Complete example
+
+`main.ts`:
+
+```ts
+import type { Plugin } from "@vestra-player/sdk";
+
+export default function activate(plugin: Plugin) {
+  const { when } = plugin;
+
+  plugin.commands.add({
+    id: "save",
+    path: ["@video", "Save Snapshot…"],
+    // Evaluated by the player, also while this plugin is stopped.
+    enabled: when.can("snapshot").and(when.phase("ready", "ended"), when.stream.not()),
+    reason: "No frame to capture",
+    run: async () => {
+      const seen = plugin.player.state; // read in a handler: keeps nothing running
+      const destination = await plugin.dialogs.saveFile({ fileName: "frame.png" });
+      if (!destination) return;
+      const snapshot = await plugin.media.capture({ ifCurrent: seen });
+      try {
+        await (await snapshot.export({ format: "png", destination })).done;
+      } finally {
+        await snapshot.dispose();
+      }
+    },
+  });
+
+  for (const [id, title] of [["vestra", "Dark"], ["vestra-light", "Light"]] as const)
+    plugin.commands.add({
+      id: `theme.${id}`,
+      path: ["Settings", "Appearance", title],
+      radio: true,
+      checked: when.theme(id),
+      run: () => plugin.appearance.set(id),
+    });
+}
+```
+
+`manifest.json` declares `"minPlayerVersion": "0.5.21"` and the capabilities `commands`, `playback.read`, `media.read`, `media.control`, `ui.dialog` and `ui.theme`.
+
+`tests/main.test.ts`:
+
+```ts
+import assert from "node:assert/strict";
+import test from "node:test";
+import { startPlugin } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+test("the menu follows the player and nothing keeps the plugin running", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    capabilities: ["commands", "playback.read", "media.read", "media.control", "ui.dialog", "ui.theme"],
+  });
+  try {
+    assert.deepEqual(host.keepsRunning, []);
+    assert.equal(host.command("save").state.enabled, false);
+    host.setSource({ phase: "ready" });
+    assert.equal(host.command("save").state.enabled, true);
+    host.setAppearance("vestra-light");
+    assert.equal(host.command("theme.vestra-light").state.checked, true);
+  } finally {
+    await stop();
+  }
+});
+```
+
 ## How-to: Translate a plugin
 
 **Goal:** the plugin shows its menus, windows and messages in the user's interface language (Vestra Player 0.4.3 or later), while its code holds only English source text and no translation code: the player translates.
@@ -1861,6 +2279,8 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.12 | SystemInfo.rendering |
 | 0.5.13 | SystemInfo.renderingReason, RenderingMode, RenderingPreference, RenderingReasonCode, RenderingReason, RenderingState, Rendering |
 | 0.5.16 | UpscalingReasonCode, UpscalingReason, UpscalingState, VideoUpscaling |
+| 0.5.20 | VideoShaders |
+| 0.5.21 | Scope.when, When, Bindings.onChange |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -1882,7 +2302,7 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 | `ui.mount` | Panels.mount, Panels.bottom, Panels.sidebar, Panels.backdrop, PanelSlot.onChange, Panel.onChange, BackdropSlot.onChange | — | Show panels in the bottom bar, the sidebar or behind the video |  |
 | `ui.dialog` | Dialogs.confirm, Dialogs.openFile, Dialogs.openFiles, Dialogs.openDirectory, Dialogs.saveFile | — | Show file pickers and confirmations |  |
 | `plugins.manage` | Packages.validate, Packages.validateArchive, Packages.setEnabled, Packages.reload, Packages.uninstall | — | Install, uninstall and disable other plugins | yes |
-| `processing.video` | Plugin.video.filter, Plugin.video.view, Plugin.video.render | `playback.read` | Process the picture (filters, shaders) |  |
+| `processing.video` | Plugin.video.filter, Plugin.video.view, Plugin.video.render, Plugin.video.shaders | `playback.read` | Process the picture (filters, shaders) |  |
 | `processing.audio` | Plugin.audio.filter | `playback.read`, `events` | Process the sound |  |
 | `subtitles.read` | Subtitles.state, Subtitles.onChange, Subtitles.refresh | — | Read subtitles |  |
 | `subtitles.control` | Subtitles.select, Subtitles.load, Subtitles.remove, Subtitles.setStyle | — | Load and change subtitles |  |
@@ -2049,7 +2469,23 @@ RenderSettings; more shaders fail with `invalid`.
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
-| Entries of `RenderSettings.shaders` | 16 | mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. |
+| Entries of `RenderSettings.shaders` | 16 | mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. They run before the shaders of every plugin's `VideoShaders` handles. |
+
+#### Video primitives
+
+The `convolution` and `lut3d` VideoNodes and the shader channel VideoShaders (player 0.5.20). Values beyond them fail with `invalid`; more shaders than `shaders` across all plugins fail with `limit`.
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `VIDEO_PROCESSING_LIMITS.shaders` | 16 | Shaders across every plugin's `plugin.video.shaders()` handles. |
+| `VIDEO_PROCESSING_LIMITS.shaderBytes` | 16777216 (16 MiB) | Bytes of one shader file. |
+| `VIDEO_PROCESSING_LIMITS.shaderIdBytes` | 128 | Bytes of a shader handle's id. |
+| `VIDEO_PROCESSING_LIMITS.lutBytes` | 16777216 (16 MiB) | Bytes of one `lut3d` `.cube` file. |
+| `VIDEO_PROCESSING_LIMITS.lutSize` | 65 | Largest `LUT_3D_SIZE` of a `lut3d` file, points per axis. |
+| `VIDEO_PROCESSING_LIMITS.lutPathBytes` | 4096 (4 KiB) | Bytes of a `lut3d` file path. |
+| `VIDEO_PROCESSING_LIMITS.matrixValue` | 1024 | Largest magnitude of a `convolution` matrix entry. |
+| `VIDEO_PROCESSING_LIMITS.rdiv` | 256 | Largest `convolution` `rdiv`. |
+| `VIDEO_PROCESSING_LIMITS.bias` | 65535 | Largest `convolution` `bias`. |
 
 #### Limits documented at their API
 
@@ -2506,7 +2942,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | `order` | Integer 0–999, left to right ascending; equal orders by plugin id, then declaration order. The built-in plugins use 100 (Vestra Player AI) and 200 (Plugin Store). |
 | `path` | Required: a button without a menu path is `invalid`. |
 
-- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: the icon in the accent colour. Accessibility: a button named by the title, with its enabled and checked state and a default action.
+- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. The icon is drawn in the accent colour (player 0.5.22; the text colour before), darker while pressed. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: a small dot in the icon's colour under the icon (before player 0.5.22: the icon in the accent colour, the others in the text colour). Accessibility: a button named by the title, with its enabled and checked state and a default action.
 - **Click**: runs the command exactly as a click on its menu item does.
 - **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip loses cells from its outer (left) end inward: the lowest order goes first, the sidebar toggle last. `order` is position only: low is further left and goes first.
 - **Limits** (Limits): one button per plugin (its first declared), eight in the player (the highest orders; the lowest go first, ties: the smaller plugin id, then the earlier declaration). A button past them is left out and logged with `limit`; the command and its menu entry stay.
@@ -2601,7 +3037,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | App.system() | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"` by default, `"gpu"` once the user has turned on GPU rendering (player 0.5.14 and later), and `"software"` again after a fallback. |
 | Snapshots and exports (MediaCapture) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams (Player.openStream) | A Unix socket. | Loopback TCP with a token. |
-| Rendering | On the GPU (OpenGL), with hardware decoding. | In software by default, with hardware decoding copied back (`d3d11va-copy` and similar); from player 0.5.19 the windows themselves draw with Direct3D 12 in this mode by default, falling back to software windows when a rule rules it out (the driver denylist, the crash guard, `SLINT_BACKEND`, `VESTRA_WINDOW_RENDERER`) or the windows cannot be created. On the GPU from player 0.5.14 once the user turns on **Video ▸ GPU Rendering (Experimental)** (applied at the next start): libmpv draws with Direct3D 11 into textures shared with the windows' Direct3D 12 device, and hardware decoding is zero-copy until a plugin adds a video filter chain. Before 0.5.14 always in software. |
+| Rendering | On the GPU (OpenGL), with hardware decoding. | In software by default, with hardware decoding copied back (`d3d11va-copy` and similar); from player 0.5.19 the windows themselves draw with Direct3D 12 in this mode by default, unless a rule rules it out (a Direct3D 12 rule of the driver denylist, the crash guard, `SLINT_BACKEND`, `VESTRA_WINDOW_RENDERER`) or the windows cannot be created; then they are OpenGL (femtovg) windows, or Slint's software renderer under an OpenGL denylist rule or when OpenGL fails (with `SLINT_BACKEND` set, Slint chooses). On the GPU from player 0.5.14 once the user turns on **Video ▸ GPU Rendering (Experimental)** (applied at the next start): libmpv draws with Direct3D 11 into textures shared with the windows' Direct3D 12 device, and hardware decoding is zero-copy until a plugin adds a video filter chain. Before 0.5.14 always in software. |
 | plugin.rendering (player 0.5.13) | `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`). | From player 0.5.14 `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`); with `"auto"` the player renders in software (`reason.code` `default`: GPU rendering is experimental and off until it is turned on). Player 0.5.13 has no GPU renderer: `gpu.available` is `false` (`no-gpu-backend`) and `setPreference("gpu")` fails with `unsupported`. |
 | Render options (RenderOptions) | Available; `peakDetect` has no effect. | Available while GPU rendering is on (player 0.5.14 and later); `unsupported` in software rendering, the default. |
 | plugin.video.upscaling (player 0.5.16) | `available` is `false` (`platform`); `set(true)` fails with `unsupported`. | NVIDIA RTX Video Super Resolution: an RTX GPU with driver 530 or newer, GPU rendering on that GPU, the video decoded on it (`d3d11va`); the user must also turn on Super Resolution in the NVIDIA app, which no program can read. |
@@ -3148,6 +3584,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | TestHost.calls | Every request the plugin sent, in order: `{ method, params }`. |
 | TestHost.subscriptions | The host events the plugin subscribed to (needs `events` etc.). |
 | TestHost.listening | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
+| TestHost.listeningWhy | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
 | TestHost.source | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | TestHost.windows | Tool windows by id (see `TestHost.window`). |
 | TestHost.panel | The plugin's mounted panel (bottom bar, sidebar or backdrop), or `null`. |
@@ -3192,6 +3629,9 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | TestHost.videoRender | The render options (`plugin.video.render()`): who owns them, the values the player holds, and whether it renders on the GPU (`gpu: false` is software rendering, where every `set` fails with `unsupported`). |
 | TestHost.setVideoRenderOwner() | Simulate another plugin owning the render options (the plugin's `video.render()` then fails with `conflict`), or, with `null`, releasing them (values reset to the defaults). |
 | TestHost.failVideoRender() | What the player pushes when mpv cannot compile a shader (code `failed`) or switches to software rendering (`unsupported`, which also sets `videoRender.gpu` to false and `rendering.reason` to `window-fallback` with `message`). |
+| TestHost.videoShaders | The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists the player holds for this plugin's handles by id (the real paths, after following links), and how many shaders other plugins hold, which count against `VIDEO_PROCESSING_LIMITS``.shaders` (`limit`). |
+| TestHost.fileRoots | Where the plugin's own files may be: its package directory and its data directory (`startPlugin` sets both when the list is still empty). |
+| TestHost.failVideoShaders() | What the player pushes to a shader handle when mpv cannot compile a shader (code `failed`; the player cannot tell whose shader failed, so every handle with shaders hears it) or the player switches to software rendering (`unsupported`; use `TestHost.failVideoRender`, which also tells the handles). |
 | TestHost.processing | The player's processing (filter) state. |
 | TestHost.subtitles | The player's subtitle state: tracks, selection, style layers, fonts and loaded resources. |
 | TestHost.uploads | Subtitle uploads in progress, by upload id. |
@@ -3251,6 +3691,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | TestHost.sent() | The parameters of every request of one wire method, oldest first. |
 | TestHost.settle() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
 | TestHost.close() | Close the fake stream servers and delete the host's temporary directories. |
+| TestHost.keepsRunning | Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason, as the player's log says it: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its mounted panel, its open windows. |
 
 ## Explanation: How a plugin runs
 
@@ -3395,11 +3836,13 @@ Write `activate` so that running it twice in one session is normal: read what yo
 
 With lazy activation (player 0.5.18 and later, while the player turns it on), the player works like a browser's extension service workers (Chrome Manifest V3): a plugin that holds nothing only its process can serve is stopped after about a minute without use, and started again by its next use.
 
-- **What stays while it is stopped**: its menu items and keys (with the last `enabled`, `checked` and `reason` it set), its settings pages, its file and link resolvers and its drop targets. Using one of them, or showing one of its settings pages, starts the plugin; it runs `activate`, registers them again, and then receives the click, the open or the drop. The player also remembers these between runs, so a plugin nobody uses is not started at launch at all.
-- **What keeps it running**: anything the player must deliver to it or that is its running work: a listener (`player.onChange`, `window.onChange`, `bindings.onChange`, `packages.onChange` and the other `onChange`, `onEnd`), a command state, panel or window binding that reads `plugin.player.state` or another state, an open window, a mounted panel, an OSD panel, a timeline layer, a filter chain, a stream or subtitle track it added, a next/previous provider, a sleep lease, a window setting, a job or snapshot in progress. Reading `plugin.player.state` inside a handler does not: the SDK reads the state again when the plugin starts.
+- **What stays while it is stopped**: its menu items and keys (with the last `enabled`, `checked` and `reason` it set; a `plugin.when` condition keeps following playback), its settings pages, its file and link resolvers and its drop targets. Using one of them, or showing one of its settings pages, starts the plugin; it runs `activate`, registers them again, and then receives the click, the open or the drop. The player also remembers these between runs, so a plugin nobody uses is not started at launch at all.
+- **What keeps it running**: anything the player must deliver to it or that is its running work: a listener (`player.onChange`, `window.onChange`, `subtitles.onChange` and the other `onChange`, `onEnd`), a command state, panel or window binding that reads `plugin.player.state` or another state, an open window, a mounted panel, an OSD panel, a timeline layer, a filter chain, a stream or subtitle track it added, a next/previous provider, a sleep lease, a window setting, a job or snapshot in progress. Reading `plugin.player.state` inside a handler does not: the SDK reads the state again when the plugin starts. Nor does a listener of the four events the player wakes a stopped plugin for (player 0.5.21): `packages.onChange`, `bindings.onChange`, `appearance.onChange` and `resolvers.onFileTypesChange`.
 - **What does not keep it running**: work the player does not see. A `fetch`, a socket, a `setTimeout` or `setInterval`, or a promise the plugin awaits is lost when an idle plugin is stopped, as in Chrome. Set the command's `busy` while its work runs (a busy command keeps the plugin running), or keep what it needs in session storage and pick it up in `activate`.
 
-`TestHost.listening` lists the events a plugin really listens to; empty means listeners do not keep it running.
+A command's `enabled` or `checked` that follows playback does not need a running plugin: give it a condition from `plugin.when` (player 0.5.21), which the player evaluates itself (Conditions the player evaluates).
+
+`TestHost.listening` lists the events a plugin really listens to, `TestHost.listeningWhy` why (which listener or binding, added where), and `TestHost.keepsRunning` what would keep it running while idle; an empty `keepsRunning` means the player may stop it.
 
 #### The data directory
 
@@ -3472,10 +3915,35 @@ const toggle = plugin.commands.add({
 
 - **The id is the command's identity.** It is unique within the plugin; the player knows the command as `<manifest id>/<id>`. The user's own key bindings are stored under that pair, so changing a title or moving the command to another menu keeps them.
 - **`path` puts it in the main menu.** Leave it out for a command that only has bindings or lives in a panel's context menu (Panel.showMenu); it then needs a `title`.
-- **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions (Bindable). Functions are evaluated in every update pass and sent only when they change, so the menu's check mark follows the player without a listener. Command.set replaces them later.
+- **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions (Bindable); `enabled` and `checked` may also be conditions from `plugin.when` (below). Functions are evaluated in every update pass and sent only when they change, so the menu's check mark follows the player without a listener you write. Command.set replaces them later.
 - **The player calls `run` only when it can run.** While a command is disabled or busy, neither its menu item nor its binding calls `run`; `reason` tells the user why (it appears in the menu and, for a key press, on the video).
 - **Titles and paths are fixed.** They cannot change in place. A menu that follows changing content (tracks, presets, a radio group) lives in a child scope that is disposed and rebuilt when the content changes; `order` keeps its place (Handles and scopes).
 - Disposing the command removes it from the menu and the binding table; the same id can be added again at once. The number of commands per plugin and per player is limited (Reference: limits); the limit stops runaway menus, so cap menus built from media content (tracks, chapters) yourself.
+
+#### Conditions the player evaluates
+
+A function such as `enabled: () => plugin.player.state.can.pause` runs in the plugin. To evaluate it again when playback changes, the SDK must hear about every change, so it listens to the player's state for as long as the command exists. That costs nothing while the plugin runs anyway, but it means the plugin must keep running. With lazy activation the player stops a plugin that nothing uses and starts it again on its next use (Idle plugins are stopped); a plugin with such a function is never stopped, because a stopped plugin cannot run it: were it stopped, its menu item would keep the last state it sent, and "Pause" would stay enabled after the file closed.
+
+plugin.when (SDK 1.5.40, player 0.5.21) moves the evaluation to the player. A condition names state the player owns, the source's phase, kind, pause and controls, fullscreen, the palette and the saved interface language, and is sent with the command as data:
+
+```ts
+const { when } = plugin;
+plugin.commands.add({
+  id: "toggle-pause",
+  path: ["@playback", "Pause"],
+  enabled: when.can("pause"),
+  checked: when.paused,
+  run: () => plugin.player.setPaused(!plugin.player.state.paused),
+});
+```
+
+The player evaluates `when.can("pause")` and `when.paused` itself, again on every change of that state, and shows the result in the menu, on keys and on bar buttons, whether the plugin's process runs or not. `run` still runs in the plugin: picking the item starts a stopped plugin, which then receives the click. Conditions combine with `and`, `or` and `not()`, each returning a new condition; with an `enabled` condition the player shows `reason` only while the condition is false (or the command is busy), so a fixed reason is enough.
+
+The vocabulary is small on purpose. It names only what the player knows without asking the plugin; a plugin's own settings, an open window or a track list are not in it, and stay functions or values set with Command.set. A function that reads only the plugin's own variables subscribes to nothing; it is the functions that read `plugin.player.state`, `plugin.window.state` or another mirrored state that keep a plugin running.
+
+This rests on the difference between two kinds of subscription. The SDK keeps its copies of the player's state (`plugin.player.state` and the others) current with **mirror** subscriptions, which do not keep a plugin running: a stopped plugin misses nothing, since the SDK reads the state again when the plugin starts. A listener the plugin adds, or a binding that reads that state, turns the subscription into a **listening** one, which the player must deliver, so it keeps the process alive. A condition makes neither: it reads nothing in the plugin and keeps no listener.
+
+When a plugin keeps running, the player says why. From SDK 1.5.40 the SDK tells the player every reason it listens to an event and where in the plugin's code it came from, and the player's log names it (`command "Snapshot" enabled is a function that reads plugin.player.state (main.ts:353) — use plugin.when`). In tests the same reasons are TestHost.listeningWhy, and TestHost.keepsRunning lists what would keep the plugin running while idle (listeners of events the player cannot wake it for, a mounted panel, open windows); an empty list means the player may stop it. Keep a command's state without keeping the plugin running turns a function into a condition step by step.
 
 #### How menu paths merge
 
@@ -3741,13 +4209,14 @@ In tests, `TestHost.keyframes` models the source's keyframes, `host.coreSeeks` r
 
 ## Explanation: Video and audio processing
 
-A plugin can change what the user sees and hears in three different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
+A plugin can change what the user sees and hears in four different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
 
 | | Changes | Owner | In snapshots and exports | API |
 | --- | --- | --- | --- | --- |
 | **Filter chain** | The decoded frames and samples: colour, blur, denoise, rotation, crop, volume, equalizer, delay… | Every plugin has its own chains; all are joined | Yes | VideoFilter, AudioFilter |
 | **Display layer** | Where the video sits in the video area: aspect, fit, zoom, pan | One plugin at a time | No | VideoView |
 | **Render options** | How the GPU renderer draws: HDR tone mapping, user shaders, motion interpolation | One plugin at a time | No | RenderOptions |
+| **Shaders** | The picture on the GPU, with the plugin's own mpv user shaders | Every plugin has its own lists; all are joined | No | VideoShaders |
 
 ```mermaid
 flowchart LR
@@ -3761,6 +4230,7 @@ flowchart LR
     R["renderer"]
     VA["video area"]
     RO["render options (display only)"]
+    SH["shaders of every plugin (display only)"]
     DL["display layer (display only)"]
     DEC --> A
     A --> B
@@ -3769,10 +4239,11 @@ flowchart LR
     FB --> R
     R --> VA
     RO -.-> R
+    SH -.-> R
     DL -.-> VA
 ```
 
-All three need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
+All four need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
 
 #### Filter chains
 
@@ -3787,6 +4258,7 @@ picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma:
 - **Each plugin owns its own chains.** The player joins the chains of all plugins in a stable order. Setting or disposing a chain changes only that plugin's contribution; an empty chain (`[]`, or for audio no nodes and no delay) withdraws it and leaves the others alone.
 - **Nothing is sent until the first `set()`**, and disposing a chain that was applied withdraws it.
 - **Limits are shared.** All plugins together have at most 64 nodes, one `frameBlend` and a bounded audio delay (Reference: limits); a value out of a node's range fails with `invalid`.
+- **Your own kernels and colour tables.** Besides the ready-made nodes, a `convolution` node runs an integer kernel of your own per plane (3×3, 5×5, 7×7, or a row or column of up to 49 entries), and a `lut3d` node recolours with a `.cube` file from the plugin's package or data directory (both player 0.5.20). They are filter nodes like the others, so they reach snapshots and exports; Write your own blur kernel builds a convolution step by step.
 - **The same chain is the picture.** A processed snapshot or an export (plugin.media) goes through the same chains, so it matches what plays.
 
 ##### Status
@@ -3838,6 +4310,14 @@ plugin.video.render() returns the RenderOptions of the GPU renderer: HDR to SDR 
 
 - **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see Reference: platforms for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error. To know before creating the handle, read rendering from `plugin.app.system()` (player 0.5.12, no capability): `"gpu"` or `"software"`.
 - A shader that does not compile is reported later: the status first becomes `applied`, then `failed` with code `failed` and the compiler's first error line once mpv first uses the shader.
+
+#### Shaders
+
+plugin.video.shaders(id) (player 0.5.20) returns a VideoShaders handle: a list of mpv user shaders (`.glsl` files) that belongs to this plugin. Unlike the render options it has no single owner: every plugin may hold shader handles at the same time, and the player joins their lists after the render options' own shaders, in a stable order (built-in plugins, then installed plugins in the order they were first installed, then development loads).
+
+- **A list is a desired state.** `set(paths)` replaces the handle's whole list, `clear()` empties it and disposing the handle withdraws it. The files must be the plugin's own, in its package or data directory.
+- **The GPU only, the screen only.** Like the render options, shaders act where the picture is drawn: under software rendering a list fails with `unsupported`, and snapshots and exports never contain them. An effect that must be in a saved frame belongs in the filter chain.
+- **Shared limits and shared failures.** At most 16 shaders across all plugins (Reference: limits). mpv compiles shaders when it first uses them; a compile failure is pushed to every handle with shaders, since the player cannot tell whose shader failed.
 
 #### The GPU's video upscaler
 
@@ -4355,25 +4835,39 @@ Source: src/host/src/playback/render_mode.rs
 
 `gpu_opt_in` is `platform::GPU_OPT_IN`: `true` on Windows, `false` on macOS. So on macOS the player renders on the GPU unless something rules it out, and on Windows it renders in software until the user turns on **Video ▸ GPU Rendering (Experimental)**. That menu item belongs to the built-in video plugin, which saves the preference with `plugin.rendering.setPreference`; the choice applies at the next start (Offer a GPU rendering switch). Linux has no GPU renderer and always renders in software.
 
-The decision also picks Slint's window renderer, and a GPU mode whose windows cannot be created falls back to software rendering before the first window opens:
+The decision also picks Slint's window renderer. A GPU mode whose windows cannot be created falls back to software rendering before the first window opens, and on Windows CPU mode's own Direct3D 12 windows fall back the same way, to OpenGL (femtovg) windows, or to Slint's software renderer where OpenGL is ruled out or fails (`select_cpu_windows`):
 
 ```rust
 let gpu_windows = match render.windows {
-    render_mode::WindowKind::Wgpu => {
-        // …
-        platform::select_wgpu_windows(winit)
-    }
+    render_mode::WindowKind::Wgpu if render.is_gpu() => wgpu_windows(),
     render_mode::WindowKind::OpenGl if render.is_gpu() => winit()
         .renderer_name("femtovg".into())
         .select()
         .map_err(|error| format!("the OpenGL window renderer is unavailable: {error}")),
     _ => Ok(()),
 };
+if let Err(error) = gpu_windows {
+    render = render.fall_back(render_mode::Reason::InitFailed(error));
+    // …
+}
+if !render.is_gpu() && render.windows == render_mode::WindowKind::Wgpu {
+    // CPU mode in Direct3D 12 windows: software video uploaded once
+    // per frame, flip model with vsync.
+    if let Err(error) = wgpu_windows() {
+        // …
+        render = render.without_wgpu_windows();
+    }
+}
+if !render.is_gpu() && render.windows != render_mode::WindowKind::Wgpu {
+    select_cpu_windows(render.windows, winit)?;
+}
 ```
 
 Source: src/host/src/main.rs
 
-Rendering can go from GPU to software at run time (a renderer that fails to start, a window that cannot show its frames), never back. A crash guard marks each GPU start until it has run five seconds; a start that finds the mark left behind counts as a crash and keeps GPU rendering off; on Windows a lost window device restarts the player on the same file (`host/restart.rs`).
+`wgpu_windows` is a closure that first registers the restart on a lost window device, then calls `platform::select_wgpu_windows`.
+
+Rendering can go from GPU to software at run time (a renderer that fails to start, a window that cannot show its frames), never back. A crash guard marks each GPU start, and on Windows each start of CPU mode's Direct3D 12 windows (a driver that crashes there would crash every start). GPU mode clears the mark on a timer of about five seconds; CPU mode's Direct3D 12 windows clear it once the first video picture was shown, or after three draws of the main window while no media is being opened, and otherwise on the same five-second timer (`render_state.rs`, `windows_started`). A start that finds the mark left behind counts as a crash: it keeps GPU rendering off and also CPU mode's Direct3D 12 windows; on Windows a lost window device restarts the player on the same file (`host/restart.rs`).
 
 ##### Software rendering
 
@@ -4415,7 +4909,7 @@ frames.set_waker(Box::new(|| {
 
 Source: src/host/src/main.rs
 
-The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too by default, and fall back to software windows when the driver denylist, the crash guard, `SLINT_BACKEND` or `VESTRA_WINDOW_RENDERER` rule it out or the windows cannot be created. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
+The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too by default, unless a Direct3D 12 rule of the driver denylist, the crash guard, `SLINT_BACKEND` or `VESTRA_WINDOW_RENDERER` rules it out or the windows cannot be created. Without them the windows are femtovg on OpenGL, or Slint's software renderer under an OpenGL rule of the driver denylist or when OpenGL windows cannot be created; with `SLINT_BACKEND` set, Slint chooses CPU mode's windows, and `VESTRA_WINDOW_RENDERER=gl|software` chooses them too. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
 
 ##### GPU rendering
 
@@ -5214,6 +5708,10 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.42](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1542) | **Nobody.** Documentation only: no API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
+| [1.5.41](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1541) | **Nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
+| [1.5.40](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1540) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
+| [1.5.39](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1539) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.38](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1538) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
 | [1.5.37](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1537) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
 | [1.5.36](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1536) | **Nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
@@ -5443,6 +5941,10 @@ rest of the plugin keeps running.
 interface Scope extends Disposable {
   /** Menu commands and their default bindings (`commands`). */
   readonly commands: Commands;
+  /**
+   * Conditions on the player's own state for a command's `enabled` and `checked` (SDK 1.5.40, player 0.5.21): the player evaluates them, so the menu follows playback even while the plugin is stopped. See When.
+   */
+  readonly when: When;
   /** Tool windows from `.slint` files (`ui.window`). */
   readonly windows: Windows;
   /** Docked panels: bottom bar, sidebar and backdrop (`ui.mount`). */
@@ -5452,7 +5954,7 @@ interface Scope extends Disposable {
   /** Playback state and controls (`playback.read`, `events`, `playback.control`). */
   readonly player: Player;
   /**
-   * Video processing: this plugin's filter chain, the display layer, the GPU render options and the GPU's video upscaler. The first three need `processing.video` and `playback.read`; the filter chain also needs `events` (without it the SDK never sees the media become ready and the chain stays `waiting`). The upscaler needs `video.upscaling` only.
+   * Video processing: this plugin's filter chain, the display layer, the GPU render options, this plugin's shaders and the GPU's video upscaler. The first four need `processing.video` and `playback.read`; the filter chain also needs `events` (without it the SDK never sees the media become ready and the chain stays `waiting`). The upscaler needs `video.upscaling` only.
    */
   readonly video: {
     /**
@@ -5473,6 +5975,15 @@ interface Scope extends Disposable {
      * @throws Error without a code (throws) A second call in the same plugin while the first handle is not disposed.
      */
     render(): RenderOptions;
+    /**
+     * This plugin's own GPU shaders named `id` (default `"shaders"`; needs `processing.video`; SDK 1.5.39, player 0.5.20). Unlike render(), every plugin may hold shader handles at the same time; the player joins their lists. Nothing is sent until the first `set()`.
+     * @param id - Local name of the handle, 1–128 bytes, unique within the plugin.
+     * @returns A VideoShaders owned by this scope.
+     * @throws capability (throws) The manifest does not declare `processing.video`.
+     * @throws invalid (throws) `id` is empty, longer than 128 bytes or has control characters.
+     * @throws Error without a code (throws) A second handle with the same `id` while the first is not disposed.
+     */
+    shaders(id?: string): VideoShaders;
     /**
      * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on Windows; needs `video.upscaling`, player 0.5.16): whether it works here and why not, and turning it on or off for this plugin.
      */
@@ -5775,6 +6286,191 @@ plugin.commands.add({
 });
 ```
 
+### Condition
+
+A condition on the player's own state, from Scope.when, for a
+command's `enabled` or `checked`. The player evaluates it, again on
+every change of that state, whether or not the plugin runs.
+
+Combine conditions with `and`, `or` and `not`; each returns a new
+condition and leaves the original as it was. A condition is data: it
+reads nothing in the plugin and keeps no listener, so a plugin whose
+menu state is made of conditions may be stopped while idle (lazy
+activation) and its menu stays current. A function (see Bindable)
+keeps working; one that reads `plugin.player.state` or another service's
+state keeps the plugin running so the SDK can evaluate it.
+
+- @capability commands
+
+```ts
+interface Condition {
+  /**
+   * True when this condition and every one of `others` hold.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Combine two conditions with and
+   * The item is enabled only while a file plays in fullscreen. `and`
+   * returns a new condition; `when.playing` itself is unchanged.
+   * ```ts
+   * const { when } = plugin;
+   * const playingFullscreen = when.playing.and(when.fullscreen);
+   * ```
+   */
+  and(...others: Condition[]): Condition;
+  /**
+   * True when this condition or one of `others` holds.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Combine two conditions with or
+   * The item is enabled while a file plays or is paused. `or` returns a
+   * new condition that holds when either of the two holds.
+   * ```ts
+   * const { when } = plugin;
+   * const active = when.playing.or(when.paused);
+   * ```
+   */
+  or(...others: Condition[]): Condition;
+  /**
+   * True when this condition does not hold.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Negate a condition with not
+   * An "Enter Fullscreen" item is enabled only outside fullscreen. `not`
+   * returns the opposite condition; the player evaluates it on every
+   * window change.
+   * ```ts
+   * const { when } = plugin;
+   * const windowed = when.fullscreen.not();
+   * ```
+   */
+  not(): Condition;
+}
+```
+
+Example: Enable an item while a frame can be saved
+
+"Save Snapshot" is greyed out with its reason unless a media file is
+open at a frame the player can capture. The condition is sent with the
+command and evaluated by the player, so the item follows playback even
+while the plugin is stopped; with an `enabled` condition the player
+shows the `reason` only while the item is disabled.
+```ts
+const { when } = plugin;
+plugin.commands.add({
+  id: "save",
+  path: ["@video", "Save Snapshot"],
+  enabled: when.can("snapshot").and(when.phase("ready", "ended"), when.stream.not()),
+  reason: "No frame to capture", // shown only while disabled
+  run: saveSnapshot,
+});
+```
+
+### When
+
+`plugin.when`: the vocabulary of conditions (SDK 1.5.40, player 0.5.21).
+It names only state the player owns: the source's phase, kind, pause
+and controls (the same names as PlayerState), fullscreen, the
+palette and the saved interface language.
+
+Give a condition as a command's `enabled` or `checked`
+(CommandOptions, Command.set). The player evaluates it
+and shows the result in menus, on keys and on bar buttons, again
+whenever that state changes, also while the plugin is stopped because
+nothing used it. With an `enabled` condition the player shows the
+command's `reason` only while the condition is false (or the command
+is busy), so a fixed reason is enough. Players before 0.5.21 have no
+`plugin.when` (declare `"minPlayerVersion": "0.5.21"`).
+
+State the vocabulary does not name (a plugin's own settings, an open
+window, a track list) stays a function or a value set with
+Command.set.
+
+- @capability commands
+
+```ts
+interface When {
+  /** A source is open: any phase but `empty` (loading, ready, ended, error). */
+  readonly open: Condition;
+  /** The source is loaded and can play (`phase` is `ready`). */
+  readonly ready: Condition;
+  /** The source is ready and not paused. */
+  readonly playing: Condition;
+  /** The source is ready and paused. */
+  readonly paused: Condition;
+  /** The source is a generated stream (`PlayerState.kind` is `stream`). */
+  readonly stream: Condition;
+  /** The main window is fullscreen. */
+  readonly fullscreen: Condition;
+  /**
+   * The source's `phase` is one of `phases`.
+   * @throws TypeError (throws) No phase, or one that is not a phase.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Enable an item while a file is loaded or finished
+   * The item is enabled while the source is ready or has ended, as a
+   * snapshot needs a frame. The phases are those of `PlayerState.phase`.
+   * ```ts
+   * const { when } = plugin;
+   * const hasFrame = when.phase("ready", "ended");
+   * ```
+   */
+  phase(...phases: PlayerState["phase"][]): Condition;
+  /**
+   * The source allows `control`: `PlayerState.can[control]` is true.
+   * @throws TypeError (throws) `control` is not one of `PlayerState.can`.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Enable a seek item only where seeking works
+   * "Jump to Middle" is greyed out on live streams that cannot seek.
+   * The player reads its own `can.seek` for the current source.
+   * ```ts
+   * const { when } = plugin;
+   * const seekable = when.can("seek");
+   * ```
+   */
+  can(control: keyof PlayerState["can"]): Condition;
+  /**
+   * The palette in use is `theme` (`plugin.appearance.theme`).
+   * @throws TypeError (throws) `theme` is not a palette of the player.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Check the light palette's item
+   * The item carries a check mark while the light palette is in use,
+   * whoever switched to it.
+   * ```ts
+   * const { when } = plugin;
+   * const light = when.theme("vestra-light");
+   * ```
+   */
+  theme(theme: ThemeId): Condition;
+  /**
+   * The saved interface language is `language` (`plugin.appearance.language`: `"system"` or a locale).
+   * @throws TypeError (throws) `language` is not `"system"` or a locale.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Check the Follow System item
+   * The item carries a check mark while the player follows the system's
+   * language; the player reads its own saved preference.
+   * ```ts
+   * const { when } = plugin;
+   * const followSystem = when.language("system");
+   * ```
+   */
+  language(language: LanguagePreference): Condition;
+}
+```
+
+Example: Check a palette item and follow the palette
+
+The Appearance submenu has one radio item per palette; the player
+checks the one in use, also after another plugin or the user changed
+it, and while this plugin is stopped. Nothing in the plugin listens to
+the palette.
+```ts
+const { when } = plugin;
+for (const [id, title] of [["vestra", "Dark"], ["vestra-light", "Light"]] as const)
+  plugin.commands.add({
+    id: `theme.${id}`,
+    path: ["Settings", "Appearance", title],
+    radio: true,
+    checked: when.theme(id), // evaluated by the player, not the plugin
+    run: () => plugin.appearance.set(id),
+  });
+```
+
 ### MenuId
 
 A built-in top-level menu of the player, named in a command path as
@@ -5816,9 +6512,9 @@ Writing a bottom bar.
 "…" removed) and its first key as the tooltip ("Plugin Store (F9)"),
 `enabled`, `busy` and `reason` as the menu item has them: a disabled or
 busy command's button is drawn disabled, its tooltip adds the reason, and
-a click runs nothing. A command with `checked` shows its icon in the
-accent colour while checked. A click runs the command exactly like a
-click on its menu item.
+a click runs nothing. Every button's icon is drawn in the accent colour;
+a command with `checked` shows a small dot under its icon while checked.
+A click runs the command exactly like a click on its menu item.
 
 **Limits.** One button per plugin and eight in the player
 (`BAR_BUTTON_LIMITS`): a button past them is left out (its command and
@@ -5976,13 +6672,15 @@ interface CommandOptions {
    * A button for this command on the bottom bar (SDK 1.5.29, player 0.5.10): an icon and a place, `{ icon: "store", order: 200 }`. Needs a `path`: the menu entry is where the command stays reachable when the bar shows no button (a bar without `BarButtons`, a narrow window, a limit). See CommandButton for where it shows, what it shows and the limits. Fails with `invalid` for an unknown icon name, an order outside 0–999 or a button without a path.
    */
   button?: CommandButton;
-  /** Whether the command can run (default true). */
-  enabled?: Bindable<boolean>;
-  /** Check mark (or radio dot with `radio`); `null` (default) draws none. */
-  checked?: Bindable<boolean | null>;
+  /** Whether the command can run (default true): a value, a function, or a Condition the player evaluates (`plugin.when`, SDK 1.5.40). */
+  enabled?: Bindable<boolean> | Condition;
+  /** Check mark (or radio dot with `radio`); `null` (default) draws none. A Condition (`plugin.when`, SDK 1.5.40) draws the mark while it holds. */
+  checked?: Bindable<boolean | null> | Condition;
   /** Busy state (default false); the player does not call `run` while busy. */
   busy?: Bindable<boolean>;
-  /** Why the command is disabled or busy (shown to the user): English source text, or a Text for one with data in it (SDK 1.5.11). */
+  /**
+   * Why the command is disabled or busy (shown to the user): English source text, or a Text for one with data in it (SDK 1.5.11). With an `enabled` Condition the player shows it only while the condition is false or the command is busy, so a fixed text is enough.
+   */
   reason?: Bindable<TextValue | null>;
   /**
    * Run the command (menu item, binding, panel menu or `host.command(id).run()` in tests). It may return a promise; errors and rejections go to Scope.onError, and bound values are re-evaluated when it returns and when its promise settles.
@@ -6034,7 +6732,10 @@ interface Command extends Disposable {
    * ```
    */
   set(state: Partial<{
-    [K in keyof CommandState]: Bindable<CommandState[K]>;
+    [K in "busy" | "reason"]: Bindable<CommandState[K]>;
+  } & {
+    enabled: Bindable<boolean> | Condition;
+    checked: Bindable<boolean | null> | Condition;
   }>): void;
   /**
    * Resolves when the host has registered the command. Rejects with `conflict` (path already taken), `invalid` or `limit` (more than 160 commands in this plugin, or 1024 in the whole player). You rarely need to await it: during activation a failure fails activation, later it goes to Scope.onError.
@@ -9018,8 +9719,10 @@ interface SystemInfo {
    * Absent (`undefined`) on players before 0.5.12, which do not report it:
    * the renderer is then unknown, not software.
    *
-   * Today the player renders on the GPU on macOS and in software on
-   * Windows, Linux and without a user interface (see
+   * Today the player renders on the GPU on macOS, on Windows when the
+   * user turned on Video ▸ GPU Rendering (Experimental) (since version 0.5.14;
+   * off by default), and in software otherwise: on Windows by default, on
+   * Linux and without a user interface (see
    * Platforms); test this field
    * rather than SystemInfo.os.
    * @player 0.5.12; older players leave it out (declare `"minPlayerVersion": "0.5.12"` when the plugin relies on it).
@@ -9786,7 +10489,7 @@ What Player.stats reports. Every field is the backend's own value
 ```ts
 interface PlaybackStats {
   /**
-   * The rendering path: "libmpv · GPU 渲染（OpenGL）" (GPU, macOS default) or "libmpv · 软件渲染" (software: Windows, Linux, headless, fallback). The strings are the player's display text.
+   * The rendering path: "libmpv · GPU 渲染（OpenGL）" (GPU on macOS, the default there), "libmpv · GPU 渲染（Direct3D）" (GPU on Windows, when turned on; version 0.5.14 and later) or "libmpv · 软件渲染" (software: Windows by default, Linux, headless, fallback). The strings are the player's display text in the interface language (shown here in Chinese).
    */
   backend: string;
   /** The playback session number. */
@@ -10915,7 +11618,7 @@ interface RenderSettings {
   targetPeak: number;
   /** Per-scene peak estimation (where the GPU supports it). */
   peakDetect: boolean;
-  /** mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. */
+  /** mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. They run before the shaders of every plugin's VideoShaders handles. */
   shaders: string[];
   /** Motion interpolation, resampled to the display's refresh rate. */
   interpolation: boolean;
@@ -10928,19 +11631,23 @@ The GPU renderer's options, from `plugin.video.render()`
 (`processing.video`). Single owner, like VideoView; the two are
 independent handles.
 
-Platforms: only macOS renders on the GPU. Under software rendering
-(Windows, Linux, headless, fallback) every `set` fails with
-`unsupported`; SystemInfo.rendering tells which renderer draws
-without creating the handle. macOS OpenGL 4.1 has no
+Platforms: macOS renders on the GPU by default; Windows does since
+version 0.5.14 of the player when the user turns on Video ▸ GPU Rendering
+(Experimental) (off by default, Rendering). Under software
+rendering (Windows by default, Linux, headless, fallback) every `set`
+fails with `unsupported`; SystemInfo.rendering tells which
+renderer draws without creating the handle. macOS OpenGL 4.1 has no
 compute shaders, so `peakDetect` is accepted but has no effect; output
 is always SDR.
 
 GPU renderer options (tone mapping, peak detection, shaders,
-interpolation). Only the GPU renderer has them, which today means macOS;
+interpolation). Only the GPU renderer has them (macOS; Windows with GPU
+rendering turned on, version 0.5.14 and later);
 under software rendering the handle is `failed` with `unsupported` after
 the player's first answer to `render()` (reported to `onError` too), and so is
 every `set`. Single owner, like VideoView. `set` never throws; the
-result shows in `status`.
+result shows in `status`. For shaders that several plugins add at the
+same time, use VideoShaders (SDK 1.5.39).
 
 - @capability processing.video, playback.read and events (like VideoFilter)
 
@@ -10958,7 +11665,9 @@ interface RenderOptions extends Disposable {
    * ```
    */
   set(value: Partial<RenderSettings>): void;
-  /** `failed` with `unsupported` while the player renders in software; `failed` with `failed` when mpv cannot compile a shader (pushed later). */
+  /**
+   * `failed` with `unsupported` while the player renders in software; `failed` with `failed` when mpv cannot compile a shader (pushed later; while other plugins' VideoShaders are on too, the player cannot tell whose shader failed and says so in the message).
+   */
   readonly status: FilterStatus;
   /**
    * The status changed (including later pushes such as shader compile errors).
@@ -10984,13 +11693,135 @@ On a GPU-rendering player HDR video is tone-mapped with BT.2390 for a
 250-nit display; under software rendering the plugin hides its HDR menu.
 `set` merges the values into the plugin's render options and the
 player reports the result through `onStatus`: `failed` with
-`unsupported` means the player renders in software (Windows, Linux).
+`unsupported` means the player renders in software (Linux, or Windows
+while GPU rendering is off).
 ```ts
 const render = plugin.video.render();
 render.onStatus((s) => {
   if (s.state === "failed" && s.error.code === "unsupported") hideHdrMenu();
 });
 render.set({ toneMapping: "bt.2390", targetPeak: 250 }); // nits
+```
+
+### VideoShaders
+
+This plugin's own GPU shaders, from `plugin.video.shaders(id)`
+(`processing.video`, SDK 1.5.39, player 0.5.20): mpv user shaders
+(`.glsl`, `//!HOOK` …) that the GPU renderer runs on every frame.
+
+Any number of plugins hold shader handles at the same time (unlike
+RenderOptions, which has one owner). The player joins every
+handle's list in a stable order, after the render options' own
+`shaders`: built-in plugins first, then installed plugins in the order
+they were first installed, then development loads (`--plugin`); ties by
+plugin id, and a plugin's handles by `id`. At most 16 shaders across all
+handles (`limit` beyond, nothing changes); the render options keep their
+own 16.
+
+Files must be this plugin's own: absolute paths inside its package
+directory or Plugin.dataDirectory after following links, each
+at most 16 MiB. Elsewhere: `invalid`; a file that does not exist:
+`missing`. The player reads the files when the list is set.
+
+GPU rendering only (macOS; Windows with Video ▸ GPU Rendering
+(Experimental) turned on): under software rendering a non-empty list is
+`failed` with `unsupported`, and a switch to software during the run
+pushes `unsupported` to every handle with shaders and removes every
+list (they no longer count against the 16); set them again once the
+player draws on the GPU (after a restart). Shaders act when a
+frame is drawn, so processed snapshots and exports never contain them
+(use a VideoNode for that). When mpv cannot compile a shader the
+handle turns `failed` with `failed` (pushed later); mpv does not say
+which file failed, so while several plugins' shaders are on, each of
+them hears it and the message says the player cannot tell whose.
+
+`set` sends the whole list (last write wins); `clear` and `dispose`
+withdraw it; the player removes a stopped plugin's shaders itself.
+Players before 0.5.20 refuse the request (the handle is `failed`): declare
+`"minPlayerVersion": "0.5.20"`.
+
+- @capability processing.video
+- @player 0.5.20; older players refuse the request.
+
+```ts
+interface VideoShaders extends Disposable {
+  /**
+   * Replace this handle's shader list (last write wins); `[]` withdraws it.
+   *
+   * Never throws: a refused list shows in `status` (`invalid`, `missing`,
+   * `limit`, `unsupported`) and goes to Scope.onError, and what the
+   * player held stays.
+   * @capability processing.video
+   * @param paths - Absolute paths of shader files in this plugin's package or data directory, in the order they run.
+   * @example Switch between two shader presets
+   * The plugin offers a light and a strong preset; picking one replaces
+   * the handle's list in one request. The files were written to the
+   * plugin's data directory when the user imported them.
+   * ```ts
+   * const presets: Record<string, string[]> = {
+   *   light: [join(plugin.dataDirectory, "denoise.glsl")],
+   *   strong: [join(plugin.dataDirectory, "denoise.glsl"), join(plugin.dataDirectory, "sharpen.glsl")],
+   * };
+   * plugin.video.shaders("presets").set(presets.strong!);
+   * ```
+   */
+  set(paths: readonly string[]): void;
+  /**
+   * Withdraw this handle's shaders (the same as `set([])`).
+   * @capability processing.video
+   * @example Turn the plugin's shaders off from a menu item
+   * A Video menu item turns the plugin's shader on and off. Clearing
+   * keeps the handle, so the next pick sets the list again.
+   * ```ts
+   * const shaders = plugin.video.shaders();
+   * let on = false;
+   * plugin.commands.add({
+   *   id: "toggle-shader",
+   *   path: ["@video", "Sharpen (Shader)"],
+   *   checked: () => on,
+   *   run: () => {
+   *     on = !on;
+   *     // Clearing keeps the handle; the next pick sets the list again.
+   *     if (on) shaders.set([file]);
+   *     else shaders.clear();
+   *   },
+   * });
+   * ```
+   */
+  clear(): void;
+  /** Current status: `waiting` before ready media, `applying`, `applied`, or `failed` with the reason (see the remarks). */
+  readonly status: FilterStatus;
+  /**
+   * The status changed, including later pushes (a compile failure, a switch to software rendering).
+   * @capability processing.video
+   * @example Report a shader that does not compile
+   * The OSD shows mpv's message when the plugin's shader fails to compile.
+   * The player pushes that failure after the list was accepted, so it
+   * arrives through `onStatus`, not as a refused `set`.
+   * ```ts
+   * const shaders = plugin.video.shaders();
+   * shaders.onStatus((status) => {
+   *   if (status.state === "failed") void plugin.osd.show("Shader: {}", [status.error.message]);
+   * });
+   * ```
+   */
+  onStatus(listener: (status: FilterStatus) => void): Disposable;
+}
+```
+
+Example: Add a sharpening shader the plugin ships
+
+The video looks sharper on the GPU renderer; under software rendering
+the OSD says why it is not. The shader file lives in the plugin's
+package, and the player puts it after other plugins' shaders that come
+earlier in its order.
+```ts
+const shaders = plugin.video.shaders("sharpen");
+shaders.onStatus((s) => {
+  // `unsupported`: software rendering; `failed`: mpv could not compile it.
+  if (s.state === "failed") void plugin.osd.show("Sharpen: {}", [s.error.message]);
+});
+shaders.set([join(packageDirectory, "shaders", "sharpen.glsl")]);
 ```
 
 ### UpscalingReasonCode
@@ -12649,12 +13480,13 @@ interface Bindings {
    */
   reset(ref?: BindingRef): Promise<void>;
   /**
-   * Declarations or overrides changed (read `list()` again). At most every 200 ms.
+   * The binding list changed (read `list()` again): a declaration or an override. At most every 200 ms; since player 0.5.21 only when the list itself changed, not when a plugin starts again with the same commands.
    * @capability bindings.manage
    * @example Refresh a key list when bindings change
    * The plugin's key list stays current when the user changes a key in the
-   * player or another plugin starts. The listener carries no data and runs
-   * at most every 200 ms; the plugin reads the table again with `list`.
+   * player or a plugin with other commands is installed. The listener
+   * carries no data and runs at most every 200 ms; the plugin reads the
+   * table again with `list`.
    * ```ts
    * plugin.bindings.onChange(async () => {
    *   const { commands } = await plugin.bindings.list(); // read the new table
@@ -13412,10 +14244,10 @@ RenderingReason.message for the rest. The codes of player 0.5.13:
 
 | Code | Meaning |
 | --- | --- |
-| `default` | Nothing ruled the GPU out; the platform's default. |
+| `default` | Nothing ruled the GPU out; the platform's default (macOS: GPU; Windows since version 0.5.14: software until the user turns on GPU rendering). |
 | `pending` | GPU rendering is starting. |
 | `headless` | The player runs without a user interface. |
-| `no-gpu-backend` | This player has no GPU renderer on this system (Windows today). |
+| `no-gpu-backend` | This player has no GPU renderer on this system (Linux today; Windows has one since version 0.5.14, off by default, which reports `default`). |
 | `env` | The environment chose it (`VESTRA_RENDER`, `VESTRA_SOFTWARE_RENDER`). |
 | `preference` | The user chose software rendering (Rendering.setPreference); GPU chosen and available reports `default`. |
 | `denylist` | The graphics driver is on the player's denylist. |
@@ -13780,6 +14612,28 @@ type VideoNode =
   kind: "frameBlend";
   /** Output frame rate, integer 24–120. */
   fps: number;
+}
+/**
+ * A convolution matrix of your own per plane (FFmpeg `convolution`, SDK 1.5.39, player 0.5.20): sharpen, blur, emboss or detect edges with a 3×3, 5×5 or 7×7 kernel, or a row or column kernel. `planes[i]` is plane `i` of the decoded picture: for the usual YUV video 0 is luma (brightness), 1 and 2 are the colour planes, 3 is alpha. A missing entry or `null` leaves that plane as it is; at least one entry has a matrix. Players before 0.5.20 refuse the kind with `invalid`.
+ */
+ | {
+  /** The node type. */
+  kind: "convolution";
+  /** 1–4 entries, by plane; `null` passes the plane through. */
+  planes: (ConvolutionPlane | null)[];
+}
+/**
+ * Recolour the picture with a 3D look-up table (FFmpeg `lut3d`, SDK 1.5.39, player 0.5.20): a `.cube` file the plugin ships in its package or wrote to its Plugin.dataDirectory. The player reads the file when the chain is set (and again for each new source, snapshot or export), so it must stay there while the chain uses it. The table is applied to RGB; the player converts the picture to RGB and back. Players before 0.5.20 refuse the kind with `invalid`.
+ */
+ | {
+  /** The node type. */
+  kind: "lut3d";
+  /**
+   * Absolute path of a `.cube` file (`LUT_3D_SIZE` 2–65, at most 16 MiB) inside the plugin's package directory or data directory after following links; a path with `[` or `]` is refused. Outside those: `invalid`; a file that does not exist: `missing`.
+   */
+  file: string;
+  /** How colours between the table's points are computed; `tetrahedral` is FFmpeg's default. */
+  interpolation: "nearest" | "trilinear" | "tetrahedral" | "pyramid" | "prism";
 };
 ```
 
@@ -13799,6 +14653,27 @@ const chain: VideoNode[] = [
   { kind: "transform", rotate: 90, flipH: false, flipV: false },
 ];
 plugin.video.filter("picture").set(chain);
+```
+
+### ConvolutionPlane
+
+One plane's kernel of a `convolution` VideoNode: each output
+sample is `(sum of matrix × neighbourhood) × rdiv + bias`, clipped to the
+sample range.
+
+```ts
+type ConvolutionPlane = {
+  /**
+   * `square`: `matrix` is a 3×3, 5×5 or 7×7 kernel, row by row (9, 25 or 49 entries); `row` / `column`: a horizontal / vertical kernel with an odd number of entries up to 49.
+   */
+  mode: "square" | "row" | "column";
+  /** Integers −1024–1024 (FFmpeg reads whole numbers only). */
+  matrix: number[];
+  /** Multiplier 0–256; 0 divides by the sum of the matrix (by 1 when it sums to 0), which keeps the brightness of a blur. */
+  rdiv: number;
+  /** Added after the multiplication, 0–65535 in the plane's sample units (128 is mid grey for 8-bit video). */
+  bias: number;
+};
 ```
 
 ### AudioNode
@@ -14157,7 +15032,18 @@ interface FakeCommand {
      */
     reason?: string | null;
   };
-  /** The command state the player last received (after the update pass). */
+  /**
+   * The conditions the plugin sent for `enabled` and `checked` (`plugin.when`, wire form), `undefined` without. Like the player, the host evaluates them in FakeCommand.state against `source`, `mainWindow.fullscreen`, `appearance` and `language`.
+   */
+  when?: {
+    /** The condition of `enabled`. */
+    enabled?: Json;
+    /** The condition of `checked`. */
+    checked?: Json;
+  };
+  /**
+   * The command state as the player shows it: what the plugin last sent (after the update pass), with the fields given as conditions (`plugin.when`) evaluated now. With an `enabled` condition, `reason` is `null` while the command is enabled and not busy.
+   */
   state: {
     /** `false` when the plugin disabled the command. */
     enabled: boolean;
@@ -14225,7 +15111,7 @@ interface FakeBarButton {
   readonly order: number;
   /** Clickable: the command is enabled and not busy. */
   readonly enabled: boolean;
-  /** Drawn in the accent colour: the command is checked. */
+  /** Shown with the on dot under its icon: the command is checked. */
   readonly checked: boolean;
   /** The tooltip without the key: the command's shown title (trailing "…" removed), then, while it cannot run, its reason on a second line. */
   readonly tooltip: string;
@@ -14377,6 +15263,10 @@ class TestHost implements Transport {
    * The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. The SDK's own copies of the state (what keeps `plugin.player.state` current) are left out. Empty means the player may stop the plugin while nothing uses it (unless it holds something else: a window, a panel, a filter…).
    */
   readonly listening: Set<string>;
+  /**
+   * Why the plugin listens to each event of TestHost.listening: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came.
+   */
+  readonly listeningWhy: Map<string, string[]>;
   /**
    * The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). Wire-level shape; change it with TestHost.setSource, which also broadcasts it.
    */
@@ -14958,6 +15848,39 @@ class TestHost implements Transport {
    */
   failVideoRender(code: "failed" | "unsupported", message: string): void;
   /**
+   * The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists the player holds for this plugin's handles by id (the real paths, after following links), and how many shaders other plugins hold, which count against VIDEO_PROCESSING_LIMITS`.shaders` (`limit`). Files must be under TestHost.fileRoots; under software rendering (`videoRender.gpu = false`) a non-empty list fails with `unsupported`.
+   */
+  readonly videoShaders: {
+    /** This plugin's lists by handle id; a cleared handle has none. */
+    handles: Map<string, string[]>;
+    /** Shaders other plugins hold (0–16). */
+    others: number;
+  };
+  /**
+   * Where the plugin's own files may be: its package directory and its data directory (startPlugin sets both when the list is still empty). `lut3d` files and shader-channel files outside them fail with `invalid`, as in the player.
+   */
+  fileRoots: string[];
+  /**
+   * What the player pushes to a shader handle when mpv cannot compile a shader (code `failed`; the player cannot tell whose shader failed, so every handle with shaders hears it) or the player switches to software rendering (`unsupported`; use TestHost.failVideoRender, which also tells the handles). Pushed only to a handle that holds shaders.
+   * @capability None.
+   * @example Make the plugin's shader fail to compile
+   * The plugin's shader handle reports `failed`, as when mpv rejects a
+   * shader. The host pushes the failure only to a handle that holds
+   * shaders, which its accepted `set` made it; the SDK updates the
+   * handle's `status` when the push arrives, so the test settles first.
+   * ```ts
+   * const file = join(plugin.dataDirectory, "sharpen.glsl");
+   * writeFileSync(file, "//!HOOK MAIN\n");
+   * const shaders = plugin.video.shaders("sharpen");
+   * shaders.set([file]); // the handle now holds a shader
+   * await host.settle();
+   * host.failVideoShaders("sharpen", "shader compile failed: ERROR: 0:3: ...");
+   * await host.settle();
+   * assert.equal(shaders.status.state, "failed");
+   * ```
+   */
+  failVideoShaders(id: string, message: string): void;
+  /**
    * The player's processing (filter) state. Wire-level; may change in minor versions. `resources` holds each `video.filter` / `audio.filter` chain the plugin applied, keyed by the SDK's resource id.
    * @example Check the filter chain the plugin applied
    * After the plugin set its picture chain, the test reads the one chain
@@ -15218,9 +16141,9 @@ class TestHost implements Transport {
    * import activate from "../main.ts";
    *
    * const host = new TestHost();
-   * host.videoRender.gpu = false; // software draws now (Windows)
+   * host.videoRender.gpu = false; // software draws now (Linux)
    * host.rendering.startedWith = "software";
-   * host.rendering.reason = { code: "no-gpu-backend", message: "No GPU renderer on Windows" };
+   * host.rendering.reason = { code: "no-gpu-backend", message: "this player has no GPU renderer on Linux yet" };
    * host.rendering.gpu = { available: false, reason: host.rendering.reason };
    * const { stop } = await startPlugin(activate, {
    *   directory: new URL("..", import.meta.url),
@@ -15228,7 +16151,7 @@ class TestHost implements Transport {
    * });
    * const item = host.command("gpu-rendering");
    * assert.equal(item.state.enabled, false);
-   * assert.equal(item.state.reason, "No GPU renderer on Windows");
+   * assert.equal(item.state.reason, "this player has no GPU renderer on Linux yet");
    * await stop();
    * ```
    */
@@ -15824,6 +16747,20 @@ class TestHost implements Transport {
    * ```
    */
   close(): void;
+  /**
+   * Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason, as the player's log says it: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its mounted panel, its open windows. Empty: the player may stop it while idle and start it again on its next use. Filter chains, streams, jobs and the like (which also keep a plugin running) are not listed.
+   * @capability None.
+   * @example Check that a plugin can be stopped while idle
+   * The test fails if the plugin keeps running for no reason after it
+   * starts, and names the reason (a command whose `enabled` reads
+   * `plugin.player.state`, say: give it a `plugin.when` condition). The
+   * player stops such a plugin while nothing uses it and starts it again
+   * on its next use, so it costs no process meanwhile.
+   * ```ts
+   * assert.deepEqual(host.keepsRunning, []);
+   * ```
+   */
+  get keepsRunning(): string[];
 }
 ```
 
@@ -16663,6 +17600,49 @@ const IMAGE_LIMITS: Readonly<{
 }>;
 ```
 
+### VIDEO_PROCESSING_LIMITS
+
+The player's bounds for the video primitives of SDK 1.5.39 (player
+0.5.20): `convolution` and `lut3d` VideoNodes and the shader
+channel (`plugin.video.shaders()`). Values beyond them fail with
+`invalid`; more shaders than `shaders` fail with `limit`.
+
+```ts
+const VIDEO_PROCESSING_LIMITS: Readonly<{
+  /** Shaders across every plugin's `plugin.video.shaders()` handles (16). */
+  shaders: 16;
+  /** Bytes of one shader file (16 MiB). */
+  shaderBytes: number;
+  /** Bytes of a shader handle's id (128). */
+  shaderIdBytes: 128;
+  /** Bytes of one `lut3d` `.cube` file (16 MiB). */
+  lutBytes: number;
+  /** Largest `LUT_3D_SIZE` of a `lut3d` file, points per axis (65). */
+  lutSize: 65;
+  /** Bytes of a `lut3d` file path (4096). */
+  lutPathBytes: 4096;
+  /** Largest magnitude of a `convolution` matrix entry (1024). */
+  matrixValue: 1024;
+  /** Largest `convolution` `rdiv` (256). */
+  rdiv: 256;
+  /** Largest `convolution` `bias` (65535). */
+  bias: 65535;
+}>;
+```
+
+Example: Refuse a shader list the player would not take
+
+The plugin checks a shader list against the player's limit before it
+sets it, and says so on the OSD instead of waiting for a `limit` failure.
+The limit counts every plugin's shaders, so the player still decides.
+```ts
+import { VIDEO_PROCESSING_LIMITS } from "@vestra-player/sdk/testing";
+
+if (files.length > VIDEO_PROCESSING_LIMITS.shaders)
+  void plugin.osd.show("Too many shaders");
+else plugin.video.shaders().set(files);
+```
+
 ### HostError
 
 A definite refusal from the player (or the plugin runner), with a stable
@@ -16922,7 +17902,7 @@ What Player.stats reports. Every field is the backend's own value
 ```ts
 interface PlaybackStats {
   /**
-   * The rendering path: "libmpv · GPU 渲染（OpenGL）" (GPU, macOS default) or "libmpv · 软件渲染" (software: Windows, Linux, headless, fallback). The strings are the player's display text.
+   * The rendering path: "libmpv · GPU 渲染（OpenGL）" (GPU on macOS, the default there), "libmpv · GPU 渲染（Direct3D）" (GPU on Windows, when turned on; version 0.5.14 and later) or "libmpv · 软件渲染" (software: Windows by default, Linux, headless, fallback). The strings are the player's display text in the interface language (shown here in Chinese).
    */
   backend: string;
   /** The playback session number. */

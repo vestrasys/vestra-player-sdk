@@ -61,6 +61,7 @@ export const STRICT_CATEGORIES = {
       "SESSION_STORAGE_LIMITS",
       "SECRET_LIMITS",
       "SUBTITLE_LIMITS",
+      "VIDEO_PROCESSING_LIMITS",
       "FileDialogText",
       "MarkdownWire",
       "UI_VALUE_LIMITS",
@@ -116,7 +117,7 @@ export const STRICT_CATEGORIES = {
     ],
   },
   Commands: {
-    full: ["Commands", "Command", "Host", "Bindings"],
+    full: ["Commands", "Command", "Host", "Bindings", "When", "Condition"],
     data: [
       "CommandState",
       "Bindable",
@@ -208,12 +209,14 @@ export const STRICT_CATEGORIES = {
       "AudioFilter",
       "VideoView",
       "RenderOptions",
+      "VideoShaders",
       "VideoUpscaling",
     ],
     data: [
       "FilterStatus",
       "ViewSettings",
       "RenderSettings",
+      "ConvolutionPlane",
       "VideoNode",
       "AudioNode",
       "UpscalingState",

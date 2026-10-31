@@ -5,13 +5,14 @@ description: Filter chains and how plugins' chains are joined, live parameter ch
 
 # Video and audio processing
 
-A plugin can change what the user sees and hears in three different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
+A plugin can change what the user sees and hears in four different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
 
 | | Changes | Owner | In snapshots and exports | API |
 | --- | --- | --- | --- | --- |
 | **Filter chain** | The decoded frames and samples: colour, blur, denoise, rotation, crop, volume, equalizer, delay… | Every plugin has its own chains; all are joined | Yes | {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!AudioFilter | AudioFilter} |
 | **Display layer** | Where the video sits in the video area: aspect, fit, zoom, pan | One plugin at a time | No | {@link "@vestra-player/sdk"!VideoView | VideoView} |
 | **Render options** | How the GPU renderer draws: HDR tone mapping, user shaders, motion interpolation | One plugin at a time | No | {@link "@vestra-player/sdk"!RenderOptions | RenderOptions} |
+| **Shaders** | The picture on the GPU, with the plugin's own mpv user shaders | Every plugin has its own lists; all are joined | No | {@link "@vestra-player/sdk"!VideoShaders | VideoShaders} |
 
 ```mermaid
 flowchart LR
@@ -25,6 +26,7 @@ flowchart LR
     R["renderer"]
     VA["video area"]
     RO["render options (display only)"]
+    SH["shaders of every plugin (display only)"]
     DL["display layer (display only)"]
     DEC --> A
     A --> B
@@ -33,10 +35,11 @@ flowchart LR
     FB --> R
     R --> VA
     RO -.-> R
+    SH -.-> R
     DL -.-> VA
 ```
 
-All three need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
+All four need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
 
 ## Filter chains
 
@@ -51,6 +54,7 @@ picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma:
 - **Each plugin owns its own chains.** The player joins the chains of all plugins in a stable order. Setting or disposing a chain changes only that plugin's contribution; an empty chain (`[]`, or for audio no nodes and no delay) withdraws it and leaves the others alone.
 - **Nothing is sent until the first `set()`**, and disposing a chain that was applied withdraws it.
 - **Limits are shared.** All plugins together have at most 64 nodes, one `frameBlend` and a bounded audio delay ([Reference: limits](../reference/limits.md#limits-documented-at-their-api)); a value out of a node's range fails with `invalid`.
+- **Your own kernels and colour tables.** Besides the ready-made nodes, a `convolution` node runs an integer kernel of your own per plane (3×3, 5×5, 7×7, or a row or column of up to 49 entries), and a `lut3d` node recolours with a `.cube` file from the plugin's package or data directory (both player 0.5.20). They are filter nodes like the others, so they reach snapshots and exports; [Write your own blur kernel](../tutorials/blur-kernel.md) builds a convolution step by step.
 - **The same chain is the picture.** A processed snapshot or an export ({@link "@vestra-player/sdk"!MediaCapture | plugin.media}) goes through the same chains, so it matches what plays.
 
 ### Status
@@ -102,6 +106,14 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 
 - **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see [Reference: platforms](../reference/platforms.md) for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error. To know before creating the handle, read {@link "@vestra-player/sdk"!SystemInfo.rendering | rendering} from `plugin.app.system()` (player 0.5.12, no capability): `"gpu"` or `"software"`.
 - A shader that does not compile is reported later: the status first becomes `applied`, then `failed` with code `failed` and the compiler's first error line once mpv first uses the shader.
+
+## Shaders
+
+{@link "@vestra-player/sdk"!Scope.video | plugin.video.shaders(id)} (player 0.5.20) returns a {@link "@vestra-player/sdk"!VideoShaders | VideoShaders} handle: a list of mpv user shaders (`.glsl` files) that belongs to this plugin. Unlike the render options it has no single owner: every plugin may hold shader handles at the same time, and the player joins their lists after the render options' own shaders, in a stable order (built-in plugins, then installed plugins in the order they were first installed, then development loads).
+
+- **A list is a desired state.** `set(paths)` replaces the handle's whole list, `clear()` empties it and disposing the handle withdraws it. The files must be the plugin's own, in its package or data directory.
+- **The GPU only, the screen only.** Like the render options, shaders act where the picture is drawn: under software rendering a list fails with `unsupported`, and snapshots and exports never contain them. An effect that must be in a saved frame belongs in the filter chain.
+- **Shared limits and shared failures.** At most 16 shaders across all plugins ([Reference: limits](../reference/limits.md#video-primitives)). mpv compiles shaders when it first uses them; a compile failure is pushed to every handle with shaders, since the player cannot tell whose shader failed.
 
 ## The GPU's video upscaler
 

@@ -80,6 +80,10 @@ export const GROUPS = [
         file: "test-and-publish.md",
         why: "Tutorial 4 of 4: a test, the checks, the package and the store submission.",
       },
+      {
+        file: "blur-kernel.md",
+        why: "A lesson of its own after the series: write a blur kernel as a GPU shader, then as a convolution node, then meet gblur; a different plugin, so not a step of the four.",
+      },
     ],
   },
   {
@@ -111,6 +115,10 @@ export const GROUPS = [
       {
         file: "gpu-rendering.md",
         why: "One task: offer the player's GPU or software rendering choice and its restart.",
+      },
+      {
+        file: "command-state.md",
+        why: "One task: give menu items that follow playback plugin.when conditions so an idle plugin can be stopped.",
       },
       {
         file: "i18n.md",

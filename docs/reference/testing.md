@@ -81,6 +81,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.calls} | Every request the plugin sent, in order: `{ method, params }`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to (needs `events` etc.). |
 | {@link "@vestra-player/sdk/testing"!TestHost.listening} | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
+| {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | {@link "@vestra-player/sdk/testing"!TestHost.windows} | Tool windows by id (see `TestHost.window`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.panel} | The plugin's mounted panel (bottom bar, sidebar or backdrop), or `null`. |
@@ -125,6 +126,9 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.videoRender} | The render options (`plugin.video.render()`): who owns them, the values the player holds, and whether it renders on the GPU (`gpu: false` is software rendering, where every `set` fails with `unsupported`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.setVideoRenderOwner}() | Simulate another plugin owning the render options (the plugin's `video.render()` then fails with `conflict`), or, with `null`, releasing them (values reset to the defaults). |
 | {@link "@vestra-player/sdk/testing"!TestHost.failVideoRender}() | What the player pushes when mpv cannot compile a shader (code `failed`) or switches to software rendering (`unsupported`, which also sets `videoRender.gpu` to false and `rendering.reason` to `window-fallback` with `message`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.videoShaders} | The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists the player holds for this plugin's handles by id (the real paths, after following links), and how many shaders other plugins hold, which count against `VIDEO_PROCESSING_LIMITS``.shaders` (`limit`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.fileRoots} | Where the plugin's own files may be: its package directory and its data directory (`startPlugin` sets both when the list is still empty). |
+| {@link "@vestra-player/sdk/testing"!TestHost.failVideoShaders}() | What the player pushes to a shader handle when mpv cannot compile a shader (code `failed`; the player cannot tell whose shader failed, so every handle with shaders hears it) or the player switches to software rendering (`unsupported`; use `TestHost.failVideoRender`, which also tells the handles). |
 | {@link "@vestra-player/sdk/testing"!TestHost.processing} | The player's processing (filter) state. |
 | {@link "@vestra-player/sdk/testing"!TestHost.subtitles} | The player's subtitle state: tracks, selection, style layers, fonts and loaded resources. |
 | {@link "@vestra-player/sdk/testing"!TestHost.uploads} | Subtitle uploads in progress, by upload id. |
@@ -184,5 +188,6 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.sent}() | The parameters of every request of one wire method, oldest first. |
 | {@link "@vestra-player/sdk/testing"!TestHost.settle}() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
 | {@link "@vestra-player/sdk/testing"!TestHost.close}() | Close the fake stream servers and delete the host's temporary directories. |
+| {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason, as the player's log says it: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its mounted panel, its open windows. |
 
 <!-- /generated -->

@@ -131,7 +131,8 @@ export abstract class ViewBase implements View {
   protected readonly scope: ScopeImpl;
   protected readonly handlers = new Map<string, (...args: Json[]) => unknown>();
   readonly #values = new Map<string, PropValue>();
-  readonly #binders = new Set<() => Props>();
+  /** Each binding, with where the plugin added it (for the player's log). */
+  readonly #binders = new Map<() => Props, () => string | undefined>();
   /** What the host currently shows, as far as this side knows. */
   #sent = new Map<string, string>();
   /** Written by `set()`: sent even if equal to what was sent before. */
@@ -183,7 +184,7 @@ export abstract class ViewBase implements View {
     this.flush();
   }
   bind(props: () => Props) {
-    this.#binders.add(props);
+    this.#binders.set(props, this.scope.runtime.callSite());
     this.scope.update();
     return this.scope.onDispose(() => {
       this.#binders.delete(props);
@@ -191,9 +192,10 @@ export abstract class ViewBase implements View {
   }
   /** Current desired properties (bound values win over earlier `set`). */
   protected snapshot(): Record<string, PropValue> {
-    for (const binder of this.#binders) {
+    for (const [binder, site] of this.#binders) {
       try {
-        for (const [key, value] of Object.entries(encode(binder())))
+        const props = this.scope.runtime.reader("a view's bind", site, binder);
+        for (const [key, value] of Object.entries(encode(props)))
           this.#values.set(key, value);
       } catch (error) {
         this.scope.report(error);
