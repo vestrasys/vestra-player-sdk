@@ -1456,20 +1456,20 @@ export interface MarkdownOptions {
  * thumbnails.
  *
  * Limits per value (`UI_VALUE_LIMITS` in `@vestra-player/sdk/testing`,
- * player 0.4.3; older players: 4096 values and 1024 rows): nesting depth 8,
- * 16384 values in total (every array, object, string, number, boolean and
- * null counts, the value itself included; a document or an image is one), 4096 rows
- * per array, 64 KiB per string or field name and 1 MiB of text in total,
- * field names and the text of its Markdown documents included (256 KB per
- * document). A list of rows with 8 fields is 9 values per row, so about
- * 1800 rows fit. The whole request must also fit the player's 1 MiB
- * message. A value over a limit is refused with code `limit` and the
- * property keeps what it showed (see {@link View.set}); `TestHost` refuses
- * it the same way.
+ * player 0.6.0; players 0.4.3 to 0.5: 16384 values, 4096 rows, 1 MiB of
+ * text): nesting depth 8, 1,048,576 values in total (every array, object,
+ * string, number, boolean and null counts, the value itself included; a
+ * document or an image is one), 100,000 rows per array, 64 KiB per string
+ * or field name and 32 MiB of text in total, field names and the text of
+ * its Markdown documents included (256 KB per document). A list of rows
+ * with 13 fields is 14 values per row, so 50,000 such rows fit. A value
+ * larger than one 1 MiB request is sent in parts (SDK 1.5.46, a player
+ * that takes row patches). A value over a limit is refused with code
+ * `limit` and the property keeps what it showed (see {@link View.set});
+ * `TestHost` refuses it the same way.
  *
- * The limits bound the work of one write, not the size of your data: for
- * a list that can grow without bound, send the rows near the view and the
- * row count, and move that window as the user scrolls.
+ * Bind a whole list and draw it with a Slint `ListView`, which builds only
+ * the rows on screen; the SDK sends what changed (row patches).
  *
  * @since 1.0.0
  * @category UI

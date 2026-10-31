@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.46
+
+**Who must change: nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. The new limits and the split writes take effect with player 0.6.0 (large lists P3); with older players arrays are sent whole as before and the old limits apply there.
+
+- **Whole lists.** `UI_VALUE_LIMITS` follow player 0.6.0: 100,000 rows per array (was 4,096), 1,048,576 values (was 16,384) and 32 MiB of text (was 1 MiB) in one property value. A plugin binds its whole list and draws it with a Slint `ListView`; the windowing example is replaced by a whole-list one.
+- **Writes larger than one request are split.** The protocol line stays 1 MiB (`MESSAGE_LIMIT`). With a player that takes row patches, an array whose rows exceed 512 KiB (`CHUNK_BYTES`, internal) is sent as a whole write of its first rows and `insert` patches of the rest, each applying on the one before; a patch carrying more is sent as several such patches; the initial properties of `panels.mount`, `ui.open` and `settings.page` carry at most 512 KiB of rows together and the first update sends the rest. A failure part-way leaves no base, so the next write of the property is whole (in parts again).
+- **`null` for an image in a row** shows no picture (player 0.6.0), so rows without a thumbnail need no placeholder image.
+- **`TestHost`** enforces the new limits and takes the split writes like the player (each line within `MESSAGE_LIMIT`); `props` hold whole values as before.
+
 ## 1.5.45
 
 **Who must change: nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. Only when the SDK re-evaluates bindings changes; what a plugin's views and commands show stays the same. One case can show in tests: a plugin that changes state outside a handler (a timer, a promise continuation after the handler returned, a child process) without calling `plugin.update()`, and a test that relied on `host.setSource(...)` to refresh it. Have the plugin call `plugin.update()` after such a change (as the documentation always said), or wait `await host.settle(1000)` in the test; `settle()` does not wait for the once-a-second full pass.

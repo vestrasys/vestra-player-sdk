@@ -213,7 +213,9 @@ test("limit counts per row agree with the player's for the whole value", () => {
   const fields = Object.fromEntries(
     Array.from({ length: 20 }, (_, i) => [`f${i}`, i]),
   );
-  const wide = Array.from({ length: 1000 }, () => countRow(row("x", fields)));
+  const wide = Array.from({ length: Math.ceil(L.values / 20) }, () =>
+    countRow(row("x", fields)),
+  );
   assert.equal(withinLimits(wide), false, "over the values limit");
   assert.equal(countRow("x".repeat(L.stringBytes + 1)).over, true);
 });

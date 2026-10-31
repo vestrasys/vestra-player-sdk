@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.45: full reference
+# @vestra-player/sdk 1.5.46: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -2284,6 +2284,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.20 | VideoShaders |
 | 0.5.21 | Scope.when, When, Bindings.onChange |
 | 0.5.25 | UpscalingReason.cause, UpscalingReason.plugins, UpscalingDecodingCause, UpscalingPlugin, UpscalingVideoSize, UpscalingState.video, UpscalingState.area, UpscalingState.gpu, UpscalingState.hwdecCurrent, UpscalingState.inChain, VideoUpscaling.onChange |
+| 0.6.0 | PropValue |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2352,7 +2353,7 @@ The check follows types, not names: `plugin.player.seek`, `const { player } = pl
 
 ## Reference: Limits
 
-The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for: a plugin that needs to come close to one usually needs a different design (send the rows near the view, not the whole list). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too (TestHost enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
+The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for. Since player 0.6.0 a whole list fits (50,000 playlist rows): bind it and draw it with a Slint `ListView`; the SDK sends row patches, and a value larger than one request in parts (SDK 1.5.46). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too (TestHost enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
 
 #### Commands
 
@@ -2380,10 +2381,10 @@ One value written to a window, panel or settings page property (View.set, View.b
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `UI_VALUE_LIMITS.depth` | 8 | Nesting depth; the value itself is depth 0. |
-| `UI_VALUE_LIMITS.values` | 16384 | Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one. |
-| `UI_VALUE_LIMITS.arrayRows` | 4096 | Rows of one array. |
+| `UI_VALUE_LIMITS.values` | 1048576 | Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one. |
+| `UI_VALUE_LIMITS.arrayRows` | 100000 | Rows of one array. |
 | `UI_VALUE_LIMITS.stringBytes` | 65536 (64 KiB) | UTF-8 bytes of one string or object field name. |
-| `UI_VALUE_LIMITS.textBytes` | 1048576 (1 MiB) | UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included. |
+| `UI_VALUE_LIMITS.textBytes` | 33554432 (32 MiB) | UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included. |
 
 #### Text values
 
@@ -5816,6 +5817,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.46](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1546) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.45](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1545) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.44](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1544) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.43](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1543) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. | — |
@@ -7102,20 +7104,20 @@ ImageOptions.maxSide for small pictures such as logos and
 thumbnails.
 
 Limits per value (`UI_VALUE_LIMITS` in `@vestra-player/sdk/testing`,
-player 0.4.3; older players: 4096 values and 1024 rows): nesting depth 8,
-16384 values in total (every array, object, string, number, boolean and
-null counts, the value itself included; a document or an image is one), 4096 rows
-per array, 64 KiB per string or field name and 1 MiB of text in total,
-field names and the text of its Markdown documents included (256 KB per
-document). A list of rows with 8 fields is 9 values per row, so about
-1800 rows fit. The whole request must also fit the player's 1 MiB
-message. A value over a limit is refused with code `limit` and the
-property keeps what it showed (see View.set); `TestHost` refuses
-it the same way.
+player 0.6.0; players 0.4.3 to 0.5: 16384 values, 4096 rows, 1 MiB of
+text): nesting depth 8, 1,048,576 values in total (every array, object,
+string, number, boolean and null counts, the value itself included; a
+document or an image is one), 100,000 rows per array, 64 KiB per string
+or field name and 32 MiB of text in total, field names and the text of
+its Markdown documents included (256 KB per document). A list of rows
+with 13 fields is 14 values per row, so 50,000 such rows fit. A value
+larger than one 1 MiB request is sent in parts (SDK 1.5.46, a player
+that takes row patches). A value over a limit is refused with code
+`limit` and the property keeps what it showed (see View.set);
+`TestHost` refuses it the same way.
 
-The limits bound the work of one write, not the size of your data: for
-a list that can grow without bound, send the rows near the view and the
-row count, and move that window as the user scrolls.
+Bind a whole list and draw it with a Slint `ListView`, which builds only
+the rows on screen; the SDK sends what changed (row patches).
 
 ```ts
 type PropValue = PropData | ImageRef;
@@ -17854,53 +17856,41 @@ keeps what it showed) and reported to `Scope.onError`: a write by
 makes `Window.show` reject; a panel or settings page opens without it and
 the failure goes to the plugin's `onError`.
 
-They bound the work one write costs the player's interface thread; they
-are not meant as list sizes to aim for. A list that can grow without
-bound (a playlist, a history) should send the rows near the view and say
-how many there are, not the whole list.
+Since player 0.6.0 (SDK 1.5.46) they allow a whole list: a plugin binds
+all of its rows (a playlist of 50,000 entries fits) and the view draws
+them with a Slint `ListView`, which builds only the rows on screen. The
+SDK sends a changed array as row patches, and an array larger than one
+request (about 512 KiB of rows) as its first rows followed by `insert`
+patches of the rest; the player converts large writes off its interface
+thread. Before player 0.6.0 the limits were 4,096 rows, 16,384 values and
+1 MiB of text, so a long list had to be sent as a window of rows.
+
+In a row, `null` where the view declares an `image` shows no picture
+(player 0.6.0): rows without a thumbnail need no placeholder image.
 
 ```ts
 const UI_VALUE_LIMITS: {
   /** Nesting depth; the value itself is depth 0 (8). */
   readonly depth: 8;
-  /** Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one (16384). */
-  readonly values: 16384;
-  /** Rows of one array (4096). */
-  readonly arrayRows: 4096;
+  /**
+   * Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one (1,048,576; 16,384 before player 0.6.0).
+   */
+  readonly values: number;
+  /** Rows of one array (100,000; 4,096 before player 0.6.0). */
+  readonly arrayRows: 100000;
   /** UTF-8 bytes of one string or object field name (64 KiB). */
   readonly stringBytes: number;
-  /** UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included (1 MiB). */
+  /** UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included (32 MiB; 1 MiB before player 0.6.0). */
   readonly textBytes: number;
 };
 ```
 
-Example: Send a long playlist as a window of rows
+Example: Bind a whole list
 
-A list view shows any number of entries while each write stays small:
-the plugin sends only the rows around the scroll position plus the total,
-and the view reports where it scrolled to. After the `scrolled` handler
-returns, the SDK evaluates the `bind` function again and sends the new
-window. Each row object and each of its fields count as one value toward
-`values`, and so does the array holding them.
+The view draws every row with a `ListView`; the SDK sends what changed.
+
 ```ts
-import { UI_VALUE_LIMITS } from "@vestra-player/sdk/testing";
-
-// 200 rows, or fewer if the limits were smaller: 2 fields per row make
-// 3 values (the row and its fields), plus 1 for the array.
-const size = Math.min(
-  200,
-  UI_VALUE_LIMITS.arrayRows,
-  Math.floor((UI_VALUE_LIMITS.values - 1) / 3),
-);
-let first = 0;
-list.bind(() => ({
-  total: entries.length,
-  rows: entries.slice(first, first + size),
-}));
-// The Slint view reports its first visible row; the window follows it.
-list.on("scrolled", (row: number) => {
-  first = Math.max(0, row - Math.floor(size / 2));
-});
+list.bind(() => ({ rows: entries.map((e) => ({ ...e, selected: false })) }));
 ```
 
 ### IMAGE_LIMITS

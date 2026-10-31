@@ -13,41 +13,26 @@ import type { Json } from "../wire.ts";
  * makes `Window.show` reject; a panel or settings page opens without it and
  * the failure goes to the plugin's `onError`.
  *
- * They bound the work one write costs the player's interface thread; they
- * are not meant as list sizes to aim for. A list that can grow without
- * bound (a playlist, a history) should send the rows near the view and say
- * how many there are, not the whole list.
+ * Since player 0.6.0 (SDK 1.5.46) they allow a whole list: a plugin binds
+ * all of its rows (a playlist of 50,000 entries fits) and the view draws
+ * them with a Slint `ListView`, which builds only the rows on screen. The
+ * SDK sends a changed array as row patches, and an array larger than one
+ * request (about 512 KiB of rows) as its first rows followed by `insert`
+ * patches of the rest; the player converts large writes off its interface
+ * thread. Before player 0.6.0 the limits were 4,096 rows, 16,384 values and
+ * 1 MiB of text, so a long list had to be sent as a window of rows.
  *
- * @example Send a long playlist as a window of rows
- * A list view shows any number of entries while each write stays small:
- * the plugin sends only the rows around the scroll position plus the total,
- * and the view reports where it scrolled to. After the `scrolled` handler
- * returns, the SDK evaluates the `bind` function again and sends the new
- * window. Each row object and each of its fields count as one value toward
- * `values`, and so does the array holding them.
+ * In a row, `null` where the view declares an `image` shows no picture
+ * (player 0.6.0): rows without a thumbnail need no placeholder image.
+ *
+ * @example Bind a whole list
+ * The view draws every row with a `ListView`; the SDK sends what changed.
+ *
  * ```ts
- * declare const entries: { title: string; duration: number }[];
- * import type { View } from "@vestra-player/sdk";
+ * declare const entries: { id: string; title: string; duration: string }[];
  * declare const list: View;
  * // ---cut---
- * import { UI_VALUE_LIMITS } from "@vestra-player/sdk/testing";
- *
- * // 200 rows, or fewer if the limits were smaller: 2 fields per row make
- * // 3 values (the row and its fields), plus 1 for the array.
- * const size = Math.min(
- *   200,
- *   UI_VALUE_LIMITS.arrayRows,
- *   Math.floor((UI_VALUE_LIMITS.values - 1) / 3),
- * );
- * let first = 0;
- * list.bind(() => ({
- *   total: entries.length,
- *   rows: entries.slice(first, first + size),
- * }));
- * // The Slint view reports its first visible row; the window follows it.
- * list.on("scrolled", (row: number) => {
- *   first = Math.max(0, row - Math.floor(size / 2));
- * });
+ * list.bind(() => ({ rows: entries.map((e) => ({ ...e, selected: false })) }));
  * ```
  *
  * @since 1.5.10
@@ -60,18 +45,18 @@ export const UI_VALUE_LIMITS = {
   /**
    * Values in all, counting every array, object, string, number, boolean
    * and null, the value itself included; a Markdown document is one
-   * (16384).
+   * (1,048,576; 16,384 before player 0.6.0).
    */
-  values: 16384,
-  /** Rows of one array (4096). */
-  arrayRows: 4096,
+  values: 1024 * 1024,
+  /** Rows of one array (100,000; 4,096 before player 0.6.0). */
+  arrayRows: 100_000,
   /** UTF-8 bytes of one string or object field name (64 KiB). */
   stringBytes: 64 * 1024,
   /**
    * UTF-8 bytes of all strings and field names together, the text of the
-   * value's Markdown documents included (1 MiB).
+   * value's Markdown documents included (32 MiB; 1 MiB before player 0.6.0).
    */
-  textBytes: 1024 * 1024,
+  textBytes: 32 * 1024 * 1024,
 } as const;
 
 const L = UI_VALUE_LIMITS;

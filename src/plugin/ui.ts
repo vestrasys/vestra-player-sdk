@@ -12,11 +12,17 @@ import {
   countRow,
   diff,
   keyOf,
+  CHUNK_BYTES,
+  chunkOps,
   PATCH_FEATURE,
+  prefixWithin,
+  jsonBytes,
+  rowBytes,
   replay,
   withinLimits,
 } from "./patch.ts";
 import type { RowCount, RowKey, Rows } from "./patch.ts";
+import { valueLimitProblem } from "./values.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
 import type { LayoutSlot } from "../wire.ts";
@@ -303,17 +309,47 @@ export abstract class ViewBase implements View {
   }
   /**
    * Initial properties in wire form. A released image is left out (the
-   * property keeps its default) and reported, like a failed write.
+   * property keeps its default) and reported, like a failed write. With a
+   * player that takes row patches, the arrays of one request carry at most
+   * {@link CHUNK_BYTES} of rows together (SDK 1.5.46): an array over that
+   * goes with its first rows, and the first flush sends the rest as patches.
+   * An array over the value limits is refused here, as the player would
+   * refuse it whole: left out and reported (a panel, a settings page), or,
+   * with `refuse` (a window's `show`), thrown.
    */
-  protected wired(values: Record<string, PropValue>): Record<string, Json> {
+  protected wired(
+    values: Record<string, PropValue>,
+    refuse = false,
+  ): Record<string, Json> {
     const out: Record<string, Json> = {};
+    let room = CHUNK_BYTES;
     for (const [key, value] of Object.entries(values)) {
+      let wire: Json;
       try {
-        out[key] = wireValue(value);
+        wire = wireValue(value);
       } catch (error) {
         this.#failed.set(key, JSON.stringify(value));
         this.scope.report(error);
+        continue;
       }
+      if (this.#patches && Array.isArray(wire)) {
+        const sizes = wire.map(rowBytes);
+        const total = sizes.reduce((a, b) => a + b, 0);
+        if (total > room) {
+          const problem = valueLimitProblem(wire);
+          if (problem) {
+            const error = new HostError("limit", `${key}: ${problem}`);
+            if (refuse) throw error;
+            this.#failed.set(key, JSON.stringify(value));
+            this.scope.report(error);
+            continue;
+          }
+          const count = room > 0 ? prefixWithin(sizes, room) : 0;
+          wire = wire.slice(0, count);
+          room -= sizes.slice(0, count).reduce((a, b) => a + b, 0);
+        } else room -= total;
+      }
+      out[key] = wire;
     }
     return out;
   }
@@ -444,7 +480,10 @@ export abstract class ViewBase implements View {
    * Write one property: a row patch when the player takes them and one
    * applies (else the whole value); a `stale` patch is followed by the whole
    * value at once. The base is forgotten on any failure, so the next write
-   * of the property is whole.
+   * of the property is whole. A write larger than one request
+   * ({@link CHUNK_BYTES} of rows, SDK 1.5.46) is sent in parts: a whole
+   * array as its first rows and `insert` patches of the rest, a patch as
+   * several, each applying on the one before.
    */
   async #send(pending: Pending): Promise<Sent> {
     const { key, value } = pending;
@@ -463,22 +502,63 @@ export abstract class ViewBase implements View {
         ? rowPatch(sent.rows, pending.rows, value as PropValue[])
         : null;
     if (plan) {
+      const [first, ...rest] = chunkOps(plan.ops);
       const seq = ++this.#seq;
+      let applied = false;
       try {
-        await this.write(key, { patch: { base: base!, seq, ops: plan.ops } });
-        this.#bases.set(key, seq);
-        this.#stales.delete(key);
-        return pending.sent(plan.counts);
+        await this.write(key, { patch: { base: base!, seq, ops: first! } });
+        applied = true;
       } catch (error) {
         if (!(error instanceof HostError && error.code === "stale"))
           throw error;
         this.#stales.set(key, (this.#stales.get(key) ?? 0) + 1);
       }
+      if (applied) {
+        this.#stales.delete(key);
+        await this.#patches_(key, seq, rest);
+        return pending.sent(plan.counts);
+      }
     }
     const seq = ++this.#seq;
+    if (Array.isArray(value) && pending.rows) {
+      const sizes = pending.rows.enc.map(jsonBytes);
+      const count = prefixWithin(sizes, CHUNK_BYTES);
+      if (count < value.length) {
+        const rows = value as PropValue[];
+        // Over the limits: refused here, as the player would refuse the
+        // whole value, before any part is sent.
+        const problem = valueLimitProblem(wireValue(value));
+        if (problem) throw new HostError("limit", `${key}: ${problem}`);
+        await this.write(key, {
+          value: wireValue(rows.slice(0, count) as PropValue),
+          seq,
+        });
+        const insert: RowOp = {
+          op: "insert",
+          at: count,
+          rows: rows.slice(count).map((row) => wireValue(row ?? null)),
+        };
+        await this.#patches_(key, seq, chunkOps([insert]));
+        return pending.sent();
+      }
+    }
     await this.write(key, { value: wireValue(value), seq });
     this.#bases.set(key, seq);
     return pending.sent();
+  }
+  /**
+   * The rest of a write sent in parts: each patch applies on the one
+   * before (`base`), and the property's base is the last one's. A failure
+   * leaves no base: the next write of the property is whole.
+   */
+  async #patches_(key: string, base: number, groups: RowOp[][]) {
+    let last = base;
+    for (const ops of groups) {
+      const seq = ++this.#seq;
+      await this.write(key, { patch: { base: last, seq, ops } });
+      last = seq;
+    }
+    this.#bases.set(key, last);
   }
   /**
    * Send what changed. A bound value is sent when it differs from the last one
@@ -615,7 +695,7 @@ class WindowHandle extends ViewBase implements Window {
       if (this.closed) return;
       const ui = this.scope.runtime.host.ui;
       if (this.#opened) return ui.show(this.#id, true);
-      const initial = this.wired(this.snapshot());
+      const initial = this.wired(this.snapshot(), true);
       await ui.open(this.#id, this.#file, initial, [...this.handlers.keys()]);
       this.#opened = true;
       this.shown(initial);

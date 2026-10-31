@@ -5,7 +5,7 @@ description: The player's runtime limits in one place, with what happens when a 
 
 # Limits
 
-The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for: a plugin that needs to come close to one usually needs a different design (send the rows near the view, not the whole list). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too ({@link "@vestra-player/sdk/testing"!TestHost | TestHost} enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
+The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for. Since player 0.6.0 a whole list fits (50,000 playlist rows): bind it and draw it with a Slint `ListView`; the SDK sends row patches, and a value larger than one request in parts (SDK 1.5.46). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too ({@link "@vestra-player/sdk/testing"!TestHost | TestHost} enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
 
 ## Commands
 
@@ -43,10 +43,10 @@ One value written to a window, panel or settings page property ({@link "@vestra-
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `UI_VALUE_LIMITS.depth` | 8 | Nesting depth; the value itself is depth 0. |
-| `UI_VALUE_LIMITS.values` | 16384 | Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one. |
-| `UI_VALUE_LIMITS.arrayRows` | 4096 | Rows of one array. |
+| `UI_VALUE_LIMITS.values` | 1048576 | Values in all, counting every array, object, string, number, boolean and null, the value itself included; a Markdown document is one. |
+| `UI_VALUE_LIMITS.arrayRows` | 100000 | Rows of one array. |
 | `UI_VALUE_LIMITS.stringBytes` | 65536 (64 KiB) | UTF-8 bytes of one string or object field name. |
-| `UI_VALUE_LIMITS.textBytes` | 1048576 (1 MiB) | UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included. |
+| `UI_VALUE_LIMITS.textBytes` | 33554432 (32 MiB) | UTF-8 bytes of all strings and field names together, the text of the value's Markdown documents included. |
 
 <!-- /generated -->
 

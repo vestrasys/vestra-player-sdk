@@ -376,3 +376,109 @@ export function applyOps<T>(
     }
   return out;
 }
+
+/**
+ * The bytes of rows one write carries at most (SDK 1.5.46, player 0.6.0):
+ * half the 1 MiB protocol line, which leaves room for the request around
+ * them. A larger whole write is sent as its first rows and `insert`
+ * patches of the rest; a larger patch as several patches, each applying on
+ * the one before (the player's doc/architecture/large-lists.md §4).
+ */
+export const CHUNK_BYTES = 512 * 1024;
+
+/** About what an operation adds to a request besides its rows. */
+const OP_BYTES = 64;
+
+/** UTF-8 bytes of `text` (JSON of a row), without encoding it. */
+function utf8Bytes(text: string) {
+  let bytes = text.length;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= 0x80)
+      bytes += code >= 0x800 && (code < 0xd800 || code > 0xdfff) ? 2 : 1;
+  }
+  return bytes;
+}
+
+/** The bytes a row adds to a write (its JSON and a separator). */
+export const rowBytes = (row: unknown) =>
+  utf8Bytes(JSON.stringify(row) ?? "null") + 1;
+
+/**
+ * How many of the first rows (by their sizes, `rowBytes`) fit in `budget`
+ * bytes; at least one when there are rows (a row over the budget alone is
+ * left to the player's limits).
+ */
+export function prefixWithin(sizes: readonly number[], budget: number) {
+  let used = 0;
+  for (let i = 0; i < sizes.length; i++) {
+    used += sizes[i]!;
+    if (used > budget) return Math.max(i, 1);
+  }
+  return sizes.length;
+}
+
+/** A wire operation (`set` and `insert` carry rows). */
+export type WireOp =
+  | { op: "set"; at: number; row: unknown }
+  | { op: "insert"; at: number; rows: unknown[] }
+  | { op: "remove"; at: number; count: number }
+  | { op: "move"; from: number; count: number; to: number };
+
+/**
+ * `ops` as consecutive patches of at most {@link CHUNK_BYTES} of rows and
+ * {@link PATCH_OPS} operations each, in order: applying them one after the
+ * other gives what `ops` give. An `insert` of more rows than fit is split
+ * into inserts of consecutive runs.
+ */
+export function chunkOps<T extends WireOp>(ops: readonly T[]): T[][] {
+  const groups: T[][] = [];
+  let group: T[] = [];
+  let bytes = 0;
+  const push = (op: T, size: number) => {
+    if (
+      group.length &&
+      (bytes + size > CHUNK_BYTES || group.length >= PATCH_OPS)
+    ) {
+      groups.push(group);
+      group = [];
+      bytes = 0;
+    }
+    group.push(op);
+    bytes += size;
+  };
+  for (const op of ops) {
+    if (op.op !== "insert") {
+      push(op, OP_BYTES + (op.op === "set" ? rowBytes(op.row) : 0));
+      continue;
+    }
+    const sizes = op.rows.map(rowBytes);
+    let start = 0;
+    while (start < sizes.length) {
+      const room = Math.max(CHUNK_BYTES - bytes - OP_BYTES, 0);
+      let count = prefixWithin(sizes.slice(start), room);
+      // Nothing fits beside this group's rows: the run starts a new patch.
+      if (
+        room === 0 ||
+        sizes.slice(start, start + count).reduce((a, b) => a + b, 0) > room
+      ) {
+        if (group.length) {
+          groups.push(group);
+          group = [];
+          bytes = 0;
+        }
+        count = prefixWithin(sizes.slice(start), CHUNK_BYTES - OP_BYTES);
+      }
+      const rows = op.rows.slice(start, start + count);
+      const size =
+        OP_BYTES + sizes.slice(start, start + count).reduce((a, b) => a + b, 0);
+      push({ op: "insert", at: op.at + start, rows } as T, size);
+      start += count;
+    }
+  }
+  if (group.length) groups.push(group);
+  return groups;
+}
+
+/** The bytes a row already in JSON adds to a write (and a separator). */
+export const jsonBytes = (json: string) => utf8Bytes(json) + 1;
