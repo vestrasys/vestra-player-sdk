@@ -113,6 +113,8 @@ Admitting a member is a control message on the runner's pipe (`g` 0) carrying wh
 
 Shape from src/host/src/process/shared_runner.rs
 
+The runner has one pipe pair, served by one writer thread (`shared-runner-write`) and one reader thread (`shared-runner-read`) for all its members; the reader routes each line by its `g`.
+
 ### The activation deadline
 
 The host opens an activation record with a deadline when it starts a plugin: 15 seconds for an installed plugin, 120 seconds for a development load. The plugin must report `runtime.ready` before then:

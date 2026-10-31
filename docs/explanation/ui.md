@@ -11,20 +11,28 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 
 ## The five surfaces
 
-```text
-┌─ main window ─────────────────────────────────────────┬─────────────┐
-│ ① OSD message (top left, 2 s)                         │             │
-│ ① OSD info blocks (one per plugin, under the message) │  ② sidebar  │
-│                                                       │    panel    │
-│            video area                                 │             │
-│            ② backdrop panel while there is no video   │             │
-├───────────────────────────────────────────────────────┤             │
-│ ② bottom bar panel                                    │             │
-└───────────────────────────────────────────────────────┴─────────────┘
-
-  separate operating-system windows:
-  ③ tool windows · ④ the Options window with the settings pages
-  ② the sidebar panel when it is detached (floating) · ⑤ dialogs
+```mermaid
+flowchart LR
+    subgraph MAIN["the main window"]
+        direction TB
+        subgraph VIDEO["the video area"]
+            direction TB
+            OSD1["1 OSD message (top left, 2 s)"]
+            OSD2["1 OSD info blocks (one per plugin, under the message)"]
+            BD["2 backdrop panel, while there is no video"]
+        end
+        BAR["2 bottom bar panel, under the video"]
+        SIDE["2 sidebar panel, on the right"]
+    end
+    subgraph OWN["separate operating-system windows"]
+        direction TB
+        TW["3 tool windows"]
+        OPT["4 the Options window with the settings pages"]
+        FL["2 the sidebar panel when it is detached (floating)"]
+        DLG["5 dialogs"]
+    end
+    VIDEO --> BAR
+    SIDE -- "detach" --> FL
 ```
 
 **① On-screen display** ({@link "@vestra-player/sdk"!Osd | plugin.osd}, capability `ui.osd`). Text the player draws over the top-left of the video: a one-line message that disappears after 2 seconds ({@link "@vestra-player/sdk"!Osd.show | osd.show}), and one multi-line information block per plugin that stays until you clear it ({@link "@vestra-player/sdk"!Osd.panel | osd.panel}). It takes no input and needs no Slint.
@@ -47,22 +55,21 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
 
 ### Tool window
 
-```text
- windows.create(file)       nothing on screen yet; bind callbacks and properties now
-        │  view.on(), view.bind(), view.set()
-        ▼
- ┌──────────────┐   show()   ┌──────────────┐   hide()   ┌──────────────┐
- │    closed    │──────────▶│   visible    │──────────▶│    hidden     │
- │ opened=false │           │ opened=true  │◀──────────│ opened=true  │
- └──────────────┘           └──────────────┘   show()   └──────────────┘
-        ▲                       │       │
-        │  close()              │       │  the user: title-bar close button,
-        │  (no onClose)         │       │  the standard close keys
-        └───────────────────────┘       │  → onClose listeners run
-        ▲                               │
-        └───────────────────────────────┘
- dispose(), the scope disposed, the plugin stopped: closed for good (no onClose)
+```mermaid
+stateDiagram-v2
+    [*] --> closed : windows.create(file), bind callbacks and properties now
+    closed --> visible : show()
+    visible --> hidden : hide()
+    hidden --> visible : show()
+    visible --> closed : close(), no onClose
+    hidden --> closed : close(), no onClose
+    visible --> closed : the user (title-bar close button, standard close keys), onClose listeners run
+    closed --> [*] : dispose(), the scope disposed, the plugin stopped, no onClose
+    visible --> [*] : dispose(), the scope disposed, the plugin stopped, no onClose
+    hidden --> [*] : dispose(), the scope disposed, the plugin stopped, no onClose
 ```
+
+`opened` is false while the window is closed and true while it is visible or hidden.
 
 - `create()` only makes a local handle. The first `show()` compiles the Slint file and opens the window with the properties you bound or set so far, so no default values flash.
 - Callbacks are registered when the window opens: bind every callback name with {@link "@vestra-player/sdk"!View.on | on()} **before the first `show()`**. Binding a new name while the window is open throws.
@@ -72,20 +79,19 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
 
 ### Panel
 
-```text
- panels.mount(slot, file)
-        │  on() / bind() in the same tick are part of the first values
-        ▼  (next microtask)
- ui.mount ──▶ the player queues it and rebuilds its main window with the panel
-        │                                                   │
-        ▼ ready resolves                                    ▼ ready rejects
- mounted ── user / setVisible(false) / no space ──▶ hidden   (ui-prepare, conflict,
-    │    ◀─ user / setVisible(true) / toggle() ───          busy, unavailable…)
-    │
-    ├─ sidebar only: setDetached(true) / the user ──▶ floating window
-    │     closing the floating window = setVisible(false)
-    │
- dispose() / plugin stops ──▶ unmounted; the main window is rebuilt without it
+```mermaid
+stateDiagram-v2
+    [*] --> queued : panels.mount(slot, file), on() and bind() in the same tick are its first values
+    queued --> mounted : ui.mount in the next microtask, the player rebuilds its main window with the panel, ready resolves
+    queued --> [*] : ready rejects (ui-prepare, conflict, busy, unavailable…)
+    mounted --> hidden : the user, setVisible(false) or no space
+    hidden --> mounted : the user, setVisible(true) or toggle()
+    mounted --> floating : sidebar only, setDetached(true) or the user
+    floating --> hidden : the user closes the floating window, as setVisible(false)
+    floating --> mounted : setDetached(false) or the user
+    mounted --> [*] : dispose() or the plugin stops, unmounted, the main window is rebuilt without it
+    hidden --> [*] : dispose() or the plugin stops
+    floating --> [*] : dispose() or the plugin stops
 ```
 
 - **Mounting rebuilds the main window.** The player compiles its main window together with every mounted panel, so mounting or unmounting any panel (from any plugin) rebuilds it. The player restores each panel's bridge properties to the last values its plugin wrote, but anything kept only inside the Slint component (a scroll position, a `property` the plugin never writes, the text of a field the plugin does not mirror) starts over. The same happens when the sidebar is detached or attached: the floating window holds a new instance of the component.
@@ -94,17 +100,24 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
 
 ### Settings page
 
-```text
- settings.page(file, { id, category, title })
-        ▼  (next microtask)
- settings.register ──▶ the player compiles the page on its own ──▶ ready
-                                                          (or ui-prepare, invalid…)
- the user opens Options, or settings.show(id)
-        ▼
- the Options window is built from every registered page
-        │  pages added or removed while it is open: rebuilt, properties restored
-        ▼
- dispose() / plugin stops ──▶ page removed (the window shows a neighbouring page)
+```mermaid
+flowchart TB
+    PAGE["settings.page(file, { id, category, title })"]
+    REG["settings.register in the next microtask"]
+    COMP["the player compiles the page on its own"]
+    READY["ready"]
+    FAIL["ready rejects (ui-prepare, invalid…)"]
+    OPEN["the user opens Options, or settings.show(id)"]
+    WIN["the Options window is built from every registered page, rebuilt with properties restored when pages are added or removed while it is open"]
+    GONE["dispose() or the plugin stops: the page is removed, the window shows a neighbouring page"]
+    PAGE --> REG
+    REG --> COMP
+    COMP --> READY
+    COMP --> FAIL
+    READY --> OPEN
+    OPEN --> WIN
+    WIN --> GONE
+    READY --> GONE
 ```
 
 - The Options window belongs to the player. The page exists from `ready` on, whether or not the window is open; property writes while it is closed are kept and applied when it opens.

@@ -144,7 +144,11 @@ test("a guideline catches sizes written as plain numbers, not small counts", () 
   assert.deepEqual(
     shapeProblems(
       "guideline",
-      page("- At most 8 pages; `…` is U+2026; player 0.4.3 on 2026-10-25."),
+      page(
+        "- At most 8 pages; `…` is U+2026; player 0.4.3 on 2026-10-25.",
+        "- An HTTP 404 is a failure; at most 1,000,000 entries.",
+        "- See [the list](https://example.com/issues/1234) and {@link Settings.page | the page}.",
+      ),
     ),
     [],
   );

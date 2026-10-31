@@ -17,19 +17,22 @@ flowchart TB
         UI["UI thread (Slint event loop)<br/>Host: plugins, registries, windows, menus, dispatch"]
         PW["playback worker thread<br/>libmpv core, sources, processing, subtitles, producers, offline jobs"]
         RT["render thread<br/>libmpv software renderer, or GPU rendering"]
-        IO["per plugin: a writer and a reader thread on its pipes"]
+        IOS["the shared runner's one writer and one reader thread, for all its members"]
+        IOO["per own process: a writer and a reader thread on its pipes"]
     end
     SR["Node.js: the shared runner<br/>(the built-in plugins)"]
     OWN["Node.js: one process per other plugin<br/>(third-party plugins, development loads)"]
     UI -- "Command queue" --> PW
     PW -- "Event channel" --> UI
     RT -- "frames" --> UI
-    UI -- "replies and events" --> IO
-    IO -- "requests (Event::Request)" --> UI
-    IO -- "JSON lines on stdin (vestra/1)" --> SR
-    SR -- "JSON lines on stdout" --> IO
-    IO -- "JSON lines on stdin (vestra/1)" --> OWN
-    OWN -- "JSON lines on stdout" --> IO
+    UI -- "replies and events" --> IOS
+    IOS -- "requests" --> UI
+    UI -- "replies and events" --> IOO
+    IOO -- "requests (Event::Request)" --> UI
+    IOS -- "JSON lines on stdin, tagged with g (vestra/1)" --> SR
+    SR -- "JSON lines on stdout, tagged with g" --> IOS
+    IOO -- "JSON lines on stdin (vestra/1)" --> OWN
+    OWN -- "JSON lines on stdout" --> IOO
 ```
 
 The host has no plugin business logic. It does not know which plugin is the playlist or the subtitle downloader; it offers shared facilities (playback, UI composition, the processing chain, subtitles, export, plugin lifecycle) and checks every request against the capabilities the plugin declared. Everything a user would call a feature lives in a plugin, built-in or not.
@@ -233,7 +236,7 @@ _ => blocked.map_or_else(|| Decision::gpu(Reason::Default), Decision::cpu),
 
 Source: src/host/src/playback/render_mode.rs
 
-`gpu_opt_in` is `platform::GPU_OPT_IN`: `true` on Windows, `false` on macOS. So on macOS the player renders on the GPU unless something rules it out, and on Windows it renders in software until the user turns on **Video > GPU Rendering (Experimental)**. That menu item belongs to the built-in video plugin, which saves the preference with `plugin.rendering.setPreference`; the choice applies at the next start ([Offer a GPU rendering switch](../how-to/gpu-rendering.md)). Linux has no GPU renderer and always renders in software.
+`gpu_opt_in` is `platform::GPU_OPT_IN`: `true` on Windows, `false` on macOS. So on macOS the player renders on the GPU unless something rules it out, and on Windows it renders in software until the user turns on **Video ▸ GPU Rendering (Experimental)**. That menu item belongs to the built-in video plugin, which saves the preference with `plugin.rendering.setPreference`; the choice applies at the next start ([Offer a GPU rendering switch](../how-to/gpu-rendering.md)). Linux has no GPU renderer and always renders in software.
 
 The decision also picks Slint's window renderer, and a GPU mode whose windows cannot be created falls back to software rendering before the first window opens:
 
@@ -295,7 +298,7 @@ frames.set_waker(Box::new(|| {
 
 Source: src/host/src/main.rs
 
-The slot holds one picture: a slow UI thread skips frames instead of queuing them. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
+The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
 
 ### GPU rendering
 

@@ -333,7 +333,7 @@ export const SHAPES = {
   explanation:
     "no numbered sections, no `Steps`, `Next`, `Testing`, `Common pitfalls` or `FAQ` sections and no numbered lists",
   guideline:
-    "rules only: no tables, colour values (`#rrggbb`), sizes (`12px`, `41×40`, or any number of three or more digits) or generated blocks outside code blocks; values are in the Reference (a small count such as `at most 8` is a rule)",
+    "rules only: no tables, colour values (`#rrggbb`), sizes (`12px`, `41×40`, or any number of three or more digits) or generated blocks outside code blocks; values are in the Reference (a small count such as `at most 8`, a status code such as `HTTP 404`, a count with thousands separators and link targets are not values)",
   example:
     "a `## What it demonstrates` section that links to the tutorial or how-to guide teaching it",
   upgrading: "first section `## Who must change`",
@@ -487,11 +487,20 @@ export function shapeProblems(shape, body, raw = body) {
         );
       // Sizes written as plain numbers: "41×40", "at least 317", "440".
       // Small counts ("at most 8") are rules, not values; code points
-      // (U+2026) and dotted versions are not values either.
-      const size = /\b\d+(?:\.\d+)?\s*[×x]\s*\d+\b/.exec(plain);
+      // (U+2026), dotted versions, link targets (`](…)`, `{@link …}`),
+      // status codes ("HTTP 404") and counts with thousands separators
+      // ("1,000,000") are not values either. They are blanked out first,
+      // with spaces, so line numbers stay.
+      const blank = (match) => match.replace(/[^\n]/g, " ");
+      const scan = plain
+        .replace(/\]\([^)\n]*\)/g, blank)
+        .replace(/\{@link[^}]*\}/g, blank)
+        .replace(/\b(?:HTTP|status)\s+\d{3}\b/gi, blank)
+        .replace(/\b\d{1,3}(?:,\d{3})+\b/g, blank);
+      const size = /\b\d+(?:\.\d+)?\s*[×x]\s*\d+\b/.exec(scan);
       if (size)
         problems.push(`a size ${size[0]} at line ${lineOf(size.index)}`);
-      const number = /(?<![\w+.-])\d{3,}(?:[.,]\d+)?\b(?![.-]\d)/.exec(plain);
+      const number = /(?<![\w+.,-])\d{3,}(?:\.\d+)?\b(?![.,-]\d)/.exec(scan);
       if (number)
         problems.push(
           `a numeric value ${number[0]} at line ${lineOf(number.index)}`,

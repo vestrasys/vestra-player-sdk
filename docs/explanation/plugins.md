@@ -52,14 +52,21 @@ Some refusals are deliberately not failures, because they depend on which other 
 
 Everything a plugin creates is a **handle**: an object that stands for one resource, carries its operations and its listeners, and implements {@link "@vestra-player/sdk"!Disposable | Disposable}. A command, a window, a panel, a filter chain, a snapshot, an export job, a resolver, a generated stream and every listener (`onChange`, `bind`, `on`…) are handles.
 
-```text
-plugin (root scope)
- ├─ command "open-inspector"
- ├─ window "inspector"            ← view.on / view.bind listeners belong to it
- ├─ video filter "picture"
- └─ child scope "tracks"          ← plugin.scope()
-     ├─ command "track.0"
-     └─ command "track.1"
+```mermaid
+flowchart TB
+    ROOT["plugin (root scope)"]
+    C1["command open-inspector"]
+    W["window inspector (its view.on and view.bind listeners belong to it)"]
+    F["video filter picture"]
+    CH["child scope tracks, from plugin.scope()"]
+    T0["command track.0"]
+    T1["command track.1"]
+    ROOT --> C1
+    ROOT --> W
+    ROOT --> F
+    ROOT --> CH
+    CH --> T0
+    CH --> T1
 ```
 
 - Every handle belongs to the {@link "@vestra-player/sdk"!Scope | Scope} it was created through. {@link "@vestra-player/sdk"!Plugin | Plugin} is the root scope; {@link "@vestra-player/sdk"!Scope.scope | plugin.scope()} makes a child with exactly the same modules.
@@ -87,16 +94,19 @@ Several requests within one microtask are merged into one pass, and every target
 
 One click, end to end (a bookmark window; the video is at 42 s):
 
-```text
-user clicks "Mark this position"
-                    ─▶  Slint: clicked => { root.mark(); }
-                    ─▶  the player forwards the callback to the plugin
-                    ─▶  window.on("mark") handler runs: mark = 42
-handler returns     ─▶  update pass: every binding is evaluated
-                          label   "Bookmark: 42.0 s"   changed  → sent
-                          canMark true                 same     → not sent
-                          canJump true                 changed  → sent
-                    ─▶  the label changes; "Jump to bookmark" is enabled
+```mermaid
+sequenceDiagram
+    participant U as user
+    participant S as Slint window (in the player)
+    participant P as plugin
+    U->>S: clicks Mark this position
+    S->>P: the callback mark (clicked => root.mark())
+    P->>P: the window.on("mark") handler runs, mark = 42
+    P->>P: the handler returns, the update pass evaluates every binding
+    P->>S: label Bookmark: 42.0 s (changed, sent)
+    Note over P: canMark true is the same as last sent, not sent
+    P->>S: canJump true (changed, sent)
+    S->>U: the label changes, Jump to bookmark is enabled
 ```
 
 The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers a pass; call `plugin.update()` after such a change. [Keep a slider responsive while dragging](../how-to/slider.md) shows the pattern; [How Slint and TypeScript talk](ui.md#how-slint-and-typescript-talk) explains `set` versus `bind` for views.

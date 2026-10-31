@@ -2598,12 +2598,12 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | DropModifiers | The pointer and ⌥ ⇧ ⌘ (`cmd` is ⌘). | The pointer and Alt, Shift, Ctrl (`cmd` is Ctrl). |
 | plugin.system (open, reveal) | Opened by the system; revealing several files selects all of them in one Finder window. | Opened by the shell; one Explorer window per folder. |
 | plugin.secrets | The login keychain. | The Credential Manager. |
-| App.system() | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"`. |
+| App.system() | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"` by default, `"gpu"` once the user has turned on GPU rendering (player 0.5.14 and later), and `"software"` again after a fallback. |
 | Snapshots and exports (MediaCapture) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams (Player.openStream) | A Unix socket. | Loopback TCP with a token. |
-| Rendering | On the GPU (OpenGL), with hardware decoding. | In software, with hardware decoding copied back (`d3d11va-copy` and similar). |
-| plugin.rendering (player 0.5.13) | `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`). | `gpu.available` is `false` (`no-gpu-backend`); `setPreference("gpu")` fails with `unsupported`. |
-| Render options (RenderOptions) | Available; `peakDetect` has no effect. | `unsupported` (software rendering). |
+| Rendering | On the GPU (OpenGL), with hardware decoding. | In software by default, with hardware decoding copied back (`d3d11va-copy` and similar); from player 0.5.19 the windows themselves draw with Direct3D 12 in this mode. On the GPU from player 0.5.14 once the user turns on **Video ▸ GPU Rendering (Experimental)** (applied at the next start): libmpv draws with Direct3D 11 into textures shared with the windows' Direct3D 12 device, and hardware decoding is zero-copy until a plugin adds a video filter chain. Before 0.5.14 always in software. |
+| plugin.rendering (player 0.5.13) | `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`). | From player 0.5.14 `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`); with `"auto"` the player renders in software (`reason.code` `default`: GPU rendering is experimental and off until it is turned on). Player 0.5.13 has no GPU renderer: `gpu.available` is `false` (`no-gpu-backend`) and `setPreference("gpu")` fails with `unsupported`. |
+| Render options (RenderOptions) | Available; `peakDetect` has no effect. | Available while GPU rendering is on (player 0.5.14 and later); `unsupported` in software rendering, the default. |
 | plugin.video.upscaling (player 0.5.16) | `available` is `false` (`platform`); `set(true)` fails with `unsupported`. | NVIDIA RTX Video Super Resolution: an RTX GPU with driver 530 or newer, GPU rendering on that GPU, the video decoded on it (`d3d11va`); the user must also turn on Super Resolution in the NVIDIA app, which no program can read. |
 | Bindings | `Ctrl` also matches ⌘; `Cmd` is ⌘. | `Cmd` is the Windows logo key; `Cmd+Q` does not quit. |
 | Keys taken first, standard close keys | See Keys the system takes first. | See Keys the system takes first. |
@@ -3301,14 +3301,21 @@ Some refusals are deliberately not failures, because they depend on which other 
 
 Everything a plugin creates is a **handle**: an object that stands for one resource, carries its operations and its listeners, and implements Disposable. A command, a window, a panel, a filter chain, a snapshot, an export job, a resolver, a generated stream and every listener (`onChange`, `bind`, `on`…) are handles.
 
-```text
-plugin (root scope)
- ├─ command "open-inspector"
- ├─ window "inspector"            ← view.on / view.bind listeners belong to it
- ├─ video filter "picture"
- └─ child scope "tracks"          ← plugin.scope()
-     ├─ command "track.0"
-     └─ command "track.1"
+```mermaid
+flowchart TB
+    ROOT["plugin (root scope)"]
+    C1["command open-inspector"]
+    W["window inspector (its view.on and view.bind listeners belong to it)"]
+    F["video filter picture"]
+    CH["child scope tracks, from plugin.scope()"]
+    T0["command track.0"]
+    T1["command track.1"]
+    ROOT --> C1
+    ROOT --> W
+    ROOT --> F
+    ROOT --> CH
+    CH --> T0
+    CH --> T1
 ```
 
 - Every handle belongs to the Scope it was created through. Plugin is the root scope; plugin.scope() makes a child with exactly the same modules.
@@ -3336,16 +3343,19 @@ Several requests within one microtask are merged into one pass, and every target
 
 One click, end to end (a bookmark window; the video is at 42 s):
 
-```text
-user clicks "Mark this position"
-                    ─▶  Slint: clicked => { root.mark(); }
-                    ─▶  the player forwards the callback to the plugin
-                    ─▶  window.on("mark") handler runs: mark = 42
-handler returns     ─▶  update pass: every binding is evaluated
-                          label   "Bookmark: 42.0 s"   changed  → sent
-                          canMark true                 same     → not sent
-                          canJump true                 changed  → sent
-                    ─▶  the label changes; "Jump to bookmark" is enabled
+```mermaid
+sequenceDiagram
+    participant U as user
+    participant S as Slint window (in the player)
+    participant P as plugin
+    U->>S: clicks Mark this position
+    S->>P: the callback mark (clicked => root.mark())
+    P->>P: the window.on("mark") handler runs, mark = 42
+    P->>P: the handler returns, the update pass evaluates every binding
+    P->>S: label Bookmark: 42.0 s (changed, sent)
+    Note over P: canMark true is the same as last sent, not sent
+    P->>S: canJump true (changed, sent)
+    S->>U: the label changes, Jump to bookmark is enabled
 ```
 
 The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers a pass; call `plugin.update()` after such a change. Keep a slider responsive while dragging shows the pattern; How Slint and TypeScript talk explains `set` versus `bind` for views.
@@ -3491,20 +3501,38 @@ The orders of the player's own items and the recommended top-level ranges are on
 
 A binding is a string such as `"Ctrl+Shift+A"`, `"NumpadEnter"` or `"Mouse:WheelUp"` (Reference: commands has the syntax and every input name). When the user presses a key, the player looks for a command in this order:
 
-```text
-key press in the main window or the floating sidebar
-   │  a focused control that uses the key (Space in a text field) keeps it
-   ▼
-this plugin's panel has focus?  ── yes ─▶ its focus: "panel" bindings first
-   ▼
-global bindings
-   │  several commands bind the same input in the same scope:
-   │    1. the user's override   2. the player's own command   3. the plugin loaded first
-   ▼
-winner enabled ──────────────▶ run()   (busy: the key is taken, nothing runs)
-winner disabled ─────────────▶ the next command it shadowed, then the global scope;
-                               none left: its reason on the OSD (key taken),
-                               no reason: the key goes on to the focused control
+```mermaid
+flowchart TB
+    K["a key press in the main window or the floating sidebar"]
+    C{"does a focused control use the key (Space in a text field)?"}
+    KEPT["the control keeps it"]
+    P{"does this plugin's panel have focus?"}
+    PB["its focus: panel bindings first"]
+    G["global bindings: when several commands bind the same input in one scope, the winner is the user's override, then the player's own command, then the plugin loaded first"]
+    W{"is the winner enabled?"}
+    BUSY{"is it busy?"}
+    RUN["run()"]
+    TAKEN["the key is taken, nothing runs"]
+    NEXT{"is there a next command it shadowed, in this scope or the global one?"}
+    R{"does the disabled winner have a reason?"}
+    OSD["its reason on the OSD, the key is taken"]
+    ON["the key goes on to the focused control"]
+    K --> C
+    C -- "yes" --> KEPT
+    C -- "no" --> P
+    P -- "yes" --> PB
+    P -- "no" --> G
+    PB -- "no binding there" --> G
+    PB -- "a binding" --> W
+    G --> W
+    W -- "yes" --> BUSY
+    BUSY -- "no" --> RUN
+    BUSY -- "yes" --> TAKEN
+    W -- "no" --> NEXT
+    NEXT -- "yes" --> W
+    NEXT -- "no" --> R
+    R -- "yes" --> OSD
+    R -- "no" --> ON
 ```
 
 - **Where bindings apply.** Bindings belong to the main window: they fire while it or the floating sidebar window has focus. They do **not** fire in tool windows or the Options window; keys there are the Slint file's own business (a `FocusScope`, a default button). While a menu or a system dialog is open, bindings pause.
@@ -3561,14 +3589,25 @@ The members are on Player; this page explains how they work together.
 
 plugin.player.state is a PlayerState: an immutable snapshot of the current source.
 
-```text
-           open()                     media ready               played to the end
- empty ───────────▶ loading ─────────────────────▶ ready ─────────────────────▶ ended
-   ▲                  │                              │  ▲                          │
-   │                  └── load failed ──▶ error      │  └──── restart() ───────────┘
-   └──────────── close() / F4 ───────────────────────┘
- every open (even of the same file) starts a new sourceId
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> loading : open()
+    loading --> ready : media ready
+    loading --> error : load failed
+    ready --> ended : played to the end
+    ended --> ready : restart()
+    loading --> loading : open()
+    ready --> loading : open()
+    ended --> loading : open()
+    error --> loading : open()
+    loading --> empty : close() or F4
+    ready --> empty : close() or F4
+    ended --> empty : close() or F4
+    error --> empty : close() or F4
 ```
+
+`open` and `close` work from every state. Every open, even of the same file, starts a new `sourceId`.
 
 - **`sourceId` identifies a source.** It changes every time something is opened, even the same file again, so comparing `sourceId`s tells you whether "the thing playing" is still the one you saw.
 - **`can` says what the source allows**: pause, seek, rate, restart, close, snapshot, next, previous. A live stream cannot seek; a generated stream cannot seek, change speed or restart. Bind your controls' enabled state to it instead of guessing from `kind` or the file type.
@@ -3587,10 +3626,15 @@ Because the state is a snapshot, a plugin can keep one and use it later as the c
 
 **A control acts on the state the plugin saw.** `setPaused`, `seek`, `setRate`, `restart`, `close` and `media.capture` are conditional on the current `player.state` by default. If, after that state, the user or another plugin changed the source (opened something else, paused, jumped to another position), the call fails with `code: "stale"` and **does nothing**.
 
-```text
-plugin sees state #7 (movie.mp4 at 0:42)
-user opens trailer.mp4  ─▶ state #8
-plugin: seek(42)        ─▶ rejected with "stale"; the trailer is not touched
+```mermaid
+sequenceDiagram
+    participant P as plugin
+    participant V as player
+    participant U as user
+    V->>P: state 7 (movie.mp4 at 0:42)
+    U->>V: opens trailer.mp4, state 8
+    P->>V: seek(42), conditional on state 7
+    V-->>P: rejected with stale, the trailer is not touched
 ```
 
 Without this rule, a "jump to bookmark" that arrives a moment late would seek a different video, and two plugins reacting to the same event would undo each other. With it, a late control is refused instead of applied to the wrong thing.
@@ -3634,16 +3678,17 @@ A **resolver** (plugin.resolvers, capability `source.resolve`) lets a plugin tak
 - A **web resolver** (`schemes` and exact `hosts`) turns a page URL into stream URLs the player can play (a video site's page into its media URLs, with headers).
 - A **file resolver** (`extensions`, player 0.4.1) takes over local files by extension and returns a stream the plugin generates (an emulator for `.nes` files). It also needs `producer.av`.
 
-```text
-player.open("https://video.example/watch?v=1")     from anyone: user, playlist, plugin
-   │  a resolver registered for https + video.example?
-   ├── no ──▶ the player opens the URL itself
-   ▼ yes
-resolver.resolve(url, signal)   in the resolver plugin's process
-   │  returns stream URLs (web) or a generated stream (file)
-   ▼
-the player opens the result under the original open:
-same ifCurrent condition, same Media, same ready() for the caller
+```mermaid
+flowchart TB
+    O["player.open('https://video.example/watch?v=1') from anyone: the user, the playlist, a plugin"]
+    Q{"is a resolver registered for https and video.example?"}
+    SELF["the player opens the URL itself"]
+    R["resolver.resolve(url, signal) in the resolver plugin's process returns stream URLs (web) or a generated stream (file)"]
+    RES["the player opens the result under the original open: the same ifCurrent condition, the same Media, the same ready() for the caller"]
+    O --> Q
+    Q -- "no" --> SELF
+    Q -- "yes" --> R
+    R --> RES
 ```
 
 - **One owner per target.** One scheme and host, or one extension, has one resolver. A second plugin's registration fails with `conflict` but does not fail its activation; the player's built-in plugins register first.
@@ -3707,11 +3752,27 @@ A plugin can change what the user sees and hears in three different places. They
 | **Display layer** | Where the video sits in the video area: aspect, fit, zoom, pan | One plugin at a time | No | VideoView |
 | **Render options** | How the GPU renderer draws: HDR tone mapping, user shaders, motion interpolation | One plugin at a time | No | RenderOptions |
 
-```text
- decoder ─▶ plugin A's chain ─▶ plugin B's chain ─▶ … ─▶ (frameBlend) ─▶ renderer ─▶ video area
-            └──────────── filter chains: part of the picture ──────────┘    │          │
-                         snapshots and exports use the same chain      render options  display layer
-                                                                       (display only)  (display only)
+```mermaid
+flowchart LR
+    DEC["decoder"]
+    subgraph CHAINS["filter chains: part of the picture, also used by snapshots and exports"]
+        A["plugin A's chain"]
+        B["plugin B's chain"]
+        MORE["…"]
+        FB["(frameBlend)"]
+    end
+    R["renderer"]
+    VA["video area"]
+    RO["render options (display only)"]
+    DL["display layer (display only)"]
+    DEC --> A
+    A --> B
+    B --> MORE
+    MORE --> FB
+    FB --> R
+    R --> VA
+    RO -.-> R
+    DL -.-> VA
 ```
 
 All three need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
@@ -3735,13 +3796,15 @@ picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma:
 
 A chain reports where it stands in FilterStatus:
 
-```text
- set(nodes)
-   │ no ready media ──▶ waiting ── media ready ──┐
-   ▼                                             ▼
- applying ──────────────────────────────────▶ applied
-   │
-   └──▶ failed (error.code) ── retry() / next set() / new source ──▶ applying
+```mermaid
+stateDiagram-v2
+    [*] --> waiting : set(nodes), no ready media
+    [*] --> applying : set(nodes), media ready
+    waiting --> applying : media ready, not applied yet
+    waiting --> applied : media ready, the player replayed the chain it kept
+    applying --> applied : the player accepted it
+    applying --> failed : refused (error.code)
+    failed --> applying : retry(), the next set() or a new source
 ```
 
 - `waiting` keeps the value until there is media to apply it to; without `events` the SDK never sees the media become ready, so the chain stays there.
@@ -3792,20 +3855,28 @@ It assumes you have written a first plugin (Getting started). For every method's
 
 #### The five surfaces
 
-```text
-┌─ main window ─────────────────────────────────────────┬─────────────┐
-│ ① OSD message (top left, 2 s)                         │             │
-│ ① OSD info blocks (one per plugin, under the message) │  ② sidebar  │
-│                                                       │    panel    │
-│            video area                                 │             │
-│            ② backdrop panel while there is no video   │             │
-├───────────────────────────────────────────────────────┤             │
-│ ② bottom bar panel                                    │             │
-└───────────────────────────────────────────────────────┴─────────────┘
-
-  separate operating-system windows:
-  ③ tool windows · ④ the Options window with the settings pages
-  ② the sidebar panel when it is detached (floating) · ⑤ dialogs
+```mermaid
+flowchart LR
+    subgraph MAIN["the main window"]
+        direction TB
+        subgraph VIDEO["the video area"]
+            direction TB
+            OSD1["1 OSD message (top left, 2 s)"]
+            OSD2["1 OSD info blocks (one per plugin, under the message)"]
+            BD["2 backdrop panel, while there is no video"]
+        end
+        BAR["2 bottom bar panel, under the video"]
+        SIDE["2 sidebar panel, on the right"]
+    end
+    subgraph OWN["separate operating-system windows"]
+        direction TB
+        TW["3 tool windows"]
+        OPT["4 the Options window with the settings pages"]
+        FL["2 the sidebar panel when it is detached (floating)"]
+        DLG["5 dialogs"]
+    end
+    VIDEO --> BAR
+    SIDE -- "detach" --> FL
 ```
 
 **① On-screen display** (plugin.osd, capability `ui.osd`). Text the player draws over the top-left of the video: a one-line message that disappears after 2 seconds (osd.show), and one multi-line information block per plugin that stays until you clear it (osd.panel). It takes no input and needs no Slint.
@@ -3828,22 +3899,21 @@ Every surface is a **handle** owned by the Scope that created it. Disposing the 
 
 ##### Tool window
 
-```text
- windows.create(file)       nothing on screen yet; bind callbacks and properties now
-        │  view.on(), view.bind(), view.set()
-        ▼
- ┌──────────────┐   show()   ┌──────────────┐   hide()   ┌──────────────┐
- │    closed    │──────────▶│   visible    │──────────▶│    hidden     │
- │ opened=false │           │ opened=true  │◀──────────│ opened=true  │
- └──────────────┘           └──────────────┘   show()   └──────────────┘
-        ▲                       │       │
-        │  close()              │       │  the user: title-bar close button,
-        │  (no onClose)         │       │  the standard close keys
-        └───────────────────────┘       │  → onClose listeners run
-        ▲                               │
-        └───────────────────────────────┘
- dispose(), the scope disposed, the plugin stopped: closed for good (no onClose)
+```mermaid
+stateDiagram-v2
+    [*] --> closed : windows.create(file), bind callbacks and properties now
+    closed --> visible : show()
+    visible --> hidden : hide()
+    hidden --> visible : show()
+    visible --> closed : close(), no onClose
+    hidden --> closed : close(), no onClose
+    visible --> closed : the user (title-bar close button, standard close keys), onClose listeners run
+    closed --> [*] : dispose(), the scope disposed, the plugin stopped, no onClose
+    visible --> [*] : dispose(), the scope disposed, the plugin stopped, no onClose
+    hidden --> [*] : dispose(), the scope disposed, the plugin stopped, no onClose
 ```
+
+`opened` is false while the window is closed and true while it is visible or hidden.
 
 - `create()` only makes a local handle. The first `show()` compiles the Slint file and opens the window with the properties you bound or set so far, so no default values flash.
 - Callbacks are registered when the window opens: bind every callback name with on() **before the first `show()`**. Binding a new name while the window is open throws.
@@ -3853,20 +3923,19 @@ Every surface is a **handle** owned by the Scope that created it. Disposing the 
 
 ##### Panel
 
-```text
- panels.mount(slot, file)
-        │  on() / bind() in the same tick are part of the first values
-        ▼  (next microtask)
- ui.mount ──▶ the player queues it and rebuilds its main window with the panel
-        │                                                   │
-        ▼ ready resolves                                    ▼ ready rejects
- mounted ── user / setVisible(false) / no space ──▶ hidden   (ui-prepare, conflict,
-    │    ◀─ user / setVisible(true) / toggle() ───          busy, unavailable…)
-    │
-    ├─ sidebar only: setDetached(true) / the user ──▶ floating window
-    │     closing the floating window = setVisible(false)
-    │
- dispose() / plugin stops ──▶ unmounted; the main window is rebuilt without it
+```mermaid
+stateDiagram-v2
+    [*] --> queued : panels.mount(slot, file), on() and bind() in the same tick are its first values
+    queued --> mounted : ui.mount in the next microtask, the player rebuilds its main window with the panel, ready resolves
+    queued --> [*] : ready rejects (ui-prepare, conflict, busy, unavailable…)
+    mounted --> hidden : the user, setVisible(false) or no space
+    hidden --> mounted : the user, setVisible(true) or toggle()
+    mounted --> floating : sidebar only, setDetached(true) or the user
+    floating --> hidden : the user closes the floating window, as setVisible(false)
+    floating --> mounted : setDetached(false) or the user
+    mounted --> [*] : dispose() or the plugin stops, unmounted, the main window is rebuilt without it
+    hidden --> [*] : dispose() or the plugin stops
+    floating --> [*] : dispose() or the plugin stops
 ```
 
 - **Mounting rebuilds the main window.** The player compiles its main window together with every mounted panel, so mounting or unmounting any panel (from any plugin) rebuilds it. The player restores each panel's bridge properties to the last values its plugin wrote, but anything kept only inside the Slint component (a scroll position, a `property` the plugin never writes, the text of a field the plugin does not mirror) starts over. The same happens when the sidebar is detached or attached: the floating window holds a new instance of the component.
@@ -3875,17 +3944,24 @@ Every surface is a **handle** owned by the Scope that created it. Disposing the 
 
 ##### Settings page
 
-```text
- settings.page(file, { id, category, title })
-        ▼  (next microtask)
- settings.register ──▶ the player compiles the page on its own ──▶ ready
-                                                          (or ui-prepare, invalid…)
- the user opens Options, or settings.show(id)
-        ▼
- the Options window is built from every registered page
-        │  pages added or removed while it is open: rebuilt, properties restored
-        ▼
- dispose() / plugin stops ──▶ page removed (the window shows a neighbouring page)
+```mermaid
+flowchart TB
+    PAGE["settings.page(file, { id, category, title })"]
+    REG["settings.register in the next microtask"]
+    COMP["the player compiles the page on its own"]
+    READY["ready"]
+    FAIL["ready rejects (ui-prepare, invalid…)"]
+    OPEN["the user opens Options, or settings.show(id)"]
+    WIN["the Options window is built from every registered page, rebuilt with properties restored when pages are added or removed while it is open"]
+    GONE["dispose() or the plugin stops: the page is removed, the window shows a neighbouring page"]
+    PAGE --> REG
+    REG --> COMP
+    COMP --> READY
+    COMP --> FAIL
+    READY --> OPEN
+    OPEN --> WIN
+    WIN --> GONE
+    READY --> GONE
 ```
 
 - The Options window belongs to the player. The page exists from `ready` on, whether or not the window is open; property writes while it is closed are kept and applied when it opens.
@@ -4029,12 +4105,12 @@ The API is the same on macOS and Windows; what differs is the system's own part:
 
 ## Explanation: GPU and software rendering
 
-The player draws the video either on the GPU or in software. Which one it uses is decided when it starts, from the user's saved choice, the system and what happened at earlier starts; the running player keeps its renderer. The choice is the player's, like a browser's hardware acceleration switch: a plugin can show it and change it (plugin.rendering), but it stores nothing itself. How the two render paths work inside the player is in The player's Rust core; where each system renders is in Reference: platforms.
+The player draws the video either on the GPU or in software. Which one it uses is decided when it starts, from the user's saved choice, the system and what happened at earlier starts; the running player keeps its renderer. The choice is the player's, like a browser's hardware acceleration switch: a plugin can show it and change it (plugin.rendering), but it stores nothing itself. How the two render paths work inside the player is in The player's Rust core; where each system renders is in Reference: platforms. On macOS the player renders on the GPU unless something rules it out. On Windows GPU rendering exists from player 0.5.14 but is experimental and off by default: with the choice `"auto"` the player renders in software (`reason.code` `default`), until the user turns on **Video ▸ GPU Rendering (Experimental)**, an item of the player's own video plugin, built as Offer a GPU rendering switch describes.
 
 #### What the state reports
 
 - **`state()` describes now and the next start.** `mode` and `reason` are the renderer drawing now and why; `preference` is the saved choice (`"auto"`, `"gpu"` or `"software"`); `nextMode` and `nextReason` are what the next start will use as far as the player knows, after the environment, the driver denylist and an earlier GPU crash. The item is checked by `nextMode`, so with `"auto"` on a system where the GPU is the default it shows checked.
-- **`gpu.available` decides whether the item can be used.** Where this player has no GPU renderer (`no-gpu-backend`), without a user interface (`headless`), for a graphics driver on the player's denylist (`denylist`) or after a GPU crash at an earlier start (`previous-crash`), it is `false` and `gpu.reason.message` explains why; the item shows that as its disabled reason. `"software"` and `"auto"` are always accepted, so a user can always leave the GPU.
+- **`gpu.available` decides whether the item can be used.** Where this player has no GPU renderer (`no-gpu-backend`: on Linux, and on Windows before player 0.5.14), without a user interface (`headless`), for a graphics driver on the player's denylist (`denylist`) or after a GPU crash at an earlier start (`previous-crash`), it is `false` and `gpu.reason.message` explains why; the item shows that as its disabled reason. `"software"` and `"auto"` are always accepted, so a user can always leave the GPU.
 - **`restartPending`** is true while the next start's mode differs from the mode this run started with. When the user changes the choice back, it turns false again and the "(Restart to Apply)" title and the restart item go away.
 - **`restartPlayer()`** resolves once the player has accepted. The player then quits normally, which stops every plugin, yours included, and starts again with the same plugins; a local file continues at its position, paused or playing as it was (a stream is not reopened). It rejects with `busy` while a restart is under way and with `failed` when the new process could not start (the player keeps running).
 
@@ -4058,19 +4134,22 @@ flowchart TB
         UI["UI thread (Slint event loop)<br/>Host: plugins, registries, windows, menus, dispatch"]
         PW["playback worker thread<br/>libmpv core, sources, processing, subtitles, producers, offline jobs"]
         RT["render thread<br/>libmpv software renderer, or GPU rendering"]
-        IO["per plugin: a writer and a reader thread on its pipes"]
+        IOS["the shared runner's one writer and one reader thread, for all its members"]
+        IOO["per own process: a writer and a reader thread on its pipes"]
     end
     SR["Node.js: the shared runner<br/>(the built-in plugins)"]
     OWN["Node.js: one process per other plugin<br/>(third-party plugins, development loads)"]
     UI -- "Command queue" --> PW
     PW -- "Event channel" --> UI
     RT -- "frames" --> UI
-    UI -- "replies and events" --> IO
-    IO -- "requests (Event::Request)" --> UI
-    IO -- "JSON lines on stdin (vestra/1)" --> SR
-    SR -- "JSON lines on stdout" --> IO
-    IO -- "JSON lines on stdin (vestra/1)" --> OWN
-    OWN -- "JSON lines on stdout" --> IO
+    UI -- "replies and events" --> IOS
+    IOS -- "requests" --> UI
+    UI -- "replies and events" --> IOO
+    IOO -- "requests (Event::Request)" --> UI
+    IOS -- "JSON lines on stdin, tagged with g (vestra/1)" --> SR
+    SR -- "JSON lines on stdout, tagged with g" --> IOS
+    IOO -- "JSON lines on stdin (vestra/1)" --> OWN
+    OWN -- "JSON lines on stdout" --> IOO
 ```
 
 The host has no plugin business logic. It does not know which plugin is the playlist or the subtitle downloader; it offers shared facilities (playback, UI composition, the processing chain, subtitles, export, plugin lifecycle) and checks every request against the capabilities the plugin declared. Everything a user would call a feature lives in a plugin, built-in or not.
@@ -4274,7 +4353,7 @@ _ => blocked.map_or_else(|| Decision::gpu(Reason::Default), Decision::cpu),
 
 Source: src/host/src/playback/render_mode.rs
 
-`gpu_opt_in` is `platform::GPU_OPT_IN`: `true` on Windows, `false` on macOS. So on macOS the player renders on the GPU unless something rules it out, and on Windows it renders in software until the user turns on **Video > GPU Rendering (Experimental)**. That menu item belongs to the built-in video plugin, which saves the preference with `plugin.rendering.setPreference`; the choice applies at the next start (Offer a GPU rendering switch). Linux has no GPU renderer and always renders in software.
+`gpu_opt_in` is `platform::GPU_OPT_IN`: `true` on Windows, `false` on macOS. So on macOS the player renders on the GPU unless something rules it out, and on Windows it renders in software until the user turns on **Video ▸ GPU Rendering (Experimental)**. That menu item belongs to the built-in video plugin, which saves the preference with `plugin.rendering.setPreference`; the choice applies at the next start (Offer a GPU rendering switch). Linux has no GPU renderer and always renders in software.
 
 The decision also picks Slint's window renderer, and a GPU mode whose windows cannot be created falls back to software rendering before the first window opens:
 
@@ -4336,7 +4415,7 @@ frames.set_waker(Box::new(|| {
 
 Source: src/host/src/main.rs
 
-The slot holds one picture: a slow UI thread skips frames instead of queuing them. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
+The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
 
 ##### GPU rendering
 
@@ -4478,6 +4557,8 @@ Admitting a member is a control message on the runner's pipe (`g` 0) carrying wh
 ```
 
 Shape from src/host/src/process/shared_runner.rs
+
+The runner has one pipe pair, served by one writer thread (`shared-runner-write`) and one reader thread (`shared-runner-read`) for all its members; the reader routes each line by its `g`.
 
 ##### The activation deadline
 

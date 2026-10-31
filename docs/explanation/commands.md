@@ -55,20 +55,38 @@ The orders of the player's own items and the recommended top-level ranges are on
 
 A binding is a string such as `"Ctrl+Shift+A"`, `"NumpadEnter"` or `"Mouse:WheelUp"` ([Reference: commands](../reference/commands.md#binding-syntax) has the syntax and every input name). When the user presses a key, the player looks for a command in this order:
 
-```text
-key press in the main window or the floating sidebar
-   │  a focused control that uses the key (Space in a text field) keeps it
-   ▼
-this plugin's panel has focus?  ── yes ─▶ its focus: "panel" bindings first
-   ▼
-global bindings
-   │  several commands bind the same input in the same scope:
-   │    1. the user's override   2. the player's own command   3. the plugin loaded first
-   ▼
-winner enabled ──────────────▶ run()   (busy: the key is taken, nothing runs)
-winner disabled ─────────────▶ the next command it shadowed, then the global scope;
-                               none left: its reason on the OSD (key taken),
-                               no reason: the key goes on to the focused control
+```mermaid
+flowchart TB
+    K["a key press in the main window or the floating sidebar"]
+    C{"does a focused control use the key (Space in a text field)?"}
+    KEPT["the control keeps it"]
+    P{"does this plugin's panel have focus?"}
+    PB["its focus: panel bindings first"]
+    G["global bindings: when several commands bind the same input in one scope, the winner is the user's override, then the player's own command, then the plugin loaded first"]
+    W{"is the winner enabled?"}
+    BUSY{"is it busy?"}
+    RUN["run()"]
+    TAKEN["the key is taken, nothing runs"]
+    NEXT{"is there a next command it shadowed, in this scope or the global one?"}
+    R{"does the disabled winner have a reason?"}
+    OSD["its reason on the OSD, the key is taken"]
+    ON["the key goes on to the focused control"]
+    K --> C
+    C -- "yes" --> KEPT
+    C -- "no" --> P
+    P -- "yes" --> PB
+    P -- "no" --> G
+    PB -- "no binding there" --> G
+    PB -- "a binding" --> W
+    G --> W
+    W -- "yes" --> BUSY
+    BUSY -- "no" --> RUN
+    BUSY -- "yes" --> TAKEN
+    W -- "no" --> NEXT
+    NEXT -- "yes" --> W
+    NEXT -- "no" --> R
+    R -- "yes" --> OSD
+    R -- "no" --> ON
 ```
 
 - **Where bindings apply.** Bindings belong to the main window: they fire while it or the floating sidebar window has focus. They do **not** fire in tool windows or the Options window; keys there are the Slint file's own business (a `FocusScope`, a default button). While a menu or a system dialog is open, bindings pause.

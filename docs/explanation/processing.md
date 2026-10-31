@@ -13,11 +13,27 @@ A plugin can change what the user sees and hears in three different places. They
 | **Display layer** | Where the video sits in the video area: aspect, fit, zoom, pan | One plugin at a time | No | {@link "@vestra-player/sdk"!VideoView | VideoView} |
 | **Render options** | How the GPU renderer draws: HDR tone mapping, user shaders, motion interpolation | One plugin at a time | No | {@link "@vestra-player/sdk"!RenderOptions | RenderOptions} |
 
-```text
- decoder ─▶ plugin A's chain ─▶ plugin B's chain ─▶ … ─▶ (frameBlend) ─▶ renderer ─▶ video area
-            └──────────── filter chains: part of the picture ──────────┘    │          │
-                         snapshots and exports use the same chain      render options  display layer
-                                                                       (display only)  (display only)
+```mermaid
+flowchart LR
+    DEC["decoder"]
+    subgraph CHAINS["filter chains: part of the picture, also used by snapshots and exports"]
+        A["plugin A's chain"]
+        B["plugin B's chain"]
+        MORE["…"]
+        FB["(frameBlend)"]
+    end
+    R["renderer"]
+    VA["video area"]
+    RO["render options (display only)"]
+    DL["display layer (display only)"]
+    DEC --> A
+    A --> B
+    B --> MORE
+    MORE --> FB
+    FB --> R
+    R --> VA
+    RO -.-> R
+    DL -.-> VA
 ```
 
 All three need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
@@ -41,13 +57,15 @@ picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma:
 
 A chain reports where it stands in {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}:
 
-```text
- set(nodes)
-   │ no ready media ──▶ waiting ── media ready ──┐
-   ▼                                             ▼
- applying ──────────────────────────────────▶ applied
-   │
-   └──▶ failed (error.code) ── retry() / next set() / new source ──▶ applying
+```mermaid
+stateDiagram-v2
+    [*] --> waiting : set(nodes), no ready media
+    [*] --> applying : set(nodes), media ready
+    waiting --> applying : media ready, not applied yet
+    waiting --> applied : media ready, the player replayed the chain it kept
+    applying --> applied : the player accepted it
+    applying --> failed : refused (error.code)
+    failed --> applying : retry(), the next set() or a new source
 ```
 
 - `waiting` keeps the value until there is media to apply it to; without `events` the SDK never sees the media become ready, so the chain stays there.
