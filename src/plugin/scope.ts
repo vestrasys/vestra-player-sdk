@@ -3,6 +3,7 @@ import { failure, toError } from "./runtime.ts";
 import type { Runtime } from "./runtime.ts";
 import type { Disposable, Plugin, PluginError, Scope } from "./types.ts";
 import { commands } from "./commands.ts";
+import { WHEN } from "./when.ts";
 import { dialogs, panels, ui, windows } from "./ui.ts";
 import { timeline } from "./timeline.ts";
 import { drops } from "./drops.ts";
@@ -54,6 +55,7 @@ export class ScopeImpl implements Plugin {
     return this.#disposed || (this.#parent?.disposed ?? false);
   }
   readonly commands = commands(this);
+  readonly when = WHEN;
   readonly windows = windows(this);
   readonly panels = panels(this);
   readonly dialogs = dialogs(this);

@@ -15,6 +15,46 @@ import type {
   SystemInfo,
 } from "./types.ts";
 import { LOCALES } from "../i18n.ts";
+import { basename, isAbsolute, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/** The SDK's own files (`src/` or `dist/`): left out of a call site. */
+const SDK_DIRECTORY = fileURLToPath(new URL("..", import.meta.url));
+
+/**
+ * Why something listens, for the player's log line that says why a plugin
+ * keeps running (`events.subscribe { why }`, player 0.5.21): computed
+ * only when the player is told.
+ */
+export type Why = () => string;
+
+/**
+ * Events the player wakes a stopped plugin for (player 0.5.21): a listener
+ * of one does not keep the plugin running. They follow deliberate changes
+ * (an install, a key edit, the palette, a resolver), not playback.
+ */
+export const WAKE_EVENTS: readonly string[] = [
+  "packages.changed",
+  "bindings.changed",
+  "appearance.changed",
+  "resolvers.fileTypes",
+];
+
+/**
+ * The state each event keeps current, and whether `plugin.when` can say
+ * the same without the plugin running.
+ */
+const STATE: Record<string, { name: string; when: boolean }> = {
+  "source.state": { name: "plugin.player.state", when: true },
+  "window.state": { name: "plugin.window.state", when: true },
+  "appearance.changed": { name: "plugin.appearance", when: true },
+  "timeline.changed": { name: "plugin.timeline.marks", when: false },
+  "playback.backend": { name: "plugin.subtitles.state", when: false },
+  "resolvers.fileTypes": {
+    name: "plugin.resolvers.fileTypes",
+    when: false,
+  },
+};
 
 export interface PluginManifest {
   id: string;
@@ -110,6 +150,10 @@ type Listener = (data: unknown) => void;
 interface EventGroup {
   listeners: Set<Listener>;
   active: number;
+  /** Why each active holder listens, in the order they came. */
+  whys: Map<object, Why>;
+  /** The reason the player was last told. */
+  toldWhy?: string;
   off?: Promise<() => Promise<void>>;
   /** What the player was last told: `true` for a real listener. */
   told?: boolean;
@@ -133,8 +177,10 @@ export class Runtime {
   readonly #transport: Transport;
   /** Each binding with the events whose state it read last time (held). */
   readonly #bindings = new Map<() => void, Map<string, Disposable>>();
-  /** The events read by the binding being evaluated. */
-  #reads: Set<string> | undefined;
+  /** The events read by the binding being evaluated, with who read them. */
+  #reads: Map<string, Why> | undefined;
+  /** Who reads now (a command's field and where it was added). */
+  #reader: Reader | undefined;
   #scheduled = false;
   readonly #events = new Map<string, EventGroup>();
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
@@ -217,24 +263,95 @@ export class Runtime {
    * on it, so the event counts as listened to while the binding reads it.
    */
   reading(event: string) {
-    this.#reads?.add(event);
+    const reads = this.#reads;
+    if (!reads || reads.has(event)) return;
+    const reader = this.#reader;
+    const state = STATE[event];
+    reads.set(event, () => {
+      const read = state?.name ?? event;
+      const site = reader?.where?.();
+      const at = site ? ` (${site})` : "";
+      if (!reader) return `a binding reads ${read}`;
+      if (!reader.field) return `${reader.label} reads ${read}${at}`;
+      const hint = state?.when ? " — use plugin.when" : "";
+      return `${reader.label} is a function that reads ${read}${at}${hint}`;
+    });
+  }
+  /**
+   * Evaluate `read` as `label`, added at `where`: the state it reads is
+   * reported as read by it. `field`: a command's `enabled` or `checked`,
+   * which a `plugin.when` condition can replace.
+   */
+  reader<T>(
+    label: string,
+    where: (() => string | undefined) | undefined,
+    read: () => T,
+    field = false,
+  ): T {
+    const outer = this.#reader;
+    this.#reader = { label, where, field };
+    try {
+      return read();
+    } finally {
+      this.#reader = outer;
+    }
+  }
+  /**
+   * Where the plugin's code called into the SDK: the first stack frame
+   * outside the SDK, as a path relative to the plugin's directory and a
+   * line (`main.ts:353`). Captured now, formatted when asked.
+   */
+  callSite(): () => string | undefined {
+    const limit = Error.stackTraceLimit;
+    Error.stackTraceLimit = 40;
+    const error = new Error();
+    Error.stackTraceLimit = limit;
+    let site: string | undefined | null = null;
+    return () => {
+      if (site === null) site = this.#site(error.stack ?? "");
+      return site;
+    };
+  }
+  #site(stack: string): string | undefined {
+    for (const line of stack.split("\n").slice(1)) {
+      const match = /\(?((?:file:\/\/)?[^()\s]+?):(\d+):\d+\)?\s*$/.exec(line);
+      if (!match) continue;
+      let file = match[1]!;
+      if (file.startsWith("file:"))
+        try {
+          file = fileURLToPath(file);
+        } catch {
+          continue;
+        }
+      const sdk = relative(SDK_DIRECTORY, file);
+      if (!isAbsolute(file) || !(sdk.startsWith("..") || isAbsolute(sdk)))
+        continue;
+      const inside = relative(this.directory, file);
+      const shown =
+        inside.startsWith("..") || isAbsolute(inside) ? basename(file) : inside;
+      return `${shown.replaceAll("\\", "/")}:${match[2]}`;
+    }
+    return undefined;
   }
   /** Evaluate one binding, holding the events whose state it read. */
   #evaluate(evaluate: () => void, held: Map<string, Disposable>) {
-    const reads = new Set<string>();
+    const reads = new Map<string, Why>();
     const outer = this.#reads;
+    const reader = this.#reader;
     this.#reads = reads;
+    this.#reader = undefined;
     try {
       evaluate();
     } finally {
       this.#reads = outer;
+      this.#reader = reader;
       for (const [event, hold] of held)
         if (!reads.has(event)) {
           held.delete(event);
           void hold.dispose();
         }
-      for (const event of reads)
-        if (!held.has(event)) held.set(event, this.hold(event));
+      for (const [event, why] of reads)
+        if (!held.has(event)) held.set(event, this.hold(event, why));
     }
   }
   /** Coalesce: one evaluation pass per microtask turn, however many changes. */
@@ -269,20 +386,26 @@ export class Runtime {
     let entry = this.#events.get(event);
     const created = !entry;
     if (!entry) {
-      entry = { listeners: new Set(), active: 0 };
+      entry = { listeners: new Set(), active: 0, whys: new Map() };
       this.#events.set(event, entry);
     }
     const group = entry;
     group.listeners.add(listener);
-    if (!mirror) group.active++;
+    const token = {};
+    if (!mirror) {
+      group.active++;
+      group.whys.set(token, listenerWhy(this.callSite()));
+    }
     if (created && (needs === null || this.can(needs))) {
       group.told = group.active > 0;
+      group.toldWhy = group.told ? firstWhy(group) : undefined;
       group.off = this.host.events.subscribe(
         event as never,
         (data) => {
           for (const each of [...group.listeners]) each(data);
         },
         !group.told,
+        group.toldWhy,
       );
       this.starting(group.off, (error) =>
         console.error(`[${this.manifest.id}] subscribe ${event}:`, error),
@@ -295,6 +418,7 @@ export class Runtime {
         listening = false;
         group.listeners.delete(listener);
         if (!mirror) group.active--;
+        group.whys.delete(token);
         if (this.#events.get(event) !== group) return;
         if (group.listeners.size) return this.#tell(event, group);
         this.#events.delete(event);
@@ -308,10 +432,12 @@ export class Runtime {
    * state, a binding that reads it. Nothing when nothing subscribed to it
    * (no capability, or the service did not start).
    */
-  hold(event: string): Disposable {
+  hold(event: string, why?: Why): Disposable {
     const group = this.#events.get(event);
     if (!group) return { dispose: async () => {} };
     group.active++;
+    const token = {};
+    group.whys.set(token, why ?? listenerWhy(this.callSite()));
     this.#tell(event, group);
     let held = true;
     return {
@@ -319,29 +445,68 @@ export class Runtime {
         if (!held) return;
         held = false;
         group.active--;
+        group.whys.delete(token);
         if (this.#events.get(event) === group) this.#tell(event, group);
       },
     };
   }
-  /** Tell the player when `group` changes between mirror and listener. */
+  /**
+   * Tell the player when `group` changes between mirror and listener, and
+   * why it listens when that changed.
+   */
   #tell(event: string, group: EventGroup) {
     const off = group.off;
+    if (!off) return;
     const active = group.active > 0;
-    if (!off || group.told === active) return;
+    const why = active ? firstWhy(group) : undefined;
+    if (group.told === active && group.toldWhy === why) return;
     group.told = active;
+    group.toldWhy = why;
     // Part of activation while it runs: the player classifies the plugin
     // at its ready, which must see this mark. A failure is not one of
     // activation (an older player never refuses it).
     const told = off
-      .then(() => this.host.events.listen(event as never, active))
+      .then(() => this.host.events.listen(event as never, active, why))
       .catch(() => {});
     this.starting(told, () => {});
+  }
+  /**
+   * Why the plugin listens to each event it really listens to (mirrors
+   * left out), as the player's log says it: for {@link TestHost} and
+   * `vestra-plugin test`.
+   */
+  listening(): Map<string, string> {
+    const result = new Map<string, string>();
+    for (const [event, group] of this.#events)
+      if (group.active > 0) result.set(event, firstWhy(group) ?? "a listener");
+    return result;
   }
   /** Raw transport events the host pushes without a subscription. */
   raw(event: string, listener: Listener): Disposable {
     const off = this.#transport.on(event, listener);
     return { dispose: async () => off() };
   }
+}
+
+/** Who reads a service's state in a binding (`Runtime.reader`). */
+interface Reader {
+  label: string;
+  where: (() => string | undefined) | undefined;
+  field: boolean;
+}
+
+/** A plugin listener's reason: where it was added. */
+const listenerWhy =
+  (site: () => string | undefined): Why =>
+  () => {
+    const at = site();
+    return at ? `a listener added at ${at}` : "a listener";
+  };
+
+/** The reason of the first active holder of `group`. */
+function firstWhy(group: EventGroup): string | undefined {
+  for (const why of group.whys.values()) return why();
+  return undefined;
 }
 
 /** `plugin.app` from the start-up handshake (the runner's environment). */

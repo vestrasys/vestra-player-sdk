@@ -116,7 +116,7 @@ export const STRICT_CATEGORIES = {
     ],
   },
   Commands: {
-    full: ["Commands", "Command", "Host", "Bindings"],
+    full: ["Commands", "Command", "Host", "Bindings", "When", "Condition"],
     data: [
       "CommandState",
       "Bindable",

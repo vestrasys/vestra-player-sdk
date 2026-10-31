@@ -124,6 +124,10 @@ import type {
 } from "./types.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
+import { evaluate } from "./when.ts";
+import type { ConditionFacts } from "./when.ts";
+import { WAKE_EVENTS } from "./runtime.ts";
+import type { CommandWhen } from "../commands.ts";
 import { THEMES } from "./appearance.ts";
 import type {
   LanguagePreference,
@@ -439,7 +443,26 @@ export interface FakeCommand {
      */
     reason?: string | null;
   };
-  /** The command state the player last received (after the update pass). */
+  /**
+   * The conditions the plugin sent for `enabled` and `checked`
+   * (`plugin.when`, wire form), `undefined` without. Like the player, the
+   * host evaluates them in {@link FakeCommand.state} against `source`,
+   * `mainWindow.fullscreen`, `appearance` and `language`.
+   *
+   * @since 1.5.40
+   */
+  when?: {
+    /** The condition of `enabled`. */
+    enabled?: Json;
+    /** The condition of `checked`. */
+    checked?: Json;
+  };
+  /**
+   * The command state as the player shows it: what the plugin last sent
+   * (after the update pass), with the fields given as conditions
+   * (`plugin.when`) evaluated now. With an `enabled` condition, `reason`
+   * is `null` while the command is enabled and not busy.
+   */
   state: {
     /** `false` when the plugin disabled the command. */
     enabled: boolean;
@@ -784,6 +807,14 @@ export class TestHost implements Transport {
    * @since 1.5.38
    */
   readonly listening = new Set<string>();
+  /**
+   * Why the plugin listens to each event of {@link TestHost.listening}, as
+   * the player's log says it (`a listener added at main.ts:12`,
+   * `command "Save" enabled reads plugin.player.state (main.ts:40)`).
+   *
+   * @since 1.5.40
+   */
+  readonly listeningWhy = new Map<string, string>();
   /**
    * The player's source facts (phase, position, duration, paused, rate,
    * audio tracks, loop, ...). Wire-level shape; change it with
@@ -4291,16 +4322,92 @@ export class TestHost implements Transport {
     };
   }
 
+  /** A command's state as the player shows it: its conditions evaluated. */
+  #commandShown(
+    sent: FakeCommand["state"],
+    when: CommandWhen | undefined,
+  ): FakeCommand["state"] {
+    if (!when) return sent;
+    const source = this.source;
+    const capabilities = source.capabilities;
+    const facts: ConditionFacts = {
+      phase: source.phase,
+      paused: source.paused,
+      kind: source.kind === "producer" ? "stream" : "media",
+      can: {
+        pause: capabilities.pause,
+        seek: capabilities.seek,
+        rate: capabilities.rate,
+        restart: capabilities.restart,
+        close: capabilities.close,
+        snapshot: capabilities.snapshotSource,
+        next: !!(source.sequence?.next ?? this.sequence?.canNext),
+        previous: !!(source.sequence?.previous ?? this.sequence?.canPrevious),
+      },
+      fullscreen: this.mainWindow.fullscreen,
+      theme: this.appearance,
+      language: this.language,
+    };
+    const shown = { ...sent };
+    if (when.enabled) {
+      shown.enabled = evaluate(when.enabled, facts);
+      if (shown.enabled && !shown.busy) shown.reason = null;
+    }
+    if (when.checked) shown.checked = evaluate(when.checked, facts);
+    return shown;
+  }
+  /**
+   * Why the player would keep this plugin running while nothing uses it
+   * (lazy activation, player 0.5.21), one line per reason, as the player's
+   * log says it: an event it listens to that is not one the player wakes
+   * it for (with what listens and where it was added), its mounted panel,
+   * its open windows. Empty: the player may stop it while idle and start
+   * it again on its next use. Filter chains, streams, jobs and the like
+   * (which also keep a plugin running) are not listed.
+   *
+   * @capability None.
+   * @since 1.5.40
+   *
+   * @example Check that a plugin can be stopped while idle
+   * The test fails if the plugin keeps running for no reason after it
+   * starts, and names the reason (a command whose `enabled` reads
+   * `plugin.player.state`, say: give it a `plugin.when` condition). The
+   * player stops such a plugin while nothing uses it and starts it again
+   * on its next use, so it costs no process meanwhile.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * assert.deepEqual(host.keepsRunning, []);
+   * ```
+   */
+  get keepsRunning(): string[] {
+    const reasons: string[] = [];
+    for (const event of this.listening)
+      if (!WAKE_EVENTS.includes(event))
+        reasons.push(
+          `listens to ${event}: ${this.listeningWhy.get(event) ?? "a listener"}`,
+        );
+    if (this.panel) reasons.push("a mounted panel");
+    for (const [id, window] of this.windows)
+      if (window.visible) reasons.push(`an open window (${id})`);
+    return reasons;
+  }
+
   readonly #defaults: Record<string, Handler> = {
     "events.subscribe": (p) => {
       const event = String(p.event);
       this.subscriptions.add(event);
       if (p.mirror === true) this.listening.delete(event);
       else this.listening.add(event);
+      if (p.mirror !== true && typeof p.why === "string")
+        this.listeningWhy.set(event, p.why);
+      else this.listeningWhy.delete(event);
     },
     "events.unsubscribe": (p) => {
       this.subscriptions.delete(String(p.event));
       this.listening.delete(String(p.event));
+      this.listeningWhy.delete(String(p.event));
     },
     "commands.register": (p) => {
       const id = String(p.id);
@@ -4355,6 +4462,7 @@ export class TestHost implements Transport {
       for (const segment of [declaration.title, ...(declaration.path ?? [])])
         this.#declared(segment, "a menu text");
       this.#checkReason(p.state);
+      let sent = p.state as FakeCommand["state"];
       this.commands.set(id, {
         declaration,
         get display() {
@@ -4364,7 +4472,13 @@ export class TestHost implements Transport {
             this.state.reason,
           );
         },
-        state: p.state as FakeCommand["state"],
+        ...(p.when ? { when: p.when as CommandWhen } : {}),
+        get state() {
+          return host.#commandShown(sent, this.when);
+        },
+        set state(state) {
+          sent = state;
+        },
         revision: Number(p.revision),
         async run() {
           if (this.state.busy || !this.state.enabled)
@@ -4389,6 +4503,8 @@ export class TestHost implements Transport {
       this.#checkReason(p.state);
       command.revision = Number(p.revision);
       command.state = p.state as FakeCommand["state"];
+      if (p.when) command.when = p.when as CommandWhen;
+      else delete command.when;
       return { revision: command.revision };
     },
     "ui.open": (p) => {
@@ -5821,6 +5937,23 @@ export class TestHost implements Transport {
   };
 }
 
+/** Lines `vestra-plugin test` printed already (one per plugin and reasons). */
+const told = new Set<string>();
+
+/**
+ * Under `vestra-plugin test` (`VESTRA_PLUGIN_RESIDENCY=1`): say once per
+ * test file why the plugin would keep running after it starts.
+ */
+function tellResidency(host: TestHost) {
+  if (process.env.VESTRA_PLUGIN_RESIDENCY !== "1") return;
+  const reasons = host.keepsRunning;
+  if (!reasons.length) return;
+  const line = `${host.manifestId} keeps running while idle (lazy activation): ${reasons.join("; ")}`;
+  if (told.has(line)) return;
+  told.add(line);
+  console.log(`# ${line}`);
+}
+
 /**
  * Activate a plugin against a test host, the way the player's runner does:
  * build the `plugin` object, call `activate(plugin)`, wait for every
@@ -5971,6 +6104,7 @@ export async function startPlugin(
     }
   }
   await host.settle();
+  tellResidency(host);
   return {
     /** The test host the plugin talks to. */
     host,
