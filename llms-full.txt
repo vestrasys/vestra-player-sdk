@@ -3599,14 +3599,9 @@ stateDiagram-v2
     ready --> error : failed while playing
     ended --> ready : restart()
     ended --> ready : a seek back from the end
-    loading --> loading : open()
-    ready --> loading : open()
-    ended --> loading : open()
-    error --> loading : open()
-    loading --> empty : close() or F4
-    ready --> empty : close() or F4
-    ended --> empty : close() or F4
-    error --> empty : close() or F4
+    state "any state" as anystate
+    anystate --> loading : open()
+    anystate --> empty : close() or F4
 ```
 
 `open` and `close` work from every state. Every open, even of the same file, starts a new `sourceId`.
@@ -3682,7 +3677,7 @@ A **resolver** (plugin.resolvers, capability `source.resolve`) lets a plugin tak
 
 ```mermaid
 flowchart TB
-    O["player.open('https://video.example/watch?v=1') from anyone: the user, the playlist, a plugin"]
+    O["player.open(a web address) from anyone: the user, the playlist, a plugin"]
     Q{"is a resolver registered for https and video.example?"}
     SELF["the player opens the URL itself"]
     R["resolver.resolve(url, signal) in the resolver plugin's process returns stream URLs (web) or a generated stream (file)"]

@@ -527,3 +527,28 @@ export function shapeProblems(shape, body, raw = body) {
   }
   return problems;
 }
+
+/**
+ * Problems of the Mermaid blocks of a page: a label must be plain text.
+ * Mermaid renders labels as Markdown, so a Markdown link (`[text](url)`), a
+ * bare address (`https://…`, `www.…`) or a backtick inside a block shows as
+ * "Unsupported markdown" or breaks the diagram. Returns messages with the
+ * line in the page.
+ */
+export function mermaidProblems(text) {
+  const problems = [];
+  const lines = text.split("\n");
+  let inside = false;
+  lines.forEach((line, index) => {
+    if (/^\s*```mermaid\s*$/.test(line)) inside = true;
+    else if (inside && /^\s*```\s*$/.test(line)) inside = false;
+    else if (inside) {
+      const found = /\]\(|https?:\/\/|www\.|`/.exec(line);
+      if (found)
+        problems.push(
+          `line ${index + 1}: "${found[0]}" in a Mermaid block (labels are plain text: no links, addresses or backticks)`,
+        );
+    }
+  });
+  return problems;
+}

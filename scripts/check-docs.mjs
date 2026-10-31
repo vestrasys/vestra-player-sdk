@@ -51,6 +51,7 @@ import {
   PENDING_UNTIL,
   PLACEHOLDERS,
   SHAPES,
+  mermaidProblems,
   shapeProblems,
 } from "./doc-structure.mjs";
 import { withoutGenerated } from "./doc-tables.mjs";
@@ -462,6 +463,8 @@ const structure = { errors: [], warnings: [] };
             `${path}: ${problem} (${shape} pages: ${SHAPES[shape]})`,
           );
     }
+    for (const problem of mermaidProblems(text))
+      violation(page, `${path}: ${problem}`);
     for (const placeholder of PLACEHOLDERS)
       if (placeholder.test(body))
         violation(

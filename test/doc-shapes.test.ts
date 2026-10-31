@@ -194,3 +194,27 @@ test("reference and upgrading pages", () => {
   );
   assert.equal(shapeProblems("upgrading", page("## What changed")).length, 1);
 });
+
+test("Mermaid labels are plain text: no links, addresses or backticks", async () => {
+  const { mermaidProblems } = (await import(
+    new URL("../scripts/doc-structure.mjs", import.meta.url).href
+  )) as { mermaidProblems(text: string): string[] };
+  const block = (...lines: string[]) =>
+    [
+      "Text with [a link](x.md).",
+      "```mermaid",
+      "flowchart TB",
+      ...lines,
+      "```",
+    ].join("\n");
+  assert.deepEqual(
+    mermaidProblems(block('    A["player.open(a web address)"] --> B')),
+    [],
+  );
+  assert.equal(mermaidProblems(block('    A["see [docs](x.md)"]')).length, 1);
+  assert.equal(
+    mermaidProblems(block('    A["open https://example.com"]')).length,
+    1,
+  );
+  assert.equal(mermaidProblems(block('    A["`code`"]')).length, 1);
+});
