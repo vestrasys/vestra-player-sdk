@@ -266,6 +266,8 @@ export const VIDEO_PROCESSING_LIMITS = Object.freeze({
   lutBytes: 16 * 1024 * 1024,
   /** Largest `LUT_3D_SIZE` of a `lut3d` file, points per axis (65). */
   lutSize: 65,
+  /** Bytes of a `lut3d` file path (4096). */
+  lutPathBytes: 4096,
   /** Largest magnitude of a `convolution` matrix entry (1024). */
   matrixValue: 1024,
   /** Largest `convolution` `rdiv` (256). */
@@ -451,22 +453,28 @@ function convolutionProblem(planes: unknown): string | null {
 }
 
 /**
+ * Whether `text` has a control character as Rust's `char::is_control`
+ * sees one (C0, DEL and C1: U+0000–U+001F, U+007F–U+009F).
+ */
+export function hasControl(text: string): boolean {
+  return [...text].some((c) => {
+    const code = c.codePointAt(0)!;
+    return code < 0x20 || (code >= 0x7f && code <= 0x9f);
+  });
+}
+/**
  * The form of a `lut3d` path (the player's `effects.rs lut_path`); where
  * the file is and what it holds the player checks when the request arrives
  * (the test host too, `TestHost.fileRoots`).
  */
 export function lutPathProblem(file: unknown): string | null {
-  const control = (text: string) =>
-    [...text].some((c) => {
-      const code = c.codePointAt(0)!;
-      return code < 0x20 || (code >= 0x7f && code <= 0x9f);
-    });
+  const max = VIDEO_PROCESSING_LIMITS.lutPathBytes;
   if (
     typeof file !== "string" ||
-    Buffer.byteLength(file) > 4096 ||
-    control(file)
+    Buffer.byteLength(file) > max ||
+    hasControl(file)
   )
-    return "lut3d file must be a path of at most 4096 bytes without control characters";
+    return `lut3d file must be a path of at most ${max} bytes without control characters`;
   if (/[[\]]/.test(file)) return "lut3d file path must not contain [ or ]";
   if (!isAbsolute(file)) return "lut3d file must be an absolute path";
   if (!/\.cube$/i.test(file)) return "lut3d file must be a .cube file";

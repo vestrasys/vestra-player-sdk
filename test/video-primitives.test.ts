@@ -86,6 +86,9 @@ test("shaders: set, clear and dispose; the player holds the real paths", async (
   const first = plugin.video.shaders();
   assert.throws(() => plugin.video.shaders("shaders"), /exists; reuse it/);
   assert.throws(() => plugin.video.shaders(""), { code: "invalid" });
+  // C1 control characters too, as the player's char::is_control.
+  assert.throws(() => plugin.video.shaders("a\u0085b"), { code: "invalid" });
+  assert.throws(() => plugin.video.shaders("a\u007fb"), { code: "invalid" });
   await first.dispose();
   plugin.video.shaders("shaders");
   await stop();
@@ -183,6 +186,14 @@ test("shaders: software rendering refuses them; a fallback and a compile failure
   );
   await host.settle();
   assert.equal(failure(shaders), "unsupported");
+  assert.equal(
+    host.videoShaders.handles.size,
+    0,
+    "a fallback removes the lists",
+  );
+  shaders.clear();
+  await host.settle();
+  assert.equal(failure(shaders), "applied", "clear() still succeeds");
   await stop();
 });
 
@@ -306,6 +317,26 @@ test("lut3d: a .cube file of the plugin's own, its header checked", async () => 
     assert.equal(await set(cube(data, "UPPER.CUBE", 3), "prism"), "applied");
     assert.equal(await set(cube(data, "x.cube"), "cubic"), "invalid");
     assert.equal(await set("warm.cube"), "invalid", "relative");
+    const long = join(
+      data,
+      `${"x".repeat(VIDEO_PROCESSING_LIMITS.lutPathBytes)}.cube`,
+    );
+    assert.match(
+      nodeProblem("video", [
+        { kind: "lut3d", file: long, interpolation: "nearest" } as never,
+      ])!,
+      /at most 4096 bytes/,
+    );
+    assert.match(
+      nodeProblem("video", [
+        {
+          kind: "lut3d",
+          file: join(data, "a\u0085.cube"),
+          interpolation: "nearest",
+        } as never,
+      ])!,
+      /control characters/,
+    );
     assert.equal(await set(cube(outside, "warm.cube")), "invalid", "outside");
     assert.equal(await set(join(data, "none.cube")), "missing");
     assert.equal(await set(cube(data, "warm.3dl")), "invalid", ".cube only");

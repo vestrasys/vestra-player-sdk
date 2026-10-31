@@ -1994,7 +1994,8 @@ export class TestHost implements Transport {
         error: { code, message },
       });
     // The player tells every shader handle too (`failVideoShaders`).
-    if (code === "unsupported")
+    // and, like the player, removes their lists.
+    if (code === "unsupported") {
       for (const [id, paths] of this.videoShaders.handles)
         if (paths.length > 0)
           this.emit("video.shaders.status", {
@@ -2002,6 +2003,8 @@ export class TestHost implements Transport {
             state: "failed",
             error: { code, message },
           });
+      this.videoShaders.handles.clear();
+    }
   }
   /**
    * The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists

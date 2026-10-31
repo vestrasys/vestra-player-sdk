@@ -6686,7 +6686,9 @@ export interface RenderOptions extends Disposable {
  * GPU rendering only (macOS; Windows with Video ▸ GPU Rendering
  * (Experimental) turned on): under software rendering a non-empty list is
  * `failed` with `unsupported`, and a switch to software during the run
- * pushes `unsupported` to every handle with shaders. Shaders act when a
+ * pushes `unsupported` to every handle with shaders and removes every
+ * list (they no longer count against the 16); set them again once the
+ * player draws on the GPU (after a restart). Shaders act when a
  * frame is drawn, so processed snapshots and exports never contain them
  * (use a {@link VideoNode} for that). When mpv cannot compile a shader the
  * handle turns `failed` with `failed` (pushed later); mpv does not say

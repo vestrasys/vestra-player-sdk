@@ -184,6 +184,7 @@ The `convolution` and `lut3d` {@link "@vestra-player/sdk"!VideoNode | VideoNode}
 | `VIDEO_PROCESSING_LIMITS.shaderIdBytes` | 128 | Bytes of a shader handle's id. |
 | `VIDEO_PROCESSING_LIMITS.lutBytes` | 16777216 (16 MiB) | Bytes of one `lut3d` `.cube` file. |
 | `VIDEO_PROCESSING_LIMITS.lutSize` | 65 | Largest `LUT_3D_SIZE` of a `lut3d` file, points per axis. |
+| `VIDEO_PROCESSING_LIMITS.lutPathBytes` | 4096 (4 KiB) | Bytes of a `lut3d` file path. |
 | `VIDEO_PROCESSING_LIMITS.matrixValue` | 1024 | Largest magnitude of a `convolution` matrix entry. |
 | `VIDEO_PROCESSING_LIMITS.rdiv` | 256 | Largest `convolution` `rdiv`. |
 | `VIDEO_PROCESSING_LIMITS.bias` | 65535 | Largest `convolution` `bias`. |

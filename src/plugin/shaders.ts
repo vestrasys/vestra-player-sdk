@@ -16,7 +16,7 @@ import type {
   PluginError,
   VideoShaders,
 } from "./types.ts";
-import { VIDEO_PROCESSING_LIMITS } from "../processing.ts";
+import { hasControl, VIDEO_PROCESSING_LIMITS } from "../processing.ts";
 
 /** The handle id when `shaders()` is called without one. */
 export const DEFAULT_SHADERS_ID = "shaders";
@@ -38,7 +38,7 @@ export function shaderIdProblem(id: unknown): string | null {
   return typeof id === "string" &&
     id.length > 0 &&
     Buffer.byteLength(id) <= VIDEO_PROCESSING_LIMITS.shaderIdBytes &&
-    ![...id].some((c) => c.codePointAt(0)! < 0x20 || c === "\u007f")
+    !hasControl(id)
     ? null
     : `shader handle id must be 1 to ${VIDEO_PROCESSING_LIMITS.shaderIdBytes} bytes without control characters`;
 }
