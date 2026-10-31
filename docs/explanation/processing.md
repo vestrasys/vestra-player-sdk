@@ -120,8 +120,9 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 {@link "@vestra-player/sdk"!VideoUpscaling | plugin.video.upscaling} (capability `video.upscaling`, player 0.5.16) turns on the GPU's AI upscaler, NVIDIA RTX Video Super Resolution on Windows. It is not a handle: `set(true)` is the plugin's request, and the player keeps the upscaler last in the filter chain, after every plugin's chain, while any plugin has it on and it can work, scaled to the area the video is shown in. Like render options it acts at display time only.
 
 - **Ask when needed.** The player checks the GPU at the first `state()` or `set(true)` and keeps the answer; the check wakes a sleeping discrete GPU, so ask on the first pick of the item, not while the plugin starts. `set(false)` never checks.
-- **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone.
+- **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone. From player 0.5.25 the reason's `cause` says which decoding stands in the way (`copy-back`, `hwdec-off`, `software`, `other-hwdec`), and with `copy-back` its `plugins` say whose filters, so a window can ask the user to turn them off there.
 - **No sign that it runs.** `requested` says the player asked the driver; on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read.
+- **Watch it while it runs.** From player 0.5.25 the state also has the video's and the area's size, the rendering GPU, the decoder and `inChain`, and {@link "@vestra-player/sdk"!VideoUpscaling.onChange | onChange} sends it as it changes while some plugin has upscaling on. A listener keeps the plugin running, so listen only while a window shows it.
 
 ## In the reference
 

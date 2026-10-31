@@ -127,7 +127,10 @@ import type {
   RenderingPreference,
   RenderingReason,
   RenderSettings,
+  UpscalingDecodingCause,
+  UpscalingPlugin,
   UpscalingReason,
+  UpscalingVideoSize,
   ViewSettings,
 } from "./types.ts";
 import type { MediaJob } from "../media.ts";
@@ -2599,13 +2602,129 @@ export class TestHost implements Transport {
     checked: boolean;
     /** GPU rendering is still starting: a `rendering` reason then lets `set(true)` keep the request. */
     renderingStarting: boolean;
+    /** The video's size the state reports (player 0.5.25); `null`: no video. */
+    video: UpscalingVideoSize | null;
+    /** The video area the state reports (player 0.5.25); `null`: none. */
+    area: {
+      /** Width in physical pixels. */
+      width: number;
+      /** Height in physical pixels. */
+      height: number;
+    } | null;
+    /** The rendering GPU's name the state reports (player 0.5.25). */
+    gpu: string | null;
+    /** mpv's decoder the state reports (player 0.5.25); `null`: no video. */
+    hwdecCurrent: string | null;
   } = {
     reason: null,
     enabled: false,
     factor: 2,
     checked: false,
     renderingStarting: false,
+    video: {
+      width: 1920,
+      height: 1080,
+      displayWidth: 1920,
+      displayHeight: 1080,
+    },
+    area: { width: 3840, height: 2160 },
+    gpu: "NVIDIA GeForce RTX 4070 Laptop GPU",
+    hwdecCurrent: "d3d11va",
   };
+  /**
+   * Make the upscaler's reason `decoding` with `cause`, with the player's
+   * message (player 0.5.25), and set `upscaling.hwdecCurrent` to match
+   * (`d3d11va-copy`, `no`, `nvdec`). `plugins` are named for `copy-back`
+   * only, as the player does. Returns the reason; call
+   * {@link TestHost.upscalingChanged} to tell a listening plugin.
+   *
+   * @example Test the window's advice for each cause
+   * The plugin's window explains why upscaling waits. The test fakes the
+   * copy-back cause that Picture Adjustments' filters cause and checks
+   * that the window names the plugin.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.upscalingDecoding("copy-back", [{ id: "vestra.video", name: "Picture Adjustments" }]);
+   * host.upscalingChanged();
+   * await host.settle();
+   * assert.match(String(host.window("upscale").props.blocker), /Picture Adjustments/);
+   * ```
+   *
+   * @capability None.
+   * @since 1.5.43
+   */
+  upscalingDecoding(
+    cause: UpscalingDecodingCause,
+    plugins: readonly UpscalingPlugin[] = [],
+  ): UpscalingReason {
+    const needs =
+      "upscaling needs it decoded on the GPU that renders it (d3d11va)";
+    const names = plugins.map((p) => p.name);
+    const because =
+      names.length === 0
+        ? "for example because a video filter needs the frames in memory"
+        : names.length === 1
+          ? `because the video filter of ${names[0]} needs the frames in memory`
+          : `because the video filters of ${names.join(", ")} need the frames in memory`;
+    const [message, current] =
+      cause === "copy-back"
+        ? [
+            `the video is decoded with copy-back (auto-copy-safe), ${because}; ${needs}`,
+            "d3d11va-copy",
+          ]
+        : cause === "hwdec-off"
+          ? [
+              "hardware decoding is off; upscaling needs the video decoded on the GPU that renders it (d3d11va)",
+              "no",
+            ]
+          : cause === "software"
+            ? [`this video is decoded in software; ${needs}`, "no"]
+            : [`this video is decoded with nvdec; ${needs}`, "nvdec"];
+    const reason: UpscalingReason =
+      cause === "copy-back"
+        ? {
+            code: "decoding",
+            message,
+            cause,
+            plugins: plugins.map(({ id, name }) => ({ id, name })),
+          }
+        : { code: "decoding", message, cause };
+    this.upscaling.reason = reason;
+    this.upscaling.hwdecCurrent = current;
+    return reason;
+  }
+  /**
+   * Send `video.upscaling.changed` with the state {@link TestHost.upscaling}
+   * describes now (without `enabled`), as the player does when it changes
+   * (player 0.5.25); a plugin listening with
+   * `plugin.video.upscaling.onChange` receives it. Nothing reaches a plugin
+   * that does not listen.
+   *
+   * @capability None.
+   *
+   * @example Show the new factor in the plugin's window
+   * The window resized: the test changes the area and the factor, sends
+   * the change, and checks that the plugin's window shows the new factor.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.upscaling.area = { width: 2560, height: 1440 };
+   * host.upscaling.factor = 1.33; // 1080p in a 1440p area
+   * host.upscalingChanged(); // as the player after the resize settled
+   * await host.settle();
+   * assert.equal(host.window("upscale").props.factor, "×1.33");
+   * ```
+   *
+   * @since 1.5.43
+   */
+  upscalingChanged() {
+    if (!this.subscriptions.has("video.upscaling.changed")) return;
+    const { enabled: _, ...state } = this.#upscalingState(false);
+    this.emit("video.upscaling.changed", state);
+  }
   /** What `player.chapters()` lists while media is ready. */
   chapters: {
     /** The chapter title, `null` without one. */
@@ -4420,12 +4539,20 @@ export class TestHost implements Transport {
         };
     const requested =
       enabled && reason === null && factor !== null && factor > 1;
+    const { video, area, gpu, hwdecCurrent } = this.upscaling;
     return {
       available: reason === null,
-      reason: reason ? { ...reason } : null,
+      reason: reason
+        ? (structuredClone(reason) as WireUpscalingState["reason"])
+        : null,
       enabled,
       requested,
       factor: requested ? factor : null,
+      video: video ? { ...video } : null,
+      area: area ? { ...area } : null,
+      gpu,
+      hwdecCurrent,
+      inChain: requested,
     };
   }
 

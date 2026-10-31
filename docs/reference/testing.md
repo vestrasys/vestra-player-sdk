@@ -151,6 +151,8 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.app} | What `plugin.app` reports. |
 | {@link "@vestra-player/sdk/testing"!TestHost.rendering} | The player's rendering choice behind `plugin.rendering` (player 0.5.13). |
 | {@link "@vestra-player/sdk/testing"!TestHost.upscaling} | The GPU's video upscaler behind `plugin.video.upscaling` (player 0.5.16), answered as the player would: - `state()` and `set(true)` set `checked` (the player's one GPU check; a plugin that should not wake the GPU while it starts can assert it is still `false`) and report `available` from `reason` (`null`: it works), this plugin's `enabled`, and `requested` with `factor` while enabled, available and `factor` is above 1. |
+| {@link "@vestra-player/sdk/testing"!TestHost.upscalingDecoding}() | Make the upscaler's reason `decoding` with `cause`, with the player's message (player 0.5.25), and set `upscaling.hwdecCurrent` to match (`d3d11va-copy`, `no`, `nvdec`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.upscalingChanged}() | Send `video.upscaling.changed` with the state `TestHost.upscaling` describes now (without `enabled`), as the player does when it changes (player 0.5.25); a plugin listening with `plugin.video.upscaling.onChange` receives it. |
 | {@link "@vestra-player/sdk/testing"!TestHost.chapters} | What `player.chapters()` lists while media is ready. |
 | {@link "@vestra-player/sdk/testing"!TestHost.dataDirectory} | `plugin.dataDirectory`: a fresh empty temporary directory, removed with the host on `stop()`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.manifestId} | The manifest id of the plugin under test (set by `startPlugin`; `"test.plugin"` by default). |

@@ -330,14 +330,35 @@ export interface WireRenderingState {
   restartPending: boolean;
   gpu: { available: boolean; reason: WireRenderingReason | null };
 }
-/** `video.upscaling.state` and `video.upscaling.set` (player 0.5.16). */
+/**
+ * An upscaling reason: `{ code, message }` as a rendering reason; with
+ * `decoding` a `cause`, with cause `copy-back` the `plugins` (player 0.5.25).
+ */
+export interface WireUpscalingReason extends WireRenderingReason {
+  cause?: string;
+  plugins?: { id: string; name: string }[];
+}
+/**
+ * `video.upscaling.state` and `video.upscaling.set` (player 0.5.16); the
+ * monitoring fields from player 0.5.25, which also sends the state without
+ * `enabled` as the event `video.upscaling.changed`.
+ */
 export interface WireUpscalingState {
   available: boolean;
-  /** The same `{ code, message }` shape as a rendering reason. */
-  reason: WireRenderingReason | null;
+  reason: WireUpscalingReason | null;
   enabled: boolean;
   requested: boolean;
   factor: number | null;
+  video?: {
+    width: number;
+    height: number;
+    displayWidth: number;
+    displayHeight: number;
+  } | null;
+  area?: { width: number; height: number } | null;
+  gpu?: string | null;
+  hwdecCurrent?: string | null;
+  inChain?: boolean;
 }
 /**
  * Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`,
@@ -368,7 +389,8 @@ type HostEvent =
   | "bindings.changed"
   | "timeline.changed"
   | "appearance.changed"
-  | "resolvers.fileTypes";
+  | "resolvers.fileTypes"
+  | "video.upscaling.changed";
 
 export function createWire(transport: Transport) {
   const subscriptions = new Map<

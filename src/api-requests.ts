@@ -160,4 +160,5 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Rendering.restartPlayer": [{ method: "rendering.restart" }],
     "VideoUpscaling.state": [{ method: "video.upscaling.state" }],
     "VideoUpscaling.set": [{ method: "video.upscaling.set" }],
+    "VideoUpscaling.onChange": [listen("video.upscaling.changed")],
   });

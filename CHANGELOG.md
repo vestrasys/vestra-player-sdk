@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.43
+
+**Who must change: nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. The new API needs player 0.5.25 (`"minPlayerVersion": "0.5.25"`); older players leave the new fields out and refuse the new event (the listener never fires). The `decoding` reason code stays as it is: the cause is a new optional field beside it.
+
+- **`UpscalingReason.cause`** (player 0.5.25): with code `decoding`, why the video is not decoded on the GPU that renders it, as a stable `UpscalingDecodingCause`: `copy-back` (decoded on the GPU and copied back to memory, usually because a plugin's video filter needs the frames there), `hwdec-off` (hardware decoding off), `software` (this video is decoded in software: a cover picture, an unsupported format), `other-hwdec` (another hardware decoder). A newer player may add causes. With `copy-back`, **`UpscalingReason.plugins`** lists whose video filters made the player switch (`UpscalingPlugin`: manifest `id` and `name`; empty when the copy-back mode is the user's own setting), and the message names them ("…because the video filter of Picture Adjustments needs the frames in memory").
+- **Monitoring fields in `UpscalingState`** (player 0.5.25, optional: absent from older players): `video` (the video's stored and display size as the upscaler gets it, `UpscalingVideoSize`), `area` (the video area in pixels), `gpu` (the rendering GPU's name), `hwdecCurrent` (mpv's decoder for this video), `inChain` (the upscaler is in the filter chain now, read from the chain). The driver still gives no sign that it upscales.
+- **`plugin.video.upscaling.onChange(listener)`** (player 0.5.25, `video.upscaling`): the state whenever it changes while some plugin has upscaling on (the player looks about five times a second and sends only differences), so a window can show it live without polling. Wire: event `video.upscaling.changed` with the state without `enabled` (the SDK adds this plugin's own); subscribing needs `video.upscaling`, not `events`. A listener keeps the plugin running (it is not an event the player wakes a stopped plugin for): listen only while a window shows the state. The manifest names in `plugins` and the message are not translated.
+- **`TestHost`**: `upscalingDecoding(cause, plugins?)` fakes each cause with the player's message (and a matching `upscaling.hwdecCurrent`); `upscaling.video`, `area`, `gpu`, `hwdecCurrent` (defaults: 1080p on a 4K area, an RTX 4070, `d3d11va`; `inChain` follows `requested`); `upscalingChanged()` sends the event to a listening plugin.
+- The player's capability table copy (`video.upscaling.changed` under `video.upscaling`) and `CAPABILITY_INFO` (`VideoUpscaling.onChange`) follow.
+
+
 ## 1.5.42
 
 **Who must change: nobody.** Documentation only: no API changes, `apiVersion` stays `vestra/1`, no player version needed. The package's code is the same as 1.5.41; the doc comments' `@see` links (27 in `src/plugin/types.ts`) now point at `docs/explanation/` instead of `docs/concepts/`. The site's page addresses stay the same, and the old _Concepts_ group address redirects to _Explanation_; `llms.txt` and `llms-full.txt` follow the new pages.
