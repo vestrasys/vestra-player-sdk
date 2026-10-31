@@ -5,6 +5,8 @@ description: What to change in a plugin manager now that the player keeps no pre
 
 # Migrating off package rollback (1.5.16, removed in 1.5.17)
 
+## Who must change
+
 For plugins that manage other plugins (`plugins.manage`): stores, plugin managers, anything that called `packages.rollback` or read `PluginInfo.previousVersion`. Both were deprecated in 1.5.16 and **removed in 1.5.17**: with 1.5.17 a remaining use is a TypeScript compile error. A plugin that only uses its own API needs no change.
 
 ## What changed

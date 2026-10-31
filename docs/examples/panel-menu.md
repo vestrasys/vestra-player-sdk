@@ -7,6 +7,12 @@ description: "Walkthrough of examples/panel-menu: a sidebar panel with its own r
 
 A list in the player's sidebar with its own right-click menu. It shows the two things that make a panel different from a tool window: its properties live on a Slint _global_, and its menu is made of the plugin's commands.
 
+## What it demonstrates
+
+Mounting a sidebar panel through a Slint global · a right-click menu made of the plugin's commands.
+
+[Add a window](../tutorials/add-a-window.md) teaches the view surface panels share with tool windows; the rules for a panel's menu are in [Menu guidelines](../guidelines/menus.md#a-panels-right-click-menu).
+
 ## What you'll build
 
 ![Panel menu in Vestra Player](../../examples/panel-menu/screenshot.png)

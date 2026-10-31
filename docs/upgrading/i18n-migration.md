@@ -5,6 +5,8 @@ description: The checklist for moving a plugin written in one language before SD
 
 # Migrate a plugin to English source text
 
+## Who must change
+
 For plugins written before SDK 1.5.9 whose texts are in one language (Chinese, for the plugins built into Vestra Player). After the migration every text is English in the source, and the old texts become the first translation. The behaviour stays the same: a user with the same language sees exactly the texts as before. Read [Translate a plugin](../how-to/i18n.md) first; this page is the checklist.
 
 Needs player 0.4.3 or later: set `"minPlayerVersion": "0.4.3"` in `manifest.json`.

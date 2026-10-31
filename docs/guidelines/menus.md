@@ -18,45 +18,7 @@ How paths merge, how `order` and `group` sort items and how a key finds its comm
 
 ## The top level
 
-The top level as the player ships it (shortcuts in the Windows notation; the menu shows each system's own):
-
-```text
-Open File…                    Ctrl+O, F3   group open
-Open ▸
-Close                         F4
-Reopen Current/Last File      Ctrl+Y
-Copy to Clipboard ▸
-────────────────────────────────────────
-Playback ▸                                 group domain
-Subtitles ▸
-Video ▸
-Audio ▸
-────────────────────────────────────────
-Toggle Fullscreen             Enter        group screen
-Screen ▸
-────────────────────────────────────────
-Playlist  ✓                   F6           group windows
-Playback Info  ✓              Tab
-Playback Properties…          Ctrl+F1
-Vestra Player AI…
-Plugin Store…
-────────────────────────────────────────
-Settings ▸
-────────────────────────────────────────
-About Vestra Player…          F1
-────────────────────────────────────────
-Quit                          Cmd+Q        group exit
-```
-
-A top-level item uses the group and the `order` range of its kind:
-
-| Group                  | `order` | For                                                                              |
-| ---------------------- | ------- | -------------------------------------------------------------------------------- |
-| `open`                 | 100–199 | Opening and closing sources                                                      |
-| `domain` (the default) | 200–699 | Domain submenus: Playback, Subtitles, Video, Audio, and a new domain of your own |
-| `screen`               | 700–799 | Fullscreen and the window's size and placement                                   |
-| `windows`              | 800–899 | Items that show a window or a panel (a check mark when it toggles one)           |
-| `exit`                 | 900–999 | Quit                                                                             |
+A top-level item goes into the group of its kind and uses that group's `order` range: opening and closing in `open`, domain submenus in `domain` (the default), fullscreen and window placement in `screen`, items that show a window or a panel in `windows`. The top level as the player ships it and the ranges are in [Reference: commands](../reference/commands.md#the-top-level).
 
 Keep a group's orders contiguous: `group` only draws a separator between neighbours of different groups, so an item whose order falls into another group's range splits that group in two.
 

@@ -7,6 +7,12 @@ description: "Walkthrough of examples/theme-widgets: a tool window drawn with th
 
 A tool window drawn with the player's own theme and controls, so it looks like part of the player: its colours, spacing, buttons, sliders and tooltips.
 
+## What it demonstrates
+
+`@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property.
+
+[Add a window](../tutorials/add-a-window.md) teaches a window with the player's theme and widgets; the rules are in [Interface guidelines](../guidelines/interface.md).
+
 ## What you'll build
 
 ![Theme widgets in Vestra Player](../../examples/theme-widgets/screenshot.png)

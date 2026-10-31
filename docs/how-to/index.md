@@ -5,7 +5,7 @@ description: Short guides that each answer one practical question about writing,
 
 # How-to guides
 
-How-to guides are short answers to one practical question each: "how do I do X?". They assume you already know the basics from [Getting started](../tutorials/getting-started.md).
+How-to guides are short answers to one practical question each: "how do I do X?". Each page has the same shape: the goal, the steps, a complete example and where to read on. They assume you already know the basics from the [Tutorials](../tutorials/index.md).
 
 ## Control playback
 
@@ -60,3 +60,9 @@ The player shows its interface in seven languages, chosen at start-up. A plugin 
 Plugins reach the store through pull requests to the official plugin repository. The guide covers preparing the package, choosing the id, registering the source repository (or hosting the plugin there), the pull request and its checks, updating, withdrawing, asking for a revocation, and what users see of the plugin in the store.
 
 [Read the guide](publish.md)
+
+## Troubleshooting
+
+Symptoms and their causes: interface pitfalls (callbacks bound too late, one-way bindings, state lost when the main window is rebuilt, hover effects that cost frames), values that do not appear after an `await`, `stale` and `capability` failures, key bindings that do not fire, tests that fail only in CI, state lost at a restart.
+
+[Read the page](troubleshooting.md)

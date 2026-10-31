@@ -90,12 +90,8 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 - **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone.
 - **No sign that it runs.** `requested` says the player asked the driver; on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read.
 
-## API on this page
+## In the reference
 
-- Filter chains: {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!AudioFilter | AudioFilter}, {@link "@vestra-player/sdk"!VideoNode | VideoNode}, {@link "@vestra-player/sdk"!AudioNode | AudioNode}, {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}
-- Display layer: {@link "@vestra-player/sdk"!VideoView | VideoView}, {@link "@vestra-player/sdk"!ViewSettings | ViewSettings}
-- Render options: {@link "@vestra-player/sdk"!RenderOptions | RenderOptions}, {@link "@vestra-player/sdk"!RenderSettings | RenderSettings}
-- The video upscaler: {@link "@vestra-player/sdk"!VideoUpscaling | VideoUpscaling}, {@link "@vestra-player/sdk"!UpscalingState | UpscalingState}, {@link "@vestra-player/sdk"!UpscalingReasonCode | UpscalingReasonCode}
-- Snapshots and exports with the same chains: {@link "@vestra-player/sdk"!MediaCapture | MediaCapture}, {@link "@vestra-player/sdk"!Snapshot | Snapshot}
+The members are in the API reference, from {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!VideoView | VideoView}, {@link "@vestra-player/sdk"!RenderOptions | RenderOptions} and {@link "@vestra-player/sdk"!VideoUpscaling | VideoUpscaling} on; their limits are in [Reference: limits](../reference/limits.md#render-options).
 
 Examples: [blur](../examples/blur.md) (a live video filter driven by a slider).

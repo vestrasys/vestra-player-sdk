@@ -149,10 +149,8 @@ scrub.end();
 
 In tests, `TestHost.keyframes` models the source's keyframes, `host.coreSeeks` records each step seek with where it landed, and `host.seeks` records each `player.seek` and `Scrub.seek` with the mode it asked for (the test host lands on the exact target in both modes).
 
-## API on this page
+## In the reference
 
-- State: {@link "@vestra-player/sdk"!Player | Player}, {@link "@vestra-player/sdk"!PlayerState | PlayerState}, {@link "@vestra-player/sdk"!AudioTrack | AudioTrack}, {@link "@vestra-player/sdk"!PlaybackStats | PlaybackStats}, {@link "@vestra-player/sdk"!Chapter | Chapter}
-- Controls: {@link "@vestra-player/sdk"!Conditional | Conditional}, {@link "@vestra-player/sdk"!Media | Media}, {@link "@vestra-player/sdk"!Scrub | Scrub}, {@link "@vestra-player/sdk"!SequenceProvider | SequenceProvider}, {@link "@vestra-player/sdk"!Host | Host}
-- Sources: {@link "@vestra-player/sdk"!Resolvers | Resolvers}, {@link "@vestra-player/sdk"!WebResolverOptions | WebResolverOptions}, {@link "@vestra-player/sdk"!FileResolverOptions | FileResolverOptions}, {@link "@vestra-player/sdk"!Stream | Stream}, {@link "@vestra-player/sdk"!StreamOptions | StreamOptions}
+The members are in the API reference, from {@link "@vestra-player/sdk"!Player | Player} and {@link "@vestra-player/sdk"!Resolvers | Resolvers} on; the core actions are in [Reference: commands](../reference/commands.md#core-actions).
 
 Examples: [bookmark](../examples/bookmark.md) (state and a seek), [signal-generator](../examples/signal-generator.md) (a generated stream).

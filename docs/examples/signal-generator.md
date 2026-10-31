@@ -9,6 +9,12 @@ This walkthrough builds a plugin that **generates its own video and audio** and 
 
 The complete, tested source is in [`examples/signal-generator`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/signal-generator). Every code block on this page is taken from those files, so it always matches the code that CI checks and tests.
 
+## What it demonstrates
+
+Generated streams with `openStream` (the player pulls `frame()`) · the RGBA frame layout · audio samples per video frame (48000 / fps, carrying the fraction) · a phase-continuous sine · stopping a stream.
+
+[Control playback](../how-to/control-playback.md) teaches opening and following a source; how generated streams work is in [Playback state, controls and sources](../explanation/playback.md#generated-streams).
+
 ## What you'll build
 
 ![Colour bars from the signal generator](../../examples/signal-generator/screenshot.png)

@@ -33,6 +33,24 @@ Filter chains change the frames and samples; the display layer and the render op
 
 ## Windows, panels, settings pages, dialogs and the OSD
 
-A plugin can show its interface in five places, and choosing the right one matters more than any detail of the API. The page compares tool windows, panels, settings pages, dialogs and the OSD, draws each one's life cycle (including what the standard close keys do and why mounting a panel rebuilds the main window), explains how Slint and TypeScript exchange values and the rules for plugin Slint files, and covers the theme, sizes, focus and keyboard and the common pitfalls.
+A plugin can show its interface in five places. The page describes tool windows, panels, settings pages, dialogs and the OSD, draws each one's life cycle (including what the standard close keys do and why mounting a panel rebuilds the main window), explains how Slint and TypeScript exchange values and the rules for plugin Slint files, and covers the theme, focus and keyboard and the platform differences.
 
 [Read the page](ui.md)
+
+## GPU and software rendering
+
+The player draws the video on the GPU or in software, decided at start from the user's choice, the system and earlier starts. The page explains what the rendering state reports, why a changed choice waits for the next start, and what depends on the renderer.
+
+[Read the page](rendering.md)
+
+## The player's Rust core
+
+What is on the other side of the API: the host's modules and their responsibilities, the separate crates that hold the only `unsafe` code, the UI thread and the playback worker, where libmpv sits, and the software and GPU render paths.
+
+[Read the page](architecture.md)
+
+## How the player runs and talks to plugins
+
+How the host starts a plugin (its own Node.js process or the shared runner for the built-ins), checks its package, and exchanges requests, replies and events with it; how it checks capabilities, stops plugins, handles crashes, and parks and wakes plugins with lazy activation.
+
+[Read the page](host-and-node.md)

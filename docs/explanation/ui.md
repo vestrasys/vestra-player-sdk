@@ -1,11 +1,11 @@
 ---
 title: Windows, panels, settings pages, dialogs and the OSD
-description: The five places a plugin shows its interface, how to choose one, how each lives and dies, and how Slint files and TypeScript exchange values.
+description: The five places a plugin shows its interface, how each one lives and dies, and how Slint files and TypeScript exchange values.
 ---
 
 # Windows, panels, settings pages, dialogs and the OSD
 
-A plugin can show its own user interface in five places. Three of them are drawn by the plugin's own Slint files: **tool windows**, **panels** and **settings pages**. Two are drawn by the player or the system from plain values: **dialogs** and the **on-screen display (OSD)**. This page explains what each one is, how to choose, how each one lives and dies, how Slint and TypeScript talk to each other, and what to watch out for.
+A plugin can show its own user interface in five places. Three of them are drawn by the plugin's own Slint files: **tool windows**, **panels** and **settings pages**. Two are drawn by the player or the system from plain values: **dialogs** and the **on-screen display (OSD)**. This page explains what each one is, how each one lives and dies, and how Slint and TypeScript talk to each other. Which one to choose is a rule in [Interface guidelines](../guidelines/interface.md#choose-the-smallest-surface); their sizes are in [Reference: theme](../reference/theme.md#surface-sizes).
 
 It assumes you have written a first plugin ([Getting started](../tutorials/getting-started.md)). For every method's parameters and errors, follow the links into the API reference.
 
@@ -37,23 +37,9 @@ It assumes you have written a first plugin ([Getting started](../tutorials/getti
 
 **⑤ Dialogs** ({@link "@vestra-player/sdk"!Dialogs | plugin.dialogs}, `ui.dialog`). The system's own dialogs: a confirmation alert ({@link "@vestra-player/sdk"!Dialogs.confirm | confirm}) and the open-file, open-folder and save-file dialogs. The plugin passes text and gets an answer back; it does not draw anything. Only one dialog is open at a time, player-wide.
 
-## Choosing a surface
+### Shared space
 
-| You want to…                                                                                  | Use                                                                        | Why not the others                                                                       |
-| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Confirm that something happened ("Bookmark added", "Speed 1.5×")                              | OSD message                                                                | A window or dialog would interrupt; the message vanishes by itself.                      |
-| Show a few live numbers while playing (bitrate, A/B loop points)                              | OSD info block                                                             | Needs no Slint and no focus; drawn over the video, also in fullscreen.                   |
-| Content that belongs to the player and stays visible: a playlist, chapters, a custom seek bar | Panel (sidebar or bottom bar)                                              | It follows the main window's layout and fullscreen; a tool window would float elsewhere. |
-| Cover art or an idle screen while nothing is playing                                          | Panel in the `backdrop` slot                                               | It replaces the black video area; one plugin at a time.                                  |
-| A tool the user opens, uses and closes: picture adjustments, an inspector, an editor          | Tool window                                                                | It has its own title bar and size and does not take space from the video.                |
-| Preferences that rarely change                                                                | Settings page                                                              | Users look for preferences in Options; the player keeps the window and its navigation.   |
-| A yes/no question before something destructive                                                | {@link "@vestra-player/sdk"!Dialogs.confirm dialogs.confirm}               | Native look and keyboard handling (Enter, Escape); no Slint file.                        |
-| A file or folder from the user                                                                | {@link "@vestra-player/sdk"!Dialogs.openFile dialogs.openFile} and friends | The system dialog is the only one users trust with paths.                                |
-
-Two rules of thumb:
-
-- **Prefer the smallest surface that works.** An OSD message before a dialog, a settings page before a tool window. Every window the user has to close is a cost.
-- **Panels are shared space.** There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there. A command that needs a one-click entry point does not need a panel: give it a bottom-bar button (`button` on {@link "@vestra-player/sdk"!Commands.add | commands.add}), which the player shows in the strip of command buttons every bottom bar places ([Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
+There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there. A command that needs a one-click entry point does not need a panel: give it a bottom-bar button (`button` on {@link "@vestra-player/sdk"!Commands.add | commands.add}), which the player shows in the strip of command buttons every bottom bar places ([Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
 
 ## Life cycles
 
@@ -82,6 +68,7 @@ Every surface is a **handle** owned by the {@link "@vestra-player/sdk"!Scope | S
 - Callbacks are registered when the window opens: bind every callback name with {@link "@vestra-player/sdk"!View.on | on()} **before the first `show()`**. Binding a new name while the window is open throws.
 - `close()` and a user close both destroy the window instance. The handle stays usable: the next `show()` opens a **fresh** instance with the current properties (whatever the user typed into fields that the plugin did not record is gone).
 - Only a user close calls {@link "@vestra-player/sdk"!Window.onClose | onClose}. Stop timers and polling there.
+- The operating system places a tool window when it opens; the player does not remember tool window positions or sizes, and the API cannot read or set them. To keep a tool window's _content_ across runs, see [Remember a window's state between runs](../how-to/window-state.md).
 
 ### Panel
 
@@ -207,21 +194,6 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 - **Use tokens, not values.** `Theme` has colour tokens (`text`, `accent`, `danger` for errors and destructive actions…), font sizes, control sizes and spacing; `Icon { name: "play"; color: Theme.text; }` draws an icon of the player's own set (player 0.4.0, SDK 1.5, so set `"minPlayerVersion": "0.4.0"`); `@vestra/widgets.slint` has the compact `Button`, `Slider`, `ToolTipArea` and `UrlInputRow`. Every token with its current values in both palettes, the icon names and the widgets' properties are in [Reference: theme](../reference/theme.md#colours). The values may change between player versions; the tokens keep their meaning.
 - **Markdown** (`@vestra/markdown.slint`): `MarkdownView` scrolls one document; `MarkdownBlocks` (SDK 1.5.4, the player after 0.4.0) draws one without scrolling, as tall as its content, for your own layout or a `ListView` row. Both take `blocks: [MarkdownBlock]`, report `link-clicked(url)`, and with `code-copy: true` (default `false`) put a **Copy** button on code blocks (`@tr("Copy")`, which the player translates into the interface language) that reports `copy-code(code)`; copy it with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}. A list of documents (a chat, one message per row) is the example at {@link "@vestra-player/sdk"!Ui.markdown | Ui.markdown}; [Example: Markdown](../examples/markdown.md) shows one document in a window.
 
-## Sizes
-
-All sizes are logical pixels (Slint's `px`): one logical pixel is two physical pixels on a Retina display or at 200 % scaling.
-
-| Surface          | Width                                                                                                                   | Height                                                                                                                                                         |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tool window      | The `Window` component's `width` (fixed, not resizable), or `preferred-width` (initial) within `min-width`/`max-width`. | Same with `height`. The title is the component's `title`.                                                                                                      |
-| Bottom bar       | The video column's width.                                                                                               | The component's preferred height (within its minimum and maximum). It may draw above its slot into the video area (negative `y`); the player does not clip it. |
-| Sidebar          | Set by the user with the splitter (at least 317; the video keeps at least 318).                                         | The window's full height.                                                                                                                                      |
-| Floating sidebar | 300 by default, at least 300.                                                                                           | 408 by default, at least 250.                                                                                                                                  |
-| Backdrop         | The whole video area.                                                                                                   | The whole video area.                                                                                                                                          |
-| Settings page    | 440.                                                                                                                    | The component's height; the Options window scrolls taller pages.                                                                                               |
-
-The operating system places a tool window when it opens; the player does not remember tool window positions or sizes, and the API cannot read or set them. To keep a tool window's _content_ across runs, see [Remember a window's state between runs](../how-to/window-state.md).
-
 ## Focus and keyboard
 
 - **Command key bindings belong to the main window.** A binding from {@link "@vestra-player/sdk"!CommandOptions.bindings | CommandOptions.bindings} fires while the main window or the floating sidebar window has focus (and the key was not taken by a focused control, such as Space in a text field). It does **not** fire while a tool window or the Options window has focus. Keys inside your own window are Slint's job: use a `FocusScope` with `key-pressed`, or a button's default action.
@@ -233,32 +205,8 @@ The operating system places a tool window when it opens; the player does not rem
 
 The API is the same on macOS and Windows; what differs is the system's own part: the standard close keys, how `dialogs.confirm` looks, the monospace font, the modifier `DropModifiers.cmd` stands for. [Reference: platforms](../reference/platforms.md) lists every difference. When the player runs without a user interface (headless, as in some automated setups), opening windows, mounting panels, dialogs, the OSD and `settings.show` fail with `unavailable`.
 
-## Common pitfalls
+## In the reference
 
-- **A window callback bound after the first `show()`.** It throws. Bind all callbacks right after `create()`; re-binding a name that already has a handler is fine.
-- **A one-way binding on a control.** `value: root.x` stops following the plugin after the user touches the control. Use `in-out` and `<=>`.
-- **`set()` inside a frequent loop.** `set` always sends, even an unchanged value; a periodic `set` of a slider value pulls the thumb back from under the user's pointer. Use `bind` for anything derived from state.
-- **Changes after an `await` do not appear.** The update pass runs when the handler finishes; call `plugin.update()` for progress in between.
-- **State only inside a panel component.** It is lost when the main window is rebuilt or the sidebar detaches. Keep anything that matters in bridge properties written by the plugin.
-- **User edits the plugin does not record.** A settings page or tool window is rebuilt from the plugin's last written values; an `in-out` property the user changed without a callback updating your model reverts. Handle the callback and keep the value in your state (and `bind` it).
-- **Hard-coded colours.** They do not follow the palette. Use `Theme.*`, and `Theme.danger` for errors.
-- **A `Ctrl+W` default binding.** It never fires in tool windows and floating panels. Pick another key.
-- **Two of a kind.** One panel per plugin, one backdrop per player, one OSD info block per plugin, one open dialog at a time (`busy`).
-- **An `if` that flips under the pointer.** `if touch.has-hover: Rectangle { … }` (a hover highlight, an accent bar, a tooltip-like box that follows the pointer) creates and destroys an element on every hover change. While a video plays, each such change costs the player's UI thread far more than a property change: the player's accessibility tree (screen readers, UI Automation) is rebuilt for the whole window each time, measured at 100–160 ms per hover on Windows, enough to drop the video to 10–15 frames a second while the pointer moves. Keep the element and change properties instead: `Rectangle { visible: touch.has-hover; … }` or `opacity:`. Use `if` for things that change rarely (a mode, a selection made with a click, a list that was loaded), never for something that follows the pointer or a hover.
-- **Slot state without `events`.** {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and their `onChange` listeners follow other plugins and the user only with the `events` capability.
-
-## Testing
-
-`TestHost` from `@vestra-player/sdk/testing` runs a plugin without the player and records its interface: windows with their properties and callbacks, the mounted panel, settings pages, the OSD and dialogs. It does not compile Slint files; check them by running the plugin in the player. How to write such tests is in [Test a plugin](../how-to/testing.md).
-
-## API on this page
-
-- Tool windows: {@link "@vestra-player/sdk"!Windows | Windows}, {@link "@vestra-player/sdk"!Window | Window}
-- Panels: {@link "@vestra-player/sdk"!Panels | Panels}, {@link "@vestra-player/sdk"!Panel | Panel}, {@link "@vestra-player/sdk"!PanelSlot | PanelSlot}, {@link "@vestra-player/sdk"!SidebarSlot | SidebarSlot}, {@link "@vestra-player/sdk"!BackdropSlot | BackdropSlot}, {@link "@vestra-player/sdk"!SlotState | SlotState}
-- Settings pages: {@link "@vestra-player/sdk"!Settings | Settings}, {@link "@vestra-player/sdk"!SettingsPage | SettingsPage}, {@link "@vestra-player/sdk"!SettingsCategory | SettingsCategory}
-- Shared view surface: {@link "@vestra-player/sdk"!View | View}, {@link "@vestra-player/sdk"!Props | Props}, {@link "@vestra-player/sdk"!PropValue | PropValue}, {@link "@vestra-player/sdk"!Ui | Ui}, {@link "@vestra-player/sdk"!ImageRef | ImageRef}, {@link "@vestra-player/sdk"!MarkdownRef | MarkdownRef}, {@link "@vestra-player/sdk"!MarkdownOptions | MarkdownOptions}
-- Dialogs: {@link "@vestra-player/sdk"!Dialogs | Dialogs}, {@link "@vestra-player/sdk"!ConfirmOptions | ConfirmOptions}
-- On-screen display: {@link "@vestra-player/sdk"!Osd | Osd}, {@link "@vestra-player/sdk"!OsdPanel | OsdPanel}
-- Palette: {@link "@vestra-player/sdk"!Appearance | Appearance}, {@link "@vestra-player/sdk"!ThemeId | ThemeId}
+Every member named here is in the API reference, from {@link "@vestra-player/sdk"!Windows | Windows}, {@link "@vestra-player/sdk"!Panels | Panels}, {@link "@vestra-player/sdk"!Settings | Settings}, {@link "@vestra-player/sdk"!Dialogs | Dialogs} and {@link "@vestra-player/sdk"!Osd | Osd} on; the sizes of each surface, the tokens, icons and widgets are in [Reference: theme](../reference/theme.md); what `TestHost` records of the interface is in [Reference: test host](../reference/testing.md). When something does not behave as described, see [Troubleshooting](../how-to/troubleshooting.md#the-interface).
 
 Examples that use them: [blur](../examples/blur.md) (a tool window with a live slider), [bookmark](../examples/bookmark.md) (a tool window bound to playback state), [panel-menu](../examples/panel-menu.md) (a sidebar panel with a context menu), [theme-widgets](../examples/theme-widgets.md) (the theme and widgets) and [markdown](../examples/markdown.md) (the Markdown view).

@@ -62,8 +62,24 @@
   },
   "treatWarningsAsErrors": true,
   "treatValidationWarningsAsErrors": true,
+  "highlightLanguages": [
+    "bash",
+    "console",
+    "css",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "json5",
+    "yaml",
+    "tsx",
+    "typescript",
+    "rust"
+  ],
   "ignoredHighlightLanguages": ["slint", "po"],
-  "jsDocCompatibility": { "exampleTag": false },
+  "jsDocCompatibility": {
+    "exampleTag": false
+  },
   "plugin": [
     "typedoc-github-theme",
     "typedoc-plugin-mdn-links",

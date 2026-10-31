@@ -9,6 +9,12 @@ This walkthrough builds **Blur**: a menu command opens a small window with one s
 
 The complete source is in [`examples/blur/`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/blur). Every code block on this page is taken from those files, so it is always the code CI checks and tests.
 
+## What it demonstrates
+
+A command in the player's **Video** menu · a tool window with one slider (properties, a callback, a two-way binding, `bind`) · a video filter: setting a `gblur` chain live, and `[]` to remove it.
+
+[Add a window](../tutorials/add-a-window.md) teaches tool windows; [Keep a slider responsive while dragging](../how-to/slider.md) teaches the live slider.
+
 ## What you'll build
 
 ![The Blur window over a playing video](../../examples/blur/screenshot.png)

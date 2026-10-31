@@ -115,11 +115,8 @@ The player registers some commands itself, with the owner `host`: **Toggle Fulls
 
 A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); what they do to playback is in [Playback](playback.md#core-actions).
 
-## API on this page
+## In the reference
 
-- Commands: {@link "@vestra-player/sdk"!Commands | Commands}, {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}, {@link "@vestra-player/sdk"!CommandButton | CommandButton}, {@link "@vestra-player/sdk"!Command | Command}, {@link "@vestra-player/sdk"!CommandState | CommandState}, {@link "@vestra-player/sdk"!MenuId | MenuId}, {@link "@vestra-player/sdk"!Bindable | Bindable}
-- Bindings: {@link "@vestra-player/sdk"!Bindings | Bindings}, {@link "@vestra-player/sdk"!BindingInfo | BindingInfo}, {@link "@vestra-player/sdk"!BindingRef | BindingRef}
-- Core actions: {@link "@vestra-player/sdk"!Host | Host}, {@link "@vestra-player/sdk"!HostAction | HostAction}
-- Text in menus: {@link "@vestra-player/sdk"!Text | Text}, {@link "@vestra-player/sdk"!I18n | I18n}
+The members are in the API reference, from {@link "@vestra-player/sdk"!Commands | Commands} and {@link "@vestra-player/sdk"!Bindings | Bindings} on; menu ids, menu keys, binding names and the core actions are in [Reference: commands](../reference/commands.md).
 
 Examples: [menus](../examples/menus.md) (submenus, groups, radio items and bindings), [panel-menu](../examples/panel-menu.md) (a context menu of commands without a menu path).

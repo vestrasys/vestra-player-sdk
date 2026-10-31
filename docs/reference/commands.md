@@ -33,6 +33,48 @@ A command's `path` is a list of 1 to 8 segments in English source text, the last
 
 Players before 0.3.0 show `@video` as a menu of its own; players up to 0.4.2 titled these menus in Chinese, where only the id form reaches them. The fixed orders of the built-in menus and of the player's own items are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 
+## The top level
+
+The top level as the player ships it (shortcuts in the Windows notation; the menu shows each system's own):
+
+```text
+Open File…                    Ctrl+O, F3   group open
+Open ▸
+Close                         F4
+Reopen Current/Last File      Ctrl+Y
+Copy to Clipboard ▸
+────────────────────────────────────────
+Playback ▸                                 group domain
+Subtitles ▸
+Video ▸
+Audio ▸
+────────────────────────────────────────
+Toggle Fullscreen             Enter        group screen
+Screen ▸
+────────────────────────────────────────
+Playlist  ✓                   F6           group windows
+Playback Info  ✓              Tab
+Playback Properties…          Ctrl+F1
+Vestra Player AI…
+Plugin Store…
+────────────────────────────────────────
+Settings ▸
+────────────────────────────────────────
+About Vestra Player…          F1
+────────────────────────────────────────
+Quit                          Cmd+Q        group exit
+```
+
+The groups of the top level and their `order` ranges ([Guidelines: menus](../guidelines/menus.md#the-top-level) says which to use):
+
+| Group                  | `order` | For                                                                              |
+| ---------------------- | ------- | -------------------------------------------------------------------------------- |
+| `open`                 | 100–199 | Opening and closing sources                                                      |
+| `domain` (the default) | 200–699 | Domain submenus: Playback, Subtitles, Video, Audio, and a new domain of your own |
+| `screen`               | 700–799 | Fullscreen and the window's size and placement                                   |
+| `windows`              | 800–899 | Items that show a window or a panel (a check mark when it toggles one)           |
+| `exit`                 | 900–999 | Quit                                                                             |
+
 ## Submenu keys in use
 
 The submenus that exist already, by key path. Write the same keys to add a command to one of them; a near-synonym makes a second submenu.

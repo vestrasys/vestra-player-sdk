@@ -50,6 +50,8 @@ import {
   OFF_SITE,
   PENDING_UNTIL,
   PLACEHOLDERS,
+  SHAPES,
+  shapeProblems,
 } from "./doc-structure.mjs";
 import { withoutGenerated } from "./doc-tables.mjs";
 import { splitCut, strictDeclarations } from "./doc-standard.mjs";
@@ -448,6 +450,17 @@ const structure = { errors: [], warnings: [] };
       const message = `${path}: ${value} ${unit}, the limit for a ${kind} page is ${limit}`;
       if (value > limit * 1.25) violation(page, message);
       else structure.warnings.push(message);
+    }
+    // The page's shape (Diátaxis; doc-structure.mjs SHAPES).
+    const shape = page.shape ?? group.kind;
+    if (kind !== "index") {
+      if (!SHAPES[shape]) error(`${path}: unknown shape "${shape}"`);
+      else
+        for (const problem of shapeProblems(shape, counted, body))
+          violation(
+            page,
+            `${path}: ${problem} (${shape} pages: ${SHAPES[shape]})`,
+          );
     }
     for (const placeholder of PLACEHOLDERS)
       if (placeholder.test(body))

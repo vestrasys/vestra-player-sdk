@@ -9,6 +9,12 @@ Every other explanation page builds on this one. It explains what the player doe
 
 It assumes you have written a first plugin ([Getting started](../tutorials/getting-started.md)). For each type's members, follow the links into the API reference.
 
+## In short
+
+- Each plugin runs in its own Node.js process (Node.js 26, which the player ships). It can use the Node standard library, the file system, the network and npm packages.
+- The player loads the entry module and calls its **default export** `activate(plugin)`. The plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
+- Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. There is no cleanup function to return.
+
 ## The plugin process
 
 - **One Node.js process per plugin.** The player starts each plugin in a Node.js 26 process of its own (the installed player ships that Node.js). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in one plugin does not stop the player or other plugins.
@@ -33,10 +39,10 @@ export default async function activate(plugin: Plugin) {
 
 When the player starts the plugin:
 
-1. It starts the process, and the SDK loads the entry module.
-2. The SDK reads the initial state the plugin may see (the playback state with `playback.read`, the main window and timeline state) and, with `events`, subscribes to changes.
-3. It calls `activate(plugin)`.
-4. It waits until every registration started during activation has succeeded: commands, panels, settings pages, resolvers, subscriptions. Then it reports the plugin ready.
+- First it starts the process, and the SDK loads the entry module.
+- The SDK reads the initial state the plugin may see (the playback state with `playback.read`, the main window and timeline state) and, with `events`, subscribes to changes.
+- It calls `activate(plugin)`.
+- Last, it waits until every registration started during activation has succeeded: commands, panels, settings pages, resolvers, subscriptions. Then it reports the plugin ready.
 
 You do not need to `await` those registrations. `commands.add`, `panels.mount` and `resolvers.add` return their handle at once and register in the background; their `ready` promise is there for the rare case that you want to wait. **Activation fails** when `activate` throws or rejects, or when one of those registrations fails. A registration made later, after activation, cannot fail activation any more: its failure goes to [`onError`](#failures-and-recovery).
 
@@ -99,9 +105,9 @@ The rule that follows: **state you change outside a handler, or after an `await`
 
 The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, and when the player quits.
 
-1. The player first removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
-2. The SDK then refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
-3. A process that has not exited 300 ms later is killed.
+- First the player removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
+- Then the SDK refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
+- A process that has not exited 300 ms later is killed.
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with {@link "@vestra-player/sdk"!Player.open | player.open} **keeps playing** after it stops.
 
@@ -174,11 +180,8 @@ Three properties make failures predictable:
 - **No client-side timeouts.** The player answers every request in order, or stops the plugin. A slow request is logged after 10 seconds, but the SDK keeps waiting for the real answer instead of guessing, so an operation never ends in "maybe".
 - **No blind retries.** The SDK never resends an operation that is not safe to repeat (opening, loading subtitles, starting an export, installing). Only last-write-wins targets such as filter chains are sent again, and only when the SDK knows the earlier write did not take effect. A filter chain that failed with `backend-uncertain` (the player's backend blocked that stage) waits for {@link "@vestra-player/sdk"!VideoFilter | retry()}, the next `set()` or a new source.
 
-## API on this page
+## In the reference
 
-- Entry and scopes: {@link "@vestra-player/sdk"!Plugin | Plugin}, {@link "@vestra-player/sdk"!Scope | Scope}, {@link "@vestra-player/sdk"!Disposable | Disposable}, {@link "@vestra-player/sdk"!Bindable | Bindable}
-- Files and settings: {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!SessionStorage | SessionStorage}, {@link "@vestra-player/sdk"!Secrets | Secrets}, {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}
-- The player and system: {@link "@vestra-player/sdk"!App | App}, {@link "@vestra-player/sdk"!SystemInfo | SystemInfo}
-- Errors: {@link "@vestra-player/sdk"!PluginError | PluginError}, {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}
+The members are in the API reference, from {@link "@vestra-player/sdk"!Plugin | Plugin} and {@link "@vestra-player/sdk"!Scope | Scope} on; the error codes are in [Reference: error codes](../reference/errors.md), the limits in [Reference: limits](../reference/limits.md). How the player starts the process and talks to it is in [How the player runs and talks to plugins](host-and-node.md).
 
 Examples: [bookmark](../examples/bookmark.md) (bindings and the update pass), [window-state](../how-to/window-state.md) (files in the data directory).

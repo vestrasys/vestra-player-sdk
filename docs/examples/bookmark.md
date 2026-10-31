@@ -7,6 +7,12 @@ description: "Walkthrough of examples/bookmark: a tool window bound to the playb
 
 A tool window whose buttons follow the playback state: **Mark** remembers where playback is, **Jump** goes back there. It shows the pattern most plugins with a window use: the window's properties are _bound_ to state, and its buttons call back into the plugin.
 
+## What it demonstrates
+
+A tool window whose properties are bound to the playback state · handling its buttons.
+
+[Add a window](../tutorials/add-a-window.md) teaches a window bound to the playback state; [Test a plugin](../how-to/testing.md) uses its test as the complete example.
+
 ## What you'll build
 
 ![Bookmark in Vestra Player](../../examples/bookmark/screenshot.png)

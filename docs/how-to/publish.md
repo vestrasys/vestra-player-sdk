@@ -9,7 +9,9 @@ description: Submit a plugin to the official plugin repository, update or withdr
 
 The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them.
 
-## Two ways in
+## Steps
+
+### Choose a way in
 
 - **Registered** (the usual way): the source stays in your own public GitHub repository, and you register it with one file in the repository's `registry/`. CI builds the package from the commit you name, as Flathub does.
 - **Hosted**: the source lives in the repository's `plugins/<name>/`, and every change is a pull request there. It needs a maintainer's agreement: open an issue first.
@@ -17,7 +19,7 @@ The store reads the official plugin repository, [vestrasys/vestra-player-plugins
 > [!IMPORTANT]
 > Building registered plugins from source is not implemented yet. The registration format, the id rule and the owner check are final and checked by CI, but a registration pull request cannot be merged until the build lands (the repository's README shows the status).
 
-## 1. Prepare the package
+### Prepare the package
 
 From the plugin folder:
 
@@ -34,7 +36,7 @@ Next to `manifest.json` the store needs:
 - tests under `tests/` that pass ([Test a plugin](testing.md));
 - only the [capabilities](../reference/capabilities.md) the plugin uses: the store lists them on the plugin's page.
 
-## 2. Choose the id
+### Choose the id
 
 The id is `<owner>.<name>`, where `<owner>` is the GitHub user or organization that owns the source repository (for a hosted plugin, the owner recorded in the repository's `plugins/owners.toml`), compared without case: `https://github.com/someone/cool-visualizer` publishes ids that start with `someone.`. Letters, digits, `.`, `-` and `_` only.
 
@@ -42,17 +44,11 @@ The id is `<owner>.<name>`, where `<owner>` is the GitHub user or organization t
 - An id is unique in the repository, also against a hosted plugin's and also with different case.
 - A changed id is a new plugin to the store: the old id's version history is not carried over.
 
-## 3. Register the plugin
+### Register the plugin
 
 Push the plugin to your public repository (it may live in a subdirectory) and note the full 40-character id of the commit to publish; a tag such as `v1.0.0` is good practice, but the registration pins the commit. Then fork the plugin repository and add `registry/<id>.toml`:
 
-```text
-# registry/someone.cool-visualizer.toml
-repository = "https://github.com/someone/cool-visualizer"
-commit = "3f2a9c1d4b5e6f708192a3b4c5d6e7f8091a2b3c"
-path = "."            # optional, default "."
-owners = ["someone"]
-```
+The file is shown in the [complete example](#complete-example) below.
 
 | Key | Rule |
 | --- | --- |
@@ -66,7 +62,7 @@ No other keys. `npm ci && npm run registry` in the plugin repository checks the 
 
 A hosted plugin instead adds its folder under `plugins/` (manifest, sources, `tests/`, `README.md`, `CHANGELOG.md`) and its owner to `plugins/owners.toml`, after the maintainers agreed in the issue; `npm run plugin -- check <name>` (and `test`, `pack`) run the checks there.
 
-## 4. Open the pull request
+### Open the pull request
 
 Title it `Add someone.cool-visualizer` (or `Update someone.cool-visualizer to 1.2.0`) and fill in the pull request checklist. On the pull request:
 
@@ -75,6 +71,23 @@ Title it `Add someone.cool-visualizer` (or `Update someone.cool-visualizer to 1.
 - **Review:** a maintainer reads the source at the registered commit (for an update, the diff since the previous one) and merges, or answers in the pull request.
 
 After the merge, the repository's publish workflow builds the package, releases it as `<id>-v<version>`, signs the index and deploys it; the store shows the plugin at its next refresh.
+
+## Complete example
+
+Publishing `someone.cool-visualizer` from `https://github.com/someone/cool-visualizer`: check, test and pack in the plugin folder, then add one file to a fork of the plugin repository and open the pull request "Add someone.cool-visualizer".
+
+```sh
+npx vestra-plugin check && npx vestra-plugin test && npx vestra-plugin pack
+git rev-parse HEAD   # the commit to register
+```
+
+```text
+# registry/someone.cool-visualizer.toml
+repository = "https://github.com/someone/cool-visualizer"
+commit = "3f2a9c1d4b5e6f708192a3b4c5d6e7f8091a2b3c"
+path = "."            # optional, default "."
+owners = ["someone"]
+```
 
 ## Update, withdraw, revoke
 
@@ -91,3 +104,10 @@ The store shows the newest version's manifest fields, so what you write there is
 - **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the store has no action to install an older one: a user who wants an older version uninstalls the plugin and installs that version's `.vxp` ([Migrating off package rollback](../upgrading/rollback-migration.md)). A side column shows the version, the date, the license, a link to `sourceUrl` and the capabilities in plain words, the risky ones highlighted (the wording is the "Shown in the store as" column of [Capabilities](../reference/capabilities.md)), with a fixed note that capabilities limit only the player API, not file or network access.
 - **Before installing**, the user confirms a dialog that lists the capabilities; an update that adds capabilities lists the new ones. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
 - **The README** is rendered as Markdown; relative links and images resolve against the README's own address, and remote images are shown for the official repository.
+
+## See also
+
+- [Manifest](../reference/manifest.md): the display fields and `minPlayerVersion`.
+- [Capabilities](../reference/capabilities.md): the wording the store shows for each capability.
+- [Test a plugin](testing.md) and [Command line](../reference/cli.md).
+- The plugin repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md).
