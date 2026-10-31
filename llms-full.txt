@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.38: full reference
+# @vestra-player/sdk 1.5.41: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -3312,7 +3312,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | `order` | Integer 0–999, left to right ascending; equal orders by plugin id, then declaration order. The built-in plugins use 100 (Vestra Player AI) and 200 (Plugin Store). |
 | `path` | Required: a button without a menu path is `invalid`. |
 
-- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: the icon in the accent colour. Accessibility: a button named by the title, with its enabled and checked state and a default action.
+- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. The icon is drawn in the accent colour (player 0.5.22; the text colour before), darker while pressed. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: a small dot in the icon's colour under the icon (before player 0.5.22: the icon in the accent colour, the others in the text colour). Accessibility: a button named by the title, with its enabled and checked state and a default action.
 - **Click**: runs the command exactly as a click on its menu item does.
 - **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip loses cells from its outer (left) end inward: the lowest order goes first, the sidebar toggle last. `order` is position only: low is further left and goes first.
 - **Limits** (Limits): one button per plugin (its first declared), eight in the player (the highest orders; the lowest go first, ties: the smaller plugin id, then the earlier declaration). A button past them is left out and logged with `limit`; the command and its menu entry stay.
@@ -4253,9 +4253,9 @@ Writing a bottom bar.
 "…" removed) and its first key as the tooltip ("Plugin Store (F9)"),
 `enabled`, `busy` and `reason` as the menu item has them: a disabled or
 busy command's button is drawn disabled, its tooltip adds the reason, and
-a click runs nothing. A command with `checked` shows its icon in the
-accent colour while checked. A click runs the command exactly like a
-click on its menu item.
+a click runs nothing. Every button's icon is drawn in the accent colour;
+a command with `checked` shows a small dot under its icon while checked.
+A click runs the command exactly like a click on its menu item.
 
 **Limits.** One button per plugin and eight in the player
 (`BAR_BUTTON_LIMITS`): a button past them is left out (its command and
@@ -12662,7 +12662,7 @@ interface FakeBarButton {
   readonly order: number;
   /** Clickable: the command is enabled and not busy. */
   readonly enabled: boolean;
-  /** Drawn in the accent colour: the command is checked. */
+  /** Shown with the on dot under its icon: the command is checked. */
   readonly checked: boolean;
   /** The tooltip without the key: the command's shown title (trailing "…" removed), then, while it cannot run, its reason on a second line. */
   readonly tooltip: string;

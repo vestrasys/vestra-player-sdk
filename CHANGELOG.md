@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.41
+
+**Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only how the player draws the bottom bar's strip of command buttons changes (player 0.5.22); a plugin's declarations and a bar that places `BarButtons` stay as they are.
+
+- **`@vestra/bar-buttons.slint`** (the read-only copy of the player's widget library): every enabled button of the strip draws its icon in the accent colour (`Theme.accent`, `Theme.accent-press` while pressed; `Theme.icon-disabled` when disabled), plugin images (`plugin.ui.image`) included. Before, icons were in the text colour and only a checked toggle in the accent. A checked command (`checked: true`, the sidebar toggle while the sidebar is on) now shows a 4px dot in the icon's colour centred under the icon, as the macOS Dock marks a running app; the accessibility checked state is unchanged.
+- _Commands_ (reference), `CommandOptions.button` and `TestHost.barButtons[].checked` describe the new look.
+
 ## 1.5.38
 
 **Who must change: nobody.** Additions only, `apiVersion` stays `vestra/1`. The marks below are read by player 0.5.18 and later; older players ignore them, and a plugin built with an older SDK keeps working (the player builds the `plugin` object with its own SDK). What may change for a plugin is the player's lazy activation, off by default in player 0.5.18 and turned on in a later release: a plugin that holds nothing only its process can serve is stopped while idle and started on its next use, so state kept only in variables is lost between uses (keep it in `plugin.storage.session`).
