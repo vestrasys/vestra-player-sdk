@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.36
+
+**Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed.
+
+- **`BUILTIN_COMMANDS`** lists the Picture Adjustments plugin's (`vestra.video` 1.1.8) `Video ▸ GPU Rendering (Experimental)` (`video.gpu-rendering`, no default keys), after the color steps. Its `Video ▸ Restart Player to Apply` (`video.gpu-rendering.restart`) appears only while a rendering choice waits for the next start and is not listed, like other items of a passing state; the reference says so.
+
 ## 1.5.35
 
 **Who must change: nobody.** Additions only, `apiVersion` stays `vestra/1`. The new API needs player 0.5.13 (`"minPlayerVersion": "0.5.13"`): older players leave `SystemInfo.renderingReason` out, refuse `rendering.state` as an unknown request (`unsupported`), and do not load a plugin that declares the new capability `rendering.manage`. A plugin that uses none of it sees no difference.
