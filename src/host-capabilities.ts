@@ -365,6 +365,17 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       residency: "none",
       risky: true,
     },
+    {
+      label: "Upscale the video with the GPU's video upscaler",
+      methods: [
+        { name: "video.upscaling.state", needs: "video.upscaling" },
+        { name: "video.upscaling.set", needs: "video.upscaling" },
+      ],
+      name: "video.upscaling",
+      requires: [],
+      residency: "live",
+      risky: false,
+    },
   ],
   uncapable: [
     { name: "packages.list", needs: null },

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.37
+
+**Who must change: nobody.** Additions only, `apiVersion` stays `vestra/1`. The new API needs player 0.5.16 (`"minPlayerVersion": "0.5.16"`): older players do not load a plugin that declares the new capability `video.upscaling` (an unknown capability). A plugin that does not use it sees no difference.
+
+- **`plugin.video.upscaling`** (player 0.5.16): the GPU's video upscaler, NVIDIA RTX Video Super Resolution on Windows. `state()` reports whether it works now (`available`) and why not (`reason`, `{ code, message }` with the stable codes of `UpscalingReasonCode`: `platform`, `no-gpu`, `driver`, `gpu-unsupported`, `rendering`, `adapter`, `decoding`; a newer player may add codes), whether this plugin turned it on (`enabled`), and whether the player asked the GPU to upscale now (`requested`, with the scale `factor`). `set(enabled)` turns this plugin's request on or off and resolves with the new state; `true` rejects with `unsupported` where upscaling cannot work in this run (every reason but `decoding`, which can pass with the next file), `invalid` for a non-boolean. The player checks the GPU once, at the first call (it wakes a sleeping discrete GPU), puts the upscaler last in the video filter chain scaled to the area the video is shown in (only above 1×), follows size changes, and takes it out when the last plugin turns it off or stops. There is no "upscaling active" signal: on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read. New types `VideoUpscaling`, `UpscalingState`, `UpscalingReason`, `UpscalingReasonCode`.
+- **New capability `video.upscaling`** ("Upscale the video with the GPU's video upscaler", not highlighted in the store: it changes only how the picture is scaled while the plugin runs and touches no data), last in `CAPABILITIES`; both requests need it and reject with `capability` without it. The player's capability table copy, `CAPABILITY_INFO`, `vestra-plugin check` and the editor plugin know it.
+- **`TestHost.upscaling`** models the player: preset `reason` (`null`: it works) and `factor`, read `enabled` and `checked` (whether the plugin made the player check the GPU); `set(true)` refuses with `unsupported` unless the reason is `decoding`.
+- _Video and audio processing_ and _Platforms_ describe the upscaler.
+
 ## 1.5.36
 
 **Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed.

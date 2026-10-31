@@ -1,7 +1,8 @@
 /**
  * Shared services: the clipboard, sleep prevention, showing and opening files
- * and links, secrets, session storage and the rendering choice go to the
- * host; external tools and settings files run in this plugin's own process.
+ * and links, secrets, session storage, the rendering choice and the video
+ * upscaler go to the host; external tools and settings files run in this
+ * plugin's own process.
  */
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { mkdir, open, rename, rm, stat } from "node:fs/promises";
@@ -22,6 +23,8 @@ import type {
   Storage,
   System,
   Tools,
+  UpscalingState,
+  VideoUpscaling,
 } from "./types.ts";
 import type { Json } from "../wire.ts";
 
@@ -559,6 +562,35 @@ export const rendering = (scope: ScopeImpl): Rendering => {
     async restartPlayer() {
       manage();
       await scope.runtime.host.rendering.restart();
+    },
+  };
+};
+
+/**
+ * `plugin.video.upscaling` (player 0.5.16): both requests need
+ * `video.upscaling`; the player answers once its GPU check ran (the first
+ * call starts it).
+ */
+export const videoUpscaling = (scope: ScopeImpl): VideoUpscaling => {
+  const declared = () => {
+    if (!scope.runtime.can("video.upscaling"))
+      throw failure(
+        "capability",
+        "video.upscaling must be declared in manifest",
+      );
+  };
+  return {
+    async state() {
+      declared();
+      return (await scope.runtime.host.video.upscalingState()) as UpscalingState;
+    },
+    async set(enabled) {
+      declared();
+      if (typeof enabled !== "boolean")
+        throw failure("invalid", "enabled must be true or false");
+      return (await scope.runtime.host.video.upscalingSet(
+        enabled,
+      )) as UpscalingState;
     },
   };
 };

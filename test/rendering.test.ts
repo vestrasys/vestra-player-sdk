@@ -25,8 +25,10 @@ async function started(capabilities: string[], host = new TestHost()) {
 const code = (expected: string) => (error: HostError) =>
   error.code === expected;
 
-test("rendering.manage: the player's table entry, last; rendering.state needs none", () => {
-  const last = HOST_CAPABILITIES.capabilities.at(-1)!;
+test("rendering.manage: the player's table entry; rendering.state needs none", () => {
+  const last = HOST_CAPABILITIES.capabilities.find(
+    (capability) => capability.name === "rendering.manage",
+  )!;
   assert.deepEqual(last, {
     label: "Choose GPU or software rendering and restart the player",
     methods: [

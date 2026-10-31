@@ -82,11 +82,20 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 - **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see [Reference: platforms](../reference/platforms.md) for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error. To know before creating the handle, read {@link "@vestra-player/sdk"!SystemInfo.rendering | rendering} from `plugin.app.system()` (player 0.5.12, no capability): `"gpu"` or `"software"`.
 - A shader that does not compile is reported later: the status first becomes `applied`, then `failed` with code `failed` and the compiler's first error line once mpv first uses the shader.
 
+## The GPU's video upscaler
+
+{@link "@vestra-player/sdk"!VideoUpscaling | plugin.video.upscaling} (capability `video.upscaling`, player 0.5.16) turns on the GPU's AI upscaler, NVIDIA RTX Video Super Resolution on Windows. It is not a handle: `set(true)` is the plugin's request, and the player keeps the upscaler last in the filter chain, after every plugin's chain, while any plugin has it on and it can work, scaled to the area the video is shown in. Like render options it acts at display time only.
+
+- **Ask when needed.** The player checks the GPU at the first `state()` or `set()` and keeps the answer; the check wakes a sleeping discrete GPU.
+- **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone.
+- **No sign that it runs.** `requested` says the player asked the driver; on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read.
+
 ## API on this page
 
 - Filter chains: {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!AudioFilter | AudioFilter}, {@link "@vestra-player/sdk"!VideoNode | VideoNode}, {@link "@vestra-player/sdk"!AudioNode | AudioNode}, {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}
 - Display layer: {@link "@vestra-player/sdk"!VideoView | VideoView}, {@link "@vestra-player/sdk"!ViewSettings | ViewSettings}
 - Render options: {@link "@vestra-player/sdk"!RenderOptions | RenderOptions}, {@link "@vestra-player/sdk"!RenderSettings | RenderSettings}
+- The video upscaler: {@link "@vestra-player/sdk"!VideoUpscaling | VideoUpscaling}, {@link "@vestra-player/sdk"!UpscalingState | UpscalingState}, {@link "@vestra-player/sdk"!UpscalingReasonCode | UpscalingReasonCode}
 - Snapshots and exports with the same chains: {@link "@vestra-player/sdk"!MediaCapture | MediaCapture}, {@link "@vestra-player/sdk"!Snapshot | Snapshot}
 
 Examples: [blur](../examples/blur.md) (a live video filter driven by a slider).

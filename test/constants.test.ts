@@ -78,6 +78,7 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "ui.theme",
     "secrets",
     "rendering.manage",
+    "video.upscaling",
   ]);
   assert.ok(Object.isFrozen(CAPABILITY_INFO));
   assert.ok(Object.isFrozen(CAPABILITIES));

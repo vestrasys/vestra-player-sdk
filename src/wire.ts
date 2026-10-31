@@ -328,6 +328,15 @@ export interface WireRenderingState {
   restartPending: boolean;
   gpu: { available: boolean; reason: WireRenderingReason | null };
 }
+/** `video.upscaling.state` and `video.upscaling.set` (player 0.5.16). */
+export interface WireUpscalingState {
+  available: boolean;
+  /** The same `{ code, message }` shape as a rendering reason. */
+  reason: WireRenderingReason | null;
+  enabled: boolean;
+  requested: boolean;
+  factor: number | null;
+}
 /**
  * Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`,
  * a text's `args`): data, or text values (player 0.4.3).
@@ -475,6 +484,13 @@ export function createWire(transport: Transport) {
           { values },
         ),
       renderRelease: () => transport.request<void>("video.render.release"),
+      /** The GPU's video upscaler (`plugin.video.upscaling`, player 0.5.16). */
+      upscalingState: () =>
+        transport.request<WireUpscalingState>("video.upscaling.state"),
+      upscalingSet: (enabled: boolean) =>
+        transport.request<WireUpscalingState>("video.upscaling.set", {
+          enabled,
+        }),
     },
     /** Mark layers on the seek bar (`plugin.timeline`). */
     timeline: {
