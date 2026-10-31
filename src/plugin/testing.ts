@@ -135,6 +135,7 @@ import type {
 } from "./types.ts";
 import type { MediaJob } from "../media.ts";
 import { createPlugin } from "./index.ts";
+import { applyOps, PATCH_FEATURE, PATCH_OPS } from "./patch.ts";
 import { evaluate } from "./when.ts";
 import type { ConditionFacts } from "./when.ts";
 import { WAKE_EVENTS } from "./runtime.ts";
@@ -1524,6 +1525,74 @@ export class TestHost implements Transport {
     const reason = (state as { reason?: unknown } | null)?.reason;
     if (reason !== null && reason !== undefined)
       this.#declared(reason, "reason");
+  }
+  /**
+   * Row patches (player 0.6.0): the `seq` of each property's last write, by
+   * view and property (none: 0, the initial properties).
+   */
+  readonly #writes = new Map<string, number>();
+  #resetWrites(view: string) {
+    for (const slot of [...this.#writes.keys()])
+      if (slot.startsWith(`${view}\u0000`)) this.#writes.delete(slot);
+  }
+  /**
+   * A property write as the player takes it, returning the value the
+   * property shows after it: a whole `value`, or a `patch` of the array
+   * `current` applying on the write numbered `base` (code `stale`
+   * otherwise). The result is checked against the value limits whole: the
+   * player counts the rows a patch keeps too.
+   */
+  #write(
+    view: string,
+    property: string,
+    p: Record<string, Json>,
+    current: Json | undefined,
+  ): Json {
+    const slot = `${view}\u0000${property}`;
+    const patch = p.patch as
+      { base?: unknown; seq?: unknown; ops?: unknown } | undefined;
+    if (patch === undefined) {
+      const value = this.#shownValues(p.value!);
+      this.#checkValues({ [property]: value });
+      this.#seeImages([value]);
+      this.#writes.set(slot, typeof p.seq === "number" ? p.seq : 0);
+      return value;
+    }
+    const { base, seq } = patch;
+    if (
+      !Number.isInteger(base) ||
+      !Number.isInteger(seq) ||
+      (base as number) < 0 ||
+      (seq as number) < 1
+    )
+      throw new HostError(
+        "invalid",
+        "patch.base and patch.seq require non-negative integers (seq ≥ 1)",
+      );
+    const stale = () =>
+      new HostError(
+        "stale",
+        "the property changed since the write this patch applies on; send the whole value",
+      );
+    if ((this.#writes.get(slot) ?? 0) !== base || !Array.isArray(current))
+      throw stale();
+    const ops = patchOps(patch.ops, current.length);
+    const resolved = ops.map((op) =>
+      op.op === "set"
+        ? { ...op, row: this.#shownValues(op.row) }
+        : op.op === "insert"
+          ? { ...op, rows: op.rows.map((row) => this.#shownValues(row)) }
+          : op,
+    );
+    const value = applyOps(current, resolved);
+    this.#checkValues({ [property]: value });
+    this.#seeImages(
+      resolved.flatMap((op) =>
+        op.op === "set" ? [op.row] : op.op === "insert" ? op.rows : [],
+      ),
+    );
+    this.#writes.set(slot, seq as number);
+    return value;
   }
   /**
    * Refuse property values over the player's limits ({@link UI_VALUE_LIMITS})
@@ -4795,6 +4864,7 @@ export class TestHost implements Transport {
       const id = String(p.id);
       if (this.windows.has(id))
         throw new HostError("conflict", "view already exists");
+      this.#resetWrites(`w:${id}`);
       const properties = this.#shownValues(
         p.properties as Record<string, Json>,
       );
@@ -4821,10 +4891,13 @@ export class TestHost implements Transport {
     "ui.set": (p) => {
       const window = this.windows.get(String(p.id));
       if (!window) throw new HostError("missing", "view not found");
-      const value = this.#shownValues(p.value!);
-      this.#checkValues({ [String(p.property)]: value });
-      this.#seeImages([value]);
-      window.props[String(p.property)] = value;
+      const property = String(p.property);
+      window.props[property] = this.#write(
+        `w:${String(p.id)}`,
+        property,
+        p,
+        window.props[property],
+      );
     },
     "ui.show": (p) => {
       const window = this.windows.get(String(p.id));
@@ -4865,6 +4938,7 @@ export class TestHost implements Transport {
         this.#shownValues(p.properties as Record<string, Json>),
       );
       this.#seeImages(properties);
+      this.#resetWrites("$mount");
       const host = this;
       this.panel = {
         slot: String(p.slot),
@@ -5232,11 +5306,14 @@ export class TestHost implements Transport {
       this.emit("sequence.step", { direction });
     },
     "ui.setMount": (p) => {
-      this.mounted();
-      const value = this.#shownValues(p.value!);
-      this.#checkValues({ [String(p.property)]: value });
-      this.#seeImages([value]);
-      this.mounted().props[String(p.property)] = value;
+      const panel = this.mounted();
+      const property = String(p.property);
+      panel.props[property] = this.#write(
+        "$mount",
+        property,
+        p,
+        panel.props[property],
+      );
     },
     "timeline.marks": () => ({ marks: this.timeline.marks }),
     "drops.provide": (p) => {
@@ -5276,6 +5353,7 @@ export class TestHost implements Transport {
         this.#shownValues(p.properties as Record<string, Json>),
       );
       this.#seeImages(properties);
+      this.#resetWrites(`$settings:${id}`);
       const host = this;
       this.settings.pages.set(id, {
         category: String(p.category),
@@ -5297,10 +5375,13 @@ export class TestHost implements Transport {
     "settings.set": (p) => {
       const page = this.settings.pages.get(String(p.id));
       if (!page) throw new HostError("missing", "page not registered");
-      const value = this.#shownValues(p.value!);
-      this.#checkValues({ [String(p.property)]: value });
-      this.#seeImages([value]);
-      page.props[String(p.property)] = value;
+      const property = String(p.property);
+      page.props[property] = this.#write(
+        `$settings:${String(p.id)}`,
+        property,
+        p,
+        page.props[property],
+      );
     },
     "settings.unregister": (p) => {
       this.settings.pages.delete(String(p.id));
@@ -6443,7 +6524,9 @@ export async function startPlugin(
     manifest,
     directory,
     data,
-    host.app,
+    // Like the player: protocol additions it takes (`app.features` set on
+    // the host replaces them, e.g. `[]` for an older player's behaviour).
+    { features: [PATCH_FEATURE], ...host.app },
   );
   await activate(instance.plugin);
   // Like the player: a position or resolver another plugin holds is not an
@@ -6470,4 +6553,90 @@ export async function startPlugin(
       host.close();
     },
   };
+}
+
+type WireRowOp =
+  | { op: "set"; at: number; row: Json }
+  | { op: "insert"; at: number; rows: Json[] }
+  | { op: "remove"; at: number; count: number }
+  | { op: "move"; from: number; count: number; to: number };
+
+/**
+ * A patch's ops checked against an array of `length` rows, as the player
+ * checks them (`ui_patch.rs`): in order, each on the result of the ones
+ * before; at most {@link PATCH_OPS}; the result at most
+ * `UI_VALUE_LIMITS.arrayRows` rows.
+ */
+function patchOps(ops: unknown, length: number): WireRowOp[] {
+  if (!Array.isArray(ops))
+    throw new HostError("invalid", "patch.ops requires an array");
+  if (ops.length > PATCH_OPS)
+    throw new HostError(
+      "limit",
+      `a patch carries at most ${PATCH_OPS} operations`,
+    );
+  const index = (op: Record<string, unknown>, key: string) => {
+    const value = op[key];
+    if (!Number.isInteger(value) || (value as number) < 0)
+      throw new HostError(
+        "invalid",
+        `patch op ${key} requires a non-negative integer`,
+      );
+    return value as number;
+  };
+  const count = (op: Record<string, unknown>) => {
+    const value = index(op, "count");
+    if (value === 0)
+      throw new HostError("invalid", "patch op count must be at least 1");
+    return value;
+  };
+  const past = (what: string) =>
+    new HostError("invalid", `${what} is past the end of the list`);
+  let len = length;
+  return ops.map((raw): WireRowOp => {
+    const op = (raw ?? {}) as Record<string, unknown>;
+    switch (op.op) {
+      case "set": {
+        const at = index(op, "at");
+        if (at >= len) throw past(`set at ${at}`);
+        if (!("row" in op))
+          throw new HostError("invalid", "patch op set requires row");
+        return { op: "set", at, row: op.row as Json };
+      }
+      case "insert": {
+        const at = index(op, "at");
+        const rows = op.rows;
+        if (!Array.isArray(rows) || rows.length === 0)
+          throw new HostError("invalid", "patch op insert requires rows");
+        if (at > len) throw past(`insert at ${at}`);
+        len += rows.length;
+        if (len > UI_VALUE_LIMITS.arrayRows)
+          throw new HostError(
+            "limit",
+            `UI array exceeds ${UI_VALUE_LIMITS.arrayRows} rows`,
+          );
+        return { op: "insert", at, rows: rows as Json[] };
+      }
+      case "remove": {
+        const at = index(op, "at");
+        const n = count(op);
+        if (at + n > len) throw past(`remove ${n} at ${at}`);
+        len -= n;
+        return { op: "remove", at, count: n };
+      }
+      case "move": {
+        const from = index(op, "from");
+        const n = count(op);
+        const to = index(op, "to");
+        if (from + n > len || to + n > len)
+          throw past(`move ${n} from ${from} to ${to}`);
+        return { op: "move", from, count: n, to };
+      }
+      default:
+        throw new HostError(
+          "invalid",
+          "patch op must be set, insert, remove or move",
+        );
+    }
+  });
 }

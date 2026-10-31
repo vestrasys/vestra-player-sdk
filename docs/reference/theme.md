@@ -208,17 +208,21 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `checked` | in `bool` |  | Icon buttons: the "on" state, drawn in the accent colour. |
 | `clicked` | callback `()` |  |  |
 
-**`Slider`**: 2px line slider. Bar style (default): 8px round thumb, a white core in a 2px accent ring, gradient fill. Panel style (`panel: true`): 14×12 thumb, gradient fill. The track is `Theme.line` in both.
+**`Slider`**: 2px line slider. Bar style (default): 8px round thumb, a white core in a 2px accent ring, gradient fill. Panel style (`panel: true`): 14×12 thumb, gradient fill. The track is `Theme.line` in both. Keyboard (focused by Tab or `focus()`; a click does not take the focus, so the bar's volume slider leaves the arrows to seeking), as std-widgets' Slider: Left/Down and Right/Up move by `step`, Page Down/Up by 10 steps, Home/End to the ends; `changed` follows every move and `released` the key's release. Screen readers can increment, decrement or set the value.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `value` | in-out `float` |  |  |
 | `minimum` | in `float` | `0` |  |
 | `maximum` | in `float` | `1` |  |
+| `step` | in `float` | `(root.maximum - root.minimum) / 20` | One key press: a twentieth of the range unless set. |
 | `enabled` | in `bool` | `true` |  |
 | `panel` | in `bool` |  |  |
+| `focusable` | in `bool` | `true` | false: Tab skips the slider (the bottom bar's seek and volume sliders, so Tab never moves the arrows from seeking to the slider); `focus()` still works. |
+| `has-focus` | out `bool` | `keys.has-focus` |  |
 | `changed` | callback `(float)` |  |  |
 | `released` | callback `(float)` |  |  |
+| `set-value` | function `(v: float)` |  | Clamped to the range; `changed` only when the value moves. |
 
 **`UrlInputRow`**: Link input: a multi-line input and [Open] [Cancel]. Enter or the confirm button accepts (Shift+Enter starts a new line), Esc or Cancel cancels. No validation here: the plugin checks the address.
 
@@ -233,6 +237,93 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `cancelled` | callback `()` |  |  |
 | `focus-input` | function `()` |  |  |
 | `select-all` | function `()` |  |  |
+
+**`Check`**: Check box with a label that wraps onto more lines when the row is narrower than the label (the box stays beside the first line). A click or Space flips `checked`, then `toggled` reports the new state, as std-widgets' CheckBox: bind it two-way (`checked <=> Bridge.on`), or set it again from the plugin's data in a `changed` handler, since the click replaces a one-way binding. Plugin-decided (`self-toggle: false`, like Radio): a click or Space does not flip the box; `toggled` reports the state asked for (`!checked`) and the plugin sets `checked` when it agrees, for example after a confirmation, so a one-way binding (`checked: Bridge.on`) stays. Both modes also call `clicked`. Default style: a 13px box, accent when checked. Panel style (`panel: true`, the picture and audio workbenches' switches): a 12px box on `bg-bar` with a 6px `playing` square.
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `text` | in `string` |  |  |
+| `checked` | in-out `bool` |  |  |
+| `enabled` | in `bool` | `true` |  |
+| `panel` | in `bool` |  |  |
+| `self-toggle` | in `bool` | `true` | false: the plugin owns `checked` (see above). |
+| `has-focus` | out `bool` | `keys.has-focus` |  |
+| `toggled` | callback `(bool)` |  | The state after the click (self-toggle) or the state asked for. |
+| `clicked` | callback `()` |  |  |
+| `toggle` | function `()` |  | What a click does; also Space and the screen reader's default action. |
+
+**`RadioMark`**: The 12px radio dot alone, for rows a plugin lays out itself, such as the palette list with its previews. `hover` lights the ring; `focused` draws the focus ring.
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `checked` | in `bool` |  |  |
+| `hover` | in `bool` |  |  |
+| `enabled` | in `bool` | `true` |  |
+| `focused` | in `bool` |  |  |
+
+**`Radio`**: One radio choice: the mark, 4px, an 11px label. The plugin owns the state: `checked` is what it shows, a click or Space asks with `clicked`. For a set of choices from one list use RadioGroup, which also takes the arrow keys. (`focusable` and `focused` are RadioGroup's: its radios are one Tab stop, the group's.)
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `text` | in `string` |  |  |
+| `checked` | in `bool` |  |  |
+| `enabled` | in `bool` | `true` |  |
+| `focusable` | in `bool` | `true` |  |
+| `focused` | in `bool` |  |  |
+| `has-focus` | out `bool` | `keys.has-focus` |  |
+| `clicked` | callback `()` |  |  |
+
+**`RadioGroup`**: Radio choices from a list of labels, in a row (12px apart) or a column (`vertical`). One Tab stop; a click, or the arrow keys while the group has the focus (they wrap around), pick one: `current-index` changes and `selected` reports it, as std-widgets' RadioGroup.
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `model` | in `[string]` |  |  |
+| `current-index` | in-out `int` | `-1` |  |
+| `vertical` | in `bool` |  |  |
+| `enabled` | in `bool` | `true` |  |
+| `spacing` | in `length` | `root.vertical ? 0px : 12px` |  |
+| `has-focus` | out `bool` | `keys.has-focus` |  |
+| `selected` | callback `(int)` |  |  |
+| `select` | function `(index: int)` |  |  |
+
+**`Tab`**: One page tab: at least 74px, 12px label, dimmed unless `selected`; the selected tab has a 28px gradient stroke under its label, the others a rounded plate on hover. `emphasis` draws an unselected label in the accent colour (something waits there). Tabs lays them out; use Tab alone only for a strip with other content.
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `text` | in `string` |  |  |
+| `selected` | in `bool` |  |  |
+| `emphasis` | in `bool` |  |  |
+| `focused` | in `bool` |  |  |
+| `clicked` | callback `()` |  |  |
+
+**`Tabs`**: A 31px tab strip on `bg-bar` (the picture, audio and properties windows): one Tab per label, left-aligned. A click, or Left/Right/Home/End while the strip has the focus, picks a tab: `current-index` changes and `selected` reports it. The pages are the plugin's (show the one for current-index). Its min-width is the tabs' width, for a window that must fit them.
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `model` | in `[string]` |  |  |
+| `current-index` | in-out `int` | `0` |  |
+| `emphasis` | in `[bool]` |  | Per tab (same order as `model`, may be shorter): Tab's `emphasis`, the accent label of a tab where something waits ("Updates (2)"). |
+| `has-focus` | out `bool` | `keys.has-focus` |  |
+| `selected` | callback `(int)` |  |  |
+| `select` | function `(index: int)` |  |  |
+
+**`Choice`**: Compact 21px drop-down: the current label (11px, elided) and a small V; a click opens the list below it (Slint keeps the popup inside the window, moving it up when there is no room below). The list is a ListView (rows are created only while visible, so long lists such as output devices or plugin ids stay cheap) of at most `max-visible-rows` 20px rows; it is at least `popup-min-width` wide. Slint moves the popup into the window but does not shorten it: in a window shorter than the list, set `window-height: root.height` (the window's height) and the list is cut to fit, scrolling to reach every row. A Choice in a mounted panel or settings page cannot see its window's height; keep `max-visible-rows` small there. Keyboard: closed and focused (Tab or `focus()`), Up/Down/Home/End change the choice, Space, Enter, F4 or Alt+Down open the list; open, the arrows, Page Up/Down and Home/End move the lit row, Enter or Space picks it, Escape or a click outside closes the list without a change. A pick sets `current-index` and `selected` reports it (only a change), as std-widgets' ComboBox; the pick replaces a one-way binding, so bind `current-index` two-way or set it again in a `changed` handler. The labels are what the list shows: give translated text (@tr in the .slint file, or text values `plugin.i18n.text` from the plugin).
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `model` | in `[string]` |  |  |
+| `current-index` | in-out `int` | `0` |  |
+| `enabled` | in `bool` | `true` |  |
+| `max-visible-rows` | in `int` | `10` |  |
+| `popup-min-width` | in `length` | `0px` |  |
+| `window-height` | in `length` | `0px` | The window's height, when known: the list is never taller. |
+| `has-focus` | out `bool` | `keys.has-focus` |  |
+| `open` | out `bool` | `popup.is-open` |  |
+| `current-text` | out `string` | `root.current-index >= 0 && root.current-index < root.model.length ? root.model[root.current-index] : ""` |  |
+| `selected` | callback `(int)` |  |  |
+| `select` | function `(index: int)` |  |  |
+| `show-list` | function `()` |  |  |
+| `close-list` | function `()` |  |  |
 
 <!-- /generated -->
 
@@ -253,7 +344,7 @@ A component's public functions are called from your own Slint code, through an e
 | `link-clicked` | callback `(string)` |  |  |
 | `copy-code` | callback `(string)` |  |  |
 
-**`MarkdownView`**: A scrolling Markdown document.
+**`MarkdownView`**: A scrolling Markdown document: a `ListView` of its blocks, so only the blocks in view exist (a long document no longer builds every block). It draws as `MarkdownBlocks` in a column with `inset` padding would: `inset` above the first block, below the last and at both sides, 8px between.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |

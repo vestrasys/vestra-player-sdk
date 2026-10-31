@@ -1,7 +1,7 @@
 /** Pages of the player's options window (`plugin.settings`, `ui.settings`). */
 import { failure, quiet } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
-import type { Json } from "../wire.ts";
+import type { PropertyWrite } from "../wire.ts";
 import type { Settings, SettingsCategory, SettingsPage } from "./types.ts";
 import { exported, ViewBase } from "./ui.ts";
 
@@ -73,8 +73,8 @@ class Page extends ViewBase implements SettingsPage {
   protected live() {
     return this.#registered && !this.closed;
   }
-  protected write(property: string, value: Json) {
-    return this.scope.runtime.host.settings.set(this.#id, property, value);
+  protected write(property: string, write: PropertyWrite) {
+    return this.scope.runtime.host.settings.set(this.#id, property, write);
   }
   async dispose() {
     if (this.closed) return;

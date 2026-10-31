@@ -9,7 +9,7 @@
 // row (a chat message: a `[MarkdownBlock]` field of the row's struct).
 // `code-copy: true` adds a Copy button to code blocks that reports
 // `copy-code(code)`; the plugin copies it (`plugin.clipboard`).
-import { ScrollView } from "std-widgets.slint";
+import { ListView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { Icon } from "icons.slint";
 
@@ -234,7 +234,10 @@ export component MarkdownBlocks inherits Rectangle {
     }
 }
 
-// A scrolling Markdown document.
+// A scrolling Markdown document: a `ListView` of its blocks, so only the
+// blocks in view exist (a long document no longer builds every block). It
+// draws as `MarkdownBlocks` in a column with `inset` padding would: `inset`
+// above the first block, below the last and at both sides, 8px between.
 export component MarkdownView inherits Rectangle {
     in property <[MarkdownBlock]> blocks;
     // Space around the document.
@@ -243,17 +246,20 @@ export component MarkdownView inherits Rectangle {
     in property <bool> code-copy: false;
     callback link-clicked(string);
     callback copy-code(string);
-    scroll := ScrollView {
+    list := ListView {
         width: 100%;
         height: 100%;
-        content-width: self.visible-width;
-        content-height: column.preferred-height;
-        column := VerticalLayout {
-            width: scroll.visible-width;
-            padding: root.inset;
-            alignment: start;
-            MarkdownBlocks {
-                blocks: root.blocks;
+        for block[i] in root.blocks: Rectangle {
+            property <length> top: i == 0 ? root.inset : 0px;
+            height: self.top + view.preferred-height
+                + (i == root.blocks.length - 1 ? root.inset : 8px);
+            view := MarkdownBlockView {
+                x: root.inset;
+                y: parent.top;
+                width: max(0px, parent.width - 2 * root.inset);
+                height: self.preferred-height;
+                block: block;
+                available: self.width;
                 code-copy: root.code-copy;
                 link-clicked(url) => { root.link-clicked(url); }
                 copy-code(code) => { root.copy-code(code); }
