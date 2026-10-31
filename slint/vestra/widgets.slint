@@ -1,9 +1,17 @@
 // Compact controls built on the Vestra theme (core-ui-design.md §2.1):
 //   import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint";
+//   import { Choice, Check, Radio, RadioGroup, RadioMark, Tab, Tabs } from "@vestra/widgets.slint";
 // Icons: @vestra/icons.slint. Other controls come from std-widgets, which the
 // host compiles as fluent-dark and switches to light for a light palette.
-import { TextEdit } from "std-widgets.slint";
+//
+// Keyboard: the controls that take input (Slider, Choice, Check, Radio,
+// RadioGroup, Tabs) take the focus by Tab or by `focus()`, never by a click,
+// so a click on a panel control leaves the player's shortcuts (Space, the
+// arrows) with the video, as on macOS. A focused control shows a 1px accent
+// ring.
+import { TextEdit, ListView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
+import { Icon } from "icons.slint";
 
 // Hover for about half a second to show `text` beside the pointer. The tip
 // closes when the pointer leaves, or presses on content that does not take
@@ -120,12 +128,20 @@ export component Button {
 // 2px line slider. Bar style (default): 8px round thumb, a white core in a
 // 2px accent ring, gradient fill. Panel style (`panel: true`): 14×12 thumb,
 // gradient fill. The track is `Theme.line` in both.
+// Keyboard (focused by Tab or `focus()`; a click does not take the focus, so
+// the bar's volume slider leaves the arrows to seeking), as std-widgets'
+// Slider: Left/Down and Right/Up move by `step`, Page Down/Up by 10 steps,
+// Home/End to the ends; `changed` follows every move and `released` the
+// key's release. Screen readers can increment, decrement or set the value.
 export component Slider {
     in-out property <float> value;
     in property <float> minimum: 0;
     in property <float> maximum: 1;
+    // One key press: a twentieth of the range unless set.
+    in property <float> step: (root.maximum - root.minimum) / 20;
     in property <bool> enabled: true;
     in property <bool> panel;
+    out property <bool> has-focus: keys.has-focus;
     callback changed(float);
     callback released(float);
     private property <length> thumb-width: root.panel ? 14px : 8px;
@@ -134,10 +150,26 @@ export component Slider {
     private property <float> ratio: clamp((root.value - root.minimum) / root.span, 0, 1);
     min-height: max(10px, self.thumb-height);
     min-width: 20px;
+    forward-focus: keys;
     accessible-role: slider;
+    accessible-enabled: root.enabled;
     accessible-value: root.value;
     accessible-value-minimum: root.minimum;
     accessible-value-maximum: root.maximum;
+    accessible-value-step: root.step;
+    accessible-action-increment => { root.set-value(root.value + root.step); }
+    accessible-action-decrement => { root.set-value(root.value - root.step); }
+    accessible-action-set-value(text) => {
+        if text.is-float() { root.set-value(text.to-float()); }
+    }
+    // Clamped to the range; `changed` only when the value moves.
+    public function set-value(v: float) {
+        if !root.enabled { return; }
+        let clamped = clamp(v, root.minimum, root.maximum);
+        if clamped == root.value { return; }
+        root.value = clamped;
+        root.changed(root.value);
+    }
     function set-from(x: length) {
         root.value = root.minimum + clamp((x - root.thumb-width / 2) / max(1px, root.width - root.thumb-width), 0, 1) * root.span;
         root.changed(root.value);
@@ -165,6 +197,17 @@ export component Slider {
         background: !root.enabled ? Theme.icon-disabled : root.panel ? Theme.text : #ffffff;
         border-width: root.panel || !root.enabled ? 0px : 2px;
         border-color: touch.pressed ? Theme.accent-press : Theme.accent;
+        // Focus ring, 2px outside the thumb.
+        Rectangle {
+            visible: keys.has-focus;
+            x: -2px;
+            y: -2px;
+            width: parent.width + 4px;
+            height: parent.height + 4px;
+            border-radius: parent.border-radius + 2px;
+            border-width: 1px;
+            border-color: Theme.accent;
+        }
     }
     touch := TouchArea {
         enabled: root.enabled;
@@ -173,6 +216,50 @@ export component Slider {
             if event.button == PointerEventButton.left && event.kind == PointerEventKind.up { root.released(root.value); }
         }
         moved => { if self.pressed { root.set-from(self.mouse-x); } }
+    }
+    keys := FocusScope {
+        x: 0;
+        y: 0;
+        width: 0;
+        height: 0;
+        enabled: root.enabled;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if event.text == Key.RightArrow || event.text == Key.UpArrow {
+                root.set-value(root.value + root.step);
+                return accept;
+            }
+            if event.text == Key.LeftArrow || event.text == Key.DownArrow {
+                root.set-value(root.value - root.step);
+                return accept;
+            }
+            if event.text == Key.PageUp {
+                root.set-value(root.value + 10 * root.step);
+                return accept;
+            }
+            if event.text == Key.PageDown {
+                root.set-value(root.value - 10 * root.step);
+                return accept;
+            }
+            if event.text == Key.Home {
+                root.set-value(root.minimum);
+                return accept;
+            }
+            if event.text == Key.End {
+                root.set-value(root.maximum);
+                return accept;
+            }
+            reject
+        }
+        key-released(event) => {
+            if event.text == Key.RightArrow || event.text == Key.UpArrow || event.text == Key.LeftArrow
+                    || event.text == Key.DownArrow || event.text == Key.PageUp || event.text == Key.PageDown
+                    || event.text == Key.Home || event.text == Key.End {
+                root.released(root.value);
+                return accept;
+            }
+            reject
+        }
     }
 }
 
@@ -223,6 +310,654 @@ export component UrlInputRow {
             Button {
                 text: root.cancel-text;
                 clicked => { root.cancelled(); }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Form controls: one compact set for every plugin window and settings page
+// (std-widgets' fluent ComboBox is 160px wide at least and its CheckBox cannot
+// wrap its label). 11px text, 18px check rows, 21px drop-downs, 31px tabs.
+
+// The 1px accent focus ring; placed 2px outside the box, mark or field
+// (x/y -2px, 4px wider and taller) where it is used.
+component FocusRing inherits Rectangle {
+    border-width: 1px;
+    border-color: Theme.accent;
+}
+
+// Check box with a label that wraps onto more lines when the row is narrower
+// than the label (the box stays beside the first line). A click or Space
+// flips `checked`, then `toggled` reports the new state, as std-widgets'
+// CheckBox: bind it two-way (`checked <=> Bridge.on`), or set it again from
+// the plugin's data in a `changed` handler, since the click replaces a
+// one-way binding.
+// Default style (ui-spec §2.1: checks on accent, the mark white): a 13px box,
+// accent when checked. Panel style (`panel: true`, the picture and audio
+// workbenches' switches): a 12px box on `bg-bar` with a 6px `playing` square.
+export component Check {
+    in property <string> text;
+    in-out property <bool> checked;
+    in property <bool> enabled: true;
+    in property <bool> panel;
+    out property <bool> has-focus: keys.has-focus;
+    callback toggled(bool);
+    // What a click does; also Space and the screen reader's default action.
+    public function toggle() {
+        if !root.enabled { return; }
+        root.checked = !root.checked;
+        root.toggled(root.checked);
+    }
+    private property <length> box: root.panel ? 12px : 13px;
+    min-height: Theme.checkbox-row-height;
+    forward-focus: keys;
+    accessible-role: checkbox;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => { root.toggle(); }
+    // Centred as one piece when the check is given more height than it needs.
+    VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            spacing: root.panel ? 4px : 5px;
+            VerticalLayout {
+                alignment: start;
+                padding-top: (Theme.checkbox-row-height - root.box) / 2;
+                Rectangle {
+                    width: root.box;
+                    height: root.box;
+                    border-radius: root.panel ? 0px : 3px;
+                    border-width: !root.panel && root.checked ? 0px : 1px;
+                    border-color: !root.enabled ? Theme.icon-disabled
+                        : root.panel ? (touch.has-hover ? Theme.text-list : Theme.text-dim)
+                        : (touch.has-hover ? Theme.accent : Theme.text-dim);
+                    background: root.panel ? Theme.bg-bar
+                        : !root.checked ? Theme.bg-list
+                        : root.enabled ? Theme.accent : Theme.accent-disabled;
+                    Rectangle {
+                        visible: root.panel && root.checked;
+                        width: 6px;
+                        height: 6px;
+                        background: root.enabled ? Theme.playing : Theme.icon-disabled;
+                    }
+                    Icon {
+                        visible: !root.panel && root.checked;
+                        name: "check-box";
+                        color: Colors.white;
+                    }
+                    FocusRing {
+                        visible: keys.has-focus;
+                        x: -2px;
+                        y: -2px;
+                        width: parent.width + 4px;
+                        height: parent.height + 4px;
+                        border-radius: root.panel ? 2px : 5px;
+                    }
+                }
+            }
+            Text {
+                text: root.text;
+                color: !root.enabled ? Theme.text-dim : root.panel ? Theme.text : Theme.text-list;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+                wrap: word-wrap;
+                min-height: Theme.checkbox-row-height;
+            }
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.toggle(); }
+    }
+    keys := FocusScope {
+        x: 0;
+        y: 0;
+        width: 0;
+        height: 0;
+        enabled: root.enabled;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if event.text == Key.Space {
+                root.toggle();
+                return accept;
+            }
+            reject
+        }
+    }
+}
+
+// The 12px radio dot alone (ui-spec §6.3 ctx-radio: a 1.5px accent ring and a
+// 6px accent dot when checked), for rows a plugin lays out itself, such as
+// the palette list with its previews. `hover` lights the ring; `focused`
+// draws the focus ring.
+export component RadioMark {
+    in property <bool> checked;
+    in property <bool> hover;
+    in property <bool> enabled: true;
+    in property <bool> focused;
+    width: 12px;
+    height: 12px;
+    Rectangle {
+        border-radius: self.height / 2;
+        border-width: root.checked ? 1.5px : 1px;
+        border-color: !root.enabled ? Theme.icon-disabled
+            : root.checked || root.hover ? Theme.accent : Theme.text-dim;
+        background: Theme.bg-list;
+        Rectangle {
+            visible: root.checked;
+            width: 6px;
+            height: 6px;
+            border-radius: 3px;
+            background: root.enabled ? Theme.accent : Theme.icon-disabled;
+        }
+        FocusRing {
+            visible: root.focused;
+            x: -2px;
+            y: -2px;
+            width: parent.width + 4px;
+            height: parent.height + 4px;
+            border-radius: self.height / 2;
+        }
+    }
+}
+
+// One radio choice: the mark, 4px, an 11px label. The plugin owns the state:
+// `checked` is what it shows, a click or Space asks with `clicked`. For a
+// set of choices from one list use RadioGroup, which also takes the arrow
+// keys. (`focusable` and `focused` are RadioGroup's: its radios are one Tab
+// stop, the group's.)
+export component Radio {
+    in property <string> text;
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    in property <bool> focusable: true;
+    in property <bool> focused;
+    out property <bool> has-focus: keys.has-focus;
+    callback clicked();
+    min-height: Theme.checkbox-row-height;
+    forward-focus: keys;
+    accessible-role: radio-button;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => { if root.enabled { root.clicked(); } }
+    HorizontalLayout {
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            RadioMark {
+                checked: root.checked;
+                hover: touch.has-hover;
+                enabled: root.enabled;
+                focused: root.focused || keys.has-focus;
+            }
+        }
+        Text {
+            text: root.text;
+            color: !root.enabled ? Theme.text-dim : root.checked ? Theme.text : Theme.text-list;
+            font-size: Theme.font-body;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+    keys := FocusScope {
+        x: 0;
+        y: 0;
+        width: 0;
+        height: 0;
+        enabled: root.enabled && root.focusable;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if event.text == Key.Space {
+                if root.enabled { root.clicked(); }
+                return accept;
+            }
+            reject
+        }
+    }
+}
+
+// Radio choices from a list of labels, in a row (12px apart) or a column
+// (`vertical`). One Tab stop; a click, or the arrow keys while the group has
+// the focus (they wrap around), pick one: `current-index` changes and
+// `selected` reports it, as std-widgets' RadioGroup.
+export component RadioGroup {
+    in property <[string]> model;
+    in-out property <int> current-index: -1;
+    in property <bool> vertical;
+    in property <bool> enabled: true;
+    in property <length> spacing: root.vertical ? 0px : 12px;
+    out property <bool> has-focus: keys.has-focus;
+    callback selected(int);
+    public function select(index: int) {
+        if !root.enabled || index < 0 || index >= root.model.length || index == root.current-index { return; }
+        root.current-index = index;
+        root.selected(index);
+    }
+    // The radio the arrows move from and the focus ring is on (the first
+    // while none is picked).
+    private property <int> anchor: root.current-index >= 0 && root.current-index < root.model.length ? root.current-index : 0;
+    forward-focus: keys;
+    accessible-role: radio-group;
+    accessible-enabled: root.enabled;
+    accessible-item-count: root.model.length;
+    accessible-delegate-focus: root.anchor;
+    VerticalLayout {
+        if root.vertical: VerticalLayout {
+            spacing: root.spacing;
+            for text[index] in root.model: Radio {
+                text: text;
+                checked: index == root.current-index;
+                enabled: root.enabled;
+                focusable: false;
+                focused: keys.has-focus && index == root.anchor;
+                accessible-item-index: index;
+                clicked => { root.select(index); }
+            }
+        }
+        if !root.vertical: HorizontalLayout {
+            spacing: root.spacing;
+            alignment: start;
+            for text[index] in root.model: Radio {
+                text: text;
+                checked: index == root.current-index;
+                enabled: root.enabled;
+                focusable: false;
+                focused: keys.has-focus && index == root.anchor;
+                accessible-item-index: index;
+                clicked => { root.select(index); }
+            }
+        }
+    }
+    keys := FocusScope {
+        x: 0;
+        y: 0;
+        width: 0;
+        height: 0;
+        enabled: root.enabled && root.model.length > 0;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if event.text == Key.LeftArrow || event.text == Key.UpArrow {
+                root.select(root.anchor <= 0 ? root.model.length - 1 : root.anchor - 1);
+                return accept;
+            }
+            if event.text == Key.RightArrow || event.text == Key.DownArrow {
+                root.select(root.anchor >= root.model.length - 1 ? 0 : root.anchor + 1);
+                return accept;
+            }
+            if event.text == Key.Space {
+                root.select(root.anchor);
+                return accept;
+            }
+            reject
+        }
+    }
+}
+
+// One page tab (ui-spec §5.2, the playlist and sidebar strip): at least 74px,
+// 12px label, dimmed unless `selected`; the selected tab has a 28px gradient
+// stroke under its label, the others a rounded plate on hover. `emphasis`
+// draws an unselected label in the accent colour (something waits there).
+// Tabs lays them out; use Tab alone only for a strip with other content.
+export component Tab {
+    in property <string> text;
+    in property <bool> selected;
+    in property <bool> emphasis;
+    in property <bool> focused;
+    callback clicked();
+    min-width: max(74px, label.preferred-width + 12px);
+    preferred-width: self.min-width;
+    horizontal-stretch: 0;
+    min-height: 22px;
+    preferred-height: 31px;
+    accessible-role: tab;
+    accessible-label: root.text;
+    accessible-item-selectable: true;
+    accessible-item-selected: root.selected;
+    accessible-action-default => { root.clicked(); }
+    // Persistent and hidden by `visible` (an `if` that flips with the
+    // pointer rebuilds the accessibility tree; menu-view.slint, 2026-10-27).
+    Rectangle {
+        x: 3px;
+        y: 4px;
+        width: parent.width - 6px;
+        height: parent.height - 8px;
+        border-radius: Theme.radius-control;
+        background: !root.selected && touch.has-hover ? Theme.hover-bg : transparent;
+        FocusRing {
+            visible: root.focused;
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height;
+            border-radius: Theme.radius-control;
+        }
+    }
+    Rectangle {
+        visible: root.selected;
+        x: (parent.width - 28px) / 2;
+        y: parent.height - 3px;
+        width: 28px;
+        height: 2px;
+        border-radius: 1px;
+        background: Theme.accent-fill;
+    }
+    label := Text {
+        x: 6px;
+        width: parent.width - 12px;
+        text: root.text;
+        color: root.selected ? Theme.text : root.emphasis ? Theme.accent : Theme.text-dim;
+        font-size: Theme.font-tab;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    touch := TouchArea { clicked => { root.clicked(); } }
+}
+
+// A 31px tab strip on `bg-bar` (the picture, audio and properties windows):
+// one Tab per label, left-aligned. A click, or Left/Right/Home/End while the
+// strip has the focus, picks a tab: `current-index` changes and `selected`
+// reports it. The pages are the plugin's (show the one for current-index).
+// Its min-width is the tabs' width, for a window that must fit them.
+export component Tabs inherits Rectangle {
+    in property <[string]> model;
+    in-out property <int> current-index: 0;
+    out property <bool> has-focus: keys.has-focus;
+    callback selected(int);
+    public function select(index: int) {
+        if index < 0 || index >= root.model.length || index == root.current-index { return; }
+        root.current-index = index;
+        root.selected(index);
+    }
+    height: 31px;
+    background: Theme.bg-bar;
+    forward-focus: keys;
+    accessible-role: tab-list;
+    accessible-item-count: root.model.length;
+    accessible-delegate-focus: root.current-index;
+    HorizontalLayout {
+        for text[index] in root.model: Tab {
+            text: text;
+            selected: index == root.current-index;
+            focused: keys.has-focus && index == root.current-index;
+            accessible-item-index: index;
+            clicked => { root.select(index); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+    keys := FocusScope {
+        x: 0;
+        y: 0;
+        width: 0;
+        height: 0;
+        enabled: root.model.length > 0;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if event.text == Key.LeftArrow {
+                root.select(max(0, root.current-index - 1));
+                return accept;
+            }
+            if event.text == Key.RightArrow {
+                root.select(min(root.model.length - 1, root.current-index + 1));
+                return accept;
+            }
+            if event.text == Key.Home {
+                root.select(0);
+                return accept;
+            }
+            if event.text == Key.End {
+                root.select(root.model.length - 1);
+                return accept;
+            }
+            reject
+        }
+    }
+}
+
+// One 20px row of a Choice's list: a 6px `playing` dot on the current item,
+// the lit row (pointer or arrow keys) on `press-bg` in the accent colour.
+component ChoiceRow {
+    in property <string> text;
+    in property <bool> selected;
+    in property <bool> lit;
+    callback picked();
+    callback hovered();
+    height: 20px;
+    accessible-role: list-item;
+    accessible-label: root.text;
+    accessible-item-selectable: true;
+    accessible-item-selected: root.selected;
+    accessible-action-default => { root.picked(); }
+    Rectangle { background: root.lit ? Theme.press-bg : transparent; }
+    HorizontalLayout {
+        padding-left: 5px;
+        padding-right: 5px;
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 6px;
+                height: 6px;
+                border-radius: 3px;
+                background: root.selected ? Theme.playing : transparent;
+            }
+        }
+        Text {
+            text: root.text;
+            color: root.lit ? Theme.accent : Theme.text-list;
+            font-size: Theme.font-body;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.picked(); }
+        changed has-hover => { if self.has-hover { root.hovered(); } }
+    }
+}
+
+// Compact 21px drop-down: the current label (11px, elided) and a small V;
+// a click opens the list below it (Slint keeps the popup inside the window,
+// moving it up when there is no room below). The list is a ListView (rows
+// are created only while visible, so long lists such as output devices or
+// plugin ids stay cheap) of at most `max-visible-rows` 20px rows; it is at
+// least `popup-min-width` wide.
+// Keyboard: closed and focused (Tab or `focus()`), Up/Down/Home/End change
+// the choice, Space, Enter, F4 or Alt+Down open the list; open, the arrows,
+// Page Up/Down and Home/End move the lit row, Enter or Space picks it,
+// Escape or a click outside closes the list without a change.
+// A pick sets `current-index` and `selected` reports it (only a change), as
+// std-widgets' ComboBox; the pick replaces a one-way binding, so bind
+// `current-index` two-way or set it again in a `changed` handler.
+// The labels are what the list shows: give translated text (@tr in the
+// .slint file, or text values `plugin.i18n.text` from the plugin).
+export component Choice {
+    in property <[string]> model;
+    in-out property <int> current-index: 0;
+    in property <bool> enabled: true;
+    in property <int> max-visible-rows: 10;
+    in property <length> popup-min-width: 0px;
+    out property <bool> has-focus: keys.has-focus;
+    out property <bool> open: popup.is-open;
+    out property <string> current-text: root.current-index >= 0 && root.current-index < root.model.length ? root.model[root.current-index] : "";
+    callback selected(int);
+    public function select(index: int) {
+        if !root.enabled || index < 0 || index >= root.model.length || index == root.current-index { return; }
+        root.current-index = index;
+        root.selected(index);
+    }
+    public function show-list() {
+        if root.enabled && root.model.length > 0 { popup.show(); }
+    }
+    public function close-list() { popup.close(); }
+    // The lit row of the open list.
+    private property <int> lit;
+    private property <int> rows: min(root.model.length, max(1, root.max-visible-rows));
+    height: Theme.input-height;
+    forward-focus: keys;
+    accessible-role: combobox;
+    accessible-enabled: root.enabled;
+    accessible-value: root.current-text;
+    accessible-expandable: true;
+    accessible-expanded: popup.is-open;
+    accessible-action-expand => { root.show-list(); }
+    accessible-action-default => { root.show-list(); }
+    Rectangle {
+        border-radius: Theme.radius-control;
+        background: !root.enabled ? Theme.button-disabled
+            : touch.pressed ? Theme.button-press
+            : touch.has-hover ? Theme.button-hover : Theme.button-bg;
+        FocusRing {
+            visible: keys.has-focus;
+            x: -2px;
+            y: -2px;
+            width: parent.width + 4px;
+            height: parent.height + 4px;
+            border-radius: Theme.radius-control + 2px;
+        }
+    }
+    HorizontalLayout {
+        padding-left: 6px;
+        padding-right: 5px;
+        spacing: 2px;
+        Text {
+            horizontal-stretch: 1;
+            text: root.current-text;
+            color: root.enabled ? Theme.text-list : Theme.text-dim;
+            font-size: Theme.font-body;
+            vertical-alignment: center;
+            overflow: elide;
+            accessible-role: none;
+        }
+        VerticalLayout {
+            horizontal-stretch: 0;
+            alignment: center;
+            Icon { name: "caret-down"; color: root.enabled ? Theme.text-dim : Theme.icon-disabled; }
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.show-list(); }
+    }
+    keys := FocusScope {
+        x: 0;
+        y: 0;
+        width: 0;
+        height: 0;
+        enabled: root.enabled;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.DownArrow && event.modifiers.alt) || event.text == Key.F4
+                    || event.text == Key.Space || event.text == Key.Return {
+                root.show-list();
+                return accept;
+            }
+            if event.text == Key.UpArrow {
+                root.select(max(0, root.current-index - 1));
+                return accept;
+            }
+            if event.text == Key.DownArrow {
+                root.select(min(root.model.length - 1, root.current-index + 1));
+                return accept;
+            }
+            if event.text == Key.Home {
+                root.select(0);
+                return accept;
+            }
+            if event.text == Key.End {
+                root.select(root.model.length - 1);
+                return accept;
+            }
+            reject
+        }
+    }
+    popup := PopupWindow {
+        x: 0;
+        y: root.height;
+        width: max(root.width, root.popup-min-width);
+        height: root.rows * 20px + 2px;
+        close-policy: close-on-click-outside;
+        forward-focus: list-keys;
+        list-keys := FocusScope {
+            // Light the row and scroll it into view.
+            function light(index: int) {
+                root.lit = clamp(index, 0, root.model.length - 1);
+                let top = root.lit * 20px;
+                if top + list.content-y < 0px {
+                    list.content-y = -top;
+                } else if top + 20px + list.content-y > list.visible-height {
+                    list.content-y = list.visible-height - top - 20px;
+                }
+            }
+            init => {
+                list.content-y = 0px;
+                self.light(root.current-index >= 0 && root.current-index < root.model.length ? root.current-index : 0);
+            }
+            key-pressed(event) => {
+                if event.text == Key.UpArrow {
+                    self.light(root.lit - 1);
+                    return accept;
+                }
+                if event.text == Key.DownArrow {
+                    self.light(root.lit + 1);
+                    return accept;
+                }
+                if event.text == Key.PageUp {
+                    self.light(root.lit - root.rows);
+                    return accept;
+                }
+                if event.text == Key.PageDown {
+                    self.light(root.lit + root.rows);
+                    return accept;
+                }
+                if event.text == Key.Home {
+                    self.light(0);
+                    return accept;
+                }
+                if event.text == Key.End {
+                    self.light(root.model.length - 1);
+                    return accept;
+                }
+                if event.text == Key.Return || event.text == Key.Space {
+                    root.select(root.lit);
+                    popup.close();
+                    return accept;
+                }
+                if event.text == Key.Escape || event.text == Key.Tab {
+                    popup.close();
+                    return accept;
+                }
+                reject
+            }
+            Rectangle {
+                background: Theme.bg-list;
+                border-color: Theme.line;
+                border-width: 1px;
+                list := ListView {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    height: parent.height - 2px;
+                    for text[index] in root.model: ChoiceRow {
+                        text: text;
+                        selected: index == root.current-index;
+                        lit: index == root.lit;
+                        accessible-item-index: index;
+                        picked => {
+                            root.select(index);
+                            popup.close();
+                        }
+                        hovered => { root.lit = index; }
+                    }
+                }
             }
         }
     }

@@ -77,6 +77,25 @@ export interface UiCallback {
   args: Json[];
 }
 /**
+ * One row operation of a patch, by index, applied to the result of the
+ * ones before (player 0.6.0, feature `ui.patch`). `move` takes `count` rows
+ * out at `from` and puts them back at `to`, an index of the list without
+ * them.
+ */
+export type RowOp =
+  | { op: "set"; at: number; row: Json }
+  | { op: "insert"; at: number; rows: Json[] }
+  | { op: "remove"; at: number; count: number }
+  | { op: "move"; from: number; count: number; to: number };
+/**
+ * A property write: a whole value (with its `seq` to players that take
+ * patches), or a row patch of an array applying on the write numbered
+ * `base` (0: the initial properties).
+ */
+export type PropertyWrite =
+  | { value: Json; seq?: number }
+  | { patch: { base: number; seq: number; ops: RowOp[] } };
+/**
  * A definite refusal from the player (or the plugin runner), with a stable
  * `code`. Plugin code sees it as a `PluginError` (an `Error` with `code`);
  * branch on `code`, never on `message`.
@@ -483,8 +502,8 @@ export function createWire(transport: Transport) {
         global: string;
         properties: Record<string, Json>;
       }) => transport.request<void>("settings.register", options),
-      set: (id: string, property: string, value: Json) =>
-        transport.request<void>("settings.set", { id, property, value }),
+      set: (id: string, property: string, write: PropertyWrite) =>
+        transport.request<void>("settings.set", { id, property, ...write }),
       unregister: (id: string) =>
         transport.request<void>("settings.unregister", { id }),
       show: (id?: string) =>
@@ -786,8 +805,8 @@ export function createWire(transport: Transport) {
           prepareMs: number;
           shellGeneration: number;
         }>("ui.mount", options),
-      setMount: (property: string, value: Json) =>
-        transport.request<void>("ui.setMount", { property, value }),
+      setMount: (property: string, write: PropertyWrite) =>
+        transport.request<void>("ui.setMount", { property, ...write }),
       interaction: (locks: {
         focused: boolean;
         dragging: boolean;
@@ -803,8 +822,8 @@ export function createWire(transport: Transport) {
         callbacks: string[] = [],
       ) =>
         transport.request<void>("ui.open", { id, file, properties, callbacks }),
-      set: (id: string, property: string, value: Json) =>
-        transport.request<void>("ui.set", { id, property, value }),
+      set: (id: string, property: string, write: PropertyWrite) =>
+        transport.request<void>("ui.set", { id, property, ...write }),
       show: (id: string, visible: boolean) =>
         transport.request<void>("ui.show", { id, visible }),
       close: (id: string) => transport.request<void>("ui.close", { id }),

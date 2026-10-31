@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.44
+
+**Who must change: nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. How the SDK sends array properties changes, on players that take it (player 0.6.0); with older players it sends whole values as before. The read-only copy of the widget library gains components that need player 0.6.0 (`"minPlayerVersion": "0.6.0"` for a plugin whose Slint uses them; an older player fails to compile such a file).
+
+- **Row patches.** When a bound or set array changes, the SDK sends the rows that changed instead of the whole array: `set`, `insert`, `remove` and `move` operations by index (wire: `ui.setMount`, `ui.set` and `settings.set` with `patch: { base, seq, ops }` instead of `value`; whole writes carry `seq`). Rows are matched by a `key`, `id`, `rowId` or `row-id` field when every row has one, unique, as a string or number (moves are kept to a minimum); otherwise by index, with the unchanged rows at both ends left out. The player writes the rows into its live model in place, without comparing the whole array: selecting one row of a 200-row list costs one row. A player that cannot apply a patch answers `stale` and the SDK sends the whole value at once. Whole values are sent as before when the player does not advertise the feature (`features: ["ui.patch"]` in its start-up data), after a failed write, for rows written into an empty array, for rows holding a Markdown document, and for a value over the limits (refused with `limit`, as before).
+- **Cheaper update passes.** A scalar property is compared with what was sent without `JSON.stringify`; an array is encoded row by row, the same work as before.
+- **`TestHost`** takes patches as the player does (`base`, `stale`, the checks on operations and the value limits on the result) and keeps whole values in `props`, so tests see no difference. It advertises the feature; `host.app = { ...host.app, features: [] }` before `startPlugin` gives an older player's behaviour.
+- **`@vestra/widgets.slint`** (the read-only copy of the player's widget library, player 0.6.0): the widget library copy gains `Check`, `Radio`, `RadioMark`, `RadioGroup`, `Tab`, `Tabs` and `Choice` (a drop-down), drawn in the player's theme with a keyboard focus ring; `Slider` takes the keyboard (arrow keys by `step`, a twentieth of the range by default) and reports `has-focus`. A Slint file that imports them needs player 0.6.0.
+
 ## 1.5.43
 
 **Who must change: nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. The new API needs player 0.5.25 (`"minPlayerVersion": "0.5.25"`); older players leave the new fields out and refuse the new event (the listener never fires). The `decoding` reason code stays as it is: the cause is a new optional field beside it.

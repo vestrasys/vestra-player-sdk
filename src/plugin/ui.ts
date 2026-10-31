@@ -6,7 +6,17 @@ import { basename, extname, resolve } from "node:path";
 import { failure, Latest, quiet } from "./runtime.ts";
 import { dropsOf } from "./drops.ts";
 import { MarkdownHandle, markdown, remoteImageFile } from "./markdown.ts";
-import type { Json } from "../wire.ts";
+import { HostError } from "../wire.ts";
+import type { Json, PropertyWrite, RowOp } from "../wire.ts";
+import {
+  countRow,
+  diff,
+  keyOf,
+  PATCH_FEATURE,
+  replay,
+  withinLimits,
+} from "./patch.ts";
+import type { RowCount, RowKey, Rows } from "./patch.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Runtime } from "./runtime.ts";
 import type { LayoutSlot } from "../wire.ts";
@@ -110,6 +120,110 @@ function wireValue(value: PropValue): Json {
   return value;
 }
 
+/** A property as last sent, compared without `JSON.stringify` where it can be. */
+type Sent =
+  | { kind: "value"; value: string | number | boolean | null }
+  | { kind: "json"; enc: string }
+  | { kind: "rows"; rows: Rows };
+
+/** A property's value now, encoded for comparison and sending. */
+interface Pending {
+  key: string;
+  value: PropValue;
+  /** It differs from what was sent. */
+  changed: boolean;
+  /** `JSON.stringify(value)`, computed when needed (a failed write's mark). */
+  signature: () => string;
+  /** Rows of an array (player feature `ui.patch`): each row's JSON, keys. */
+  rows?: { enc: string[]; keyed: { field: string; keys: RowKey[] } | null };
+  /** What to remember once written (rows: with their limit counts, if known). */
+  sent: (counts?: (RowCount | undefined)[]) => Sent;
+}
+
+/** Scalars compared by value. Non-finite numbers are JSON `null`: compared as JSON. */
+const isPrimitive = (
+  value: unknown,
+): value is string | number | boolean | null =>
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "boolean" ||
+  (typeof value === "number" && Number.isFinite(value));
+
+/** A row as `JSON.stringify` writes it inside an array. */
+const encodeRow = (row: unknown) => JSON.stringify(row) ?? "null";
+
+function sameRows(a: readonly string[], b: readonly string[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/** An initial property (wire form) as sent. */
+function sentOf(value: Json, patches: boolean): Sent {
+  if (isPrimitive(value)) return { kind: "value", value };
+  if (Array.isArray(value) && patches) {
+    const keyed = keyOf(value);
+    return {
+      kind: "rows",
+      rows: {
+        enc: value.map(encodeRow),
+        field: keyed?.field ?? null,
+        keys: keyed?.keys ?? null,
+        counts: [],
+      },
+    };
+  }
+  return { kind: "json", enc: JSON.stringify(value) };
+}
+
+/**
+ * The row patch from `sent` to `next` (the bound `rows`), in wire form, and
+ * the new rows' limit counts; `null` when the whole value is to be sent:
+ * nothing to type the rows by (no rows sent), a Markdown document in a row
+ * (the player merges documents in place), too many operations, a value over
+ * the limits (the player refuses it whole, as before), or no change (an
+ * explicit `set()` of the same value).
+ */
+function rowPatch(
+  sent: Rows,
+  next: NonNullable<Pending["rows"]>,
+  rows: readonly PropValue[],
+): { ops: RowOp[]; counts: (RowCount | undefined)[] } | null {
+  if (sent.enc.length === 0) return null;
+  if (next.enc.some((row) => row.includes('"$vestraMarkdown"'))) return null;
+  const keyed =
+    sent.field !== null &&
+    next.keyed !== null &&
+    next.keyed.field === sent.field;
+  const plan = diff(
+    { enc: sent.enc, keys: keyed ? sent.keys : null },
+    { enc: next.enc, keys: keyed ? next.keyed!.keys : null },
+  );
+  if (!plan || plan.ops.length === 0) return null;
+  const counts = next.enc.map((_, j) => {
+    const from = plan.from[j]!;
+    return (from >= 0 ? sent.counts[from] : undefined) ?? countRow(rows[j]);
+  });
+  if (!withinLimits(counts as RowCount[])) return null;
+  // The ops must give exactly the new rows (a guard against this diff's bugs).
+  if (!sameRows(replay(sent.enc, plan.ops, next.enc), next.enc)) return null;
+  const ops = plan.ops.map((op): RowOp => {
+    switch (op.op) {
+      case "set":
+        return { op: "set", at: op.at, row: wireValue(rows[op.row]!) };
+      case "insert":
+        return {
+          op: "insert",
+          at: op.at,
+          rows: op.rows.map((j) => wireValue(rows[j]!)),
+        };
+      default:
+        return op;
+    }
+  });
+  return { ops, counts };
+}
+
 export const ui = (scope: ScopeImpl): Ui => ({
   image(path, options) {
     if (typeof path !== "string" || !path)
@@ -134,7 +248,14 @@ export abstract class ViewBase implements View {
   /** Each binding, with where the plugin added it (for the player's log). */
   readonly #binders = new Map<() => Props, () => string | undefined>();
   /** What the host currently shows, as far as this side knows. */
-  #sent = new Map<string, string>();
+  #sent = new Map<string, Sent>();
+  /**
+   * Row patches (player feature `ui.patch`): each property's last write the
+   * player confirmed, by `seq` (0: the initial properties). A patch applies
+   * on it; a property without one is sent whole.
+   */
+  #bases = new Map<string, number>();
+  #seq = 0;
   /** Written by `set()`: sent even if equal to what was sent before. */
   readonly #forced = new Set<string>();
   /** The last value of each property whose write failed; not retried until it changes. */
@@ -151,7 +272,14 @@ export abstract class ViewBase implements View {
     this.#binding = scope.runtime.bind(() => this.evaluate());
   }
   protected abstract live(): boolean;
-  protected abstract write(property: string, value: Json): Promise<void>;
+  protected abstract write(
+    property: string,
+    write: PropertyWrite,
+  ): Promise<void>;
+  /** The player takes row patches (and `seq` on whole writes). */
+  get #patches() {
+    return this.scope.runtime.features.has(PATCH_FEATURE);
+  }
   /**
    * Initial properties in wire form. A released image is left out (the
    * property keeps its default) and reported, like a failed write.
@@ -210,11 +338,103 @@ export abstract class ViewBase implements View {
   }
   /** The host already shows these values (e.g. sent as initial properties). */
   protected shown(values: Record<string, Json>) {
+    const patches = this.#patches;
     this.#sent = new Map(
-      Object.entries(values).map(([k, v]) => [k, JSON.stringify(v)]),
+      Object.entries(values).map(([k, v]) => [k, sentOf(v, patches)]),
+    );
+    this.#bases = new Map(
+      patches ? Object.keys(values).map((key) => [key, 0]) : [],
     );
     this.#forced.clear();
     for (const key of Object.keys(values)) this.#failed.delete(key);
+  }
+  /** `value` encoded, and whether it differs from what was sent. */
+  #encode(key: string, value: PropValue): Pending {
+    const sent = this.#sent.get(key);
+    if (isPrimitive(value)) {
+      // Compared as it is: no `JSON.stringify` for the scalars of a pass.
+      const changed =
+        sent?.kind === "value"
+          ? sent.value !== value
+          : sent?.kind !== "json" || sent.enc !== JSON.stringify(value);
+      return {
+        key,
+        value,
+        changed,
+        signature: () => JSON.stringify(value),
+        sent: () => ({ kind: "value", value }),
+      };
+    }
+    if (Array.isArray(value) && this.#patches) {
+      // Row by row: the same work as one `JSON.stringify`, and the rows to
+      // diff against those last sent.
+      const enc = value.map(encodeRow);
+      const signature = () => `[${enc.join(",")}]`;
+      const changed =
+        sent?.kind === "rows"
+          ? !sameRows(sent.rows.enc, enc)
+          : sent?.kind !== "json" || sent.enc !== signature();
+      const keyed = keyOf(value);
+      return {
+        key,
+        value,
+        changed,
+        signature,
+        rows: { enc, keyed },
+        sent: (counts = []) => ({
+          kind: "rows",
+          rows: {
+            enc,
+            field: keyed?.field ?? null,
+            keys: keyed?.keys ?? null,
+            counts,
+          },
+        }),
+      };
+    }
+    const enc = JSON.stringify(value);
+    return {
+      key,
+      value,
+      changed: sent?.kind !== "json" || sent.enc !== enc,
+      signature: () => enc,
+      sent: () => ({ kind: "json", enc }),
+    };
+  }
+  /**
+   * Write one property: a row patch when the player takes them and one
+   * applies (else the whole value); a `stale` patch is followed by the whole
+   * value at once. The base is forgotten on any failure, so the next write
+   * of the property is whole.
+   */
+  async #send(pending: Pending): Promise<Sent> {
+    const { key, value } = pending;
+    if (!this.#patches) {
+      await this.write(key, { value: wireValue(value) });
+      return pending.sent();
+    }
+    const base = this.#bases.get(key);
+    this.#bases.delete(key);
+    const sent = this.#sent.get(key);
+    const plan =
+      base !== undefined && sent?.kind === "rows" && pending.rows
+        ? rowPatch(sent.rows, pending.rows, value as PropValue[])
+        : null;
+    if (plan) {
+      const seq = ++this.#seq;
+      try {
+        await this.write(key, { patch: { base: base!, seq, ops: plan.ops } });
+        this.#bases.set(key, seq);
+        return pending.sent(plan.counts);
+      } catch (error) {
+        if (!(error instanceof HostError && error.code === "stale"))
+          throw error;
+      }
+    }
+    const seq = ++this.#seq;
+    await this.write(key, { value: wireValue(value), seq });
+    this.#bases.set(key, seq);
+    return pending.sent();
   }
   /**
    * Send what changed. A bound value is sent when it differs from the last one
@@ -233,20 +453,22 @@ export abstract class ViewBase implements View {
       let failed = false;
       let failure: unknown;
       try {
-        let pending: [string, PropValue][];
+        let pending: Pending[];
         do {
-          pending = [...this.#values].filter(([key, value]) => {
-            const encoded = JSON.stringify(value);
-            if (this.#failed.get(key) === encoded) return false;
-            return this.#forced.has(key) || this.#sent.get(key) !== encoded;
-          });
-          for (const [key, value] of pending) {
+          pending = [];
+          for (const [key, value] of this.#values) {
+            const encoded = this.#encode(key, value);
+            const failedAs = this.#failed.get(key);
+            if (failedAs !== undefined && failedAs === encoded.signature())
+              continue;
+            if (this.#forced.has(key) || encoded.changed) pending.push(encoded);
+          }
+          for (const encoded of pending) {
             if (!this.live()) return;
-            const encoded = JSON.stringify(value);
+            const key = encoded.key;
             this.#forced.delete(key);
             try {
-              await this.write(key, wireValue(value));
-              this.#sent.set(key, encoded);
+              this.#sent.set(key, await this.#send(encoded));
               this.#failed.delete(key);
               this.#backoff = 0;
               this.#broken = false;
@@ -255,7 +477,7 @@ export abstract class ViewBase implements View {
               // Report the start of a failing streak only.
               if (!this.#broken) failure ??= error;
               this.#broken = true;
-              this.#failed.set(key, encoded);
+              this.#failed.set(key, encoded.signature());
             }
           }
         } while (pending.length && !failed && this.live());
@@ -327,8 +549,8 @@ class WindowHandle extends ViewBase implements Window {
   protected live() {
     return this.#opened && !this.closed;
   }
-  protected write(property: string, value: Json) {
-    return this.scope.runtime.host.ui.set(this.#id, property, value);
+  protected write(property: string, write: PropertyWrite) {
+    return this.scope.runtime.host.ui.set(this.#id, property, write);
   }
   on<A extends Json[]>(callback: string, handler: (...args: A) => unknown) {
     // The host forwards only callbacks named when the window opens.
@@ -450,8 +672,8 @@ class PanelHandle extends ViewBase implements Panel {
   protected live() {
     return this.#mounted && !this.closed;
   }
-  protected write(property: string, value: Json) {
-    return this.scope.runtime.host.ui.setMount(property, value);
+  protected write(property: string, write: PropertyWrite) {
+    return this.scope.runtime.host.ui.setMount(property, write);
   }
   get state(): PanelState | null {
     const service = layoutOf(this.scope.runtime);

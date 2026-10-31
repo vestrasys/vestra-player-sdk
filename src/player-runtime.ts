@@ -50,3 +50,4 @@ export {
 export { MANIFEST_FIELDS, MANIFEST_LIMITS } from "./manifest.ts";
 export { MARKDOWN_LIMITS } from "./plugin/markdown.ts";
 export { IMAGE_LIMITS, UI_VALUE_LIMITS } from "./plugin/values.ts";
+export { PATCH_FEATURE, PATCH_OPS } from "./plugin/patch.ts";
