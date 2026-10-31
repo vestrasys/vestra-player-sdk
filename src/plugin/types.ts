@@ -7293,7 +7293,12 @@ export interface UpscalingState {
    * @player 0.5.25
    * @since 1.5.43
    */
-  readonly area?: { readonly width: number; readonly height: number } | null;
+  readonly area?: {
+    /** Width in physical pixels. */
+    readonly width: number;
+    /** Height in physical pixels. */
+    readonly height: number;
+  } | null;
   /**
    * The name of the GPU that renders, for example `NVIDIA GeForce RTX 4070
    * Laptop GPU`; `null` in software rendering and where the player does not

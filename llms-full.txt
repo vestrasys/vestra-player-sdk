@@ -12025,7 +12025,9 @@ interface UpscalingState {
    * @player 0.5.25
    */
   readonly area?: {
+    /** Width in physical pixels. */
     readonly width: number;
+    /** Height in physical pixels. */
     readonly height: number;
   } | null;
   /**
@@ -16386,7 +16388,9 @@ class TestHost implements Transport {
     video: UpscalingVideoSize | null;
     /** The video area the state reports (player 0.5.25); `null`: none. */
     area: {
+      /** Width in physical pixels. */
       width: number;
+      /** Height in physical pixels. */
       height: number;
     } | null;
     /** The rendering GPU's name the state reports (player 0.5.25). */

@@ -2605,7 +2605,12 @@ export class TestHost implements Transport {
     /** The video's size the state reports (player 0.5.25); `null`: no video. */
     video: UpscalingVideoSize | null;
     /** The video area the state reports (player 0.5.25); `null`: none. */
-    area: { width: number; height: number } | null;
+    area: {
+      /** Width in physical pixels. */
+      width: number;
+      /** Height in physical pixels. */
+      height: number;
+    } | null;
     /** The rendering GPU's name the state reports (player 0.5.25). */
     gpu: string | null;
     /** mpv's decoder the state reports (player 0.5.25); `null`: no video. */
