@@ -298,7 +298,7 @@ frames.set_waker(Box::new(|| {
 
 Source: src/host/src/main.rs
 
-The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
+The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too by default, and fall back to software windows when the driver denylist, the crash guard, `SLINT_BACKEND` or `VESTRA_WINDOW_RENDERER` rule it out or the windows cannot be created. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
 
 ### GPU rendering
 

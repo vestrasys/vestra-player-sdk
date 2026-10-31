@@ -2601,7 +2601,7 @@ A plugin uses the same API on macOS and Windows; the player does the system-spec
 | App.system() | Version, build, model and displays; `rendering` is `"gpu"`, or `"software"` after a fallback (a window that cannot show GPU frames). | Version, build, model and displays; `rendering` is `"software"` by default, `"gpu"` once the user has turned on GPU rendering (player 0.5.14 and later), and `"software"` again after a fallback. |
 | Snapshots and exports (MediaCapture) | Available. | Available; needs FFmpeg 6.1 or newer. |
 | Generated streams (Player.openStream) | A Unix socket. | Loopback TCP with a token. |
-| Rendering | On the GPU (OpenGL), with hardware decoding. | In software by default, with hardware decoding copied back (`d3d11va-copy` and similar); from player 0.5.19 the windows themselves draw with Direct3D 12 in this mode. On the GPU from player 0.5.14 once the user turns on **Video ▸ GPU Rendering (Experimental)** (applied at the next start): libmpv draws with Direct3D 11 into textures shared with the windows' Direct3D 12 device, and hardware decoding is zero-copy until a plugin adds a video filter chain. Before 0.5.14 always in software. |
+| Rendering | On the GPU (OpenGL), with hardware decoding. | In software by default, with hardware decoding copied back (`d3d11va-copy` and similar); from player 0.5.19 the windows themselves draw with Direct3D 12 in this mode by default, falling back to software windows when a rule rules it out (the driver denylist, the crash guard, `SLINT_BACKEND`, `VESTRA_WINDOW_RENDERER`) or the windows cannot be created. On the GPU from player 0.5.14 once the user turns on **Video ▸ GPU Rendering (Experimental)** (applied at the next start): libmpv draws with Direct3D 11 into textures shared with the windows' Direct3D 12 device, and hardware decoding is zero-copy until a plugin adds a video filter chain. Before 0.5.14 always in software. |
 | plugin.rendering (player 0.5.13) | `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`). | From player 0.5.14 `"gpu"` can be chosen unless the driver is ruled out (`denylist`, `previous-crash`); with `"auto"` the player renders in software (`reason.code` `default`: GPU rendering is experimental and off until it is turned on). Player 0.5.13 has no GPU renderer: `gpu.available` is `false` (`no-gpu-backend`) and `setPreference("gpu")` fails with `unsupported`. |
 | Render options (RenderOptions) | Available; `peakDetect` has no effect. | Available while GPU rendering is on (player 0.5.14 and later); `unsupported` in software rendering, the default. |
 | plugin.video.upscaling (player 0.5.16) | `available` is `false` (`platform`); `set(true)` fails with `unsupported`. | NVIDIA RTX Video Super Resolution: an RTX GPU with driver 530 or newer, GPU rendering on that GPU, the video decoded on it (`d3d11va`); the user must also turn on Super Resolution in the NVIDIA app, which no program can read. |
@@ -3596,7 +3596,9 @@ stateDiagram-v2
     loading --> ready : media ready
     loading --> error : load failed
     ready --> ended : played to the end
+    ready --> error : failed while playing
     ended --> ready : restart()
+    ended --> ready : a seek back from the end
     loading --> loading : open()
     ready --> loading : open()
     ended --> loading : open()
@@ -3803,6 +3805,9 @@ stateDiagram-v2
     waiting --> applying : media ready, not applied yet
     waiting --> applied : media ready, the player replayed the chain it kept
     applying --> applied : the player accepted it
+    applying --> waiting : the source changed or was not ready meanwhile (stale, unavailable)
+    applied --> applying : set() again
+    applied --> waiting : a new source, not ready yet
     applying --> failed : refused (error.code)
     failed --> applying : retry(), the next set() or a new source
 ```
@@ -4415,7 +4420,7 @@ frames.set_waker(Box::new(|| {
 
 Source: src/host/src/main.rs
 
-The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
+The slot holds one picture: a slow UI thread skips frames instead of queuing them. Only the video picture is drawn by the CPU in this mode: on Windows, from player 0.5.19, the windows themselves draw with Direct3D 12 here too by default, and fall back to software windows when the driver denylist, the crash guard, `SLINT_BACKEND` or `VESTRA_WINDOW_RENDERER` rule it out or the windows cannot be created. Hardware decoding still runs in this mode, in copy-back form, so frames arrive in memory. The size the renderer draws at follows the video area, capped at 3840×2160.
 
 ##### GPU rendering
 

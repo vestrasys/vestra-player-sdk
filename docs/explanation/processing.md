@@ -64,6 +64,9 @@ stateDiagram-v2
     waiting --> applying : media ready, not applied yet
     waiting --> applied : media ready, the player replayed the chain it kept
     applying --> applied : the player accepted it
+    applying --> waiting : the source changed or was not ready meanwhile (stale, unavailable)
+    applied --> applying : set() again
+    applied --> waiting : a new source, not ready yet
     applying --> failed : refused (error.code)
     failed --> applying : retry(), the next set() or a new source
 ```

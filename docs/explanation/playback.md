@@ -20,7 +20,9 @@ stateDiagram-v2
     loading --> ready : media ready
     loading --> error : load failed
     ready --> ended : played to the end
+    ready --> error : failed while playing
     ended --> ready : restart()
+    ended --> ready : a seek back from the end
     loading --> loading : open()
     ready --> loading : open()
     ended --> loading : open()
