@@ -8217,6 +8217,17 @@ export interface PluginInfo {
    * @since 1.5.9
    */
   display?: PluginDisplay;
+  /**
+   * For `state: "running"`: `"running"` while its process runs, `"idle"`
+   * while the player stopped it because nothing used it (lazy activation:
+   * it starts again on its next use, its menu items, keys, settings pages,
+   * resolvers and drop targets stay). Absent in other states and from
+   * players before 0.5.18. A change between the two alone does not fire
+   * {@link Packages.onChange}.
+   *
+   * @since 1.5.38
+   */
+  process?: "running" | "idle";
 }
 
 /**
