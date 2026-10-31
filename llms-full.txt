@@ -4636,6 +4636,13 @@ Update passes run after every handler the SDK calls, after player and other stat
 
 The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see Keep a slider responsive while dragging).
 
+##### Arrays: only the changed rows are sent
+
+From player 0.6.0 and SDK 1.5.44, a changed array (a list's rows) is sent as the rows that changed: rows set, inserted, removed or moved, matched by a `key`, `id`, `rowId` or `row-id` field when every row has a unique one, else by position. The player writes those rows into the list Slint already shows, so selecting one row of a long list costs one row, not the whole list. Nothing changes in your code, and the TestHost's `props` still hold the whole array. Two consequences:
+
+- **Your Slint code must not write into the rows of an array property** (`rows[i].selected = true` in a handler). A whole write used to overwrite such a change on the next update; a row patch touches only the rows whose value changed in your plugin, so the edited row keeps the Slint-side value until your value for that row changes. Send the event to the plugin with a callback and change the row there.
+- **`set()` with an unchanged array sends the whole array**, as `set()` always sends: use it to pull a list back to your rows. A bound array whose rows did not change sends nothing.
+
 ##### Two-way controls
 
 A control whose value both the user and the plugin change (a slider, a switch, a text field, a combo box) needs a **two-way binding to an `in-out` property**:

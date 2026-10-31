@@ -110,7 +110,9 @@ function wireValue(value: PropValue): Json {
       );
     return value.toJSON();
   }
-  if (Array.isArray(value)) return value.map((item) => wireValue(item));
+  // Array.from: a hole is `null`, as `JSON.stringify` writes it.
+  if (Array.isArray(value))
+    return Array.from(value, (item) => wireValue(item ?? null));
   if (value !== null && typeof value === "object") {
     const out: Record<string, Json> = {};
     for (const [key, item] of Object.entries(value))
@@ -134,8 +136,14 @@ interface Pending {
   changed: boolean;
   /** `JSON.stringify(value)`, computed when needed (a failed write's mark). */
   signature: () => string;
-  /** Rows of an array (player feature `ui.patch`): each row's JSON, keys. */
-  rows?: { enc: string[]; keyed: { field: string; keys: RowKey[] } | null };
+  /**
+   * Rows of an array (player feature `ui.patch`): each row's JSON, and its
+   * keys (computed when a patch needs them).
+   */
+  rows?: {
+    enc: string[];
+    keyed: () => { field: string; keys: RowKey[] } | null;
+  };
   /** What to remember once written (rows: with their limit counts, if known). */
   sent: (counts?: (RowCount | undefined)[]) => Sent;
 }
@@ -151,6 +159,8 @@ const isPrimitive = (
 
 /** A row as `JSON.stringify` writes it inside an array. */
 const encodeRow = (row: unknown) => JSON.stringify(row) ?? "null";
+/** Each row of an array as `JSON.stringify` writes it; a hole is `null`. */
+const encodeRows = (rows: readonly unknown[]) => Array.from(rows, encodeRow);
 
 function sameRows(a: readonly string[], b: readonly string[]) {
   if (a.length !== b.length) return false;
@@ -166,7 +176,7 @@ function sentOf(value: Json, patches: boolean): Sent {
     return {
       kind: "rows",
       rows: {
-        enc: value.map(encodeRow),
+        enc: encodeRows(value),
         field: keyed?.field ?? null,
         keys: keyed?.keys ?? null,
         counts: [],
@@ -191,15 +201,18 @@ function rowPatch(
 ): { ops: RowOp[]; counts: (RowCount | undefined)[] } | null {
   if (sent.enc.length === 0) return null;
   if (next.enc.some((row) => row.includes('"$vestraMarkdown"'))) return null;
-  const keyed =
-    sent.field !== null &&
-    next.keyed !== null &&
-    next.keyed.field === sent.field;
+  const nextKeyed = sent.field === null ? null : next.keyed();
+  const keyed = nextKeyed !== null && nextKeyed.field === sent.field;
   const plan = diff(
     { enc: sent.enc, keys: keyed ? sent.keys : null },
-    { enc: next.enc, keys: keyed ? next.keyed!.keys : null },
+    { enc: next.enc, keys: keyed ? nextKeyed.keys : null },
   );
   if (!plan || plan.ops.length === 0) return null;
+  // A released image is refused wherever it is, as in a whole write: the
+  // rows the patch does not carry are checked too (those holding images).
+  for (let j = 0; j < rows.length; j++)
+    if (plan.from[j]! >= 0 && next.enc[j]!.includes('"$vestraImage"'))
+      wireValue(rows[j] ?? null);
   const counts = next.enc.map((_, j) => {
     const from = plan.from[j]!;
     return (from >= 0 ? sent.counts[from] : undefined) ?? countRow(rows[j]);
@@ -210,12 +223,12 @@ function rowPatch(
   const ops = plan.ops.map((op): RowOp => {
     switch (op.op) {
       case "set":
-        return { op: "set", at: op.at, row: wireValue(rows[op.row]!) };
+        return { op: "set", at: op.at, row: wireValue(rows[op.row] ?? null) };
       case "insert":
         return {
           op: "insert",
           at: op.at,
-          rows: op.rows.map((j) => wireValue(rows[j]!)),
+          rows: op.rows.map((j) => wireValue(rows[j] ?? null)),
         };
       default:
         return op;
@@ -255,6 +268,11 @@ export abstract class ViewBase implements View {
    * on it; a property without one is sent whole.
    */
   #bases = new Map<string, number>();
+  /**
+   * Patches of a property answered `stale` in a row: after two, the
+   * property is sent whole until the view shows its initial properties again.
+   */
+  readonly #stales = new Map<string, number>();
   #seq = 0;
   /** Written by `set()`: sent even if equal to what was sent before. */
   readonly #forced = new Set<string>();
@@ -345,6 +363,7 @@ export abstract class ViewBase implements View {
     this.#bases = new Map(
       patches ? Object.keys(values).map((key) => [key, 0]) : [],
     );
+    this.#stales.clear();
     this.#forced.clear();
     for (const key of Object.keys(values)) this.#failed.delete(key);
   }
@@ -368,13 +387,15 @@ export abstract class ViewBase implements View {
     if (Array.isArray(value) && this.#patches) {
       // Row by row: the same work as one `JSON.stringify`, and the rows to
       // diff against those last sent.
-      const enc = value.map(encodeRow);
+      const enc = encodeRows(value);
       const signature = () => `[${enc.join(",")}]`;
       const changed =
         sent?.kind === "rows"
           ? !sameRows(sent.rows.enc, enc)
           : sent?.kind !== "json" || sent.enc !== signature();
-      const keyed = keyOf(value);
+      // Keys only for a write: an unchanged array costs its encoding alone.
+      let keys: ReturnType<typeof keyOf> | undefined;
+      const keyed = () => (keys === undefined ? (keys = keyOf(value)) : keys);
       return {
         key,
         value,
@@ -385,8 +406,8 @@ export abstract class ViewBase implements View {
           kind: "rows",
           rows: {
             enc,
-            field: keyed?.field ?? null,
-            keys: keyed?.keys ?? null,
+            field: keyed()?.field ?? null,
+            keys: keyed()?.keys ?? null,
             counts,
           },
         }),
@@ -417,7 +438,10 @@ export abstract class ViewBase implements View {
     this.#bases.delete(key);
     const sent = this.#sent.get(key);
     const plan =
-      base !== undefined && sent?.kind === "rows" && pending.rows
+      base !== undefined &&
+      sent?.kind === "rows" &&
+      pending.rows &&
+      (this.#stales.get(key) ?? 0) < 2
         ? rowPatch(sent.rows, pending.rows, value as PropValue[])
         : null;
     if (plan) {
@@ -425,10 +449,12 @@ export abstract class ViewBase implements View {
       try {
         await this.write(key, { patch: { base: base!, seq, ops: plan.ops } });
         this.#bases.set(key, seq);
+        this.#stales.delete(key);
         return pending.sent(plan.counts);
       } catch (error) {
         if (!(error instanceof HostError && error.code === "stale"))
           throw error;
+        this.#stales.set(key, (this.#stales.get(key) ?? 0) + 1);
       }
     }
     const seq = ++this.#seq;

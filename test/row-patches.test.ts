@@ -525,3 +525,212 @@ test("whole values where a patch cannot apply: empty, documents, a failed write"
   assert.ok("value" in writes.at(-1)!.params);
   await stop();
 });
+
+test("limit counts: handles are one value, other toJSON objects count as their JSON, holes as null", () => {
+  // Any other object with toJSON (a Date) counts as what it returns.
+  const date = new Date(0);
+  assert.deepEqual(countRow({ when: date }), countRow({ when: date.toJSON() }));
+  const custom = { toJSON: () => [1, 2, 3] };
+  assert.deepEqual(countRow({ x: custom }), countRow({ x: [1, 2, 3] }));
+  assert.equal(countRow({ x: custom }).values, 5);
+  // A toJSON leaving a field out (undefined) drops the field, as JSON does.
+  assert.deepEqual(
+    countRow({ a: 1, gone: { toJSON: () => undefined } }),
+    countRow({ a: 1 }),
+  );
+  // An image handle is one value; a document one value and its text.
+  assert.deepEqual(
+    countRow({ __vestraImage: true, path: "/a/very/long/path.png" }),
+    {
+      values: 1,
+      text: 0,
+      over: false,
+    },
+  );
+  assert.deepEqual(countRow({ __vestraMarkdown: true, text: "héllo" }), {
+    values: 1,
+    text: 6,
+    over: false,
+  });
+  // A hole counts as null.
+  // eslint-disable-next-line no-sparse-arrays
+  assert.deepEqual(countRow([1, , 3]), countRow([1, null, 3]));
+});
+
+test("sparse arrays: compared and patched as JSON writes them (holes are null)", async () => {
+  const host = new TestHost();
+  const writes = recorded(host);
+  // eslint-disable-next-line no-sparse-arrays
+  let rows: unknown[] = [row("a"), , row("c")];
+  let panel!: Panel;
+  const errors: unknown[] = [];
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }) as never);
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  assert.deepEqual(host.mounted().props.rows, [row("a"), null, row("c")]);
+  plugin.update();
+  await host.settle();
+  assert.equal(writes.length, 0, "the same sparse rows are unchanged");
+  // eslint-disable-next-line no-sparse-arrays
+  rows = [row("a", { selected: true }), , row("c")];
+  plugin.update();
+  await host.settle();
+  assert.deepEqual((writes.at(-1)!.params.patch as { ops: Json[] }).ops, [
+    { op: "set", at: 0, row: row("a", { selected: true }) },
+  ]);
+  // A hole that a patch carries is null, not a missing row.
+  // eslint-disable-next-line no-sparse-arrays
+  rows = [row("a"), , , row("c")];
+  plugin.update();
+  await host.settle();
+  assert.deepEqual(host.mounted().props.rows, [row("a"), null, null, row("c")]);
+  assert.deepEqual(errors, []);
+  await stop();
+});
+
+test("an unchanged array costs its encoding alone: keys are read for a write only", async () => {
+  const host = new TestHost();
+  let reads = 0;
+  const counted = (key: string) => {
+    const out: Record<string, unknown> = { label: key };
+    Object.defineProperty(out, "rowId", {
+      enumerable: true,
+      get: () => (reads++, key),
+    });
+    return out;
+  };
+  const rows = Array.from({ length: 50 }, (_, i) => counted(String(i)));
+  let panel!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }) as never);
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  reads = 0;
+  plugin.update();
+  await host.settle();
+  assert.equal(reads, rows.length, "one read per row (its JSON), no key pass");
+  await stop();
+});
+
+test("released images: refused in rows a patch keeps too, as in a whole write", async () => {
+  const host = new TestHost();
+  const writes = recorded(host);
+  const directory = packageWith();
+  const scope: { dispose(): Promise<void> }[] = [];
+  let rows: unknown[] = [];
+  let panel!: Panel;
+  const errors: unknown[] = [];
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      const images = plugin.scope();
+      scope.push(images);
+      rows = [
+        { ...row("a"), icon: images.ui.image(join(directory, "a.png")) },
+        row("b"),
+      ];
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }) as never);
+    },
+    { host, directory },
+  );
+  await panel.ready;
+  await host.settle();
+  await scope[0]!.dispose();
+  writes.length = 0;
+  rows = [rows[0], row("b", { selected: true })];
+  plugin.update();
+  await host.settle();
+  assert.equal(writes.length, 0, "nothing is sent");
+  assert.equal((errors[0] as { code?: string }).code, "invalid");
+  assert.match(String((errors[0] as Error).message), /released/);
+  await stop();
+});
+
+test("two stale answers in a row: the property is sent whole until the view shows its initial properties again", async () => {
+  const host = new TestHost();
+  const writes = recorded(host);
+  let rows = [row("a"), row("b")];
+  let panel!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }));
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  const request = host.request.bind(host);
+  host.request = (async (method: string, params: Record<string, Json> = {}) => {
+    if (method === "ui.setMount" && params.patch) {
+      writes.push({ method, params });
+      throw new HostError("stale", "stale");
+    }
+    return request(method, params);
+  }) as typeof host.request;
+  const kinds = async () => {
+    writes.length = 0;
+    rows = rows.map((r) => ({ ...r, selected: !r.selected }));
+    plugin.update();
+    await host.settle();
+    return writes.map((w) => ("patch" in w.params ? "patch" : "value"));
+  };
+  assert.deepEqual(await kinds(), ["patch", "value"]);
+  assert.deepEqual(await kinds(), ["patch", "value"]);
+  assert.deepEqual(await kinds(), ["value"]);
+  assert.deepEqual(await kinds(), ["value"]);
+  await stop();
+});
+
+test("the TestHost counts the rows a patch keeps: successive patches cannot pass the totals", async () => {
+  const host = new TestHost();
+  let panel!: Panel;
+  const L = UI_VALUE_LIMITS;
+  const big = "x".repeat(L.stringBytes);
+  const rows = Array.from({ length: L.textBytes / L.stringBytes }, () => big);
+  const { stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint", {});
+      panel.set({ rows: rows.slice(0, 1) });
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  // One row per patch: each is small, their sum reaches the text total.
+  for (let seq = 1; seq < rows.length; seq++)
+    await host.request("ui.setMount", {
+      property: "rows",
+      patch: {
+        base: seq - 1,
+        seq,
+        ops: [{ op: "insert", at: 0, rows: [big] }],
+      },
+    });
+  await assert.rejects(
+    host.request("ui.setMount", {
+      property: "rows",
+      patch: {
+        base: rows.length - 1,
+        seq: rows.length,
+        ops: [{ op: "insert", at: 0, rows: ["y"] }],
+      },
+    }),
+    { code: "limit", message: /text exceeds/ },
+  );
+  assert.equal((host.mounted().props.rows as Json[]).length, rows.length);
+  await stop();
+});

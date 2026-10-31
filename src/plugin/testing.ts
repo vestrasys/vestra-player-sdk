@@ -1539,15 +1539,14 @@ export class TestHost implements Transport {
    * A property write as the player takes it, returning the value the
    * property shows after it: a whole `value`, or a `patch` of the array
    * `current` applying on the write numbered `base` (code `stale`
-   * otherwise, and for a tool window whose rows the player cannot type:
-   * an empty array). The result is checked against the value limits.
+   * otherwise). The result is checked against the value limits whole: the
+   * player counts the rows a patch keeps too.
    */
   #write(
     view: string,
     property: string,
     p: Record<string, Json>,
     current: Json | undefined,
-    window: boolean,
   ): Json {
     const slot = `${view}\u0000${property}`;
     const patch = p.patch as
@@ -1578,7 +1577,6 @@ export class TestHost implements Transport {
     if ((this.#writes.get(slot) ?? 0) !== base || !Array.isArray(current))
       throw stale();
     const ops = patchOps(patch.ops, current.length);
-    if (window && current.length === 0 && ops.length) throw stale();
     const resolved = ops.map((op) =>
       op.op === "set"
         ? { ...op, row: this.#shownValues(op.row) }
@@ -4899,7 +4897,6 @@ export class TestHost implements Transport {
         property,
         p,
         window.props[property],
-        true,
       );
     },
     "ui.show": (p) => {
@@ -5316,7 +5313,6 @@ export class TestHost implements Transport {
         property,
         p,
         panel.props[property],
-        false,
       );
     },
     "timeline.marks": () => ({ marks: this.timeline.marks }),
@@ -5385,7 +5381,6 @@ export class TestHost implements Transport {
         property,
         p,
         page.props[property],
-        false,
       );
     },
     "settings.unregister": (p) => {

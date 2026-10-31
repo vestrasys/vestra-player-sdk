@@ -84,9 +84,28 @@ export function keyOf(
 const bytes = (text: string) => Buffer.byteLength(text, "utf8");
 
 /**
+ * `value` as `JSON.stringify` writes it: an object's `toJSON` result
+ * (once), `undefined` for what it leaves out (a function, a symbol).
+ */
+function jsonOf(value: unknown): unknown {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !("__vestraImage" in value) &&
+    !("__vestraMarkdown" in value) &&
+    typeof (value as { toJSON?: unknown }).toJSON === "function"
+  )
+    return (value as { toJSON: () => unknown }).toJSON();
+  return typeof value === "function" || typeof value === "symbol"
+    ? undefined
+    : value;
+}
+
+/**
  * What `row` counts toward the value limits as a row of an array (depth
- * 1), like `valueLimitProblem`: every value one, an image or document one,
- * strings and field names their UTF-8 bytes.
+ * 1), like `valueLimitProblem` on the row as sent: every value one, an
+ * image one, a document one and its text, strings and field names their
+ * UTF-8 bytes. Any other object with `toJSON` counts as what it returns.
  */
 export function countRow(row: unknown): RowCount {
   const count: RowCount = { values: 0, text: 0, over: false };
@@ -104,25 +123,29 @@ export function countRow(row: unknown): RowCount {
     }
     count.values += 1;
     if (value !== null && typeof value === "object") {
-      const json = (value as { toJSON?: () => unknown }).toJSON;
-      // An image or document handle: one value (its text counted by the
-      // player, which a document row never reaches: those are sent whole).
-      if (typeof json === "function") return;
+      if ("__vestraImage" in value) return;
+      if ("__vestraMarkdown" in value) {
+        count.text += bytes((value as unknown as { text: string }).text);
+        return;
+      }
     }
     if (typeof value === "string") return text(value);
     if (Array.isArray(value)) {
       if (value.length > L.arrayRows) count.over = true;
-      for (const item of value) walk(item ?? null, depth + 1);
+      // Array.from: a hole is `null`, as `JSON.stringify` writes it.
+      for (const item of Array.from(value))
+        walk(jsonOf(item) ?? null, depth + 1);
       return;
     }
     if (value !== null && typeof value === "object")
-      for (const [name, item] of Object.entries(value)) {
-        if (item === undefined || typeof item === "function") continue;
+      for (const [name, raw] of Object.entries(value)) {
+        const item = jsonOf(raw);
+        if (item === undefined) continue;
         text(name);
         walk(item, depth + 1);
       }
   };
-  walk(row ?? null, 1);
+  walk(jsonOf(row) ?? null, 1);
   return count;
 }
 
