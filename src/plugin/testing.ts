@@ -553,7 +553,7 @@ export interface FakeBarButton {
   readonly order: number;
   /** Clickable: the command is enabled and not busy. */
   readonly enabled: boolean;
-  /** Drawn in the accent colour: the command is checked. */
+  /** Shown with the on dot under its icon: the command is checked. */
   readonly checked: boolean;
   /**
    * The tooltip without the key: the command's shown title (trailing "…"

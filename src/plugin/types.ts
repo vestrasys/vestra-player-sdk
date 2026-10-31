@@ -898,9 +898,9 @@ export type BarButtonIcon =
  * "…" removed) and its first key as the tooltip ("Plugin Store (F9)"),
  * `enabled`, `busy` and `reason` as the menu item has them: a disabled or
  * busy command's button is drawn disabled, its tooltip adds the reason, and
- * a click runs nothing. A command with `checked` shows its icon in the
- * accent colour while checked. A click runs the command exactly like a
- * click on its menu item.
+ * a click runs nothing. Every button's icon is drawn in the accent colour;
+ * a command with `checked` shows a small dot under its icon while checked.
+ * A click runs the command exactly like a click on its menu item.
  *
  * **Limits.** One button per plugin and eight in the player
  * (`BAR_BUTTON_LIMITS`): a button past them is left out (its command and

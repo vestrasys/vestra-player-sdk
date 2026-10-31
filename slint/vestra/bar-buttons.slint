@@ -12,9 +12,13 @@
 // entries stay; the player logs which buttons are hidden).
 //
 // The cells look like the bar's own icon buttons: a 32×32 plate on hover
-// and press, the V-Line icon in the text colour (accent while a toggle is
-// on), the bar's tooltip (ToolTipArea). They are persistent elements shown with
-// `visible:`; nothing is created on hover or resize.
+// and press, the bar's tooltip (ToolTipArea). Every enabled cell draws its
+// icon in the accent (accent-press while pressed; icon-disabled when
+// disabled), so the strip reads as one group. A toggle that is on shows a
+// small dot in the icon's colour centred under the icon, like a running app
+// in the macOS Dock (player 0.5.22, SDK 1.5.41; before, icons were in the
+// text colour and only an on toggle in the accent). They are persistent
+// elements shown with `visible:`; nothing is created on hover or resize.
 import { Theme } from "theme.slint";
 import { Icon } from "icons.slint";
 import { ToolTipArea } from "widgets.slint";
@@ -32,7 +36,7 @@ export struct BarButtonItem {
     // The tooltip: the title and its key, the reason it is unavailable.
     tip: string,
     enabled: bool,
-    // The command has a checked state; `checked` draws the icon in the accent.
+    // The command has a checked state; `checked` shows the dot under the icon.
     checkable: bool,
     checked: bool,
     // At half opacity: on, but not shown for want of room (the sidebar).
@@ -58,8 +62,11 @@ component Cell inherits Rectangle {
     in property <bool> shown;
     private property <bool> live: root.shown && root.item.enabled;
     private property <brush> tint: !root.item.enabled ? Theme.icon-disabled
-        : root.item.checked ? (touch.pressed ? Theme.accent-press : Theme.accent)
-        : Theme.text;
+        : touch.pressed ? Theme.accent-press : Theme.accent;
+    // The on dot: its diameter and top edge, between the icon box (y 14–26)
+    // and the hover plate's lower edge (y 36).
+    private property <length> dot-size: 4px;
+    private property <length> dot-y: 29px;
     width: 41px;
     height: 40px;
     visible: root.shown;
@@ -98,6 +105,16 @@ component Cell inherits Rectangle {
         source: root.item.image;
         image-fit: contain;
         colorize: root.tint;
+    }
+    // On (`checked`): the dot under the icon, in the icon's colour.
+    Rectangle {
+        visible: root.item.checked;
+        x: (root.width - 1px - self.width) / 2;
+        y: root.dot-y;
+        width: root.dot-size;
+        height: root.dot-size;
+        border-radius: self.width / 2;
+        background: root.tint;
     }
     ToolTipArea {
         width: 100%;
