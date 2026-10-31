@@ -329,9 +329,13 @@ export class Runtime {
     const active = group.active > 0;
     if (!off || group.told === active) return;
     group.told = active;
-    void off
+    // Part of activation while it runs: the player classifies the plugin
+    // at its ready, which must see this mark. A failure is not one of
+    // activation (an older player never refuses it).
+    const told = off
       .then(() => this.host.events.listen(event as never, active))
       .catch(() => {});
+    this.starting(told, () => {});
   }
   /** Raw transport events the host pushes without a subscription. */
   raw(event: string, listener: Listener): Disposable {

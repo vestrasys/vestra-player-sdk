@@ -113,3 +113,18 @@ test("listeners without a mirror subscribe as listeners", async () => {
     await stop();
   }
 });
+
+test("a listener added during activation is marked before the plugin is ready", async () => {
+  const { host, stop } = await startPlugin(
+    (plugin) => {
+      plugin.player.onChange(() => {});
+    },
+    { capabilities: ["events", "playback.read"] },
+  );
+  try {
+    // No settle: the player classifies the plugin at its ready.
+    assert.deepEqual([...host.listening], ["source.state"]);
+  } finally {
+    await stop();
+  }
+});
