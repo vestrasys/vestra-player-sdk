@@ -202,6 +202,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
         { name: "video.view.release", needs: "processing.video" },
         { name: "video.render.set", needs: "processing.video" },
         { name: "video.render.release", needs: "processing.video" },
+        { name: "video.shaders.set", needs: "processing.video" },
       ],
       name: "processing.video",
       requires: ["playback.read"],

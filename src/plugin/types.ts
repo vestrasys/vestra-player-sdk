@@ -9,12 +9,19 @@
  * object, so a built plugin has no runtime dependency on this package.
  */
 import type { Json } from "../wire.ts";
-import type { AudioNode, VideoNode } from "../processing.ts";
+import type { AudioNode, ConvolutionPlane, VideoNode } from "../processing.ts";
 import type { SubtitleStyle } from "../subtitles.ts";
 import type { ResolvedMedia } from "../source-resolvers.ts";
 import type { MediaJob } from "../media.ts";
 
-export type { Json, AudioNode, VideoNode, SubtitleStyle, ResolvedMedia };
+export type {
+  Json,
+  AudioNode,
+  ConvolutionPlane,
+  VideoNode,
+  SubtitleStyle,
+  ResolvedMedia,
+};
 
 /**
  * Anything that owns player-side or local resources: every handle the API
@@ -218,10 +225,11 @@ export interface Scope extends Disposable {
   readonly player: Player;
   /**
    * Video processing: this plugin's filter chain, the display layer, the
-   * GPU render options and the GPU's video upscaler. The first three need
-   * `processing.video` and `playback.read`; the filter chain also needs
-   * `events` (without it the SDK never sees the media become ready and the
-   * chain stays `waiting`). The upscaler needs `video.upscaling` only.
+   * GPU render options, this plugin's shaders and the GPU's video
+   * upscaler. The first four need `processing.video` and `playback.read`;
+   * the filter chain also needs `events` (without it the SDK never sees
+   * the media become ready and the chain stays `waiting`). The upscaler
+   * needs `video.upscaling` only.
    */
   readonly video: {
     /**
@@ -254,6 +262,24 @@ export interface Scope extends Disposable {
      *   while the first handle is not disposed.
      */
     render(): RenderOptions;
+    /**
+     * This plugin's own GPU shaders named `id` (default `"shaders"`;
+     * needs `processing.video`; SDK 1.5.39, player 0.5.20). Unlike
+     * {@link Scope.video | render()}, every plugin may hold shader
+     * handles at the same time; the player joins their lists. Nothing is
+     * sent until the first `set()`.
+     *
+     * @param id - Local name of the handle, 1–128 bytes, unique within
+     *   the plugin.
+     * @returns A {@link VideoShaders} owned by this scope.
+     * @throws `capability` (throws) The manifest does not declare
+     *   `processing.video`.
+     * @throws `invalid` (throws) `id` is empty, longer than 128 bytes or
+     *   has control characters.
+     * @throws `Error` without a code (throws) A second handle with the
+     *   same `id` while the first is not disposed.
+     */
+    shaders(id?: string): VideoShaders;
     /**
      * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on
      * Windows; needs `video.upscaling`, player 0.5.16): whether it works
@@ -4182,8 +4208,10 @@ export interface SystemInfo {
    * Absent (`undefined`) on players before 0.5.12, which do not report it:
    * the renderer is then unknown, not software.
    *
-   * Today the player renders on the GPU on macOS and in software on
-   * Windows, Linux and without a user interface (see
+   * Today the player renders on the GPU on macOS, on Windows when the
+   * user turned on Video ▸ GPU Rendering (Experimental) (since version 0.5.14;
+   * off by default), and in software otherwise: on Windows by default, on
+   * Linux and without a user interface (see
    * [Platforms](../../docs/reference/platforms.md)); test this field
    * rather than {@link SystemInfo.os}.
    *
@@ -5095,9 +5123,11 @@ export interface SequenceProvider {
  */
 export interface PlaybackStats {
   /**
-   * The rendering path: "libmpv · GPU 渲染（OpenGL）" (GPU, macOS default) or
-   * "libmpv · 软件渲染" (software: Windows, Linux, headless, fallback).
-   * The strings are the player's display text.
+   * The rendering path: "libmpv · GPU 渲染（OpenGL）" (GPU on macOS, the
+   * default there), "libmpv · GPU 渲染（Direct3D）" (GPU on Windows, when
+   * turned on; version 0.5.14 and later) or "libmpv · 软件渲染" (software: Windows by
+   * default, Linux, headless, fallback). The strings are the player's
+   * display text in the interface language (shown here in Chinese).
    */
   backend: string;
   /** The playback session number. */
@@ -6532,7 +6562,11 @@ export interface RenderSettings {
   targetPeak: number;
   /** Per-scene peak estimation (where the GPU supports it). */
   peakDetect: boolean;
-  /** mpv user shaders (`.glsl`): absolute paths of existing files, at most 16, in order. */
+  /**
+   * mpv user shaders (`.glsl`): absolute paths of existing files, at most
+   * 16, in order. They run before the shaders of every plugin's
+   * {@link VideoShaders} handles.
+   */
   shaders: string[];
   /** Motion interpolation, resampled to the display's refresh rate. */
   interpolation: boolean;
@@ -6542,10 +6576,12 @@ export interface RenderSettings {
  * (`processing.video`). Single owner, like {@link VideoView}; the two are
  * independent handles.
  *
- * Platforms: only macOS renders on the GPU. Under software rendering
- * (Windows, Linux, headless, fallback) every `set` fails with
- * `unsupported`; {@link SystemInfo.rendering} tells which renderer draws
- * without creating the handle. macOS OpenGL 4.1 has no
+ * Platforms: macOS renders on the GPU by default; Windows does since
+ * version 0.5.14 of the player when the user turns on Video ▸ GPU Rendering
+ * (Experimental) (off by default, {@link Rendering}). Under software
+ * rendering (Windows by default, Linux, headless, fallback) every `set`
+ * fails with `unsupported`; {@link SystemInfo.rendering} tells which
+ * renderer draws without creating the handle. macOS OpenGL 4.1 has no
  * compute shaders, so `peakDetect` is accepted but has no effect; output
  * is always SDR.
  *
@@ -6554,7 +6590,8 @@ export interface RenderSettings {
  * 250-nit display; under software rendering the plugin hides its HDR menu.
  * `set` merges the values into the plugin's render options and the
  * player reports the result through `onStatus`: `failed` with
- * `unsupported` means the player renders in software (Windows, Linux).
+ * `unsupported` means the player renders in software (Linux, or Windows
+ * while GPU rendering is off).
  * ```ts
  * declare function hideHdrMenu(): void;
  * // ---cut---
@@ -6567,11 +6604,13 @@ export interface RenderSettings {
  *
  * @remarks
  * GPU renderer options (tone mapping, peak detection, shaders,
- * interpolation). Only the GPU renderer has them, which today means macOS;
+ * interpolation). Only the GPU renderer has them (macOS; Windows with GPU
+ * rendering turned on, version 0.5.14 and later);
  * under software rendering the handle is `failed` with `unsupported` after
  * the player's first answer to `render()` (reported to `onError` too), and so is
  * every `set`. Single owner, like {@link VideoView}. `set` never throws; the
- * result shows in `status`.
+ * result shows in `status`. For shaders that several plugins add at the
+ * same time, use {@link VideoShaders} (SDK 1.5.39).
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
@@ -6598,7 +6637,9 @@ export interface RenderOptions extends Disposable {
   set(value: Partial<RenderSettings>): void;
   /**
    * `failed` with `unsupported` while the player renders in software;
-   * `failed` with `failed` when mpv cannot compile a shader (pushed later).
+   * `failed` with `failed` when mpv cannot compile a shader (pushed later;
+   * while other plugins' {@link VideoShaders} are on too, the player
+   * cannot tell whose shader failed and says so in the message).
    */
   readonly status: FilterStatus;
   /**
@@ -6618,6 +6659,153 @@ export interface RenderOptions extends Disposable {
    * ```
    *
    * @since 1.0.0
+   */
+  onStatus(listener: (status: FilterStatus) => void): Disposable;
+}
+
+/**
+ * This plugin's own GPU shaders, from `plugin.video.shaders(id)`
+ * (`processing.video`, SDK 1.5.39, player 0.5.20): mpv user shaders
+ * (`.glsl`, `//!HOOK` …) that the GPU renderer runs on every frame.
+ *
+ * @remarks
+ * Any number of plugins hold shader handles at the same time (unlike
+ * {@link RenderOptions}, which has one owner). The player joins every
+ * handle's list in a stable order, after the render options' own
+ * `shaders`: built-in plugins first, then installed plugins in the order
+ * they were first installed, then development loads (`--plugin`); ties by
+ * plugin id, and a plugin's handles by `id`. At most 16 shaders across all
+ * handles (`limit` beyond, nothing changes); the render options keep their
+ * own 16.
+ *
+ * Files must be this plugin's own: absolute paths inside its package
+ * directory or {@link Plugin.dataDirectory} after following links, each
+ * at most 16 MiB. Elsewhere: `invalid`; a file that does not exist:
+ * `missing`. The player reads the files when the list is set.
+ *
+ * GPU rendering only (macOS; Windows with Video ▸ GPU Rendering
+ * (Experimental) turned on): under software rendering a non-empty list is
+ * `failed` with `unsupported`, and a switch to software during the run
+ * pushes `unsupported` to every handle with shaders and removes every
+ * list (they no longer count against the 16); set them again once the
+ * player draws on the GPU (after a restart). Shaders act when a
+ * frame is drawn, so processed snapshots and exports never contain them
+ * (use a {@link VideoNode} for that). When mpv cannot compile a shader the
+ * handle turns `failed` with `failed` (pushed later); mpv does not say
+ * which file failed, so while several plugins' shaders are on, each of
+ * them hears it and the message says the player cannot tell whose.
+ *
+ * `set` sends the whole list (last write wins); `clear` and `dispose`
+ * withdraw it; the player removes a stopped plugin's shaders itself.
+ * Players before 0.5.20 refuse the request (the handle is `failed`): declare
+ * `"minPlayerVersion": "0.5.20"`.
+ *
+ * @example Add a sharpening shader the plugin ships
+ * The video looks sharper on the GPU renderer; under software rendering
+ * the OSD says why it is not. The shader file lives in the plugin's
+ * package, and the player puts it after other plugins' shaders that come
+ * earlier in its order.
+ * ```ts
+ * import { join } from "node:path";
+ * declare const packageDirectory: string;
+ * // ---cut---
+ * const shaders = plugin.video.shaders("sharpen");
+ * shaders.onStatus((s) => {
+ *   // `unsupported`: software rendering; `failed`: mpv could not compile it.
+ *   if (s.state === "failed") void plugin.osd.show("Sharpen: {}", [s.error.message]);
+ * });
+ * shaders.set([join(packageDirectory, "shaders", "sharpen.glsl")]);
+ * ```
+ *
+ * @capability processing.video
+ * @player 0.5.20; older players refuse the request.
+ * @see [Video and audio processing](../../docs/concepts/processing.md)
+ * @since 1.5.39
+ * @category Processing
+ */
+export interface VideoShaders extends Disposable {
+  /**
+   * Replace this handle's shader list (last write wins); `[]` withdraws
+   * it.
+   *
+   * @remarks
+   * Never throws: a refused list shows in `status` (`invalid`, `missing`,
+   * `limit`, `unsupported`) and goes to {@link Scope.onError}, and what the
+   * player held stays.
+   *
+   * @capability processing.video
+   * @param paths - Absolute paths of shader files in this plugin's package
+   *   or data directory, in the order they run.
+   *
+   * @example Switch between two shader presets
+   * The plugin offers a light and a strong preset; picking one replaces
+   * the handle's list in one request. The files were written to the
+   * plugin's data directory when the user imported them.
+   * ```ts
+   * import { join } from "node:path";
+   * // ---cut---
+   * const presets: Record<string, string[]> = {
+   *   light: [join(plugin.dataDirectory, "denoise.glsl")],
+   *   strong: [join(plugin.dataDirectory, "denoise.glsl"), join(plugin.dataDirectory, "sharpen.glsl")],
+   * };
+   * plugin.video.shaders("presets").set(presets.strong!);
+   * ```
+   *
+   * @since 1.5.39
+   */
+  set(paths: readonly string[]): void;
+  /**
+   * Withdraw this handle's shaders (the same as `set([])`).
+   *
+   * @capability processing.video
+   *
+   * @example Turn the plugin's shaders off from a menu item
+   * A Video menu item turns the plugin's shader on and off. Clearing
+   * keeps the handle, so the next pick sets the list again.
+   * ```ts
+   * declare const file: string;
+   * // ---cut---
+   * const shaders = plugin.video.shaders();
+   * let on = false;
+   * plugin.commands.add({
+   *   id: "toggle-shader",
+   *   path: ["@video", "Sharpen (Shader)"],
+   *   checked: () => on,
+   *   run: () => {
+   *     on = !on;
+   *     // Clearing keeps the handle; the next pick sets the list again.
+   *     if (on) shaders.set([file]);
+   *     else shaders.clear();
+   *   },
+   * });
+   * ```
+   *
+   * @since 1.5.39
+   */
+  clear(): void;
+  /**
+   * Current status: `waiting` before ready media, `applying`, `applied`,
+   * or `failed` with the reason (see the remarks).
+   */
+  readonly status: FilterStatus;
+  /**
+   * The status changed, including later pushes (a compile failure, a
+   * switch to software rendering).
+   *
+   * @capability processing.video
+   *
+   * @example Report a shader that does not compile
+   * The OSD shows mpv's message when the plugin's shader fails to compile.
+   * The player pushes that failure after the list was accepted, so it
+   * arrives through `onStatus`, not as a refused `set`.
+   * ```ts
+   * const shaders = plugin.video.shaders();
+   * shaders.onStatus((status) => {
+   *   if (status.state === "failed") void plugin.osd.show("Shader: {}", [status.error.message]);
+   * });
+   * ```
+   *
+   * @since 1.5.39
    */
   onStatus(listener: (status: FilterStatus) => void): Disposable;
 }
@@ -9567,10 +9755,10 @@ export type RenderingPreference = "auto" | "gpu" | "software";
  *
  * | Code | Meaning |
  * | --- | --- |
- * | `default` | Nothing ruled the GPU out; the platform's default. |
+ * | `default` | Nothing ruled the GPU out; the platform's default (macOS: GPU; Windows since version 0.5.14: software until the user turns on GPU rendering). |
  * | `pending` | GPU rendering is starting. |
  * | `headless` | The player runs without a user interface. |
- * | `no-gpu-backend` | This player has no GPU renderer on this system (Windows today). |
+ * | `no-gpu-backend` | This player has no GPU renderer on this system (Linux today; Windows has one since version 0.5.14, off by default, which reports `default`). |
  * | `env` | The environment chose it (`VESTRA_RENDER`, `VESTRA_SOFTWARE_RENDER`). |
  * | `preference` | The user chose software rendering ({@link Rendering.setPreference}); GPU chosen and available reports `default`. |
  * | `denylist` | The graphics driver is on the player's denylist. |

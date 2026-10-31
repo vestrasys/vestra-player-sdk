@@ -12,6 +12,7 @@ import { i18n } from "./language.ts";
 import { player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { videoRender, videoView } from "./view.ts";
+import { videoShaders } from "./shaders.ts";
 import { subtitles } from "./subtitles.ts";
 import { mediaCapture } from "./media.ts";
 import { resolvers } from "./resolvers.ts";
@@ -62,6 +63,7 @@ export class ScopeImpl implements Plugin {
     ...videoFilters(this),
     view: () => videoView(this),
     render: () => videoRender(this),
+    shaders: (id?: string) => videoShaders(this, id),
     upscaling: videoUpscaling(this),
   };
   readonly audio = audioFilters(this);
