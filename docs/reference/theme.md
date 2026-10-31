@@ -5,7 +5,7 @@ description: The Theme tokens with their current values, fonts, the icon set, an
 
 # Theme
 
-What a plugin's Slint file can import from the player's library. How Slint and TypeScript talk is in [Windows, panels, settings pages, dialogs and the OSD](../concepts/ui.md); which token to use where is in [Guidelines: interface](../guidelines/interface.md).
+What a plugin's Slint file can import from the player's library. How Slint and TypeScript talk is in [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md); which token to use where is in [Guidelines: interface](../guidelines/interface.md).
 
 ```slint nocheck
 import { Theme } from "@vestra/theme.slint";
@@ -52,6 +52,10 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 
 `std-widgets.slint` controls (`CheckBox`, `ComboBox`, `LineEdit`…) are compiled in Slint's `fluent-dark` style and switched to their light colours in `vestra-light`; do not set `Palette.color-scheme` yourself.
 
+### Over the video
+
+The video area is dark in both palettes. Text and icons drawn over it (a backdrop, an overlay) use the OSD's colours, which have no `Theme` token: text `#ffffff` on a translucent dark plate `#0b0a10c4`. A check mark on an accent background is white in both palettes.
+
 ## Sizes and fonts
 
 Corner radii, font sizes and control sizes are constants, the same in both palettes. `radius-control` rounds controls, menu rows and hover plates; `radius-panel` menus, panels and the OSD (4px and 8px since player 0.4.0; 3px and 6px before).
@@ -86,6 +90,39 @@ Corner radii, font sizes and control sizes are constants, the same in both palet
   2. The family Windows' own fallback picks.
   3. The bundled Noto Sans CJK SC, last, so CJK text never shows as boxes when an edition lacks the optional font packs.
 - **`Theme.font-mono`** is the system's monospace family: Menlo on macOS, Consolas on Windows ([Platforms](platforms.md)). CJK falls back in it too.
+
+## Surface sizes
+
+All sizes are logical pixels (Slint's `px`): one logical pixel is two physical pixels on a Retina display or at 200 % scaling.
+
+| Surface          | Width                                                                                                                   | Height                                                                                                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool window      | The `Window` component's `width` (fixed, not resizable), or `preferred-width` (initial) within `min-width`/`max-width`. | Same with `height`. The title is the component's `title`.                                                                                                      |
+| Bottom bar       | The video column's width.                                                                                               | The component's preferred height (within its minimum and maximum). It may draw above its slot into the video area (negative `y`); the player does not clip it. |
+| Sidebar          | Set by the user with the splitter (at least 317; the video keeps at least 318).                                         | The window's full height.                                                                                                                                      |
+| Floating sidebar | 300 by default, at least 300.                                                                                           | 408 by default, at least 250.                                                                                                                                  |
+| Backdrop         | The whole video area.                                                                                                   | The whole video area.                                                                                                                                          |
+| Settings page    | 440.                                                                                                                    | The component's height; the Options window scrolls taller pages.                                                                                               |
+
+## Layouts
+
+The sizes the player's own windows use, in logical pixels:
+
+- Buttons and inputs 21 high (`Theme.button-height`, `Theme.input-height`); a small button 18 high; form rows 24–26 apart; padding 8–14.
+- A list row that is playing has a 2-wide bar at its left in `Theme.playing`.
+- An icon line is 1.5 wide, 1.25 for icons of 12 or less.
+
+### Small adjustment windows
+
+The player's picture, audio and subtitle tools share this layout:
+
+| Part                          | Size and style                                                                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Window                        | 301 wide, at most 320 × 280; background `Theme.bg-bar`; content 8 from the left and right edges (285 usable)                                |
+| Tabs (if any)                 | 31 high, 74 wide, text `Theme.font-tab` in `Theme.text-dim`; the current tab in `Theme.text` with a short `Theme.accent-fill` line under it |
+| Page                          | background `Theme.bg-panel`                                                                                                                 |
+| Row                           | 24 high: label 65 wide, right-aligned, `Theme.font-body`; `Slider` with `panel: true`, 154 × 12; a small "Default" button, 41 × 18          |
+| Toggle buttons (flip, rotate) | 46 × 22; choice buttons 51 × 22 (69 wide for longer labels)                                                                                 |
 
 ## Icons
 
@@ -234,7 +271,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 ## Bar buttons
 
-`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
+`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle. Each button is a cell 41 wide and 40 high. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
 
 <!-- generated:widgets bar-buttons -->
 

@@ -7,7 +7,7 @@ description: Where a plugin's commands go in the player's right-click menu, how 
 
 The player has one menu, opened with a right click on the video. There is no menu button in the window and no menu bar at the top of the screen, so every command a user may look for is in this menu or in a panel's right-click menu. It is merged from the commands of every plugin and the player's own; these rules keep the result one menu instead of a pile of plugins.
 
-How paths merge, how `order` and `group` sort items and how a key finds its command are explained in [Commands, menus and key bindings](../concepts/commands.md). Menu ids, the shared menu keys, the binding syntax and the keys the system takes first are listed in [Commands](../reference/commands.md). The declaration itself is {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}.
+How paths merge, how `order` and `group` sort items and how a key finds its command are explained in [Commands, menus and key bindings](../explanation/commands.md). Menu ids, the shared menu keys, the binding syntax and the keys the system takes first are listed in [Commands](../reference/commands.md). The declaration itself is {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}.
 
 ## Organize by what the user does
 
@@ -18,52 +18,14 @@ How paths merge, how `order` and `group` sort items and how a key finds its comm
 
 ## The top level
 
-The top level as the player ships it (shortcuts in the Windows notation; the menu shows each system's own):
-
-```text
-Open File…                    Ctrl+O, F3   group open
-Open ▸
-Close                         F4
-Reopen Current/Last File      Ctrl+Y
-Copy to Clipboard ▸
-────────────────────────────────────────
-Playback ▸                                 group domain
-Subtitles ▸
-Video ▸
-Audio ▸
-────────────────────────────────────────
-Toggle Fullscreen             Enter        group screen
-Screen ▸
-────────────────────────────────────────
-Playlist  ✓                   F6           group windows
-Playback Info  ✓              Tab
-Playback Properties…          Ctrl+F1
-Vestra Player AI…
-Plugin Store…
-────────────────────────────────────────
-Settings ▸
-────────────────────────────────────────
-About Vestra Player…          F1
-────────────────────────────────────────
-Quit                          Cmd+Q        group exit
-```
-
-A top-level item uses the group and the `order` range of its kind:
-
-| Group                  | `order` | For                                                                              |
-| ---------------------- | ------- | -------------------------------------------------------------------------------- |
-| `open`                 | 100–199 | Opening and closing sources                                                      |
-| `domain` (the default) | 200–699 | Domain submenus: Playback, Subtitles, Video, Audio, and a new domain of your own |
-| `screen`               | 700–799 | Fullscreen and the window's size and placement                                   |
-| `windows`              | 800–899 | Items that show a window or a panel (a check mark when it toggles one)           |
-| `exit`                 | 900–999 | Quit                                                                             |
+A top-level item goes into the group of its kind and uses that group's `order` range: opening and closing in `open`, domain submenus in `domain` (the default), fullscreen and window placement in `screen`, items that show a window or a panel in `windows`. The top level as the player ships it and the ranges are in [Reference: commands](../reference/commands.md#the-top-level).
 
 Keep a group's orders contiguous: `group` only draws a separator between neighbours of different groups, so an item whose order falls into another group's range splits that group in two.
 
 ## Inside a built-in menu
 
 - **Name the menu by its id**: `["@video", "Blur"]`. The seven built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings) stay where they are whatever you put in them.
-- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use 100 and up, in the order listed in [Built-in commands](../reference/commands.md#built-in-commands), and the ranges per menu are at {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
+- **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use the orders listed in [Built-in commands](../reference/commands.md#built-in-commands), and the ranges per menu are at {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 - **Group related items** with a `group` of your own, so a separator sets them apart from the player's items.
 - **Playback ▸ Speed and Playback ▸ Seek are the player's.** You can add to them; their titles stay the player's.
 
@@ -98,4 +60,4 @@ A default binding is optional. Users rebind every command (Settings ▸ Keyboard
 - **Avoid the [keys the system takes first](../reference/commands.md#keys-the-system-takes-first)**, the standard close keys among them, as defaults.
 - **The right mouse button opens the menu** and is not a binding input; the other video-area mouse inputs are.
 - **A typed symbol is its own key**: `>` is not `Shift+.`, so `.` and `>` can do different things.
-- **Remember that bindings belong to the main window.** They do not fire while a tool window or the Options window has focus ([Focus and keyboard](../concepts/ui.md)).
+- **Remember that bindings belong to the main window.** They do not fire while a tool window or the Options window has focus ([Focus and keyboard](../explanation/ui.md)).

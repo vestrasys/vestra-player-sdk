@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.42
+
+**Who must change: nobody.** Documentation only: no API changes, `apiVersion` stays `vestra/1`, no player version needed. The package's code is the same as 1.5.41; the doc comments' `@see` links (27 in `src/plugin/types.ts`) now point at `docs/explanation/` instead of `docs/concepts/`. The site's page addresses stay the same, and the old _Concepts_ group address redirects to _Explanation_; `llms.txt` and `llms-full.txt` follow the new pages.
+
+- **The documentation follows Diátaxis.** The site's groups are Tutorials, How-to, Reference, Explanation, Guidelines, Examples and Upgrading, each with one kind of page whose shape `npm run docs:check` enforces (a tutorial has `Before you start`, numbered steps and `Next`; a how-to guide a goal, steps, a complete example and `See also`; explanation pages give no steps). _Concepts_ became _Explanation_ (the old address redirects); the migration notes moved to _Upgrading_ (`docs/upgrading/`), with every release's "who must change" in one generated table. New pages: tutorials _Add a window_, _Add settings and translations_, _Test, check, pack and publish_; _Troubleshooting_; reference pages _Error codes_, _Translations_ and _Test host_ (generated tables); explanation pages _GPU and software rendering_, _The player's Rust core_ and _How the player runs and talks to plugins_. Diagrams are Mermaid, and a check refuses link syntax in their labels.
+- **New tutorial _Write your own blur kernel_**: what the numbers of a 3×3 blur kernel do and why it is normalized; the kernel as an mpv user shader the plugin owns, applied with `plugin.video.shaders()`; the same kernel as a `convolution` node (the 9, 25 and 49 entry sizes, `row` and `column` kernels, `rdiv`, `bias` and `VIDEO_PROCESSING_LIMITS`) that also reaches processed snapshots; and `gblur` as the shortcut.
+- **New how-to guide _Keep a command's state without keeping the plugin running_**: find what keeps a plugin running with `TestHost.keepsRunning`, replace functions that read `plugin.player.state` with `plugin.when` conditions, keep the plugin's own state as values, and test it.
+- _Commands, menus and key bindings_ (explanation) explains `plugin.when`: why the player evaluates conditions, how they relate to idle stop, mirror and listening subscriptions, and `keepsRunning` / `listeningWhy`. _How a plugin runs_ says that listeners of `packages`, `bindings`, `appearance` and the resolvers' file types no longer keep a plugin running (player 0.5.21). _Video and audio processing_ describes the shader channel and the `convolution` and `lut3d` nodes.
+- _The player's Rust core_ shows the current window renderer choice (player 0.5.20): Direct3D 12 windows in CPU mode on Windows and their fallback to software windows. No page says any longer that only macOS renders on the GPU.
+
 ## 1.5.41
 
 **Who must change: nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. Only how the player draws the bottom bar's strip of command buttons changes (player 0.5.22); a plugin's declarations and a bar that places `BarButtons` stay as they are.
@@ -210,7 +220,7 @@ Fixes for Windows and for a vendored SDK, and built-ins that can no longer be di
 
 ## 1.5.17
 
-**Package rollback is removed**, as announced in 1.5.16: the player keeps no previous plugin version. `apiVersion` stays `vestra/1` (a patch release, as when 1.5.8 removed `PackageCandidate.trial()`); plugins that do not manage other plugins need no change. A plugin manager that still calls `rollback` or reads `previousVersion` no longer compiles. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
+**Package rollback is removed**, as announced in 1.5.16: the player keeps no previous plugin version. `apiVersion` stays `vestra/1` (a patch release, as when 1.5.8 removed `PackageCandidate.trial()`); plugins that do not manage other plugins need no change. A plugin manager that still calls `rollback` or reads `previousVersion` no longer compiles. Migration: [Migrating off package rollback](docs/upgrading/rollback-migration.md).
 
 - **Removed: `Packages.rollback`** and the wire method `packages.rollback`. The player already answers the method with `unsupported` ("unknown package method"). To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`.
 - **Removed: `PluginInfo.previousVersion`** and the wire field `PackageInfo.previousVersion`; `packages.list` and `packages.changed` no longer carry it.
@@ -221,7 +231,7 @@ Fixes for Windows and for a vendored SDK, and built-ins that can no longer be di
 
 ## 1.5.16
 
-**Package rollback is deprecated: the player keeps no previous plugin version.** `apiVersion` stays `vestra/1`; code still compiles, and plugins that do not manage other plugins need no change. 1.5.17 removes the deprecated symbols, as 1.5.8 removed `PackageCandidate.trial()` at patch level. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
+**Package rollback is deprecated: the player keeps no previous plugin version.** `apiVersion` stays `vestra/1`; code still compiles, and plugins that do not manage other plugins need no change. 1.5.17 removes the deprecated symbols, as 1.5.8 removed `PackageCandidate.trial()` at patch level. Migration: [Migrating off package rollback](docs/upgrading/rollback-migration.md).
 
 - **Deprecated: `Packages.rollback`** (removed in 1.5.17). The player no longer has `packages.rollback` and answers it with `unsupported` ("unknown package method"); the SDK still forwards the call, so the error reaches the caller. To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`.
 - **Deprecated: `PluginInfo.previousVersion`** and the wire field `PackageInfo.previousVersion` (removed in 1.5.17): always `null`, since an upgrade replaces the package. The SDK reads a missing field as `null`.
@@ -299,7 +309,7 @@ Fixes for Windows and for a vendored SDK, and built-ins that can no longer be di
 
 ## 1.5.9
 
-**Translations** (player 0.4.3). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.8 need no change. One test-visible change: a core action's `declaration.path` in `TestHost` is now the player's English key (read `display` for what the menu shows). The player now shows its interface in English, Simplified Chinese, Japanese, Korean, German, French or Spanish, chosen at start-up; a plugin writes every text in English and ships one gettext file per language. Plugins write no translation code: the player translates. Guides: [Translate a plugin](docs/how-to/i18n.md), [Migrate a plugin to English source text](docs/how-to/i18n-migration.md); example: `examples/i18n`.
+**Translations** (player 0.4.3). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.8 need no change. One test-visible change: a core action's `declaration.path` in `TestHost` is now the player's English key (read `display` for what the menu shows). The player now shows its interface in English, Simplified Chinese, Japanese, Korean, German, French or Spanish, chosen at start-up; a plugin writes every text in English and ships one gettext file per language. Plugins write no translation code: the player translates. Guides: [Translate a plugin](docs/how-to/i18n.md), [Migrate a plugin to English source text](docs/upgrading/i18n-migration.md); example: `examples/i18n`.
 
 - **`plugin.i18n.locale`** (new `I18n`, `Locale`): the interface language of this run, `"en"`, `"zh-Hans"`, `"ja"`, `"ko"`, `"de"`, `"fr"` or `"es"`; it never changes while the player runs. `"en"` from older players.
 - **Templates with arguments**: `osd.show(text, args?)`, `OsdPanel.set(text, args?)` and `ConfirmOptions.args` (new `TemplateArgs`: an array for `{}` / `{0}`, an object for `{name}`). The player translates the template with the plugin's catalog, then fills it in. Without `args` the text shows as it is, so existing calls are unchanged; older players show the template unfilled.

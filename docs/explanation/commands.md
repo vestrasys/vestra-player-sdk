@@ -26,10 +26,35 @@ const toggle = plugin.commands.add({
 
 - **The id is the command's identity.** It is unique within the plugin; the player knows the command as `<manifest id>/<id>`. The user's own key bindings are stored under that pair, so changing a title or moving the command to another menu keeps them.
 - **`path` puts it in the main menu.** Leave it out for a command that only has bindings or lives in a panel's context menu ({@link "@vestra-player/sdk"!Panel.showMenu | Panel.showMenu}); it then needs a `title`.
-- **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions ({@link "@vestra-player/sdk"!Bindable | Bindable}). Functions are evaluated in every [update pass](plugins.md#the-update-pass) and sent only when they change, so the menu's check mark follows the player without a listener. {@link "@vestra-player/sdk"!Command.set | Command.set} replaces them later.
+- **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions ({@link "@vestra-player/sdk"!Bindable | Bindable}); `enabled` and `checked` may also be conditions from `plugin.when` ([below](#conditions-the-player-evaluates)). Functions are evaluated in every [update pass](plugins.md#the-update-pass) and sent only when they change, so the menu's check mark follows the player without a listener you write. {@link "@vestra-player/sdk"!Command.set | Command.set} replaces them later.
 - **The player calls `run` only when it can run.** While a command is disabled or busy, neither its menu item nor its binding calls `run`; `reason` tells the user why (it appears in the menu and, for a key press, on the video).
 - **Titles and paths are fixed.** They cannot change in place. A menu that follows changing content (tracks, presets, a radio group) lives in a child scope that is disposed and rebuilt when the content changes; `order` keeps its place ([Handles and scopes](plugins.md#handles-and-scopes)).
 - Disposing the command removes it from the menu and the binding table; the same id can be added again at once. The number of commands per plugin and per player is limited ([Reference: limits](../reference/limits.md#commands)); the limit stops runaway menus, so cap menus built from media content (tracks, chapters) yourself.
+
+## Conditions the player evaluates
+
+A function such as `enabled: () => plugin.player.state.can.pause` runs in the plugin. To evaluate it again when playback changes, the SDK must hear about every change, so it listens to the player's state for as long as the command exists. That costs nothing while the plugin runs anyway, but it means the plugin must keep running. With lazy activation the player stops a plugin that nothing uses and starts it again on its next use ([Idle plugins are stopped](plugins.md#idle-plugins-are-stopped)); a plugin with such a function is never stopped, because a stopped plugin cannot run it: were it stopped, its menu item would keep the last state it sent, and "Pause" would stay enabled after the file closed.
+
+{@link "@vestra-player/sdk"!When | plugin.when} (SDK 1.5.40, player 0.5.21) moves the evaluation to the player. A condition names state the player owns, the source's phase, kind, pause and controls, fullscreen, the palette and the saved interface language, and is sent with the command as data:
+
+```ts
+const { when } = plugin;
+plugin.commands.add({
+  id: "toggle-pause",
+  path: ["@playback", "Pause"],
+  enabled: when.can("pause"),
+  checked: when.paused,
+  run: () => plugin.player.setPaused(!plugin.player.state.paused),
+});
+```
+
+The player evaluates `when.can("pause")` and `when.paused` itself, again on every change of that state, and shows the result in the menu, on keys and on bar buttons, whether the plugin's process runs or not. `run` still runs in the plugin: picking the item starts a stopped plugin, which then receives the click. Conditions combine with `and`, `or` and `not()`, each returning a new condition; with an `enabled` condition the player shows `reason` only while the condition is false (or the command is busy), so a fixed reason is enough.
+
+The vocabulary is small on purpose. It names only what the player knows without asking the plugin; a plugin's own settings, an open window or a track list are not in it, and stay functions or values set with {@link "@vestra-player/sdk"!Command.set | Command.set}. A function that reads only the plugin's own variables subscribes to nothing; it is the functions that read `plugin.player.state`, `plugin.window.state` or another mirrored state that keep a plugin running.
+
+This rests on the difference between two kinds of subscription. The SDK keeps its copies of the player's state (`plugin.player.state` and the others) current with **mirror** subscriptions, which do not keep a plugin running: a stopped plugin misses nothing, since the SDK reads the state again when the plugin starts. A listener the plugin adds, or a binding that reads that state, turns the subscription into a **listening** one, which the player must deliver, so it keeps the process alive. A condition makes neither: it reads nothing in the plugin and keeps no listener.
+
+When a plugin keeps running, the player says why. From SDK 1.5.40 the SDK tells the player every reason it listens to an event and where in the plugin's code it came from, and the player's log names it (`command "Snapshot" enabled is a function that reads plugin.player.state (main.ts:353) — use plugin.when`). In tests the same reasons are {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy | TestHost.listeningWhy}, and {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning | TestHost.keepsRunning} lists what would keep the plugin running while idle (listeners of events the player cannot wake it for, a mounted panel, open windows); an empty list means the player may stop it. [Keep a command's state without keeping the plugin running](../how-to/command-state.md) turns a function into a condition step by step.
 
 ## How menu paths merge
 
@@ -55,20 +80,38 @@ The orders of the player's own items and the recommended top-level ranges are on
 
 A binding is a string such as `"Ctrl+Shift+A"`, `"NumpadEnter"` or `"Mouse:WheelUp"` ([Reference: commands](../reference/commands.md#binding-syntax) has the syntax and every input name). When the user presses a key, the player looks for a command in this order:
 
-```text
-key press in the main window or the floating sidebar
-   │  a focused control that uses the key (Space in a text field) keeps it
-   ▼
-this plugin's panel has focus?  ── yes ─▶ its focus: "panel" bindings first
-   ▼
-global bindings
-   │  several commands bind the same input in the same scope:
-   │    1. the user's override   2. the player's own command   3. the plugin loaded first
-   ▼
-winner enabled ──────────────▶ run()   (busy: the key is taken, nothing runs)
-winner disabled ─────────────▶ the next command it shadowed, then the global scope;
-                               none left: its reason on the OSD (key taken),
-                               no reason: the key goes on to the focused control
+```mermaid
+flowchart TB
+    K["a key press in the main window or the floating sidebar"]
+    C{"does a focused control use the key (Space in a text field)?"}
+    KEPT["the control keeps it"]
+    P{"does this plugin's panel have focus?"}
+    PB["its focus: panel bindings first"]
+    G["global bindings: when several commands bind the same input in one scope, the winner is the user's override, then the player's own command, then the plugin loaded first"]
+    W{"is the winner enabled?"}
+    BUSY{"is it busy?"}
+    RUN["run()"]
+    TAKEN["the key is taken, nothing runs"]
+    NEXT{"is there a next command it shadowed, in this scope or the global one?"}
+    R{"does the disabled winner have a reason?"}
+    OSD["its reason on the OSD, the key is taken"]
+    ON["the key goes on to the focused control"]
+    K --> C
+    C -- "yes" --> KEPT
+    C -- "no" --> P
+    P -- "yes" --> PB
+    P -- "no" --> G
+    PB -- "no binding there" --> G
+    PB -- "a binding" --> W
+    G --> W
+    W -- "yes" --> BUSY
+    BUSY -- "no" --> RUN
+    BUSY -- "yes" --> TAKEN
+    W -- "no" --> NEXT
+    NEXT -- "yes" --> W
+    NEXT -- "no" --> R
+    R -- "yes" --> OSD
+    R -- "no" --> ON
 ```
 
 - **Where bindings apply.** Bindings belong to the main window: they fire while it or the floating sidebar window has focus. They do **not** fire in tool windows or the Options window; keys there are the Slint file's own business (a `FocusScope`, a default button). While a menu or a system dialog is open, bindings pause.
@@ -115,11 +158,8 @@ The player registers some commands itself, with the owner `host`: **Toggle Fulls
 
 A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); what they do to playback is in [Playback](playback.md#core-actions).
 
-## API on this page
+## In the reference
 
-- Commands: {@link "@vestra-player/sdk"!Commands | Commands}, {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}, {@link "@vestra-player/sdk"!CommandButton | CommandButton}, {@link "@vestra-player/sdk"!Command | Command}, {@link "@vestra-player/sdk"!CommandState | CommandState}, {@link "@vestra-player/sdk"!MenuId | MenuId}, {@link "@vestra-player/sdk"!Bindable | Bindable}
-- Bindings: {@link "@vestra-player/sdk"!Bindings | Bindings}, {@link "@vestra-player/sdk"!BindingInfo | BindingInfo}, {@link "@vestra-player/sdk"!BindingRef | BindingRef}
-- Core actions: {@link "@vestra-player/sdk"!Host | Host}, {@link "@vestra-player/sdk"!HostAction | HostAction}
-- Text in menus: {@link "@vestra-player/sdk"!Text | Text}, {@link "@vestra-player/sdk"!I18n | I18n}
+The members are in the API reference, from {@link "@vestra-player/sdk"!Commands | Commands} and {@link "@vestra-player/sdk"!Bindings | Bindings} on; menu ids, menu keys, binding names and the core actions are in [Reference: commands](../reference/commands.md).
 
 Examples: [menus](../examples/menus.md) (submenus, groups, radio items and bindings), [panel-menu](../examples/panel-menu.md) (a context menu of commands without a menu path).

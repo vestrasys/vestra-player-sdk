@@ -7,6 +7,12 @@ description: "Walkthrough of examples/hello: the smallest plugin, with a manifes
 
 The smallest useful plugin: one menu command that shows a message over the video. It is the README's Quick start as a runnable project.
 
+## What it demonstrates
+
+The manifest and capabilities · a menu command · the on-screen display.
+
+[Getting started](../tutorials/getting-started.md) teaches the same steps from an empty folder.
+
 ## What you'll build
 
 ![Hello in Vestra Player](../../examples/hello/screenshot.png)

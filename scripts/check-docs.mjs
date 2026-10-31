@@ -50,6 +50,9 @@ import {
   OFF_SITE,
   PENDING_UNTIL,
   PLACEHOLDERS,
+  SHAPES,
+  mermaidProblems,
+  shapeProblems,
 } from "./doc-structure.mjs";
 import { withoutGenerated } from "./doc-tables.mjs";
 import { splitCut, strictDeclarations } from "./doc-standard.mjs";
@@ -449,6 +452,19 @@ const structure = { errors: [], warnings: [] };
       if (value > limit * 1.25) violation(page, message);
       else structure.warnings.push(message);
     }
+    // The page's shape (Diátaxis; doc-structure.mjs SHAPES).
+    const shape = page.shape ?? group.kind;
+    if (kind !== "index") {
+      if (!SHAPES[shape]) error(`${path}: unknown shape "${shape}"`);
+      else
+        for (const problem of shapeProblems(shape, counted, body))
+          violation(
+            page,
+            `${path}: ${problem} (${shape} pages: ${SHAPES[shape]})`,
+          );
+    }
+    for (const problem of mermaidProblems(text))
+      violation(page, `${path}: ${problem}`);
     for (const placeholder of PLACEHOLDERS)
       if (placeholder.test(body))
         violation(
@@ -464,9 +480,10 @@ const structure = { errors: [], warnings: [] };
     if (!existsSync(join(root, indexPath))) continue;
     const index = read(indexPath);
     const targets = new Set(
-      [...index.matchAll(/\]\(\s*([^)\s#]+\.md)(?:#[^)\s]*)?\s*\)/g)].map(
-        (m) => m[1],
-      ),
+      [...index.matchAll(/\]\(\s*([^)\s#]+\.md)(?:#[^)\s]*)?\s*\)/g)]
+        .map((m) => m[1])
+        // Absolute links (the CHANGELOG on GitHub) are not pages of the site.
+        .filter((target) => !/^[a-z]+:/i.test(target)),
     );
     for (const target of targets) {
       const resolved = rel(resolve(root, "docs", group.folder, target));

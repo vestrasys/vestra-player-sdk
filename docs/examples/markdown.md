@@ -7,6 +7,12 @@ description: "Walkthrough of examples/markdown: a window that shows a Markdown d
 
 A window that shows a formatted Markdown document with the player's `MarkdownView` component. The plugin never parses Markdown: it passes the text to the player, which parses and draws it.
 
+## What it demonstrates
+
+`plugin.ui.markdown` and `MarkdownView` · images relative to the package · packing a non-code file.
+
+[Add a window](../tutorials/add-a-window.md) teaches tool windows; the Markdown view is explained in [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md#theme-and-widgets).
+
 ## What you'll build
 
 ![Markdown in Vestra Player](../../examples/markdown/screenshot.png)

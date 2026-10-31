@@ -9,7 +9,9 @@ description: Open files, pause, seek and change speed from a plugin without figh
 
 The player has one source. The user, other plugins and yours all change it, so every control in `plugin.player` is **conditional**: it acts on the state your plugin last saw and fails with `stale` (doing nothing) when someone else changed the source in between. Most of this guide is about using that well.
 
-## Capabilities
+## Steps
+
+### Capabilities
 
 ```json
 {
@@ -19,7 +21,7 @@ The player has one source. The user, other plugins and yours all change it, so e
 
 `playback.read` reads the state, `playback.control` changes it, `events` keeps `player.state` current when the change comes from elsewhere (without it, the state only moves after your own calls and `refresh()`), and `commands` gives your actions menu items and keys.
 
-## Read the state
+### Read the state
 
 `plugin.player.state` is a snapshot the SDK keeps current from the player's events. `onChange` runs after it changed; read the new snapshot there instead of asking the player.
 
@@ -44,7 +46,7 @@ plugin.commands.add({
 });
 ```
 
-## Control it, and handle `stale`
+### Control it, and handle `stale`
 
 A control without options is conditional on `player.state` as it is when you call. `stale` means the source changed after that: another file, a close, or any pause, seek or speed change by the user or another plugin. Nothing happened, and usually that is the right outcome:
 
@@ -71,7 +73,7 @@ if (answer.confirmed)
 
 Other codes: `invalid` for a value out of range (a negative seek, a speed outside 0.05–10) or a control while nothing is open, `unsupported` for something the source cannot do (a loop on a source that cannot seek).
 
-## Open a file and follow it
+### Open a file and follow it
 
 `open` resolves once the player accepted the load (for an address a resolver plugin handles, once the resolver has answered) and returns a `Media` handle for that source. `ready()` waits until it plays; `onEnd` fires when it ends on its own.
 
@@ -90,7 +92,7 @@ media.onEnd((ended) =>
 
 `ready()` rejects with `failed` (the file cannot be loaded), `replaced` (another source took over) or `ended`. Disposing your scope does not close the media: playback belongs to the user, so call `media.close()` when you mean it.
 
-## Behave exactly like the player's own keys
+### Behave exactly like the player's own keys
 
 For buttons in your own bar or window, prefer the player's core actions to calling the controls yourself. `plugin.host.run` (capability `commands`) runs them with the player's checks, accumulation of repeated presses and on-screen text:
 
@@ -103,7 +105,7 @@ bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 })); // 
 
 `run` rejects with `unavailable` while the action is disabled, for example with nothing open.
 
-## Next and previous
+### Next and previous
 
 The player's Next and Previous items, keys and buttons ask the **sequence provider**, one plugin at a time, first come first served. The built-in playlist registers as provider when it starts and a built-in plugin cannot be disabled, so in practice another plugin's `provideSequence` is refused (`sequence-taken`); only a development load that replaces the playlist under its id gets it. Any plugin can ask the provider with `player.next()` and `player.previous()`:
 
@@ -125,14 +127,52 @@ plugin.player.provideSequence({
 
 A second provider is refused with `conflict` (`sequence-taken`). During activation that does not fail the plugin: it runs without Next and Previous and the player shows a warning; a refusal after activation goes to `onError`.
 
-## Sliders, loops and the output
+### Sliders, loops and the output
 
 - A seek slider: start a `player.scrub()` gesture on press and `end()` it on release; see [Keep a slider responsive while dragging](slider.md).
 - An A-B loop: `setLoop({ a, b, count })`; `null` stops it, a new source clears it.
 - Volume and mute: `setOutput({ volume, muted })` (volume 0–200). The newest write wins; the promise resolves `false` when a newer one replaced it.
 - Your own step size for ← and →: `setStepSeek({ seconds, keyframes })`, withdrawn when your plugin stops.
 
+## Complete example
+
+A plugin that shows the position on the OSD, offers a Pause item that greys out by itself, and a "Back to the Start" item that does nothing when the user changed the source meanwhile (`commands`, `ui.osd`, `playback.read`, `playback.control`, `events`):
+
+```ts
+import type { Plugin, PluginError } from "@vestra-player/sdk";
+
+export default async function activate(plugin: Plugin) {
+  // A live line on the OSD while something plays.
+  const info = plugin.osd.panel();
+  plugin.player.onChange((state) => {
+    if (state.phase !== "ready") return info.set(null);
+    info.set("{} / {} s", [state.position?.toFixed(0) ?? "–", state.duration?.toFixed(0) ?? "–"]);
+  });
+
+  plugin.commands.add({
+    id: "pause",
+    path: ["@playback", "Pause"],
+    enabled: () => plugin.player.state.can.pause, // re-evaluated after every change
+    checked: () => plugin.player.state.paused,
+    run: () => plugin.player.setPaused(!plugin.player.state.paused),
+  });
+
+  plugin.commands.add({
+    id: "start",
+    path: ["@playback", "Back to the Start"],
+    enabled: () => plugin.player.state.can.seek,
+    run: async () => {
+      try {
+        await plugin.player.seek(0);
+      } catch (error) {
+        if ((error as PluginError).code !== "stale") throw error; // another file now
+      }
+    },
+  });
+}
+```
+
 ## See also
 
-- [Playback state, controls and sources](../concepts/playback.md): phases, sources, resolvers and streams.
+- [Playback state, controls and sources](../explanation/playback.md): phases, sources, resolvers and streams.
 - The API reference: `Player`, `Media`, `Scrub`, `Conditional`, `Host`.

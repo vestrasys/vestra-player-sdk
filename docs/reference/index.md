@@ -5,7 +5,7 @@ description: Lookup tables that span many symbols (capabilities, manifest fields
 
 # Reference
 
-These pages are tables to look things up in while you write a plugin. Each one collects facts that belong to many API symbols at once; what a single symbol does is in the {@link "@vestra-player/sdk" | API reference}, and how the pieces fit together is in the [Concepts](../concepts/index.md). Most tables are generated from the SDK's own constants and Slint files, so they match the version of the SDK you read them for.
+These pages are tables to look things up in while you write a plugin. Each one collects facts that belong to many API symbols at once; what a single symbol does is in the {@link "@vestra-player/sdk" | API reference}, and how the pieces fit together is in the [Explanation](../explanation/index.md). Most tables are generated from the SDK's own constants and Slint files, so they match the version of the SDK you read them for.
 
 ## Manifest
 
@@ -27,7 +27,7 @@ The player's runtime limits in one place: commands, property values, text values
 
 ## Commands, menus and bindings
 
-Built-in menu ids, the submenu keys already in use, every command the player and its built-in plugins register with its default keys, the binding syntax and input names, the core actions and the keys the system takes first.
+Built-in menu ids, the top level and its groups, the submenu keys already in use, every command the player and its built-in plugins register with its default keys, the binding syntax and input names, the core actions and the keys the system takes first.
 
 [Read the commands reference](commands.md)
 
@@ -39,7 +39,7 @@ What differs between macOS and Windows: the clipboard, dialogs, window control, 
 
 ## Theme
 
-The `Theme` tokens with their current values, fonts, the icon names, and the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`.
+The `Theme` tokens with their current values, fonts, the sizes of each surface and the layouts of the player's own windows, the icon names, and the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`.
 
 [Read the theme reference](theme.md)
 
@@ -48,3 +48,21 @@ The `Theme` tokens with their current values, fonts, the icon names, and the com
 The `vestra-plugin` commands and options, what `build` puts into a package, and the `vestra` field of `package.json`.
 
 [Read the command line reference](cli.md)
+
+## Error codes
+
+Every `error.code` the API fails with and what it means, from the `PluginError` table.
+
+[Read the error codes](errors.md)
+
+## Translations
+
+The interface languages, the gettext files, template and plural rules, where text values are accepted, what `i18n extract` and `i18n check` do, the review markers and the limits.
+
+[Read the translations reference](i18n.md)
+
+## Test host
+
+What `startPlugin` takes and returns, every way `TestHost` acts like the user and simulates the player, what it records, and every member.
+
+[Read the test host reference](testing.md)

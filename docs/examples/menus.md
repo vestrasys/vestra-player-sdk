@@ -7,6 +7,12 @@ description: "Walkthrough of examples/menus: radio items, separator groups and a
 
 What a menu item can look like: radio items, separator groups, a greyed-out item, and an item whose title changes. The items set the playback speed.
 
+## What it demonstrates
+
+Radio items · order and separator groups · changing an item's title by rebuilding a child scope.
+
+[Getting started](../tutorials/getting-started.md) teaches a first menu item; the rules for titles, groups and order are in [Menu guidelines](../guidelines/menus.md).
+
 ## What you'll build
 
 ![Menus in Vestra Player](../../examples/menus/screenshot.png)

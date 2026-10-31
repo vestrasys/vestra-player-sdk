@@ -5,22 +5,41 @@ description: Filter chains and how plugins' chains are joined, live parameter ch
 
 # Video and audio processing
 
-A plugin can change what the user sees and hears in three different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
+A plugin can change what the user sees and hears in four different places. They look alike in the API (each is a handle with `set`, a `status` and `onStatus`), but they act at different stages and have different owners, so choosing the right one matters:
 
 | | Changes | Owner | In snapshots and exports | API |
 | --- | --- | --- | --- | --- |
 | **Filter chain** | The decoded frames and samples: colour, blur, denoise, rotation, crop, volume, equalizer, delay… | Every plugin has its own chains; all are joined | Yes | {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!AudioFilter | AudioFilter} |
 | **Display layer** | Where the video sits in the video area: aspect, fit, zoom, pan | One plugin at a time | No | {@link "@vestra-player/sdk"!VideoView | VideoView} |
 | **Render options** | How the GPU renderer draws: HDR tone mapping, user shaders, motion interpolation | One plugin at a time | No | {@link "@vestra-player/sdk"!RenderOptions | RenderOptions} |
+| **Shaders** | The picture on the GPU, with the plugin's own mpv user shaders | Every plugin has its own lists; all are joined | No | {@link "@vestra-player/sdk"!VideoShaders | VideoShaders} |
 
-```text
- decoder ─▶ plugin A's chain ─▶ plugin B's chain ─▶ … ─▶ (frameBlend) ─▶ renderer ─▶ video area
-            └──────────── filter chains: part of the picture ──────────┘    │          │
-                         snapshots and exports use the same chain      render options  display layer
-                                                                       (display only)  (display only)
+```mermaid
+flowchart LR
+    DEC["decoder"]
+    subgraph CHAINS["filter chains: part of the picture, also used by snapshots and exports"]
+        A["plugin A's chain"]
+        B["plugin B's chain"]
+        MORE["…"]
+        FB["(frameBlend)"]
+    end
+    R["renderer"]
+    VA["video area"]
+    RO["render options (display only)"]
+    SH["shaders of every plugin (display only)"]
+    DL["display layer (display only)"]
+    DEC --> A
+    A --> B
+    B --> MORE
+    MORE --> FB
+    FB --> R
+    R --> VA
+    RO -.-> R
+    SH -.-> R
+    DL -.-> VA
 ```
 
-All three need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
+All four need `processing.video` (or `processing.audio`) and `playback.read`; filter chains also need `events`, because the SDK must see each new source to apply the chain again.
 
 ## Filter chains
 
@@ -35,19 +54,25 @@ picture.set([{ kind: "eq", brightness: 0.1, contrast: 1.1, saturation: 1, gamma:
 - **Each plugin owns its own chains.** The player joins the chains of all plugins in a stable order. Setting or disposing a chain changes only that plugin's contribution; an empty chain (`[]`, or for audio no nodes and no delay) withdraws it and leaves the others alone.
 - **Nothing is sent until the first `set()`**, and disposing a chain that was applied withdraws it.
 - **Limits are shared.** All plugins together have at most 64 nodes, one `frameBlend` and a bounded audio delay ([Reference: limits](../reference/limits.md#limits-documented-at-their-api)); a value out of a node's range fails with `invalid`.
+- **Your own kernels and colour tables.** Besides the ready-made nodes, a `convolution` node runs an integer kernel of your own per plane (3×3, 5×5, 7×7, or a row or column of up to 49 entries), and a `lut3d` node recolours with a `.cube` file from the plugin's package or data directory (both player 0.5.20). They are filter nodes like the others, so they reach snapshots and exports; [Write your own blur kernel](../tutorials/blur-kernel.md) builds a convolution step by step.
 - **The same chain is the picture.** A processed snapshot or an export ({@link "@vestra-player/sdk"!MediaCapture | plugin.media}) goes through the same chains, so it matches what plays.
 
 ### Status
 
 A chain reports where it stands in {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}:
 
-```text
- set(nodes)
-   │ no ready media ──▶ waiting ── media ready ──┐
-   ▼                                             ▼
- applying ──────────────────────────────────▶ applied
-   │
-   └──▶ failed (error.code) ── retry() / next set() / new source ──▶ applying
+```mermaid
+stateDiagram-v2
+    [*] --> waiting : set(nodes), no ready media
+    [*] --> applying : set(nodes), media ready
+    waiting --> applying : media ready, not applied yet
+    waiting --> applied : media ready, the player replayed the chain it kept
+    applying --> applied : the player accepted it
+    applying --> waiting : the source changed or was not ready meanwhile (stale, unavailable)
+    applied --> applying : set() again
+    applied --> waiting : a new source, not ready yet
+    applying --> failed : refused (error.code)
+    failed --> applying : retry(), the next set() or a new source
 ```
 
 - `waiting` keeps the value until there is media to apply it to; without `events` the SDK never sees the media become ready, so the chain stays there.
@@ -82,6 +107,14 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 - **Only the GPU renderer has them.** Under software rendering every `set` fails with `unsupported`; see [Reference: platforms](../reference/platforms.md) for where the player renders on the GPU. Treat `unsupported` as "hide these settings", not as an error. To know before creating the handle, read {@link "@vestra-player/sdk"!SystemInfo.rendering | rendering} from `plugin.app.system()` (player 0.5.12, no capability): `"gpu"` or `"software"`.
 - A shader that does not compile is reported later: the status first becomes `applied`, then `failed` with code `failed` and the compiler's first error line once mpv first uses the shader.
 
+## Shaders
+
+{@link "@vestra-player/sdk"!Scope.video | plugin.video.shaders(id)} (player 0.5.20) returns a {@link "@vestra-player/sdk"!VideoShaders | VideoShaders} handle: a list of mpv user shaders (`.glsl` files) that belongs to this plugin. Unlike the render options it has no single owner: every plugin may hold shader handles at the same time, and the player joins their lists after the render options' own shaders, in a stable order (built-in plugins, then installed plugins in the order they were first installed, then development loads).
+
+- **A list is a desired state.** `set(paths)` replaces the handle's whole list, `clear()` empties it and disposing the handle withdraws it. The files must be the plugin's own, in its package or data directory.
+- **The GPU only, the screen only.** Like the render options, shaders act where the picture is drawn: under software rendering a list fails with `unsupported`, and snapshots and exports never contain them. An effect that must be in a saved frame belongs in the filter chain.
+- **Shared limits and shared failures.** At most 16 shaders across all plugins ([Reference: limits](../reference/limits.md#video-primitives)). mpv compiles shaders when it first uses them; a compile failure is pushed to every handle with shaders, since the player cannot tell whose shader failed.
+
 ## The GPU's video upscaler
 
 {@link "@vestra-player/sdk"!VideoUpscaling | plugin.video.upscaling} (capability `video.upscaling`, player 0.5.16) turns on the GPU's AI upscaler, NVIDIA RTX Video Super Resolution on Windows. It is not a handle: `set(true)` is the plugin's request, and the player keeps the upscaler last in the filter chain, after every plugin's chain, while any plugin has it on and it can work, scaled to the area the video is shown in. Like render options it acts at display time only.
@@ -90,12 +123,8 @@ How smoothly the change shows depends on the field. Some fields, marked **live**
 - **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone.
 - **No sign that it runs.** `requested` says the player asked the driver; on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read.
 
-## API on this page
+## In the reference
 
-- Filter chains: {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!AudioFilter | AudioFilter}, {@link "@vestra-player/sdk"!VideoNode | VideoNode}, {@link "@vestra-player/sdk"!AudioNode | AudioNode}, {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}
-- Display layer: {@link "@vestra-player/sdk"!VideoView | VideoView}, {@link "@vestra-player/sdk"!ViewSettings | ViewSettings}
-- Render options: {@link "@vestra-player/sdk"!RenderOptions | RenderOptions}, {@link "@vestra-player/sdk"!RenderSettings | RenderSettings}
-- The video upscaler: {@link "@vestra-player/sdk"!VideoUpscaling | VideoUpscaling}, {@link "@vestra-player/sdk"!UpscalingState | UpscalingState}, {@link "@vestra-player/sdk"!UpscalingReasonCode | UpscalingReasonCode}
-- Snapshots and exports with the same chains: {@link "@vestra-player/sdk"!MediaCapture | MediaCapture}, {@link "@vestra-player/sdk"!Snapshot | Snapshot}
+The members are in the API reference, from {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}, {@link "@vestra-player/sdk"!VideoView | VideoView}, {@link "@vestra-player/sdk"!RenderOptions | RenderOptions} and {@link "@vestra-player/sdk"!VideoUpscaling | VideoUpscaling} on; their limits are in [Reference: limits](../reference/limits.md#render-options).
 
 Examples: [blur](../examples/blur.md) (a live video filter driven by a slider).

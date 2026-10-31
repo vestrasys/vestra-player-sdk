@@ -7,6 +7,12 @@ description: "Walkthrough of examples/theme-widgets: a tool window drawn with th
 
 A tool window drawn with the player's own theme and controls, so it looks like part of the player: its colours, spacing, buttons, sliders and tooltips.
 
+## What it demonstrates
+
+`@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property.
+
+[Add a window](../tutorials/add-a-window.md) teaches a window with the player's theme and widgets; the rules are in [Interface guidelines](../guidelines/interface.md).
+
 ## What you'll build
 
 ![Theme widgets in Vestra Player](../../examples/theme-widgets/screenshot.png)
@@ -88,4 +94,4 @@ Start the player with `--plugin <path to examples/theme-widgets>` and choose **E
 
 1. **Use the level.** Add `ui.osd` and show the level with `plugin.osd.show` when the slider is released (the `Slider`'s `released` callback).
 2. **A text field.** Add `UrlInputRow` from `@vestra/widgets.slint`, the player's input row with confirm and cancel buttons.
-3. **More tokens.** The [concept page](../concepts/ui.md) lists every `Theme` token and widget property.
+3. **More tokens.** The [explanation page](../explanation/ui.md) lists every `Theme` token and widget property.

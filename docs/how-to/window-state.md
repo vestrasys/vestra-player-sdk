@@ -9,7 +9,29 @@ description: Store a tool window's values and whether it was open, and restore b
 
 A tool window keeps nothing by itself: closing it destroys the window instance, and the plugin process ends with the player. Keep the state in your plugin, store it with {@link "@vestra-player/sdk"!Storage.json | plugin.storage.json}, show it with `bind`, and reopen the window during activation.
 
-## The complete example
+## Steps
+
+### Load the stored state at activation
+
+Create the store with `plugin.storage.json(name, { defaults, validate })` at the start of `activate`, with the window's values and an `open` flag in it. Always pass `validate`: the file is outside your control.
+
+### Bind the window to the stored value
+
+Write the window's properties with `window.bind(() => …)` reading `store.value`, not a copy of it, so every change and every later opening shows the current values.
+
+### Save on every change
+
+In each callback that changes a value, call `store.save({ ...store.value, … })`. Do not debounce it yourself, and do not change `store.value` in place.
+
+### Record whether the window is open
+
+Save `open: true` when your command shows the window, and `open: false` in `window.onClose`. Do nothing on stop.
+
+### Reopen it after binding
+
+At the end of `activate`, after the window is created and bound, show it if `store.value.open` is true; if that fails, save `open: false` instead of failing activation.
+
+## Complete example
 
 The **Brightness** window from [Keep a slider responsive while dragging](slider.md), now remembering the brightness and whether the window was open. The manifest is the same as there, without `ui.osd`:
 
@@ -116,11 +138,11 @@ export default async function activate(plugin: Plugin) {
 
 ## How it works
 
-- **Load once, at activation.** `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin. Always pass a `validate` function: the file is outside your control.
-- **Bind the stored value, not a copy.** `window.bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window, and a window opened later starts with the current values.
-- **Save on every change; the store debounces.** `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename). Dragging the slider writes the file once, after the drag. When the plugin stops (the player quits, the user disables the plugin), the store is flushed, so the last value is not lost.
-- **"Open" means "the user did not close it".** `onClose` runs only when the user closes the window (the title-bar button or the [standard close keys](../reference/commands.md#keys-the-system-takes-first)). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time. That is the behaviour users expect from an application's tool windows.
-- **Restore after binding.** The window is created and bound before `open()` runs, so it opens with the stored values and without flashing defaults. If it cannot open (for example in a player without a user interface), the plugin forgets that it was open instead of failing activation.
+- `storage.json` reads `<dataDirectory>/brightness.json` synchronously when it is created. A file that cannot be parsed or fails `validate` is renamed to `brightness.json.bad-<timestamp>` and `defaults` is used, so a damaged or older file never breaks the plugin.
+- `bind` reads `store.value` in every update pass, so whatever changes the state (a callback, Reset, a command) updates the window.
+- `save()` replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename): dragging the slider writes the file once, after the drag. When the plugin stops, the store is flushed, so the last value is not lost.
+- `onClose` runs only when the user closes the window (the title-bar button or the [standard close keys](../reference/commands.md#keys-the-system-takes-first)). When the player quits, the plugin stops and its windows close _without_ `onClose`, so `open` stays `true` and the window comes back next time, as users expect from an application's tool windows.
+- The window is created and bound before it opens, so it shows the stored values without flashing defaults.
 
 ## What you cannot restore
 
@@ -135,5 +157,5 @@ export default async function activate(plugin: Plugin) {
 
 ## See also
 
-- [Windows, panels, settings pages, dialogs and the OSD](../concepts/ui.md): the tool window life cycle.
+- [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md): the tool window life cycle.
 - {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!Window.onClose | Window.onClose}

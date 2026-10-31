@@ -5,7 +5,7 @@ description: Short guides that each answer one practical question about writing,
 
 # How-to guides
 
-How-to guides are short answers to one practical question each: "how do I do X?". They assume you already know the basics from [Getting started](../tutorials/getting-started.md).
+How-to guides are short answers to one practical question each: "how do I do X?". Each page has the same shape: the goal, the steps, a complete example and where to read on. They assume you already know the basics from the [Tutorials](../tutorials/index.md).
 
 ## Control playback
 
@@ -43,17 +43,17 @@ The player can draw the video on the GPU or in software, and keeps the user's ch
 
 [Read the guide](gpu-rendering.md)
 
+## Keep a command's state without keeping the plugin running
+
+A menu item whose `enabled` or `checked` is a function that reads `plugin.player.state` keeps the plugin running, because the SDK must evaluate it on every change. The guide finds such bindings with `TestHost.keepsRunning`, replaces them with `plugin.when` conditions that the player evaluates itself (`when.can("snapshot")`, `when.theme(id)`, combined with `and`, `or`, `not`), keeps the plugin's own state as values, and tests that nothing keeps the plugin running.
+
+[Read the guide](command-state.md)
+
 ## Translate a plugin
 
 The player shows its interface in seven languages, chosen at start-up. A plugin writes every text in English (menu paths and titles, `@tr("…")` in its Slint files, templates such as `osd.show("Speed {}×", [rate])`) and ships one gettext file per language in `locales/`; the player translates, and the plugin contains no translation code. The guide covers the three places text lives, `vestra-plugin i18n extract` and `check`, and testing in another language.
 
 [Read the guide](i18n.md)
-
-## Migrate a plugin to English source text
-
-The checklist for a plugin written in one language before SDK 1.5.9: English menu paths, `@tr` in Slint, sentences moved out of TypeScript into Slint or templates, `zh-Hans.po` written from the old texts, and tests.
-
-[Read the guide](i18n-migration.md)
 
 ## Test a plugin
 
@@ -67,8 +67,8 @@ Plugins reach the store through pull requests to the official plugin repository.
 
 [Read the guide](publish.md)
 
-## Migrate off package rollback
+## Troubleshooting
 
-The player no longer keeps a previous plugin version: `packages.rollback` and `previousVersion` were deprecated in SDK 1.5.16 and removed in 1.5.17. The checklist for plugins with `plugins.manage`: remove rollback calls and UI and any "Undo install", keep to install, uninstall and disable/enable for third-party plugins (an older version is the user's uninstall plus a `.vxp`), offer no action for built-ins (from 1.5.18 they cannot be disabled either), and update tests.
+Symptoms and their causes: interface pitfalls (callbacks bound too late, one-way bindings, state lost when the main window is rebuilt, hover effects that cost frames), values that do not appear after an `await`, `stale` and `capability` failures, key bindings that do not fire, tests that fail only in CI, state lost at a restart.
 
-[Read the guide](rollback-migration.md)
+[Read the page](troubleshooting.md)

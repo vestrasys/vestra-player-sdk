@@ -13,14 +13,22 @@ The members are on {@link "@vestra-player/sdk"!Player | Player}; this page expla
 
 {@link "@vestra-player/sdk"!Player.state | plugin.player.state} is a {@link "@vestra-player/sdk"!PlayerState | PlayerState}: an immutable snapshot of the current source.
 
-```text
-           open()                     media ready               played to the end
- empty ───────────▶ loading ─────────────────────▶ ready ─────────────────────▶ ended
-   ▲                  │                              │  ▲                          │
-   │                  └── load failed ──▶ error      │  └──── restart() ───────────┘
-   └──────────── close() / F4 ───────────────────────┘
- every open (even of the same file) starts a new sourceId
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> loading : open()
+    loading --> ready : media ready
+    loading --> error : load failed
+    ready --> ended : played to the end
+    ready --> error : failed while playing
+    ended --> ready : restart()
+    ended --> ready : a seek back from the end
+    state "any state" as anystate
+    anystate --> loading : open()
+    anystate --> empty : close() or F4
 ```
+
+`open` and `close` work from every state. Every open, even of the same file, starts a new `sourceId`.
 
 - **`sourceId` identifies a source.** It changes every time something is opened, even the same file again, so comparing `sourceId`s tells you whether "the thing playing" is still the one you saw.
 - **`can` says what the source allows**: pause, seek, rate, restart, close, snapshot, next, previous. A live stream cannot seek; a generated stream cannot seek, change speed or restart. Bind your controls' enabled state to it instead of guessing from `kind` or the file type.
@@ -39,10 +47,15 @@ Because the state is a snapshot, a plugin can keep one and use it later as the c
 
 **A control acts on the state the plugin saw.** `setPaused`, `seek`, `setRate`, `restart`, `close` and `media.capture` are conditional on the current `player.state` by default. If, after that state, the user or another plugin changed the source (opened something else, paused, jumped to another position), the call fails with `code: "stale"` and **does nothing**.
 
-```text
-plugin sees state #7 (movie.mp4 at 0:42)
-user opens trailer.mp4  ─▶ state #8
-plugin: seek(42)        ─▶ rejected with "stale"; the trailer is not touched
+```mermaid
+sequenceDiagram
+    participant P as plugin
+    participant V as player
+    participant U as user
+    V->>P: state 7 (movie.mp4 at 0:42)
+    U->>V: opens trailer.mp4, state 8
+    P->>V: seek(42), conditional on state 7
+    V-->>P: rejected with stale, the trailer is not touched
 ```
 
 Without this rule, a "jump to bookmark" that arrives a moment late would seek a different video, and two plugins reacting to the same event would undo each other. With it, a late control is refused instead of applied to the wrong thing.
@@ -86,16 +99,17 @@ A **resolver** ({@link "@vestra-player/sdk"!Resolvers | plugin.resolvers}, capab
 - A **web resolver** (`schemes` and exact `hosts`) turns a page URL into stream URLs the player can play (a video site's page into its media URLs, with headers).
 - A **file resolver** (`extensions`, player 0.4.1) takes over local files by extension and returns a stream the plugin generates (an emulator for `.nes` files). It also needs `producer.av`.
 
-```text
-player.open("https://video.example/watch?v=1")     from anyone: user, playlist, plugin
-   │  a resolver registered for https + video.example?
-   ├── no ──▶ the player opens the URL itself
-   ▼ yes
-resolver.resolve(url, signal)   in the resolver plugin's process
-   │  returns stream URLs (web) or a generated stream (file)
-   ▼
-the player opens the result under the original open:
-same ifCurrent condition, same Media, same ready() for the caller
+```mermaid
+flowchart TB
+    O["player.open(a web address) from anyone: the user, the playlist, a plugin"]
+    Q{"is a resolver registered for https and video.example?"}
+    SELF["the player opens the URL itself"]
+    R["resolver.resolve(url, signal) in the resolver plugin's process returns stream URLs (web) or a generated stream (file)"]
+    RES["the player opens the result under the original open: the same ifCurrent condition, the same Media, the same ready() for the caller"]
+    O --> Q
+    Q -- "no" --> SELF
+    Q -- "yes" --> R
+    R --> RES
 ```
 
 - **One owner per target.** One scheme and host, or one extension, has one resolver. A second plugin's registration fails with `conflict` but does not fail its activation; the player's built-in plugins register first.
@@ -149,10 +163,8 @@ scrub.end();
 
 In tests, `TestHost.keyframes` models the source's keyframes, `host.coreSeeks` records each step seek with where it landed, and `host.seeks` records each `player.seek` and `Scrub.seek` with the mode it asked for (the test host lands on the exact target in both modes).
 
-## API on this page
+## In the reference
 
-- State: {@link "@vestra-player/sdk"!Player | Player}, {@link "@vestra-player/sdk"!PlayerState | PlayerState}, {@link "@vestra-player/sdk"!AudioTrack | AudioTrack}, {@link "@vestra-player/sdk"!PlaybackStats | PlaybackStats}, {@link "@vestra-player/sdk"!Chapter | Chapter}
-- Controls: {@link "@vestra-player/sdk"!Conditional | Conditional}, {@link "@vestra-player/sdk"!Media | Media}, {@link "@vestra-player/sdk"!Scrub | Scrub}, {@link "@vestra-player/sdk"!SequenceProvider | SequenceProvider}, {@link "@vestra-player/sdk"!Host | Host}
-- Sources: {@link "@vestra-player/sdk"!Resolvers | Resolvers}, {@link "@vestra-player/sdk"!WebResolverOptions | WebResolverOptions}, {@link "@vestra-player/sdk"!FileResolverOptions | FileResolverOptions}, {@link "@vestra-player/sdk"!Stream | Stream}, {@link "@vestra-player/sdk"!StreamOptions | StreamOptions}
+The members are in the API reference, from {@link "@vestra-player/sdk"!Player | Player} and {@link "@vestra-player/sdk"!Resolvers | Resolvers} on; the core actions are in [Reference: commands](../reference/commands.md#core-actions).
 
 Examples: [bookmark](../examples/bookmark.md) (state and a seek), [signal-generator](../examples/signal-generator.md) (a generated stream).

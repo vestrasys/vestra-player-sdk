@@ -5,7 +5,9 @@ description: The checklist for moving a plugin written in one language before SD
 
 # Migrate a plugin to English source text
 
-For plugins written before SDK 1.5.9 whose texts are in one language (Chinese, for the plugins built into Vestra Player). After the migration every text is English in the source, and the old texts become the first translation. The behaviour stays the same: a user with the same language sees exactly the texts as before. Read [Translate a plugin](i18n.md) first; this page is the checklist.
+## Who must change
+
+For plugins written before SDK 1.5.9 whose texts are in one language (Chinese, for the plugins built into Vestra Player). After the migration every text is English in the source, and the old texts become the first translation. The behaviour stays the same: a user with the same language sees exactly the texts as before. Read [Translate a plugin](../how-to/i18n.md) first; this page is the checklist.
 
 Needs player 0.4.3 or later: set `"minPlayerVersion": "0.4.3"` in `manifest.json`.
 
@@ -104,7 +106,7 @@ plugin.osd.show("Download failed: {}", [text(REASONS[reason])]);
 plugin.osd.show("Removed missing shaders: {}", [list(missing)]);
 ```
 
-The table of where text values are accepted is in [Translate a plugin](i18n.md#text-that-mixes-words-and-data). A resolver's failure: `throw plugin.i18n.error("The ROM file was not found.")`. Text for the clipboard or a file: `plugin.i18n.resolve(value)`, never for the interface.
+The table of where text values are accepted is in [Translate a plugin](../how-to/i18n.md#text-that-mixes-words-and-data). A resolver's failure: `throw plugin.i18n.error("The ROM file was not found.")`. Text for the clipboard or a file: `plugin.i18n.resolve(value)`, never for the interface.
 
 **Status texts as data.** A text that a window shows depending on state (`"正在载入…"`, `"没有音轨"`) becomes a state value (`loading: true`) that the Slint file turns into words.
 

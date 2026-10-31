@@ -532,7 +532,7 @@ export interface Scope extends Disposable {
  * `dataDirectory`.
  *
  * @capability That of each module (see the modules).
- * @see [How a plugin runs](../../docs/concepts/plugins.md)
+ * @see [How a plugin runs](../../docs/explanation/plugins.md)
  * @since 1.0.0
  * @category Plugin
  */
@@ -552,7 +552,7 @@ export interface Plugin extends Scope {
    * {@link PluginInfo.dataDirectory}). Write files atomically (to a
    * temporary name, then rename); for JSON settings prefer
    * {@link Scope.storage}. Throws `unavailable` when the player provided
-   * none. See [How a plugin runs](../../docs/concepts/plugins.md#the-data-directory).
+   * none. See [How a plugin runs](../../docs/explanation/plugins.md#the-data-directory).
    */
   readonly dataDirectory: string;
 }
@@ -979,7 +979,7 @@ export interface CommandButton {
  * order, group or binding. The same path registered twice, or a path that
  * is both an item and a submenu, fails with `conflict` (through `ready`).
  *
- * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/explanation/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -1147,7 +1147,7 @@ export interface CommandOptions {
  * exportCommand.set({ enabled: () => plugin.player.state.phase === "ready" });
  * ```
  *
- * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/explanation/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -1236,7 +1236,7 @@ export interface Command extends Disposable {
  * });
  * ```
  *
- * @see {@link Command}, {@link CommandOptions}, [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @see {@link Command}, {@link CommandOptions}, [Commands, menus and key bindings](../../docs/explanation/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -1329,7 +1329,7 @@ export interface Commands {
  * }));
  * ```
  *
- * @see {@link Ui.image}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link Ui.image}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -1554,7 +1554,7 @@ export type Props = Record<string, PropValue>;
  *
  * {@includeCode ../../examples/markdown/ui/document.slint}
  *
- * @see {@link ImageRef}, {@link MarkdownRef}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link ImageRef}, {@link MarkdownRef}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -1820,7 +1820,7 @@ export interface Ui {
  *
  * {@includeCode ../../examples/bookmark/ui/bookmark.slint}
  *
- * @see {@link Window}, {@link Panel}, {@link SettingsPage}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md), [Keep a slider responsive while dragging](../../docs/how-to/slider.md)
+ * @see {@link Window}, {@link Panel}, {@link SettingsPage}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md), [Keep a slider responsive while dragging](../../docs/how-to/slider.md)
  * @since 1.0.0
  * @category UI
  */
@@ -2035,7 +2035,7 @@ export interface View {
  * });
  * ```
  *
- * @see {@link Windows.create}, {@link View}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md), [Remember a window's state between runs](../../docs/how-to/window-state.md)
+ * @see {@link Windows.create}, {@link View}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md), [Remember a window's state between runs](../../docs/how-to/window-state.md)
  * @since 1.0.0
  * @category UI
  */
@@ -2218,7 +2218,7 @@ export interface Window extends View, Disposable {
  *
  * {@includeCode ../../examples/bookmark/main.ts#window,command}
  *
- * @see {@link Window}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link Window}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -2627,7 +2627,7 @@ export interface SidebarSlot extends PanelSlot {
  *
  * {@includeCode ../../examples/panel-menu/ui/panel.slint}
  *
- * @see {@link Panels.mount}, {@link PanelSlot}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link Panels.mount}, {@link PanelSlot}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -3071,7 +3071,7 @@ export type ThemeId = "vestra" | "vestra-light";
  * });
  * ```
  *
- * @see [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md) (theme tokens)
+ * @see [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md) (theme tokens)
  * @since 1.0.0
  * @category UI
  */
@@ -3615,7 +3615,7 @@ export type SettingsCategory =
  * }
  * ```
  *
- * @see {@link Settings.page}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link Settings.page}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -3678,7 +3678,7 @@ export type SettingsPage = View &
  * page.on("resumeToggled", (on: boolean) => store.save({ ...store.value, resume: on }));
  * ```
  *
- * @see {@link SettingsPage}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link SettingsPage}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -3875,7 +3875,7 @@ export interface BackdropSlot {
  *
  * {@includeCode ../../examples/panel-menu/ui/panel.slint}
  *
- * @see {@link Panel}, {@link PanelSlot}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link Panel}, {@link PanelSlot}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -4610,7 +4610,7 @@ export interface ConfirmOptions {
  * }
  * ```
  *
- * @see [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -4828,7 +4828,7 @@ export interface AudioTrack {
  * Without `events`, {@link Player.state} only updates at start and after
  * this plugin's own operations.
  *
- * @see {@link Player.state}, [Playback state, controls and sources](../../docs/concepts/playback.md)
+ * @see {@link Player.state}, [Playback state, controls and sources](../../docs/explanation/playback.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -4964,7 +4964,7 @@ export interface Chapter {
  * });
  * ```
  *
- * @see [Playback state, controls and sources](../../docs/concepts/playback.md)
+ * @see [Playback state, controls and sources](../../docs/explanation/playback.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -5488,7 +5488,7 @@ export interface PlaybackStats {
  * `events` to follow changes made elsewhere; `producer.av` for
  * {@link Player.openStream}.
  *
- * @see [Playback state, controls and sources](../../docs/concepts/playback.md), [Control playback](../../docs/how-to/control-playback.md)
+ * @see [Playback state, controls and sources](../../docs/explanation/playback.md), [Control playback](../../docs/how-to/control-playback.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -6476,7 +6476,7 @@ export interface OsdPanelOptions {
  * say("Blur on");
  * ```
  *
- * @see {@link OsdPanel}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/concepts/ui.md)
+ * @see {@link OsdPanel}, [Windows, panels, settings pages, dialogs and the OSD](../../docs/explanation/ui.md)
  * @since 1.0.0
  * @category UI
  */
@@ -6646,7 +6646,7 @@ interface Filter<T> extends Disposable {
  * never throws: a refused chain shows as `failed` in `status`.
  *
  * @capability processing.video, playback.read and events
- * @see [Video and audio processing](../../docs/concepts/processing.md)
+ * @see [Video and audio processing](../../docs/explanation/processing.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -6675,7 +6675,7 @@ export type VideoFilter = Filter<VideoNode[]>;
  * result, `retry` applies it again, `dispose` withdraws it.
  *
  * @capability processing.audio, playback.read and events
- * @see [Video and audio processing](../../docs/concepts/processing.md)
+ * @see [Video and audio processing](../../docs/explanation/processing.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -6735,7 +6735,7 @@ export interface ViewSettings {
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
- * @see [Video and audio processing](../../docs/concepts/processing.md)
+ * @see [Video and audio processing](../../docs/explanation/processing.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -6848,7 +6848,7 @@ export interface RenderSettings {
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
- * @see [Video and audio processing](../../docs/concepts/processing.md)
+ * @see [Video and audio processing](../../docs/explanation/processing.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -6953,7 +6953,7 @@ export interface RenderOptions extends Disposable {
  *
  * @capability processing.video
  * @player 0.5.20; older players refuse the request.
- * @see [Video and audio processing](../../docs/concepts/processing.md)
+ * @see [Video and audio processing](../../docs/explanation/processing.md)
  * @since 1.5.39
  * @category Processing
  */
@@ -8213,7 +8213,7 @@ export interface Resolver extends Disposable {
  * another plugin), so the plugin does not intercept opens itself.
  *
  * @capability source.resolve (file resolvers also `producer.av`)
- * @see [Playback state, controls and sources](../../docs/concepts/playback.md)
+ * @see [Playback state, controls and sources](../../docs/explanation/playback.md)
  * @since 1.0.0
  * @category Sources
  */
@@ -9018,7 +9018,7 @@ export interface BindingInfo extends BindingRef {
  * applies the change at once to every running plugin.
  *
  * @capability bindings.manage
- * @see [Commands, menus and key bindings](../../docs/concepts/commands.md)
+ * @see [Commands, menus and key bindings](../../docs/explanation/commands.md)
  * @since 1.0.0
  * @category Commands
  */

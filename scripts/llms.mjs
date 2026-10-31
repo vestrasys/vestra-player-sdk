@@ -469,6 +469,8 @@ const internalExports = internalNames.map((name) => {
 // ── Text from the documents ─────────────────────────────────────────────
 
 const gettingStarted = read("docs/tutorials/getting-started.md");
+const pluginsPage = read("docs/explanation/plugins.md");
+const rulesPage = read("docs/guidelines/plugins.md");
 const capabilitiesPage = read("docs/reference/capabilities.md");
 const cliPage = read("docs/reference/cli.md");
 const examplesReadme = read("examples/README.md");
@@ -481,9 +483,10 @@ function generatedTable(text, name, page) {
   return table(text.slice(start, text.indexOf("<!-- /generated -->", start)));
 }
 
-const manifestSection = section(gettingStarted, "The manifest");
+const manifestSection = section(gettingStarted, "2. Write the manifest");
 const firstManifest = fences(manifestSection).find((f) => f.lang === "json");
-if (!firstManifest) fail("getting-started.md, The manifest: no JSON manifest");
+if (!firstManifest)
+  fail("getting-started.md, 2. Write the manifest: no JSON manifest");
 
 /** `[capability, opens, also needs]` from Reference: capabilities. */
 const capabilityRows = generatedTable(
@@ -627,10 +630,11 @@ const pageUrl = (path) =>
 /** The singular kind of each group's pages, for headings. */
 const KINDS = {
   tutorials: "Tutorial",
-  concepts: "Concept",
   "how-to": "How-to",
-  guidelines: "Guideline",
   reference: "Reference",
+  explanation: "Explanation",
+  guidelines: "Guideline",
+  upgrading: "Upgrading",
 };
 /**
  * The documentation pages in reading order: `{ group, path, url }`, every
@@ -647,7 +651,7 @@ const GUIDES = GROUPS.filter((g) => KINDS[g.folder]).flatMap((g) =>
 );
 const guideHeading = (path) =>
   `## ${KINDS[path.split("/")[1]]}: ${/^# (.+)$/m.exec(read(path))[1]}`;
-const DROPPED_SECTIONS = ["Next", "See also", "API on this page"];
+const DROPPED_SECTIONS = ["Next", "See also", "In the reference"];
 
 /**
  * A page as one `##` section; its own headings move two levels down, so they
@@ -841,9 +845,11 @@ const bullets = (text) =>
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2));
 
-const running = bullets(plain(section(gettingStarted, "How plugins run")));
-const rules = bullets(plain(section(gettingStarted, "Rules for plugins")));
-const layout = fences(section(gettingStarted, "Files"))[0].code;
+const running = bullets(plain(section(pluginsPage, "In short")));
+const rules = bullets(plain(rulesPage));
+const layout = fences(section(gettingStarted, "1. Set up the folder")).find(
+  (f) => f.lang === "text",
+).code;
 const helloMain = read("examples/hello/main.ts").trimEnd();
 
 const scopeStatement = statementsOf(
@@ -867,8 +873,8 @@ const fullUrl = `${SITE}llms-full.txt`;
 const index = [
   `# Vestra Player SDK`,
   "",
-  `> ${pkg.name} ${pkg.version}: write plugins for Vestra Player in TypeScript (plugin API \`${API_VERSION}\`). A plugin is a folder with \`manifest.json\` and an entry module whose default export \`activate(plugin)\` the player calls; it runs in its own Node.js process. ${running
-    // Getting started, How plugins run: the process and activate are said above.
+  `> ${pkg.name} ${pkg.version}: write plugins for Vestra Player in TypeScript (plugin API \`${API_VERSION}\`). A plugin is a folder with \`manifest.json\` and an entry module whose default export \`activate(plugin)\` the player calls; it runs in its own Node.js process (the player's built-in plugins share one). ${running
+    // How a plugin runs, In short: the process and activate are said above.
     .slice(2)
     .map(firstSentence)
     .join(

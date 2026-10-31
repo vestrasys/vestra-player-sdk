@@ -5,13 +5,19 @@ description: The plugin process, activation, handles and scopes, the update pass
 
 # How a plugin runs
 
-Every other concept page builds on this one. It explains what the player does with a plugin from the moment it starts it until it stops it: the process the plugin runs in, the `activate` function, the handles everything is made of, the update pass that keeps the player in step with the plugin's state, what happens when the plugin stops, where it keeps its files, and how failures reach it.
+Every other explanation page builds on this one. It explains what the player does with a plugin from the moment it starts it until it stops it: the process the plugin runs in, the `activate` function, the handles everything is made of, the update pass that keeps the player in step with the plugin's state, what happens when the plugin stops, where it keeps its files, and how failures reach it.
 
 It assumes you have written a first plugin ([Getting started](../tutorials/getting-started.md)). For each type's members, follow the links into the API reference.
 
+## In short
+
+- Each third-party plugin runs in its own Node.js process (Node.js 26, which the player ships); the player's built-in plugins share one. A plugin can use the Node standard library, the file system, the network and npm packages.
+- The player loads the entry module and calls its **default export** `activate(plugin)`. The plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
+- Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. There is no cleanup function to return.
+
 ## The plugin process
 
-- **One Node.js process per plugin.** The player starts each plugin in a Node.js 26 process of its own (the installed player ships that Node.js). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in one plugin does not stop the player or other plugins.
+- **A Node.js process.** The player starts each third-party plugin, and each plugin loaded with `--plugin`, in a Node.js 26 process of its own (the installed player ships that Node.js); its own built-in plugins share one process ([How the player runs and talks to plugins](host-and-node.md)). The plugin can use the Node standard library, the file system, the network and npm packages. A crash or a busy loop in a plugin with its own process does not stop the player or other plugins.
 - **No web storage.** The player starts Node with `--no-experimental-webstorage`, so `localStorage` and `sessionStorage` do not exist. Keep settings with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage} or in your own files in the [data directory](#the-data-directory), and state that must outlive a restart of the plugin's process, but not the player, in {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} ([Restarts](#restarts-activate-can-run-more-than-once)).
 - **Trusted code.** Manifest capabilities are a contract the player checks on every call (a missing one fails with `code: "capability"`), not a sandbox: the process has the user's file and network access. The full list of capabilities and the API each one opens is in [Reference: capabilities](../reference/capabilities.md).
 - **One API on every system.** The same plugin runs on macOS and Windows. Something a system cannot do fails with `unsupported`; the differences are collected in [Reference: platforms](../reference/platforms.md).
@@ -33,10 +39,10 @@ export default async function activate(plugin: Plugin) {
 
 When the player starts the plugin:
 
-1. It starts the process, and the SDK loads the entry module.
-2. The SDK reads the initial state the plugin may see (the playback state with `playback.read`, the main window and timeline state) and, with `events`, subscribes to changes.
-3. It calls `activate(plugin)`.
-4. It waits until every registration started during activation has succeeded: commands, panels, settings pages, resolvers, subscriptions. Then it reports the plugin ready.
+- First it starts the process, and the SDK loads the entry module.
+- The SDK reads the initial state the plugin may see (the playback state with `playback.read`, the main window and timeline state) and, with `events`, subscribes to changes.
+- It calls `activate(plugin)`.
+- Last, it waits until every registration started during activation has succeeded: commands, panels, settings pages, resolvers, subscriptions. Then it reports the plugin ready.
 
 You do not need to `await` those registrations. `commands.add`, `panels.mount` and `resolvers.add` return their handle at once and register in the background; their `ready` promise is there for the rare case that you want to wait. **Activation fails** when `activate` throws or rejects, or when one of those registrations fails. A registration made later, after activation, cannot fail activation any more: its failure goes to [`onError`](#failures-and-recovery).
 
@@ -46,14 +52,21 @@ Some refusals are deliberately not failures, because they depend on which other 
 
 Everything a plugin creates is a **handle**: an object that stands for one resource, carries its operations and its listeners, and implements {@link "@vestra-player/sdk"!Disposable | Disposable}. A command, a window, a panel, a filter chain, a snapshot, an export job, a resolver, a generated stream and every listener (`onChange`, `bind`, `on`…) are handles.
 
-```text
-plugin (root scope)
- ├─ command "open-inspector"
- ├─ window "inspector"            ← view.on / view.bind listeners belong to it
- ├─ video filter "picture"
- └─ child scope "tracks"          ← plugin.scope()
-     ├─ command "track.0"
-     └─ command "track.1"
+```mermaid
+flowchart TB
+    ROOT["plugin (root scope)"]
+    C1["command open-inspector"]
+    W["window inspector (its view.on and view.bind listeners belong to it)"]
+    F["video filter picture"]
+    CH["child scope tracks, from plugin.scope()"]
+    T0["command track.0"]
+    T1["command track.1"]
+    ROOT --> C1
+    ROOT --> W
+    ROOT --> F
+    ROOT --> CH
+    CH --> T0
+    CH --> T1
 ```
 
 - Every handle belongs to the {@link "@vestra-player/sdk"!Scope | Scope} it was created through. {@link "@vestra-player/sdk"!Plugin | Plugin} is the root scope; {@link "@vestra-player/sdk"!Scope.scope | plugin.scope()} makes a child with exactly the same modules.
@@ -81,16 +94,19 @@ Several requests within one microtask are merged into one pass, and every target
 
 One click, end to end (a bookmark window; the video is at 42 s):
 
-```text
-user clicks "Mark this position"
-                    ─▶  Slint: clicked => { root.mark(); }
-                    ─▶  the player forwards the callback to the plugin
-                    ─▶  window.on("mark") handler runs: mark = 42
-handler returns     ─▶  update pass: every binding is evaluated
-                          label   "Bookmark: 42.0 s"   changed  → sent
-                          canMark true                 same     → not sent
-                          canJump true                 changed  → sent
-                    ─▶  the label changes; "Jump to bookmark" is enabled
+```mermaid
+sequenceDiagram
+    participant U as user
+    participant S as Slint window (in the player)
+    participant P as plugin
+    U->>S: clicks Mark this position
+    S->>P: the callback mark (clicked => root.mark())
+    P->>P: the window.on("mark") handler runs, mark = 42
+    P->>P: the handler returns, the update pass evaluates every binding
+    P->>S: label Bookmark: 42.0 s (changed, sent)
+    Note over P: canMark true is the same as last sent, not sent
+    P->>S: canJump true (changed, sent)
+    S->>U: the label changes, Jump to bookmark is enabled
 ```
 
 The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers a pass; call `plugin.update()` after such a change. [Keep a slider responsive while dragging](../how-to/slider.md) shows the pattern; [How Slint and TypeScript talk](ui.md#how-slint-and-typescript-talk) explains `set` versus `bind` for views.
@@ -99,9 +115,9 @@ The rule that follows: **state you change outside a handler, or after an `await`
 
 The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, when the player quits, and, with lazy activation, when nothing has used it for a while ([Idle plugins](#idle-plugins-are-stopped)).
 
-1. The player first removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
-2. The SDK then refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
-3. A process that has not exited 300 ms later is killed (2 s later when it stops because it is idle).
+- First the player removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
+- Then the SDK refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
+- A process that has not exited 300 ms later is killed (2 s later when it stops because it is idle).
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with {@link "@vestra-player/sdk"!Player.open | player.open} **keeps playing** after it stops.
 
@@ -130,11 +146,13 @@ Write `activate` so that running it twice in one session is normal: read what yo
 
 With lazy activation (player 0.5.18 and later, while the player turns it on), the player works like a browser's extension service workers (Chrome Manifest V3): a plugin that holds nothing only its process can serve is stopped after about a minute without use, and started again by its next use.
 
-- **What stays while it is stopped**: its menu items and keys (with the last `enabled`, `checked` and `reason` it set), its settings pages, its file and link resolvers and its drop targets. Using one of them, or showing one of its settings pages, starts the plugin; it runs `activate`, registers them again, and then receives the click, the open or the drop. The player also remembers these between runs, so a plugin nobody uses is not started at launch at all.
-- **What keeps it running**: anything the player must deliver to it or that is its running work: a listener (`player.onChange`, `window.onChange`, `bindings.onChange`, `packages.onChange` and the other `onChange`, `onEnd`), a command state, panel or window binding that reads `plugin.player.state` or another state, an open window, a mounted panel, an OSD panel, a timeline layer, a filter chain, a stream or subtitle track it added, a next/previous provider, a sleep lease, a window setting, a job or snapshot in progress. Reading `plugin.player.state` inside a handler does not: the SDK reads the state again when the plugin starts.
+- **What stays while it is stopped**: its menu items and keys (with the last `enabled`, `checked` and `reason` it set; a `plugin.when` condition keeps following playback), its settings pages, its file and link resolvers and its drop targets. Using one of them, or showing one of its settings pages, starts the plugin; it runs `activate`, registers them again, and then receives the click, the open or the drop. The player also remembers these between runs, so a plugin nobody uses is not started at launch at all.
+- **What keeps it running**: anything the player must deliver to it or that is its running work: a listener (`player.onChange`, `window.onChange`, `subtitles.onChange` and the other `onChange`, `onEnd`), a command state, panel or window binding that reads `plugin.player.state` or another state, an open window, a mounted panel, an OSD panel, a timeline layer, a filter chain, a stream or subtitle track it added, a next/previous provider, a sleep lease, a window setting, a job or snapshot in progress. Reading `plugin.player.state` inside a handler does not: the SDK reads the state again when the plugin starts. Nor does a listener of the four events the player wakes a stopped plugin for (player 0.5.21): `packages.onChange`, `bindings.onChange`, `appearance.onChange` and `resolvers.onFileTypesChange`.
 - **What does not keep it running**: work the player does not see. A `fetch`, a socket, a `setTimeout` or `setInterval`, or a promise the plugin awaits is lost when an idle plugin is stopped, as in Chrome. Set the command's `busy` while its work runs (a busy command keeps the plugin running), or keep what it needs in [session storage](#restarts-activate-can-run-more-than-once) and pick it up in `activate`.
 
-`TestHost.listening` lists the events a plugin really listens to; empty means listeners do not keep it running.
+A command's `enabled` or `checked` that follows playback does not need a running plugin: give it a condition from `plugin.when` (player 0.5.21), which the player evaluates itself ([Conditions the player evaluates](commands.md#conditions-the-player-evaluates)).
+
+`TestHost.listening` lists the events a plugin really listens to, `TestHost.listeningWhy` why (which listener or binding, added where), and `TestHost.keepsRunning` what would keep it running while idle; an empty `keepsRunning` means the player may stop it.
 
 ## The data directory
 
@@ -184,11 +202,8 @@ Three properties make failures predictable:
 - **No client-side timeouts.** The player answers every request in order, or stops the plugin. A slow request is logged after 10 seconds, but the SDK keeps waiting for the real answer instead of guessing, so an operation never ends in "maybe".
 - **No blind retries.** The SDK never resends an operation that is not safe to repeat (opening, loading subtitles, starting an export, installing). Only last-write-wins targets such as filter chains are sent again, and only when the SDK knows the earlier write did not take effect. A filter chain that failed with `backend-uncertain` (the player's backend blocked that stage) waits for {@link "@vestra-player/sdk"!VideoFilter | retry()}, the next `set()` or a new source.
 
-## API on this page
+## In the reference
 
-- Entry and scopes: {@link "@vestra-player/sdk"!Plugin | Plugin}, {@link "@vestra-player/sdk"!Scope | Scope}, {@link "@vestra-player/sdk"!Disposable | Disposable}, {@link "@vestra-player/sdk"!Bindable | Bindable}
-- Files and settings: {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!SessionStorage | SessionStorage}, {@link "@vestra-player/sdk"!Secrets | Secrets}, {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}
-- The player and system: {@link "@vestra-player/sdk"!App | App}, {@link "@vestra-player/sdk"!SystemInfo | SystemInfo}
-- Errors: {@link "@vestra-player/sdk"!PluginError | PluginError}, {@link "@vestra-player/sdk"!FilterStatus | FilterStatus}
+The members are in the API reference, from {@link "@vestra-player/sdk"!Plugin | Plugin} and {@link "@vestra-player/sdk"!Scope | Scope} on; the error codes are in [Reference: error codes](../reference/errors.md), the limits in [Reference: limits](../reference/limits.md). How the player starts the process and talks to it is in [How the player runs and talks to plugins](host-and-node.md).
 
 Examples: [bookmark](../examples/bookmark.md) (bindings and the update pass), [window-state](../how-to/window-state.md) (files in the data directory).
