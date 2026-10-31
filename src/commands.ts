@@ -1,6 +1,7 @@
 /** Finite candidate command registry. Host authenticates owner; no plugin supplies an owner id. */
 import type { Json, Transport } from "./wire.ts";
 import type { ListJson, TextJson } from "./i18n.ts";
+import type { ConditionJson } from "./plugin/when.ts";
 /**
  * The player's command registry caps, the same values as the player's own
  * table (the player's tests check that they agree). They are runaway guards,
@@ -683,6 +684,15 @@ export type CommandState = {
   /** Source text, or a text value (player 0.4.3). */
   reason: string | TextJson | ListJson | null;
 };
+/**
+ * A command's conditions (SDK 1.5.40, player 0.5.21): `enabled` and
+ * `checked` evaluated by the player (`plugin.when`). Older players ignore
+ * the field and show the state as sent.
+ */
+export type CommandWhen = {
+  enabled?: ConditionJson;
+  checked?: ConditionJson;
+};
 export type CommandDeclaration = {
   /** Source text, or a text value (player 0.4.3). */
   title: string | TextJson;
@@ -714,21 +724,29 @@ export function commandClient(transport: Transport) {
       revision: number,
       declaration: CommandDeclaration,
       state: CommandState,
+      when?: CommandWhen,
     ) =>
       transport.request<{ revision: number }>("commands.register", {
         id,
         revision,
         declaration,
         state,
+        ...(when ? { when: when as Json } : {}),
       }),
     /** Remove the command from the menu and the binding table; the id is free again. */
     unregister: (id: string) =>
       transport.request<void>("commands.unregister", { id }),
-    update: (id: string, revision: number, state: CommandState) =>
+    update: (
+      id: string,
+      revision: number,
+      state: CommandState,
+      when?: CommandWhen,
+    ) =>
       transport.request<{ revision: number }>("commands.update", {
         id,
         revision,
         state,
+        ...(when ? { when: when as Json } : {}),
       }),
   };
 }

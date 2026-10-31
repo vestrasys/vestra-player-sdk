@@ -44,10 +44,7 @@
       "name": "plural",
       "source": "text: @tr(\"{n} file\" | \"{n} files\" % count);",
       "catalog": {
-        "{n} file": [
-          "{n} 个文件",
-          "{n} 个文件"
-        ]
+        "{n} file": ["{n} 个文件", "{n} 个文件"]
       },
       "messages": [
         {
@@ -61,10 +58,7 @@
       "name": "plural with arguments",
       "source": "text: @tr(\"{n} item in {}\" | \"{n} items in {}\" % n, name);",
       "catalog": {
-        "{n} item in {}": [
-          "{1} 里有 {n} 项",
-          "{1} 里有 {n} 项"
-        ]
+        "{n} item in {}": ["{1} 里有 {n} 项", "{1} 里有 {n} 项"]
       },
       "messages": [
         {
@@ -245,10 +239,7 @@
       "name": "plural entry for a singular call is ignored",
       "source": "text: @tr(\"Files\");",
       "catalog": {
-        "Files": [
-          "文件",
-          "文件们"
-        ]
+        "Files": ["文件", "文件们"]
       },
       "messages": [
         {
