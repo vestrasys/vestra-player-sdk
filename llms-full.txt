@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.39: full reference
+# @vestra-player/sdk 1.5.40: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -2710,6 +2710,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.13 | SystemInfo.renderingReason, RenderingMode, RenderingPreference, RenderingReasonCode, RenderingReason, RenderingState, Rendering |
 | 0.5.16 | UpscalingReasonCode, UpscalingReason, UpscalingState, VideoUpscaling |
 | 0.5.20 | VideoShaders |
+| 0.5.21 | Scope.when, When, Bindings.onChange |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -3897,6 +3898,10 @@ rest of the plugin keeps running.
 interface Scope extends Disposable {
   /** Menu commands and their default bindings (`commands`). */
   readonly commands: Commands;
+  /**
+   * Conditions on the player's own state for a command's `enabled` and `checked` (SDK 1.5.40, player 0.5.21): the player evaluates them, so the menu follows playback even while the plugin is stopped. See When.
+   */
+  readonly when: When;
   /** Tool windows from `.slint` files (`ui.window`). */
   readonly windows: Windows;
   /** Docked panels: bottom bar, sidebar and backdrop (`ui.mount`). */
@@ -4238,6 +4243,191 @@ plugin.commands.add({
 });
 ```
 
+### Condition
+
+A condition on the player's own state, from Scope.when, for a
+command's `enabled` or `checked`. The player evaluates it, again on
+every change of that state, whether or not the plugin runs.
+
+Combine conditions with `and`, `or` and `not`; each returns a new
+condition and leaves the original as it was. A condition is data: it
+reads nothing in the plugin and keeps no listener, so a plugin whose
+menu state is made of conditions may be stopped while idle (lazy
+activation) and its menu stays current. A function (see Bindable)
+keeps working; one that reads `plugin.player.state` or another service's
+state keeps the plugin running so the SDK can evaluate it.
+
+- @capability commands
+
+```ts
+interface Condition {
+  /**
+   * True when this condition and every one of `others` hold.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Combine two conditions with and
+   * The item is enabled only while a file plays in fullscreen. `and`
+   * returns a new condition; `when.playing` itself is unchanged.
+   * ```ts
+   * const { when } = plugin;
+   * const playingFullscreen = when.playing.and(when.fullscreen);
+   * ```
+   */
+  and(...others: Condition[]): Condition;
+  /**
+   * True when this condition or one of `others` holds.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Combine two conditions with or
+   * The item is enabled while a file plays or is paused. `or` returns a
+   * new condition that holds when either of the two holds.
+   * ```ts
+   * const { when } = plugin;
+   * const active = when.playing.or(when.paused);
+   * ```
+   */
+  or(...others: Condition[]): Condition;
+  /**
+   * True when this condition does not hold.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Negate a condition with not
+   * An "Enter Fullscreen" item is enabled only outside fullscreen. `not`
+   * returns the opposite condition; the player evaluates it on every
+   * window change.
+   * ```ts
+   * const { when } = plugin;
+   * const windowed = when.fullscreen.not();
+   * ```
+   */
+  not(): Condition;
+}
+```
+
+Example: Enable an item while a frame can be saved
+
+"Save Snapshot" is greyed out with its reason unless a media file is
+open at a frame the player can capture. The condition is sent with the
+command and evaluated by the player, so the item follows playback even
+while the plugin is stopped; with an `enabled` condition the player
+shows the `reason` only while the item is disabled.
+```ts
+const { when } = plugin;
+plugin.commands.add({
+  id: "save",
+  path: ["@video", "Save Snapshot"],
+  enabled: when.can("snapshot").and(when.phase("ready", "ended"), when.stream.not()),
+  reason: "No frame to capture", // shown only while disabled
+  run: saveSnapshot,
+});
+```
+
+### When
+
+`plugin.when`: the vocabulary of conditions (SDK 1.5.40, player 0.5.21).
+It names only state the player owns: the source's phase, kind, pause
+and controls (the same names as PlayerState), fullscreen, the
+palette and the saved interface language.
+
+Give a condition as a command's `enabled` or `checked`
+(CommandOptions, Command.set). The player evaluates it
+and shows the result in menus, on keys and on bar buttons, again
+whenever that state changes, also while the plugin is stopped because
+nothing used it. With an `enabled` condition the player shows the
+command's `reason` only while the condition is false (or the command
+is busy), so a fixed reason is enough. Players before 0.5.21 have no
+`plugin.when` (declare `"minPlayerVersion": "0.5.21"`).
+
+State the vocabulary does not name (a plugin's own settings, an open
+window, a track list) stays a function or a value set with
+Command.set.
+
+- @capability commands
+
+```ts
+interface When {
+  /** A source is open: any phase but `empty` (loading, ready, ended, error). */
+  readonly open: Condition;
+  /** The source is loaded and can play (`phase` is `ready`). */
+  readonly ready: Condition;
+  /** The source is ready and not paused. */
+  readonly playing: Condition;
+  /** The source is ready and paused. */
+  readonly paused: Condition;
+  /** The source is a generated stream (`PlayerState.kind` is `stream`). */
+  readonly stream: Condition;
+  /** The main window is fullscreen. */
+  readonly fullscreen: Condition;
+  /**
+   * The source's `phase` is one of `phases`.
+   * @throws TypeError (throws) No phase, or one that is not a phase.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Enable an item while a file is loaded or finished
+   * The item is enabled while the source is ready or has ended, as a
+   * snapshot needs a frame. The phases are those of `PlayerState.phase`.
+   * ```ts
+   * const { when } = plugin;
+   * const hasFrame = when.phase("ready", "ended");
+   * ```
+   */
+  phase(...phases: PlayerState["phase"][]): Condition;
+  /**
+   * The source allows `control`: `PlayerState.can[control]` is true.
+   * @throws TypeError (throws) `control` is not one of `PlayerState.can`.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Enable a seek item only where seeking works
+   * "Jump to Middle" is greyed out on live streams that cannot seek.
+   * The player reads its own `can.seek` for the current source.
+   * ```ts
+   * const { when } = plugin;
+   * const seekable = when.can("seek");
+   * ```
+   */
+  can(control: keyof PlayerState["can"]): Condition;
+  /**
+   * The palette in use is `theme` (`plugin.appearance.theme`).
+   * @throws TypeError (throws) `theme` is not a palette of the player.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Check the light palette's item
+   * The item carries a check mark while the light palette is in use,
+   * whoever switched to it.
+   * ```ts
+   * const { when } = plugin;
+   * const light = when.theme("vestra-light");
+   * ```
+   */
+  theme(theme: ThemeId): Condition;
+  /**
+   * The saved interface language is `language` (`plugin.appearance.language`: `"system"` or a locale).
+   * @throws TypeError (throws) `language` is not `"system"` or a locale.
+   * @capability None (the command it is given to needs `commands`).
+   * @example Check the Follow System item
+   * The item carries a check mark while the player follows the system's
+   * language; the player reads its own saved preference.
+   * ```ts
+   * const { when } = plugin;
+   * const followSystem = when.language("system");
+   * ```
+   */
+  language(language: LanguagePreference): Condition;
+}
+```
+
+Example: Check a palette item and follow the palette
+
+The Appearance submenu has one radio item per palette; the player
+checks the one in use, also after another plugin or the user changed
+it, and while this plugin is stopped. Nothing in the plugin listens to
+the palette.
+```ts
+const { when } = plugin;
+for (const [id, title] of [["vestra", "Dark"], ["vestra-light", "Light"]] as const)
+  plugin.commands.add({
+    id: `theme.${id}`,
+    path: ["Settings", "Appearance", title],
+    radio: true,
+    checked: when.theme(id), // evaluated by the player, not the plugin
+    run: () => plugin.appearance.set(id),
+  });
+```
+
 ### MenuId
 
 A built-in top-level menu of the player, named in a command path as
@@ -4439,13 +4629,15 @@ interface CommandOptions {
    * A button for this command on the bottom bar (SDK 1.5.29, player 0.5.10): an icon and a place, `{ icon: "store", order: 200 }`. Needs a `path`: the menu entry is where the command stays reachable when the bar shows no button (a bar without `BarButtons`, a narrow window, a limit). See CommandButton for where it shows, what it shows and the limits. Fails with `invalid` for an unknown icon name, an order outside 0–999 or a button without a path.
    */
   button?: CommandButton;
-  /** Whether the command can run (default true). */
-  enabled?: Bindable<boolean>;
-  /** Check mark (or radio dot with `radio`); `null` (default) draws none. */
-  checked?: Bindable<boolean | null>;
+  /** Whether the command can run (default true): a value, a function, or a Condition the player evaluates (`plugin.when`, SDK 1.5.40). */
+  enabled?: Bindable<boolean> | Condition;
+  /** Check mark (or radio dot with `radio`); `null` (default) draws none. A Condition (`plugin.when`, SDK 1.5.40) draws the mark while it holds. */
+  checked?: Bindable<boolean | null> | Condition;
   /** Busy state (default false); the player does not call `run` while busy. */
   busy?: Bindable<boolean>;
-  /** Why the command is disabled or busy (shown to the user): English source text, or a Text for one with data in it (SDK 1.5.11). */
+  /**
+   * Why the command is disabled or busy (shown to the user): English source text, or a Text for one with data in it (SDK 1.5.11). With an `enabled` Condition the player shows it only while the condition is false or the command is busy, so a fixed text is enough.
+   */
   reason?: Bindable<TextValue | null>;
   /**
    * Run the command (menu item, binding, panel menu or `host.command(id).run()` in tests). It may return a promise; errors and rejections go to Scope.onError, and bound values are re-evaluated when it returns and when its promise settles.
@@ -4497,7 +4689,10 @@ interface Command extends Disposable {
    * ```
    */
   set(state: Partial<{
-    [K in keyof CommandState]: Bindable<CommandState[K]>;
+    [K in "busy" | "reason"]: Bindable<CommandState[K]>;
+  } & {
+    enabled: Bindable<boolean> | Condition;
+    checked: Bindable<boolean | null> | Condition;
   }>): void;
   /**
    * Resolves when the host has registered the command. Rejects with `conflict` (path already taken), `invalid` or `limit` (more than 160 commands in this plugin, or 1024 in the whole player). You rarely need to await it: during activation a failure fails activation, later it goes to Scope.onError.
@@ -11242,12 +11437,13 @@ interface Bindings {
    */
   reset(ref?: BindingRef): Promise<void>;
   /**
-   * Declarations or overrides changed (read `list()` again). At most every 200 ms.
+   * The binding list changed (read `list()` again): a declaration or an override. At most every 200 ms; since player 0.5.21 only when the list itself changed, not when a plugin starts again with the same commands.
    * @capability bindings.manage
    * @example Refresh a key list when bindings change
    * The plugin's key list stays current when the user changes a key in the
-   * player or another plugin starts. The listener carries no data and runs
-   * at most every 200 ms; the plugin reads the table again with `list`.
+   * player or a plugin with other commands is installed. The listener
+   * carries no data and runs at most every 200 ms; the plugin reads the
+   * table again with `list`.
    * ```ts
    * plugin.bindings.onChange(async () => {
    *   const { commands } = await plugin.bindings.list(); // read the new table
@@ -12793,7 +12989,18 @@ interface FakeCommand {
      */
     reason?: string | null;
   };
-  /** The command state the player last received (after the update pass). */
+  /**
+   * The conditions the plugin sent for `enabled` and `checked` (`plugin.when`, wire form), `undefined` without. Like the player, the host evaluates them in FakeCommand.state against `source`, `mainWindow.fullscreen`, `appearance` and `language`.
+   */
+  when?: {
+    /** The condition of `enabled`. */
+    enabled?: Json;
+    /** The condition of `checked`. */
+    checked?: Json;
+  };
+  /**
+   * The command state as the player shows it: what the plugin last sent (after the update pass), with the fields given as conditions (`plugin.when`) evaluated now. With an `enabled` condition, `reason` is `null` while the command is enabled and not busy.
+   */
   state: {
     /** `false` when the plugin disabled the command. */
     enabled: boolean;
@@ -13013,6 +13220,10 @@ class TestHost implements Transport {
    * The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. The SDK's own copies of the state (what keeps `plugin.player.state` current) are left out. Empty means the player may stop the plugin while nothing uses it (unless it holds something else: a window, a panel, a filter…).
    */
   readonly listening: Set<string>;
+  /**
+   * Why the plugin listens to each event of TestHost.listening: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came.
+   */
+  readonly listeningWhy: Map<string, string[]>;
   /**
    * The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). Wire-level shape; change it with TestHost.setSource, which also broadcasts it.
    */
@@ -14493,6 +14704,20 @@ class TestHost implements Transport {
    * ```
    */
   close(): void;
+  /**
+   * Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason, as the player's log says it: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its mounted panel, its open windows. Empty: the player may stop it while idle and start it again on its next use. Filter chains, streams, jobs and the like (which also keep a plugin running) are not listed.
+   * @capability None.
+   * @example Check that a plugin can be stopped while idle
+   * The test fails if the plugin keeps running for no reason after it
+   * starts, and names the reason (a command whose `enabled` reads
+   * `plugin.player.state`, say: give it a `plugin.when` condition). The
+   * player stops such a plugin while nothing uses it and starts it again
+   * on its next use, so it costs no process meanwhile.
+   * ```ts
+   * assert.deepEqual(host.keepsRunning, []);
+   * ```
+   */
+  get keepsRunning(): string[];
 }
 ```
 

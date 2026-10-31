@@ -787,7 +787,11 @@ async function test(target) {
     run(
       process.execPath,
       ["--test", ...tests.map((file) => join(directory, file))],
-      { cwd: target.directory },
+      // startPlugin says why a plugin would keep running while idle.
+      {
+        cwd: target.directory,
+        env: { ...process.env, VESTRA_PLUGIN_RESIDENCY: "1" },
+      },
     ) !== 0
   )
     fail(`${target.name}: tests failed`);
