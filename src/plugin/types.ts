@@ -581,14 +581,16 @@ export interface CommandState {
 }
 
 /**
- * A value, or a function the SDK re-evaluates on every update pass (see
- * {@link Scope.update}); only changes are sent to the player.
+ * A value, or a function the SDK re-evaluates on every full update pass,
+ * and after a player state change only if it read a field of
+ * `plugin.player.state` that changed (see {@link Scope.update}); only
+ * changes are sent to the player.
  *
  * @example Mix a computed state with a fixed one
  * The Loop item carries a check mark while a loop is set and is always
- * enabled. A function is evaluated again in every update pass (after each
- * handler and player state change) and only changes are sent; a plain
- * value never changes.
+ * enabled. A function is evaluated again in every full update pass (after
+ * each handler), and after a player state change only if it read a changed
+ * field; only changes are sent, and a plain value never changes.
  * ```ts
  * plugin.commands.add({
  *   id: "loop",
@@ -1122,8 +1124,9 @@ export interface CommandOptions {
  * @remarks
  * The handle of one menu item and its keys. Its state (`enabled`, `checked`,
  * `busy`, `reason`) is bound: functions given to {@link Commands.add} or
- * {@link Command.set} are evaluated again in every update pass and only
- * changes reach the player. Its title, path, bindings and button cannot
+ * {@link Command.set} are evaluated again in every full update pass (after
+ * a player state change only if they read a changed field of
+ * `plugin.player.state`) and only changes reach the player. Its title, path, bindings and button cannot
  * change in place; dispose the command (or a child {@link Scope}) and add it
  * again. Disposing it, its scope or stopping the plugin removes the menu
  * item, its keys and its bar button.
@@ -1143,7 +1146,7 @@ export interface CommandOptions {
  *   path: ["@video", "Export…"],
  *   run: runExport,
  * });
- * // A function: re-evaluated in every update pass.
+ * // A function: re-evaluated in every full pass and when `phase` changes.
  * exportCommand.set({ enabled: () => plugin.player.state.phase === "ready" });
  * ```
  *
@@ -1790,8 +1793,9 @@ export interface Ui {
  * callback.
  *
  * `bind` is the usual way: the SDK re-evaluates bound functions in every
- * update pass (after each handler it calls, after player state changes, on
- * {@link Scope.update}) and sends only what changed, at most one write in
+ * full update pass (after each handler it calls, on {@link Scope.update}),
+ * and after a player state change those that read a changed field of
+ * `plugin.player.state`, and sends only what changed, at most one write in
  * flight per view. `set` sends now, even an unchanged value.
  *
  * Writes that fail (a name the Slint file does not declare, a value of the
@@ -1930,7 +1934,11 @@ export interface View {
    *
    * @remarks
    * The SDK calls `props` in every update pass (and right after `bind`) and
-   * sends the values that differ from the ones it sent last. Because an
+   * sends the values that differ from the ones it sent last. After a change
+   * of the player state alone it calls `props` only if it read a field of
+   * `plugin.player.state` that changed (SDK 1.5.45); a full pass follows
+   * after each handler, on {@link Scope.update} and at least once a second
+   * while the player state keeps changing. Because an
    * unchanged value is not sent again, text the user typed into an `in-out`
    * property stays until the plugin's value for it changes.
    *
@@ -1951,8 +1959,9 @@ export interface View {
    * @example Show what is playing and whether it can seek
    * The status window always shows the current file and enables its seek
    * controls only for seekable sources. The SDK calls the function right
-   * away and again in every update pass (after player state changes and
-   * after each handler) and sends only the values that changed.
+   * away, again in every full update pass (after each handler) and after
+   * each change of `source` or `can`, and sends only the values that
+   * changed.
    * ```ts
    * const status = plugin.windows.create("ui/status.slint");
    * status.bind(() => ({
@@ -5847,8 +5856,8 @@ export interface Player {
    * @example Drive the player's Next and Previous from a playlist
    * The player's Next and Previous items and keys play the plugin's list.
    * The player calls `next` and `previous` when the user asks; `canNext`
-   * and `canPrevious` are evaluated again after every handler the SDK runs,
-   * and while they return false the player disables its items ("No next
+   * and `canPrevious` are evaluated again after every handler the SDK runs
+   * (and after a player state change if they read a changed field), and while they return false the player disables its items ("No next
    * item").
    * ```ts
    * declare const items: string[];

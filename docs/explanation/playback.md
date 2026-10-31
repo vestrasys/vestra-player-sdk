@@ -128,7 +128,7 @@ flowchart TB
 
 ## Next and previous
 
-The player's **Previous** and **Next** (menu, keys, the bottom bar) are not tied to a playlist. One plugin at a time can **provide the sequence** with {@link "@vestra-player/sdk"!Player.provideSequence | provideSequence}, giving `next()`, `previous()` and two flags, `canNext` and `canPrevious`, which are bindings re-evaluated in every update pass.
+The player's **Previous** and **Next** (menu, keys, the bottom bar) are not tied to a playlist. One plugin at a time can **provide the sequence** with {@link "@vestra-player/sdk"!Player.provideSequence | provideSequence}, giving `next()`, `previous()` and two flags, `canNext` and `canPrevious`, which are bindings re-evaluated in every full update pass, and after a player state change only if they read a changed field.
 
 - Every plugin sees the flags as `player.state.can.next` and `can.previous`, and {@link "@vestra-player/sdk"!Player.next | player.next()} asks the provider to move; the provider's `next` runs in its own scope.
 - A second provider fails with `conflict` and does not fail activation; it is tried again when its flags change, so it takes over once the first provider goes away.

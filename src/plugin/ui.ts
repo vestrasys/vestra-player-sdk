@@ -259,7 +259,10 @@ export abstract class ViewBase implements View {
   protected readonly handlers = new Map<string, (...args: Json[]) => unknown>();
   readonly #values = new Map<string, PropValue>();
   /** Each binding, with where the plugin added it (for the player's log). */
-  readonly #binders = new Map<() => Props, () => string | undefined>();
+  readonly #binders = new Map<
+    () => Props,
+    { site: () => string | undefined; token: object }
+  >();
   /** What the host currently shows, as far as this side knows. */
   #sent = new Map<string, Sent>();
   /**
@@ -330,18 +333,33 @@ export abstract class ViewBase implements View {
     this.flush();
   }
   bind(props: () => Props) {
-    this.#binders.set(props, this.scope.runtime.callSite());
+    // `token` names this binding of this view in the runtime's read
+    // tracking: the same function bound to two views is two parts.
+    this.#binders.set(props, {
+      site: this.scope.runtime.callSite(),
+      token: {},
+    });
     this.scope.update();
     return this.scope.onDispose(() => {
       this.#binders.delete(props);
     });
   }
-  /** Current desired properties (bound values win over earlier `set`). */
+  /**
+   * Current desired properties (bound values win over earlier `set`). A
+   * precise pass (`Runtime.part`) skips a bind function that read none of
+   * the changed state: its last values stay.
+   */
   protected snapshot(): Record<string, PropValue> {
-    for (const [binder, site] of this.#binders) {
+    const runtime = this.scope.runtime;
+    for (const [binder, { site, token }] of this.#binders) {
       try {
-        const props = this.scope.runtime.reader("a view's bind", site, binder);
-        for (const [key, value] of Object.entries(encode(props)))
+        // Encoded inside the part: what encoding reads counts as the
+        // function's (a state object it returned).
+        const result = runtime.part(token, () =>
+          encode(runtime.reader("a view's bind", site, binder)),
+        );
+        if (!result) continue;
+        for (const [key, value] of Object.entries(result.value))
           this.#values.set(key, value);
       } catch (error) {
         this.scope.report(error);

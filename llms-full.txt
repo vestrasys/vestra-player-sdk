@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.44: full reference
+# @vestra-player/sdk 1.5.45: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -1902,6 +1902,8 @@ host.handle("processing.replace", () => {
 ##### Wait, then assert
 
 `await host.settle()` after every action that makes the plugin talk to the player; `host.settle(400)` also lets debounces and timers due by then fire. Then assert on what the host recorded: `host.window(id).props` (kebab-case names), `host.command(id).state`, `host.osd`, `host.source`.
+
+`settle` does not wait for the once-a-second full update pass (SDK 1.5.45): after `host.setSource(...)` only the bindings that read a changed field of `plugin.player.state` run again. A value your plugin changed outside a handler (a timer, a promise continuation, a child process) without `plugin.update()` shows in the next full pass, at most about a second later; call `plugin.update()` in the plugin after such a change, or wait `await host.settle(1000)` in the test.
 
 `settle` waits only for calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine; poll the value you assert on instead:
 
@@ -3866,13 +3868,17 @@ There is no cleanup function to return from `activate`. Because every resource i
 A plugin's state is plain variables. The SDK keeps the player in step with it through **bindings** and the **update pass**:
 
 - A binding is a function the SDK calls to get a current value: view.bind(() => props) for a window, panel or settings page, and the function form of a command's `enabled`, `checked`, `busy` and `reason` (Bindable).
-- In an update pass the SDK calls every binding of the plugin, compares each result with the value it last sent, and sends only what changed.
+- In an update pass the SDK calls the bindings of the plugin, compares each result with the value it last sent, and sends only what changed.
 
-Update passes run:
+A **full pass** calls every binding. It runs:
 
 - after every handler the SDK calls returns (a command's `run`, a view callback, an `onChange`, `onStatus`, `onEnd` or `onStop` listener), and again when the promise it returned settles;
-- after the player, subtitle, panel position, filter or export state changes;
+- after the subtitle, window, panel position, timeline, appearance, filter or export state changes;
 - when the plugin calls plugin.update().
+
+A **precise pass** follows a change of the player state (SDK 1.5.45). While media plays the player sends its state about ten times a second, mostly with only `position` changed. The SDK notes which fields of `plugin.player.state` each binding read the last time it ran (each `view.bind` function on its own; a command's four functions together) and calls only the bindings that read a field that changed. A panel whose list reads nothing of the player state is not rebuilt on every position tick; a label that shows the position is. `player.isCurrent` and `Media.current` count as reading the source. A `player.onChange` listener is followed by a full pass, as above, unless it returned synchronously and read only fields that did not change.
+
+A precise pass cannot see state the plugin changed by itself. So while precise passes leave bindings out, a full pass follows at least once a second: a variable your own timer changed without `plugin.update()` appears within about a second (before SDK 1.5.45 it usually appeared at the next position tick). Call `plugin.update()` after such a change to show it at once.
 
 Several requests within one microtask are merged into one pass, and every target has at most one write in flight: values that change meanwhile are merged into the next write. A binding that changes 60 times a second therefore costs one write per round trip, never a growing queue.
 
@@ -3893,7 +3899,7 @@ sequenceDiagram
     S->>U: the label changes, Jump to bookmark is enabled
 ```
 
-The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers a pass; call `plugin.update()` after such a change. Keep a slider responsive while dragging shows the pattern; How Slint and TypeScript talk explains `set` versus `bind` for views.
+The rule that follows: **state you change outside a handler, or after an `await` inside one, appears only at the next full pass.** Changing a variable from your own `setInterval`, a socket callback or the middle of a long task shows nothing until something triggers one (at most about a second while media plays); call `plugin.update()` after such a change. Keep a slider responsive while dragging shows the pattern; How Slint and TypeScript talk explains `set` versus `bind` for views.
 
 #### Stopping
 
@@ -4009,7 +4015,7 @@ const toggle = plugin.commands.add({
 
 - **The id is the command's identity.** It is unique within the plugin; the player knows the command as `<manifest id>/<id>`. The user's own key bindings are stored under that pair, so changing a title or moving the command to another menu keeps them.
 - **`path` puts it in the main menu.** Leave it out for a command that only has bindings or lives in a panel's context menu (Panel.showMenu); it then needs a `title`.
-- **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions (Bindable); `enabled` and `checked` may also be conditions from `plugin.when` (below). Functions are evaluated in every update pass and sent only when they change, so the menu's check mark follows the player without a listener you write. Command.set replaces them later.
+- **State is declared, not pushed.** `enabled`, `checked`, `busy` and `reason` are values or functions (Bindable); `enabled` and `checked` may also be conditions from `plugin.when` (below). Functions are evaluated in every full update pass, and after a player state change only if they read a field that changed; they are sent only when they change, so the menu's check mark follows the player without a listener you write. Command.set replaces them later.
 - **The player calls `run` only when it can run.** While a command is disabled or busy, neither its menu item nor its binding calls `run`; `reason` tells the user why (it appears in the menu and, for a key press, on the video).
 - **Titles and paths are fixed.** They cannot change in place. A menu that follows changing content (tracks, presets, a radio group) lives in a child scope that is disposed and rebuilt when the content changes; `order` keeps its place (Handles and scopes).
 - Disposing the command removes it from the menu and the binding table; the same id can be added again at once. The number of commands per plugin and per player is limited (Reference: limits); the limit stops runaway menus, so cap menus built from media content (tracks, chapters) yourself.
@@ -4266,7 +4272,7 @@ player.openStream (capability `producer.av`) makes a source whose picture and so
 
 #### Next and previous
 
-The player's **Previous** and **Next** (menu, keys, the bottom bar) are not tied to a playlist. One plugin at a time can **provide the sequence** with provideSequence, giving `next()`, `previous()` and two flags, `canNext` and `canPrevious`, which are bindings re-evaluated in every update pass.
+The player's **Previous** and **Next** (menu, keys, the bottom bar) are not tied to a playlist. One plugin at a time can **provide the sequence** with provideSequence, giving `next()`, `previous()` and two flags, `canNext` and `canPrevious`, which are bindings re-evaluated in every full update pass, and after a player state change only if they read a changed field.
 
 - Every plugin sees the flags as `player.state.can.next` and `can.previous`, and player.next() asks the provider to move; the provider's `next` runs in its own scope.
 - A second provider fails with `conflict` and does not fail activation; it is tried again when its flags change, so it takes over once the first provider goes away.
@@ -4627,12 +4633,12 @@ export component ListPanel inherits Rectangle {
 
 |                  | `set({ x })`                                                                            | `bind(() => ({ x }))`                                                                 |
 | ---------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| When it is sent  | Immediately (in the next write).                                                        | In every update pass, if `x` differs from the last value sent.                        |
+| When it is sent  | Immediately (in the next write).                                                        | In every full update pass, and after a player state change if the function read a changed field; when `x` differs from the last value sent. |
 | Same value again | Sent again. Use this to pull a control back to the model value after the user moved it. | Not sent. A field the user edited stays as the user left it until your value changes. |
 | Write fails      | Retried with back-off (0.25 s doubling up to 30 s).                                     | Not repeated until the value changes.                                                 |
 | Typical use      | One-off values: a document, a reset.                                                    | Everything derived from plugin state: labels, enabled flags, lists, status lines.     |
 
-Update passes run after every handler the SDK calls, after player and other state changes, and when you call plugin.update(); several requests are merged into one pass, and each view has at most one write in flight (The update pass has the details).
+Update passes run after every handler the SDK calls, after player and other state changes, and when you call plugin.update(); several requests are merged into one pass, and each view has at most one write in flight. After a player state change only the bind functions that read a changed field of `plugin.player.state` run again (The update pass has the details).
 
 The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see Keep a slider responsive while dragging).
 
@@ -5810,6 +5816,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.45](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1545) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.44](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1544) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.43](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1543) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.42](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1542) | **Nobody.** Documentation only: no API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
@@ -6367,8 +6374,10 @@ interface CommandState {
 
 ### Bindable
 
-A value, or a function the SDK re-evaluates on every update pass (see
-Scope.update); only changes are sent to the player.
+A value, or a function the SDK re-evaluates on every full update pass,
+and after a player state change only if it read a field of
+`plugin.player.state` that changed (see Scope.update); only
+changes are sent to the player.
 
 ```ts
 type Bindable<T> = T | (() => T);
@@ -6377,9 +6386,9 @@ type Bindable<T> = T | (() => T);
 Example: Mix a computed state with a fixed one
 
 The Loop item carries a check mark while a loop is set and is always
-enabled. A function is evaluated again in every update pass (after each
-handler and player state change) and only changes are sent; a plain
-value never changes.
+enabled. A function is evaluated again in every full update pass (after
+each handler), and after a player state change only if it read a changed
+field; only changes are sent, and a plain value never changes.
 ```ts
 plugin.commands.add({
   id: "loop",
@@ -6800,8 +6809,9 @@ from the menu and the binding table; the id can be added again right away.
 
 The handle of one menu item and its keys. Its state (`enabled`, `checked`,
 `busy`, `reason`) is bound: functions given to Commands.add or
-Command.set are evaluated again in every update pass and only
-changes reach the player. Its title, path, bindings and button cannot
+Command.set are evaluated again in every full update pass (after
+a player state change only if they read a changed field of
+`plugin.player.state`) and only changes reach the player. Its title, path, bindings and button cannot
 change in place; dispose the command (or a child Scope) and add it
 again. Disposing it, its scope or stopping the plugin removes the menu
 item, its keys and its bar button.
@@ -6864,7 +6874,7 @@ const exportCommand = plugin.commands.add({
   path: ["@video", "Export…"],
   run: runExport,
 });
-// A function: re-evaluated in every update pass.
+// A function: re-evaluated in every full pass and when `phase` changes.
 exportCommand.set({ enabled: () => plugin.player.state.phase === "ready" });
 ```
 
@@ -7415,8 +7425,9 @@ a property back: a value the user changes reaches it only through a
 callback.
 
 `bind` is the usual way: the SDK re-evaluates bound functions in every
-update pass (after each handler it calls, after player state changes, on
-Scope.update) and sends only what changed, at most one write in
+full update pass (after each handler it calls, on Scope.update),
+and after a player state change those that read a changed field of
+`plugin.player.state`, and sends only what changed, at most one write in
 flight per view. `set` sends now, even an unchanged value.
 
 Writes that fail (a name the Slint file does not declare, a value of the
@@ -7519,7 +7530,11 @@ interface View {
    * Keep properties equal to a function of the plugin's state.
    *
    * The SDK calls `props` in every update pass (and right after `bind`) and
-   * sends the values that differ from the ones it sent last. Because an
+   * sends the values that differ from the ones it sent last. After a change
+   * of the player state alone it calls `props` only if it read a field of
+   * `plugin.player.state` that changed (SDK 1.5.45); a full pass follows
+   * after each handler, on Scope.update and at least once a second
+   * while the player state keeps changing. Because an
    * unchanged value is not sent again, text the user typed into an `in-out`
    * property stays until the plugin's value for it changes.
    *
@@ -7537,8 +7552,9 @@ interface View {
    * @example Show what is playing and whether it can seek
    * The status window always shows the current file and enables its seek
    * controls only for seekable sources. The SDK calls the function right
-   * away and again in every update pass (after player state changes and
-   * after each handler) and sends only the values that changed.
+   * away, again in every full update pass (after each handler) and after
+   * each change of `source` or `can`, and sends only the values that
+   * changed.
    * ```ts
    * const status = plugin.windows.create("ui/status.slint");
    * status.bind(() => ({
@@ -10947,8 +10963,8 @@ interface Player {
    * @example Drive the player's Next and Previous from a playlist
    * The player's Next and Previous items and keys play the plugin's list.
    * The player calls `next` and `previous` when the user asks; `canNext`
-   * and `canPrevious` are evaluated again after every handler the SDK runs,
-   * and while they return false the player disables its items ("No next
+   * and `canPrevious` are evaluated again after every handler the SDK runs
+   * (and after a player state change if they read a changed field), and while they return false the player disables its items ("No next
    * item").
    * ```ts
    * const playAt = async (at: number) => {
@@ -17001,6 +17017,13 @@ class TestHost implements Transport {
    * or parsing a file, a child process, a network request) is not waited
    * for: on a loaded machine it can finish after `settle()` returns. Poll
    * the result you assert on instead (second example).
+   *
+   * `settle()` does not wait for the SDK's once-a-second full update pass
+   * (SDK 1.5.45). After `setSource` (or another player state change) only
+   * the bindings that read a changed field of `plugin.player.state` run
+   * again; state the plugin changed outside a handler without
+   * `plugin.update()` shows only in the next full pass. Have the plugin
+   * call `plugin.update()` after such a change, or wait `settle(1000)`.
    * @param ms - Extra time to wait, for debounces and timers (default 0).
    * @capability None.
    * @throws Never.

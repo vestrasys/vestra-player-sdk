@@ -167,12 +167,12 @@ A tool window ({@link "@vestra-player/sdk"!Window | Window}), a panel ({@link "@
 
 |                  | `set({ x })`                                                                            | `bind(() => ({ x }))`                                                                 |
 | ---------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| When it is sent  | Immediately (in the next write).                                                        | In every update pass, if `x` differs from the last value sent.                        |
+| When it is sent  | Immediately (in the next write).                                                        | In every full update pass, and after a player state change if the function read a changed field; when `x` differs from the last value sent. |
 | Same value again | Sent again. Use this to pull a control back to the model value after the user moved it. | Not sent. A field the user edited stays as the user left it until your value changes. |
 | Write fails      | Retried with back-off (0.25 s doubling up to 30 s).                                     | Not repeated until the value changes.                                                 |
 | Typical use      | One-off values: a document, a reset.                                                    | Everything derived from plugin state: labels, enabled flags, lists, status lines.     |
 
-Update passes run after every handler the SDK calls, after player and other state changes, and when you call {@link "@vestra-player/sdk"!Scope.update | plugin.update()}; several requests are merged into one pass, and each view has at most one write in flight ([The update pass](plugins.md#the-update-pass) has the details).
+Update passes run after every handler the SDK calls, after player and other state changes, and when you call {@link "@vestra-player/sdk"!Scope.update | plugin.update()}; several requests are merged into one pass, and each view has at most one write in flight. After a player state change only the bind functions that read a changed field of `plugin.player.state` run again ([The update pass](plugins.md#the-update-pass) has the details).
 
 The rule to remember: **state you change after an `await` inside a handler appears only when the handler finishes**, unless something else triggers a pass. Call `plugin.update()` right after changing it (see [Keep a slider responsive while dragging](../how-to/slider.md)).
 
