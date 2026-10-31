@@ -46,13 +46,19 @@ export class WindowService {
   start() {
     if (this.#started) return;
     this.#started = true;
-    this.#runtime.on("window.state", (data) => {
-      const facts = data as Partial<WindowFacts> | null;
-      // The event carries the facts; anything else is read again.
-      if (typeof facts?.fullscreen === "boolean" && facts.videoArea)
-        this.accept(facts as WindowFacts);
-      else void this.read();
-    });
+    // A mirror: a plugin listens through `watch` and bindings.
+    this.#runtime.on(
+      "window.state",
+      (data) => {
+        const facts = data as Partial<WindowFacts> | null;
+        // The event carries the facts; anything else is read again.
+        if (typeof facts?.fullscreen === "boolean" && facts.videoArea)
+          this.accept(facts as WindowFacts);
+        else void this.read();
+      },
+      "events",
+      true,
+    );
     void this.read();
   }
   /** The palette, as the `window.state` reply carried it (`plugin.appearance`). */
@@ -89,7 +95,13 @@ export class WindowService {
   }
   watch(listener: (state: WindowState) => void) {
     this.#listeners.add(listener);
-    return { dispose: async () => void this.#listeners.delete(listener) };
+    const held = this.#runtime.hold("window.state");
+    return {
+      dispose: async () => {
+        this.#listeners.delete(listener);
+        await held.dispose();
+      },
+    };
   }
 }
 
@@ -102,6 +114,7 @@ export function mainWindow(scope: ScopeImpl): MainWindow {
   return {
     get state() {
       service().start();
+      scope.runtime.reading("window.state");
       return service().state;
     },
     onChange(listener) {

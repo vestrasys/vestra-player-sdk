@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.5.37: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. L<n>: a line of llms-full.txt (next to this file), which has every page, declaration and example.
+> @vestra-player/sdk 1.5.38: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls; it runs in its own Node.js process. Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. L<n>: a line of llms-full.txt (next to this file), which has every page, declaration and example.
 
 **Rules**
 
@@ -33,7 +33,7 @@ my-plugin/
 }
 ```
 
-Fields: `id`, `version`, `apiVersion`, `entry`, `capabilities`, `name`, `author`, `punchline`, `description`, `tags`, `icon`, `readme`, `changelog`, `sourceUrl`, `license`, `minPlayerVersion`; unknown fields and capabilities are rejected. Rules and limits: L2636–2706.
+Fields: `id`, `version`, `apiVersion`, `entry`, `capabilities`, `name`, `author`, `punchline`, `description`, `tags`, `icon`, `readme`, `changelog`, `sourceUrl`, `license`, `minPlayerVersion`; unknown fields and capabilities are rejected. Rules and limits: L2646–2716.
 
 **main.ts**
 
@@ -78,9 +78,9 @@ export default async function activate(plugin: Plugin) {
 - `secrets`: Secrets.get/set/delete
 - `rendering.manage`: Rendering.setPreference/restartPlayer
 - `video.upscaling`: VideoUpscaling.state/set
-- No capability: `tools`, `storage`, `system`, `app`, `ui` (images and Markdown), `i18n`, reading window.state, appearance.theme, packages.list and rendering.state. Details: L2707–2767.
+- No capability: `tools`, `storage`, `system`, `app`, `ui` (images and Markdown), `i18n`, reading window.state, appearance.theme, packages.list and rendering.state. Details: L2717–2777.
 
-**Test**: `tests/*.test.ts` with `node:test`, run by `vestra-plugin test`. `startPlugin(activate, { directory: new URL("..", import.meta.url) })` from `@vestra-player/sdk/testing` returns `{ host, stop }`, `host` an in-memory player (TestHost): act (`host.command(id).run()`, `host.press(key)`), `await host.settle()`, assert on `host.osd`, `host.window(id).props`… Guide: L2077–2265; TestHost: L12744.
+**Test**: `tests/*.test.ts` with `node:test`, run by `vestra-plugin test`. `startPlugin(activate, { directory: new URL("..", import.meta.url) })` from `@vestra-player/sdk/testing` returns `{ host, stop }`, `host` an in-memory player (TestHost): act (`host.command(id).run()`, `host.press(key)`), `await host.settle()`, assert on `host.osd`, `host.window(id).props`… Guide: L2087–2275; TestHost: L12758.
 
 **Command line**
 
@@ -108,39 +108,39 @@ export default async function activate(plugin: Plugin) {
 - `limit`: A player-wide limit was reached, a property value is over the limits of PropValue
 - `reserved`: The id is `vestra` or starts with `vestra.`
 - `versionMismatch`: The package needs a newer player
-- Others: PluginError, llms-full.txt L3770.
+- Others: PluginError, llms-full.txt L3780.
 
 ## Reference
 
 - [llms-full.txt](https://vestrasys.github.io/vestra-player-sdk/llms-full.txt), also node_modules/@vestra-player/sdk/llms-full.txt; pages: [site](https://vestrasys.github.io/vestra-player-sdk/).
 - Tutorials: Getting started L9–237
-- Concepts: How a plugin runs L238–408; Commands, menus and key bindings L409–520; Playback state, controls and sources L521–666; Video and audio processing L667–753; Windows, panels, settings pages, dialogs and the OSD L754–1042
-- How-to: Control playback L1043–1171; Store a plugin's data L1172–1239; Load subtitles from a plugin L1240–1318; Keep a slider responsive while dragging L1319–1493; Remember a window's state between runs L1494–1623; Offer a GPU rendering switch L1624–1744; Translate a plugin L1745–1928; Migrate a plugin to English source text L1929–2076; Test a plugin L2077–2265; Publish a plugin L2266–2354; Migrating off package rollback (1.5.16, removed in 1.5.17) L2355–2430
-- Guidelines: Interface guidelines L2431–2538; Menu guidelines L2539–2635
-- Reference: Manifest L2636–2706; Capabilities L2707–2767; Limits L2768–2897; Commands, menus and bindings L2898–3381; Platforms L3382–3412; Theme L3413–3634; Command line L3635–3692
-- [API: @vestra-player/sdk](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html): L3693–12428
-- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html): L12429–15144
+- Concepts: How a plugin runs L238–418; Commands, menus and key bindings L419–530; Playback state, controls and sources L531–676; Video and audio processing L677–763; Windows, panels, settings pages, dialogs and the OSD L764–1052
+- How-to: Control playback L1053–1181; Store a plugin's data L1182–1249; Load subtitles from a plugin L1250–1328; Keep a slider responsive while dragging L1329–1503; Remember a window's state between runs L1504–1633; Offer a GPU rendering switch L1634–1754; Translate a plugin L1755–1938; Migrate a plugin to English source text L1939–2086; Test a plugin L2087–2275; Publish a plugin L2276–2364; Migrating off package rollback (1.5.16, removed in 1.5.17) L2365–2440
+- Guidelines: Interface guidelines L2441–2548; Menu guidelines L2549–2645
+- Reference: Manifest L2646–2716; Capabilities L2717–2777; Limits L2778–2907; Commands, menus and bindings L2908–3391; Platforms L3392–3422; Theme L3423–3644; Command line L3645–3702
+- [API: @vestra-player/sdk](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html): L3703–12442
+- [API: @vestra-player/sdk/testing](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk_testing.html): L12443–15162
 
 ## API
 
 Where each `plugin.<module>` is declared:
 
-- Plugin L4096, Scope L3845, PluginError L3770, Disposable L3708
-- Commands L4493; Windows L5430; Panels L6876; Dialogs L7544; Player L8285; video: VideoFilter L9165, VideoView L9265, RenderOptions L9352, VideoUpscaling L9548; audio: AudioFilter L9210; Subtitles L9744; media: MediaCapture L10148; Resolvers L10378; Packages L10776; Osd L9030; Host L8872; Clipboard L11104; Power L11191; Tools L11250; Storage L11402; System L11601; Secrets L11681; window: MainWindow L7193; App L7373; Rendering L11944; Bindings L11004; Ui L4782; Timeline L7105; Drops L6123; Appearance L6204; I18n L6437; Settings L6720.
+- Plugin L4106, Scope L3855, PluginError L3780, Disposable L3718
+- Commands L4503; Windows L5440; Panels L6886; Dialogs L7554; Player L8295; video: VideoFilter L9175, VideoView L9275, RenderOptions L9362, VideoUpscaling L9558; audio: AudioFilter L9220; Subtitles L9754; media: MediaCapture L10158; Resolvers L10388; Packages L10790; Osd L9040; Host L8882; Clipboard L11118; Power L11205; Tools L11264; Storage L11416; System L11615; Secrets L11695; window: MainWindow L7203; App L7383; Rendering L11958; Bindings L11018; Ui L4792; Timeline L7115; Drops L6133; Appearance L6214; I18n L6447; Settings L6730.
 
 ## Examples
 
 Tested plugins in [examples/](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples):
 
-- hello: The README Quick start: one menu command and an on-screen message. L15579–15668
-- blur: A tool window with one slider that blurs the playing video. L15669–15930
-- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L15931–16263
-- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L16264–16450
-- panel-menu: A sidebar panel with its own right-click menu. L16451–16659
-- menus: Radio menu items, separator groups and a menu item whose title changes. L16660–16819
-- theme-widgets: A tool window drawn with the player's theme and widgets. L16820–16983
-- markdown: A window that shows a Markdown document. L16984–17180
-- i18n: A plugin in the player's language: English source text, a Chinese translation. L17181–17348
+- hello: The README Quick start: one menu command and an on-screen message. L15597–15686
+- blur: A tool window with one slider that blurs the playing video. L15687–15948
+- signal-generator: Generates its own video and audio: colour bars and a 1 kHz tone. L15949–16281
+- bookmark: A tool window bound to the playback state: remember the position and jump back to it. L16282–16468
+- panel-menu: A sidebar panel with its own right-click menu. L16469–16677
+- menus: Radio menu items, separator groups and a menu item whose title changes. L16678–16837
+- theme-widgets: A tool window drawn with the player's theme and widgets. L16838–17001
+- markdown: A window that shows a Markdown document. L17002–17198
+- i18n: A plugin in the player's language: English source text, a Chinese translation. L17199–17366
 
 ## Optional
 

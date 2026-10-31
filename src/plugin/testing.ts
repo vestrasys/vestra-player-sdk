@@ -775,6 +775,16 @@ export class TestHost implements Transport {
   /** The host events the plugin subscribed to (needs `events` etc.). */
   readonly subscriptions = new Set<string>();
   /**
+   * The subscribed events the plugin really listens to: an `onChange` and
+   * the like, or a binding that reads the state. The SDK's own copies of
+   * the state (what keeps `plugin.player.state` current) are left out.
+   * Empty means the player may stop the plugin while nothing uses it
+   * (unless it holds something else: a window, a panel, a filter…).
+   *
+   * @since 1.5.38
+   */
+  readonly listening = new Set<string>();
+  /**
    * The player's source facts (phase, position, duration, paused, rate,
    * audio tracks, loop, ...). Wire-level shape; change it with
    * {@link TestHost.setSource}, which also broadcasts it.
@@ -4282,9 +4292,16 @@ export class TestHost implements Transport {
   }
 
   readonly #defaults: Record<string, Handler> = {
-    "events.subscribe": (p) => void this.subscriptions.add(String(p.event)),
-    "events.unsubscribe": (p) =>
-      void this.subscriptions.delete(String(p.event)),
+    "events.subscribe": (p) => {
+      const event = String(p.event);
+      this.subscriptions.add(event);
+      if (p.mirror === true) this.listening.delete(event);
+      else this.listening.add(event);
+    },
+    "events.unsubscribe": (p) => {
+      this.subscriptions.delete(String(p.event));
+      this.listening.delete(String(p.event));
+    },
     "commands.register": (p) => {
       const id = String(p.id);
       // The player's built-in menu ids (MENU_IDS) in the first path segment.

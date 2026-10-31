@@ -37,11 +37,17 @@ export class TimelineService {
   start() {
     if (this.#started) return;
     this.#started = true;
-    this.#runtime.on("timeline.changed", (data) => {
-      const marks = (data as { marks?: WireMark[] } | null)?.marks;
-      if (Array.isArray(marks)) this.accept(marks);
-      else void this.read();
-    });
+    // A mirror: a plugin listens through `watch` and bindings.
+    this.#runtime.on(
+      "timeline.changed",
+      (data) => {
+        const marks = (data as { marks?: WireMark[] } | null)?.marks;
+        if (Array.isArray(marks)) this.accept(marks);
+        else void this.read();
+      },
+      "events",
+      true,
+    );
   }
   accept(marks: WireMark[]) {
     const next = view(marks);
@@ -56,7 +62,13 @@ export class TimelineService {
   }
   watch(listener: (marks: readonly TimelineMark[]) => void) {
     this.#listeners.add(listener);
-    return { dispose: async () => void this.#listeners.delete(listener) };
+    const held = this.#runtime.hold("timeline.changed");
+    return {
+      dispose: async () => {
+        this.#listeners.delete(listener);
+        await held.dispose();
+      },
+    };
   }
 }
 
@@ -68,6 +80,7 @@ export function timeline(scope: ScopeImpl): Timeline {
   return {
     get marks() {
       service().start();
+      scope.runtime.reading("timeline.changed");
       return service().marks;
     },
     onChange(listener) {
