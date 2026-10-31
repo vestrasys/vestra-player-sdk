@@ -64,13 +64,20 @@
  * @packageDocumentation
  * @module @vestra-player/sdk/testing
  */
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  openSync,
+  readFileSync,
+  readSync,
+  closeSync,
+  realpathSync,
+} from "node:fs";
 import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:net";
 import { randomBytes } from "node:crypto";
 import type { Server } from "node:net";
 import { tmpdir } from "node:os";
-import { extname, isAbsolute, join } from "node:path";
+import { extname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostError } from "../wire.ts";
 import { localSocketPath } from "./local.ts";
@@ -107,7 +114,8 @@ import { validStep } from "./player.ts";
 import type { CommandDeclaration } from "../commands.ts";
 import type { SourceState, SourceStamp } from "../source.ts";
 import type { SubtitleState } from "../subtitles.ts";
-import { nodeProblem } from "../processing.ts";
+import { nodeProblem, VIDEO_PROCESSING_LIMITS } from "../processing.ts";
+import { shaderIdProblem, shaderListProblem } from "./shaders.ts";
 import {
   RENDER_DEFAULTS,
   renderProblem,
@@ -175,6 +183,8 @@ export { SECRET_LIMITS };
 export { SESSION_STORAGE_LIMITS };
 /** The player's limits on loaded subtitle files, which the test host enforces as well. */
 export { SUBTITLE_LIMITS };
+/** The player's bounds on convolution, lut3d and shader-channel requests, which the test host enforces as well. */
+export { VIDEO_PROCESSING_LIMITS };
 /** The names bindings are made of. */
 export { BINDING_INPUTS };
 /** The colours of the player's palettes, by `Theme` token. */
@@ -610,6 +620,74 @@ export interface FakeProducer {
 const kebab = (name: string) =>
   name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+/**
+ * The player's `playback/plugin_files.rs`: a file the plugin names for its
+ * video processing is an absolute path inside one of `roots` after
+ * following links, a regular file of at most `max` bytes. Returns the real
+ * path or throws the player's error.
+ */
+function ownFile(path: string, roots: string[], what: string, max: number) {
+  if (!isAbsolute(path))
+    throw new HostError("invalid", `${what} path must be absolute: ${path}`);
+  let real: string;
+  try {
+    real = realpathSync(path);
+  } catch {
+    throw new HostError("missing", `${what} not found: ${path}`);
+  }
+  const inside = roots.some((root) => {
+    let base: string;
+    try {
+      base = realpathSync(root);
+    } catch {
+      return false;
+    }
+    const rel = relative(base, real);
+    return rel === "" || (!/^\.\.([\\/]|$)/.test(rel) && !isAbsolute(rel));
+  });
+  if (!inside)
+    throw new HostError(
+      "invalid",
+      `${what} must be in the plugin's package or data directory: ${path}`,
+    );
+  const stat = statSync(real);
+  if (!stat.isFile())
+    throw new HostError("invalid", `${what} is not a file: ${path}`);
+  if (stat.size > max)
+    throw new HostError(
+      "invalid",
+      `${what} is larger than ${max / 1024 / 1024} MiB: ${path}`,
+    );
+  return real;
+}
+
+/** The `LUT_3D_SIZE` check of `plugin_files::lut` on the first 64 KiB. */
+function cubeProblem(file: string): string | null {
+  const buffer = Buffer.alloc(64 * 1024);
+  const fd = openSync(file, "r");
+  let read: number;
+  try {
+    read = readSync(fd, buffer, 0, buffer.length, 0);
+  } finally {
+    closeSync(fd);
+  }
+  for (const line of buffer.subarray(0, read).toString("utf8").split("\n")) {
+    const [word, value] = line.trim().split(/\s+/);
+    if (word === "LUT_3D_SIZE") {
+      const size = Number(value);
+      return Number.isInteger(size) &&
+        size >= 2 &&
+        size <= VIDEO_PROCESSING_LIMITS.lutSize
+        ? null
+        : `LUT_3D_SIZE must be 2 to ${VIDEO_PROCESSING_LIMITS.lutSize}`;
+    }
+    if (word === "LUT_1D_SIZE") return "a 1D LUT; lut3d needs LUT_3D_SIZE";
+    if (word !== undefined && word !== "" && Number.isFinite(Number(word)))
+      break;
+  }
+  return "no LUT_3D_SIZE line before the data";
+}
 
 function initialSource(): SourceState {
   return {
@@ -1915,6 +1993,80 @@ export class TestHost implements Transport {
         state: "failed",
         error: { code, message },
       });
+    // The player tells every shader handle too (`failVideoShaders`).
+    if (code === "unsupported")
+      for (const [id, paths] of this.videoShaders.handles)
+        if (paths.length > 0)
+          this.emit("video.shaders.status", {
+            id,
+            state: "failed",
+            error: { code, message },
+          });
+  }
+  /**
+   * The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists
+   * the player holds for this plugin's handles by id (the real paths, after
+   * following links), and how many shaders other plugins hold, which count
+   * against {@link VIDEO_PROCESSING_LIMITS}`.shaders` (`limit`). Files must
+   * be under {@link TestHost.fileRoots}; under software rendering
+   * (`videoRender.gpu = false`) a non-empty list fails with `unsupported`.
+   *
+   * @since 1.5.39
+   */
+  readonly videoShaders: {
+    /** This plugin's lists by handle id; a cleared handle has none. */
+    handles: Map<string, string[]>;
+    /** Shaders other plugins hold (0–16). */
+    others: number;
+  } = { handles: new Map(), others: 0 };
+  /**
+   * Where the plugin's own files may be: its package directory and its
+   * data directory ({@link startPlugin} sets both when the list is still
+   * empty). `lut3d` files and shader-channel files outside them fail with
+   * `invalid`, as in the player.
+   *
+   * @since 1.5.39
+   */
+  fileRoots: string[] = [];
+  /**
+   * What the player pushes to a shader handle when mpv cannot compile a
+   * shader (code `failed`; the player cannot tell whose shader failed, so
+   * every handle with shaders hears it) or the player switches to software
+   * rendering (`unsupported`; use {@link TestHost.failVideoRender}, which
+   * also tells the handles). Pushed only to a handle that holds shaders.
+   *
+   * @capability None.
+   *
+   * @example Make the plugin's shader fail to compile
+   * The plugin's shader handle reports `failed`, as when mpv rejects a
+   * shader. The host pushes the failure only to a handle that holds
+   * shaders, which its accepted `set` made it; the SDK updates the
+   * handle's `status` when the push arrives, so the test settles first.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * import { join } from "node:path";
+   * import { writeFileSync } from "node:fs";
+   * declare const host: TestHost;
+   * // ---cut---
+   * const file = join(plugin.dataDirectory, "sharpen.glsl");
+   * writeFileSync(file, "//!HOOK MAIN\n");
+   * const shaders = plugin.video.shaders("sharpen");
+   * shaders.set([file]); // the handle now holds a shader
+   * await host.settle();
+   * host.failVideoShaders("sharpen", "shader compile failed: ERROR: 0:3: ...");
+   * await host.settle();
+   * assert.equal(shaders.status.state, "failed");
+   * ```
+   *
+   * @since 1.5.39
+   */
+  failVideoShaders(id: string, message: string) {
+    if ((this.videoShaders.handles.get(id)?.length ?? 0) > 0)
+      this.emit("video.shaders.status", {
+        id,
+        state: "failed",
+        error: { code: "failed", message },
+      });
   }
   /**
    * The player's processing (filter) state. Wire-level; may change in minor
@@ -2314,9 +2466,9 @@ export class TestHost implements Transport {
    * import activate from "../main.ts";
    *
    * const host = new TestHost();
-   * host.videoRender.gpu = false; // software draws now (Windows)
+   * host.videoRender.gpu = false; // software draws now (Linux)
    * host.rendering.startedWith = "software";
-   * host.rendering.reason = { code: "no-gpu-backend", message: "No GPU renderer on Windows" };
+   * host.rendering.reason = { code: "no-gpu-backend", message: "this player has no GPU renderer on Linux yet" };
    * host.rendering.gpu = { available: false, reason: host.rendering.reason };
    * const { stop } = await startPlugin(activate, {
    *   directory: new URL("..", import.meta.url),
@@ -2324,7 +2476,7 @@ export class TestHost implements Transport {
    * });
    * const item = host.command("gpu-rendering");
    * assert.equal(item.state.enabled, false);
-   * assert.equal(item.state.reason, "No GPU renderer on Windows");
+   * assert.equal(item.state.reason, "this player has no GPU renderer on Linux yet");
    * await stop();
    * ```
    *
@@ -4970,6 +5122,46 @@ export class TestHost implements Transport {
         this.setVideoRenderOwner(null);
       return null;
     },
+    // The player's capability layer and `video_shaders.rs`.
+    "video.shaders.set": (p) => {
+      const idProblem = shaderIdProblem(p.id);
+      if (idProblem) throw new HostError("invalid", idProblem);
+      if (
+        !Array.isArray(p.paths) ||
+        p.paths.some((path) => typeof path !== "string")
+      )
+        throw new HostError("invalid", "paths must be an array of paths");
+      const id = p.id as string;
+      const list = p.paths as string[];
+      const listProblem = shaderListProblem(list);
+      if (listProblem?.startsWith("at most"))
+        throw new HostError("limit", listProblem);
+      const paths = list.map((path) =>
+        ownFile(
+          path,
+          this.fileRoots,
+          "shader",
+          VIDEO_PROCESSING_LIMITS.shaderBytes,
+        ),
+      );
+      if (paths.length > 0 && !this.videoRender.gpu)
+        throw new HostError(
+          "unsupported",
+          "shaders need GPU rendering; the player renders in software",
+        );
+      const mine = [...this.videoShaders.handles]
+        .filter(([other]) => other !== id)
+        .reduce((sum, [, held]) => sum + held.length, 0);
+      const others = mine + this.videoShaders.others;
+      if (others + paths.length > VIDEO_PROCESSING_LIMITS.shaders)
+        throw new HostError(
+          "limit",
+          `at most ${VIDEO_PROCESSING_LIMITS.shaders} shaders across all plugins: ${others} are in use, this list has ${paths.length}`,
+        );
+      if (paths.length > 0) this.videoShaders.handles.set(id, paths);
+      else this.videoShaders.handles.delete(id);
+      return { state: this.source.phase === "ready" ? "applied" : "waiting" };
+    },
     "timeline.set": (p) => {
       if (
         p.sourceId !== undefined &&
@@ -5241,6 +5433,34 @@ export class TestHost implements Transport {
           status: "failed",
           error: { code: "invalid", message: (problem ?? blend ?? delay)! },
         });
+      // `lut3d` files: the plugin's own `.cube` files (`plugin_files.rs`).
+      if (stage === "video")
+        for (const node of (p.nodes ?? []) as { kind: string; file?: string }[])
+          if (node.kind === "lut3d") {
+            let cube: string | null;
+            try {
+              const real = ownFile(
+                node.file!,
+                this.fileRoots,
+                "lut3d file",
+                VIDEO_PROCESSING_LIMITS.lutBytes,
+              );
+              cube = /\.cube$/i.test(real)
+                ? cubeProblem(real)
+                : "lut3d file must be a .cube file";
+            } catch (error) {
+              const { code, message } = error as HostError;
+              return finish({ status: "failed", error: { code, message } });
+            }
+            if (cube)
+              return finish({
+                status: "failed",
+                error: {
+                  code: "invalid",
+                  message: `lut3d file ${node.file}: ${cube}`,
+                },
+              });
+          }
       if (this.source.phase !== "ready")
         return finish({
           status: "failed",
@@ -5952,6 +6172,7 @@ export async function startPlugin(
   for (const [key, value] of options.sessionStorage ?? [])
     host.sessionStorage.set(key, sortedJson(value));
   mkdirSync(data, { recursive: true });
+  if (host.fileRoots.length === 0) host.fileRoots = [directory, data];
   const instance = await createPlugin(
     host,
     manifest,

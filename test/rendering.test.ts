@@ -129,7 +129,7 @@ test("GPU unavailable: unsupported without a GPU renderer, unavailable when rule
   host.rendering.startedWith = "software";
   host.rendering.reason = {
     code: "no-gpu-backend",
-    message: "This player has no GPU renderer on Windows",
+    message: "This player has no GPU renderer on Linux",
   };
   host.rendering.gpu = { available: false, reason: host.rendering.reason };
   const { plugin, stop } = await started(["rendering.manage"], host);
@@ -141,7 +141,7 @@ test("GPU unavailable: unsupported without a GPU renderer, unavailable when rule
     available: false,
     reason: {
       code: "no-gpu-backend",
-      message: "This player has no GPU renderer on Windows",
+      message: "This player has no GPU renderer on Linux",
     },
   });
   assert.equal(
@@ -150,7 +150,7 @@ test("GPU unavailable: unsupported without a GPU renderer, unavailable when rule
   );
   await assert.rejects(plugin.rendering.setPreference("gpu"), {
     code: "unsupported",
-    message: "This player has no GPU renderer on Windows",
+    message: "This player has no GPU renderer on Linux",
   });
   // "auto" and "software" are always accepted.
   state = await plugin.rendering.setPreference("software");
