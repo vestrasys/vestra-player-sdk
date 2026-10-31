@@ -222,6 +222,9 @@ export const STRICT_CATEGORIES = {
       "UpscalingState",
       "UpscalingReason",
       "UpscalingReasonCode",
+      "UpscalingDecodingCause",
+      "UpscalingPlugin",
+      "UpscalingVideoSize",
     ],
   },
 };

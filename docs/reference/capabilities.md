@@ -37,7 +37,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 | `ui.theme` | {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set}, {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage} | — | Change the player's palette |  |
 | `secrets` | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | — | Store sign-in details in the system keychain | yes |
 | `rendering.manage` | {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference}, {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} | — | Choose GPU or software rendering and restart the player | yes |
-| `video.upscaling` | {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set} | — | Upscale the video with the GPU's video upscaler |  |
+| `video.upscaling` | {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | — | Upscale the video with the GPU's video upscaler |  |
 
 <!-- /generated -->
 

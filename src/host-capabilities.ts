@@ -96,6 +96,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
             cases: {
               "bindings.changed": "bindings.manage",
               "packages.changed": null,
+              "video.upscaling.changed": "video.upscaling",
             },
             otherwise: "events",
             param: "event",
@@ -107,6 +108,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
             cases: {
               "bindings.changed": "bindings.manage",
               "packages.changed": null,
+              "video.upscaling.changed": "video.upscaling",
             },
             otherwise: "events",
             param: "event",

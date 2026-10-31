@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.43](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1543) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.42](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1542) | **Nobody.** Documentation only: no API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
 | [1.5.41](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1541) | **Nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
 | [1.5.40](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1540) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |

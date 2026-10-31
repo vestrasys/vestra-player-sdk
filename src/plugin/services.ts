@@ -26,7 +26,7 @@ import type {
   UpscalingState,
   VideoUpscaling,
 } from "./types.ts";
-import type { Json } from "../wire.ts";
+import type { Json, WireUpscalingState } from "../wire.ts";
 
 const MAX_OUTPUT = 16 * 1024 * 1024;
 
@@ -579,18 +579,44 @@ export const videoUpscaling = (scope: ScopeImpl): VideoUpscaling => {
         "video.upscaling must be declared in manifest",
       );
   };
+  // This plugin's own request, kept from every answer for `onChange`: the
+  // event leaves it out (it is each plugin's own), and only this plugin's
+  // `set` changes it.
+  const noted = (state: WireUpscalingState) => {
+    enabledOf.set(scope.runtime, state.enabled);
+    return state as UpscalingState;
+  };
   return {
     async state() {
       declared();
-      return (await scope.runtime.host.video.upscalingState()) as UpscalingState;
+      return noted(await scope.runtime.host.video.upscalingState());
     },
     async set(enabled) {
       declared();
       if (typeof enabled !== "boolean")
         throw failure("invalid", "enabled must be true or false");
-      return (await scope.runtime.host.video.upscalingSet(
-        enabled,
-      )) as UpscalingState;
+      return noted(await scope.runtime.host.video.upscalingSet(enabled));
+    },
+    onChange(listener) {
+      declared();
+      const watch = scope.runtime.on(
+        "video.upscaling.changed",
+        (data) =>
+          scope.run(listener, {
+            ...(data as Omit<WireUpscalingState, "enabled">),
+            enabled: enabledOf.get(scope.runtime) ?? false,
+          } as UpscalingState),
+        "video.upscaling",
+      );
+      return scope.add({
+        dispose: async () => {
+          scope.forget(watch);
+          await watch.dispose();
+        },
+      });
     },
   };
 };
+
+/** Each plugin's own upscaling request, as its last answer said. */
+const enabledOf = new WeakMap<object, boolean>();

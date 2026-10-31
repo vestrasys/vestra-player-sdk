@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.42: full reference
+# @vestra-player/sdk 1.5.43: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -2281,6 +2281,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.16 | UpscalingReasonCode, UpscalingReason, UpscalingState, VideoUpscaling |
 | 0.5.20 | VideoShaders |
 | 0.5.21 | Scope.when, When, Bindings.onChange |
+| 0.5.25 | UpscalingReason.cause, UpscalingReason.plugins, UpscalingDecodingCause, UpscalingPlugin, UpscalingVideoSize, UpscalingState.video, UpscalingState.area, UpscalingState.gpu, UpscalingState.hwdecCurrent, UpscalingState.inChain, VideoUpscaling.onChange |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -2318,7 +2319,7 @@ A plugin lists what it may do in the manifest's `capabilities` (Manifest). A cal
 | `ui.theme` | Appearance.set, Appearance.setLanguage | — | Change the player's palette |  |
 | `secrets` | Secrets.get, Secrets.set, Secrets.delete | — | Store sign-in details in the system keychain | yes |
 | `rendering.manage` | Rendering.setPreference, Rendering.restartPlayer | — | Choose GPU or software rendering and restart the player | yes |
-| `video.upscaling` | VideoUpscaling.state, VideoUpscaling.set | — | Upscale the video with the GPU's video upscaler |  |
+| `video.upscaling` | VideoUpscaling.state, VideoUpscaling.set, VideoUpscaling.onChange | — | Upscale the video with the GPU's video upscaler |  |
 
 **Also needs** applies to every member of the row: declare those capabilities as well. A few members or options need one more, documented at the member:
 
@@ -3654,6 +3655,8 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | TestHost.app | What `plugin.app` reports. |
 | TestHost.rendering | The player's rendering choice behind `plugin.rendering` (player 0.5.13). |
 | TestHost.upscaling | The GPU's video upscaler behind `plugin.video.upscaling` (player 0.5.16), answered as the player would: - `state()` and `set(true)` set `checked` (the player's one GPU check; a plugin that should not wake the GPU while it starts can assert it is still `false`) and report `available` from `reason` (`null`: it works), this plugin's `enabled`, and `requested` with `factor` while enabled, available and `factor` is above 1. |
+| TestHost.upscalingDecoding() | Make the upscaler's reason `decoding` with `cause`, with the player's message (player 0.5.25), and set `upscaling.hwdecCurrent` to match (`d3d11va-copy`, `no`, `nvdec`). |
+| TestHost.upscalingChanged() | Send `video.upscaling.changed` with the state `TestHost.upscaling` describes now (without `enabled`), as the player does when it changes (player 0.5.25); a plugin listening with `plugin.video.upscaling.onChange` receives it. |
 | TestHost.chapters | What `player.chapters()` lists while media is ready. |
 | TestHost.dataDirectory | `plugin.dataDirectory`: a fresh empty temporary directory, removed with the host on `stop()`. |
 | TestHost.manifestId | The manifest id of the plugin under test (set by `startPlugin`; `"test.plugin"` by default). |
@@ -4324,8 +4327,9 @@ plugin.video.shaders(id) (player 0.5.20) returns a VideoShaders handle: a list o
 plugin.video.upscaling (capability `video.upscaling`, player 0.5.16) turns on the GPU's AI upscaler, NVIDIA RTX Video Super Resolution on Windows. It is not a handle: `set(true)` is the plugin's request, and the player keeps the upscaler last in the filter chain, after every plugin's chain, while any plugin has it on and it can work, scaled to the area the video is shown in. Like render options it acts at display time only.
 
 - **Ask when needed.** The player checks the GPU at the first `state()` or `set(true)` and keeps the answer; the check wakes a sleeping discrete GPU, so ask on the first pick of the item, not while the plugin starts. `set(false)` never checks.
-- **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone.
+- **It needs GPU rendering on the upscaler's GPU, with the video decoded there.** A filter chain that needs the frames in memory switches decoding to copy-back, and the upscaler waits (`decoding`) until it is gone. From player 0.5.25 the reason's `cause` says which decoding stands in the way (`copy-back`, `hwdec-off`, `software`, `other-hwdec`), and with `copy-back` its `plugins` say whose filters, so a window can ask the user to turn them off there.
 - **No sign that it runs.** `requested` says the player asked the driver; on Windows the user must also turn on Super Resolution in the NVIDIA app, which no program can read.
+- **Watch it while it runs.** From player 0.5.25 the state also has the video's and the area's size, the rendering GPU, the decoder and `inChain`, and onChange sends it as it changes while some plugin has upscaling on. A listener keeps the plugin running, so listen only while a window shows it.
 
 ## Explanation: Windows, panels, settings pages, dialogs and the OSD
 
@@ -5708,6 +5712,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.43](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1543) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.42](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1542) | **Nobody.** Documentation only: no API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
 | [1.5.41](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1541) | **Nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
 | [1.5.40](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1540) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
@@ -11839,7 +11844,7 @@ in the order the player checks them (the first that holds is reported):
 | `gpu-unsupported` | The driver does not offer upscaling on this GPU (Windows: not an RTX GPU), or the check failed. |
 | `rendering` | The player renders in software, or GPU rendering is still starting; upscaling needs GPU rendering (Rendering). |
 | `adapter` | GPU rendering runs on another GPU than the one that can upscale (a laptop with two GPUs; Windows: choose the high-performance GPU for Vestra in Settings ▸ System ▸ Display ▸ Graphics). |
-| `decoding` | The video is not decoded on the GPU that renders it: copy-back or software decoding, for example while a VideoFilter needs the frames in memory. |
+| `decoding` | The video is not decoded on the GPU that renders it: copy-back or software decoding, for example while a VideoFilter needs the frames in memory. UpscalingReason.cause says which, and UpscalingReason.plugins whose filters (newer players; see there). |
 | `unchecked` | The player has not checked the GPU yet. Only in the answer to `set(false)`, which never starts the check; `state()` and `set(true)` always check first. |
 
 `decoding` and `rendering` while GPU rendering is still starting can pass
@@ -11883,6 +11888,16 @@ interface UpscalingReason {
   readonly code: UpscalingReasonCode;
   /** The reason as English text for people, for example with the GPU's name and what to change; never branch on it. */
   readonly message: string;
+  /**
+   * With code `decoding` only: why the video is not decoded on the GPU that renders it (UpscalingDecodingCause). Absent with every other code, and from players before 0.5.25.
+   * @player 0.5.25; older players send `decoding` without a cause.
+   */
+  readonly cause?: UpscalingDecodingCause;
+  /**
+   * With cause `copy-back` only: the plugins whose video filters need the frames in memory, which is why the player switched to copy-back decoding, in the order the plugins started (each plugin once). Name them to the user, who can turn the filters off there. Empty when the copy-back decoding is not one the player chose for a filter (the user's own `hwdec` setting). Absent with any other cause, and from players before 0.5.25.
+   * @player 0.5.25
+   */
+  readonly plugins?: readonly UpscalingPlugin[];
 }
 ```
 
@@ -11895,6 +11910,78 @@ decisions.
 ```ts
 const { available, reason } = await plugin.video.upscaling.state();
 if (!available && reason) console.log(`${reason.code}: ${reason.message}`);
+```
+
+### UpscalingDecodingCause
+
+Why the video is not decoded on the GPU that renders it: the
+UpscalingReason.cause of a `decoding` reason (player 0.5.25). A
+newer player may add causes: show UpscalingReason.message for the
+ones you do not handle.
+
+| Cause | Meaning |
+| --- | --- |
+| `copy-back` | Decoded on the GPU and copied back to memory, because a plugin's video filter needs the frames there (UpscalingReason.plugins names it), or because of the user's `hwdec` setting. |
+| `hwdec-off` | Hardware decoding is turned off (mpv's `hwdec` is `no`). |
+| `software` | This video is decoded in software: a cover picture, a format the GPU does not decode, or a hardware decoder that failed. It passes with the next video. |
+| `other-hwdec` | This video is decoded with another hardware decoder than the one the upscaler needs. |
+
+- @player 0.5.25
+
+```ts
+type UpscalingDecodingCause = "copy-back" | "hwdec-off" | "software" | "other-hwdec" | (string & {});
+```
+
+Example: Name the plugins whose filters block upscaling
+
+A plugin's upscaling window explains a `decoding` reason by its cause,
+and for `copy-back` names the plugins whose filters stand in the way, so
+the user can turn them off there (a plugin cannot run another plugin's
+commands).
+```ts
+const { reason } = await plugin.video.upscaling.state();
+if (reason?.code === "decoding" && reason.cause === "copy-back") {
+  const names = (reason.plugins ?? []).map((p) => p.name).join(", ");
+  // Ask the user to reset those filters; the manifest names are not translated.
+  console.log(names ? `Turn off the video filters of ${names}` : reason.message);
+} else if (reason) console.log(reason.message);
+```
+
+### UpscalingPlugin
+
+A plugin named in an UpscalingReason: its manifest id and its
+name for people, as its manifest gives it (not translated).
+
+- @player 0.5.25
+
+```ts
+interface UpscalingPlugin {
+  /** The plugin's manifest id, for example `vestra.video`. */
+  readonly id: string;
+  /** The manifest's `name` as is (its id without one), for people. */
+  readonly name: string;
+}
+```
+
+### UpscalingVideoSize
+
+The video's size as the upscaler gets it (UpscalingState.video):
+the decoder's frame size, width and height swapped for the file's
+quarter-turn rotation metadata.
+
+- @player 0.5.25
+
+```ts
+interface UpscalingVideoSize {
+  /** The frames' stored width in pixels. */
+  readonly width: number;
+  /** The frames' stored height in pixels. */
+  readonly height: number;
+  /** The width the video is meant to be shown at (non-square pixels). */
+  readonly displayWidth: number;
+  /** The height the video is meant to be shown at. */
+  readonly displayHeight: number;
+}
 ```
 
 ### UpscalingState
@@ -11928,6 +12015,34 @@ interface UpscalingState {
    * The scale factor the upscaler was asked for (the area the video is shown in over the video's size, in hundredths, above 1); `null` while nothing is requested.
    */
   readonly factor: number | null;
+  /**
+   * The video's size as the upscaler gets it; `null` while no video decodes. With UpscalingState.area it explains the factor. Absent from players before 0.5.25.
+   * @player 0.5.25
+   */
+  readonly video?: UpscalingVideoSize | null;
+  /**
+   * The area the video is shown in, in pixels (the upscaler scales the video to fit it); `null` while the player shows no video area. Absent from players before 0.5.25.
+   * @player 0.5.25
+   */
+  readonly area?: {
+    readonly width: number;
+    readonly height: number;
+  } | null;
+  /**
+   * The name of the GPU that renders, for example `NVIDIA GeForce RTX 4070 Laptop GPU`; `null` in software rendering and where the player does not know it (macOS, Linux). Absent from players before 0.5.25.
+   * @player 0.5.25
+   */
+  readonly gpu?: string | null;
+  /**
+   * The hardware decoder in use for this video, as mpv names it (`d3d11va`, `d3d11va-copy`; `no` for software decoding); `null` while no video decodes. For people and logs: branch on UpscalingReason.cause. Absent from players before 0.5.25.
+   * @player 0.5.25
+   */
+  readonly hwdecCurrent?: string | null;
+  /**
+   * The upscaler is in the player's video filter chain now, read from the chain itself (`requested` is what the player asked for; they differ only for a moment, while the chain changes). Still not a sign that the GPU upscales: the driver gives none (see the remarks). Absent from players before 0.5.25.
+   * @player 0.5.25
+   */
+  readonly inChain?: boolean;
 }
 ```
 
@@ -12036,6 +12151,46 @@ interface VideoUpscaling {
    * ```
    */
   set(enabled: boolean): Promise<UpscalingState>;
+  /**
+   * Call `listener` with the new state whenever it changes while some plugin has upscaling on: the factor, whether the upscaler is in the chain, the reason, the video's and the area's size, the decoder. A window that shows how upscaling runs listens instead of polling VideoUpscaling.state.
+   *
+   * The player looks about five times a second while upscaling is on for
+   * any plugin (a window resize sends at most that many), and sends a
+   * change only when something differs; after the last plugin turns it
+   * off one more change says so, then nothing until it is on again: read
+   * VideoUpscaling.state when you need the state then. Nothing is
+   * sent before the player's GPU check ran (the first `state()` or
+   * `set(true)` of any plugin). `enabled` is this plugin's own request, as
+   * in `state()`. The message of a `rendering` reason can be shorter than
+   * the one `state()` gives (it may leave out what to do).
+   *
+   * **A listener keeps the plugin running.** `video.upscaling.changed` is
+   * not an event the player wakes a stopped plugin for: while the plugin
+   * listens, the player does not stop it while idle (lazy activation), even
+   * with upscaling off. Listen only while a window that shows the state is
+   * open, and dispose of the listener when it closes. Players before 0.5.25 do not know the event: the listener
+   * never fires and the SDK logs that the player refused the subscription.
+   * @capability video.upscaling
+   * @param listener - Receives the new state.
+   * @returns Stops listening; also when the scope that added it is disposed.
+   * @throws capability (synchronously) The manifest does not declare `video.upscaling`.
+   * @player 0.5.25
+   * @example Show how upscaling runs while a window is open
+   * The plugin's window shows the factor, the sizes and the GPU while it
+   * is open; the listener goes when the window closes, so the plugin can
+   * be stopped while idle again.
+   * ```ts
+   * // When the window opens:
+   * const watch = plugin.video.upscaling.onChange((state) => {
+   *   const video = state.video ? `${state.video.width}×${state.video.height}` : "no video";
+   *   const area = state.area ? `${state.area.width}×${state.area.height}` : "—";
+   *   console.log(`${video} → ${area}, ×${state.factor ?? 1}, ${state.gpu ?? "no GPU"}`);
+   * });
+   * // When it closes: stop listening (it keeps the plugin running).
+   * await watch.dispose();
+   * ```
+   */
+  onChange(listener: (state: UpscalingState) => void): Disposable;
 }
 ```
 
@@ -16227,7 +16382,48 @@ class TestHost implements Transport {
     checked: boolean;
     /** GPU rendering is still starting: a `rendering` reason then lets `set(true)` keep the request. */
     renderingStarting: boolean;
+    /** The video's size the state reports (player 0.5.25); `null`: no video. */
+    video: UpscalingVideoSize | null;
+    /** The video area the state reports (player 0.5.25); `null`: none. */
+    area: {
+      width: number;
+      height: number;
+    } | null;
+    /** The rendering GPU's name the state reports (player 0.5.25). */
+    gpu: string | null;
+    /** mpv's decoder the state reports (player 0.5.25); `null`: no video. */
+    hwdecCurrent: string | null;
   };
+  /**
+   * Make the upscaler's reason `decoding` with `cause`, with the player's message (player 0.5.25), and set `upscaling.hwdecCurrent` to match (`d3d11va-copy`, `no`, `nvdec`). `plugins` are named for `copy-back` only, as the player does. Returns the reason; call TestHost.upscalingChanged to tell a listening plugin.
+   * @capability None.
+   * @example Test the window's advice for each cause
+   * The plugin's window explains why upscaling waits. The test fakes the
+   * copy-back cause that Picture Adjustments' filters cause and checks
+   * that the window names the plugin.
+   * ```ts
+   * host.upscalingDecoding("copy-back", [{ id: "vestra.video", name: "Picture Adjustments" }]);
+   * host.upscalingChanged();
+   * await host.settle();
+   * assert.match(String(host.window("upscale").props.blocker), /Picture Adjustments/);
+   * ```
+   */
+  upscalingDecoding(cause: UpscalingDecodingCause, plugins?: readonly UpscalingPlugin[]): UpscalingReason;
+  /**
+   * Send `video.upscaling.changed` with the state TestHost.upscaling describes now (without `enabled`), as the player does when it changes (player 0.5.25); a plugin listening with `plugin.video.upscaling.onChange` receives it. Nothing reaches a plugin that does not listen.
+   * @capability None.
+   * @example Show the new factor in the plugin's window
+   * The window resized: the test changes the area and the factor, sends
+   * the change, and checks that the plugin's window shows the new factor.
+   * ```ts
+   * host.upscaling.area = { width: 2560, height: 1440 };
+   * host.upscaling.factor = 1.33; // 1080p in a 1440p area
+   * host.upscalingChanged(); // as the player after the resize settled
+   * await host.settle();
+   * assert.equal(host.window("upscale").props.factor, "×1.33");
+   * ```
+   */
+  upscalingChanged(): void;
   /** What `player.chapters()` lists while media is ready. */
   chapters: {
     /** The chapter title, `null` without one. */

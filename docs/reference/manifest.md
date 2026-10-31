@@ -77,6 +77,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.16 | {@linkcode "@vestra-player/sdk"!UpscalingReasonCode UpscalingReasonCode}, {@linkcode "@vestra-player/sdk"!UpscalingReason UpscalingReason}, {@linkcode "@vestra-player/sdk"!UpscalingState UpscalingState}, {@linkcode "@vestra-player/sdk"!VideoUpscaling VideoUpscaling} |
 | 0.5.20 | {@linkcode "@vestra-player/sdk"!VideoShaders VideoShaders} |
 | 0.5.21 | {@linkcode "@vestra-player/sdk"!Scope.when Scope.when}, {@linkcode "@vestra-player/sdk"!When When}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange} |
+| 0.5.25 | {@linkcode "@vestra-player/sdk"!UpscalingReason.cause UpscalingReason.cause}, {@linkcode "@vestra-player/sdk"!UpscalingReason.plugins UpscalingReason.plugins}, {@linkcode "@vestra-player/sdk"!UpscalingDecodingCause UpscalingDecodingCause}, {@linkcode "@vestra-player/sdk"!UpscalingPlugin UpscalingPlugin}, {@linkcode "@vestra-player/sdk"!UpscalingVideoSize UpscalingVideoSize}, {@linkcode "@vestra-player/sdk"!UpscalingState.video UpscalingState.video}, {@linkcode "@vestra-player/sdk"!UpscalingState.area UpscalingState.area}, {@linkcode "@vestra-player/sdk"!UpscalingState.gpu UpscalingState.gpu}, {@linkcode "@vestra-player/sdk"!UpscalingState.hwdecCurrent UpscalingState.hwdecCurrent}, {@linkcode "@vestra-player/sdk"!UpscalingState.inChain UpscalingState.inChain}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} |
 
 <!-- /generated -->
 

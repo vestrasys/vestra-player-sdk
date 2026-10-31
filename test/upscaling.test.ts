@@ -10,6 +10,7 @@ import {
   TestHost,
 } from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
+import type { UpscalingState } from "../src/plugin/types.ts";
 import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
 import { hostMethod } from "../src/capability-rules.ts";
 
@@ -25,6 +26,14 @@ async function started(capabilities: string[], host = new TestHost()) {
 }
 const code = (expected: string) => (error: HostError) =>
   error.code === expected;
+// The default model's monitoring fields (player 0.5.25): 1080p on a 4K area.
+const monitoring = (inChain: boolean) => ({
+  video: { width: 1920, height: 1080, displayWidth: 1920, displayHeight: 1080 },
+  area: { width: 3840, height: 2160 },
+  gpu: "NVIDIA GeForce RTX 4070 Laptop GPU",
+  hwdecCurrent: "d3d11va",
+  inChain,
+});
 
 test("video.upscaling: the player's table entry, last; not risky, live", () => {
   const last = HOST_CAPABILITIES.capabilities.at(-1)!;
@@ -44,7 +53,11 @@ test("video.upscaling: the player's table entry, last; not risky, live", () => {
     needs: "video.upscaling",
   });
   assert.deepEqual(CAPABILITY_INFO["video.upscaling"], {
-    apis: ["VideoUpscaling.state", "VideoUpscaling.set"],
+    apis: [
+      "VideoUpscaling.state",
+      "VideoUpscaling.set",
+      "VideoUpscaling.onChange",
+    ],
     requires: [],
     label: "Upscale the video with the GPU's video upscaler",
     risky: false,
@@ -71,6 +84,7 @@ test("the default model: available, off, nothing checked until asked", async () 
     enabled: false,
     requested: false,
     factor: null,
+    ...monitoring(false),
   });
   assert.equal(host.upscaling.checked, true);
   assert.deepEqual(host.calls.at(-1), {
@@ -84,6 +98,7 @@ test("the default model: available, off, nothing checked until asked", async () 
     enabled: true,
     requested: true,
     factor: 2,
+    ...monitoring(true),
   });
   assert.deepEqual(host.calls.at(-1), {
     method: "video.upscaling.set",
@@ -184,4 +199,107 @@ test("set(true) keeps the request while GPU rendering is still starting", async 
   await plugin.video.upscaling.set(false);
   await assert.rejects(plugin.video.upscaling.set(true), code("unsupported"));
   await stop();
+});
+
+// ------------------------------------------------ SDK 1.5.43, player 0.5.25
+
+test("a decoding reason says its cause; copy-back names the plugins", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.upscaling"], host);
+  const video = { id: "vestra.video", name: "Picture Adjustments" };
+  for (const [cause, current] of [
+    ["copy-back", "d3d11va-copy"],
+    ["hwdec-off", "no"],
+    ["software", "no"],
+    ["other-hwdec", "nvdec"],
+  ] as const) {
+    const faked = host.upscalingDecoding(cause, [video]);
+    const state = await plugin.video.upscaling.state();
+    assert.equal(state.available, false);
+    assert.equal(state.reason?.code, "decoding");
+    assert.equal(state.reason?.cause, cause);
+    assert.deepEqual(state.reason, faked);
+    assert.equal(state.hwdecCurrent, current);
+    // Plugins only with copy-back, as the player sends them.
+    if (cause === "copy-back") {
+      assert.deepEqual(state.reason?.plugins, [video]);
+      assert.match(
+        state.reason!.message,
+        /because the video filter of Picture Adjustments needs the frames in memory/,
+      );
+    } else assert.equal(state.reason && "plugins" in state.reason, false);
+    // Decoding can pass: set(true) keeps the request.
+    assert.equal((await plugin.video.upscaling.set(true)).enabled, true);
+    await plugin.video.upscaling.set(false);
+  }
+  // Copy-back nobody's filter chose: an empty list.
+  host.upscalingDecoding("copy-back");
+  assert.deepEqual((await plugin.video.upscaling.state()).reason?.plugins, []);
+  await stop();
+});
+
+test("onChange needs video.upscaling and delivers the state with this plugin's enabled", async () => {
+  const none = await started([]);
+  assert.throws(
+    () => none.plugin.video.upscaling.onChange(() => {}),
+    code("capability"),
+  );
+  await none.stop();
+
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.upscaling"], host);
+  const seen: UpscalingState[] = [];
+  const watch = plugin.video.upscaling.onChange((state) => seen.push(state));
+  await host.settle();
+  assert.ok(host.listening.has("video.upscaling.changed"));
+  assert.deepEqual(
+    host.calls.find((c) => c.method === "events.subscribe")?.params.event,
+    "video.upscaling.changed",
+  );
+  await plugin.video.upscaling.set(true);
+  host.upscaling.area = { width: 2560, height: 1440 };
+  host.upscaling.factor = 1.33;
+  host.upscalingChanged();
+  await host.settle();
+  assert.deepEqual(
+    [...seen],
+    [
+      {
+        available: true,
+        reason: null,
+        requested: true,
+        factor: 1.33,
+        ...monitoring(true),
+        area: { width: 2560, height: 1440 },
+        enabled: true,
+      },
+    ],
+  );
+  // Off, then the copy-back cause arrives with the plugins.
+  await plugin.video.upscaling.set(false);
+  host.upscalingDecoding("copy-back", [
+    { id: "vestra.video", name: "Picture Adjustments" },
+  ]);
+  host.upscalingChanged();
+  await host.settle();
+  const last = seen[seen.length - 1];
+  assert.equal(last?.enabled, false);
+  assert.deepEqual(last?.reason?.plugins, [
+    { id: "vestra.video", name: "Picture Adjustments" },
+  ]);
+  await watch.dispose();
+  await host.settle();
+  assert.ok(!host.subscriptions.has("video.upscaling.changed"));
+  host.upscalingChanged();
+  await host.settle();
+  assert.equal(seen.length, 2, "nothing after dispose");
+  await stop();
+});
+
+test("video.upscaling.changed needs video.upscaling (the player's table)", () => {
+  // The event needs video.upscaling, not events.
+  const needs = hostMethod("events.subscribe")?.needs as {
+    cases: Record<string, string | null>;
+  };
+  assert.equal(needs.cases["video.upscaling.changed"], "video.upscaling");
 });
