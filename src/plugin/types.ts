@@ -757,7 +757,7 @@ export interface When {
   /**
    * The palette in use is `theme` (`plugin.appearance.theme`).
    *
-   * @throws `TypeError` (throws) `theme` is not a string.
+   * @throws `TypeError` (throws) `theme` is not a palette of the player.
    *
    * @example Check the light palette's item
    * The item carries a check mark while the light palette is in use,
@@ -775,7 +775,7 @@ export interface When {
    * The saved interface language is `language`
    * (`plugin.appearance.language`: `"system"` or a locale).
    *
-   * @throws `TypeError` (throws) `language` is not a string.
+   * @throws `TypeError` (throws) `language` is not `"system"` or a locale.
    *
    * @example Check the Follow System item
    * The item carries a check mark while the player follows the system's
@@ -8911,14 +8911,17 @@ export interface Bindings {
    */
   reset(ref?: BindingRef): Promise<void>;
   /**
-   * Declarations or overrides changed (read `list()` again). At most every 200 ms.
+   * The binding list changed (read `list()` again): a declaration or an
+   * override. At most every 200 ms; since player 0.5.21 only when the list
+   * itself changed, not when a plugin starts again with the same commands.
    *
    * @capability bindings.manage
    *
    * @example Refresh a key list when bindings change
    * The plugin's key list stays current when the user changes a key in the
-   * player or another plugin starts. The listener carries no data and runs
-   * at most every 200 ms; the plugin reads the table again with `list`.
+   * player or a plugin with other commands is installed. The listener
+   * carries no data and runs at most every 200 ms; the plugin reads the
+   * table again with `list`.
    * ```ts
    * declare function render(commands: BindingInfo[]): void;
    * // ---cut---

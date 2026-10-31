@@ -10,6 +10,8 @@ import type {
   ThemeId,
   When,
 } from "./types.ts";
+import { LOCALES } from "../i18n.ts";
+import { THEMES } from "./appearance.ts";
 
 /** A condition in the wire form: an object of exactly one key. */
 export type ConditionJson =
@@ -112,13 +114,20 @@ export const WHEN: When = Object.freeze({
     return make({ can: control });
   },
   theme(theme: ThemeId) {
-    if (typeof theme !== "string" || !theme)
-      throw new TypeError("theme is a theme id");
+    if (!THEMES.includes(theme))
+      throw new TypeError(
+        `theme is ${THEMES.map((t) => `"${t}"`).join(" or ")}`,
+      );
     return make({ theme });
   },
   language(language: LanguagePreference) {
-    if (typeof language !== "string" || !language)
-      throw new TypeError('language is "system" or a locale');
+    if (
+      language !== "system" &&
+      !(LOCALES as readonly string[]).includes(language)
+    )
+      throw new TypeError(
+        `language is "system" or one of ${LOCALES.map((l) => `"${l}"`).join(", ")}`,
+      );
     return make({ language });
   },
 });

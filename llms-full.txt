@@ -2709,7 +2709,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.5.12 | SystemInfo.rendering |
 | 0.5.13 | SystemInfo.renderingReason, RenderingMode, RenderingPreference, RenderingReasonCode, RenderingReason, RenderingState, Rendering |
 | 0.5.16 | UpscalingReasonCode, UpscalingReason, UpscalingState, VideoUpscaling |
-| 0.5.21 | Scope.when, When |
+| 0.5.21 | Scope.when, When, Bindings.onChange |
 
 The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 (Theme).
 
@@ -4357,7 +4357,7 @@ interface When {
   can(control: keyof PlayerState["can"]): Condition;
   /**
    * The palette in use is `theme` (`plugin.appearance.theme`).
-   * @throws TypeError (throws) `theme` is not a string.
+   * @throws TypeError (throws) `theme` is not a palette of the player.
    * @capability None (the command it is given to needs `commands`).
    * @example Check the light palette's item
    * The item carries a check mark while the light palette is in use,
@@ -4370,7 +4370,7 @@ interface When {
   theme(theme: ThemeId): Condition;
   /**
    * The saved interface language is `language` (`plugin.appearance.language`: `"system"` or a locale).
-   * @throws TypeError (throws) `language` is not a string.
+   * @throws TypeError (throws) `language` is not `"system"` or a locale.
    * @capability None (the command it is given to needs `commands`).
    * @example Check the Follow System item
    * The item carries a check mark while the player follows the system's
@@ -11281,12 +11281,13 @@ interface Bindings {
    */
   reset(ref?: BindingRef): Promise<void>;
   /**
-   * Declarations or overrides changed (read `list()` again). At most every 200 ms.
+   * The binding list changed (read `list()` again): a declaration or an override. At most every 200 ms; since player 0.5.21 only when the list itself changed, not when a plugin starts again with the same commands.
    * @capability bindings.manage
    * @example Refresh a key list when bindings change
    * The plugin's key list stays current when the user changes a key in the
-   * player or another plugin starts. The listener carries no data and runs
-   * at most every 200 ms; the plugin reads the table again with `list`.
+   * player or a plugin with other commands is installed. The listener
+   * carries no data and runs at most every 200 ms; the plugin reads the
+   * table again with `list`.
    * ```ts
    * plugin.bindings.onChange(async () => {
    *   const { commands } = await plugin.bindings.list(); // read the new table
@@ -13021,9 +13022,9 @@ class TestHost implements Transport {
    */
   readonly listening: Set<string>;
   /**
-   * Why the plugin listens to each event of TestHost.listening, as the player's log says it (`a listener added at main.ts:12`, `command "Save" enabled reads plugin.player.state (main.ts:40)`).
+   * Why the plugin listens to each event of TestHost.listening: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came.
    */
-  readonly listeningWhy: Map<string, string>;
+  readonly listeningWhy: Map<string, string[]>;
   /**
    * The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). Wire-level shape; change it with TestHost.setSource, which also broadcasts it.
    */

@@ -682,7 +682,7 @@ export function createWire(transport: Transport) {
         listener: (data: unknown) => void,
         mirror = false,
         /** What listens (player 0.5.21 logs it; older players ignore it). */
-        why?: string,
+        why?: string[],
       ) {
         const off = transport.on(event, listener);
         let subscription = subscriptions.get(event);
@@ -693,7 +693,7 @@ export function createWire(transport: Transport) {
               "events.subscribe",
               mirror
                 ? { event, mirror: true }
-                : why
+                : why?.length
                   ? { event, why }
                   : { event },
             ),
@@ -725,10 +725,14 @@ export function createWire(transport: Transport) {
        * again, which replaces the mark (player 0.5.18; older players keep
        * one subscription per name and ignore the mark).
        */
-      listen: (event: HostEvent, active: boolean, why?: string) =>
+      listen: (event: HostEvent, active: boolean, why?: string[]) =>
         transport.request<void>(
           "events.subscribe",
-          active ? (why ? { event, why } : { event }) : { event, mirror: true },
+          active
+            ? why?.length
+              ? { event, why }
+              : { event }
+            : { event, mirror: true },
         ),
     },
     ui: {

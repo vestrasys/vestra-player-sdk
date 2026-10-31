@@ -808,13 +808,15 @@ export class TestHost implements Transport {
    */
   readonly listening = new Set<string>();
   /**
-   * Why the plugin listens to each event of {@link TestHost.listening}, as
-   * the player's log says it (`a listener added at main.ts:12`,
-   * `command "Save" enabled reads plugin.player.state (main.ts:40)`).
+   * Why the plugin listens to each event of {@link TestHost.listening}:
+   * every listener and every binding that reads its state, as the
+   * player's log says them (`a listener added at main.ts:12`,
+   * `command "Save" enabled is a function that reads plugin.player.state
+   * (main.ts:40) — use plugin.when`), in the order they came.
    *
    * @since 1.5.40
    */
-  readonly listeningWhy = new Map<string, string>();
+  readonly listeningWhy = new Map<string, string[]>();
   /**
    * The player's source facts (phase, position, duration, paused, rate,
    * audio tracks, loop, ...). Wire-level shape; change it with
@@ -4341,8 +4343,9 @@ export class TestHost implements Transport {
         restart: capabilities.restart,
         close: capabilities.close,
         snapshot: capabilities.snapshotSource,
-        next: !!(source.sequence?.next ?? this.sequence?.canNext),
-        previous: !!(source.sequence?.previous ?? this.sequence?.canPrevious),
+        // As the player: the flags merged into the source state.
+        next: source.sequence?.next === true,
+        previous: source.sequence?.previous === true,
       },
       fullscreen: this.mainWindow.fullscreen,
       theme: this.appearance,
@@ -4385,9 +4388,8 @@ export class TestHost implements Transport {
     const reasons: string[] = [];
     for (const event of this.listening)
       if (!WAKE_EVENTS.includes(event))
-        reasons.push(
-          `listens to ${event}: ${this.listeningWhy.get(event) ?? "a listener"}`,
-        );
+        for (const why of this.listeningWhy.get(event) ?? ["a listener"])
+          reasons.push(`listens to ${event}: ${why}`);
     if (this.panel) reasons.push("a mounted panel");
     for (const [id, window] of this.windows)
       if (window.visible) reasons.push(`an open window (${id})`);
@@ -4400,8 +4402,8 @@ export class TestHost implements Transport {
       this.subscriptions.add(event);
       if (p.mirror === true) this.listening.delete(event);
       else this.listening.add(event);
-      if (p.mirror !== true && typeof p.why === "string")
-        this.listeningWhy.set(event, p.why);
+      if (p.mirror !== true && Array.isArray(p.why))
+        this.listeningWhy.set(event, p.why.map(String));
       else this.listeningWhy.delete(event);
     },
     "events.unsubscribe": (p) => {

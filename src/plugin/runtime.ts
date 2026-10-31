@@ -152,7 +152,7 @@ interface EventGroup {
   active: number;
   /** Why each active holder listens, in the order they came. */
   whys: Map<object, Why>;
-  /** The reason the player was last told. */
+  /** The reasons the player was last told, joined (to compare). */
   toldWhy?: string;
   off?: Promise<() => Promise<void>>;
   /** What the player was last told: `true` for a real listener. */
@@ -398,14 +398,15 @@ export class Runtime {
     }
     if (created && (needs === null || this.can(needs))) {
       group.told = group.active > 0;
-      group.toldWhy = group.told ? firstWhy(group) : undefined;
+      const whys = group.told ? allWhys(group) : undefined;
+      group.toldWhy = whys?.join("\n");
       group.off = this.host.events.subscribe(
         event as never,
         (data) => {
           for (const each of [...group.listeners]) each(data);
         },
         !group.told,
-        group.toldWhy,
+        whys,
       );
       this.starting(group.off, (error) =>
         console.error(`[${this.manifest.id}] subscribe ${event}:`, error),
@@ -458,7 +459,8 @@ export class Runtime {
     const off = group.off;
     if (!off) return;
     const active = group.active > 0;
-    const why = active ? firstWhy(group) : undefined;
+    const whys = active ? allWhys(group) : undefined;
+    const why = whys?.join("\n");
     if (group.told === active && group.toldWhy === why) return;
     group.told = active;
     group.toldWhy = why;
@@ -466,7 +468,7 @@ export class Runtime {
     // at its ready, which must see this mark. A failure is not one of
     // activation (an older player never refuses it).
     const told = off
-      .then(() => this.host.events.listen(event as never, active, why))
+      .then(() => this.host.events.listen(event as never, active, whys))
       .catch(() => {});
     this.starting(told, () => {});
   }
@@ -475,10 +477,10 @@ export class Runtime {
    * left out), as the player's log says it: for {@link TestHost} and
    * `vestra-plugin test`.
    */
-  listening(): Map<string, string> {
-    const result = new Map<string, string>();
+  listening(): Map<string, string[]> {
+    const result = new Map<string, string[]>();
     for (const [event, group] of this.#events)
-      if (group.active > 0) result.set(event, firstWhy(group) ?? "a listener");
+      if (group.active > 0) result.set(event, allWhys(group));
     return result;
   }
   /** Raw transport events the host pushes without a subscription. */
@@ -503,10 +505,9 @@ const listenerWhy =
     return at ? `a listener added at ${at}` : "a listener";
   };
 
-/** The reason of the first active holder of `group`. */
-function firstWhy(group: EventGroup): string | undefined {
-  for (const why of group.whys.values()) return why();
-  return undefined;
+/** Every active holder's reason in `group`, in the order they came, once each. */
+function allWhys(group: EventGroup): string[] {
+  return [...new Set([...group.whys.values()].map((why) => why()))];
 }
 
 /** `plugin.app` from the start-up handshake (the runner's environment). */

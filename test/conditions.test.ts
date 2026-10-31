@@ -119,6 +119,10 @@ test("plugin.when refuses what is not in its vocabulary", async () => {
     assert.throws(() => when.phase(), TypeError);
     assert.throws(() => when.phase("playing" as never), TypeError);
     assert.throws(() => when.can("fly" as never), TypeError);
+    // The player's own rules: its palettes and languages only.
+    assert.throws(() => when.theme("dark" as never), TypeError);
+    assert.throws(() => when.language("xx" as never), TypeError);
+    assert.doesNotThrow(() => when.language("zh-Hans"));
     assert.deepEqual(JSON.parse(JSON.stringify(when.open)), {
       not: { phase: ["empty"] },
     });
@@ -154,15 +158,21 @@ test("keepsRunning says why, with where the plugin added it", async () => {
     );
     const listener = plugin.player.onChange(() => {});
     await host.settle();
-    // The first reason stays the one the player was told.
-    assert.match(host.listeningWhy.get("source.state")!, /^command "Snapshot"/);
-    await listener.dispose();
-    const watcher = plugin.window.onChange(() => {});
-    await host.settle();
+    // Every reason, in the order they came: the player is told again.
+    const reasons = host.listeningWhy.get("source.state")!;
+    assert.equal(reasons.length, 2);
+    assert.match(reasons[0]!, /^command "Snapshot"/);
     assert.match(
-      host.listeningWhy.get("window.state")!,
+      reasons[1]!,
       /^a listener added at test\/conditions\.test\.ts:\d+$/,
     );
+    assert.equal(host.keepsRunning.length, 2);
+    await listener.dispose();
+    await host.settle();
+    assert.equal(host.listeningWhy.get("source.state")!.length, 1);
+    const watcher = plugin.window.onChange(() => {});
+    await host.settle();
+    assert.deepEqual(host.listeningWhy.get("window.state")!.length, 1);
     await watcher.dispose();
     await host.settle();
     assert.ok(!host.listeningWhy.has("window.state"));

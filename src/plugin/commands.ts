@@ -229,6 +229,15 @@ class CommandHandle implements Command {
         read,
         name === "enabled" || name === "checked",
       );
+    // enabled and checked first: what they read is reported as theirs
+    // (a condition can replace them), not as the reason's.
+    const when: CommandWhen = {};
+    const enabled = as("enabled", () =>
+      field(spec.enabled, true, "enabled", when),
+    );
+    const checked = as("checked", () =>
+      field<boolean | null>(spec.checked, false, "checked", when),
+    );
     const reason = as("reason", () => value(spec.reason));
     if (reason !== null && typeof reason !== "string") {
       const problem = isTextValue(reason)
@@ -236,12 +245,9 @@ class CommandHandle implements Command {
         : "reason is a string, a text or null";
       if (problem) throw failure("invalid", `command ${this.id}: ${problem}`);
     }
-    const when: CommandWhen = {};
     const state = {
-      enabled: as("enabled", () => field(spec.enabled, true, "enabled", when)),
-      checked: as("checked", () =>
-        field<boolean | null>(spec.checked, false, "checked", when),
-      ),
+      enabled,
+      checked,
       busy: as("busy", () => value(spec.busy)),
       reason,
     };
