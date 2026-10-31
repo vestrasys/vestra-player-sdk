@@ -103,11 +103,11 @@ The rule that follows: **state you change outside a handler, or after an `await`
 
 ## Stopping
 
-The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, and when the player quits.
+The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, when the player quits, and, with lazy activation, when nothing has used it for a while ([Idle plugins](#idle-plugins-are-stopped)).
 
 - First the player removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
 - Then the SDK refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
-- A process that has not exited 300 ms later is killed.
+- A process that has not exited 300 ms later is killed (2 s later when it stops because it is idle).
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with {@link "@vestra-player/sdk"!Player.open | player.open} **keeps playing** after it stops.
 
@@ -118,7 +118,7 @@ A plugin's process does not live as long as the player. Within one player sessio
 - the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
 - it **crashed**, or failed to start, and is started again.
 
-A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use. Write the plugin for those too.
+A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use ([Idle plugins](#idle-plugins-are-stopped)). Write the plugin for those too.
 
 Everything in the process is gone after such a restart: variables, timers, caches, open sockets. The menus, windows and panels come back because `activate` creates them again. **Keep state that must survive a restart in session storage (or persistent storage):**
 
@@ -131,6 +131,16 @@ Everything in the process is gone after such a restart: variables, timers, cache
 Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
 
 Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
+
+## Idle plugins are stopped
+
+With lazy activation (player 0.5.18 and later, while the player turns it on), the player works like a browser's extension service workers (Chrome Manifest V3): a plugin that holds nothing only its process can serve is stopped after about a minute without use, and started again by its next use.
+
+- **What stays while it is stopped**: its menu items and keys (with the last `enabled`, `checked` and `reason` it set), its settings pages, its file and link resolvers and its drop targets. Using one of them, or showing one of its settings pages, starts the plugin; it runs `activate`, registers them again, and then receives the click, the open or the drop. The player also remembers these between runs, so a plugin nobody uses is not started at launch at all.
+- **What keeps it running**: anything the player must deliver to it or that is its running work: a listener (`player.onChange`, `window.onChange`, `bindings.onChange`, `packages.onChange` and the other `onChange`, `onEnd`), a command state, panel or window binding that reads `plugin.player.state` or another state, an open window, a mounted panel, an OSD panel, a timeline layer, a filter chain, a stream or subtitle track it added, a next/previous provider, a sleep lease, a window setting, a job or snapshot in progress. Reading `plugin.player.state` inside a handler does not: the SDK reads the state again when the plugin starts.
+- **What does not keep it running**: work the player does not see. A `fetch`, a socket, a `setTimeout` or `setInterval`, or a promise the plugin awaits is lost when an idle plugin is stopped, as in Chrome. Set the command's `busy` while its work runs (a busy command keeps the plugin running), or keep what it needs in [session storage](#restarts-activate-can-run-more-than-once) and pick it up in `activate`.
+
+`TestHost.listening` lists the events a plugin really listens to; empty means listeners do not keep it running.
 
 ## The data directory
 

@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.37: full reference
+# @vestra-player/sdk 1.5.38: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -3147,6 +3147,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | --- | --- |
 | TestHost.calls | Every request the plugin sent, in order: `{ method, params }`. |
 | TestHost.subscriptions | The host events the plugin subscribed to (needs `events` etc.). |
+| TestHost.listening | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
 | TestHost.source | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | TestHost.windows | Tool windows by id (see `TestHost.window`). |
 | TestHost.panel | The plugin's mounted panel (bottom bar, sidebar or backdrop), or `null`. |
@@ -3351,11 +3352,11 @@ The rule that follows: **state you change outside a handler, or after an `await`
 
 #### Stopping
 
-The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, and when the player quits.
+The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, when the player quits, and, with lazy activation, when nothing has used it for a while (Idle plugins).
 
 - First the player removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
 - Then the SDK refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
-- A process that has not exited 300 ms later is killed.
+- A process that has not exited 300 ms later is killed (2 s later when it stops because it is idle).
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with player.open **keeps playing** after it stops.
 
@@ -3366,7 +3367,7 @@ A plugin's process does not live as long as the player. Within one player sessio
 - the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
 - it **crashed**, or failed to start, and is started again.
 
-A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use. Write the plugin for those too.
+A later player may restart a plugin in more cases: restarting plugins that share one process together when one of them faults or hangs, or stopping a plugin nobody uses and starting it on its next use (Idle plugins). Write the plugin for those too.
 
 Everything in the process is gone after such a restart: variables, timers, caches, open sockets. The menus, windows and panels come back because `activate` creates them again. **Keep state that must survive a restart in session storage (or persistent storage):**
 
@@ -3379,6 +3380,16 @@ Everything in the process is gone after such a restart: variables, timers, cache
 Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
 
 Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
+
+#### Idle plugins are stopped
+
+With lazy activation (player 0.5.18 and later, while the player turns it on), the player works like a browser's extension service workers (Chrome Manifest V3): a plugin that holds nothing only its process can serve is stopped after about a minute without use, and started again by its next use.
+
+- **What stays while it is stopped**: its menu items and keys (with the last `enabled`, `checked` and `reason` it set), its settings pages, its file and link resolvers and its drop targets. Using one of them, or showing one of its settings pages, starts the plugin; it runs `activate`, registers them again, and then receives the click, the open or the drop. The player also remembers these between runs, so a plugin nobody uses is not started at launch at all.
+- **What keeps it running**: anything the player must deliver to it or that is its running work: a listener (`player.onChange`, `window.onChange`, `bindings.onChange`, `packages.onChange` and the other `onChange`, `onEnd`), a command state, panel or window binding that reads `plugin.player.state` or another state, an open window, a mounted panel, an OSD panel, a timeline layer, a filter chain, a stream or subtitle track it added, a next/previous provider, a sleep lease, a window setting, a job or snapshot in progress. Reading `plugin.player.state` inside a handler does not: the SDK reads the state again when the plugin starts.
+- **What does not keep it running**: work the player does not see. A `fetch`, a socket, a `setTimeout` or `setInterval`, or a promise the plugin awaits is lost when an idle plugin is stopped, as in Chrome. Set the command's `busy` while its work runs (a busy command keeps the plugin running), or keep what it needs in session storage and pick it up in `activate`.
+
+`TestHost.listening` lists the events a plugin really listens to; empty means listeners do not keep it running.
 
 #### The data directory
 
@@ -4672,9 +4683,11 @@ Session storage is kept in the host's memory, keyed by the plugin's data key rat
 
 #### Lazy activation and idle stop
 
+What a plugin sees of this, what stays while it is stopped and what keeps it running, is in Idle plugins are stopped; this section is the host's side.
+
 Host 0.5.17 adds step A1 of lazy activation, **off by default**: `VESTRA_LAZY=1` turns it on, and `VESTRA_IDLE_MS` sets the idle time (default 60 000 ms). It applies to installed plugins only; development loads are never parked.
 
-- **Record.** Every 250 ms the host looks for plugins that are ready, unused for the idle time and have nothing in flight, and asks the playback worker what each holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) keeps running. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`.
+- **Record.** Every 250 ms the host looks for plugins that are ready, unused for the idle time and have nothing in flight, and asks the playback worker what each holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) keeps running. From SDK 1.5.38 (read by player 0.5.18) the SDK marks the subscriptions it makes only to keep its own state mirrors current as `events.subscribe { event, mirror: true }`, and subscribes plainly only while the plugin has a listener or a binding that reads that state; a plugin whose subscriptions are all mirrors stays parkable. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`.
 - **Park.** The host writes the recording to `<package store>/activation/<instance GUID>.json` and stops the process as a disable does, but keeps its menu items, keys, settings pages, drop targets and resolvers, marked as recorded. A park gives the process 2 s instead of 300 ms.
 - **Wake.** One of these events for a parked plugin starts it under a new owner generation:
 
@@ -5120,6 +5133,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.38](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1538) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
 | [1.5.37](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1537) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
 | [1.5.36](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1536) | **Nobody.** No API changes, `apiVersion` stays `vestra/1`, no player version needed. | — |
 | [1.5.35](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1535) | **Nobody.** Additions only, `apiVersion` stays `vestra/1`. | — |
@@ -12213,6 +12227,10 @@ interface PluginInfo {
    * The manifest's display texts in the interface language, translated with that package's catalog; absent from players before 0.4.3 (read `manifest.json` there).
    */
   display?: PluginDisplay;
+  /**
+   * For `state: "running"`: `"running"` while its process runs, `"idle"` while the player stopped it because nothing used it (lazy activation: it starts again on its next use, its menu items, keys, settings pages, resolvers and drop targets stay). Absent in other states and from players before 0.5.18. A change between the two alone does not fire Packages.onChange.
+   */
+  process?: "running" | "idle";
 }
 ```
 
@@ -14274,6 +14292,10 @@ class TestHost implements Transport {
   readonly calls: Call[];
   /** The host events the plugin subscribed to (needs `events` etc.). */
   readonly subscriptions: Set<string>;
+  /**
+   * The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. The SDK's own copies of the state (what keeps `plugin.player.state` current) are left out. Empty means the player may stop the plugin while nothing uses it (unless it holds something else: a window, a panel, a filter…).
+   */
+  readonly listening: Set<string>;
   /**
    * The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). Wire-level shape; change it with TestHost.setSource, which also broadcasts it.
    */

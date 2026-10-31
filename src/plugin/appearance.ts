@@ -35,16 +35,22 @@ class AppearanceService {
   start() {
     if (this.#started) return;
     this.#started = true;
-    this.#runtime.on("appearance.changed", (data) => {
-      const event = data as { theme?: ThemeId; language?: string } | null;
-      const language = preference(event?.language);
-      if (language && language !== this.language) {
-        this.language = language;
-        this.#runtime.invalidate();
-      }
-      const theme = event?.theme;
-      if (theme && THEMES.includes(theme)) this.accept(theme);
-    });
+    // A mirror: a plugin listens through `watch` and bindings.
+    this.#runtime.on(
+      "appearance.changed",
+      (data) => {
+        const event = data as { theme?: ThemeId; language?: string } | null;
+        const language = preference(event?.language);
+        if (language && language !== this.language) {
+          this.language = language;
+          this.#runtime.invalidate();
+        }
+        const theme = event?.theme;
+        if (theme && THEMES.includes(theme)) this.accept(theme);
+      },
+      "events",
+      true,
+    );
   }
   accept(theme: ThemeId) {
     if (theme === this.theme) return;
@@ -54,7 +60,13 @@ class AppearanceService {
   }
   watch(listener: (theme: ThemeId) => void) {
     this.#listeners.add(listener);
-    return { dispose: async () => void this.#listeners.delete(listener) };
+    const held = this.#runtime.hold("appearance.changed");
+    return {
+      dispose: async () => {
+        this.#listeners.delete(listener);
+        await held.dispose();
+      },
+    };
   }
 }
 
@@ -66,6 +78,7 @@ export function appearance(scope: ScopeImpl): Appearance {
   return {
     get theme() {
       service().start();
+      scope.runtime.reading("appearance.changed");
       return service().theme;
     },
     onChange(listener) {
@@ -89,6 +102,7 @@ export function appearance(scope: ScopeImpl): Appearance {
     },
     get language() {
       service().start();
+      scope.runtime.reading("appearance.changed");
       return service().language;
     },
     async setLanguage(language) {

@@ -317,9 +317,11 @@ Session storage is kept in the host's memory, keyed by the plugin's data key rat
 
 ## Lazy activation and idle stop
 
+What a plugin sees of this, what stays while it is stopped and what keeps it running, is in [Idle plugins are stopped](plugins.md#idle-plugins-are-stopped); this section is the host's side.
+
 Host 0.5.17 adds step A1 of lazy activation, **off by default**: `VESTRA_LAZY=1` turns it on, and `VESTRA_IDLE_MS` sets the idle time (default 60 000 ms). It applies to installed plugins only; development loads are never parked.
 
-- **Record.** Every 250 ms the host looks for plugins that are ready, unused for the idle time and have nothing in flight, and asks the playback worker what each holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) keeps running. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`.
+- **Record.** Every 250 ms the host looks for plugins that are ready, unused for the idle time and have nothing in flight, and asks the playback worker what each holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) keeps running. From SDK 1.5.38 (read by player 0.5.18) the SDK marks the subscriptions it makes only to keep its own state mirrors current as `events.subscribe { event, mirror: true }`, and subscribes plainly only while the plugin has a listener or a binding that reads that state; a plugin whose subscriptions are all mirrors stays parkable. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`.
 - **Park.** The host writes the recording to `<package store>/activation/<instance GUID>.json` and stops the process as a disable does, but keeps its menu items, keys, settings pages, drop targets and resolvers, marked as recorded. A park gives the process 2 s instead of 300 ms.
 - **Wake.** One of these events for a parked plugin starts it under a new owner generation:
 

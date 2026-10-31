@@ -15,6 +15,7 @@
   <a href="https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md">Changelog</a> ·
   <a href="https://vestrasys.github.io/vestra-player-sdk/llms.txt">llms.txt</a>
 </p>
+
 ## Features
 
 - **One typed API** (`vestra/1`) for commands and menus, windows, panels, settings pages, on-screen messages, playback state and control, video and audio filters, and generated streams.

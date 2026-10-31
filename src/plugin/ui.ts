@@ -604,13 +604,20 @@ class LayoutService {
   start() {
     if (this.#started || !this.#runtime.can("ui.mount")) return;
     this.#started = true;
-    this.#runtime.on("window.state", () => void this.read());
+    // A mirror: panels listen through `watch`.
+    this.#runtime.on("window.state", () => void this.read(), "events", true);
     void this.read();
   }
   watch(listener: (layout: Layout) => void) {
     this.start();
     this.#listeners.add(listener);
-    return { dispose: async () => void this.#listeners.delete(listener) };
+    const held = this.#runtime.hold("window.state");
+    return {
+      dispose: async () => {
+        this.#listeners.delete(listener);
+        await held.dispose();
+      },
+    };
   }
   async read() {
     if (this.#reading) {

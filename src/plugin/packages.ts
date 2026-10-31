@@ -229,6 +229,9 @@ const info = (plugin: WirePlugin): PluginInfo =>
         }),
       ),
     ),
+    ...(plugin.process === "running" || plugin.process === "idle"
+      ? { process: plugin.process }
+      : {}),
     ...(plugin.display
       ? {
           display: Object.freeze({

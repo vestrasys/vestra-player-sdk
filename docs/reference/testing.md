@@ -80,6 +80,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | --- | --- |
 | {@link "@vestra-player/sdk/testing"!TestHost.calls} | Every request the plugin sent, in order: `{ method, params }`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to (needs `events` etc.). |
+| {@link "@vestra-player/sdk/testing"!TestHost.listening} | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | {@link "@vestra-player/sdk/testing"!TestHost.windows} | Tool windows by id (see `TestHost.window`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.panel} | The plugin's mounted panel (bottom bar, sidebar or backdrop), or `null`. |

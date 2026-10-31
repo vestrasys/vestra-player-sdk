@@ -151,7 +151,14 @@ export class PlayerService {
   readonly output: Latest<{ volume?: number; muted?: boolean }>;
   constructor(runtime: Runtime) {
     this.runtime = runtime;
-    runtime.on("source.state", (data) => this.accept(data as SourceState));
+    // The SDK's copy of the state (a mirror): a plugin listens through
+    // `watch` and the bindings that read `state`.
+    runtime.on(
+      "source.state",
+      (data) => this.accept(data as SourceState),
+      "events",
+      true,
+    );
     this.output = new Latest(async ({ volume, muted }) => {
       if (volume !== undefined)
         await runtime.host.playback.set("volume", volume);
@@ -174,9 +181,11 @@ export class PlayerService {
   }
   watch(watcher: (raw: SourceState) => void): Disposable {
     this.#watchers.add(watcher);
+    const held = this.runtime.hold("source.state");
     return {
       dispose: async () => {
         this.#watchers.delete(watcher);
+        await held.dispose();
       },
     };
   }
@@ -465,6 +474,7 @@ export function player(scope: ScopeImpl): Player {
   const service = () => playerOf(scope.runtime);
   return {
     get state() {
+      scope.runtime.reading("source.state");
       return service().state;
     },
     onChange(listener) {
