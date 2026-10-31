@@ -141,6 +141,10 @@ export component Slider {
     in property <float> step: (root.maximum - root.minimum) / 20;
     in property <bool> enabled: true;
     in property <bool> panel;
+    // false: Tab skips the slider (the bottom bar's seek and volume sliders,
+    // so Tab never moves the arrows from seeking to the slider); `focus()`
+    // still works.
+    in property <bool> focusable: true;
     out property <bool> has-focus: keys.has-focus;
     callback changed(float);
     callback released(float);
@@ -224,6 +228,7 @@ export component Slider {
         height: 0;
         enabled: root.enabled;
         focus-on-click: false;
+        focus-on-tab-navigation: root.focusable;
         key-pressed(event) => {
             if event.text == Key.RightArrow || event.text == Key.UpArrow {
                 root.set-value(root.value + root.step);
@@ -333,6 +338,11 @@ component FocusRing inherits Rectangle {
 // CheckBox: bind it two-way (`checked <=> Bridge.on`), or set it again from
 // the plugin's data in a `changed` handler, since the click replaces a
 // one-way binding.
+// Plugin-decided (`self-toggle: false`, like Radio): a click or Space does
+// not flip the box; `toggled` reports the state asked for (`!checked`) and
+// the plugin sets `checked` when it agrees, for example after a
+// confirmation, so a one-way binding (`checked: Bridge.on`) stays. Both
+// modes also call `clicked`.
 // Default style (ui-spec §2.1: checks on accent, the mark white): a 13px box,
 // accent when checked. Panel style (`panel: true`, the picture and audio
 // workbenches' switches): a 12px box on `bg-bar` with a 6px `playing` square.
@@ -341,13 +351,22 @@ export component Check {
     in-out property <bool> checked;
     in property <bool> enabled: true;
     in property <bool> panel;
+    // false: the plugin owns `checked` (see above).
+    in property <bool> self-toggle: true;
     out property <bool> has-focus: keys.has-focus;
+    // The state after the click (self-toggle) or the state asked for.
     callback toggled(bool);
+    callback clicked();
     // What a click does; also Space and the screen reader's default action.
     public function toggle() {
         if !root.enabled { return; }
-        root.checked = !root.checked;
-        root.toggled(root.checked);
+        if root.self-toggle {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        } else {
+            root.toggled(!root.checked);
+        }
+        root.clicked();
     }
     private property <length> box: root.panel ? 12px : 13px;
     min-height: Theme.checkbox-row-height;
@@ -670,6 +689,9 @@ export component Tab {
 export component Tabs inherits Rectangle {
     in property <[string]> model;
     in-out property <int> current-index: 0;
+    // Per tab (same order as `model`, may be shorter): Tab's `emphasis`,
+    // the accent label of a tab where something waits ("Updates (2)").
+    in property <[bool]> emphasis;
     out property <bool> has-focus: keys.has-focus;
     callback selected(int);
     public function select(index: int) {
@@ -687,6 +709,7 @@ export component Tabs inherits Rectangle {
         for text[index] in root.model: Tab {
             text: text;
             selected: index == root.current-index;
+            emphasis: index < root.emphasis.length && root.emphasis[index];
             focused: keys.has-focus && index == root.current-index;
             accessible-item-index: index;
             clicked => { root.select(index); }
@@ -769,7 +792,12 @@ component ChoiceRow {
 // moving it up when there is no room below). The list is a ListView (rows
 // are created only while visible, so long lists such as output devices or
 // plugin ids stay cheap) of at most `max-visible-rows` 20px rows; it is at
-// least `popup-min-width` wide.
+// least `popup-min-width` wide. Slint moves the popup into the window but
+// does not shorten it: in a window shorter than the list, set
+// `window-height: root.height` (the window's height) and the list is cut
+// to fit, scrolling to reach every row. A Choice in a mounted panel or
+// settings page cannot see its window's height; keep `max-visible-rows`
+// small there.
 // Keyboard: closed and focused (Tab or `focus()`), Up/Down/Home/End change
 // the choice, Space, Enter, F4 or Alt+Down open the list; open, the arrows,
 // Page Up/Down and Home/End move the lit row, Enter or Space picks it,
@@ -785,6 +813,8 @@ export component Choice {
     in property <bool> enabled: true;
     in property <int> max-visible-rows: 10;
     in property <length> popup-min-width: 0px;
+    // The window's height, when known: the list is never taller.
+    in property <length> window-height: 0px;
     out property <bool> has-focus: keys.has-focus;
     out property <bool> open: popup.is-open;
     out property <string> current-text: root.current-index >= 0 && root.current-index < root.model.length ? root.model[root.current-index] : "";
@@ -801,6 +831,10 @@ export component Choice {
     // The lit row of the open list.
     private property <int> lit;
     private property <int> rows: min(root.model.length, max(1, root.max-visible-rows));
+    private property <length> list-height: root.window-height > 0px
+        ? min(root.rows * 20px + 2px, root.window-height) : root.rows * 20px + 2px;
+    // Whole rows the list shows (Page Up/Down).
+    private property <int> page: max(1, floor((root.list-height - 2px) / 20px));
     height: Theme.input-height;
     forward-focus: keys;
     accessible-role: combobox;
@@ -883,7 +917,7 @@ export component Choice {
         x: 0;
         y: root.height;
         width: max(root.width, root.popup-min-width);
-        height: root.rows * 20px + 2px;
+        height: root.list-height;
         close-policy: close-on-click-outside;
         forward-focus: list-keys;
         list-keys := FocusScope {
@@ -911,11 +945,11 @@ export component Choice {
                     return accept;
                 }
                 if event.text == Key.PageUp {
-                    self.light(root.lit - root.rows);
+                    self.light(root.lit - root.page);
                     return accept;
                 }
                 if event.text == Key.PageDown {
-                    self.light(root.lit + root.rows);
+                    self.light(root.lit + root.page);
                     return accept;
                 }
                 if event.text == Key.Home {
