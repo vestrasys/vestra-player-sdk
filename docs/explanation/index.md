@@ -1,11 +1,11 @@
 ---
-title: Concepts
+title: Explanation
 description: What each part of the player and its plugins is, why it works the way it does and how the parts fit together.
 ---
 
-# Concepts
+# Explanation
 
-Concept pages explain how the player and its plugins fit together: what a thing is, why it works the way it does, and how it relates to its neighbours. They do not walk through code step by step (that is what the [Tutorials](../tutorials/index.md) do), they do not list every member (that is the {@link "@vestra-player/sdk" | API reference}), and they do not collect constants and names (that is the [Reference](../reference/index.md)). Start with the first page; the others build on it.
+Explanation pages explain how the player and its plugins fit together: what a thing is, why it works the way it does, and how it relates to its neighbours. They do not walk through code step by step (that is what the [Tutorials](../tutorials/index.md) do), they do not list every member (that is the {@link "@vestra-player/sdk" | API reference}), and they do not collect constants and names (that is the [Reference](../reference/index.md)). Start with the first page; the others build on it.
 
 ## How a plugin runs
 

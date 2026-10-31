@@ -134,5 +134,5 @@ A second provider is refused with `conflict` (`sequence-taken`). During activati
 
 ## See also
 
-- [Playback state, controls and sources](../concepts/playback.md): phases, sources, resolvers and streams.
+- [Playback state, controls and sources](../explanation/playback.md): phases, sources, resolvers and streams.
 - The API reference: `Player`, `Media`, `Scrub`, `Conditional`, `Host`.

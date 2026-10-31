@@ -13,7 +13,7 @@ This guide walks through a complete Vestra Player plugin: the files it is made o
 - The player loads the entry module and calls its **default export** `activate(plugin)`. The plugin imports the SDK **as types only**, so a built plugin contains nothing but its own code.
 - Everything a plugin creates (commands, windows, panels, filters, listeners…) is a handle that is released automatically when the plugin stops. There is no cleanup function to return.
 
-[How a plugin runs](../concepts/plugins.md) explains the process, activation, handles, the update pass and failures in full.
+[How a plugin runs](../explanation/plugins.md) explains the process, activation, handles, the update pass and failures in full.
 
 ## Rules for plugins
 
@@ -235,6 +235,6 @@ Every 1.x release of the SDK implements the plugin API `vestra/1`; minor release
 ## Next
 
 - [Examples](../examples/index.md): complete plugins, each with a step-by-step walkthrough.
-- [Concepts](../concepts/index.md): how plugins, commands, playback, processing and the interface work.
+- [Explanation](../explanation/index.md): how plugins, commands, playback, processing and the interface work.
 - [Test a plugin](../how-to/testing.md) and [Publish a plugin](../how-to/publish.md).
 - {@link "@vestra-player/sdk"!Scope | Scope}: every module available on `plugin`; {@link "@vestra-player/sdk"!PluginError | PluginError}: error codes.

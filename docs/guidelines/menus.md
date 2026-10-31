@@ -7,7 +7,7 @@ description: Where a plugin's commands go in the player's right-click menu, how 
 
 The player has one menu, opened with a right click on the video. There is no menu button in the window and no menu bar at the top of the screen, so every command a user may look for is in this menu or in a panel's right-click menu. It is merged from the commands of every plugin and the player's own; these rules keep the result one menu instead of a pile of plugins.
 
-How paths merge, how `order` and `group` sort items and how a key finds its command are explained in [Commands, menus and key bindings](../concepts/commands.md). Menu ids, the shared menu keys, the binding syntax and the keys the system takes first are listed in [Commands](../reference/commands.md). The declaration itself is {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}.
+How paths merge, how `order` and `group` sort items and how a key finds its command are explained in [Commands, menus and key bindings](../explanation/commands.md). Menu ids, the shared menu keys, the binding syntax and the keys the system takes first are listed in [Commands](../reference/commands.md). The declaration itself is {@link "@vestra-player/sdk"!CommandOptions | CommandOptions}.
 
 ## Organize by what the user does
 
@@ -98,4 +98,4 @@ A default binding is optional. Users rebind every command (Settings ▸ Keyboard
 - **Avoid the [keys the system takes first](../reference/commands.md#keys-the-system-takes-first)**, the standard close keys among them, as defaults.
 - **The right mouse button opens the menu** and is not a binding input; the other video-area mouse inputs are.
 - **A typed symbol is its own key**: `>` is not `Shift+.`, so `.` and `>` can do different things.
-- **Remember that bindings belong to the main window.** They do not fire while a tool window or the Options window has focus ([Focus and keyboard](../concepts/ui.md)).
+- **Remember that bindings belong to the main window.** They do not fire while a tool window or the Options window has focus ([Focus and keyboard](../explanation/ui.md)).

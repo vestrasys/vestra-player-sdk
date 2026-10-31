@@ -5,7 +5,7 @@ description: Step-by-step lessons that take you from an empty folder to a workin
 
 # Tutorials
 
-Tutorials take you from an empty folder to a working plugin, one step at a time, and end with something that runs in the player. If you want to look something up instead, use the [Reference](../reference/index.md) tables or the {@link "@vestra-player/sdk" | API reference}; to understand how the pieces fit together, read the [Concepts](../concepts/index.md); for one task at a time, the [How-to guides](../how-to/index.md).
+Tutorials take you from an empty folder to a working plugin, one step at a time, and end with something that runs in the player. If you want to look something up instead, use the [Reference](../reference/index.md) tables or the {@link "@vestra-player/sdk" | API reference}; to understand how the pieces fit together, read the [Explanation](../explanation/index.md); for one task at a time, the [How-to guides](../how-to/index.md).
 
 | Tutorial                              | You will learn                                                                       |
 | ------------------------------------- | ------------------------------------------------------------------------------------ |

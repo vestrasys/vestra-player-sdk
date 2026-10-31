@@ -5,7 +5,7 @@ description: Built-in menu ids, submenu keys in use, every built-in command with
 
 # Commands, menus and bindings
 
-The names to look up while declaring a command with {@link "@vestra-player/sdk"!Commands.add | plugin.commands.add}. How menus merge and how a key finds its command is explained in [Commands, menus and key bindings](../concepts/commands.md); where a command should go is in [Guidelines: menus](../guidelines/menus.md).
+The names to look up while declaring a command with {@link "@vestra-player/sdk"!Commands.add | plugin.commands.add}. How menus merge and how a key finds its command is explained in [Commands, menus and key bindings](../explanation/commands.md); where a command should go is in [Guidelines: menus](../guidelines/menus.md).
 
 ## Menu paths
 

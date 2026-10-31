@@ -49,12 +49,6 @@ The player shows its interface in seven languages, chosen at start-up. A plugin 
 
 [Read the guide](i18n.md)
 
-## Migrate a plugin to English source text
-
-The checklist for a plugin written in one language before SDK 1.5.9: English menu paths, `@tr` in Slint, sentences moved out of TypeScript into Slint or templates, `zh-Hans.po` written from the old texts, and tests.
-
-[Read the guide](i18n-migration.md)
-
 ## Test a plugin
 
 `@vestra-player/sdk/testing` runs a plugin against `TestHost`, an in-memory player that speaks the real protocol. The guide shows the shape of a test (start, act, settle, assert, stop), how to act like the user (run commands, press keys and what `press` reports, fire window callbacks, answer dialogs), how to simulate sources and the main window, how to inject a refusal or a lost reply with `host.handle`, when `settle()` is enough and when to poll, and what to assert on.
@@ -66,9 +60,3 @@ The checklist for a plugin written in one language before SDK 1.5.9: English men
 Plugins reach the store through pull requests to the official plugin repository. The guide covers preparing the package, choosing the id, registering the source repository (or hosting the plugin there), the pull request and its checks, updating, withdrawing, asking for a revocation, and what users see of the plugin in the store.
 
 [Read the guide](publish.md)
-
-## Migrate off package rollback
-
-The player no longer keeps a previous plugin version: `packages.rollback` and `previousVersion` were deprecated in SDK 1.5.16 and removed in 1.5.17. The checklist for plugins with `plugins.manage`: remove rollback calls and UI and any "Undo install", keep to install, uninstall and disable/enable for third-party plugins (an older version is the user's uninstall plus a `.vxp`), offer no action for built-ins (from 1.5.18 they cannot be disabled either), and update tests.
-
-[Read the guide](rollback-migration.md)

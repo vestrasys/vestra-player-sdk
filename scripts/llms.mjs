@@ -627,10 +627,11 @@ const pageUrl = (path) =>
 /** The singular kind of each group's pages, for headings. */
 const KINDS = {
   tutorials: "Tutorial",
-  concepts: "Concept",
   "how-to": "How-to",
-  guidelines: "Guideline",
   reference: "Reference",
+  explanation: "Explanation",
+  guidelines: "Guideline",
+  upgrading: "Upgrading",
 };
 /**
  * The documentation pages in reading order: `{ group, path, url }`, every

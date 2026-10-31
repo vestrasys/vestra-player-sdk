@@ -5,7 +5,7 @@ description: The plugin process, activation, handles and scopes, the update pass
 
 # How a plugin runs
 
-Every other concept page builds on this one. It explains what the player does with a plugin from the moment it starts it until it stops it: the process the plugin runs in, the `activate` function, the handles everything is made of, the update pass that keeps the player in step with the plugin's state, what happens when the plugin stops, where it keeps its files, and how failures reach it.
+Every other explanation page builds on this one. It explains what the player does with a plugin from the moment it starts it until it stops it: the process the plugin runs in, the `activate` function, the handles everything is made of, the update pass that keeps the player in step with the plugin's state, what happens when the plugin stops, where it keeps its files, and how failures reach it.
 
 It assumes you have written a first plugin ([Getting started](../tutorials/getting-started.md)). For each type's members, follow the links into the API reference.
 

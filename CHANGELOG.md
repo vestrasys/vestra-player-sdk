@@ -176,7 +176,7 @@ Fixes for Windows and for a vendored SDK, and built-ins that can no longer be di
 
 ## 1.5.17
 
-**Package rollback is removed**, as announced in 1.5.16: the player keeps no previous plugin version. `apiVersion` stays `vestra/1` (a patch release, as when 1.5.8 removed `PackageCandidate.trial()`); plugins that do not manage other plugins need no change. A plugin manager that still calls `rollback` or reads `previousVersion` no longer compiles. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
+**Package rollback is removed**, as announced in 1.5.16: the player keeps no previous plugin version. `apiVersion` stays `vestra/1` (a patch release, as when 1.5.8 removed `PackageCandidate.trial()`); plugins that do not manage other plugins need no change. A plugin manager that still calls `rollback` or reads `previousVersion` no longer compiles. Migration: [Migrating off package rollback](docs/upgrading/rollback-migration.md).
 
 - **Removed: `Packages.rollback`** and the wire method `packages.rollback`. The player already answers the method with `unsupported` ("unknown package method"). To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`.
 - **Removed: `PluginInfo.previousVersion`** and the wire field `PackageInfo.previousVersion`; `packages.list` and `packages.changed` no longer carry it.
@@ -187,7 +187,7 @@ Fixes for Windows and for a vendored SDK, and built-ins that can no longer be di
 
 ## 1.5.16
 
-**Package rollback is deprecated: the player keeps no previous plugin version.** `apiVersion` stays `vestra/1`; code still compiles, and plugins that do not manage other plugins need no change. 1.5.17 removes the deprecated symbols, as 1.5.8 removed `PackageCandidate.trial()` at patch level. Migration: [Migrating off package rollback](docs/how-to/rollback-migration.md).
+**Package rollback is deprecated: the player keeps no previous plugin version.** `apiVersion` stays `vestra/1`; code still compiles, and plugins that do not manage other plugins need no change. 1.5.17 removes the deprecated symbols, as 1.5.8 removed `PackageCandidate.trial()` at patch level. Migration: [Migrating off package rollback](docs/upgrading/rollback-migration.md).
 
 - **Deprecated: `Packages.rollback`** (removed in 1.5.17). The player no longer has `packages.rollback` and answers it with `unsupported` ("unknown package method"); the SDK still forwards the call, so the error reaches the caller. To go back to an older version of a third-party plugin, the user uninstalls it and installs that version's `.vxp`.
 - **Deprecated: `PluginInfo.previousVersion`** and the wire field `PackageInfo.previousVersion` (removed in 1.5.17): always `null`, since an upgrade replaces the package. The SDK reads a missing field as `null`.
@@ -265,7 +265,7 @@ Fixes for Windows and for a vendored SDK, and built-ins that can no longer be di
 
 ## 1.5.9
 
-**Translations** (player 0.4.3). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.8 need no change. One test-visible change: a core action's `declaration.path` in `TestHost` is now the player's English key (read `display` for what the menu shows). The player now shows its interface in English, Simplified Chinese, Japanese, Korean, German, French or Spanish, chosen at start-up; a plugin writes every text in English and ships one gettext file per language. Plugins write no translation code: the player translates. Guides: [Translate a plugin](docs/how-to/i18n.md), [Migrate a plugin to English source text](docs/how-to/i18n-migration.md); example: `examples/i18n`.
+**Translations** (player 0.4.3). Additive; `apiVersion` stays `vestra/1`, and plugins written for 1.5.8 need no change. One test-visible change: a core action's `declaration.path` in `TestHost` is now the player's English key (read `display` for what the menu shows). The player now shows its interface in English, Simplified Chinese, Japanese, Korean, German, French or Spanish, chosen at start-up; a plugin writes every text in English and ships one gettext file per language. Plugins write no translation code: the player translates. Guides: [Translate a plugin](docs/how-to/i18n.md), [Migrate a plugin to English source text](docs/upgrading/i18n-migration.md); example: `examples/i18n`.
 
 - **`plugin.i18n.locale`** (new `I18n`, `Locale`): the interface language of this run, `"en"`, `"zh-Hans"`, `"ja"`, `"ko"`, `"de"`, `"fr"` or `"es"`; it never changes while the player runs. `"en"` from older players.
 - **Templates with arguments**: `osd.show(text, args?)`, `OsdPanel.set(text, args?)` and `ConfirmOptions.args` (new `TemplateArgs`: an array for `{}` / `{0}`, an object for `{name}`). The player translates the template with the plugin's catalog, then fills it in. Without `args` the text shows as it is, so existing calls are unchanged; older players show the template unfilled.

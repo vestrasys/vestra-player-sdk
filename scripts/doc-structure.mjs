@@ -28,16 +28,17 @@ export const PENDING_UNTIL = "1.5.13";
 
 /**
  * Size limits (lines without the front matter and generated blocks; words
- * for concept pages). Above a limit `docs:check` warns; more than 25 % above
+ * for explanation pages). Above a limit `docs:check` warns; more than 25 % above
  * it fails.
  */
 export const LIMITS = {
   index: { lines: 120 },
   tutorial: { lines: 350 },
-  concept: { lines: 350, words: 4500 },
+  explanation: { lines: 350, words: 4500 },
   "how-to": { lines: 200 },
   guideline: { lines: 200 },
   example: { lines: 200 },
+  upgrading: { lines: 200 },
   reference: { lines: 150 },
 };
 
@@ -66,34 +67,6 @@ export const GROUPS = [
       {
         file: "getting-started.md",
         why: "The one tutorial: from an empty folder to a packed plugin.",
-      },
-    ],
-  },
-  {
-    title: "Concepts",
-    folder: "concepts",
-    kind: "concept",
-    pages: [
-      { file: "index.md", why: "Group index." },
-      {
-        file: "plugins.md",
-        why: "How a plugin runs (process, activate, handles and scopes, the update pass, stopping, data directory, failures): the base every other concept builds on.",
-      },
-      {
-        file: "commands.md",
-        why: "Commands, menu paths and how a key finds its command: one model shared by menus, bindings and panels.",
-      },
-      {
-        file: "playback.md",
-        why: "Playback state and events, conditional controls, sources and the play sequence: spans Player, Resolvers and the core actions.",
-      },
-      {
-        file: "processing.md",
-        why: "Video and audio filter chains, joining plugins' chains, live parameters, the view and render options.",
-      },
-      {
-        file: "ui.md",
-        why: "The five interface surfaces and how Slint and TypeScript talk; at its size limit, so no other topic joins it.",
       },
     ],
   },
@@ -132,10 +105,6 @@ export const GROUPS = [
         why: "One task: translate a plugin.",
       },
       {
-        file: "i18n-migration.md",
-        why: "One task: migrate a plugin written before 1.5.9 to English source text.",
-      },
-      {
         file: "testing.md",
         why: "One task: test a plugin with TestHost (actions, simulated sources, injected failures, settling).",
       },
@@ -143,9 +112,69 @@ export const GROUPS = [
         file: "publish.md",
         why: "One task: submit a plugin to the plugin store.",
       },
+    ],
+  },
+  {
+    title: "Reference",
+    folder: "reference",
+    kind: "reference",
+    pages: [
+      { file: "index.md", why: "Group index." },
       {
-        file: "rollback-migration.md",
-        why: "One task: move a plugin manager off Packages.rollback and PluginInfo.previousVersion (deprecated in 1.5.16; removed in 1.5.17).",
+        file: "manifest.md",
+        why: "Manifest field rules and the minPlayerVersion table: lookup across many symbols.",
+      },
+      {
+        file: "capabilities.md",
+        why: "Every capability with the API it opens, what it requires and its store wording: one generated table.",
+      },
+      {
+        file: "limits.md",
+        why: "Every runtime limit in one generated table instead of scattered over the API.",
+      },
+      {
+        file: "commands.md",
+        why: "Menu ids, menu keys, menu path and binding syntax, core action ids and the keys the system takes first.",
+      },
+      {
+        file: "platforms.md",
+        why: "Every platform difference in one table.",
+      },
+      {
+        file: "theme.md",
+        why: "Theme tokens and values, fonts, icons and the @vestra/widgets components, generated from slint/.",
+      },
+      {
+        file: "cli.md",
+        why: "The vestra-plugin commands, their options and the package.json `vestra` field.",
+      },
+    ],
+  },
+  {
+    title: "Explanation",
+    folder: "explanation",
+    kind: "explanation",
+    pages: [
+      { file: "index.md", why: "Group index." },
+      {
+        file: "plugins.md",
+        why: "How a plugin runs (process, activate, handles and scopes, the update pass, stopping, data directory, failures): the base every other explanation page builds on.",
+      },
+      {
+        file: "commands.md",
+        why: "Commands, menu paths and how a key finds its command: one model shared by menus, bindings and panels.",
+      },
+      {
+        file: "playback.md",
+        why: "Playback state and events, conditional controls, sources and the play sequence: spans Player, Resolvers and the core actions.",
+      },
+      {
+        file: "processing.md",
+        why: "Video and audio filter chains, joining plugins' chains, live parameters, the view and render options.",
+      },
+      {
+        file: "ui.md",
+        why: "The five interface surfaces and how Slint and TypeScript talk; at its size limit, so no other topic joins it.",
       },
     ],
   },
@@ -204,38 +233,18 @@ export const GROUPS = [
     ],
   },
   {
-    title: "Reference",
-    folder: "reference",
-    kind: "reference",
+    title: "Upgrading",
+    folder: "upgrading",
+    kind: "upgrading",
     pages: [
       { file: "index.md", why: "Group index." },
       {
-        file: "manifest.md",
-        why: "Manifest field rules and the minPlayerVersion table: lookup across many symbols.",
+        file: "i18n-migration.md",
+        why: "Upgrade note: migrate a plugin written before 1.5.9 to English source text.",
       },
       {
-        file: "capabilities.md",
-        why: "Every capability with the API it opens, what it requires and its store wording: one generated table.",
-      },
-      {
-        file: "limits.md",
-        why: "Every runtime limit in one generated table instead of scattered over the API.",
-      },
-      {
-        file: "commands.md",
-        why: "Menu ids, menu keys, menu path and binding syntax, core action ids and the keys the system takes first.",
-      },
-      {
-        file: "platforms.md",
-        why: "Every platform difference in one table.",
-      },
-      {
-        file: "theme.md",
-        why: "Theme tokens and values, fonts, icons and the @vestra/widgets components, generated from slint/.",
-      },
-      {
-        file: "cli.md",
-        why: "The vestra-plugin commands, their options and the package.json `vestra` field.",
+        file: "rollback-migration.md",
+        why: "Upgrade note: move a plugin manager off Packages.rollback and PluginInfo.previousVersion (deprecated in 1.5.16; removed in 1.5.17).",
       },
     ],
   },
@@ -243,3 +252,15 @@ export const GROUPS = [
 
 /** Files under docs/ that are deliberately not on the site. */
 export const OFF_SITE = ["maintaining.md"];
+
+/**
+ * Site addresses that moved, old → new (both relative to the site's root).
+ * TypeDoc names a page's address after its title, so a renamed title (or
+ * group index) would leave the old address dead for links from outside,
+ * such as the player repository's docs. scripts/typedoc-plugin.mjs writes a
+ * small redirecting page at each old address.
+ */
+export const REDIRECTS = {
+  // The group "Concepts" became "Explanation" (the Diátaxis restructure).
+  "documents/Concepts.html": "documents/Explanation.html",
+};

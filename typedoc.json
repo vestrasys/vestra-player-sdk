@@ -6,8 +6,8 @@
   "out": "docs-site",
   "readme": "README.md",
   "projectDocuments": [
-    "docs/{tutorials,concepts,how-to,guidelines,examples,reference}/index.md",
-    "docs/{tutorials,concepts,how-to,guidelines,examples,reference}/!(index).md"
+    "docs/{tutorials,how-to,reference,explanation,guidelines,examples,upgrading}/index.md",
+    "docs/{tutorials,how-to,reference,explanation,guidelines,examples,upgrading}/!(index).md"
   ],
   "favicon": ".github/assets/logo.png",
   "excludeInternal": true,
@@ -16,11 +16,12 @@
   "sort": ["source-order"],
   "groupOrder": [
     "Tutorials",
-    "Concepts",
     "How-to",
+    "Reference",
+    "Explanation",
     "Guidelines",
     "Examples",
-    "Reference",
+    "Upgrading",
     "API",
     "*"
   ],

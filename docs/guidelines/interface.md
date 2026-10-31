@@ -5,7 +5,7 @@ description: Rules for a plugin's tool windows, panels, on-screen messages and t
 
 # Interface guidelines
 
-These are the rules the player's built-in plugins follow for their windows, panels and messages. Follow them and your plugin looks like part of the player. They assume you know the five surfaces from [Windows, panels, settings pages, dialogs and the OSD](../concepts/ui.md); token names, sizes, fonts, icons and widgets are listed in [Theme](../reference/theme.md).
+These are the rules the player's built-in plugins follow for their windows, panels and messages. Follow them and your plugin looks like part of the player. They assume you know the five surfaces from [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md); token names, sizes, fonts, icons and widgets are listed in [Theme](../reference/theme.md).
 
 All sizes are logical pixels (Slint `px`).
 
@@ -14,7 +14,7 @@ All sizes are logical pixels (Slint `px`).
 - **Feedback is an OSD message, not a window.** Confirm what just happened with {@link "@vestra-player/sdk"!Osd.show | osd.show} ("Bookmark added", a new volume, a new speed). Do not open a dialog to say that something succeeded: the player's own snapshot command saves at once and shows a message; only "Save As…" asks.
 - **Errors are messages too.** A failed load or a failed action shows one sentence in the OSD; in a window the user is working in, a failure state is drawn in `Theme.danger`.
 - **No permanent text over the video.** Nothing sits above the video, and diagnostic numbers are not always on: show them in an OSD info block ({@link "@vestra-player/sdk"!Osd.panel | osd.panel}) behind a command with a check mark, off by default (the player's "Playback Info", Tab, works this way).
-- **A dialog only for a real question** (before something destructive) or a path (the system file dialogs). See [Choosing a surface](../concepts/ui.md).
+- **A dialog only for a real question** (before something destructive) or a path (the system file dialogs). See [Choosing a surface](../explanation/ui.md).
 
 ## Theme
 

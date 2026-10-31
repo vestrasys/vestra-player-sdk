@@ -34,7 +34,7 @@ The package publishes compiled `.js` and `.d.ts` files, not `.ts` sources: Node 
 - `npm run docs` treats warnings as errors: every exported declaration and member must be documented, `{@link}` targets and relative links in documents must resolve, `{@includeCode}` regions must exist, and an internal type referenced by the public API must be listed in `intentionallyNotExported`. Mark members that only exist for the player with `@internal`.
 - `npm run docs:check` (`scripts/check-docs.mjs`) extracts every ` ```ts ` block from `README.md` and `docs/**/*.md` and every ` ```ts ` block in an `@example` of `src/` and type checks them against `src/` (a block without imports gets `plugin: Plugin` and the SDK's exported types in scope, and may use `await` and `return`). Markdown blocks must compile, and so must the `@example` blocks of the categories listed in `scripts/doc-standard.mjs`; the other `@example` blocks are reported only, until the reference rewrite reaches them (`--strict` makes them fail). Mark an intentionally incomplete block ` ```ts nocheck `. It also checks for drift: the README Quick start equals `examples/hello`, and the Node.js version in the documents equals `engines.node`.
 - `npm run doc-lint` (`scripts/doc-lint.mjs`) reports, per public declaration and member, a missing summary and the coverage of `@remarks`, `@example`, `@throws`, `@category`, `@since` and `@capability`, and compares the error codes in the `PluginError` table with the codes the SDK throws. That report only warns (`--strict` fails on missing summaries). The categories listed in `scripts/doc-standard.mjs` (so far `UI`) are enforced: a symbol of such a category that misses part of the standard below fails the run, and so does a declaration tagged with such a `@category` that the list does not name.
-- **llms.txt and llms-full.txt** ([llmstxt.org](https://llmstxt.org)) are the reference for language models, such as Vestra Player AI writing a plugin. `scripts/llms.mjs` generates both from the sources: the declarations from an in-memory declaration emit of `src/` (`stripInternal`; doc comments reduced to the description, `@remarks`, `@capability`, `@player`, `@param`, `@returns`, `@throws`, `@deprecated` and every `@example` without its hidden setup lines), every page of the groups in `scripts/doc-structure.mjs` except Examples (Tutorials, Concepts, How-to, Guidelines, Reference; index pages left out), the examples' READMEs, walkthroughs and complete source from `examples/` and `docs/examples/`, and the short index (rules, manifest, capabilities, test, command line, error codes, line numbers into the full file) from `docs/tutorials/getting-started.md`, the generated tables of `docs/reference/capabilities.md` and `docs/reference/cli.md`, the `PluginError` table, `src/manifest.ts`, `src/commands.ts` and `src/capabilities.ts`. Never edit the two files by hand: change the source and run `npm run docs:llms`, then commit them. CI (`_static.yml`) runs `npm run docs:llms -- --check`; `pack:check` checks that the packed files name the package version. They are published in the package (`files`, and the exports `./llms.txt`, `./llms-full.txt`) and copied to the site's root by `scripts/typedoc-plugin.mjs`. The script fails when a source it reads changes shape: the generated capability table must list exactly `CAPABILITIES`, `examples/README.md` every example folder, and llms.txt must stay at most 10 KB, 10,240 bytes (shorten the index, not the full file; the limit was 9 KB until SDK 1.5.33, raised to leave room for about 20 more how-to pages while the index stays under 2.6k tokens).
+- **llms.txt and llms-full.txt** ([llmstxt.org](https://llmstxt.org)) are the reference for language models, such as Vestra Player AI writing a plugin. `scripts/llms.mjs` generates both from the sources: the declarations from an in-memory declaration emit of `src/` (`stripInternal`; doc comments reduced to the description, `@remarks`, `@capability`, `@player`, `@param`, `@returns`, `@throws`, `@deprecated` and every `@example` without its hidden setup lines), every page of the groups in `scripts/doc-structure.mjs` except Examples (Tutorials, How-to, Reference, Explanation, Guidelines, Upgrading; index pages left out), the examples' READMEs, walkthroughs and complete source from `examples/` and `docs/examples/`, and the short index (rules, manifest, capabilities, test, command line, error codes, line numbers into the full file) from `docs/tutorials/getting-started.md`, the generated tables of `docs/reference/capabilities.md` and `docs/reference/cli.md`, the `PluginError` table, `src/manifest.ts`, `src/commands.ts` and `src/capabilities.ts`. Never edit the two files by hand: change the source and run `npm run docs:llms`, then commit them. CI (`_static.yml`) runs `npm run docs:llms -- --check`; `pack:check` checks that the packed files name the package version. They are published in the package (`files`, and the exports `./llms.txt`, `./llms-full.txt`) and copied to the site's root by `scripts/typedoc-plugin.mjs`. The script fails when a source it reads changes shape: the generated capability table must list exactly `CAPABILITIES`, `examples/README.md` every example folder, and llms.txt must stay at most 10 KB, 10,240 bytes (shorten the index, not the full file; the limit was 9 KB until SDK 1.5.33, raised to leave room for about 20 more how-to pages while the index stays under 2.6k tokens).
 - The output directory `docs-site/` is ignored by git and not part of the npm package.
 - `typedoc.json` sets `jsDocCompatibility.exampleTag: false`: the first line of an `@example` is its title and the rest is Markdown, so an example may be a `{@includeCode}` of an example file. Every `@example` therefore needs a code fence or an `{@includeCode}`; plain code without a fence renders as text.
 
@@ -47,7 +47,7 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 
 @remarks   What it is, when to use it and when to use something else; its life cycle;
            limits; platform differences (**macOS:** / **Windows:**). Methods: only what
-           the summary and the tags below do not say. Long background goes to a concept page.
+           the summary and the tags below do not say. Long background goes to an explanation page.
 @capability  The manifest capability ("None." when there is none).
 @player    The minimum player version, only when above the vestra/1 baseline.
 @param     Meaning, unit, range, default. Inline option objects: one @param for
@@ -59,7 +59,7 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
            ```ts block that compiles on its own (`plugin` and every SDK type are in
            scope; hidden setup above `// ---cut---`) or {@includeCode ../../examples/…#region};
            see "Examples in reference comments" below.
-@see       Related symbols and the concept page: [title](../../docs/concepts/<page>.md).
+@see       Related symbols and the explanation page: [title](../../docs/explanation/<page>.md).
 @since     The SDK version that added it (git tags; CHANGELOG).
 @category  The API category (UI, Playback, …).
 ````
@@ -94,16 +94,17 @@ Do not invent mechanisms: every claim in a lead is checked against the SDK in `s
 
 ## Documentation structure
 
-The site has seven fixed groups, in this order; a new group needs a change to this section first.
+The site has eight fixed groups, in this order; a new group needs a change to this section first.
 
 | Group | Folder | Holds | Size limit per page |
 | --- | --- | --- | --- |
 | Tutorials | `docs/tutorials/` | Step-by-step lessons for a newcomer that can be followed to the end. | 350 lines |
-| Concepts | `docs/concepts/` | What something is, why it works that way and what it relates to, across several modules; no member lists. | 350 lines, 4500 words |
 | How-to | `docs/how-to/` | One page answers one "how do I do X?"; assumes Getting started. | 200 lines |
-| Guidelines | `docs/guidelines/` | Normative rules (should / should not) for interface and menu consistency. They prescribe, so they are not concepts; they are not tasks either. | 200 lines |
-| Examples | `docs/examples/` | Walkthroughs of the complete plugins in `examples/`. | 200 lines |
 | Reference | `docs/reference/` | Lookup tables across symbols (capabilities, manifest and versions, limits, menu and binding names, platforms, theme, CLI), generated where possible. A fact about one symbol belongs in its TSDoc, not here. | 150 hand-written lines |
+| Explanation | `docs/explanation/` | What something is, why it works that way and what it relates to, across several modules; no member lists. Named "Concepts" until the Diátaxis restructure; `REDIRECTS` in `scripts/doc-structure.mjs` keeps the old address. | 350 lines, 4500 words |
+| Guidelines | `docs/guidelines/` | Normative rules (should / should not) for interface and menu consistency. They prescribe, so they are not explanation; they are not tasks either. | 200 lines |
+| Examples | `docs/examples/` | Walkthroughs of the complete plugins in `examples/`. | 200 lines |
+| Upgrading | `docs/upgrading/` | What to change in a plugin when a release deprecates, removes or changes something: one checklist per change, linked from the CHANGELOG entry. | 200 lines |
 | API | (TypeDoc entry points) | The per-symbol reference from the TSDoc in `src/`. | — |
 
 Every group's `index.md` comes first and is limited to 120 lines. Errors and testing have no group of their own: the error codes live in the `PluginError` table, the test helpers on `TestHost`.

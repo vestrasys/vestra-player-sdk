@@ -464,9 +464,10 @@ const structure = { errors: [], warnings: [] };
     if (!existsSync(join(root, indexPath))) continue;
     const index = read(indexPath);
     const targets = new Set(
-      [...index.matchAll(/\]\(\s*([^)\s#]+\.md)(?:#[^)\s]*)?\s*\)/g)].map(
-        (m) => m[1],
-      ),
+      [...index.matchAll(/\]\(\s*([^)\s#]+\.md)(?:#[^)\s]*)?\s*\)/g)]
+        .map((m) => m[1])
+        // Absolute links (the CHANGELOG on GitHub) are not pages of the site.
+        .filter((target) => !/^[a-z]+:/i.test(target)),
     );
     for (const target of targets) {
       const resolved = rel(resolve(root, "docs", group.folder, target));

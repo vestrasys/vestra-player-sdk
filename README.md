@@ -79,11 +79,12 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 The [documentation site](https://vestrasys.github.io/vestra-player-sdk/) is the one place for everything a plugin author needs:
 
 - **[Tutorials](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorials.html)**: [Getting started](https://vestrasys.github.io/vestra-player-sdk/documents/Getting_started.html), from an empty folder to a packed plugin.
-- **[Concepts](https://vestrasys.github.io/vestra-player-sdk/documents/Concepts.html)**: how a plugin runs, commands and key bindings, playback, video and audio processing, the interface.
 - **[How-to guides](https://vestrasys.github.io/vestra-player-sdk/documents/How-to_guides.html)**: testing, translating and publishing a plugin, responsive sliders, remembering window state.
+- **[Reference](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html)**: capabilities, manifest fields, limits, menus and bindings, platforms, theme, and the [command line](https://vestrasys.github.io/vestra-player-sdk/documents/Command_line.html) (`vestra-plugin check`, `test`, `build`, `pack`, `i18n extract`, `i18n check`).
+- **[Explanation](https://vestrasys.github.io/vestra-player-sdk/documents/Explanation.html)**: how a plugin runs, commands and key bindings, playback, video and audio processing, the interface.
 - **[Guidelines](https://vestrasys.github.io/vestra-player-sdk/documents/Guidelines.html)**: rules for the interface and the menus.
 - **[Examples](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html)**: the walkthroughs above.
-- **[Reference](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html)**: capabilities, manifest fields, limits, menus and bindings, platforms, theme, and the [command line](https://vestrasys.github.io/vestra-player-sdk/documents/Command_line.html) (`vestra-plugin check`, `test`, `build`, `pack`, `i18n extract`, `i18n check`).
+- **[Upgrading](https://vestrasys.github.io/vestra-player-sdk/documents/Upgrading.html)**: what to change when a release deprecates or removes something, with the migration checklists.
 - **[API](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html)**: every type and member of `@vestra-player/sdk` and `@vestra-player/sdk/testing`.
 
 ## Compatibility

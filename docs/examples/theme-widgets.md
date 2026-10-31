@@ -88,4 +88,4 @@ Start the player with `--plugin <path to examples/theme-widgets>` and choose **E
 
 1. **Use the level.** Add `ui.osd` and show the level with `plugin.osd.show` when the slider is released (the `Slider`'s `released` callback).
 2. **A text field.** Add `UrlInputRow` from `@vestra/widgets.slint`, the player's input row with confirm and cancel buttons.
-3. **More tokens.** The [concept page](../concepts/ui.md) lists every `Theme` token and widget property.
+3. **More tokens.** The [explanation page](../explanation/ui.md) lists every `Theme` token and widget property.

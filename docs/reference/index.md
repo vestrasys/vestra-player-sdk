@@ -5,7 +5,7 @@ description: Lookup tables that span many symbols (capabilities, manifest fields
 
 # Reference
 
-These pages are tables to look things up in while you write a plugin. Each one collects facts that belong to many API symbols at once; what a single symbol does is in the {@link "@vestra-player/sdk" | API reference}, and how the pieces fit together is in the [Concepts](../concepts/index.md). Most tables are generated from the SDK's own constants and Slint files, so they match the version of the SDK you read them for.
+These pages are tables to look things up in while you write a plugin. Each one collects facts that belong to many API symbols at once; what a single symbol does is in the {@link "@vestra-player/sdk" | API reference}, and how the pieces fit together is in the [Explanation](../explanation/index.md). Most tables are generated from the SDK's own constants and Slint files, so they match the version of the SDK you read them for.
 
 ## Manifest
 

@@ -5,7 +5,7 @@ description: The Theme tokens with their current values, fonts, the icon set, an
 
 # Theme
 
-What a plugin's Slint file can import from the player's library. How Slint and TypeScript talk is in [Windows, panels, settings pages, dialogs and the OSD](../concepts/ui.md); which token to use where is in [Guidelines: interface](../guidelines/interface.md).
+What a plugin's Slint file can import from the player's library. How Slint and TypeScript talk is in [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md); which token to use where is in [Guidelines: interface](../guidelines/interface.md).
 
 ```slint nocheck
 import { Theme } from "@vestra/theme.slint";

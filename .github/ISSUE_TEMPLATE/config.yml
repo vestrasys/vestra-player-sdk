@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Documentation
     url: https://vestrasys.github.io/vestra-player-sdk/
-    about: Tutorials, concepts, how-to guides, examples and the API reference.
+    about: Tutorials, how-to guides, reference, explanation, examples and the API reference.

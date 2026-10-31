@@ -5,7 +5,7 @@ description: The rules a plugin follows so that its windows, panels, messages an
 
 # Guidelines
 
-The player's own interface is built from plugins, with the same API you use. These pages state the rules those plugins follow, so that yours fits in: what a user sees should not tell them which plugin drew it. They prescribe ("do", "do not"); for how the pieces work, read the [Concepts](../concepts/index.md), and for exact names, sizes and values, the [Reference](../reference/index.md).
+The player's own interface is built from plugins, with the same API you use. These pages state the rules those plugins follow, so that yours fits in: what a user sees should not tell them which plugin drew it. They prescribe ("do", "do not"); for how the pieces work, read the [Explanation](../explanation/index.md), and for exact names, sizes and values, the [Reference](../reference/index.md).
 
 ## Interface
 
