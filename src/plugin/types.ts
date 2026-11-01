@@ -4185,6 +4185,18 @@ export interface Timeline {
 export interface WindowState {
   /** The main window is fullscreen. */
   readonly fullscreen: boolean;
+  /**
+   * The main window is maximized (`false` in fullscreen, also when it was
+   * maximized before and will be again after). Changes reach
+   * {@link MainWindow.onChange}. A plugin that sizes the window, such as to
+   * the video when playback starts, leaves a maximized window alone, as
+   * MPC-HC and mpv do. Always `false` with players before 0.6.3, which do
+   * not report it.
+   *
+   * @player 0.6.3; older players: always `false`.
+   * @since 1.5.52
+   */
+  readonly maximized: boolean;
   /** The video column, without the bottom bar, sidebar and splitter. */
   readonly videoArea: {
     /** Logical points. */
@@ -4234,8 +4246,8 @@ export interface WindowState {
  * ```
  *
  * @remarks
- * `plugin.window` is the player's main window: its size, fullscreen,
- * picture-in-picture and the video area. Reading it needs no capability;
+ * `plugin.window` is the player's main window: its size, whether it is
+ * maximized or fullscreen, picture-in-picture and the video area. Reading it needs no capability;
  * changing it needs `window.control`. Changes that last only while the
  * plugin runs (always on top, pointer auto-hide) revert when it stops.
  *

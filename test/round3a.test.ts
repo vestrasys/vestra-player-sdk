@@ -41,6 +41,7 @@ test("window state is read before activation and follows the player", async () =
   );
   assert.deepEqual(seen, {
     fullscreen: false,
+    maximized: false,
     videoArea: { width: 1280, height: 720 },
     pictureInPicture: { supported: true, active: false },
   });

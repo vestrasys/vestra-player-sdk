@@ -215,6 +215,8 @@ export interface BindingTable {
 /** `window.state`: the main window, in logical points (zero without one). */
 export interface WindowFacts {
   fullscreen: boolean;
+  /** The main window is maximized, `false` in fullscreen (player 0.6.3; absent from older players: `false`). */
+  maximized?: boolean;
   videoArea: { width: number; height: number };
   /** System picture-in-picture (absent from older players: unsupported). */
   pictureInPicture?: { supported: boolean; active: boolean };

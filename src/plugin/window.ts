@@ -8,6 +8,8 @@ import type { MainWindow, WindowState } from "./types.ts";
 const view = (facts: WindowFacts): WindowState =>
   Object.freeze({
     fullscreen: facts.fullscreen === true,
+    // Players before 0.6.3 do not send it; never maximized in fullscreen.
+    maximized: facts.maximized === true && facts.fullscreen !== true,
     videoArea: Object.freeze({
       width: Number(facts.videoArea?.width ?? 0),
       height: Number(facts.videoArea?.height ?? 0),

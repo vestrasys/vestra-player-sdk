@@ -2574,14 +2574,22 @@ export class TestHost implements Transport {
   readonly confirms: Record<string, Json>[] = [];
   /**
    * The main window as the player would show it. Change it with
-   * `setMainWindow` (the user resized it, entered fullscreen, closed the
-   * picture-in-picture window); `onTop`, `cursorAutoHide` and
+   * `setMainWindow` (the user resized or maximized it, entered fullscreen,
+   * closed the picture-in-picture window); `onTop`, `cursorAutoHide` and
    * `pictureInPicture.active` record the plugin's `window.set…` calls.
    * `pictureInPicture.supported: false` stands for Windows and Linux.
    */
   readonly mainWindow = {
     /** Whether the main window is fullscreen. */
     fullscreen: false,
+    /**
+     * Whether the main window is maximized (default `false`). Like the
+     * player, `window.state` reports `false` while fullscreen and this
+     * value again after leaving it.
+     *
+     * @since 1.5.52
+     */
+    maximized: false,
     /** The video area in logical points (default 780×609). */
     videoArea: {
       /** Width in logical points. */
@@ -3657,15 +3665,17 @@ export class TestHost implements Transport {
       this.setBackdropEffective(true);
   }
   /**
-   * Simulate the user changing the main window (resizing it, entering or
-   * leaving fullscreen, closing the picture-in-picture window) and broadcast
-   * it. Like the player, entering fullscreen collapses an attached, visible
+   * Simulate the user changing the main window (resizing, maximizing or
+   * restoring it, entering or leaving fullscreen, closing the
+   * picture-in-picture window) and broadcast it. `maximized` (SDK 1.5.52)
+   * reads `false` while fullscreen, as player 0.6.3 reports it. Like the player, entering fullscreen collapses an attached, visible
    * sidebar (`effective: false`, `reason: "fullscreen"`) and leaving
    * fullscreen docks it again.
    *
-   * @example Go fullscreen, then report picture-in-picture support
+   * @example Go fullscreen, report picture-in-picture support, maximize
    * The plugin sees the main window fullscreen at 1920×1080, then learns
-   * that picture-in-picture is available. `setMainWindow` changes the
+   * that picture-in-picture is available, then sees the window leave
+   * fullscreen maximized. `setMainWindow` changes the
    * host's window facts and broadcasts them as the player does when the
    * user resizes or toggles fullscreen; entering fullscreen also collapses
    * an attached sidebar.
@@ -3677,6 +3687,10 @@ export class TestHost implements Transport {
    * await host.settle();
    * assert.equal(plugin.window.state.fullscreen, true);
    * host.setMainWindow({ pictureInPicture: { supported: true, active: false } });
+   * // Leaving fullscreen into a maximized window: `maximized` reads true again.
+   * host.setMainWindow({ fullscreen: false, maximized: true });
+   * await host.settle();
+   * assert.equal(plugin.window.state.maximized, true);
    * ```
    *
    * @capability None.
@@ -3685,6 +3699,7 @@ export class TestHost implements Transport {
   setMainWindow(
     patch: Partial<{
       fullscreen: boolean;
+      maximized: boolean;
       videoArea: { width: number; height: number };
       pictureInPicture: { supported: boolean; active: boolean };
     }>,
@@ -3734,6 +3749,8 @@ export class TestHost implements Transport {
   #windowFacts() {
     return {
       fullscreen: this.mainWindow.fullscreen,
+      // Like player 0.6.3: never maximized while fullscreen.
+      maximized: this.mainWindow.maximized && !this.mainWindow.fullscreen,
       videoArea: { ...this.mainWindow.videoArea },
       pictureInPicture: { ...this.mainWindow.pictureInPicture },
       appearance: this.appearance,
