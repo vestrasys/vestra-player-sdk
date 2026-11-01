@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.48](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1548) | **Nobody, but plugin tests may now fail.** No changes to the TypeScript API beyond new fields of `COMMAND_LIMITS`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.47](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1547) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.46](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1546) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.45](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1545) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |

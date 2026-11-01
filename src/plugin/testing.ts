@@ -107,7 +107,7 @@ import type { CapabilityInfo } from "../capabilities.ts";
 import { OSD_LIMITS } from "./osd.ts";
 import { SECRET_LIMITS, SESSION_STORAGE_LIMITS } from "./services.ts";
 import { SUBTITLE_LIMITS } from "./subtitles.ts";
-import { BINDING_INPUTS } from "./bindings.ts";
+import { BINDING_INPUTS, canonical } from "./bindings.ts";
 import { THEME_PALETTES } from "../palettes.ts";
 import { IMAGE_LIMITS, UI_VALUE_LIMITS, valueLimitProblem } from "./values.ts";
 import { validStep } from "./player.ts";
@@ -791,6 +791,86 @@ const TEST_ZH_HANS: Readonly<Record<string, string>> = {
 };
 /** The player's limit of sidebar tabs. */
 const MAX_SIDEBAR_TABS = 8;
+
+/**
+ * The player's refusal of a declaration (commands.rs `CommandError`): code
+ * `invalid`, `conflict` or `limit`, its message prefixed as the player's.
+ */
+const commandInvalid = (message: string) =>
+  new HostError("invalid", `invalid command: ${message}`);
+const commandConflict = (message: string) =>
+  new HostError("conflict", `command conflict: ${message}`);
+/**
+ * The player's check of a command text (commands.rs `text`): 1 to `limit`
+ * UTF-8 bytes, no control character (`char::is_control`: C0, DEL and C1)
+ * and no whitespace at either end (`str::trim`: Unicode White_Space).
+ */
+function commandText(value: string, label: string, limit: number) {
+  const bytes = Buffer.byteLength(value, "utf8");
+  if (
+    bytes === 0 ||
+    bytes > limit ||
+    /^\p{White_Space}|\p{White_Space}$/u.test(value) ||
+    /\p{Cc}/u.test(value)
+  )
+    throw commandInvalid(
+      `${label} requires 1..=${limit} bytes, no controls or surrounding whitespace`,
+    );
+}
+/**
+ * A menu text (title or path segment) as the player keys it: a string as
+ * declared, a text value by its English rendering (capabilities/commands.rs
+ * `menu_text`).
+ */
+function menuTextKey(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (!isTextValue(value))
+    throw new HostError(
+      "invalid",
+      "title and path segments are strings or texts",
+    );
+  if ("$vestraList" in value)
+    throw new HostError(
+      "invalid",
+      "a menu text is a string or a text, not a list",
+    );
+  const problem = textProblem(value);
+  if (problem) throw new HostError("invalid", problem);
+  return textKey(value);
+}
+/**
+ * The declaration checks of the player's `Registry::register`, in its
+ * order, on the keyed title and path (`@<id>` already replaced).
+ */
+function checkDeclaration(
+  id: string,
+  title: string,
+  path: readonly string[],
+  declaration: { group?: unknown; order?: unknown; bindings?: unknown },
+) {
+  commandText(id, "localId", COMMAND_LIMITS.idBytes);
+  if (!/^[A-Za-z0-9._-]+$/.test(id))
+    throw commandInvalid(
+      "localId permits ASCII letters, digits, '.', '_' and '-'",
+    );
+  commandText(title, "title", COMMAND_LIMITS.titleBytes);
+  if (path.length > COMMAND_LIMITS.depth)
+    throw commandInvalid(
+      `menu path allows at most ${COMMAND_LIMITS.depth} segments`,
+    );
+  for (const segment of path)
+    commandText(segment, "path segment", COMMAND_LIMITS.segmentBytes);
+  const group = declaration.group ?? "domain";
+  if (typeof group !== "string")
+    throw new HostError("invalid", "group is a string");
+  commandText(group, "group", COMMAND_LIMITS.groupBytes);
+  const order = declaration.order ?? 0;
+  if (
+    !Number.isInteger(order) ||
+    Math.abs(order as number) > COMMAND_LIMITS.order
+  )
+    throw commandInvalid("order must be within ±1000000");
+}
 
 /**
  * An in-memory fake Vestra Player for plugin tests.
@@ -1521,10 +1601,11 @@ export class TestHost implements Transport {
     };
   }
   /** A command state's reason, refused as the player refuses it. */
-  #checkReason(state: Json | undefined) {
+  #checkReason(state: Json | undefined): string | null {
     const reason = (state as { reason?: unknown } | null)?.reason;
-    if (reason !== null && reason !== undefined)
-      this.#declared(reason, "reason");
+    return reason !== null && reason !== undefined
+      ? this.#declared(reason, "reason")
+      : null;
   }
   /**
    * Row patches (player 0.6.0): the `seq` of each property's last write, by
@@ -3192,19 +3273,38 @@ export class TestHost implements Transport {
       ["mute", ["Audio", "Mute"], 503, "domain", ["M"], false],
     ];
     const host = this;
-    for (const [id, path, order, group, bindings, repeat, radio] of table) {
+    for (const [id, fixed, order, group, bindings, repeat, radio] of table) {
+      // The seek items carry the step (`setStepSeek`): the player
+      // registers them again when it changes (core_actions.rs `seek_title`).
+      const seek =
+        id === "seek-forward"
+          ? "Forward"
+          : id === "seek-backward"
+            ? "Back"
+            : null;
+      const pathOf = () =>
+        seek === null
+          ? fixed
+          : [
+              ...fixed.slice(0, -1),
+              `${seek} ${String(Math.round(host.stepSeek * 1000) / 1000)} s`,
+            ];
+      const declaration = {
+        order,
+        group,
+        radio: radio ?? false,
+        bindings,
+        repeat,
+      } as unknown as CommandDeclaration;
+      Object.defineProperties(declaration, {
+        title: { get: () => pathOf().at(-1)!, enumerable: true },
+        path: { get: pathOf, enumerable: true },
+      });
       const command: FakeCommand = {
-        declaration: {
-          title: path.at(-1)!,
-          path,
-          order,
-          group,
-          radio: radio ?? false,
-          bindings,
-          repeat,
-        } as unknown as CommandDeclaration,
+        declaration,
         // The player's own words in the player's language.
         get display() {
+          const path = pathOf();
           const leaf = path.at(-1)!;
           const step = /^(Back|Forward) (\S+) s$/.exec(leaf);
           const title = step
@@ -4822,57 +4922,125 @@ export class TestHost implements Transport {
     },
     "commands.register": (p) => {
       const id = String(p.id);
-      // The player's built-in menu ids (MENU_IDS) in the first path segment.
-      const path = ((p.declaration as { path?: string[] })?.path ?? []).map(
-        String,
-      );
-      const menu = path[0]?.startsWith("@") ? path[0].slice(1) : null;
-      if (menu !== null && !(MENU_IDS as readonly string[]).includes(menu))
-        throw new HostError("invalid", `unknown menu id @${menu}`);
-      if (menu !== null && path.length < 2)
-        throw new HostError(
-          "invalid",
-          `menu id @${menu} needs an item after it`,
-        );
-      if (this.commands.has(id))
-        throw new HostError("command", "owner/localId already registered");
-      // The player's caps (COMMAND_LIMITS): the total counts the core commands too.
-      if (
-        this.commands.size >= COMMAND_LIMITS.perPlugin ||
-        this.commands.size + this.coreCommands.size >= COMMAND_LIMITS.total
-      )
-        throw new HostError("limit", "command registry limit reached");
-      const host = this;
+      // The player's checks, in its order (capabilities/commands.rs
+      // `register`, then commands.rs `Registry::register`), with its codes
+      // and messages.
+      if (!Number.isInteger(p.revision) || Number(p.revision) <= 0)
+        throw new HostError("invalid", "positive revision required");
+      // The reason is checked (and shown) when it arrives.
+      const reason = this.#checkReason(p.state);
       const declaration = p.declaration as FakeCommand["declaration"];
-      // Player 0.5.10: a bar button needs a path, an order 0–999 and a
-      // known icon or an image of the plugin.
-      if (declaration.button !== undefined) {
-        const { icon, order } = declaration.button;
-        if (path.length === 0)
-          throw new HostError("invalid", "button needs a menu path");
+      const button = declaration.button as unknown;
+      const maxOrder = BAR_BUTTON_LIMITS.maxOrder;
+      // Player 0.5.10: a bar button is { icon, order }, its order 0–999,
+      // its icon a name or an image of the plugin.
+      if (button !== undefined && button !== null) {
         if (
-          !Number.isInteger(order) ||
-          order < 0 ||
-          order > BAR_BUTTON_LIMITS.maxOrder
+          typeof button !== "object" ||
+          Array.isArray(button) ||
+          !Object.keys(button).every((key) => key === "icon" || key === "order")
         )
+          throw new HostError("invalid", "button is { icon, order }");
+        const { icon, order } = button as { icon?: Json; order?: unknown };
+        if (!Number.isInteger(order) || +order! < 0 || +order! > maxOrder)
           throw new HostError(
             "invalid",
-            `button order must be an integer 0–${BAR_BUTTON_LIMITS.maxOrder}`,
+            `button order must be an integer 0–${maxOrder}`,
           );
-        if (typeof icon === "string") {
-          if (!(BAR_BUTTON_ICONS as readonly string[]).includes(icon))
-            throw new HostError("invalid", `unknown button icon "${icon}"`);
-        } else if (this.imagePath(icon) === null)
+        if (typeof icon !== "string" && this.imagePath(icon) === null)
           throw new HostError(
             "invalid",
             "button icon is an icon name or an image from plugin.ui.image",
           );
       }
-      // Like the player: the menu texts and the reason are checked (and
-      // shown) when they arrive.
-      for (const segment of [declaration.title, ...(declaration.path ?? [])])
-        this.#declared(segment, "a menu text");
-      this.#checkReason(p.state);
+      // Text values in the title and path are keyed by their English
+      // rendering; the built-in menu ids (MENU_IDS) and the player's old
+      // Chinese menu titles by the menus' keys.
+      const title = menuTextKey(declaration.title);
+      const declared = (declaration.path ?? []) as unknown[];
+      if (!Array.isArray(declared))
+        throw new HostError("invalid", "path is a list of menu texts");
+      const keys = declared.map(menuTextKey);
+      const menu = keys[0]?.startsWith("@") ? keys[0].slice(1) : null;
+      if (menu !== null && !(MENU_IDS as readonly string[]).includes(menu))
+        throw commandInvalid(
+          `unknown menu id @${menu}; the built-in menus are ${MENU_IDS.map((known) => `@${known}`).join(", ")}`,
+        );
+      if (menu !== null && keys.length < 2)
+        throw commandInvalid(`menu id @${menu} needs an item after it`);
+      const path = menuKeys(keys);
+      checkDeclaration(id, title, path, declaration);
+      if (button !== undefined && button !== null) {
+        if (path.length === 0)
+          throw commandInvalid(
+            "button needs a menu path: a bar button is also a menu item",
+          );
+        const { icon } = button as { icon: unknown };
+        if (
+          typeof icon === "string" &&
+          !(BAR_BUTTON_ICONS as readonly string[]).includes(icon)
+        )
+          throw commandInvalid(
+            `unknown button icon ${JSON.stringify(icon)}: a name of @vestra/icons.slint (${BAR_BUTTON_ICONS.join(", ")}) or an image from plugin.ui.image`,
+          );
+      }
+      const bindings = (declaration.bindings ?? []) as unknown[];
+      for (const binding of bindings)
+        try {
+          canonical(String(binding));
+        } catch (error) {
+          throw commandInvalid((error as Error).message);
+        }
+      if (reason !== null)
+        commandText(reason, "reason", COMMAND_LIMITS.reasonBytes);
+      if (this.commands.has(id))
+        throw commandConflict("owner/localId already registered");
+      // The player's own commands beside the core actions (host/actions.rs
+      // `host_declarations`: Toggle Fullscreen, Quit and three outside the
+      // menu), which take part in conflicts and the total like any other.
+      const hostOnly = BUILTIN_COMMANDS.filter(
+        (row) =>
+          row.owner === "host" && !this.coreCommands.has(`host/${row.id}`),
+      );
+      // A path may not repeat another command's (the player's own
+      // included) nor be a submenu of one, or one of its submenus.
+      if (path.length > 0)
+        for (const existing of [
+          ...hostOnly.map((row) => row.path as readonly string[]),
+          ...[...this.coreCommands.values()].map(
+            (command) => command.declaration.path as string[],
+          ),
+          ...[...this.commands.values()].map((command) =>
+            menuKeys(
+              ((command.declaration.path ?? []) as unknown[]).map(menuTextKey),
+            ),
+          ),
+        ]) {
+          const shared = Math.min(existing.length, path.length);
+          if (
+            existing.length > 0 &&
+            existing.slice(0, shared).every((s, i) => s === path[i])
+          )
+            throw commandConflict(
+              "menu path duplicates a command or collides with a leaf/group",
+            );
+        }
+      // The player's caps (COMMAND_LIMITS): the total counts all of the
+      // player's own commands too.
+      if (
+        this.commands.size >= COMMAND_LIMITS.perPlugin ||
+        this.commands.size + this.coreCommands.size + hostOnly.length >=
+          COMMAND_LIMITS.total
+      )
+        throw new HostError("limit", "command registry limit reached");
+      // The binding table: each input once per command.
+      const seen = new Set<string>();
+      for (const binding of bindings.map(String)) {
+        if (seen.has(binding))
+          throw new HostError("invalid", `binding ${binding} is listed twice`);
+        seen.add(binding);
+      }
+      const host = this;
       let sent = p.state as FakeCommand["state"];
       this.commands.set(id, {
         declaration,
@@ -4908,10 +5076,27 @@ export class TestHost implements Transport {
         throw new HostError("missing", `command ${p.id} is not registered`);
     },
     "commands.update": (p) => {
-      const command = this.command(String(p.id));
+      // The request itself, as the player reads it (capabilities/commands.rs
+      // `parsed`): `invalid`.
+      if (!Number.isInteger(p.revision) || Number(p.revision) <= 0)
+        throw new HostError("invalid", "positive revision required");
+      const reason = this.#checkReason(p.state);
+      // The registry's refusals of an update (commands.rs `Registry::update`)
+      // all come back as `command`; the test host's one plugin is owner 1.
+      const command = this.commands.get(String(p.id));
+      if (!command)
+        throw new HostError("command", `command missing: owner 1 / ${p.id}`);
       if (Number(p.revision) <= command.revision)
-        throw new HostError("command", `stale command revision ${p.revision}`);
-      this.#checkReason(p.state);
+        throw new HostError(
+          "command",
+          `stale command revision ${p.revision}; current is ${command.revision}`,
+        );
+      if (reason !== null)
+        try {
+          commandText(reason, "reason", COMMAND_LIMITS.reasonBytes);
+        } catch (error) {
+          throw new HostError("command", (error as Error).message);
+        }
       command.revision = Number(p.revision);
       command.state = p.state as FakeCommand["state"];
       if (p.when) command.when = p.when as CommandWhen;

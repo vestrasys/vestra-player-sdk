@@ -978,7 +978,9 @@ export interface CommandButton {
  * give it an order in the menu's range (Video: 400–499).
  *
  * {@link Commands.add} throws `invalid` synchronously for a bad path,
- * order, group or binding. The same path registered twice, or a path that
+ * order or binding; the player refuses an empty or overlong text, a control
+ * character or whitespace at either end (`COMMAND_LIMITS`) with
+ * `invalid` (through `ready`). The same path registered twice, or a path that
  * is both an item and a submenu, fails with `conflict` (through `ready`).
  *
  * @see {@link Commands.add}, [Commands, menus and key bindings](../../docs/explanation/commands.md)
@@ -1255,8 +1257,15 @@ export interface Commands {
    * lists, presets) in a child {@link Scope} and rebuild it.
    *
    * @throws `invalid` synchronously for a malformed path (including an
-   *   unknown `@` menu id), order, group or binding; `conflict` for an id this
+   *   unknown `@` menu id), order or binding; `conflict` for an id this
    *   plugin has already declared and not disposed.
+   * @throws `invalid` (`ready` rejects; during activation, activation
+   *   fails) for a text the player refuses: an id, title, path segment,
+   *   group or reason that is empty, longer than its `COMMAND_LIMITS`
+   *   bytes (a text value counted by its English rendering), has a control
+   *   character or whitespace at either end, or an id with other characters
+   *   than ASCII letters, digits, `.`, `_` and `-`. `TestHost`
+   *   refuses the same (SDK 1.5.48).
    *
    * @example Pause playback from a menu item
    * Playback ▸ Pause (and Ctrl+P) pauses and resumes, shows a check mark

@@ -9,7 +9,7 @@ The player bounds what one request may cost it. The limits are guards against ru
 
 ## Commands
 
-A command added past a limit fails with code `limit` (its `ready` rejects; during activation, activation fails). Commands already registered are unaffected, and disposing one frees its slot at once.
+A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects; during activation, activation fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
 
 <!-- generated:limits COMMAND_LIMITS -->
 
@@ -17,6 +17,13 @@ A command added past a limit fails with code `limit` (its `ready` rejects; durin
 | --- | --- | --- |
 | `COMMAND_LIMITS.perPlugin` | 160 | Commands one plugin instance may have at the same time. |
 | `COMMAND_LIMITS.total` | 1024 | Commands of every plugin plus the player's own, together. |
+| `COMMAND_LIMITS.depth` | 8 | Segments of a menu path, the leaf included. |
+| `COMMAND_LIMITS.idBytes` | 128 | UTF-8 bytes of a command's local id: ASCII letters, digits, `.`, `_` and `-`. |
+| `COMMAND_LIMITS.titleBytes` | 128 | UTF-8 bytes of a title, a text value counted by its English rendering. Like every command text: not empty, no control characters, no whitespace at either end. |
+| `COMMAND_LIMITS.segmentBytes` | 80 | UTF-8 bytes of a menu path segment, a text value counted by its English rendering. |
+| `COMMAND_LIMITS.groupBytes` | 80 | UTF-8 bytes of a group. |
+| `COMMAND_LIMITS.reasonBytes` | 512 | UTF-8 bytes of a state's reason, as shown in the player's language. |
+| `COMMAND_LIMITS.order` | 1000000 | The largest `order` either way: an order is within ±1,000,000. |
 
 <!-- /generated -->
 
