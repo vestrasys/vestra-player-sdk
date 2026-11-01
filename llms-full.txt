@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.47: full reference
+# @vestra-player/sdk 1.5.48: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -2357,12 +2357,19 @@ The player bounds what one request may cost it. The limits are guards against ru
 
 #### Commands
 
-A command added past a limit fails with code `limit` (its `ready` rejects; during activation, activation fails). Commands already registered are unaffected, and disposing one frees its slot at once.
+A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects; during activation, activation fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `COMMAND_LIMITS.perPlugin` | 160 | Commands one plugin instance may have at the same time. |
 | `COMMAND_LIMITS.total` | 1024 | Commands of every plugin plus the player's own, together. |
+| `COMMAND_LIMITS.depth` | 8 | Segments of a menu path, the leaf included. |
+| `COMMAND_LIMITS.idBytes` | 128 | UTF-8 bytes of a command's local id: ASCII letters, digits, `.`, `_` and `-`. |
+| `COMMAND_LIMITS.titleBytes` | 128 | UTF-8 bytes of a title, a text value counted by its English rendering. Like every command text: not empty, no control characters, no whitespace at either end. |
+| `COMMAND_LIMITS.segmentBytes` | 80 | UTF-8 bytes of a menu path segment, a text value counted by its English rendering. |
+| `COMMAND_LIMITS.groupBytes` | 80 | UTF-8 bytes of a group. |
+| `COMMAND_LIMITS.reasonBytes` | 512 | UTF-8 bytes of a state's reason, as shown in the player's language. |
+| `COMMAND_LIMITS.order` | 1000000 | The largest `order` either way: an order is within ±1,000,000. |
 
 #### Bottom-bar buttons
 
@@ -5820,6 +5827,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.48](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1548) | **Nobody, but plugin tests may now fail.** No changes to the TypeScript API beyond new fields of `COMMAND_LIMITS`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.47](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1547) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.46](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1546) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.45](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1545) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
@@ -6701,7 +6709,9 @@ an item without `order` moves the whole menu to the top; to avoid that,
 give it an order in the menu's range (Video: 400–499).
 
 Commands.add throws `invalid` synchronously for a bad path,
-order, group or binding. The same path registered twice, or a path that
+order or binding; the player refuses an empty or overlong text, a control
+character or whitespace at either end (`COMMAND_LIMITS`) with
+`invalid` (through `ready`). The same path registered twice, or a path that
 is both an item and a submenu, fails with `conflict` (through `ready`).
 
 ```ts
@@ -6911,7 +6921,8 @@ interface Commands {
    *
    * Titles and paths cannot change in place: put changing items (track
    * lists, presets) in a child Scope and rebuild it.
-   * @throws invalid synchronously for a malformed path (including an unknown `@` menu id), order, group or binding; `conflict` for an id this plugin has already declared and not disposed.
+   * @throws invalid synchronously for a malformed path (including an unknown `@` menu id), order or binding; `conflict` for an id this plugin has already declared and not disposed.
+   * @throws invalid (`ready` rejects; during activation, activation fails) for a text the player refuses: an id, title, path segment, group or reason that is empty, longer than its `COMMAND_LIMITS` bytes (a text value counted by its English rendering), has a control character or whitespace at either end, or an id with other characters than ASCII letters, digits, `.`, `_` and `-`. `TestHost` refuses the same (SDK 1.5.48).
    * @capability commands
    * @example Pause playback from a menu item
    * Playback ▸ Pause (and Ctrl+P) pauses and resumes, shows a check mark
@@ -17314,6 +17325,9 @@ fails; later the failure goes to `Scope.onError`), commands
 already registered are unaffected, and disposing a command frees its slot
 at once. TestHost enforces the same caps.
 
+The other fields are the player's rules for one declaration (since
+1.5.48): a command past them is refused with `invalid`, the same way.
+
 For menus built from media content (tracks, chapters, presets), set your
 own sensible display cap well below `perPlugin`.
 
@@ -17323,6 +17337,22 @@ const COMMAND_LIMITS: {
   readonly perPlugin: 160;
   /** Commands of every plugin plus the player's own, together (1024). */
   readonly total: 1024;
+  /** Segments of a menu path, the leaf included. */
+  readonly depth: 8;
+  /** UTF-8 bytes of a command's local id: ASCII letters, digits, `.`, `_` and `-`. */
+  readonly idBytes: 128;
+  /**
+   * UTF-8 bytes of a title, a text value counted by its English rendering. Like every command text: not empty, no control characters, no whitespace at either end.
+   */
+  readonly titleBytes: 128;
+  /** UTF-8 bytes of a menu path segment, a text value counted by its English rendering. */
+  readonly segmentBytes: 80;
+  /** UTF-8 bytes of a group. */
+  readonly groupBytes: 80;
+  /** UTF-8 bytes of a state's reason, as shown in the player's language. */
+  readonly reasonBytes: 512;
+  /** The largest `order` either way: an order is within ±1,000,000. */
+  readonly order: 1000000;
 };
 ```
 

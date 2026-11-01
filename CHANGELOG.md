@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.48
+
+**Who must change: nobody, but plugin tests may now fail.** No changes to the TypeScript API beyond new fields of `COMMAND_LIMITS`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. `TestHost` now refuses the command declarations the player has always refused: a plugin test that starts failing shows a menu item, key or reason the real player already rejected (the command never appeared, or the plugin failed to activate). Fix the declaration, not the test.
+
+- **`TestHost` checks a command declaration as the player does** (`commands.register`, in the player's order, with its codes and messages):
+  - the local id: 1–128 bytes of ASCII letters, digits, `.`, `_` and `-` (`invalid`);
+  - the title (128 bytes), each path segment (80 bytes) and the group (80 bytes, default `"domain"`): not empty, no control character (C0, DEL and C1), no whitespace at either end (Unicode White_Space, as the player's `trim`). A text value is checked on its English rendering, which is also the key menus merge by. The message names the field: `invalid command: path segment requires 1..=80 bytes, no controls or surrounding whitespace`;
+  - at most 8 path segments, an `order` within ±1,000,000, bindings in the player's syntax, each once (`invalid`);
+  - the state's reason: at most 512 bytes as shown, the same text rules (`invalid` at registration; `command` on an update, as the player answers every refused update);
+  - a path that repeats another command's or is a submenu of one, or one of whose submenus is a command, the player's own commands included (`Audio ▸ Mute ▸ …`, `Playback ▸ Speed` as an item, `Quit`, `Toggle Fullscreen ▸ …`): `conflict` (`command conflict: menu path duplicates a command or collides with a leaf/group`). The total (`COMMAND_LIMITS.total`) counts all 19 of the player's own commands, Toggle Fullscreen, Enter and Leave Fullscreen, Quit and Toggle Sidebar included;
+  - an id registered twice: `conflict` (was `command`); an unknown `@` menu id, a bar button without a path or with an unknown icon, give the player's full messages;
+  - an update of a command that is not registered rejects with `command` (`command missing: owner 1 / <id>`; was a plain `Error`), a revision that is not a positive integer with `invalid` (`positive revision required`), and a stale one names the current revision.
+- **The seek items follow `setStepSeek`.** `host.coreAction("seek-backward")` and `seek-forward` carry the step in their path and title (`Playback ▸ Seek ▸ Back 2.5 s`), as the player registers them again when the step changes; they were fixed at 5 s.
+- **`COMMAND_LIMITS`** gains the player's declaration limits: `depth` (8), `idBytes` (128), `titleBytes` (128), `segmentBytes` (80), `groupBytes` (80), `reasonBytes` (512) and `order` (1,000,000), so the player's tests can check that they agree.
+- _Commands_: `CommandOptions` and `Commands.add` say which checks the player makes (`ready` rejects with `invalid`) and which `add` makes at once.
+
 ## 1.5.47
 
 **Who must change: nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. The built-in command table follows player 0.6.0's new default keys: a plugin whose documentation or tests list the player's default keys (from `BUILTIN_COMMANDS`, or Escape, Enter, F11 and the side mouse buttons by hand) should update them.
