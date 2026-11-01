@@ -373,3 +373,70 @@ test("a patch in parts never makes the list longer than either end", async () =>
   assert.deepEqual(host.mounted().props.rows, list);
   await stop();
 });
+
+test("rows holding Markdown documents are sent whole, never in parts", async () => {
+  const host = new TestHost();
+  const lines = recorded(host);
+  let list: unknown[] = [];
+  let panel!: Panel;
+  const errors: unknown[] = [];
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows: list }) as never);
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  // About 700 KiB of rows: over one part, under one request.
+  const docs = await Promise.all(
+    Array.from({ length: 7 }, (_, i) =>
+      plugin.ui.markdown(`# Message ${i}\n\n${"word ".repeat(20_000)}`),
+    ),
+  );
+  lines.length = 0;
+  list = docs.map((body, i) => ({ key: `m${i}`, body }));
+  plugin.update();
+  await host.settle();
+  const writes = lines.filter((line) => line.method === "ui.setMount");
+  assert.equal(writes.length, 1);
+  assert.ok(writes[0]!.bytes > 512 * 1024 && writes[0]!.bytes <= MESSAGE_LIMIT);
+  assert.ok(Array.isArray(writes[0]!.params.value));
+  assert.equal(writes[0]!.params.more, undefined);
+  assert.deepEqual(errors, []);
+  assert.equal((host.mounted().props.rows as Json[]).length, 7);
+  // The test host refuses Markdown in parts, as the player does.
+  const doc = {
+    $vestraMarkdown: { text: "x", base: null, images: {} },
+    ref: 1,
+  };
+  await assert.rejects(
+    host.request("ui.setMount", {
+      property: "rows",
+      value: [{ key: "a", body: doc }],
+      seq: 90,
+      more: true,
+    }),
+    (error: { code?: string }) => error.code === "invalid",
+  );
+  await host.request("ui.setMount", {
+    property: "rows",
+    value: [{ key: "a" }],
+    seq: 91,
+    more: true,
+  });
+  await assert.rejects(
+    host.request("ui.setMount", {
+      property: "rows",
+      patch: {
+        base: 91,
+        seq: 92,
+        ops: [{ op: "insert", at: 1, rows: [{ key: "b", body: doc }] }],
+      },
+    }),
+    (error: { code?: string }) => error.code === "invalid",
+  );
+  await stop();
+});

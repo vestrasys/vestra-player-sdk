@@ -1565,6 +1565,7 @@ export class TestHost implements Transport {
       const rows = this.#shownValues(p.value!);
       if (!Array.isArray(rows))
         throw new HostError("invalid", "a value sent in parts is an array");
+      noMarkdownParts(rows);
       this.#checkValues({ [property]: rows });
       this.#parts.set(slot, {
         seq: typeof p.seq === "number" ? p.seq : 0,
@@ -1580,6 +1581,11 @@ export class TestHost implements Transport {
           : op.op === "insert"
             ? { ...op, rows: op.rows.map((row) => this.#shownValues(row)) }
             : op,
+      );
+      noMarkdownParts(
+        resolved.flatMap((op) =>
+          op.op === "set" ? [op.row] : op.op === "insert" ? op.rows : [],
+        ),
       );
       const rows = applyOps(held.rows, resolved);
       this.#checkValues({ [property]: rows });
@@ -6620,6 +6626,15 @@ type WireRowOp =
  * before; at most {@link PATCH_OPS}; the result at most
  * `UI_VALUE_LIMITS.arrayRows` rows.
  */
+/** The player takes no Markdown documents in parts of a value (`invalid`). */
+function noMarkdownParts(rows: Json[]) {
+  if (JSON.stringify(rows).includes('"$vestraMarkdown"'))
+    throw new HostError(
+      "invalid",
+      "a value sent in parts holds no Markdown documents",
+    );
+}
+
 function patchOps(ops: unknown, length: number): WireRowOp[] {
   if (!Array.isArray(ops))
     throw new HostError("invalid", "patch.ops requires an array");

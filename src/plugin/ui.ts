@@ -197,6 +197,8 @@ function sentOf(value: Json, patches: boolean): Sent {
  * initial properties again: not a failure.
  */
 class Abandoned extends Error {}
+/** The wire key of a Markdown document: rows holding one are never sent in parts. */ const MARKDOWN_KEY =
+  '"$vestraMarkdown"';
 
 /** A row larger than one request can carry (`limit`). */
 const rowTooLarge = (key: string, bytes: number) =>
@@ -361,7 +363,7 @@ export abstract class ViewBase implements View {
       if (this.#patches && Array.isArray(wire)) {
         const sizes = wire.map(rowBytes);
         const total = sizes.reduce((a, b) => a + b, 0);
-        if (total > room) {
+        if (total > room && !JSON.stringify(wire).includes(MARKDOWN_KEY)) {
           const largest = sizes.reduce((a, b) => Math.max(a, b), 0);
           const problem = valueLimitProblem(wire);
           if (problem || largest > CHUNK_BYTES) {
@@ -565,7 +567,13 @@ export abstract class ViewBase implements View {
       }
     }
     const seq = ++this.#seq;
-    if (Array.isArray(value) && pending.rows) {
+    // Rows holding Markdown documents go whole, as before: the player
+    // merges documents in place and takes no parts of them.
+    if (
+      Array.isArray(value) &&
+      pending.rows &&
+      !pending.rows.enc.some((row) => row.includes(MARKDOWN_KEY))
+    ) {
       const sizes = pending.rows.enc.map(jsonBytes);
       const count = prefixWithin(sizes, CHUNK_BYTES);
       if (count < value.length) {
