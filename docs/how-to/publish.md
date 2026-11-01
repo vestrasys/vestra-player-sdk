@@ -7,7 +7,7 @@ description: Submit a plugin to the official plugin repository, update or withdr
 
 **Goal:** your plugin appears in the player's plugin store, where users install, update and uninstall it.
 
-The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them.
+The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them. To publish without the official repository, [host your own plugin store](own-store.md): users add its address, and its plugins come with an Unofficial mark.
 
 ## Steps
 
@@ -107,6 +107,7 @@ The store shows the newest version's manifest fields, so what you write there is
 
 ## See also
 
+- [Host your own plugin store](own-store.md): publish from your own `index.json` instead, without review; users add it as an unofficial repository.
 - [Manifest](../reference/manifest.md): the display fields and `minPlayerVersion`.
 - [Capabilities](../reference/capabilities.md): the wording the store shows for each capability.
 - [Test a plugin](testing.md) and [Command line](../reference/cli.md).

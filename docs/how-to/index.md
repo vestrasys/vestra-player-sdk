@@ -67,6 +67,12 @@ Plugins reach the store through pull requests to the official plugin repository.
 
 [Read the guide](publish.md)
 
+## Host your own plugin store
+
+A store is any https address that serves an `index.json`; users add it to the player's store under ⚙ ▸ Repositories…, and its plugins install and update from there, marked Unofficial and with a warning. The guide covers ids, the index format (packages with their size and sha256, icon, README and changelog, `minPlayerVersion`, revocations), what users see, testing on `localhost`, and a GitHub repository whose Actions pack every plugin with `vestra-plugin pack` and publish the index on GitHub Pages.
+
+[Read the guide](own-store.md)
+
 ## Give a coding agent the documentation
 
 Claude Code, Cursor or the player's own Vestra Player AI read this documentation as a tree of short nodes, like `go doc`: `npx -p @vestra-player/sdk vestra-plugin docs Snapshot.dispose` prints one member's signature, errors, capability and examples, `--search` finds paths, and every answer stays under 8 KB. The guide shows what to put in the agent's instructions, the path scheme, searching, paging, and the same calls from a program with `@vestra-player/sdk/docs`.

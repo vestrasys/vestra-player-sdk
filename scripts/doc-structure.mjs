@@ -133,6 +133,10 @@ export const GROUPS = [
         why: "One task: submit a plugin to the plugin store.",
       },
       {
+        file: "own-store.md",
+        why: "One task: host a store of one's own (an index.json on GitHub Pages) that users add as an unofficial repository; a different path from publish.md, which is the official repository's review flow.",
+      },
+      {
         file: "agent-docs.md",
         why: "One task: give a coding agent this documentation through the documentation tree (vestra-plugin docs, @vestra-player/sdk/docs); its reader is the agent's author, not the plugin's code.",
       },
