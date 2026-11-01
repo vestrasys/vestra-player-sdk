@@ -169,8 +169,8 @@ test("a member shows its signature, parameters, returns, errors, capability, ver
 });
 
 test("a path that matches nothing suggests the nearest names and lists the level", () => {
-  const missing = docs("/API/Medai");
-  assert.match(missing, /^Not found: \/API\/Medai\n\n\/API has no "Medai"\./);
+  const missing = docs("/API/Mediax");
+  assert.match(missing, /^Not found: \/API\/Mediax\n\n\/API has no "Mediax"\./);
   assert.match(missing, /Did you mean:\n\n- \/API\/Media \(category\)/);
   assert.match(missing, /## Contents of \/API\n/);
   const member = docs("/API/Media/Snapshot/disposee");
