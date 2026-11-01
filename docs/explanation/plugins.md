@@ -46,6 +46,10 @@ When the player starts the plugin:
 
 You do not need to `await` those registrations. `commands.add`, `panels.mount` and `resolvers.add` return their handle at once and register in the background; their `ready` promise is there for the rare case that you want to wait. **Activation fails** when `activate` throws or rejects, or when one of those registrations fails. A registration made later, after activation, cannot fail activation any more: its failure goes to [`onError`](#failures-and-recovery).
 
+A command declaration the player refuses (`invalid`, `conflict` or `limit`: a bad text, a path another command has, too many commands) does not fail activation either (SDK 1.5.49). The SDK, in the plugin's process, logs it with the command id and the player's message, skips that command and lets the rest of the plugin activate, like VS Code with a bad contribution; the command's `ready` rejects and `onError` hears the refusal once activation completes. `startPlugin` stays strict: there the refusal fails the start, so your tests show the bad declaration.
+
+This covers only the player's answer. What `commands.add` checks itself still throws from `add`: an unknown `@` menu id, more than 8 path segments, an `order` out of range, a malformed binding or one listed twice, a bad `button`, a reason text of the wrong shape, an id already declared. Uncaught, such a throw fails activation like any other exception in `activate`.
+
 Some refusals are deliberately not failures, because they depend on which other plugins are installed: a bottom bar or backdrop that another plugin's panel already holds, the next/previous sequence that another plugin provides, a file type or web host that another plugin already resolves. The plugin keeps running without that part, the player tells the user, and the plugin manager shows it as a warning ({@link "@vestra-player/sdk"!PluginInfo.warnings | PluginInfo.warnings}). The player's built-in plugins register first, so they win these contests at start-up.
 
 ## Handles and scopes

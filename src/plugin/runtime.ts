@@ -129,6 +129,27 @@ function merge(into: Deps, from: Deps) {
  */
 export const SAFETY_PASS_MS = 1000;
 
+/**
+ * The player's answers to a declaration that refuse that one declaration
+ * (a command's path, texts or count): during activation they skip it
+ * instead of failing the plugin (`Runtime.declaring`, SDK 1.5.49).
+ */
+const DECLARATION_REFUSALS: ReadonlySet<string> = new Set([
+  "invalid",
+  "conflict",
+  "limit",
+]);
+
+/** How the plugin is run: the player's runner, or `TestHost`. */
+export interface RuntimeOptions {
+  /**
+   * A declaration the player refuses during activation fails activation
+   * (`startPlugin`, so a plugin's tests show it) instead of being logged,
+   * reported to `onError` and skipped (the player's runner).
+   */
+  strictDeclarations?: boolean;
+}
+
 export const same = (a: Json | undefined, b: Json | undefined) =>
   JSON.stringify(a) === JSON.stringify(b);
 
@@ -212,6 +233,10 @@ export class Runtime {
   /** Registrations that activation must wait for before reporting ready. */
   readonly startup = new Set<Promise<unknown>>();
   #activating = true;
+  /** `RuntimeOptions.strictDeclarations`. */
+  readonly #strict: boolean;
+  /** Declarations skipped during activation: reported once it completes. */
+  readonly #refusals: (() => void)[] = [];
   readonly #transport: Transport;
   /** Each binding with the events whose state it read last time (held). */
   readonly #bindings = new Map<() => void, Binding>();
@@ -259,8 +284,10 @@ export class Runtime {
     directory: string,
     dataDirectory?: string,
     app?: unknown,
+    options: RuntimeOptions = {},
   ) {
     this.#transport = transport;
+    this.#strict = options.strictDeclarations ?? false;
     this.dataDirectory = dataDirectory;
     this.local = transport.local;
     this.host = createWire(transport);
@@ -306,6 +333,42 @@ export class Runtime {
     work.catch(() => {});
     return work;
   }
+  /**
+   * A declaration the player checks on its own (`what`: "command x"),
+   * started like `starting`. In the player's runner a refusal of it during
+   * activation (`invalid`, `conflict`, `limit`) does not fail the plugin:
+   * it is logged, skipped and reported to the scope once activation
+   * completes, so an `onError` added anywhere in `activate` hears it (SDK
+   * 1.5.49; VS Code logs a bad contribution and activates the extension).
+   * Under `strictDeclarations` (TestHost) it fails activation as before.
+   */
+  declaring<T>(
+    work: Promise<T>,
+    what: string,
+    report: (error: unknown) => void,
+  ): Promise<T> {
+    if (!this.#activating || this.#strict) return this.starting(work, report);
+    const settled = work.then(
+      () => {},
+      (error: unknown) => {
+        if (
+          !(error instanceof HostError) ||
+          !DECLARATION_REFUSALS.has(error.code)
+        )
+          throw error;
+        console.error(
+          `[${this.manifest.id}] ${what} skipped, the player refused it (${error.code}): ${error.message}`,
+        );
+        this.#refusals.push(() => report(error));
+      },
+    );
+    // Observed now: `activated()` may come after `activate` awaits, and
+    // its `allSettled` still sees the rejection.
+    settled.catch(() => {});
+    this.startup.add(settled);
+    work.catch(() => {});
+    return work;
+  }
   async activated() {
     while (this.startup.size) {
       const pending = [...this.startup];
@@ -314,6 +377,7 @@ export class Runtime {
         if (result.status === "rejected") throw result.reason;
     }
     this.#activating = false;
+    for (const report of this.#refusals.splice(0)) report();
   }
   bind(evaluate: () => void): Disposable {
     const held = new Map<string, Disposable>();

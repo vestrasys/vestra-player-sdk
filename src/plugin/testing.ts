@@ -4984,13 +4984,22 @@ export class TestHost implements Transport {
             `unknown button icon ${JSON.stringify(icon)}: a name of @vestra/icons.slint (${BAR_BUTTON_ICONS.join(", ")}) or an image from plugin.ui.image`,
           );
       }
+      // The binding table's `Table::canonical` (player 0.6.1): each binding
+      // parsed, and each input once, compared parsed, before the reason,
+      // conflicts and limits.
       const bindings = (declaration.bindings ?? []) as unknown[];
-      for (const binding of bindings)
+      const seen = new Set<string>();
+      for (const binding of bindings.map(String)) {
+        let input: string;
         try {
-          canonical(String(binding));
+          input = canonical(binding);
         } catch (error) {
           throw commandInvalid((error as Error).message);
         }
+        if (seen.has(input))
+          throw commandInvalid(`binding ${binding} is listed twice`);
+        seen.add(input);
+      }
       if (reason !== null)
         commandText(reason, "reason", COMMAND_LIMITS.reasonBytes);
       if (this.commands.has(id))
@@ -5033,13 +5042,6 @@ export class TestHost implements Transport {
           COMMAND_LIMITS.total
       )
         throw new HostError("limit", "command registry limit reached");
-      // The binding table: each input once per command.
-      const seen = new Set<string>();
-      for (const binding of bindings.map(String)) {
-        if (seen.has(binding))
-          throw new HostError("invalid", `binding ${binding} is listed twice`);
-        seen.add(binding);
-      }
       const host = this;
       let sent = p.state as FakeCommand["state"];
       this.commands.set(id, {
@@ -6644,8 +6646,11 @@ function tellResidency(host: TestHost) {
  *
  * Rejects when `manifest.json` cannot be read or parsed, when `activate`
  * throws, or when a registration made during activation fails (for example
- * `limit`, `conflict`, `invalid`), which is when the player would fail the
- * activation.
+ * `limit`, `conflict`, `invalid`). Stricter than the player's runner for
+ * commands (SDK 1.5.49): there the SDK logs a command declaration the
+ * player refuses during activation, skips it and activates the rest of the
+ * plugin (`onError` hears it); `startPlugin` fails, so a test shows the
+ * bad declaration.
  *
  * @param activate - The plugin's default-exported `activate` function.
  * @param options - Where the plugin lives and how to start it.
@@ -6771,6 +6776,9 @@ export async function startPlugin(
     // Like the player: protocol additions it takes (`app.features` set on
     // the host replaces them, e.g. `[]` for an older player's behaviour).
     { features: [PATCH_FEATURE], ...host.app },
+    // Unlike the player's runner, which logs a refused command declaration
+    // and activates the rest: a plugin's tests show the refusal.
+    { strictDeclarations: true },
   );
   await activate(instance.plugin);
   // Like the player: a position or resolver another plugin holds is not an

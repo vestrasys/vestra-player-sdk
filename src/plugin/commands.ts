@@ -1,5 +1,5 @@
 /** Menu commands: declaration, state sync (revisions hidden) and dispatch. */
-import { failure, Latest, quiet } from "./runtime.ts";
+import { failure, Latest, quiet, uncertain } from "./runtime.ts";
 import { checkBindings } from "./bindings.ts";
 import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, MENU_IDS } from "../commands.ts";
 import { ImageHandle } from "./ui.ts";
@@ -157,6 +157,10 @@ class CommandHandle implements Command {
   #last = "";
   #disposed = false;
   #registered = false;
+  /** Its entry in `runtime.commands` (a later handle may own the id). */
+  #run: () => void = () => {};
+  /** The player refused the declaration: no state updates follow. */
+  #refused = false;
   readonly #pump: Latest<Sent>;
   readonly #label: string;
   /** Where the plugin added it, for the player's log. */
@@ -181,16 +185,23 @@ class CommandHandle implements Command {
     // registration itself is revision 1, so every later state follows it.
     const previous = removing(runtime).get(this.id);
     this.#pump = new Latest(async ({ state, when }) => {
+      if (this.#refused) return;
       const revision = ++this.#revision;
       if (revision === 1) {
         await previous;
-        await runtime.host.commands.register(
-          this.id,
-          1,
-          declaration,
-          state as WireState,
-          when,
-        );
+        try {
+          await runtime.host.commands.register(
+            this.id,
+            1,
+            declaration,
+            state as WireState,
+            when,
+          );
+        } catch (error) {
+          // A definite refusal: the player has no such command to update.
+          if (!uncertain(error)) this.#refused = true;
+          throw error;
+        }
         this.#registered = true;
       } else
         await runtime.host.commands.update(
@@ -204,12 +215,15 @@ class CommandHandle implements Command {
     this.#last = JSON.stringify(initial);
     this.ready = quiet(
       runtime
-        .starting(this.#pump.push(initial), (error) => scope.report(error))
+        .declaring(this.#pump.push(initial), `command ${this.id}`, (error) =>
+          scope.report(error),
+        )
         .then(() => {}),
     );
-    runtime.commands.set(this.id, () => {
+    this.#run = () => {
       if (!this.#disposed) scope.run(options.run);
-    });
+    };
+    runtime.commands.set(this.id, this.#run);
     this.#binding = runtime.bind(() => this.#sync());
     scope.add(this);
   }
@@ -254,7 +268,7 @@ class CommandHandle implements Command {
     return Object.keys(when).length ? { state, when } : { state };
   }
   #sync() {
-    if (this.#disposed) return;
+    if (this.#disposed || this.#refused) return;
     const state = this.#state();
     const encoded = JSON.stringify(state);
     if (encoded === this.#last) return;
@@ -270,7 +284,8 @@ class CommandHandle implements Command {
     this.#disposed = true;
     this.#scope.forget(this);
     const runtime = this.#scope.runtime;
-    runtime.commands.delete(this.id);
+    if (runtime.commands.get(this.id) === this.#run)
+      runtime.commands.delete(this.id);
     this.#pump.stop();
     // Removed from the menu once registered. Recorded before any await, so an
     // immediate re-add of the same id registers after this removal.
