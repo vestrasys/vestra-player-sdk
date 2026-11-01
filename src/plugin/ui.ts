@@ -220,8 +220,9 @@ function settled(value: unknown, depth: number): boolean {
       : proto !== Object.prototype && proto !== null
   )
     return false;
+  // An own `toJSON`, enumerable or not, is called by `JSON.stringify`.
+  if (Object.prototype.hasOwnProperty.call(value, "toJSON")) return false;
   for (const key of Object.keys(value)) {
-    if (key === "toJSON") return false;
     const property = Object.getOwnPropertyDescriptor(value, key);
     if (!property || !("value" in property)) return false;
     if (!settled(property.value, depth + 1)) return false;
@@ -261,6 +262,8 @@ interface Encoded {
   marks: Uint8Array;
   /** Some row holds a Markdown document. */
   markdown: boolean;
+  /** The cache was usable (no `toJSON` on the shared prototypes). */
+  cache: boolean;
 }
 
 /** Each row of an array as `JSON.stringify` writes it; a hole is `null`. */
@@ -278,13 +281,15 @@ function encodeRows(rows: readonly unknown[]): Encoded {
     marks[i] = row.marks;
     if (row.marks & HAS_MARKDOWN) markdown = true;
   }
-  return { enc, marks, markdown };
+  return { enc, marks, markdown, cache };
 }
 
 /** A row's limit counts, kept with its encoding when the row cannot change. */
-function rowCount(row: unknown): RowCount {
+function rowCount(row: unknown, cache: boolean): RowCount {
   const kept =
-    row !== null && typeof row === "object" ? settledRows.get(row) : undefined;
+    cache && row !== null && typeof row === "object"
+      ? settledRows.get(row)
+      : undefined;
   if (!kept) return countRow(row);
   return (kept.count ??= countRow(row));
 }
@@ -368,7 +373,10 @@ function rowPatch(
       wireValue(rows[j] ?? null);
   const counts = next.enc.map((_, j) => {
     const from = plan.from[j]!;
-    return (from >= 0 ? sent.counts[from] : undefined) ?? rowCount(rows[j]);
+    return (
+      (from >= 0 ? sent.counts[from] : undefined) ??
+      rowCount(rows[j], next.cache)
+    );
   });
   if (!withinLimits(counts as RowCount[])) return null;
   // The ops must give exactly the new rows (a guard against this diff's bugs).

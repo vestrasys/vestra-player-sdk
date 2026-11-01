@@ -1063,8 +1063,9 @@ export interface CommandOptions {
    * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, the video-area mouse
    * inputs `Mouse:LeftClick`, `Mouse:LeftDoubleClick[:LeftHalf|:RightHalf]`,
    * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
-   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), anywhere in the main
-   * window from 0.6.0 on.
+   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), from 0.6.0 on anywhere
+   * in the main window or the floating sidebar window, except while a menu
+   * is open.
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write
