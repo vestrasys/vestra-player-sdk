@@ -2353,7 +2353,7 @@ The check follows types, not names: `plugin.player.seek`, `const { player } = pl
 
 ## Reference: Limits
 
-The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for. Since player 0.6.0 a whole list fits (50,000 playlist rows): bind it and draw it with a Slint `ListView`; the SDK sends row patches, and a value larger than one request in parts (SDK 1.5.46). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too (TestHost enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
+The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for. Since player 0.6.0 a whole list fits (50,000 playlist rows): bind it and draw it with a Slint `ListView` (a long list should use one: a `for` builds every row). The SDK sends row patches, and an array property larger than one request in parts (SDK 1.5.46); only a property's top-level array is split, so any other value, and each row, must fit in one request (a row of more than 512 KiB is refused with `limit`). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too (TestHost enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
 
 #### Commands
 
@@ -7110,9 +7110,12 @@ string, number, boolean and null counts, the value itself included; a
 document or an image is one), 100,000 rows per array, 64 KiB per string
 or field name and 32 MiB of text in total, field names and the text of
 its Markdown documents included (256 KB per document). A list of rows
-with 13 fields is 14 values per row, so 50,000 such rows fit. A value
-larger than one 1 MiB request is sent in parts (SDK 1.5.46, a player
-that takes row patches). A value over a limit is refused with code
+with 13 fields is 14 values per row, so 50,000 such rows fit. An array
+property larger than one 1 MiB request is sent in parts (SDK 1.5.46, a
+player that takes row patches); only the top-level array is split, so
+any other value, and each row, must fit in one request (a row of more
+than 512 KiB is refused with `limit`). A value over a limit is refused
+with code
 `limit` and the property keeps what it showed (see View.set);
 `TestHost` refuses it the same way.
 

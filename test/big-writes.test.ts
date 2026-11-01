@@ -21,7 +21,7 @@ import {
   UI_VALUE_LIMITS,
 } from "../src/plugin/testing.ts";
 import type { Json } from "../src/wire.ts";
-import type { Panel, Plugin } from "../src/plugin/types.ts";
+import type { Panel, Plugin, Window } from "../src/plugin/types.ts";
 
 /** About 390 bytes, like a playlist row of a local file. */
 const row = (i: number, extra: Record<string, unknown> = {}) => ({
@@ -200,6 +200,176 @@ test("initial properties: at most one request of rows, the rest follows", async 
   const rest = lines.filter((line) => line.method === "ui.setMount");
   assert.ok(rest.length >= 2);
   assert.equal((rest[0]!.params.patch as unknown as { base: number }).base, 0);
+  assert.deepEqual(host.mounted().props.rows, list);
+  await stop();
+});
+
+// Review fixes (SDK 1.5.46): parts held until the last, rows too large,
+// a view reopened midway, no list longer than either end midway.
+
+function windowPackage() {
+  const directory = packageWith();
+  writeFileSync(
+    join(directory, "win.slint"),
+    "export component Win inherits Window { in property <[int]> rows; }\n",
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({ id: "test.big", capabilities: ["ui.mount", "ui.window"] }),
+  );
+  return directory;
+}
+
+test("a whole value in parts: `more` on all but the last; the shown list changes once", async () => {
+  const host = new TestHost();
+  const lines = recorded(host);
+  // Unkeyed rows (strings): a change of every row is more than one diff
+  // plans, so the value goes whole, in parts.
+  const strings = (tag: string) =>
+    Array.from(
+      { length: 20_000 },
+      (_, i) => `${tag} row ${i} ${"x".repeat(100)}`,
+    );
+  let list = strings("a");
+  let panel!: Panel;
+  const shown: number[] = [];
+  const request = host.request.bind(host);
+  host.request = (async (method: string, params: Record<string, Json> = {}) => {
+    const result = await request(method, params);
+    if (method === "ui.setMount")
+      shown.push(
+        (host.mounted().props.rows as Json[] | undefined)?.length ?? 0,
+      );
+    return result;
+  }) as typeof host.request;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows: list }));
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  assert.deepEqual(host.mounted().props.rows, list);
+  lines.length = 0;
+  shown.length = 0;
+  list = strings("b");
+  plugin.update();
+  await host.settle();
+  const parts = lines.filter((line) => line.method === "ui.setMount");
+  assert.ok(parts.length > 2);
+  assert.ok(Array.isArray(parts[0]!.params.value), "whole first");
+  assert.deepEqual(
+    parts.map((line) => line.params.more === true),
+    [...parts.slice(1).map(() => true), false],
+  );
+  // The panel showed the old list until the last part, then the new one.
+  assert.ok(shown.slice(0, -1).every((length) => length === 20_000));
+  assert.deepEqual(host.mounted().props.rows, list);
+  await stop();
+});
+
+test("a row larger than one request is refused before any part is sent", async () => {
+  const host = new TestHost();
+  const lines = recorded(host);
+  let list: unknown[] = [];
+  let panel!: Panel;
+  const errors: unknown[] = [];
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows: list }) as never);
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  lines.length = 0;
+  list = rows(0, 3000);
+  list[2500] = {
+    ...row(2500),
+    notes: Array.from({ length: 20 }, () => "y".repeat(40_000)),
+  };
+  plugin.update();
+  await host.settle();
+  assert.equal(lines.filter((line) => line.method === "ui.setMount").length, 0);
+  assert.equal((errors[0] as { code?: string }).code, "limit");
+  assert.match(
+    (errors[0] as Error).message,
+    /^rows: a row of \d+ bytes is larger/,
+  );
+  await stop();
+});
+
+test("a window closed and shown again while a write goes in parts: the rest is dropped quietly", async () => {
+  const host = new TestHost();
+  const errors: unknown[] = [];
+  let list = rows(0, 100);
+  let window!: Window;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      window = plugin.windows.create("win.slint", { id: "w" });
+      window.bind(() => ({ rows: list }));
+    },
+    { host, directory: windowPackage() },
+  );
+  await window.show();
+  await host.settle();
+  // While the third part is on its way, the window closes and opens again.
+  let parts = 0;
+  const request = host.request.bind(host);
+  host.request = (async (method: string, params: Record<string, Json> = {}) => {
+    if (method === "ui.set" && ++parts === 3) {
+      await window.close();
+      await window.show();
+    }
+    return request(method, params);
+  }) as typeof host.request;
+  list = rows(1000, 21_000);
+  plugin.update();
+  await host.settle(300);
+  plugin.update();
+  await host.settle(300);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(
+    host.windows.get("w")!.props.rows,
+    list,
+    "the reopened window shows it all",
+  );
+  await stop();
+});
+
+test("a patch in parts never makes the list longer than either end", async () => {
+  const host = new TestHost();
+  let list = rows(0, 20_000);
+  let panel!: Panel;
+  const lengths: number[] = [];
+  const request = host.request.bind(host);
+  host.request = (async (method: string, params: Record<string, Json> = {}) => {
+    const result = await request(method, params);
+    if (method === "ui.setMount")
+      lengths.push((host.mounted().props.rows as Json[]).length);
+    return result;
+  }) as typeof host.request;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows: list }));
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  lengths.length = 0;
+  // A new list (new keys): removes first, then inserts, in several patches.
+  list = rows(50_000, 70_000);
+  plugin.update();
+  await host.settle();
+  assert.ok(lengths.length > 1);
+  assert.ok(Math.max(...lengths) <= 20_000, `${Math.max(...lengths)}`);
   assert.deepEqual(host.mounted().props.rows, list);
   await stop();
 });

@@ -93,8 +93,12 @@ export type RowOp =
  * `base` (0: the initial properties).
  */
 export type PropertyWrite =
-  | { value: Json; seq?: number }
-  | { patch: { base: number; seq: number; ops: RowOp[] } };
+  | { value: Json; seq?: number; more?: boolean }
+  | {
+      patch: { base: number; seq: number; ops: RowOp[] };
+      /** A part of a whole value sent in parts, not the last (player 0.6.0). */
+      more?: boolean;
+    };
 /**
  * A definite refusal from the player (or the plugin runner), with a stable
  * `code`. Plugin code sees it as a `PluginError` (an `Error` with `code`);

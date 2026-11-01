@@ -1531,9 +1531,13 @@ export class TestHost implements Transport {
    * view and property (none: 0, the initial properties).
    */
   readonly #writes = new Map<string, number>();
+  /** The parts of a whole value held until its last part, by view and property. */
+  readonly #parts = new Map<string, { seq: number; rows: Json[] }>();
   #resetWrites(view: string) {
     for (const slot of [...this.#writes.keys()])
       if (slot.startsWith(`${view}\u0000`)) this.#writes.delete(slot);
+    for (const slot of [...this.#parts.keys()])
+      if (slot.startsWith(`${view}\u0000`)) this.#parts.delete(slot);
   }
   /**
    * A property write as the player takes it, returning the value the
@@ -1547,10 +1551,51 @@ export class TestHost implements Transport {
     property: string,
     p: Record<string, Json>,
     current: Json | undefined,
-  ): Json {
+  ): Json | undefined {
     const slot = `${view}\u0000${property}`;
     const patch = p.patch as
       { base?: unknown; seq?: unknown; ops?: unknown } | undefined;
+    // A whole array sent in parts (player 0.6.0, SDK 1.5.46): every part but
+    // the last carries `more`; the player holds them and writes the whole
+    // value at the last, as here (`undefined`: held, nothing shown yet).
+    const more = p.more === true;
+    const held = this.#parts.get(slot);
+    this.#parts.delete(slot);
+    if (more && patch === undefined) {
+      const rows = this.#shownValues(p.value!);
+      if (!Array.isArray(rows))
+        throw new HostError("invalid", "a value sent in parts is an array");
+      this.#checkValues({ [property]: rows });
+      this.#parts.set(slot, {
+        seq: typeof p.seq === "number" ? p.seq : 0,
+        rows,
+      });
+      return undefined;
+    }
+    if (patch !== undefined && held && patch.base === held.seq) {
+      const ops = patchOps(patch.ops, held.rows.length);
+      const resolved = ops.map((op) =>
+        op.op === "set"
+          ? { ...op, row: this.#shownValues(op.row) }
+          : op.op === "insert"
+            ? { ...op, rows: op.rows.map((row) => this.#shownValues(row)) }
+            : op,
+      );
+      const rows = applyOps(held.rows, resolved);
+      this.#checkValues({ [property]: rows });
+      if (more) {
+        this.#parts.set(slot, { seq: patch.seq as number, rows });
+        return undefined;
+      }
+      this.#seeImages([rows]);
+      this.#writes.set(slot, patch.seq as number);
+      return rows;
+    }
+    if (patch !== undefined && more)
+      throw new HostError(
+        "stale",
+        "the property changed since the write this patch applies on; send the whole value",
+      );
     if (patch === undefined) {
       const value = this.#shownValues(p.value!);
       this.#checkValues({ [property]: value });
@@ -4899,12 +4944,14 @@ export class TestHost implements Transport {
       const window = this.windows.get(String(p.id));
       if (!window) throw new HostError("missing", "view not found");
       const property = String(p.property);
-      window.props[property] = this.#write(
+      const next = this.#write(
         `w:${String(p.id)}`,
         property,
         p,
         window.props[property],
       );
+      // A part of a value sent in parts is held until the last (player 0.6.0).
+      if (next !== undefined) window.props[property] = next;
     },
     "ui.show": (p) => {
       const window = this.windows.get(String(p.id));
@@ -5315,12 +5362,9 @@ export class TestHost implements Transport {
     "ui.setMount": (p) => {
       const panel = this.mounted();
       const property = String(p.property);
-      panel.props[property] = this.#write(
-        "$mount",
-        property,
-        p,
-        panel.props[property],
-      );
+      const next = this.#write("$mount", property, p, panel.props[property]);
+      // A part of a value sent in parts is held until the last (player 0.6.0).
+      if (next !== undefined) panel.props[property] = next;
     },
     "timeline.marks": () => ({ marks: this.timeline.marks }),
     "drops.provide": (p) => {
@@ -5383,12 +5427,14 @@ export class TestHost implements Transport {
       const page = this.settings.pages.get(String(p.id));
       if (!page) throw new HostError("missing", "page not registered");
       const property = String(p.property);
-      page.props[property] = this.#write(
+      const next = this.#write(
         `$settings:${String(p.id)}`,
         property,
         p,
         page.props[property],
       );
+      // A part of a value sent in parts is held until the last (player 0.6.0).
+      if (next !== undefined) page.props[property] = next;
     },
     "settings.unregister": (p) => {
       this.settings.pages.delete(String(p.id));

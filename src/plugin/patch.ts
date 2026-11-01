@@ -11,6 +11,12 @@ export const PATCH_FEATURE = "ui.patch";
 /** The most operations one patch carries (the player's `MAX_PATCH_OPS`). */
 export const PATCH_OPS = 1024;
 /**
+ * The most operations one diff plans (SDK 1.5.46): its patch is sent as
+ * several of at most {@link PATCH_OPS} each (`chunkOps`); more is sent whole
+ * (in parts, which the player writes at once).
+ */
+export const DIFF_OPS = 16 * PATCH_OPS;
+/**
  * Fields that identify a row, in the order they are tried. A field is used
  * when every row has it, as a string or a number, and no two rows share it.
  */
@@ -185,7 +191,8 @@ function increasing(values: readonly number[]): Set<number> {
 
 /**
  * The operations that turn the old rows into the new ones (`null`: more
- * than {@link PATCH_OPS} would be needed), and for each new row the old row
+ * than {@link DIFF_OPS} would be needed, or more than {@link PATCH_OPS}
+ * moves), and for each new row the old row
  * whose JSON it keeps (`-1`: a new or changed row). Keyed when both arrays
  * have keys from the same field; otherwise by index.
  */
@@ -198,7 +205,7 @@ export function diff(
     old.keys && next.keys
       ? keyed(old.enc, old.keys, next.enc, next.keys, from)
       : byIndex(old.enc, next.enc, from);
-  return ops && ops.length <= PATCH_OPS ? { ops, from } : null;
+  return ops && ops.length <= DIFF_OPS ? { ops, from } : null;
 }
 
 function byIndex(
@@ -270,7 +277,7 @@ function keyed(
       last.at = i;
       last.count++;
     } else ops.push({ op: "remove", at: i, count: 1 });
-    if (ops.length > PATCH_OPS) return null;
+    if (ops.length > DIFF_OPS) return null;
   }
   for (let i = p; i < oldEnd; i++)
     if (target.has(oldKeys[i]!)) {
@@ -281,7 +288,9 @@ function keyed(
   // positions goes right after the kept row before it in the new order.
   const positions = kept.map((key) => target.get(key)!);
   const stay = increasing(positions);
-  if (kept.length - stay.size + ops.length > PATCH_OPS) return null;
+  // Moves cost a search each: at most PATCH_OPS of them.
+  if (kept.length - stay.size > PATCH_OPS) return null;
+  if (kept.length - stay.size + ops.length > DIFF_OPS) return null;
   const stays = new Set<RowKey>();
   for (const index of stay) stays.add(kept[index]!);
   const current = kept.slice();
@@ -310,12 +319,12 @@ function keyed(
     if (last?.op === "insert" && last.at + last.rows.length === j)
       last.rows.push(j);
     else ops.push({ op: "insert", at: j, rows: [j] });
-    if (ops.length > PATCH_OPS) return null;
+    if (ops.length > DIFF_OPS) return null;
   }
   sets.sort((a, b) => (a as { at: number }).at - (b as { at: number }).at);
   for (const set of sets) {
     ops.push(set);
-    if (ops.length > PATCH_OPS) return null;
+    if (ops.length > DIFF_OPS) return null;
   }
   return ops;
 }

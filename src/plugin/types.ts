@@ -1462,9 +1462,12 @@ export interface MarkdownOptions {
  * document or an image is one), 100,000 rows per array, 64 KiB per string
  * or field name and 32 MiB of text in total, field names and the text of
  * its Markdown documents included (256 KB per document). A list of rows
- * with 13 fields is 14 values per row, so 50,000 such rows fit. A value
- * larger than one 1 MiB request is sent in parts (SDK 1.5.46, a player
- * that takes row patches). A value over a limit is refused with code
+ * with 13 fields is 14 values per row, so 50,000 such rows fit. An array
+ * property larger than one 1 MiB request is sent in parts (SDK 1.5.46, a
+ * player that takes row patches); only the top-level array is split, so
+ * any other value, and each row, must fit in one request (a row of more
+ * than 512 KiB is refused with `limit`). A value over a limit is refused
+ * with code
  * `limit` and the property keeps what it showed (see {@link View.set});
  * `TestHost` refuses it the same way.
  *
