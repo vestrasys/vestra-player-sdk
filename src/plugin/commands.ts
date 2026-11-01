@@ -157,6 +157,8 @@ class CommandHandle implements Command {
   #last = "";
   #disposed = false;
   #registered = false;
+  /** Its entry in `runtime.commands` (a later handle may own the id). */
+  #run: () => void = () => {};
   /** The player refused the declaration: no state updates follow. */
   #refused = false;
   readonly #pump: Latest<Sent>;
@@ -218,9 +220,10 @@ class CommandHandle implements Command {
         )
         .then(() => {}),
     );
-    runtime.commands.set(this.id, () => {
+    this.#run = () => {
       if (!this.#disposed) scope.run(options.run);
-    });
+    };
+    runtime.commands.set(this.id, this.#run);
     this.#binding = runtime.bind(() => this.#sync());
     scope.add(this);
   }
@@ -281,7 +284,8 @@ class CommandHandle implements Command {
     this.#disposed = true;
     this.#scope.forget(this);
     const runtime = this.#scope.runtime;
-    runtime.commands.delete(this.id);
+    if (runtime.commands.get(this.id) === this.#run)
+      runtime.commands.delete(this.id);
     this.#pump.stop();
     // Removed from the menu once registered. Recorded before any await, so an
     // immediate re-add of the same id registers after this removal.

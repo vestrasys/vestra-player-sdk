@@ -348,22 +348,24 @@ export class Runtime {
     report: (error: unknown) => void,
   ): Promise<T> {
     if (!this.#activating || this.#strict) return this.starting(work, report);
-    this.startup.add(
-      work.then(
-        () => {},
-        (error: unknown) => {
-          if (
-            !(error instanceof HostError) ||
-            !DECLARATION_REFUSALS.has(error.code)
-          )
-            throw error;
-          console.error(
-            `[${this.manifest.id}] ${what} skipped, the player refused it (${error.code}): ${error.message}`,
-          );
-          this.#refusals.push(() => report(error));
-        },
-      ),
+    const settled = work.then(
+      () => {},
+      (error: unknown) => {
+        if (
+          !(error instanceof HostError) ||
+          !DECLARATION_REFUSALS.has(error.code)
+        )
+          throw error;
+        console.error(
+          `[${this.manifest.id}] ${what} skipped, the player refused it (${error.code}): ${error.message}`,
+        );
+        this.#refusals.push(() => report(error));
+      },
     );
+    // Observed now: `activated()` may come after `activate` awaits, and
+    // its `allSettled` still sees the rejection.
+    settled.catch(() => {});
+    this.startup.add(settled);
     work.catch(() => {});
     return work;
   }

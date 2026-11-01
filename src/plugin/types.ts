@@ -500,7 +500,7 @@ export interface Scope extends Disposable {
  * subscriptions) do not need to be awaited: the plugin is reported ready
  * once they all succeed, and activation fails if `activate` throws or any
  * of them fails. A command declaration the player refuses is the exception
- * (SDK 1.5.49): it is logged and skipped, its `ready` rejects and
+ * (SDK 1.5.49): the SDK logs and skips it, its `ready` rejects and
  * {@link Scope.onError} hears it, the rest of the plugin activates
  * (`startPlugin` still fails on it). The entry module must
  * **default-export** `activate`.
@@ -1207,13 +1207,20 @@ export interface Command extends Disposable {
    * `conflict` (path already taken), `invalid` or `limit` (more than 160
    * commands in this plugin, or 1024 in the whole player). You rarely need
    * to await it: the refusal goes to {@link Scope.onError}. During
-   * activation the player skips the command (and logs it with the
-   * player's message) and activates the rest of the plugin (SDK 1.5.49;
-   * before, the refusal failed activation); the error reaches `onError`
-   * once activation completes, so a listener added anywhere in `activate`
-   * hears it. `startPlugin` stays strict: there a refusal during
-   * activation fails it, so tests show the bad declaration. Any other
-   * failure during activation (`capability`, no answer) fails activation.
+   * activation the SDK, in the plugin's process, logs the refusal with the
+   * command id and the player's message, skips the command and lets the
+   * rest of the plugin activate (SDK 1.5.49; before, the refusal failed
+   * activation); the error reaches `onError` once activation completes,
+   * so a listener added anywhere in `activate` hears it. `startPlugin`
+   * stays strict: there a refusal during activation fails it, so tests
+   * show the bad declaration. Any other failure during activation
+   * (`capability`, no answer) fails activation.
+   *
+   * Only the player's answer is skipped. What {@link Commands.add} checks
+   * itself still throws from `add` (an unknown `@` menu id, more than 8
+   * path segments, an `order` out of range, a malformed binding or one
+   * listed twice, a bad `button`, a reason text of the wrong shape, an id
+   * already declared), and fails activation unless the plugin catches it.
    *
    * @throws `conflict` (rejects) Another command already has this menu path,
    *   or the path would be both a menu item and a submenu.
@@ -1236,8 +1243,9 @@ export interface Command extends Disposable {
  * when the user picks the item, presses a key or clicks the button.
  * Commands of all plugins merge into the player's menus by their English
  * path keys. Registration is asynchronous: `add` returns at once, and
- * {@link Command.ready} reports the player's answer (a refusal during
- * activation skips that command, SDK 1.5.49; `startPlugin` fails on it).
+ * {@link Command.ready} reports the player's answer (during activation
+ * the SDK logs a refusal and skips that command, SDK 1.5.49;
+ * `startPlugin` fails on it). What `add` checks itself throws from `add`.
  *
  * @capability commands
  *

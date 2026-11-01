@@ -195,3 +195,38 @@ test("TestHost's startPlugin stays strict: a refused declaration fails it", asyn
     },
   );
 });
+
+test("a failure that is not a refusal causes no unhandled rejection while activate awaits", async () => {
+  const unhandled: unknown[] = [];
+  const listener = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", listener);
+  const host = new TestHost();
+  host.manifestId = "test.runner";
+  try {
+    const transport = {
+      request<T>(method: string, params?: Json): Promise<T> {
+        if (method === "commands.register")
+          return Promise.reject(new HostError("host", "host failure"));
+        return host.request<T>(method, params);
+      },
+      on: (event: string, listener: (data: unknown) => void) =>
+        host.on(event, listener),
+    };
+    const instance = await createPlugin(
+      transport,
+      { id: "test.runner", capabilities: ["commands"] },
+      process.cwd(),
+      host.dataDirectory,
+    );
+    instance.plugin.commands.add({ id: "a", title: "A", run() {} });
+    // `activate` awaits before the runner calls `activated()`.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await assert.rejects(instance.activated(), { code: "host" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(unhandled, []);
+    await instance.dispose();
+  } finally {
+    process.off("unhandledRejection", listener);
+    host.close();
+  }
+});

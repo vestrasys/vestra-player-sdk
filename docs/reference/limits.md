@@ -9,7 +9,7 @@ The player bounds what one request may cost it. The limits are guards against ru
 
 ## Commands
 
-A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects and `onError` hears it; during activation the player skips that command and activates the rest of the plugin, SDK 1.5.49, while `startPlugin` fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
+A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects and `onError` hears it; during activation the SDK logs and skips that command and the rest of the plugin activates, SDK 1.5.49, while `startPlugin` fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
 
 <!-- generated:limits COMMAND_LIMITS -->
 

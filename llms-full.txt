@@ -2357,7 +2357,7 @@ The player bounds what one request may cost it. The limits are guards against ru
 
 #### Commands
 
-A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects and `onError` hears it; during activation the player skips that command and activates the rest of the plugin, SDK 1.5.49, while `startPlugin` fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
+A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects and `onError` hears it; during activation the SDK logs and skips that command and the rest of the plugin activates, SDK 1.5.49, while `startPlugin` fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
@@ -3841,7 +3841,9 @@ When the player starts the plugin:
 
 You do not need to `await` those registrations. `commands.add`, `panels.mount` and `resolvers.add` return their handle at once and register in the background; their `ready` promise is there for the rare case that you want to wait. **Activation fails** when `activate` throws or rejects, or when one of those registrations fails. A registration made later, after activation, cannot fail activation any more: its failure goes to `onError`.
 
-A command declaration the player refuses (`invalid`, `conflict` or `limit`: a bad text, a path another command has, too many commands) does not fail activation either (SDK 1.5.49). The player logs it with the command id and its message, skips that command and activates the rest of the plugin, like VS Code with a bad contribution; the command's `ready` rejects and `onError` hears the refusal once activation completes. `startPlugin` stays strict: there the refusal fails the start, so your tests show the bad declaration.
+A command declaration the player refuses (`invalid`, `conflict` or `limit`: a bad text, a path another command has, too many commands) does not fail activation either (SDK 1.5.49). The SDK, in the plugin's process, logs it with the command id and the player's message, skips that command and lets the rest of the plugin activate, like VS Code with a bad contribution; the command's `ready` rejects and `onError` hears the refusal once activation completes. `startPlugin` stays strict: there the refusal fails the start, so your tests show the bad declaration.
+
+This covers only the player's answer. What `commands.add` checks itself still throws from `add`: an unknown `@` menu id, more than 8 path segments, an `order` out of range, a malformed binding or one listed twice, a bad `button`, a reason text of the wrong shape, an id already declared. Uncaught, such a throw fails activation like any other exception in `activate`.
 
 Some refusals are deliberately not failures, because they depend on which other plugins are installed: a bottom bar or backdrop that another plugin's panel already holds, the next/previous sequence that another plugin provides, a file type or web host that another plugin already resolves. The plugin keeps running without that part, the player tells the user, and the plugin manager shows it as a warning (PluginInfo.warnings). The player's built-in plugins register first, so they win these contests at start-up.
 
@@ -5830,7 +5832,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
-| [1.5.49](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1549) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed, and the player's runner needs no change. | — |
+| [1.5.49](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1549) | **Nobody.** No changes to the plugin API (`@vestra-player/sdk/runtime` gains the additive `RuntimeOptions` and an optional sixth `createPlugin` argument), `apiVersion` stays `vestra/1`, no new capability, no player version needed, and the player's runner needs no change. | — |
 | [1.5.48](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1548) | **Nobody, but plugin tests may now fail.** No changes to the TypeScript API beyond new fields of `COMMAND_LIMITS`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.47](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1547) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.46](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1546) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
@@ -6317,7 +6319,7 @@ Registrations started during activation (commands, panels, resolvers,
 subscriptions) do not need to be awaited: the plugin is reported ready
 once they all succeed, and activation fails if `activate` throws or any
 of them fails. A command declaration the player refuses is the exception
-(SDK 1.5.49): it is logged and skipped, its `ready` rejects and
+(SDK 1.5.49): the SDK logs and skips it, its `ready` rejects and
 Scope.onError hears it, the rest of the plugin activates
 (`startPlugin` still fails on it). The entry module must
 **default-export** `activate`.
@@ -6879,7 +6881,24 @@ interface Command extends Disposable {
     checked: Bindable<boolean | null> | Condition;
   }>): void;
   /**
-   * Resolves when the host has registered the command. Rejects with `conflict` (path already taken), `invalid` or `limit` (more than 160 commands in this plugin, or 1024 in the whole player). You rarely need to await it: the refusal goes to Scope.onError. During activation the player skips the command (and logs it with the player's message) and activates the rest of the plugin (SDK 1.5.49; before, the refusal failed activation); the error reaches `onError` once activation completes, so a listener added anywhere in `activate` hears it. `startPlugin` stays strict: there a refusal during activation fails it, so tests show the bad declaration. Any other failure during activation (`capability`, no answer) fails activation.
+   * Resolves when the host has registered the command. Rejects with
+   * `conflict` (path already taken), `invalid` or `limit` (more than 160
+   * commands in this plugin, or 1024 in the whole player). You rarely need
+   * to await it: the refusal goes to Scope.onError. During
+   * activation the SDK, in the plugin's process, logs the refusal with the
+   * command id and the player's message, skips the command and lets the
+   * rest of the plugin activate (SDK 1.5.49; before, the refusal failed
+   * activation); the error reaches `onError` once activation completes,
+   * so a listener added anywhere in `activate` hears it. `startPlugin`
+   * stays strict: there a refusal during activation fails it, so tests
+   * show the bad declaration. Any other failure during activation
+   * (`capability`, no answer) fails activation.
+   *
+   * Only the player's answer is skipped. What Commands.add checks
+   * itself still throws from `add` (an unknown `@` menu id, more than 8
+   * path segments, an `order` out of range, a malformed binding or one
+   * listed twice, a bad `button`, a reason text of the wrong shape, an id
+   * already declared), and fails activation unless the plugin catches it.
    * @throws conflict (rejects) Another command already has this menu path, or the path would be both a menu item and a submenu.
    * @throws capability (rejects) The manifest does not declare `commands`.
    * @throws invalid (rejects) The player refused the declaration.
@@ -6916,8 +6935,9 @@ the menu, the binding table and the user's key overrides: it calls `run`
 when the user picks the item, presses a key or clicks the button.
 Commands of all plugins merge into the player's menus by their English
 path keys. Registration is asynchronous: `add` returns at once, and
-Command.ready reports the player's answer (a refusal during
-activation skips that command, SDK 1.5.49; `startPlugin` fails on it).
+Command.ready reports the player's answer (during activation
+the SDK logs a refusal and skips that command, SDK 1.5.49;
+`startPlugin` fails on it). What `add` checks itself throws from `add`.
 
 - @capability commands
 
@@ -17159,10 +17179,11 @@ undeclared capability fail with `capability`, as in the player.
 
 Rejects when `manifest.json` cannot be read or parsed, when `activate`
 throws, or when a registration made during activation fails (for example
-`limit`, `conflict`, `invalid`). Stricter than the player for commands
-(SDK 1.5.49): the player logs a command declaration it refuses during
-activation, skips it and activates the rest of the plugin (`onError`
-hears it); `startPlugin` fails, so a test shows the bad declaration.
+`limit`, `conflict`, `invalid`). Stricter than the player's runner for
+commands (SDK 1.5.49): there the SDK logs a command declaration the
+player refuses during activation, skips it and activates the rest of the
+plugin (`onError` hears it); `startPlugin` fails, so a test shows the
+bad declaration.
 
 The way into a plugin's tests: one call starts the plugin the way the
 player's runner does and returns the host to drive, the `plugin` object
