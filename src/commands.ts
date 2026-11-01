@@ -320,8 +320,8 @@ vestra.playback | copy-name | Copy to Clipboard ▸ File Name
 vestra.playback | copy-folder | Copy to Clipboard ▸ Folder Path
 vestra.playback | copy-path | Copy to Clipboard ▸ Full Path
 host | play-pause | Playback ▸ Play/Pause | Space, Mouse:LeftClick
-host | previous | Playback ▸ Previous | PageUp, Mouse:X1
-host | next | Playback ▸ Next | PageDown, Mouse:X2
+host | previous | Playback ▸ Previous | PageUp, Mouse:X2
+host | next | Playback ▸ Next | PageDown, Mouse:X1
 host | frame-back | Playback ▸ Seek ▸ Previous Frame | D
 host | frame-forward | Playback ▸ Seek ▸ Next Frame | F
 vestra.playback | keyframe-back | Playback ▸ Seek ▸ Previous Keyframe | Ctrl+Shift+ArrowLeft
@@ -547,7 +547,7 @@ vestra.audio | audio.normalize | Audio ▸ Processing ▸ Normalize | Shift+N
 vestra.audio | audio.clarity | Audio ▸ Processing ▸ Crystalizer | Shift+C
 vestra.audio | audio.reset | Audio ▸ Reset
 vestra.visualizer | audio-cover | Audio ▸ Show Album Cover for Audio Only
-host | fullscreen | Toggle Fullscreen | Enter, Alt+Enter, F11
+host | fullscreen | Toggle Fullscreen | Escape
 vestra.window | pip | Screen ▸ Picture-in-Picture
 vestra.window | mini | Screen ▸ Mini Size | \`
 vestra.window | size.0.5 | Screen ▸ 0.5× | 1
@@ -591,7 +591,8 @@ vestra.preferences | language.fr | Settings ▸ Language ▸ Français
 vestra.preferences | language.es | Settings ▸ Language ▸ Español
 vestra.info | info.about | About Vestra Player… | F1
 host | quit | Quit | Cmd+Q
-host | exit-fullscreen | (Leave Fullscreen) | Escape
+host | enter-fullscreen | (Enter Fullscreen)
+host | exit-fullscreen | (Leave Fullscreen)
 host | sidebar | (Toggle Sidebar)
 vestra.info | info.brief | (Brief Info) | Shift+Tab
 vestra.playlist | playlist.play | (Play) | Enter, P | panel

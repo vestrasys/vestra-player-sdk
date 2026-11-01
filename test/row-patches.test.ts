@@ -758,3 +758,215 @@ test("the TestHost counts the rows a patch keeps: successive patches cannot pass
   assert.equal((host.mounted().props.rows as Json[]).length, rows.length);
   await stop();
 });
+
+test("deep-frozen rows bound again are not encoded again; rows that can change always are", async () => {
+  const host = new TestHost();
+  const writes = recorded(host);
+  const frozen = (key: string, extra: Record<string, unknown> = {}) =>
+    Object.freeze({ ...row(key), tags: Object.freeze(["x"]), ...extra });
+  const nested = { text: "before" };
+  let shown = "a";
+  const getter = Object.freeze(
+    Object.defineProperty({ rowId: "getter" }, "label", {
+      enumerable: true,
+      get: () => shown,
+    }),
+  );
+  const plain = row("plain");
+  const shallow = Object.freeze({ ...row("shallow"), nested });
+  let rows: unknown[] = [
+    ...Array.from({ length: 50 }, (_, i) => frozen(String(i))),
+    getter,
+    plain,
+    shallow,
+  ];
+  const settledRows = new Set(rows.slice(0, 50));
+  let panel!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }) as never);
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  const stringify = JSON.stringify;
+  let encoded = 0;
+  JSON.stringify = ((value: unknown, ...rest: never[]) => {
+    if (settledRows.has(value)) encoded++;
+    return stringify(value, ...rest);
+  }) as typeof JSON.stringify;
+  try {
+    // Seen once, then verified and kept: from then on taken from the cache.
+    for (let pass = 0; pass < 2; pass++) {
+      plugin.update();
+      await host.settle();
+    }
+    encoded = 0;
+    plugin.update();
+    await host.settle();
+    assert.equal(encoded, 0, "kept rows are not encoded again");
+    assert.equal(writes.length, 0, "and nothing changed");
+    // A changed row is a new object: one set, the others still kept.
+    const changed = frozen("7", { selected: true });
+    rows = rows.map((r, i) => (i === 7 ? changed : r));
+    plugin.update();
+    await host.settle();
+    assert.equal(encoded, 0);
+    assert.deepEqual(
+      (writes.at(-1)!.params.patch as unknown as { ops: unknown[] }).ops,
+      [{ op: "set", at: 7, row: changed }],
+    );
+  } finally {
+    JSON.stringify = stringify;
+  }
+  // A frozen row with a getter, a mutable row and a frozen row holding a
+  // mutable object are encoded on every pass: their changes are sent.
+  shown = "b";
+  (plain as { label: string }).label = "changed";
+  nested.text = "after";
+  writes.length = 0;
+  plugin.update();
+  await host.settle();
+  const ops = (
+    writes.at(-1)!.params.patch as unknown as {
+      ops: { op: string; at: number }[];
+    }
+  ).ops;
+  assert.deepEqual(
+    ops.map((op) => [op.op, op.at]),
+    [
+      ["set", 50],
+      ["set", 51],
+      ["set", 52],
+    ],
+  );
+  assert.deepEqual(host.mounted().props.rows, JSON.parse(JSON.stringify(rows)));
+  await stop();
+});
+
+/** Counts `JSON.stringify` calls on the given values while `run` runs. */
+async function stringified(values: Set<unknown>, run: () => Promise<void>) {
+  const stringify = JSON.stringify;
+  let count = 0;
+  JSON.stringify = ((value: unknown, ...rest: never[]) => {
+    if (values.has(value)) count++;
+    return stringify(value, ...rest);
+  }) as typeof JSON.stringify;
+  try {
+    await run();
+  } finally {
+    JSON.stringify = stringify;
+  }
+  return count;
+}
+
+test("a kept frozen row holding an image is still refused once its scope is released", async () => {
+  const host = new TestHost();
+  const writes = recorded(host);
+  const directory = packageWith();
+  const scope: { dispose(): Promise<void> }[] = [];
+  let rows: unknown[] = [];
+  let panel!: Panel;
+  const errors: unknown[] = [];
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      const images = plugin.scope();
+      scope.push(images);
+      rows = [
+        Object.freeze({
+          ...row("a"),
+          icon: images.ui.image(join(directory, "a.png")),
+        }),
+        Object.freeze(row("b")),
+      ];
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }) as never);
+    },
+    { host, directory },
+  );
+  await panel.ready;
+  await host.settle();
+  // Seen, then kept.
+  const kept = new Set([rows[0]]);
+  for (let pass = 0; pass < 2; pass++) {
+    plugin.update();
+    await host.settle();
+  }
+  const count = await stringified(kept, async () => {
+    plugin.update();
+    await host.settle();
+  });
+  assert.equal(count, 0, "the image row is taken from the cache");
+  await scope[0]!.dispose();
+  writes.length = 0;
+  rows = [rows[0], Object.freeze(row("b", { selected: true }))];
+  plugin.update();
+  await host.settle();
+  assert.equal(writes.length, 0, "nothing is sent");
+  assert.equal((errors[0] as { code?: string }).code, "invalid");
+  assert.match(String((errors[0] as Error).message), /released/);
+  await stop();
+});
+
+test("frozen rows holding a Date or a Map are not kept; a toJSON on Object.prototype turns the cache off", async () => {
+  const host = new TestHost();
+  const writes = recorded(host);
+  const when = new Date(0);
+  const dated = Object.freeze({ ...row("dated"), when });
+  const mapped = Object.freeze({ ...row("mapped"), map: new Map() });
+  const plain = Array.from({ length: 10 }, (_, i) =>
+    Object.freeze(row(String(i))),
+  );
+  const rows: unknown[] = [dated, mapped, ...plain];
+  let panel!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      panel = plugin.panels.mount("sidebar", "list.slint");
+      panel.bind(() => ({ rows }) as never);
+    },
+    { host, directory: packageWith() },
+  );
+  await panel.ready;
+  await host.settle();
+  for (let pass = 0; pass < 2; pass++) {
+    plugin.update();
+    await host.settle();
+  }
+  const pass = async () => {
+    plugin.update();
+    await host.settle();
+  };
+  assert.equal(await stringified(new Set([dated, mapped]), pass), 2);
+  assert.equal(await stringified(new Set(plain), pass), 0, "plain rows kept");
+  // A Date changes inside a frozen row: the change is sent.
+  when.setTime(1000);
+  writes.length = 0;
+  await pass();
+  const ops = (
+    writes.at(-1)!.params.patch as unknown as {
+      ops: { op: string; at: number }[];
+    }
+  ).ops;
+  assert.deepEqual(
+    ops.map((op) => [op.op, op.at]),
+    [["set", 0]],
+  );
+  // A `toJSON` on Object.prototype: every row is encoded again.
+  Object.defineProperty(Object.prototype, "toJSON", {
+    value: function (this: unknown) {
+      return this;
+    },
+    configurable: true,
+    writable: true,
+  });
+  try {
+    assert.equal(await stringified(new Set(plain), pass), plain.length);
+  } finally {
+    delete (Object.prototype as { toJSON?: unknown }).toJSON;
+  }
+  assert.equal(await stringified(new Set(plain), pass), 0, "kept again");
+  await stop();
+});

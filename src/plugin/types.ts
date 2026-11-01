@@ -1060,9 +1060,12 @@ export interface CommandOptions {
    * `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`/`Right`/`Up`/`Down`,
    * `Plus`, any other single symbol as typed (`">"`, not `"Shift+."`),
    * `Numpad0`–`Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`,
-   * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, and the video-area mouse
+   * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, the video-area mouse
    * inputs `Mouse:LeftClick`, `Mouse:LeftDoubleClick[:LeftHalf|:RightHalf]`,
-   * `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`/`Down`/`Left`/`Right`.
+   * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
+   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), from 0.6.0 on anywhere
+   * in the main window or the floating sidebar window, except while a menu
+   * is open.
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write
@@ -6213,13 +6216,13 @@ export interface Player {
  * | --- | --- | --- |
  * | `stop` | F4 | close the source |
  * | `play-pause` | Space, a left click on the video (player 0.5.2) | pause / resume, replay after the end |
- * | `previous` / `next` | PageUp, Mouse:X1 / PageDown, Mouse:X2 | ask the sequence provider |
+ * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 (from 0.6.0; up to 0.5.x X1 was previous and X2 next) | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
  * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
  * | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
  * | `mute` | M | toggle mute |
- * | `fullscreen` | Enter, Alt+Enter, F11 | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
+ * | `fullscreen` | Escape (from 0.6.0; up to 0.5.x Enter, Alt+Enter, F11) | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
  *
  * In the binding overlay their keys are `host/<action>`. `fullscreen`
  * changes no playback state: read the result from `window.state.fullscreen`
