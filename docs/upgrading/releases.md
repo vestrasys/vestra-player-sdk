@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.51](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1551) | **Nobody.** Additive: `MENU_IDS` and `MenuId` gain `reset`, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.50](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1550) | **Tools that read `llms-full.txt`.** It is removed (approved by the maintainer, 2026-11-01): from the package (`@vestra-player/sdk/llms-full.txt`), from the documentation site and from the generators. | — |
 | [1.5.49](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1549) | **Nobody.** No changes to the plugin API (`@vestra-player/sdk/runtime` gains the additive `RuntimeOptions` and an optional sixth `createPlugin` argument), `apiVersion` stays `vestra/1`, no new capability, no player version needed, and the player's runner needs no change. | — |
 | [1.5.48](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1548) | **Nobody, but plugin tests may now fail.** No changes to the TypeScript API beyond new fields of `COMMAND_LIMITS`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |

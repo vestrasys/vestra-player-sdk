@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.51
+
+**Who must change: nobody.** Additive: `MENU_IDS` and `MenuId` gain `reset`, `apiVersion` stays `vestra/1`, no new capability. A plugin that puts a command under `@reset` sets `"minPlayerVersion": "0.6.3"`: older players refuse `@reset` with `invalid` (since SDK 1.5.49 that command is skipped and the rest of the plugin activates).
+
+- **A Reset menu for every reset-to-default command** (user ruling, 2026-11-01). `["@reset", "Picture"]` (or the key `["Reset", …]`) puts a command into the player's new built-in top-level menu **Reset**, directly below Settings and in Settings' separator group (order 840, whatever the groups of the items inside). It lists the resets of every plugin in one place, so users do not hunt for them through Video, Audio and Subtitles; like every built-in menu it is shown only once a command is in it, and its title is the player's (复位 in Simplified Chinese).
+- **`TestHost`** accepts `@reset`, shows Reset in the player's words (`HOST_ZH_HANS`) and lists it in its refusal of an unknown menu id (`… @settings, @reset`).
+- _Docs_: [Guidelines: menus](docs/guidelines/menus.md#reset) gains **Reset**: put reset-to-default commands under `@reset`, titled by what they reset, without the word Reset ("Picture", "Subtitle Sync"); order and group them by domain; keep the command id when moving one (bindings and the user's keys follow the id); a "Normal"/"Default" radio or clearing user data is not a reset. [Reference: commands](docs/reference/commands.md#built-in-menus) lists `@reset` and the top-level sketch shows it; `CommandOptions.order` gives its fixed order.
+
 ## 1.5.50
 
 **Who must change: tools that read `llms-full.txt`.** It is removed (approved by the maintainer, 2026-11-01): from the package (`@vestra-player/sdk/llms-full.txt`), from the documentation site and from the generators. Read the documentation tree instead: `npx -p @vestra-player/sdk vestra-plugin docs [path]` and `… docs --search <words>`, or `docs(path)` and `searchDocs(query)` from `@vestra-player/sdk/docs` in a program. The player's Workshop vendors the package's `dist/` (the tree is `dist/docs-tree.json.gz`, built with the package; reading it needs nothing else) and must drop its `llms-full.txt` expectation. Plugins need no change: no changes to the plugin API, `apiVersion` stays `vestra/1`, no new capability, no player version needed.

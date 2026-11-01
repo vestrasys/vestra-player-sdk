@@ -1,6 +1,6 @@
 {
   "name": "@vestra-player/sdk",
-  "version": "1.5.50",
+  "version": "1.5.51",
   "description": "Plugin API types, test host and plugin CLI for Vestra Player (apiVersion vestra/1)",
   "license": "Apache-2.0",
   "repository": {

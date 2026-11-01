@@ -28,10 +28,11 @@ A command's `path` is a list of 1 to 8 segments in English source text, the last
 | `@audio` | `Audio` |
 | `@screen` | `Screen` |
 | `@settings` | `Settings` |
+| `@reset` | `Reset` |
 
 <!-- /generated -->
 
-Players before 0.3.0 show `@video` as a menu of its own; players up to 0.4.2 titled these menus in Chinese, where only the id form reaches them. The fixed orders of the built-in menus and of the player's own items are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
+`@reset` needs player 0.6.3; older players refuse it with `invalid`. Players before 0.3.0 show `@video` as a menu of its own; players up to 0.4.2 titled these menus in Chinese, where only the id form reaches them. The fixed orders of the built-in menus and of the player's own items are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 
 ## The top level
 
@@ -59,6 +60,7 @@ Vestra Player AI…
 Plugin Store…
 ────────────────────────────────────────
 Settings ▸
+Reset ▸                                    (only when a command is in it)
 ────────────────────────────────────────
 About Vestra Player…          F1
 ────────────────────────────────────────
@@ -74,6 +76,10 @@ The groups of the top level and their `order` ranges ([Guidelines: menus](../gui
 | `screen`               | 700–799 | Fullscreen and the window's size and placement                                   |
 | `windows`              | 800–899 | Items that show a window or a panel (a check mark when it toggles one)           |
 | `exit`                 | 900–999 | Quit                                                                             |
+
+## The Reset menu
+
+**Reset ▸** (`@reset`, player 0.6.3) sits at order 840, directly below Settings and in its separator group, and is shown only once a command is in it. Inside it, items use the order range and a group of their domain ([Guidelines: menus](../guidelines/menus.md#reset) says why): Playback 200–299 `reset-playback`, Subtitles 300–399 `reset-subtitles`, Video 400–499 `reset-video`, Audio 500–599 `reset-audio`, Screen 700–799 `reset-screen`, anything else 800–899 in a group of its own.
 
 ## Submenu keys in use
 

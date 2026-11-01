@@ -222,7 +222,7 @@ test("raw registrations get the player's answers", async () => {
     await assert.rejects(register({ path: ["@tools", "A"] }), {
       code: "invalid",
       message:
-        "invalid command: unknown menu id @tools; the built-in menus are @open, @playback, @subtitles, @video, @audio, @screen, @settings",
+        "invalid command: unknown menu id @tools; the built-in menus are @open, @playback, @subtitles, @video, @audio, @screen, @settings, @reset",
     });
     await assert.rejects(register({ path: ["@video"] }), {
       code: "invalid",
