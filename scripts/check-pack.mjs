@@ -5,11 +5,12 @@
  *   node scripts/check-pack.mjs vestra-player-sdk-x.y.z.tgz
  *
  * - every file matches the allow list below (compiled dist/, the CLI, the
- *   Slint widget copy and the top-level documents; no sources, tests, source
+ *   Slint widget copy, the documentation tree dist/docs-tree.json.gz and
+ *   the top-level documents; no sources, tests, source
  *   maps, build info or stray files),
  * - every `exports` target and every `bin` entry of package.json is present,
  * - the tarball's package.json has the same name and version as the
- *   repository's, and its llms.txt / llms-full.txt name that version.
+ *   repository's, and its llms.txt names that version.
  *
  * CI runs it on the tarball it uploads (and, on a release, publishes).
  */
@@ -28,7 +29,8 @@ const ALLOWED = [
   /^README\.md$/,
   /^CHANGELOG\.md$/,
   /^LICENSE$/,
-  /^llms(-full)?\.txt$/,
+  /^llms\.txt$/,
+  /^dist\/docs-tree\.json\.gz$/,
   /^bin\/[\w-]+\.mjs$/,
   /^slint\/[\w/-]+\.slint$/,
   /^ts-plugin\/(index\.js|index\.d\.ts|package\.json)$/,
@@ -76,7 +78,7 @@ if (inner.name !== manifest.name || inner.version !== manifest.version)
     `tarball is ${inner.name}@${inner.version}, package.json is ${manifest.name}@${manifest.version}`,
   );
 
-for (const name of ["llms.txt", "llms-full.txt"]) {
+for (const name of ["llms.txt"]) {
   const text = spawnSync(
     "tar",
     ["-xzOf", resolve(tarball), `package/${name}`],

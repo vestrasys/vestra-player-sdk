@@ -47,10 +47,10 @@ jobs:
         env:
           TGZ: ${{ steps.pack.outputs.tgz }}
       # ESM-only package (engines: node >= 26): node10 and require()
-      # resolution are not supported targets. llms.txt / llms-full.txt are
-      # text exports without types.
+      # resolution are not supported targets. llms.txt is a text export
+      # without types.
       - name: Are the types wrong
-        run: npx --no-install attw "$TGZ" --profile esm-only --exclude-entrypoints llms.txt llms-full.txt
+        run: npx --no-install attw "$TGZ" --profile esm-only --exclude-entrypoints llms.txt
         env:
           TGZ: ${{ steps.pack.outputs.tgz }}
       - name: Install smoke test (fresh project, tsc + vestra-plugin check/test)

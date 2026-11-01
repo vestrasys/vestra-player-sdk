@@ -171,6 +171,7 @@ for (const path of walk("src", (p) => p.endsWith(".ts"))) {
 
 const sdkEntry = join(root, "src/index.ts");
 const testingEntry = join(root, "src/plugin/testing.ts");
+const docsEntry = join(root, "src/docs.ts");
 
 /** Every name the public entry points export (types and values). */
 function exportedNames() {
@@ -262,6 +263,7 @@ const program = ts.createProgram([...files.keys()], {
   paths: {
     "@vestra-player/sdk": [sdkEntry],
     "@vestra-player/sdk/testing": [testingEntry],
+    "@vestra-player/sdk/docs": [docsEntry],
   },
 });
 

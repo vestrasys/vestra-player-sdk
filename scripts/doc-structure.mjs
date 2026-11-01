@@ -133,6 +133,10 @@ export const GROUPS = [
         why: "One task: submit a plugin to the plugin store.",
       },
       {
+        file: "agent-docs.md",
+        why: "One task: give a coding agent this documentation through the documentation tree (vestra-plugin docs, @vestra-player/sdk/docs); its reader is the agent's author, not the plugin's code.",
+      },
+      {
         file: "troubleshooting.md",
         why: "Symptoms and their causes (the pitfalls and questions that used to sit on the explanation pages): problem-oriented, so it sits with the how-to guides, in a shape of its own.",
         shape: "troubleshooting",

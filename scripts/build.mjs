@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * src/*.ts → dist/*.js + dist/*.d.ts (tsconfig.json). The package publishes
+ * src/*.ts → dist/*.js + dist/*.d.ts (tsconfig.json), then the documentation
+ * tree for agents → dist/docs-tree.json.gz (scripts/docs-tree.mjs, read by
+ * `@vestra-player/sdk/docs` and `vestra-plugin docs`). The package publishes
  * the compiled files: Node does not strip types inside node_modules, and other
  * tool chains (bundlers, older TypeScript, editors) read .js + .d.ts directly.
  * Runs as `prepare`: on `npm ci` / `npm install` in this repository, before
@@ -26,4 +28,10 @@ const result = spawnSync(
   [tsc, "-p", join(root, "tsconfig.json")],
   { stdio: "inherit" },
 );
-process.exit(result.status ?? 1);
+if (result.status !== 0) process.exit(result.status ?? 1);
+const tree = spawnSync(
+  process.execPath,
+  [join(root, "scripts", "docs-tree.mjs")],
+  { stdio: "inherit" },
+);
+process.exit(tree.status ?? 1);
