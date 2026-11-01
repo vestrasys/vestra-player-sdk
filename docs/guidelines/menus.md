@@ -24,10 +24,20 @@ Keep a group's orders contiguous: `group` only draws a separator between neighbo
 
 ## Inside a built-in menu
 
-- **Name the menu by its id**: `["@video", "Blur"]`. The seven built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings) stay where they are whatever you put in them.
+- **Name the menu by its id**: `["@video", "Blur"]`. The eight built-in menus (Open, Playback, Subtitles, Video, Audio, Screen, Settings, Reset) stay where they are whatever you put in them.
 - **Without an `order`, your item goes to the end** of the menu, after the player's own items, which is usually right for a plugin. To sit next to a related player item, give an `order` near that item's; the player's items use the orders listed in [Built-in commands](../reference/commands.md#built-in-commands), and the ranges per menu are at {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 - **Group related items** with a `group` of your own, so a separator sets them apart from the player's items.
 - **Playback ▸ Speed and Playback ▸ Seek are the player's.** You can add to them; their titles stay the player's.
+
+## Reset
+
+Every command that puts something back to its default lives in one place, the **Reset** menu (`@reset`, player 0.6.3), directly below Settings: a user who changed the picture, the audio processing or the subtitle position finds every way back there instead of hunting through each domain. The menu shows only once a command is in it.
+
+- **Put a reset-to-default command under `@reset`, titled by what it resets, without the word Reset**: `["@reset", "Picture"]`, `["@reset", "Subtitle Sync"]`, not "Reset Picture" (the menu already says it). Keep it out of the domain menu: one entry, not two.
+- **One item per thing a user would reset on its own.** Name the setting as the domain menu does ("Audio Sync", "Framing"), so the item reads as the same thing.
+- **Order and group by domain.** Use the `order` range of the domain menu the setting belongs to and one group per domain (`reset-video`, `reset-audio`…), so a separator sets each domain apart and the items read in the order of the menus above; the ranges are in [Reference: commands](../reference/commands.md#the-reset-menu).
+- **Keep the command id when you move a reset there.** Bindings and the user's own keys follow the command id, not its path, so the default key and any key the user set keep working.
+- **Not a reset**: picking one value among others (the "Normal" speed radio, the "Default (Source)" aspect radio) stays with its choices, and clearing what the user made (bookmarks, history, an A-B loop point) is not going back to a default; both stay in their domain.
 
 ## Shared submenus
 

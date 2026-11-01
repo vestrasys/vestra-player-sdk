@@ -57,6 +57,7 @@ const activate = (plugin: Plugin) => {
     run() {},
   });
   plugin.commands.add({ id: "plain", path: ["Settings", "Plain"], run() {} });
+  plugin.commands.add({ id: "picture", path: ["@reset", "Picture"], run() {} });
 };
 
 test("the test host shows a plugin's declarations in its locale", async () => {
@@ -76,6 +77,11 @@ test("the test host shows a plugin's declarations in its locale", async () => {
     ]);
     // Untranslated text shows as written; the player's menu in its words.
     assert.deepEqual(zh.host.command("plain").display.path, ["设置", "Plain"]);
+    // Reset (SDK 1.5.51) is the player's menu too.
+    assert.deepEqual(zh.host.command("picture").display.path, [
+      "复位",
+      "Picture",
+    ]);
     await zh.stop();
     const en = await startPlugin(activate, { directory, locale: "en" });
     assert.equal(en.plugin.i18n.locale, "en");
