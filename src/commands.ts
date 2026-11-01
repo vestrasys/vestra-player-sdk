@@ -461,13 +461,11 @@ vestra.subtitles | size-up | Subtitles ▸ Subtitle Style ▸ Size + | Alt+PageU
 vestra.subtitles | size-down | Subtitles ▸ Subtitle Style ▸ Size − | Alt+PageDown
 vestra.subtitles | move-up | Subtitles ▸ Subtitle Style ▸ Move Up
 vestra.subtitles | move-down | Subtitles ▸ Subtitle Style ▸ Move Down
-vestra.subtitles | move-reset | Subtitles ▸ Subtitle Style ▸ Reset Position | Alt+Home
 vestra.subtitles | shadow | Subtitles ▸ Subtitle Style ▸ Shadow
 vestra.subtitles | box | Subtitles ▸ Subtitle Style ▸ Opaque Box
 vestra.subtitles | ass-original | Subtitles ▸ Original ASS/SSA Styles
 vestra.subtitles | sync-earlier | Subtitles ▸ Sync ▸ Earlier 0.5 s | .
 vestra.subtitles | sync-later | Subtitles ▸ Sync ▸ Later 0.5 s | ,
-vestra.subtitles | sync-reset | Subtitles ▸ Sync ▸ Reset | /
 vestra.subtitles | sync-input | Subtitles ▸ Sync ▸ Adjust Sync…
 vestra.subtitle-online | search | Subtitles ▸ Online Subtitles ▸ Search and Download Subtitles…
 vestra.subtitle-online | settings | Subtitles ▸ Online Subtitles ▸ Online Subtitle Settings…
@@ -517,12 +515,10 @@ vestra.video | video.reframe.crop.1 | Video ▸ Crop/Stretch ▸ Crop to 16:9
 vestra.video | video.reframe.crop.2 | Video ▸ Crop/Stretch ▸ Crop to 16:10
 vestra.video | video.reframe.crop.3 | Video ▸ Crop/Stretch ▸ Crop to 1.85:1
 vestra.video | video.reframe.crop.4 | Video ▸ Crop/Stretch ▸ Crop to 2.35:1
-vestra.video | video.reframe.reset | Video ▸ Crop/Stretch ▸ Reset Position
 vestra.video | video.reframe.left | Video ▸ Crop/Stretch ▸ Move Left
 vestra.video | video.reframe.right | Video ▸ Crop/Stretch ▸ Move Right
 vestra.video | video.reframe.up | Video ▸ Crop/Stretch ▸ Move Up
 vestra.video | video.reframe.down | Video ▸ Crop/Stretch ▸ Move Down
-vestra.video | video.frame.reset | Video ▸ Framing ▸ Reset Framing | Numpad5, Alt+Backspace
 vestra.video | video.frame.zoom-in | Video ▸ Framing ▸ Zoom In | Numpad9, Alt+Plus
 vestra.video | video.frame.zoom-out | Video ▸ Framing ▸ Zoom Out | Numpad1, Alt+-
 vestra.video | video.frame.right | Video ▸ Framing ▸ Pan → | Ctrl+Numpad6, Alt+ArrowRight
@@ -564,7 +560,6 @@ vestra.capture | capture.settings | Video ▸ Snapshot ▸ Snapshot Settings…
 vestra.capture | capture.folder | Video ▸ Snapshot ▸ Snapshot Folder…
 vestra.capture | capture.openFolder | Video ▸ Snapshot ▸ Open Snapshot Folder
 vestra.video | video.picture | Video ▸ Picture Adjustments…
-vestra.video | video.reset | Video ▸ Reset | Q
 vestra.video | video.brightness.down | Video ▸ Brightness -1% | W
 vestra.video | video.brightness.up | Video ▸ Brightness +1% | E
 vestra.video | video.contrast.down | Video ▸ Contrast -1% | R
@@ -593,13 +588,11 @@ vestra.audio | audio.preset.2 | Audio ▸ Preset ▸ Music
 vestra.audio | audio.preset.3 | Audio ▸ Preset ▸ Cinema
 vestra.audio | audio.sync.earlier | Audio ▸ Audio Sync ▸ 50 ms Earlier | >
 vestra.audio | audio.sync.later | Audio ▸ Audio Sync ▸ 50 ms Later | <
-vestra.audio | audio.sync.reset | Audio ▸ Audio Sync ▸ Reset | ?
 vestra.audio | audio.sync.keep.none | Audio ▸ Audio Sync ▸ Don't Keep
 vestra.audio | audio.sync.keep.session | Audio ▸ Audio Sync ▸ Keep for This Run
 vestra.audio | audio.sync.keep.always | Audio ▸ Audio Sync ▸ Always Keep
 vestra.audio | audio.normalize | Audio ▸ Processing ▸ Normalize | Shift+N
 vestra.audio | audio.clarity | Audio ▸ Processing ▸ Crystalizer | Shift+C
-vestra.audio | audio.reset | Audio ▸ Reset
 vestra.visualizer | audio-cover | Audio ▸ Show Album Cover for Audio Only
 host | fullscreen | Toggle Fullscreen | Escape
 vestra.window | pip | Screen ▸ Picture-in-Picture
@@ -634,7 +627,6 @@ vestra.preferences | theme.vestra | Settings ▸ Appearance ▸ Vestra Dark
 vestra.preferences | theme.vestra-light | Settings ▸ Appearance ▸ Vestra Light
 vestra.visualizer | idle-logo | Settings ▸ Appearance ▸ Show Logo When Idle
 vestra.visualizer | choose-logo | Settings ▸ Appearance ▸ Choose Logo Image…
-vestra.visualizer | reset-logo | Settings ▸ Appearance ▸ Restore Default Logo
 vestra.preferences | language.system | Settings ▸ Language ▸ Follow System
 vestra.preferences | language.en | Settings ▸ Language ▸ English
 vestra.preferences | language.zh-Hans | Settings ▸ Language ▸ 简体中文
@@ -643,6 +635,14 @@ vestra.preferences | language.ko | Settings ▸ Language ▸ 한국어
 vestra.preferences | language.de | Settings ▸ Language ▸ Deutsch
 vestra.preferences | language.fr | Settings ▸ Language ▸ Français
 vestra.preferences | language.es | Settings ▸ Language ▸ Español
+vestra.subtitles | move-reset | Reset ▸ Subtitle Position | Alt+Home
+vestra.subtitles | sync-reset | Reset ▸ Subtitle Sync | /
+vestra.video | video.reset | Reset ▸ Picture | Q
+vestra.video | video.frame.reset | Reset ▸ Framing | Numpad5, Alt+Backspace
+vestra.video | video.reframe.reset | Reset ▸ Crop Position
+vestra.audio | audio.sync.reset | Reset ▸ Audio Sync | ?
+vestra.audio | audio.reset | Reset ▸ Audio Processing
+vestra.visualizer | reset-logo | Reset ▸ Idle Logo
 vestra.info | info.about | About Vestra Player… | F1
 host | quit | Quit | Cmd+Q
 host | enter-fullscreen | (Enter Fullscreen)

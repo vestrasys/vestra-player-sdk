@@ -239,13 +239,11 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Subtitles ▸ Subtitle Style ▸ Size − | `Alt+PageDown` | `vestra.subtitles/size-down` |
 | Subtitles ▸ Subtitle Style ▸ Move Up |  | `vestra.subtitles/move-up` |
 | Subtitles ▸ Subtitle Style ▸ Move Down |  | `vestra.subtitles/move-down` |
-| Subtitles ▸ Subtitle Style ▸ Reset Position | `Alt+Home` | `vestra.subtitles/move-reset` |
 | Subtitles ▸ Subtitle Style ▸ Shadow |  | `vestra.subtitles/shadow` |
 | Subtitles ▸ Subtitle Style ▸ Opaque Box |  | `vestra.subtitles/box` |
 | Subtitles ▸ Original ASS/SSA Styles |  | `vestra.subtitles/ass-original` |
 | Subtitles ▸ Sync ▸ Earlier 0.5 s | `.` | `vestra.subtitles/sync-earlier` |
 | Subtitles ▸ Sync ▸ Later 0.5 s | `,` | `vestra.subtitles/sync-later` |
-| Subtitles ▸ Sync ▸ Reset | `/` | `vestra.subtitles/sync-reset` |
 | Subtitles ▸ Sync ▸ Adjust Sync… |  | `vestra.subtitles/sync-input` |
 | Subtitles ▸ Online Subtitles ▸ Search and Download Subtitles… |  | `vestra.subtitle-online/search` |
 | Subtitles ▸ Online Subtitles ▸ Online Subtitle Settings… |  | `vestra.subtitle-online/settings` |
@@ -295,12 +293,10 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Video ▸ Crop/Stretch ▸ Crop to 16:10 |  | `vestra.video/video.reframe.crop.2` |
 | Video ▸ Crop/Stretch ▸ Crop to 1.85:1 |  | `vestra.video/video.reframe.crop.3` |
 | Video ▸ Crop/Stretch ▸ Crop to 2.35:1 |  | `vestra.video/video.reframe.crop.4` |
-| Video ▸ Crop/Stretch ▸ Reset Position |  | `vestra.video/video.reframe.reset` |
 | Video ▸ Crop/Stretch ▸ Move Left |  | `vestra.video/video.reframe.left` |
 | Video ▸ Crop/Stretch ▸ Move Right |  | `vestra.video/video.reframe.right` |
 | Video ▸ Crop/Stretch ▸ Move Up |  | `vestra.video/video.reframe.up` |
 | Video ▸ Crop/Stretch ▸ Move Down |  | `vestra.video/video.reframe.down` |
-| Video ▸ Framing ▸ Reset Framing | `Numpad5`, `Alt+Backspace` | `vestra.video/video.frame.reset` |
 | Video ▸ Framing ▸ Zoom In | `Numpad9`, `Alt+Plus` | `vestra.video/video.frame.zoom-in` |
 | Video ▸ Framing ▸ Zoom Out | `Numpad1`, `Alt+-` | `vestra.video/video.frame.zoom-out` |
 | Video ▸ Framing ▸ Pan → | `Ctrl+Numpad6`, `Alt+ArrowRight` | `vestra.video/video.frame.right` |
@@ -342,7 +338,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Video ▸ Snapshot ▸ Snapshot Folder… |  | `vestra.capture/capture.folder` |
 | Video ▸ Snapshot ▸ Open Snapshot Folder |  | `vestra.capture/capture.openFolder` |
 | Video ▸ Picture Adjustments… |  | `vestra.video/video.picture` |
-| Video ▸ Reset | `Q` | `vestra.video/video.reset` |
 | Video ▸ Brightness -1% | `W` | `vestra.video/video.brightness.down` |
 | Video ▸ Brightness +1% | `E` | `vestra.video/video.brightness.up` |
 | Video ▸ Contrast -1% | `R` | `vestra.video/video.contrast.down` |
@@ -371,13 +366,11 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Audio ▸ Preset ▸ Cinema |  | `vestra.audio/audio.preset.3` |
 | Audio ▸ Audio Sync ▸ 50 ms Earlier | `>` | `vestra.audio/audio.sync.earlier` |
 | Audio ▸ Audio Sync ▸ 50 ms Later | `<` | `vestra.audio/audio.sync.later` |
-| Audio ▸ Audio Sync ▸ Reset | `?` | `vestra.audio/audio.sync.reset` |
 | Audio ▸ Audio Sync ▸ Don't Keep |  | `vestra.audio/audio.sync.keep.none` |
 | Audio ▸ Audio Sync ▸ Keep for This Run |  | `vestra.audio/audio.sync.keep.session` |
 | Audio ▸ Audio Sync ▸ Always Keep |  | `vestra.audio/audio.sync.keep.always` |
 | Audio ▸ Processing ▸ Normalize | `Shift+N` | `vestra.audio/audio.normalize` |
 | Audio ▸ Processing ▸ Crystalizer | `Shift+C` | `vestra.audio/audio.clarity` |
-| Audio ▸ Reset |  | `vestra.audio/audio.reset` |
 | Audio ▸ Show Album Cover for Audio Only |  | `vestra.visualizer/audio-cover` |
 | Toggle Fullscreen | `Escape` | `host/fullscreen` |
 | Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
@@ -412,7 +405,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Settings ▸ Appearance ▸ Vestra Light |  | `vestra.preferences/theme.vestra-light` |
 | Settings ▸ Appearance ▸ Show Logo When Idle |  | `vestra.visualizer/idle-logo` |
 | Settings ▸ Appearance ▸ Choose Logo Image… |  | `vestra.visualizer/choose-logo` |
-| Settings ▸ Appearance ▸ Restore Default Logo |  | `vestra.visualizer/reset-logo` |
 | Settings ▸ Language ▸ Follow System |  | `vestra.preferences/language.system` |
 | Settings ▸ Language ▸ English |  | `vestra.preferences/language.en` |
 | Settings ▸ Language ▸ 简体中文 |  | `vestra.preferences/language.zh-Hans` |
@@ -421,6 +413,14 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Settings ▸ Language ▸ Deutsch |  | `vestra.preferences/language.de` |
 | Settings ▸ Language ▸ Français |  | `vestra.preferences/language.fr` |
 | Settings ▸ Language ▸ Español |  | `vestra.preferences/language.es` |
+| Reset ▸ Subtitle Position | `Alt+Home` | `vestra.subtitles/move-reset` |
+| Reset ▸ Subtitle Sync | `/` | `vestra.subtitles/sync-reset` |
+| Reset ▸ Picture | `Q` | `vestra.video/video.reset` |
+| Reset ▸ Framing | `Numpad5`, `Alt+Backspace` | `vestra.video/video.frame.reset` |
+| Reset ▸ Crop Position |  | `vestra.video/video.reframe.reset` |
+| Reset ▸ Audio Sync | `?` | `vestra.audio/audio.sync.reset` |
+| Reset ▸ Audio Processing |  | `vestra.audio/audio.reset` |
+| Reset ▸ Idle Logo |  | `vestra.visualizer/reset-logo` |
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Quit | `Cmd+Q` | `host/quit` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
