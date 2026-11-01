@@ -146,8 +146,7 @@ interface Pending {
    * Rows of an array (player feature `ui.patch`): each row's JSON, and its
    * keys (computed when a patch needs them).
    */
-  rows?: {
-    enc: string[];
+  rows?: Encoded & {
     keyed: () => { field: string; keys: RowKey[] } | null;
   };
   /** What to remember once written (rows: with their limit counts, if known). */
@@ -165,8 +164,130 @@ const isPrimitive = (
 
 /** A row as `JSON.stringify` writes it inside an array. */
 const encodeRow = (row: unknown) => JSON.stringify(row) ?? "null";
+
+/** What a row's encoding holds: a Markdown document, an image. */
+const HAS_MARKDOWN = 1;
+const HAS_IMAGE = 2;
+const marksOf = (enc: string) =>
+  (enc.includes('"$vestraMarkdown"') ? HAS_MARKDOWN : 0) |
+  (enc.includes('"$vestraImage"') ? HAS_IMAGE : 0);
+
+/**
+ * The encoding of a row object that can never change (SDK 1.5.47): its
+ * JSON, what it holds, and its limit counts once a patch needed them.
+ */
+interface Settled {
+  enc: string;
+  marks: number;
+  count?: RowCount;
+}
+/**
+ * Row encodings by row object, shared by every property (a row's JSON does
+ * not depend on where it is bound). Only rows that cannot change are kept
+ * ({@link settled}): a plugin that mutates its rows in place sees no
+ * difference, and one that keeps unchanged rows as the same deep-frozen
+ * objects skips encoding them on every pass. Weak: a row the plugin drops
+ * goes with its entry.
+ */
+const settledRows = new WeakMap<object, Settled>();
+/**
+ * Frozen rows seen once. A frozen row is verified and kept on its second
+ * pass, so rows frozen afresh on every pass cost one set entry, not a
+ * verification each.
+ */
+const seenRows = new WeakSet<object>();
+/** Frozen rows that can still change (a mutable part, a getter): never kept. */
+const unsettledRows = new WeakSet<object>();
+
+/**
+ * `value` can never change what `JSON.stringify` writes for it: a primitive,
+ * an image or document handle (their wire form is fixed when made), or a
+ * frozen plain object or array whose own enumerable properties are data
+ * properties (no getter, no own `toJSON`) holding such values. Freezing
+ * fixes the properties and the prototype for good, so the answer holds as
+ * long as the object lives.
+ */
+function settled(value: unknown, depth: number): boolean {
+  if (value === null || typeof value !== "object")
+    return typeof value !== "function";
+  if (value instanceof ImageHandle || value instanceof MarkdownHandle)
+    return true;
+  if (depth > UI_VALUE_LIMITS.depth || !Object.isFrozen(value)) return false;
+  const proto: unknown = Object.getPrototypeOf(value);
+  if (
+    Array.isArray(value)
+      ? proto !== Array.prototype
+      : proto !== Object.prototype && proto !== null
+  )
+    return false;
+  for (const key of Object.keys(value)) {
+    if (key === "toJSON") return false;
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    if (!property || !("value" in property)) return false;
+    if (!settled(property.value, depth + 1)) return false;
+  }
+  return true;
+}
+
+/** A row's encoding and marks, from {@link settledRows} when it is kept. */
+function rowEncoding(row: unknown, cache: boolean): Settled {
+  if (cache && row !== null && typeof row === "object") {
+    // A kept row is frozen: looked up first, `isFrozen` only on a miss.
+    const kept = settledRows.get(row);
+    if (kept) return kept;
+  }
+  if (
+    cache &&
+    row !== null &&
+    typeof row === "object" &&
+    Object.isFrozen(row)
+  ) {
+    const enc = encodeRow(row);
+    const entry: Settled = { enc, marks: marksOf(enc) };
+    if (!seenRows.has(row)) seenRows.add(row);
+    else if (!unsettledRows.has(row)) {
+      if (settled(row, 1)) settledRows.set(row, entry);
+      else unsettledRows.add(row);
+    }
+    return entry;
+  }
+  const enc = encodeRow(row);
+  return { enc, marks: marksOf(enc) };
+}
+
+/** An array's rows as `JSON.stringify` writes them (a hole is `null`), and what each holds. */
+interface Encoded {
+  enc: string[];
+  marks: Uint8Array;
+  /** Some row holds a Markdown document. */
+  markdown: boolean;
+}
+
 /** Each row of an array as `JSON.stringify` writes it; a hole is `null`. */
-const encodeRows = (rows: readonly unknown[]) => Array.from(rows, encodeRow);
+function encodeRows(rows: readonly unknown[]): Encoded {
+  // A `toJSON` added to the shared prototypes would change any row's JSON:
+  // then nothing is taken from (or kept in) the cache.
+  const cache =
+    !("toJSON" in Object.prototype) && !("toJSON" in Array.prototype);
+  const enc: string[] = [];
+  const marks = new Uint8Array(rows.length);
+  let markdown = false;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rowEncoding(rows[i], cache);
+    enc[i] = row.enc;
+    marks[i] = row.marks;
+    if (row.marks & HAS_MARKDOWN) markdown = true;
+  }
+  return { enc, marks, markdown };
+}
+
+/** A row's limit counts, kept with its encoding when the row cannot change. */
+function rowCount(row: unknown): RowCount {
+  const kept =
+    row !== null && typeof row === "object" ? settledRows.get(row) : undefined;
+  if (!kept) return countRow(row);
+  return (kept.count ??= countRow(row));
+}
 
 function sameRows(a: readonly string[], b: readonly string[]) {
   if (a.length !== b.length) return false;
@@ -182,7 +303,7 @@ function sentOf(value: Json, patches: boolean): Sent {
     return {
       kind: "rows",
       rows: {
-        enc: encodeRows(value),
+        enc: encodeRows(value).enc,
         field: keyed?.field ?? null,
         keys: keyed?.keys ?? null,
         counts: [],
@@ -232,7 +353,7 @@ function rowPatch(
   rows: readonly PropValue[],
 ): { ops: RowOp[]; counts: (RowCount | undefined)[] } | null {
   if (sent.enc.length === 0) return null;
-  if (next.enc.some((row) => row.includes('"$vestraMarkdown"'))) return null;
+  if (next.markdown) return null;
   const nextKeyed = sent.field === null ? null : next.keyed();
   const keyed = nextKeyed !== null && nextKeyed.field === sent.field;
   const plan = diff(
@@ -243,11 +364,11 @@ function rowPatch(
   // A released image is refused wherever it is, as in a whole write: the
   // rows the patch does not carry are checked too (those holding images).
   for (let j = 0; j < rows.length; j++)
-    if (plan.from[j]! >= 0 && next.enc[j]!.includes('"$vestraImage"'))
+    if (plan.from[j]! >= 0 && next.marks[j]! & HAS_IMAGE)
       wireValue(rows[j] ?? null);
   const counts = next.enc.map((_, j) => {
     const from = plan.from[j]!;
-    return (from >= 0 ? sent.counts[from] : undefined) ?? countRow(rows[j]);
+    return (from >= 0 ? sent.counts[from] : undefined) ?? rowCount(rows[j]);
   });
   if (!withinLimits(counts as RowCount[])) return null;
   // The ops must give exactly the new rows (a guard against this diff's bugs).
@@ -472,8 +593,10 @@ export abstract class ViewBase implements View {
     }
     if (Array.isArray(value) && this.#patches) {
       // Row by row: the same work as one `JSON.stringify`, and the rows to
-      // diff against those last sent.
-      const enc = encodeRows(value);
+      // diff against those last sent. Rows that cannot change (deep-frozen
+      // objects bound again, SDK 1.5.47) are taken from `settledRows`.
+      const encoded = encodeRows(value);
+      const { enc } = encoded;
       const signature = () => `[${enc.join(",")}]`;
       const changed =
         sent?.kind === "rows"
@@ -487,7 +610,7 @@ export abstract class ViewBase implements View {
         value,
         changed,
         signature,
-        rows: { enc, keyed },
+        rows: { ...encoded, keyed },
         sent: (counts = []) => ({
           kind: "rows",
           rows: {
@@ -569,11 +692,7 @@ export abstract class ViewBase implements View {
     const seq = ++this.#seq;
     // Rows holding Markdown documents go whole, as before: the player
     // merges documents in place and takes no parts of them.
-    if (
-      Array.isArray(value) &&
-      pending.rows &&
-      !pending.rows.enc.some((row) => row.includes(MARKDOWN_KEY))
-    ) {
+    if (Array.isArray(value) && pending.rows && !pending.rows.markdown) {
       const sizes = pending.rows.enc.map(jsonBytes);
       const count = prefixWithin(sizes, CHUNK_BYTES);
       if (count < value.length) {

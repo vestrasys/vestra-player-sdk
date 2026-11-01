@@ -146,8 +146,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Copy to Clipboard ▸ Folder Path |  | `vestra.playback/copy-folder` |
 | Copy to Clipboard ▸ Full Path |  | `vestra.playback/copy-path` |
 | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
-| Playback ▸ Previous | `PageUp`, `Mouse:X1` | `host/previous` |
-| Playback ▸ Next | `PageDown`, `Mouse:X2` | `host/next` |
+| Playback ▸ Previous | `PageUp`, `Mouse:X2` | `host/previous` |
+| Playback ▸ Next | `PageDown`, `Mouse:X1` | `host/next` |
 | Playback ▸ Seek ▸ Previous Frame | `D` | `host/frame-back` |
 | Playback ▸ Seek ▸ Next Frame | `F` | `host/frame-forward` |
 | Playback ▸ Seek ▸ Previous Keyframe | `Ctrl+Shift+ArrowLeft` | `vestra.playback/keyframe-back` |
@@ -373,7 +373,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Audio ▸ Processing ▸ Crystalizer | `Shift+C` | `vestra.audio/audio.clarity` |
 | Audio ▸ Reset |  | `vestra.audio/audio.reset` |
 | Audio ▸ Show Album Cover for Audio Only |  | `vestra.visualizer/audio-cover` |
-| Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` | `host/fullscreen` |
+| Toggle Fullscreen | `Escape` | `host/fullscreen` |
 | Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Screen ▸ Mini Size | ``` | `vestra.window/mini` |
 | Screen ▸ 0.5× | `1` | `vestra.window/size.0.5` |
@@ -417,7 +417,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Settings ▸ Language ▸ Español |  | `vestra.preferences/language.es` |
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Quit | `Cmd+Q` | `host/quit` |
-| Leave Fullscreen (not in the menu) | `Escape` | `host/exit-fullscreen` |
+| Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
+| Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
@@ -499,7 +500,7 @@ A menu item shows the first of its keyboard bindings that is in effect.
 | `digits` | `0`–`9` | Digit keys of the main keyboard: `0` to `9`. |
 | `functionKeys` | `F1`–`F24` | Function keys: `F1` to `F24`. |
 | `named` | `Space`, `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`, `Plus`, `Numpad0`, `Numpad1`, `Numpad2`, `Numpad3`, `Numpad4`, `Numpad5`, `Numpad6`, `Numpad7`, `Numpad8`, `Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`, `NumpadDivide`, `NumpadEnter`, `NumpadDecimal` | Other named keys, matched by the physical key. `Plus` is the `+` key however it is typed; the `Numpad…` names are the numeric keypad only, never the main keyboard. |
-| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
+| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window (player 0.6.0). `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
 
 <!-- /generated -->
 
@@ -513,8 +514,8 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | --- | --- | --- |
 | `stop` | Close | `F4` |
 | `play-pause` | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` |
-| `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X1` |
-| `next` | Playback ▸ Next | `PageDown`, `Mouse:X2` |
+| `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X2` |
+| `next` | Playback ▸ Next | `PageDown`, `Mouse:X1` |
 | `frame-back` | Playback ▸ Seek ▸ Previous Frame | `D` |
 | `frame-forward` | Playback ▸ Seek ▸ Next Frame | `F` |
 | `seek-backward` | Playback ▸ Seek ▸ Back 5 s | `ArrowLeft` |
@@ -525,11 +526,11 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | `volume-up` | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` |
 | `volume-down` | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` |
 | `mute` | Audio ▸ Mute | `M` |
-| `fullscreen` | Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` |
+| `fullscreen` | Toggle Fullscreen | `Escape` |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in [Built-in commands](#built-in-commands).
 
 ## Keys the system takes first
 

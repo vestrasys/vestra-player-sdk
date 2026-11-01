@@ -100,8 +100,10 @@ export const BINDING_INPUTS = Object.freeze({
     "NumpadDecimal",
   ],
   /**
-   * Mouse inputs on the video area. `:LeftHalf` and `:RightHalf` tell the
-   * halves of the video apart for a double click.
+   * Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and
+   * `Mouse:X2` (forward) anywhere in the main window (player 0.6.0).
+   * `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a
+   * double click.
    */
   mouse: [
     "Mouse:LeftClick",

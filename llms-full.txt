@@ -1,4 +1,4 @@
-# @vestra-player/sdk 1.5.46: full reference
+# @vestra-player/sdk 1.5.47: full reference
 
 > Everything needed to write a Vestra Player plugin (plugin API `vestra/1`): the guides, every public declaration of `@vestra-player/sdk` and `@vestra-player/sdk/testing` with its documentation, and the complete source of the example plugins. Generated from the SDK's sources by scripts/llms.mjs; the short index is llms.txt.
 
@@ -2630,8 +2630,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Copy to Clipboard ▸ Folder Path |  | `vestra.playback/copy-folder` |
 | Copy to Clipboard ▸ Full Path |  | `vestra.playback/copy-path` |
 | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
-| Playback ▸ Previous | `PageUp`, `Mouse:X1` | `host/previous` |
-| Playback ▸ Next | `PageDown`, `Mouse:X2` | `host/next` |
+| Playback ▸ Previous | `PageUp`, `Mouse:X2` | `host/previous` |
+| Playback ▸ Next | `PageDown`, `Mouse:X1` | `host/next` |
 | Playback ▸ Seek ▸ Previous Frame | `D` | `host/frame-back` |
 | Playback ▸ Seek ▸ Next Frame | `F` | `host/frame-forward` |
 | Playback ▸ Seek ▸ Previous Keyframe | `Ctrl+Shift+ArrowLeft` | `vestra.playback/keyframe-back` |
@@ -2857,7 +2857,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Audio ▸ Processing ▸ Crystalizer | `Shift+C` | `vestra.audio/audio.clarity` |
 | Audio ▸ Reset |  | `vestra.audio/audio.reset` |
 | Audio ▸ Show Album Cover for Audio Only |  | `vestra.visualizer/audio-cover` |
-| Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` | `host/fullscreen` |
+| Toggle Fullscreen | `Escape` | `host/fullscreen` |
 | Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Screen ▸ Mini Size | ``` | `vestra.window/mini` |
 | Screen ▸ 0.5× | `1` | `vestra.window/size.0.5` |
@@ -2901,7 +2901,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Settings ▸ Language ▸ Español |  | `vestra.preferences/language.es` |
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Quit | `Cmd+Q` | `host/quit` |
-| Leave Fullscreen (not in the menu) | `Escape` | `host/exit-fullscreen` |
+| Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
+| Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
@@ -2979,7 +2980,7 @@ A menu item shows the first of its keyboard bindings that is in effect.
 | `digits` | `0`–`9` | Digit keys of the main keyboard: `0` to `9`. |
 | `functionKeys` | `F1`–`F24` | Function keys: `F1` to `F24`. |
 | `named` | `Space`, `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`, `Plus`, `Numpad0`, `Numpad1`, `Numpad2`, `Numpad3`, `Numpad4`, `Numpad5`, `Numpad6`, `Numpad7`, `Numpad8`, `Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`, `NumpadDivide`, `NumpadEnter`, `NumpadDecimal` | Other named keys, matched by the physical key. `Plus` is the `+` key however it is typed; the `Numpad…` names are the numeric keypad only, never the main keyboard. |
-| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
+| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window (player 0.6.0). `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
 
 #### Core actions
 
@@ -2989,8 +2990,8 @@ The player's own playback commands, which plugin.host.run runs by id (capability
 | --- | --- | --- |
 | `stop` | Close | `F4` |
 | `play-pause` | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` |
-| `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X1` |
-| `next` | Playback ▸ Next | `PageDown`, `Mouse:X2` |
+| `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X2` |
+| `next` | Playback ▸ Next | `PageDown`, `Mouse:X1` |
 | `frame-back` | Playback ▸ Seek ▸ Previous Frame | `D` |
 | `frame-forward` | Playback ▸ Seek ▸ Next Frame | `F` |
 | `seek-backward` | Playback ▸ Seek ▸ Back 5 s | `ArrowLeft` |
@@ -3001,9 +3002,9 @@ The player's own playback commands, which plugin.host.run runs by id (capability
 | `volume-up` | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` |
 | `volume-down` | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` |
 | `mute` | Audio ▸ Mute | `M` |
-| `fullscreen` | Toggle Fullscreen | `Enter`, `Alt+Enter`, `F11` |
+| `fullscreen` | Toggle Fullscreen | `Escape` |
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`), **Leave Fullscreen** (`host/exit-fullscreen`, `Escape`, only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in Built-in commands.
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in Built-in commands.
 
 #### Keys the system takes first
 
@@ -4106,7 +4107,7 @@ flowchart TB
 
 - **Where bindings apply.** Bindings belong to the main window: they fire while it or the floating sidebar window has focus. They do **not** fire in tool windows or the Options window; keys there are the Slint file's own business (a `FocusScope`, a default button). While a menu or a system dialog is open, bindings pause.
 - **Conflicts are not errors.** A binding that loses is written to the player's log and takes effect by itself when the winner goes away (its plugin stops, the user rebinds it). Tests can check `host.conflicts` (TestHost.conflicts).
-- **A disabled command lets its key go.** This is what makes context-dependent keys work: `Escape` bound to "Leave Fullscreen" does nothing outside fullscreen, so `Escape` reaches the focused control. Give `reason` to a command whose key should still be taken and explained while it is disabled.
+- **A disabled command lets its key go.** This is what makes context-dependent keys work: a command bound to `Delete` that is disabled while nothing is selected does nothing then, so `Delete` reaches the focused control (a text field deletes a character). Give `reason` to a command whose key should still be taken and explained while it is disabled.
 - **`repeat: true`** fires again on the keyboard's auto-repeat while the key is held; without it a binding fires once per press.
 - **Some keys never reach a binding.** The system takes some keys first, and the standard close keys close a tool window, the floating sidebar or the Options window before any binding sees them (in the main window they are ordinary keys). Keys the system takes first lists them; default bindings avoid them.
 
@@ -4119,7 +4120,7 @@ Key names describe keys, not characters, with two deliberate exceptions:
 - **Option combinations match the physical key**, so `Alt+O` fires for ⌥O although that key types `ø`, and dead keys (⌥E, ⌥N…) fire too. On layouts that need Option to type a symbol (German ⌥5 = ``, ⌥L = `@`), a binding for the typed symbol (`"["`, `"@"`) wins over one for the physical key (`Alt+5`).
 - **`Ctrl` is portable, `Cmd` is not.** On macOS `Ctrl+X` fires for both ⌃X and ⌘X, `Cmd+X` only for ⌘X. On Windows `Cmd` is the Windows logo key, which the system mostly keeps, so write `Ctrl+…` for a binding that works on both systems.
 
-Mouse bindings apply only over the video area. `Mouse:LeftDoubleClick:LeftHalf` and `:RightHalf` win over the plain double click; wheel bindings count accumulated scroll steps. The right button is reserved for the context menu, and a left drag in window mode moves the window instead of clicking. A `Mouse:LeftClick` fires on release, except when the same modifiers also have a double-click binding and the click's command is not checkable: then the player waits the system's double-click interval to tell a click from a double click. (A checkable command such as play/pause runs at once; a double click runs it twice, which restores its state, and the double-click binding still fires.) The player's defaults (player 0.5.2): a left click on the video is Play/Pause and nothing is bound to a double click (up to 0.5.1 a double click was Toggle Fullscreen); a click whose command is disabled does nothing.
+Mouse bindings apply only over the video area, except the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward), which fire anywhere in the main window except over an open menu, as in browsers (player 0.6.0; before, only over the video area). `Mouse:LeftDoubleClick:LeftHalf` and `:RightHalf` win over the plain double click; wheel bindings count accumulated scroll steps. The right button is reserved for the context menu, and a left drag in window mode moves the window instead of clicking. A `Mouse:LeftClick` fires on release, except when the same modifiers also have a double-click binding and the click's command is not checkable: then the player waits the system's double-click interval to tell a click from a double click. (A checkable command such as play/pause runs at once; a double click runs it twice, which restores its state, and the double-click binding still fires.) The player's defaults (player 0.5.2): a left click on the video is Play/Pause and nothing is bound to a double click (up to 0.5.1 a double click was Toggle Fullscreen); a click whose command is disabled does nothing.
 
 ##### The user's bindings
 
@@ -4144,7 +4145,7 @@ plugin.commands.add({
 
 #### The player's own commands
 
-The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Leave Fullscreen**, **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
+The player registers some commands itself, with the owner `host`: **Toggle Fullscreen**, **Enter Fullscreen** and **Leave Fullscreen** (player 0.6.0: no default key, each enabled only where it acts), **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
 
 A plugin button that does what a core action does should run that action with plugin.host.run (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in Reference: commands; what they do to playback is in Playback.
 
@@ -4649,6 +4650,8 @@ From player 0.6.0 and SDK 1.5.44, a changed array (a list's rows) is sent as the
 
 - **Your Slint code must not write into the rows of an array property** (`rows[i].selected = true` in a handler). A whole write used to overwrite such a change on the next update; a row patch touches only the rows whose value changed in your plugin, so the edited row keeps the Slint-side value until your value for that row changes. Send the event to the plugin with a callback and change the row there.
 - **`set()` with an unchanged array sends the whole array**, as `set()` always sends: use it to pull a list back to your rows. A bound array whose rows did not change sends nothing.
+
+To find the changed rows the SDK encodes every row of a bound array on each update pass, which in a list of tens of thousands of rows is most of a pass. From SDK 1.5.47 it skips that for rows it can prove unchanged: a **deep-frozen** row object (`Object.freeze` on the row and on every object and array inside it, plain objects and arrays only, no getters or own `toJSON`; image and document handles may sit inside) that the bind function returns again is encoded once and then taken from a cache kept by the row object. To use it in a long list, keep each row as the same frozen object while it does not change and make a new one when it does (memoize by the row's id and the fields it shows). Nothing else changes: rows that are not frozen, or that hold a mutable part, are encoded on every pass as before, so a plugin that changes its rows in place keeps working.
 
 ##### Two-way controls
 
@@ -5817,6 +5820,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.5.47](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1547) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.46](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1546) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.5.45](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1545) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.44](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1544) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability. | — |
@@ -6765,9 +6769,11 @@ interface CommandOptions {
    * `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`/`Right`/`Up`/`Down`,
    * `Plus`, any other single symbol as typed (`">"`, not `"Shift+."`),
    * `Numpad0`–`Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`,
-   * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, and the video-area mouse
+   * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, the video-area mouse
    * inputs `Mouse:LeftClick`, `Mouse:LeftDoubleClick[:LeftHalf|:RightHalf]`,
-   * `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`/`Down`/`Left`/`Right`.
+   * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
+   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), anywhere in the main
+   * window from 0.6.0 on.
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write
@@ -11252,13 +11258,13 @@ and the main window's fullscreen toggle.
 | --- | --- | --- |
 | `stop` | F4 | close the source |
 | `play-pause` | Space, a left click on the video (player 0.5.2) | pause / resume, replay after the end |
-| `previous` / `next` | PageUp, Mouse:X1 / PageDown, Mouse:X2 | ask the sequence provider |
+| `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 (from 0.6.0; up to 0.5.x X1 was previous and X2 next) | ask the sequence provider |
 | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
 | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
 | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
 | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
 | `mute` | M | toggle mute |
-| `fullscreen` | Enter, Alt+Enter, F11 | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
+| `fullscreen` | Escape (from 0.6.0; up to 0.5.x Enter, Alt+Enter, F11) | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
 
 In the binding overlay their keys are `host/<action>`. `fullscreen`
 changes no playback state: read the result from `window.state.fullscreen`
@@ -17625,7 +17631,9 @@ const BINDING_INPUTS: Readonly<{
    * Other named keys, matched by the physical key. `Plus` is the `+` key however it is typed; the `Numpad…` names are the numeric keypad only, never the main keyboard.
    */
   readonly named: readonly ["Space", "Enter", "Tab", "Escape", "Backspace", "Delete", "Insert", "Home", "End", "PageUp", "PageDown", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Plus", ...string[], "NumpadPlus", "NumpadMinus", "NumpadMultiply", "NumpadDivide", "NumpadEnter", "NumpadDecimal"];
-  /** Mouse inputs on the video area. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. */
+  /**
+   * Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window (player 0.6.0). `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click.
+   */
   readonly mouse: readonly ["Mouse:LeftClick", "Mouse:LeftDoubleClick", "Mouse:LeftDoubleClick:LeftHalf", "Mouse:LeftDoubleClick:RightHalf", "Mouse:MiddleClick", "Mouse:X1", "Mouse:X2", "Mouse:WheelUp", "Mouse:WheelDown", "Mouse:WheelLeft", "Mouse:WheelRight"];
 }>;
 ```

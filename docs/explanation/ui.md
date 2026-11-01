@@ -183,6 +183,8 @@ From player 0.6.0 and SDK 1.5.44, a changed array (a list's rows) is sent as the
 - **Your Slint code must not write into the rows of an array property** (`rows[i].selected = true` in a handler). A whole write used to overwrite such a change on the next update; a row patch touches only the rows whose value changed in your plugin, so the edited row keeps the Slint-side value until your value for that row changes. Send the event to the plugin with a callback and change the row there.
 - **`set()` with an unchanged array sends the whole array**, as `set()` always sends: use it to pull a list back to your rows. A bound array whose rows did not change sends nothing.
 
+To find the changed rows the SDK encodes every row of a bound array on each update pass, which in a list of tens of thousands of rows is most of a pass. From SDK 1.5.47 it skips that for rows it can prove unchanged: a **deep-frozen** row object (`Object.freeze` on the row and on every object and array inside it, plain objects and arrays only, no getters or own `toJSON`; image and document handles may sit inside) that the bind function returns again is encoded once and then taken from a cache kept by the row object. To use it in a long list, keep each row as the same frozen object while it does not change and make a new one when it does (memoize by the row's id and the fields it shows). Nothing else changes: rows that are not frozen, or that hold a mutable part, are encoded on every pass as before, so a plugin that changes its rows in place keeps working.
+
 ### Two-way controls
 
 A control whose value both the user and the plugin change (a slider, a switch, a text field, a combo box) needs a **two-way binding to an `in-out` property**:
