@@ -7,7 +7,7 @@
  */
 import type { Transport } from "../wire.ts";
 import { failure, Runtime } from "./runtime.ts";
-import type { PluginManifest } from "./runtime.ts";
+import type { PluginManifest, RuntimeOptions } from "./runtime.ts";
 import { ScopeImpl } from "./scope.ts";
 import { playerOf } from "./player.ts";
 import { windowOf } from "./window.ts";
@@ -15,11 +15,16 @@ import { timelineOf } from "./timeline.ts";
 import type { Plugin } from "./types.ts";
 
 export type * from "./types.ts";
-export type { PluginManifest };
+export type { PluginManifest, RuntimeOptions };
 
 export interface PluginInstance {
   plugin: Plugin;
-  /** Wait for registrations started during activation; rejects if one failed. */
+  /**
+   * Wait for registrations started during activation; rejects if one failed.
+   * A command declaration the player refused is not a failure (it is
+   * logged, skipped and reported to `onError`) unless
+   * `RuntimeOptions.strictDeclarations` is set.
+   */
   activated(): Promise<void>;
   dispose(): Promise<void>;
 }
@@ -31,6 +36,8 @@ export async function createPlugin(
   dataDirectory?: string,
   /** `plugin.app` (the runner passes the player's `VESTRA_APP_INFO`). */
   app?: unknown,
+  /** `TestHost` sets `strictDeclarations`; the player's runner does not. */
+  options?: RuntimeOptions,
 ): Promise<PluginInstance> {
   const runtime = new Runtime(
     transport,
@@ -38,6 +45,7 @@ export async function createPlugin(
     directory,
     dataDirectory,
     app,
+    options,
   );
   // Player, window and timeline state are synchronous for plugins: read them first.
   await Promise.all([

@@ -217,7 +217,7 @@ test("raw registrations get the player's answers", async () => {
     });
     await assert.rejects(register({ bindings: ["F3", "F3"] }), {
       code: "invalid",
-      message: "binding F3 is listed twice",
+      message: "invalid command: binding F3 is listed twice",
     });
     await assert.rejects(register({ path: ["@tools", "A"] }), {
       code: "invalid",
@@ -295,6 +295,65 @@ test("updates get the player's answers", async () => {
     await assert.rejects(
       host.request("commands.update", { id: "nope", revision: 0, state }),
       { code: "invalid", message: "positive revision required" },
+    );
+  } finally {
+    await stop();
+  }
+});
+
+test("a binding listed twice is refused as the player's binding table does, before the reason, conflicts and limits", async () => {
+  const { host, stop } = await startPlugin(() => {}, {
+    capabilities: ["commands"],
+  });
+  const register = (
+    id: string,
+    declaration: Record<string, unknown>,
+    reason: string | null = null,
+  ) =>
+    host.request("commands.register", {
+      id,
+      revision: 1,
+      declaration: { title: id, ...declaration },
+      state: { enabled: reason === null, checked: null, busy: false, reason },
+    } as never);
+  const twice = (binding: string) => ({
+    code: "invalid",
+    message: `invalid command: binding ${binding} is listed twice`,
+  });
+  try {
+    // Compared as parsed inputs, in order: the repeat is found before a
+    // later binding that does not parse.
+    await assert.rejects(
+      register("a", { bindings: ["Ctrl+K", "F2", "Ctrl+K", "Ctrl+k"] }),
+      twice("Ctrl+K"),
+    );
+    await assert.rejects(register("a", { bindings: ["F3", "Shift+Ctrl+A"] }), {
+      code: "invalid",
+      message:
+        "invalid command: binding Shift+Ctrl+A: modifiers go in the order Ctrl, Alt, Shift, Cmd, once each",
+    });
+    // Before the reason.
+    await assert.rejects(
+      register("a", { bindings: ["F3", "F3"] }, "x".repeat(513)),
+      twice("F3"),
+    );
+    // Before the id and path conflicts.
+    await register("taken", { path: ["Tools", "Taken"] });
+    await assert.rejects(
+      register("taken", { bindings: ["F4", "F4"] }),
+      twice("F4"),
+    );
+    await assert.rejects(
+      register("other", { path: ["Tools", "Taken"], bindings: ["F4", "F4"] }),
+      twice("F4"),
+    );
+    // Before the limit.
+    for (let i = 1; i < COMMAND_LIMITS.perPlugin; i++)
+      await register(`c${i}`, {});
+    await assert.rejects(register("over", {}), { code: "limit" });
+    await assert.rejects(
+      register("over", { bindings: ["F5", "F5"] }),
+      twice("F5"),
     );
   } finally {
     await stop();

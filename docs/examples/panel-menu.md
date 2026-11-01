@@ -47,7 +47,7 @@ examples/panel-menu/
 - **The global `ListBridge`** holds the properties and callbacks. A panel is part of the player's main window, and the player makes a new instance of the component whenever it rebuilds that window. The global stays put, so the plugin talks to it, not to the component.
   - `rows` is the list (an array in TypeScript) and `selected` the selected index.
   - `select(int)` reports a click; `context-menu(float, float)` asks for the menu at a point.
-- **The component** inherits `Rectangle`, not `Window`: the player places it. `for row[index] in ListBridge.rows` draws one 20-pixel row per item; the selected row gets `Theme.selected-bg`.
+- **The component** inherits `Rectangle`, not `Window`: the player places it. A `ListView` from `std-widgets.slint` fills it; `for row[index] in ListBridge.rows` inside it gives one 20-pixel row per item, and the selected row gets `Theme.selected-bg`. The `ListView` creates only the rows in view and scrolls the rest, so the panel stays cheap however long the list grows; a bare `for` in a layout would build every row up front (and `vestra-plugin check` warns about one over a bound array).
 - **The `TouchArea`** of each row: any button going down selects the row. The right button coming up asks for the menu, at the pointer's position in the window (`absolute-position` is the row's position, `mouse-x`/`mouse-y` the pointer's position in it, and `/ 1px` makes a plain number).
 
 ## The code

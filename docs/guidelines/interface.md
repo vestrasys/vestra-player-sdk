@@ -81,6 +81,7 @@ Use the layout of [Theme: small adjustment windows](../reference/theme.md#small-
 - **No status or path lines in a panel.** Messages go to the OSD; a full path is a tooltip on its row.
 - **Show state with colour, not words.** As in the player's playlist: what is playing in `Theme.playing` (with a thin bar at the left, [Theme: layouts](../reference/theme.md#layouts)), what was played in `Theme.text-played`, the selection on `Theme.selected-bg`. A failed item gets the `failed` icon at the end of its row and an OSD message.
 - **Lists are plain**: single-line rows, background `Theme.bg-list`, no cards, no stripes, no rounded rows; scroll bars come from `std-widgets.slint` so they follow the palette.
+- **Long lists use `ListView`.** A list whose length the user decides (a playlist, search results, files, messages) goes in a `ListView` from `std-widgets.slint`, with the `for` inside it: it creates only the rows in view, so a list of thousands of rows scrolls as smoothly as one of ten. A `for` in a layout builds every row up front. Keep a bare `for` for a short list of a fixed size, such as a row of buttons. [Example: Panel menu](../examples/panel-menu.md) is a panel list drawn this way.
 - **Commands of a panel go into its right-click menu**, made of the plugin's commands ({@link "@vestra-player/sdk"!Panel.showMenu | panel.showMenu}); see [Menus](menus.md).
 - **The bottom bar is icons only**: no text buttons, no source path, no status text (the source name is in the window title, status is an OSD message).
 

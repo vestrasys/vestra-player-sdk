@@ -125,7 +125,7 @@ self.activations.begin(owner, self.now_ms() + 15_000)?;
 
 Source: src/host/src/packages/package_manager.rs
 
-`boot.ts` sends `runtime.ready` only after `activate` returned and every registration started during activation succeeded (a slot, sequence or resolver another plugin holds does not count as a failure). Otherwise it sends `runtime.failed` with a `code`. A failure or a missed deadline stops the plugin, and the plugin manager lists it as failed with the message. At start-up the installed plugins are started from a queue, about 25 ms of process spawning per UI tick, so the window stays responsive while they come up.
+`boot.ts` sends `runtime.ready` only after `activate` returned and every registration started during activation succeeded (a slot, sequence or resolver another plugin holds does not count as a failure, and the SDK skips a command declaration the player refuses with `invalid`, `conflict` or `limit`: it logs it and reports it to `onError`, SDK 1.5.49). Otherwise it sends `runtime.failed` with a `code`. A failure or a missed deadline stops the plugin, and the plugin manager lists it as failed with the message. At start-up the installed plugins are started from a queue, about 25 ms of process spawning per UI tick, so the window stays responsive while they come up.
 
 ## The wire protocol
 
