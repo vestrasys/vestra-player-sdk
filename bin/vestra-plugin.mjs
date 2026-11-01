@@ -6,6 +6,8 @@
  *   vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]
  *   vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...
  *   vestra-plugin i18n check [plugin-dir...]
+ *   vestra-plugin docs [path] [--page N]
+ *   vestra-plugin docs --search <query> [--page N]
  *
  * A plugin directory holds manifest.json; the default is the current
  * directory. Works in any project that depends on @vestra-player/sdk.
@@ -19,6 +21,10 @@
  *   test    node --test on tests/*.test.{ts,mjs}
  *   pack    build, then dist/ → <out>/<id>-<version>.vxp (a zip; default
  *           out: the current directory) with its sha256 and size
+ *   docs    the SDK's documentation by path, for coding agents: `/` lists
+ *           Overview, Guides and API, `/API/Media/Snapshot/dispose` is
+ *           one member's whole documentation; --search <query> lists
+ *           matching paths; at most 8 KB per answer, --page N for the rest
  *
  * Translations (docs/how-to/i18n.md). English is the source text; each
  * language is a gettext file locales/<lang>.po:
@@ -932,7 +938,43 @@ const USAGE = [
   "       vestra-plugin check [plugin-dir...] --json",
   "       vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...",
   "       vestra-plugin i18n check [plugin-dir...]",
+  "       vestra-plugin docs [path] [--page N]",
+  "       vestra-plugin docs --search <query> [--page N]",
 ].join("\n");
+
+/** `vestra-plugin docs`: `@vestra-player/sdk/docs` on the command line. */
+async function docsCommand(args) {
+  const index = args.indexOf("--page");
+  let page;
+  if (index >= 0) {
+    const [, value] = args.splice(index, 2);
+    page = Number(value);
+    if (!Number.isInteger(page) || page < 1)
+      fail("--page needs a page number (1, 2, …)");
+  }
+  const { docs, searchDocs } = await import(
+    pathToFileURL(join(sdkRoot, "dist/docs.js")).href
+  );
+  const search = args.indexOf("--search");
+  if (search >= 0) {
+    args.splice(search, 1);
+    if (!args.length) fail("--search needs words to search for");
+    console.log(searchDocs(args.join(" "), { page }));
+    return;
+  }
+  // A path with spaces may come as several arguments.
+  let path = args.length ? args.join(" ") : "/";
+  // Git Bash (MSYSTEM) turns "/API/Media" into "<its root>/API/Media":
+  // start again at the tree's top level.
+  if (process.env.MSYSTEM && /^[A-Za-z]:[\\/]/.test(path)) {
+    const segments = path.split(/[\\/]/);
+    const top = segments.findIndex((segment) =>
+      ["overview", "guides", "api"].includes(segment.toLowerCase()),
+    );
+    if (top > 0) path = `/${segments.slice(top).join("/")}`;
+  }
+  console.log(docs(path, { page }));
+}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -946,6 +988,10 @@ async function main() {
   };
   if (command === "--help" || command === "-h") {
     console.log(USAGE);
+    return;
+  }
+  if (command === "docs") {
+    await docsCommand(args);
     return;
   }
   let subcommand = null;

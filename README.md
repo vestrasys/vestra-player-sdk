@@ -23,7 +23,7 @@
 - **Tests without the player**: `@vestra-player/sdk/testing` runs your plugin against an in-memory host with `node --test`.
 - **One command line tool**, `vestra-plugin`, to check, test, build and pack a `.vxp` package.
 - **The same API on macOS and Windows**; every plugin runs in its own Node.js 26 process that the player ships.
-- **A reference for AI assistants**: [`llms.txt`](https://vestrasys.github.io/vestra-player-sdk/llms.txt) (short index) and [`llms-full.txt`](https://vestrasys.github.io/vestra-player-sdk/llms-full.txt) (every declaration, the guides and the examples), also in the package as `@vestra-player/sdk/llms.txt` and `@vestra-player/sdk/llms-full.txt`.
+- **Documentation for coding agents**: `npx -p @vestra-player/sdk vestra-plugin docs [path]` reads this documentation as a tree of short pages, like `go doc` (`… docs Snapshot.export`, `… docs --search <words>`; in a project that depends on the SDK, `npx vestra-plugin docs`); programs import `@vestra-player/sdk/docs`. [`llms.txt`](https://vestrasys.github.io/vestra-player-sdk/llms.txt) (also `@vestra-player/sdk/llms.txt`) is the short entry that explains it.
 
 ## Install
 

@@ -7,9 +7,11 @@
  *
  * 1. `npm install <tgz>` (registry dependencies only: typescript, @types/node),
  * 2. import every public entry point from plain Node (ESM resolution of the
- *    published dist/) and resolve the llms.txt / llms-full.txt exports,
+ *    published dist/), resolve the llms.txt export and read the
+ *    documentation tree (`@vestra-player/sdk/docs`),
  * 3. `tsc --noEmit` on a tiny plugin with the installed types,
- * 4. `vestra-plugin check` and `vestra-plugin test` on that plugin.
+ * 4. `vestra-plugin check` and `vestra-plugin test` on that plugin, and
+ *    `vestra-plugin docs`.
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -58,10 +60,11 @@ try {
     'await import("@vestra-player/sdk/runtime");',
     'if (typeof testing.startPlugin !== "function") throw new Error("startPlugin missing");',
     'import { readFileSync } from "node:fs";',
-    'for (const name of ["llms.txt", "llms-full.txt"]) {',
-    '  const text = readFileSync(new URL(import.meta.resolve(`@vestra-player/sdk/${name}`)), "utf8");',
-    '  if (!text.startsWith("# ")) throw new Error(`${name}: not an llms.txt file`);',
-    "}",
+    'const text = readFileSync(new URL(import.meta.resolve("@vestra-player/sdk/llms.txt")), "utf8");',
+    'if (!text.startsWith("# ")) throw new Error("llms.txt: not an llms.txt file");',
+    'const { docs, searchDocs } = await import("@vestra-player/sdk/docs");',
+    'if (!docs("/API/Media/Snapshot/dispose").includes("dispose(): Promise<void>")) throw new Error("docs: no member page");',
+    'if (!searchDocs("snapshot").includes("/API/Media/Snapshot")) throw new Error("searchDocs: no match");',
     'console.log("imports ok");',
   ]);
   run(process.execPath, ["imports.mjs"]);
@@ -123,6 +126,11 @@ try {
   run(process.execPath, [
     "node_modules/@vestra-player/sdk/bin/vestra-plugin.mjs",
     "test",
+  ]);
+  run(process.execPath, [
+    "node_modules/@vestra-player/sdk/bin/vestra-plugin.mjs",
+    "docs",
+    "API/Media",
   ]);
   console.log("smoke test passed");
 } finally {

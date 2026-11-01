@@ -244,7 +244,7 @@ export const strictDeclarations = new Map(
  * Ends the hidden setup of an `@example` code block (the convention of
  * TypeScript's twoslash): the lines above it are type checked by
  * `docs:check` but not shown on the site (scripts/typedoc-plugin.mjs), in
- * llms-full.txt (scripts/llms.mjs) or counted by `doc-lint`. In a block
+ * the documentation tree (scripts/docs-tree.mjs) or counted by `doc-lint`. In a block
  * without its own `import`/`export`, `docs:check` places them at module
  * level, so they may `import` and `declare` what the shown lines use.
  */

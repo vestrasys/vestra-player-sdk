@@ -1,6 +1,6 @@
 {
   "name": "@vestra-player/sdk",
-  "version": "1.5.49",
+  "version": "1.5.50",
   "description": "Plugin API types, test host and plugin CLI for Vestra Player (apiVersion vestra/1)",
   "license": "Apache-2.0",
   "repository": {
@@ -24,12 +24,15 @@
       "types": "./dist/player-runtime.d.ts",
       "default": "./dist/player-runtime.js"
     },
+    "./docs": {
+      "types": "./dist/docs.d.ts",
+      "default": "./dist/docs.js"
+    },
     "./ts-plugin": {
       "types": "./ts-plugin/index.d.ts",
       "default": "./ts-plugin/index.js"
     },
     "./llms.txt": "./llms.txt",
-    "./llms-full.txt": "./llms-full.txt",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -43,8 +46,7 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "llms.txt",
-    "llms-full.txt"
+    "llms.txt"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",

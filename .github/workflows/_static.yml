@@ -34,8 +34,8 @@ jobs:
         run: npm run format:check
       - name: oxlint
         run: npm run lint
-      # llms.txt and llms-full.txt are generated from src/, docs/ and
-      # examples/ (scripts/llms.mjs); the committed files must be current.
+      # llms.txt is generated from the documentation tree of src/ and docs/
+      # (scripts/llms.mjs); the committed file must be current.
       - name: llms.txt up to date
         run: npm run docs:llms -- --check
       - name: typos

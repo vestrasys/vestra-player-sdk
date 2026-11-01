@@ -1,7 +1,7 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "name": "@vestra-player/sdk",
-  "entryPoints": ["src/index.ts", "src/plugin/testing.ts"],
+  "entryPoints": ["src/index.ts", "src/plugin/testing.ts", "src/docs.ts"],
   "tsconfig": "tsconfig.json",
   "out": "docs-site",
   "readme": "README.md",
