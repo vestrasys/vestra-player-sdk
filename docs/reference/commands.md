@@ -422,6 +422,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Reset ▸ Audio Processing |  | `vestra.audio/audio.reset` |
 | Reset ▸ Idle Logo |  | `vestra.visualizer/reset-logo` |
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
+| Check for Updates… |  | `vestra.info/info.update` |
 | Quit | `Cmd+Q` | `host/quit` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |

@@ -644,6 +644,7 @@ vestra.audio | audio.sync.reset | Reset ▸ Audio Sync | ?
 vestra.audio | audio.reset | Reset ▸ Audio Processing
 vestra.visualizer | reset-logo | Reset ▸ Idle Logo
 vestra.info | info.about | About Vestra Player… | F1
+vestra.info | info.update | Check for Updates…
 host | quit | Quit | Cmd+Q
 host | enter-fullscreen | (Enter Fullscreen)
 host | exit-fullscreen | (Leave Fullscreen)
