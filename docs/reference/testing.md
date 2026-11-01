@@ -53,7 +53,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 
 - `host.openElsewhere(path, phase?)`: the user or another plugin opened a source (a new source id, then `phase`, `"ready"` by default). Calls the plugin made against the old state now fail with `stale`.
 - `host.setSource({ phase, position, duration, paused, audioTracks, … })`: the state changed (the user paused, playback reached the end). Before `startPlugin`, it presets the source the plugin finds at activation.
-- `host.setMainWindow({ fullscreen, videoArea })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the main window, the colour scheme, the installed plugins changed.
+- `host.setMainWindow({ fullscreen, maximized, videoArea })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the main window, the colour scheme, the installed plugins changed.
 - Preset data the player would return: `host.stats` (`player.stats()`), `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`, `host.rendering` (the GPU or software choice), `host.upscaling`; `host.tools.handle("ffprobe", (args) => ({ stdout }))` makes a tool available and answers its runs.
 - `host.handle(method, fn)` replaces the player's answer to one protocol method until `host.reset(method)`. The handler gets the request parameters and returns the reply, or throws: `throw new HostError(code, message)` is a refusal (the plugin's call rejects with that `code`, one of the [error codes](errors.md)); `throw new Error(…)` is a lost reply, and the SDK runs its recovery path. Method names are the protocol's (`"processing.replace"`, `"system.openPath"`, `"clipboard.writeText"`): `host.calls` lists every request in order, which shows the method an action uses, and `host.sent(method)` the parameters of one method's requests.
 
@@ -168,7 +168,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.reset}() | Restore the default behaviour of a method replaced with `TestHost.handle`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.emit}() | Deliver a host event to the plugin. |
 | {@link "@vestra-player/sdk/testing"!TestHost.setSource}() | Change the source facts and broadcast them, as if the player's state changed (the user paused, playback reached the end, a file finished loading). |
-| {@link "@vestra-player/sdk/testing"!TestHost.setMainWindow}() | Simulate the user changing the main window (resizing it, entering or leaving fullscreen, closing the picture-in-picture window) and broadcast it. |
+| {@link "@vestra-player/sdk/testing"!TestHost.setMainWindow}() | Simulate the user changing the main window (resizing, maximizing or restoring it, entering or leaving fullscreen, closing the picture-in-picture window) and broadcast it. |
 | {@link "@vestra-player/sdk/testing"!TestHost.popSidebar}() | The pointer reached the right edge in fullscreen (`true`) or left the popped-out sidebar (`false`): the attached sidebar pops out or collapses (reference §6.3). |
 | {@link "@vestra-player/sdk/testing"!TestHost.openElsewhere}() | Simulate another plugin (or the user) opening a source: a new `sourceId`, then the given phase. |
 | {@link "@vestra-player/sdk/testing"!TestHost.failStream}() | Simulate a generated stream failing in the player (its audio device lost, its frame connection broken), like the player: the source fails with `message` (`phase: "error"`) and the producer is retired at once. |

@@ -88,3 +88,43 @@ test("picture-in-picture: an older player without the field reads as unsupported
   });
   await stop();
 });
+
+test("maximized: default, setMainWindow, onChange and false in fullscreen", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  assert.equal(plugin.window.state.maximized, false);
+  const seen: boolean[] = [];
+  plugin.window.onChange((state) => seen.push(state.maximized));
+  await host.settle();
+  host.setMainWindow({ maximized: true });
+  await host.settle();
+  assert.equal(plugin.window.state.maximized, true);
+  // Fullscreen reads as not maximized; leaving it restores the maximized window.
+  host.setMainWindow({ fullscreen: true });
+  await host.settle();
+  assert.equal(plugin.window.state.maximized, false);
+  host.setMainWindow({ fullscreen: false });
+  await host.settle();
+  assert.equal(plugin.window.state.maximized, true);
+  host.setMainWindow({ maximized: false });
+  await host.settle();
+  assert.deepEqual(seen, [true, false, true, false]);
+  await stop();
+});
+
+test("maximized: an older player without the field reads as false", async () => {
+  const host = new TestHost();
+  host.handle("window.state", () => ({
+    fullscreen: false,
+    videoArea: { width: 640, height: 360 },
+  }));
+  const { plugin, stop } = await started(host);
+  assert.equal(plugin.window.state.maximized, false);
+  host.emit("window.state", {
+    fullscreen: false,
+    videoArea: { width: 640, height: 360 },
+  });
+  await host.settle();
+  assert.equal(plugin.window.state.maximized, false);
+  await stop();
+});

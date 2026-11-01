@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.52
+
+**Who must change: nobody.** Additive: `WindowState` gains `maximized`, `apiVersion` stays `vestra/1`, no new capability. Players before 0.6.3 do not report it and it reads `false` there; a plugin that depends on it sets `"minPlayerVersion": "0.6.3"`.
+
+- **`plugin.window.state.maximized`** (player 0.6.3): `true` while the main window is maximized, `false` in fullscreen (also when the window was maximized before and is again after leaving it). Changes arrive through `plugin.window.onChange` like the other window facts (with `events` for changes made by the user). A plugin that resizes the window, such as the Window plugin's "Window size when playback starts", leaves a maximized window alone, as MPC-HC and mpv do. The player sends it as `maximized` in the `window.state` reply and event; the SDK reads a missing or non-boolean field as `false`.
+- **`TestHost`**: `host.mainWindow.maximized` (default `false`) and `host.setMainWindow({ maximized: true })`, which broadcasts `window.state` as the player does; like the player, `window.state` reports `false` while fullscreen.
+- _Docs_: `WindowState.maximized`, `MainWindow`, `TestHost.setMainWindow` and [Reference: testing](docs/reference/testing.md#simulating-the-player) describe it.
+
 ## 1.5.51
 
 **Who must change: nobody.** Additive: `MENU_IDS` and `MenuId` gain `reset`, `apiVersion` stays `vestra/1`, no new capability. A plugin that puts a command under `@reset` sets `"minPlayerVersion": "0.6.3"`: older players refuse `@reset` with `invalid` (since SDK 1.5.49 that command is skipped and the rest of the plugin activates).
