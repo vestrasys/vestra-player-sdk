@@ -7,7 +7,7 @@ description: Submit a plugin to the official plugin repository, update or withdr
 
 **Goal:** your plugin appears in the player's plugin store, where users install, update and uninstall it.
 
-The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them.
+The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them. To publish without the official repository, [host your own plugin store](own-store.md): users add its address, and its plugins come with an Unofficial mark.
 
 ## Steps
 
@@ -101,12 +101,13 @@ owners = ["someone"]
 The store shows the newest version's manifest fields, so what you write there is the plugin's page:
 
 - **The list**: name and version, author and repository, the punchline. Search covers the name, id, author, punchline and tags; the list can be filtered by tag and sorted by name or by the date of the newest version. There are no download counts.
-- **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the store has no action to install an older one: a user who wants an older version uninstalls the plugin and installs that version's `.vxp` ([Migrating off package rollback](../upgrading/rollback-migration.md)). A side column shows the version, the date, the license, a link to `sourceUrl` and the capabilities in plain words, the risky ones highlighted (the wording is the "Shown in the store as" column of [Capabilities](../reference/capabilities.md)), with a fixed note that capabilities limit only the player API, not file or network access.
+- **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the Versions tab never installs a version older than the one installed from the same repository; to go back, a user uninstalls the plugin, then installs the older version from the Versions tab while the index still lists it, or its `.vxp` ([Migrating off package rollback](../upgrading/rollback-migration.md)). A side column shows the version, the date, the license, a link to `sourceUrl` and the capabilities in plain words, the risky ones highlighted (the wording is the "Shown in the store as" column of [Capabilities](../reference/capabilities.md)), with a fixed note that capabilities limit only the player API, not file or network access.
 - **Before installing**, the user confirms a dialog that lists the capabilities; an update that adds capabilities lists the new ones. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
 - **The README** is rendered as Markdown; relative links and images resolve against the README's own address, and remote images are shown for the official repository.
 
 ## See also
 
+- [Host your own plugin store](own-store.md): publish from your own `index.json` instead, without review; users add it as an unofficial repository.
 - [Manifest](../reference/manifest.md): the display fields and `minPlayerVersion`.
 - [Capabilities](../reference/capabilities.md): the wording the store shows for each capability.
 - [Test a plugin](testing.md) and [Command line](../reference/cli.md).
