@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.53
+
+**Who must change: nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed.
+
+- **`BUILTIN_COMMANDS`** lists the Info plugin's (`vestra.info` 0.1.11, player 0.6.3) top-level **Check for Updates…** (`info.update`, no default key), right after About Vestra Player… (the player's agreement test failed on it). The built-in command table in [Reference: commands](docs/reference/commands.md) follows.
+
 ## 1.5.52
 
 **Who must change: nobody.** Additive: `WindowState` gains `maximized`, `apiVersion` stays `vestra/1`, no new capability. Players before 0.6.3 do not report it and it reads `false` there; a plugin that depends on it sets `"minPlayerVersion": "0.6.3"`. A test that deep-compares the whole `plugin.window.state` now also sees `maximized: false`.
