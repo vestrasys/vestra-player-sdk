@@ -30,7 +30,7 @@ Use the id rule of the official repository, so that your plugin can move there l
 
 - `version`, `apiVersion` (`vestra/1`), `minPlayerVersion` (or `null`) and `capabilities` are copied from the version's `manifest.json`. The store refuses a downloaded package whose id, version or capabilities differ from the entry.
 - `downloadUrl` (https), `sha256` and `size` (bytes, at most 64 MiB) are those of the `.vxp`; the store installs it only when both match. `published` is a date (ISO 8601); the store sorts `versions` itself, newest first.
-- `iconUrl`, `readmeUrl` and `changelogUrl` each come with `…Sha256` and `…Size`, or all three are `null`. The icon is PNG or JPEG of at most 512 KiB; README and changelog at most 256 KiB each. Keep them on the same origin as `index.json` (scheme, host and port): from an unofficial store the store loads no icon from another origin, and a README or changelog there only when the user asks. Images in your README show after the user clicks Show Images; publish them next to it, since relative links resolve against the README's address.
+- `iconUrl`, `readmeUrl` and `changelogUrl` each come with `…Sha256` and `…Size`, or all three are `null`. The icon is PNG or JPEG of at most 512 KiB; README and changelog at most 256 KiB each. Keep them on the same origin as `index.json` (scheme, host and port): from an unofficial store the store loads no icon from another origin, and a README or changelog there only when the user asks. Images in the README or changelog of an unofficial store must be absolute https addresses on the same site; they show after the user clicks Show Images. A relative image shows only its alt text, so the script below publishes each one next to the README and rewrites its link to that absolute address.
 - Optional: `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl` and `translations` (the display fields per language, as in the [official index](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#indexjson)).
 - `revoked` (optional, top level): versions the store disables on users' machines, telling them why. Each entry is `{ "id": "someone.cool-visualizer", "versions": ">=1.0.0 <1.2.0", "reason": "Deletes files outside its data directory. Update to 1.2.0." }`: `versions` an exact version or a range (`<`, `<=`, `>`, `>=`, `=` joined by spaces, alternatives by `||`, `*` for all), `reason` at most 500 characters. Only the store a plugin was installed from can revoke it; more than 1,000 entries make the store refuse the whole index.
 
@@ -71,12 +71,12 @@ The confirming button is **Install Anyway**. The store offers updates of a plugi
 
 ## Complete example
 
-A repository `someone/my-plugins` with `package.json` (`"type": "module"`, `@vestra-player/sdk` in `devDependencies`), `plugins/<name>/` per plugin (manifest, sources, `tests/`, README and changelog) and two files. `scripts/build-index.ts` packs the plugins into `site/packages/`, publishes their README, changelog and icon (and the README's images) under `site/assets/<id>/<version>/`, and writes `site/index.json`:
+A repository `someone/my-plugins` with `package.json` (`"type": "module"`, `@vestra-player/sdk` in `devDependencies`), `plugins/<name>/` per plugin (manifest, sources, `tests/`, README and changelog) and two files. `scripts/build-index.ts` packs the plugins into `site/packages/`, publishes their README, changelog and icon (and their images, linked by absolute address) under `site/assets/<id>/<version>/`, and writes `site/index.json`:
 
 ```ts
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
 
 // The Pages address (to test locally: STORE_URL=http://localhost:8080/).
@@ -87,10 +87,11 @@ const digest = (path: string) => {
   const bytes = readFileSync(path);
   return { sha256: createHash("sha256").update(bytes).digest("hex"), size: bytes.length };
 };
-const copy = (from: string, to: string) => {
+const write = (to: string, data: string | Buffer) => {
   mkdirSync(dirname(join(site, to)), { recursive: true });
-  copyFileSync(from, join(site, to));
+  writeFileSync(join(site, to), data);
 };
+const copy = (from: string, to: string) => write(to, readFileSync(from));
 const plugins = [];
 for (const name of readdirSync("plugins").sort()) {
   const dir = join("plugins", name);
@@ -111,14 +112,16 @@ for (const name of readdirSync("plugins").sort()) {
       continue;
     }
     const to = `${folder}/${published}${field === "icon" ? extname(from) : ""}`;
-    copy(from, to);
-    const { sha256, size } = digest(from);
+    if (field === "icon") copy(from, to);
+    // README, changelog: relative images published alongside, linked absolutely.
+    else
+      write(to, readFileSync(from, "utf8").replace(/(!\[[^\]]*\]\(\s*<?)([^)\s>]+)/g, (whole, lead, image) => {
+        if (/^[a-z]+:|^\/|\.\./i.test(image) || !existsSync(join(dirname(from), image))) return whole;
+        copy(join(dirname(from), image), `${folder}/${image}`);
+        return lead + BASE + `${folder}/${image}`;
+      }));
+    const { sha256, size } = digest(join(site, to));
     Object.assign(assets, { [`${field}Url`]: BASE + to, [`${field}Sha256`]: sha256, [`${field}Size`]: size });
-    // The README's own images, at the same relative paths.
-    if (field === "readme")
-      for (const [, image = ""] of readFileSync(from, "utf8").matchAll(/!\[[^\]]*\]\(\s*<?([^)\s>]+)/g))
-        if (!/^[a-z]+:|^\/|\.\./i.test(image) && existsSync(join(dirname(from), image)))
-          copy(join(dirname(from), image), `${folder}/${image}`);
   }
   // The date of the commit that last changed the manifest: stable across builds.
   const git = ["log", "-1", "--format=%cI", "--", join(dir, "manifest.json")];
