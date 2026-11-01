@@ -11,6 +11,7 @@ import {
   countRow,
   diff,
   keyOf,
+  DIFF_OPS,
   PATCH_OPS,
   replay,
   withinLimits,
@@ -195,9 +196,30 @@ test("index fallback: prefix and suffix trimmed, sets, one insert or remove", ()
 });
 
 test("too many operations: no patch (the whole value is sent)", () => {
+  // SDK 1.5.46: a diff may plan up to DIFF_OPS (sent as patches of at most
+  // PATCH_OPS each); beyond, or more than PATCH_OPS moves, the whole value.
   const old = Array.from({ length: 3000 }, (_, i) => `r${i}`);
   const next = old.map((r, i) => (i % 2 ? r : `${r}!`));
-  assert.equal(diff({ enc: old, keys: null }, { enc: next, keys: null }), null);
+  assert.equal(
+    diff({ enc: old, keys: null }, { enc: next, keys: null })?.ops.length,
+    1500,
+  );
+  const many = Array.from({ length: DIFF_OPS * 2 + 2 }, (_, i) => `r${i}`);
+  const every = many.map((r, i) => (i % 2 ? r : `${r}!`));
+  assert.equal(
+    diff({ enc: many, keys: null }, { enc: every, keys: null }),
+    null,
+  );
+  const keys = old.map((_, i) => i);
+  const shuffled = [...keys].sort((a, b) => (a % 7) - (b % 7) || a - b);
+  assert.equal(
+    diff(
+      { enc: old, keys },
+      { enc: shuffled.map((i) => old[i]!), keys: shuffled },
+    ),
+    null,
+    "more than PATCH_OPS moves",
+  );
   assert.equal(PATCH_OPS, 1024);
 });
 
@@ -213,7 +235,9 @@ test("limit counts per row agree with the player's for the whole value", () => {
   const fields = Object.fromEntries(
     Array.from({ length: 20 }, (_, i) => [`f${i}`, i]),
   );
-  const wide = Array.from({ length: 1000 }, () => countRow(row("x", fields)));
+  const wide = Array.from({ length: Math.ceil(L.values / 20) }, () =>
+    countRow(row("x", fields)),
+  );
   assert.equal(withinLimits(wide), false, "over the values limit");
   assert.equal(countRow("x".repeat(L.stringBytes + 1)).over, true);
 });

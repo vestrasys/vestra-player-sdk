@@ -508,3 +508,69 @@ test("the BarButtons check stays inside the plugin directory and follows local r
   );
   assert.equal(warned(), false);
 });
+
+test("a `for` over a bound array outside a ListView is a warning (SDK 1.5.46)", () => {
+  const directory = project(
+    [
+      'import type { Plugin } from "@vestra-player/sdk";',
+      "export default async function activate(plugin: Plugin) {",
+      '  plugin.panels.mount("sidebar", "ui/list.slint");',
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({
+      id: "me.list",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.ts",
+      capabilities: ["ui.mount"],
+    }),
+  );
+  mkdirSync(join(directory, "ui"));
+  const list = join(directory, "ui/list.slint");
+  const write = (body: string) =>
+    writeFileSync(
+      list,
+      [
+        'import { ListView } from "std-widgets.slint";',
+        "export global ListBridge { in property <[string]> rows; in property <[int]> marks; }",
+        "export component List inherits Rectangle {",
+        "  in property <[{ name: string }]> items;",
+        body,
+        "}",
+      ].join("\n"),
+    );
+  write(
+    [
+      "  VerticalLayout {",
+      "    for row in ListBridge.rows: Text { text: row; }",
+      "  }",
+      "  // for x in items: Text {}",
+      "  for item[i] in root.items: Text { text: item.name; }",
+      "  ListView { for row in ListBridge.rows: Text { text: row; } }",
+      "  for n in [1, 2, 3]: Rectangle {}",
+    ].join("\n"),
+  );
+  const result = vestraPlugin(directory, "check");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const warnings = result.stdout
+    .split("\n")
+    .filter((line) => line.includes("outside a ListView"));
+  assert.deepEqual(
+    warnings.map((line) =>
+      /ui\/list\.slint:(\d+): `for` over the bound array `(\w+)`/
+        .exec(line)
+        ?.slice(1),
+    ),
+    [
+      ["6", "rows"],
+      ["9", "items"],
+    ],
+  );
+  write("  ListView { for row in ListBridge.rows: Text { text: row; } }");
+  const clean = vestraPlugin(directory, "check");
+  assert.equal(clean.status, 0, clean.stdout + clean.stderr);
+  assert.doesNotMatch(clean.stdout, /outside a ListView/);
+});

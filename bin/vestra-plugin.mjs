@@ -357,7 +357,10 @@ async function check(target, report = null) {
   }
   say(`${target.name}: capabilities declared for every API use`);
   if (report) return;
-  for (const line of await bottomBarWarnings(target))
+  for (const line of [
+    ...(await bottomBarWarnings(target)),
+    ...(await forWarnings(target)),
+  ])
     console.log(`${target.name}: warning: ${line}`);
   // Translation warnings never fail the check.
   if (present(join(target.directory, "locales"))) {
@@ -502,6 +505,61 @@ async function bottomBarWarnings(target) {
   return warnings;
 }
 
+/**
+ * A `for` over an array the plugin binds (an `in` or `in-out` property of
+ * array type of a component or global in the same file), outside a
+ * `ListView`, in the plugin's .slint files: a reminder, not a failure
+ * (SDK 1.5.46). Such a `for` builds every row of the array up front; since
+ * player 0.6.0 a plugin may bind a whole long list, which belongs in a
+ * `ListView` (it builds only the rows on screen). A text scan: imported
+ * components and `@children` are not followed.
+ */
+async function forWarnings(target) {
+  const { slint } = await sourceFiles(target);
+  const warnings = [];
+  for (const file of slint) {
+    const text = slintCode(
+      await readFile(join(target.directory, file), "utf8"),
+    );
+    const arrays = new Set(
+      [
+        ...text.matchAll(
+          /\b(?:in|in-out)\s+property\s*<\s*\[[^\]]*\]\s*>\s*([A-Za-z_][\w-]*)/g,
+        ),
+      ].map((match) => match[1]),
+    );
+    if (!arrays.size) continue;
+    // The elements open at each point: the name before each `{`.
+    const open = [];
+    let line = 1;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === "\n") line++;
+      else if (c === "{") {
+        const name = /([A-Za-z_][\w-]*)\s*$/.exec(
+          text.slice(Math.max(0, i - 80), i),
+        );
+        open.push(name ? name[1] : "");
+      } else if (c === "}") open.pop();
+      else if (
+        text.startsWith("for", i) &&
+        !/[\w-]/.test(text[i - 1] ?? " ") &&
+        /\s/.test(text[i + 3] ?? "")
+      ) {
+        const loop =
+          /^for\s+[\w-]+(?:\s*\[\s*[\w-]+\s*\])?\s+in\s+([\w.-]+)/.exec(
+            text.slice(i, i + 200),
+          );
+        const array = loop?.[1].split(".").at(-1);
+        if (array && arrays.has(array) && !open.includes("ListView"))
+          warnings.push(
+            `${file.replaceAll("\\", "/")}:${line}: \`for\` over the bound array \`${array}\` outside a ListView builds every row; a long list should use a ListView (docs/reference/limits.md)`,
+          );
+      }
+    }
+  }
+  return warnings;
+}
 /** The plugin's own production .ts / .mts and .slint files. */
 async function sourceFiles(target) {
   const all = await files(target.directory);

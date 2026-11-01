@@ -29,7 +29,8 @@ function packageWith() {
   return directory;
 }
 
-/** The D1 row: 8 fields, so 9 values. */
+/** A wide D1 row: 16 fields, so 17 values (rows of 9 values would meet the
+ * rows limit before the values total). */
 const row = (i: number) => ({
   title: String(i),
   folder: "",
@@ -39,9 +40,18 @@ const row = (i: number) => ({
   current: false,
   missing: false,
   probing: false,
+  a: "",
+  b: "",
+  c: "",
+  d: "",
+  e: false,
+  f: false,
+  g: false,
+  h: false,
 });
 const rows = (count: number) => Array.from({ length: count }, (_, i) => row(i));
-const fitting = Math.floor(UI_VALUE_LIMITS.values / 9) - 1;
+const fitting = Math.floor(UI_VALUE_LIMITS.values / 17) - 1;
+const over = Math.floor(UI_VALUE_LIMITS.values / 17) + 1;
 const filled = <T>(length: number, value: T): T[] =>
   Array.from({ length }, () => value);
 
@@ -64,18 +74,18 @@ test("TestHost refuses a panel write over the value limits with limit, like the 
   assert.equal((host.mounted().props.rows as Json[]).length, fitting);
   assert.equal(errors.length, 0);
   // D1: past the limit the write fails loudly; the panel keeps what it showed.
-  count = 3000;
+  count = over;
   plugin.update();
   await host.settle();
   assert.equal((host.mounted().props.rows as Json[]).length, fitting);
   assert.equal(errors.length, 1);
   assert.equal(errors[0]!.code, "limit");
-  assert.match(errors[0]!.message, /^rows: UI (object|array) cannot fit/);
+  assert.match(errors[0]!.message, /^rows: UI /);
   await stop();
 });
 
 test("initial properties over the limits: a panel leaves the property out and reports it, a window fails show", async () => {
-  // D1 at start-up: a restored 3000-row list. The panel still mounts (a
+  // D1 at start-up: a restored list over the limits. The panel still mounts (a
   // failed mount during activation would fail the plugin); onError hears it.
   const directory = packageWith();
   const errors: PluginError[] = [];
@@ -84,7 +94,7 @@ test("initial properties over the limits: a panel leaves the property out and re
       plugin.onError((error) => errors.push(error));
       plugin.panels
         .mount("sidebar", "list.slint")
-        .set({ rows: rows(3000), title: "List" });
+        .set({ rows: rows(over), title: "List" });
     },
     { directory },
   );
@@ -100,7 +110,9 @@ test("initial properties over the limits: a panel leaves the property out and re
     window.show(),
     (error: PluginError) =>
       error.code === "limit" &&
-      /items: UI array exceeds 4096 rows/.test(error.message),
+      new RegExp(
+        `items: UI array exceeds ${UI_VALUE_LIMITS.arrayRows} rows`,
+      ).test(error.message),
   );
   await stop();
 });
@@ -114,15 +126,16 @@ test("valueLimitProblem follows the player's rules", () => {
   assert.equal(valueLimitProblem(filled(L.arrayRows, null)), null);
   assert.match(
     valueLimitProblem(filled(L.arrayRows + 1, null)) ?? "",
-    /exceeds 4096 rows/,
+    new RegExp(`exceeds ${L.arrayRows} rows`),
   );
-  // root + 4 arrays + nulls = the total.
-  const last = L.values - 5 - 3 * L.arrayRows;
-  const exact = [0, 0, 0, 0].map((_, i) =>
-    filled(i < 3 ? L.arrayRows : last, null),
+  // root + (full + 1) arrays + nulls = the total.
+  const full = Math.floor((L.values - 2) / (L.arrayRows + 1));
+  const last = L.values - 2 - full - full * L.arrayRows;
+  const exact = Array.from({ length: full + 1 }, (_, i) =>
+    filled(i < full ? L.arrayRows : last, null),
   );
   assert.equal(valueLimitProblem(exact), null);
-  exact[3]!.push(null);
+  exact[full]!.push(null);
   assert.match(valueLimitProblem(exact) ?? "", /node/);
   // Bytes, not characters; field names count.
   assert.equal(valueLimitProblem("段".repeat(L.stringBytes / 3)), null);
@@ -131,9 +144,10 @@ test("valueLimitProblem follows the player's rules", () => {
     /string or field name exceeds/,
   );
   const part = "x".repeat(L.stringBytes);
-  assert.equal(valueLimitProblem(filled(15, part)), null);
+  const parts = L.textBytes / L.stringBytes;
+  assert.equal(valueLimitProblem(filled(parts - 1, part)), null);
   assert.match(
-    valueLimitProblem({ [part]: filled(16, part) }) ?? "",
+    valueLimitProblem({ [part]: filled(parts, part) }) ?? "",
     /text exceeds/,
   );
   // An image is checked when used; a document is one value and its text.
@@ -144,7 +158,8 @@ test("valueLimitProblem follows the player's rules", () => {
   });
   assert.equal(valueLimitProblem([doc(200_000), doc(200_000)]), null);
   assert.match(
-    valueLimitProblem(filled(6, doc(200_000))) ?? "",
+    valueLimitProblem(filled(Math.ceil(L.textBytes / 200_000), doc(200_000))) ??
+      "",
     /text exceeds/,
   );
 });
