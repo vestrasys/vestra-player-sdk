@@ -104,7 +104,7 @@ test("a guide page by title, by file name and in any case", () => {
   assert.equal(docs("guides/how-to/testing"), page);
   assert.equal(docs("/GUIDES/HOW-TO/test-a-plugin/"), page);
   // Links between pages are paths of the tree.
-  assert.match(page, /\]\(\/Guides\/Reference\/Test host#/);
+  assert.match(page, /\]\(<\/Guides\/Reference\/Test host#[\w-]+>\)/);
 });
 
 test("/API lists both entry points' categories; a category lists its symbols", () => {
@@ -186,11 +186,135 @@ test("a path that matches nothing suggests the nearest names and lists the level
     /\(Found \/API\/Snapshot\/export at \/API\/Media\/Snapshot\/export\.\)/,
   );
   assert.match(docs("Snapshot"), /^\/API\/Media\/Snapshot · Interface/);
-  // Git Bash's conversion of a leading "/".
+  // Git Bash's conversion of a leading "/" (non-greedy).
   assert.equal(docs("C:/Program Files/Git/API/Media"), docs("/API/Media"));
+  assert.equal(docs("D:/tools/Git/API/Media"), docs("/API/Media"));
+});
+
+test("a name alone, dot notation, a stale segment and a .md suffix find their node", () => {
+  const head = (path: string) =>
+    docs(path)
+      .split("\n")[0]!
+      .replace(/ · page \d+ of \d+$/, "");
+  // A declaration before a page of a similar name (Test host).
+  assert.equal(head("TestHost"), "/API/Testing/TestHost · Class");
+  assert.equal(
+    head("TestHost/settle"),
+    "/API/Testing/TestHost/settle · Method",
+  );
+  assert.equal(
+    head("TestHost.settle"),
+    "/API/Testing/TestHost/settle · Method",
+  );
+  assert.equal(head("Snapshot.export"), "/API/Media/Snapshot/export · Method");
+  // The interface, not the category of the same name.
+  assert.equal(head("Plugin"), "/API/Plugin/Plugin · Interface");
+  assert.equal(head("plugin.player"), "/API/Plugin/Plugin/player · Property");
+  // The category /API/Media has no `current`; the interface Media has.
+  assert.equal(
+    head("/API/Media/current"),
+    "/API/Playback/Media/current · Property",
+  );
+  // A stale category segment is left out.
+  assert.equal(
+    head("/API/Playback/Snapshot/export"),
+    "/API/Media/Snapshot/export · Method",
+  );
+  assert.equal(
+    head("/Guides/How-to/testing.md"),
+    "/Guides/How-to/Test a plugin · Page",
+  );
+  // Several equally good: named, not guessed.
+  assert.match(
+    docs("testing"),
+    /^Several matches: \/testing\n\nName the one you mean:\n\n- \/Guides\/How-to\/Test a plugin \(page\)/,
+  );
+  // An old title (REDIRECTS) and a Markdown link target in angle brackets.
+  assert.equal(head("/Guides/Concepts"), "/Guides/Explanation · Group");
+  assert.equal(
+    head("</Guides/How-to/Test a plugin>"),
+    "/Guides/How-to/Test a plugin · Page",
+  );
+});
+
+test("links are paths of the tree; site addresses and images are gone", () => {
+  const overview = docs("/Overview");
+  assert.match(
+    overview,
+    /\[Getting started\]\(<\/Guides\/Tutorials\/Getting started>\)/,
+  );
+  assert.match(
+    overview,
+    /\[Step by step\]\(<\/Guides\/Examples\/Example: Blur>\)/,
+  );
+  assert.match(
+    overview,
+    /\(https:\/\/github\.com\/vestrasys\/vestra-player-sdk\/blob\/main\/LICENSE\)/,
+  );
+  for (const node of stored.nodes) {
+    assert.doesNotMatch(
+      node.t,
+      /\]\(https:\/\/vestrasys\.github\.io\/vestra-player-sdk\/(documents|modules|interfaces|classes)\//,
+      node.n,
+    );
+    assert.doesNotMatch(node.t, /^!\[[^\]]*\]\(/m, node.n);
+    // A link target with a space is in angle brackets.
+    assert.doesNotMatch(node.t, /\]\(\/[^)>\s]*\s[^)]*\)/, node.n);
+  }
+  // The test host's entry point links to its category; the tree's own
+  // entry point is under /API too.
+  assert.ok(stored.nodes.some((node) => node.t.includes("](/API/Testing)")));
+  assert.match(docs("/API/Docs"), /^- \/API\/Docs\/docs \(function\): /m);
+  // Types a signature names link to their node.
+  assert.match(
+    docs("Snapshot.export"),
+    /Types: \[ExportOptions\]\(\/API\/Media\/ExportOptions\), \[ExportJob\]\(\/API\/Media\/ExportJob\)/,
+  );
+});
+
+test("a #heading opens its page; page 1 lists the sections", () => {
+  const path = "/Guides/Reference/Commands, menus and bindings";
+  const first = docs(path);
+  assert.match(first, /\n\nSections: Menu paths \(p\. 1\) · /);
+  const sections = /Sections: (.+)\n/.exec(first)![1]!.split(" · ");
+  const later = sections
+    .map((each) => /^(.+) \(p\. (\d+)\)$/.exec(each)!)
+    .find((match) => Number(match[2]) > 1)!;
+  const anchor = later[1]!
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+    .replace(/\s/g, "-");
+  const opened = docs(`${path}#${anchor}`);
+  assert.match(opened, new RegExp(`· page ${later[2]} of \\d+\\n`));
+  assert.match(opened, new RegExp(`^## ${later[1]}$`, "m"));
+  assert.match(
+    docs(`${path}#no-such-heading`),
+    /\(No section #no-such-heading here\.\)/,
+  );
+});
+
+test("a table cut by a page break repeats its header", () => {
+  const path = "/Guides/Reference/Commands, menus and bindings";
+  const all = pages((page) => docs(path, { page }));
+  const continued = all.slice(1).filter((text) => {
+    const body = text.split("\n").slice(2);
+    return body[0]?.startsWith("|");
+  });
+  assert.ok(continued.length > 0, "no page starts inside a table");
+  for (const text of continued) {
+    const body = text.split("\n").slice(2);
+    assert.match(body[1]!, /^\s*\|?\s*:?-{3,}/, "the header's rule follows");
+  }
 });
 
 test("search ranks names first and lists paths with summaries", () => {
+  // Common words are left out; a declaration's name ranks high.
+  const window = searchDocs("open a window");
+  assert.match(window, /common words left out: a\)/);
+  assert.match(
+    window,
+    /best first[^\n]*:\n\n- \/API\/UI\/Window \(interface\)/,
+  );
   const found = searchDocs("snapshot export");
   assert.match(
     found,
@@ -279,6 +403,17 @@ test("the command line prints the same answers", () => {
   const bad = cli("/", "--page", "x");
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /--page needs a page number/);
+  // Git Bash (MSYSTEM) with its root anywhere.
+  const msys = spawnSync(
+    process.execPath,
+    [
+      fileURLToPath(new URL("../bin/vestra-plugin.mjs", import.meta.url)),
+      "docs",
+      "E:/msys64/usr/API/Media",
+    ],
+    { encoding: "utf8", env: { ...process.env, MSYSTEM: "MINGW64" } },
+  );
+  assert.equal(msys.stdout, `${docs("/API/Media")}\n`);
 });
 
 test("every page and declaration of the documentation site is in the tree", async () => {
@@ -324,9 +459,13 @@ test("every page and declaration of the documentation site is in the tree", asyn
     let owner: Reflection | undefined = declaration.parent;
     while (owner && !ids.has(owner.getFullName())) owner = owner.parent;
     assert.ok(owner, `${declaration.getFullName()} is not in the tree`);
-    assert.ok(
-      ids.get(owner.getFullName())!.t.includes(declaration.name),
-      `${declaration.getFullName()} is not in the text of ${owner.getFullName()}`,
+    // Described as a member: `name: type`, `name?: type` or `name`, in a
+    // list or in the declaration's type (`{ slot: string; … }`).
+    const name = declaration.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(
+      ids.get(owner.getFullName())!.t,
+      new RegExp(`(\`|\\{ |; )${name}(\\??: |\`)`),
+      `${declaration.getFullName()} is not described in ${owner.getFullName()}`,
     );
     described++;
   }

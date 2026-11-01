@@ -26,7 +26,7 @@ The package publishes compiled `.js` and `.d.ts` files, not `.ts` sources: Node 
 
 ## API documentation
 
-- The reference is generated from the TSDoc comments in `src/` by TypeDoc (pinned in `devDependencies`, configured in `typedoc.json`). Entry points are the public entries `.` (`src/index.ts`) and `./testing` (`src/plugin/testing.ts`). `./runtime` and wire-level modules are internal and not documented.
+- The reference is generated from the TSDoc comments in `src/` by TypeDoc (pinned in `devDependencies`, configured in `typedoc.json`). Entry points are the public entries `.` (`src/index.ts`), `./testing` (`src/plugin/testing.ts`) and `./docs` (`src/docs.ts`, the documentation tree's reader). `./runtime` and wire-level modules are internal and not documented.
 - `README.md` is the site's front page (it must render on GitHub, npm and TypeDoc: absolute URLs for images and repository links, no `<picture>`, no GitHub alerts).
 - The hand-written pages live in one folder per navigation group under `docs/` (see [Documentation structure](#documentation-structure)). `scripts/typedoc-plugin.mjs` puts every page in the group of its folder, in the order of `scripts/doc-structure.mjs`; the two entry points are "API". `docs/maintaining.md` (this page) is deliberately not on the site.
 - Example walkthroughs (`docs/examples/<name>.md`) pull code from the example with `{@includeCode ../../examples/<name>/main.ts#region}` and `// #region name` / `// #endregion name` markers in the source; never paste example code into a page.

@@ -4,9 +4,9 @@
 
 ## Read the documentation
 
-- **Command line** (any coding agent, in a project that depends on the SDK): `npx vestra-plugin docs [path] [--page N]` prints one node of the tree; `npx vestra-plugin docs --search <words>` lists the matching paths.
+- **Command line** (any coding agent): `npx -p @vestra-player/sdk vestra-plugin docs [path] [--page N]` prints one node of the tree; `npx -p @vestra-player/sdk vestra-plugin docs --search <words>` lists the matching paths. In a project that depends on the SDK, `npx vestra-plugin docs` is enough.
 - **In a Node.js program**: `import { docs, searchDocs } from "@vestra-player/sdk/docs"`; `docs(path, { page })` and `searchDocs(query, { page })` return the same text.
-- **Paths**: `/` lists the top level; every answer lists the paths one level down with a one-line summary. `/API/<category>/<symbol>/<member>` is one declaration with its signature, parameters, return value, errors, capability, player version and examples, for example `/API/Media/Snapshot/dispose`. `/Guides/<group>/<page>` is a page of the site, for example `/Guides/How-to/Test a plugin` (the file name works too: `/Guides/How-to/testing`). Case, spaces and punctuation do not matter, the leading `/` is optional, and a symbol's name alone finds it (`Snapshot`).
+- **Paths**: `/` lists the top level; every answer lists the paths one level down with a one-line summary. `/API/<category>/<symbol>/<member>` is one declaration with its signature, parameters, return value, errors, capability, player version and examples, for example `/API/Media/Snapshot/dispose`. `/Guides/<group>/<page>` is a page of the site, for example `/Guides/How-to/Test a plugin` (the file name works too: `/Guides/How-to/testing`). Case, spaces and punctuation do not matter, the leading `/` is optional, `.` works like `/`, a name alone finds its declaration (`TestHost`, `Snapshot.export`, `plugin.player`), and `#heading` opens the page of a long answer that has that section.
 - **Size**: every answer is at most 8 KB; a longer one ends with the number of its next page (`--page 2`).
 - **Before writing code**, read `/Guides/Tutorials/Getting started` and `/Guides/Guidelines`, then the API of what you use. Test with `/Guides/How-to/Test a plugin`.
 
@@ -14,7 +14,7 @@
 
 - `/Overview`: The package's README: what the SDK is, installing it and where to start.
 - `/Guides`: The documentation pages, by group: tutorials, how-to guides, reference, explanation, guidelines, examples, upgrading.
-- `/API`: Every type and value of @vestra-player/sdk (the plugin API) and @vestra-player/sdk/testing (the test host), by category.
+- `/API`: Every type and value of @vestra-player/sdk (the plugin API), @vestra-player/sdk/testing (the test host) and @vestra-player/sdk/docs (this tree), by category.
 
 ## Guides
 
@@ -39,3 +39,4 @@
 - `/API/Subtitles`: 5 entries: SubtitleTrack, SubtitlesState, SubtitleConditional, Subtitles, SubtitleStyle
 - `/API/UI`: 42 entries: ImageRef, ImageOptions, MarkdownRef, MarkdownOptions, PropValue, PropData, Props, Ui, View, Window, Windows, SlotState, SlotPanel, PanelState, PanelSlot, SidebarSlot, Panel,…
 - `/API/Testing`: 32 entries: CapabilityInfo, CAPABILITY_INFO, MESSAGE_LIMIT, COMMAND_LIMITS, MENU_IDS, BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, BuiltinSubmenu, BUILTIN_SUBMENUS, BuiltinCommand, BUILTIN_COMMANDS, LOCALES,…
+- `/API/Docs`: 4 entries: DOCS_PAGE_BYTES, DocsOptions, docs, searchDocs

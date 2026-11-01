@@ -30,21 +30,26 @@
  * first. `src/docs.ts` reads it.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, posix, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { Application, Reflection, ReflectionKind } from "typedoc";
-import { GROUPS } from "./doc-structure.mjs";
+import { GROUPS, REDIRECTS } from "./doc-structure.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const SITE = "https://vestrasys.github.io/vestra-player-sdk/";
+/** Files of the repository that are not pages of the site link here. */
+const REPOSITORY = "https://github.com/vestrasys/vestra-player-sdk/blob/main/";
 /** A one-line summary is cut to about this many characters. */
 const SUMMARY = 200;
 /** The entry points and how a plugin imports them. */
 const ENTRY = {
   "@vestra-player/sdk": "@vestra-player/sdk",
   "@vestra-player/sdk/testing": "@vestra-player/sdk/testing",
+  "@vestra-player/sdk/docs": "@vestra-player/sdk/docs",
 };
+/** Letters and digits only, lower case: "Example: Blur" → "exampleblur". */
+const loose = (text) => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 /** TypeDoc's model of the project, as the site's build makes it. */
 export async function convertProject() {
@@ -100,18 +105,42 @@ export function buildTree(project) {
     return made;
   };
   const add = (parent, child) => {
-    let name = child.name.replace(/\//g, "∕");
-    const taken = (candidate) =>
-      parent.children.some(
-        (other) => other.name.toLowerCase() === candidate.toLowerCase(),
-      );
-    if (taken(name)) name = `${name} (${child.kind.toLowerCase()})`;
-    for (let i = 2; taken(name); i++) name = `${child.name} (${i})`;
-    child.name = name;
+    child.name = child.name.replace(/\//g, "∕");
     child.parent = parent;
     parent.children.push(child);
     return child;
   };
+  /**
+   * Siblings that share a name (any case) all get a suffix, the same
+   * whatever order they were added in: their kind, and a number in the
+   * order of their ids when the kind is the same too. The plain name stays
+   * an alias.
+   */
+  const distinct = (n) => {
+    const groups = new Map();
+    for (const child of n.children) {
+      const key = child.name.toLowerCase();
+      groups.set(key, [...(groups.get(key) ?? []), child]);
+    }
+    for (const same of groups.values()) {
+      if (same.length < 2) continue;
+      const byKind = new Map();
+      for (const child of same)
+        byKind.set(child.kind, [...(byKind.get(child.kind) ?? []), child]);
+      for (const [kind, list] of byKind) {
+        list.sort((a, b) =>
+          String(a.id ?? a.name).localeCompare(String(b.id ?? b.name)),
+        );
+        list.forEach((child, i) => {
+          child.aliases = [...(child.aliases ?? []), child.name];
+          child.name = `${child.name} (${kind.toLowerCase()}${list.length > 1 ? ` ${i + 1}` : ""})`;
+        });
+      }
+    }
+    n.children.forEach(distinct);
+  };
+  /** A Markdown link target: angle brackets around one with spaces or brackets. */
+  const href = (target) => (/[\s()<>]/.test(target) ? `<${target}>` : target);
   const pathOf = (target) => {
     for (let r = target; r; r = r.parent) {
       const found = byReflection.get(r.id);
@@ -129,40 +158,95 @@ export function buildTree(project) {
   );
 
   // ── Markdown from TypeDoc's comment parts ─────────────────────────────
-  const parts = (list = []) =>
-    list
-      .map((part) => {
-        if (part.kind === "text" || part.kind === "code") return part.text;
-        if (part.kind === "inline-tag") {
-          const label = part.text;
-          const code = part.tag === "@linkcode" ? `\`${label}\`` : label;
-          // typedoc-plugin-mdn-links can claim an SDK name (Plugin): the
-          // SDK's own declaration wins here.
-          const own =
-            typeof part.target === "string" &&
-            part.target.startsWith("https://developer.mozilla.org/")
-              ? topLevel.get(label)
-              : undefined;
-          if (own) return `[${code}](${pathOf(own)})`;
-          if (typeof part.target === "string")
-            return `[${code}](${part.target})`;
-          const path =
-            part.target instanceof Reflection ? pathOf(part.target) : null;
-          return path ? `[${code}](${path})` : code;
-        }
-        if (part.kind === "relative-link") {
-          const target =
-            part.target === undefined
-              ? undefined
-              : project.files.resolve(part.target, project);
-          const path = target instanceof Reflection ? pathOf(target) : null;
-          if (path)
-            return path + (part.targetAnchor ? `#${part.targetAnchor}` : "");
-          return part.text;
-        }
-        return part.text ?? "";
-      })
-      .join("");
+  /**
+   * Comment or page parts as Markdown. Links to the site's pages and API
+   * become paths of the tree; a relative link to another file of the
+   * repository (`base`: the directory of the page) becomes its GitHub
+   * address; images become their alt text (a line of only an image goes).
+   */
+  const parts = (list = [], base = "") =>
+    finish(
+      list
+        .map((part) => {
+          if (part.kind === "text" || part.kind === "code") return part.text;
+          if (part.kind === "inline-tag") {
+            const label = part.text;
+            const code = part.tag === "@linkcode" ? `\`${label}\`` : label;
+            // typedoc-plugin-mdn-links can claim an SDK name (Plugin): the
+            // SDK's own declaration wins here.
+            const own =
+              typeof part.target === "string" &&
+              part.target.startsWith("https://developer.mozilla.org/")
+                ? topLevel.get(label)
+                : undefined;
+            if (own) return `[${code}](${href(pathOf(own))})`;
+            if (typeof part.target === "string")
+              return `[${code}](${part.target})`;
+            const path =
+              part.target instanceof Reflection ? pathOf(part.target) : null;
+            return path ? `[${code}](${href(path)})` : code;
+          }
+          if (part.kind === "relative-link") {
+            const target =
+              part.target === undefined
+                ? undefined
+                : project.files.resolve(part.target, project);
+            const path = target instanceof Reflection ? pathOf(target) : null;
+            if (path)
+              return href(
+                path + (part.targetAnchor ? `#${part.targetAnchor}` : ""),
+              );
+            return repository(base, part.text);
+          }
+          return part.text ?? "";
+        })
+        .join(""),
+    );
+  /** A path relative to `base` in the repository, as its GitHub address. */
+  const repository = (base, relative) => {
+    if (/^[a-z]+:/i.test(relative) || relative.startsWith("#")) return relative;
+    const [file, anchor] = relative.split("#");
+    const resolved = posix.normalize(posix.join(base, file));
+    if (resolved.startsWith("..")) return relative;
+    return `${REPOSITORY}${resolved}${anchor ? `#${anchor}` : ""}`;
+  };
+  /** Site addresses → paths of the tree; images → their alt text. */
+  const finish = (text) =>
+    text
+      .replace(/^[ \t]*!\[[^\]]*\]\([^)]*\)[ \t]*\n?/gm, "")
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(
+        /\]\((https:\/\/vestrasys\.github\.io\/vestra-player-sdk\/[^)\s]*)\)/g,
+        (whole, url) => {
+          const path = sitePath(url);
+          return path ? `](${href(path)})` : whole;
+        },
+      );
+  /** The tree's path for an address of the documentation site. */
+  const sitePath = (url) => {
+    const [address, anchor] = url.slice(SITE.length).split("#");
+    if (address === "" || address === "index.html") return "/Overview";
+    let found;
+    const page = /^documents\/(.+)\.html$/.exec(address);
+    if (page) found = documentPaths.get(loose(decodeURIComponent(page[1])));
+    const module = /^modules\/(.+)\.html$/.exec(address);
+    if (module) found = modulePaths.get(module[1]);
+    const symbol =
+      /^(?:interfaces|classes|functions|types|variables|enums)\/[^.]+\.(.+)\.html$/.exec(
+        address,
+      );
+    if (symbol) {
+      const r = topLevel.get(symbol[1]);
+      found = r && pathOf(r);
+      const member = r && anchor && r.children?.find((c) => c.name === anchor);
+      if (member) return pathOf(member);
+    }
+    if (!found) return undefined;
+    return anchor && page ? `${found}#${anchor}` : found;
+  };
+  /** Page title (letters and digits) → path; module file name → path. */
+  const documentPaths = new Map();
+  const modulePaths = new Map();
 
   const TAG_TITLES = {
     "@remarks": "Remarks",
@@ -314,7 +398,15 @@ export function buildTree(project) {
     if (!target?.parent) return type.name;
     const path = pathOf(target);
     const name = `${target.parent.name}.${target.name}`;
-    return path ? `[${name}](${path})` : name;
+    return path ? `[${name}](${href(path)})` : name;
+  };
+  /** The SDK's own types a declaration names, as links (after its code). */
+  const typeLinks = (r, code) => {
+    const names = [
+      ...new Set(code.match(/\b[A-Z][A-Za-z0-9_]*\b/g) ?? []),
+    ].filter((name) => name !== r.name && topLevel.has(name));
+    if (!names.length) return "";
+    return `Types: ${names.map((name) => `[${name}](${href(pathOf(topLevel.get(name)))})`).join(", ")}`;
   };
   const symbolText = (r, entry) => {
     const out = [];
@@ -332,7 +424,9 @@ export function buildTree(project) {
       head.push(`Inherited from ${origin(r.inheritedFrom)}.`);
     if (r.overwrites) head.push(`Overrides ${origin(r.overwrites)}.`);
     out.push(head.join("\n"));
-    out.push(`\`\`\`ts\n${declaration(r)}\n\`\`\``);
+    const code = declaration(r);
+    out.push(`\`\`\`ts\n${code}\n\`\`\``);
+    out.push(typeLinks(r, code));
     const signatures = r.signatures?.length
       ? r.signatures
       : [r.getSignature, r.setSignature].filter(Boolean);
@@ -361,7 +455,7 @@ export function buildTree(project) {
     summary:
       "The package's README: what the SDK is, installing it and where to start.",
     render: () =>
-      parts(project.readme)
+      parts(project.readme, "")
         .replace(/^[\s\S]*?(?=^## )/m, "")
         .trim(),
     id: "doc:README.md",
@@ -392,7 +486,7 @@ export function buildTree(project) {
       node(group.title, "Group", {
         summary: index.frontmatter.description ?? "",
         reflection: index,
-        render: () => parts(index.content).trim(),
+        render: () => parts(index.content, `docs/${group.folder}`).trim(),
         id: `doc:${group.folder}/index.md`,
         aliases: [group.folder],
       }),
@@ -408,7 +502,7 @@ export function buildTree(project) {
         node(doc.name, "Page", {
           summary: doc.frontmatter.description ?? "",
           reflection: doc,
-          render: () => parts(doc.content).trim(),
+          render: () => parts(doc.content, `docs/${group.folder}`).trim(),
           id: `doc:${group.folder}/${page.file}`,
           aliases: [basename(page.file, ".md")],
         }),
@@ -425,10 +519,14 @@ export function buildTree(project) {
     rootNode,
     node("API", "Section", {
       summary:
-        "Every type and value of @vestra-player/sdk (the plugin API) and @vestra-player/sdk/testing (the test host), by category.",
+        "Every type and value of @vestra-player/sdk (the plugin API), @vestra-player/sdk/testing (the test host) and @vestra-player/sdk/docs (this tree), by category.",
     }),
   );
-  const modules = project.children ?? [];
+  // In the order of ENTRY: the plugin API, the test host, this tree.
+  const entries = Object.keys(ENTRY);
+  const modules = [...(project.children ?? [])].sort(
+    (a, b) => entries.indexOf(a.name) - entries.indexOf(b.name),
+  );
   api.render = () =>
     modules
       .map(
@@ -486,6 +584,32 @@ export function buildTree(project) {
       `${categoryNode.children.length} entries: ${categoryNode.children.map((c) => c.name).join(", ")}`,
     );
 
+  // An entry point with one category of its own (testing, docs) is that
+  // category; the plugin API is /API.
+  for (const module of modules) {
+    const own = module.categories ?? [];
+    const target =
+      own.length === 1 ? (categories.get(own[0].title) ?? api) : api;
+    byReflection.set(module.id, target);
+    module.target = target;
+  }
+  // Old page titles (REDIRECTS) stay names of their page.
+  for (const [from, to] of Object.entries(REDIRECTS)) {
+    const old = /^documents\/(.+)\.html$/.exec(from)?.[1];
+    const now = /^documents\/(.+)\.html$/.exec(to)?.[1];
+    if (!old || !now) continue;
+    const doc = [...documents.values()].find(
+      (each) => loose(each.name) === loose(decodeURIComponent(now)),
+    );
+    const target = doc && byReflection.get(doc.id);
+    if (!target) throw new Error(`docs-tree: REDIRECTS ${to} is no page`);
+    target.aliases = [
+      ...(target.aliases ?? []),
+      decodeURIComponent(old).replace(/_/g, " "),
+    ];
+  }
+  distinct(rootNode);
+
   // Paths, then the texts (links need every path).
   const assign = (n) => {
     for (const child of n.children) {
@@ -494,9 +618,13 @@ export function buildTree(project) {
     }
   };
   assign(rootNode);
+  for (const doc of documents.values())
+    documentPaths.set(loose(doc.name), byReflection.get(doc.id).path);
+  for (const module of modules)
+    modulePaths.set(module.name.replace(/[@/]/g, "_"), module.target.path);
   rootNode.text = [
     `Vestra Player SDK ${pkg.version}: the documentation of ${SITE}, as a tree of pages.`,
-    "Open a path below; each listing shows the paths one level down. Paths are case-insensitive and the leading / is optional; a guide page also answers to its file name (/Guides/How-to/testing). Long texts come in pages. Search by name or text when you do not know the path.",
+    "Open a path below; each listing shows the paths one level down. Paths ignore case, spaces and punctuation, the leading / is optional, `.` works like `/` (Snapshot.export), a guide page also answers to its file name (/Guides/How-to/testing) and a name alone finds its declaration (TestHost). Long texts come in pages; a #heading opens the page that has it. Search by name or text when you do not know the path.",
   ].join("\n\n");
   for (const n of nodes) {
     if (n === rootNode) continue;

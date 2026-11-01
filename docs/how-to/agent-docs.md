@@ -13,35 +13,39 @@ The documentation is a tree of short nodes with the same pages and API as this s
 
 ### Point the agent at the command line
 
-In a project that depends on `@vestra-player/sdk`, any agent that can run commands reads the tree with `npx vestra-plugin docs`. Put this in the agent's instructions (`CLAUDE.md`, `AGENTS.md`, a Cursor rule):
+In a project that depends on `@vestra-player/sdk`, any agent that can run commands reads the tree with `npx vestra-plugin docs`. Elsewhere (no `package.json` with the SDK yet), name the package: `npx -p @vestra-player/sdk vestra-plugin docs`. Put this in the agent's instructions (`CLAUDE.md`, `AGENTS.md`, a Cursor rule):
 
 ```text
 The Vestra Player SDK documentation is a tree read by path:
-  npx vestra-plugin docs /                     the top level
-  npx vestra-plugin docs /API/Media/Snapshot   an interface and its members
-  npx vestra-plugin docs --search "export"     paths that match
-  npx vestra-plugin docs <path> --page 2       the rest of a long answer
+  npx -p @vestra-player/sdk vestra-plugin docs /                    the top level
+  npx -p @vestra-player/sdk vestra-plugin docs Snapshot             a declaration and its members
+  npx -p @vestra-player/sdk vestra-plugin docs Snapshot.export      one member
+  npx -p @vestra-player/sdk vestra-plugin docs --search "export"    paths that match
+  npx -p @vestra-player/sdk vestra-plugin docs <path> --page 2      the rest of a long answer
 Read /Guides/Tutorials/Getting started and the API of every member you use
 before writing code.
 ```
 
 ### Know the paths
 
-- `/Guides/<group>/<page>` is a page of this site: `/Guides/How-to/Test a plugin`. The page's file name works too: `/Guides/How-to/testing`.
-- `/API/<category>/<symbol>` is a declaration of `@vestra-player/sdk` or `@vestra-player/sdk/testing`, with its import line: `/API/Media/Snapshot`. `/API/Testing` holds the test host.
-- `/API/<category>/<symbol>/<member>` is one member with its signature, parameters, return value, errors, capability, player version and examples: `/API/Media/Snapshot/dispose`.
-- Case, spaces and punctuation do not matter, the leading `/` is optional, and a symbol's name alone finds it: `Snapshot`, `/API/Snapshot`.
+- `/Guides/<group>/<page>` is a page of this site: `/Guides/How-to/Test a plugin`. The page's file name works too, with or without `.md` (`/Guides/How-to/testing`), and so does a page's old title.
+- `/API/<category>/<symbol>` is a declaration of `@vestra-player/sdk`, `@vestra-player/sdk/testing` or `@vestra-player/sdk/docs`, with its import line: `/API/Media/Snapshot`. `/API/Testing` holds the test host, `/API/Docs` this tree's own functions.
+- `/API/<category>/<symbol>/<member>` is one member with its signature, parameters, return value, errors, capability, player version and examples: `/API/Media/Snapshot/dispose`. The SDK types a signature names are linked below it.
+- Case, spaces and punctuation do not matter, the leading `/` is optional, and `.` works like `/`.
+- A name alone finds its node, even when it is not at the level asked: `TestHost`, `TestHost.settle`, `plugin.player`, `/API/Snapshot`. A declaration wins over a guide page of a similar name; one segment that leads nowhere (a wrong category) is left out. When several nodes fit equally well, the answer lists them instead of guessing.
+- `#heading` after a path opens the page of a long answer that has that section: `/Guides/Reference/Test host#acting-like-the-user`.
 - A path that matches nothing answers with the nearest names and the contents of the level it reached.
+- Links in the text are paths of the tree; a path with spaces is written in angle brackets, `[Test a plugin](</Guides/How-to/Test a plugin>)`, and the brackets may be passed along as they are. Files of the repository that are not pages link to GitHub.
 
-In Git Bash on Windows, write the path without its leading `/` (`API/Media`): the shell turns `/API` into a Windows path. `vestra-plugin docs` undoes that conversion when it can.
+In Git Bash on Windows the shell turns a leading `/API` into a Windows path (`C:/Program Files/Git/API`). `vestra-plugin docs` recognises Git Bash by its `MSYSTEM` variable and starts again at the tree's top level; writing the path without its leading `/` (`API/Media`) avoids the conversion altogether.
 
 ### Search when you do not know the path
 
-`npx vestra-plugin docs --search <words>` lists the nodes that contain every word, names first, each with its path and summary. Search for the thing, not the question: `--search snapshot export`, `--search onError`.
+`npx vestra-plugin docs --search <words>` lists the nodes that contain every word, each with its path and summary. Common words ("a", "the", "to") are left out; a name that matches ranks first, a declaration's before a page's, and a path that contains every word before one that does not. Search for the thing, not the question: `--search snapshot export`, `--search open window`.
 
 ### Read long answers in pages
 
-An answer longer than 8 KB ends with `(Page 1 of 3. Read on with page 2 of …)`. Ask for the next one with `--page 2`. Code blocks cut by a page break are closed and reopened, so each page is valid Markdown.
+An answer longer than 8 KB ends with `(Page 1 of 3. Read on with page 2 of …)`. Ask for the next one with `--page 2`. Page 1 of a long page lists its sections with the page each starts on. A code block cut by a page break is closed at the break and opened again on the next page, a short one moves to the next page whole, and a table cut by a break repeats its header row.
 
 ### Call it from a program
 

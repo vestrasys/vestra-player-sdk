@@ -69,7 +69,7 @@ Plugins reach the store through pull requests to the official plugin repository.
 
 ## Give a coding agent the documentation
 
-Claude Code, Cursor or the player's own Vestra Player AI read this documentation as a tree of short nodes, like `go doc`: `npx vestra-plugin docs /API/Media/Snapshot/dispose` prints one member's signature, errors, capability and examples, `--search` finds paths, and every answer stays under 8 KB. The guide shows what to put in the agent's instructions, the path scheme, searching, paging, and the same calls from a program with `@vestra-player/sdk/docs`.
+Claude Code, Cursor or the player's own Vestra Player AI read this documentation as a tree of short nodes, like `go doc`: `npx -p @vestra-player/sdk vestra-plugin docs Snapshot.dispose` prints one member's signature, errors, capability and examples, `--search` finds paths, and every answer stays under 8 KB. The guide shows what to put in the agent's instructions, the path scheme, searching, paging, and the same calls from a program with `@vestra-player/sdk/docs`.
 
 [Read the guide](agent-docs.md)
 

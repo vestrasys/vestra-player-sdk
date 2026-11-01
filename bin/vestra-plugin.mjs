@@ -963,7 +963,17 @@ async function docsCommand(args) {
     return;
   }
   // A path with spaces may come as several arguments.
-  console.log(docs(args.length ? args.join(" ") : "/", { page }));
+  let path = args.length ? args.join(" ") : "/";
+  // Git Bash (MSYSTEM) turns "/API/Media" into "<its root>/API/Media":
+  // start again at the tree's top level.
+  if (process.env.MSYSTEM && /^[A-Za-z]:[\\/]/.test(path)) {
+    const segments = path.split(/[\\/]/);
+    const top = segments.findIndex((segment) =>
+      ["overview", "guides", "api"].includes(segment.toLowerCase()),
+    );
+    if (top > 0) path = `/${segments.slice(top).join("/")}`;
+  }
+  console.log(docs(path, { page }));
 }
 
 async function main() {
