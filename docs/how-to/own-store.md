@@ -17,25 +17,41 @@ Use the id rule of the official repository, so that your plugin can move there l
 
 ### Write the index
 
-`index.json` has `schema: 1`, a `name` (the store shows it with your host: `Someone's plugins (someone.github.io)`) and the `plugins`. A plugin's display fields come from its manifest; `versions` lists each version with its package:
+`index.json` has `schema: 1`, a `name` (the store shows it with your host: `Someone's plugins (someone.github.io)`) and the `plugins`. A plugin's display fields come from its manifest; `versions` lists each version with its package. The smallest useful index:
 
-- `version`, `apiVersion` (`vestra/1`), `minPlayerVersion` (or `null`) and `capabilities`, copied from the version's `manifest.json`. The store refuses a downloaded package whose id, version or capabilities differ from the entry.
-- `downloadUrl` (https), `sha256` (lowercase hex) and `size` (bytes, at most 64 MiB) of the `.vxp`; the store installs it only when both match.
-- `published`: a date (ISO 8601). The store sorts `versions` itself, newest first.
-- `iconUrl`, `readmeUrl`, `changelogUrl`, each with its `…Sha256` and `…Size`, or all three `null`. Icon PNG or JPEG, at most 512 KiB; README and changelog at most 256 KiB. Keep them on the same host as `index.json`: from an unofficial store the store loads no icon from another host, and loads a README there only when the user asks.
-- Optional: `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl`, `translations` (the display fields per language, as in the [official index](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#indexjson)) and `revoked`: versions the store disables on users' machines, with a reason. Only your store can revoke what was installed from it.
+```json
+{ "schema": 1, "name": "Someone's plugins", "revoked": [], "plugins": [
+  { "id": "someone.cool-visualizer", "name": "Cool Visualizer", "versions": [
+    { "version": "1.0.0", "apiVersion": "vestra/1", "minPlayerVersion": null,
+      "capabilities": ["commands", "ui.osd"],
+      "downloadUrl": "https://someone.github.io/my-plugins/packages/someone.cool-visualizer-1.0.0.vxp",
+      "sha256": "<64 lowercase hex digits>", "size": 9370, "published": "2026-11-01T12:00:00Z" } ] } ] }
+```
+
+- `version`, `apiVersion` (`vestra/1`), `minPlayerVersion` (or `null`) and `capabilities` are copied from the version's `manifest.json`. The store refuses a downloaded package whose id, version or capabilities differ from the entry.
+- `downloadUrl` (https), `sha256` and `size` (bytes, at most 64 MiB) are those of the `.vxp`; the store installs it only when both match. `published` is a date (ISO 8601); the store sorts `versions` itself, newest first.
+- `iconUrl`, `readmeUrl` and `changelogUrl` each come with `…Sha256` and `…Size`, or all three are `null`. The icon is PNG or JPEG of at most 512 KiB; README and changelog at most 256 KiB each. Keep them on the same origin as `index.json` (scheme, host and port): from an unofficial store the store loads no icon from another origin, and a README or changelog there only when the user asks. Images in your README show after the user clicks Show Images; publish them next to it, since relative links resolve against the README's address.
+- Optional: `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl` and `translations` (the display fields per language, as in the [official index](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#indexjson)).
+- `revoked` (optional, top level): versions the store disables on users' machines, telling them why. Each entry is `{ "id": "someone.cool-visualizer", "versions": ">=1.0.0 <1.2.0", "reason": "Deletes files outside its data directory. Update to 1.2.0." }`: `versions` an exact version or a range (`<`, `<=`, `>`, `>=`, `=` joined by spaces, alternatives by `||`, `*` for all), `reason` at most 500 characters. Only the store a plugin was installed from can revoke it; more than 1,000 entries make the store refuse the whole index.
 
 The store ignores unknown keys and drops an entry it cannot use (a bad version, a missing digest) on its own. It reads at most 4 MiB of index, 2,000 plugins and 200 versions each. `official: true` in your index changes nothing: only the address built into the player is official.
 
 ### Build it with GitHub Actions and Pages
 
-The official repository's publishing is tied to its signing key, so it is not a template. A small script is enough: keep each plugin in `plugins/<name>/`, let `vestra-plugin pack` build the packages into the Pages folder, and write the index next to them (the [complete example](#complete-example)). In the repository's settings, set **Pages ▸ Source** to **GitHub Actions**; the repository must be public. Each push to `main` then tests and packs every plugin and publishes `https://<owner>.github.io/<repo>/index.json`.
+The official repository's publishing is tied to its signing key, so it is not a template. A small script is enough: keep each plugin in `plugins/<name>/`, let `vestra-plugin pack` build the packages into `site/`, and write the index next to them (the [complete example](#complete-example)). Commit `package-lock.json` (the workflow runs `npm ci`) and put `site/` and `plugins/*/dist/` in `.gitignore`. In the repository's settings, set **Pages ▸ Source** to **GitHub Actions**; the repository must be public. Each push to `main` then tests and packs every plugin and publishes `https://<owner>.github.io/<repo>/index.json`, which users see after the deployment and at most 10 minutes of caching.
 
-A version is published once: bump `version` in the manifest for every change, or users never see it. The script below publishes the current version of each plugin only; to keep older ones installable, add their entries (and packages) to the index from the previous run, as the official repository does with GitHub Releases.
+A version is published once: bump `version` in the manifest for every change, or users never see it. Each Pages deployment replaces the whole site, so the script lists only the current version of each plugin, and the packages of older versions disappear with it. To keep them installable, carry them over: download the previous index and its packages before building and keep their entries, or attach each `.vxp` to a GitHub Release, as the official repository does.
 
 ### Test it before you share it
 
-Build with the local address (`STORE_URL=http://localhost:8080/ node scripts/build-index.ts`), serve `site/` on this machine (`npx http-server site`, say) and add `http://localhost:8080/` as a repository. Plain http is accepted only for `localhost`, `127.0.0.1` and `[::1]`, with a note that it is a test repository on this machine, without encryption.
+Build with the local address and serve `site/` on this machine (`npx http-server site`, say):
+
+```sh
+STORE_URL=http://localhost:8080/ node scripts/build-index.ts     # PowerShell: $env:STORE_URL="http://localhost:8080/"; node scripts/build-index.ts
+npx http-server site
+```
+
+Then add `http://localhost:8080/` as a repository. Plain http is accepted only for `localhost`, `127.0.0.1` and `[::1]`, with a note that it is a test repository on this machine, without encryption. The list shows no icons for it (they need https), and after a rebuild click Refresh: the store reads an index again on its own only after 10 minutes.
 
 ### Tell users how to add it
 
@@ -47,55 +63,66 @@ In the store, **⚙ ▸ Repositories…** (or **Options ▸ Plugins ▸ Plugin S
 >
 > Its plugins are not reviewed by Vestra Player and may read your files or use the network. The store shows this repository's plugins but does not judge for you whether they can be trusted.
 
-A user can add up to 16 repositories besides the official one. Your plugins are then listed with "Unofficial: Someone's plugins (someone.github.io)", and their page says "Unofficial repository: not reviewed by Vestra Player; plugins may read your files or use the network". Installing asks "Install “Cool Visualizer” 1.0.0 from an unofficial repository?", with "Repository: Someone's plugins (someone.github.io). This repository is not reviewed by Vestra Player; its plugins may read your files or use the network. Only install plugins from authors you trust." above the list of permissions. Remote images in your README stay hidden until the user clicks Show Images.
+A user can add up to 16 repositories besides the official one. Your plugins are then listed with "Unofficial: Someone's plugins (someone.github.io)", and their page says "Unofficial repository: not reviewed by Vestra Player; plugins may read your files or use the network". Installing asks "Install “Cool Visualizer” 1.0.0 from an unofficial repository?", above the list of permissions:
 
-The store offers updates of a plugin only from the repository it was installed from. It reads your index again when the store opens (if its copy is older than 10 minutes) and at its automatic check, 30 seconds after the player starts and then every 24 hours; it never installs on its own.
+> Repository: Someone's plugins (someone.github.io) (https://someone.github.io/my-plugins/index.json). This repository is not reviewed by Vestra Player; its plugins may read your files or use the network. Only install plugins from authors you trust.
+
+The confirming button is **Install Anyway**. The store offers updates of a plugin only from the repository it was installed from. It reads your index again when the store opens (if its copy is older than 10 minutes) and at its automatic check, 30 seconds after the player starts and then every 24 hours; it never installs on its own.
 
 ## Complete example
 
-A repository `someone/my-plugins` with `package.json` (`"type": "module"`, `@vestra-player/sdk` in `devDependencies`), `plugins/<name>/` per plugin (manifest, sources, `tests/`, `README.md`, `CHANGELOG.md`) and two files. `scripts/build-index.ts` packs the plugins into `site/` and writes `site/index.json`:
+A repository `someone/my-plugins` with `package.json` (`"type": "module"`, `@vestra-player/sdk` in `devDependencies`), `plugins/<name>/` per plugin (manifest, sources, `tests/`, README and changelog) and two files. `scripts/build-index.ts` packs the plugins into `site/packages/`, publishes their README, changelog and icon (and the README's images) under `site/assets/<id>/<version>/`, and writes `site/index.json`:
 
 ```ts
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import { dirname, extname, join } from "node:path";
 
-// The Pages address (a local one to test: STORE_URL=http://localhost:8080/).
-const BASE = process.env.STORE_URL ?? "https://someone.github.io/my-plugins/";
+// The Pages address (to test locally: STORE_URL=http://localhost:8080/).
+const BASE = (process.env.STORE_URL ?? "https://someone.github.io/my-plugins/").replace(/\/?$/, "/");
+const CLI = join("node_modules", "@vestra-player", "sdk", "bin", "vestra-plugin.mjs");
 const site = "site";
 const digest = (path: string) => {
   const bytes = readFileSync(path);
   return { sha256: createHash("sha256").update(bytes).digest("hex"), size: bytes.length };
 };
+const copy = (from: string, to: string) => {
+  mkdirSync(dirname(join(site, to)), { recursive: true });
+  copyFileSync(from, join(site, to));
+};
 const plugins = [];
 for (const name of readdirSync("plugins").sort()) {
   const dir = join("plugins", name);
-  // dist/ and <id>-<version>.vxp; on Windows npx needs a shell
-  execFileSync("npx", ["vestra-plugin", "pack", dir, "--out", join(site, "packages")], {
-    stdio: "inherit",
-    shell: process.platform === "win32",
-  });
+  execFileSync(process.execPath, [CLI, "pack", dir, "--out", join(site, "packages")], { stdio: "inherit" });
   const manifest = JSON.parse(readFileSync(join(dir, "dist", "manifest.json"), "utf8"));
-  const file = `${manifest.id}-${manifest.version}.vxp`;
+  const file = `packages/${manifest.id}-${manifest.version}.vxp`;
+  const folder = `assets/${manifest.id}/${manifest.version}`;
   const assets: Record<string, string | number | null> = {};
-  const shown: [string, string | undefined][] = [
-    ["readme", "README.md"],
-    ["changelog", "CHANGELOG.md"],
-    ["icon", manifest.icon],
+  const shown: [string, string | undefined, string][] = [
+    ["readme", manifest.readme ?? "README.md", "README.md"],
+    ["changelog", manifest.changelog ?? "CHANGELOG.md", "CHANGELOG.md"],
+    ["icon", manifest.icon, "icon"],
   ];
-  for (const [field, source] of shown) {
-    const from = source && join(dir, source);
+  for (const [field, source, published] of shown) {
+    const from = source ? join(dir, source) : "";
     if (!from || !existsSync(from)) {
       Object.assign(assets, { [`${field}Url`]: null, [`${field}Sha256`]: null, [`${field}Size`]: null });
       continue;
     }
-    const published = `assets/${manifest.id}/${field}${extname(from)}`;
-    mkdirSync(join(site, "assets", manifest.id), { recursive: true });
-    copyFileSync(from, join(site, published));
+    const to = `${folder}/${published}${field === "icon" ? extname(from) : ""}`;
+    copy(from, to);
     const { sha256, size } = digest(from);
-    Object.assign(assets, { [`${field}Url`]: BASE + published, [`${field}Sha256`]: sha256, [`${field}Size`]: size });
+    Object.assign(assets, { [`${field}Url`]: BASE + to, [`${field}Sha256`]: sha256, [`${field}Size`]: size });
+    // The README's own images, at the same relative paths.
+    if (field === "readme")
+      for (const [, image = ""] of readFileSync(from, "utf8").matchAll(/!\[[^\]]*\]\(\s*<?([^)\s>]+)/g))
+        if (!/^[a-z]+:|^\/|\.\./i.test(image) && existsSync(join(dirname(from), image)))
+          copy(join(dirname(from), image), `${folder}/${image}`);
   }
+  // The date of the commit that last changed the manifest: stable across builds.
+  const git = ["log", "-1", "--format=%cI", "--", join(dir, "manifest.json")];
+  const published = execFileSync("git", git, { encoding: "utf8" }).trim();
   plugins.push({
     id: manifest.id,
     name: manifest.name ?? manifest.id,
@@ -112,9 +139,9 @@ for (const name of readdirSync("plugins").sort()) {
         apiVersion: manifest.apiVersion,
         minPlayerVersion: manifest.minPlayerVersion ?? null,
         capabilities: manifest.capabilities,
-        downloadUrl: `${BASE}packages/${file}`,
-        ...digest(join(site, "packages", file)),
-        published: new Date().toISOString(),
+        downloadUrl: BASE + file,
+        ...digest(join(site, file)),
+        published: published || new Date().toISOString(),
       },
     ],
   });
@@ -123,7 +150,7 @@ const index = { schema: 1, name: "Someone's plugins", plugins, revoked: [] };
 writeFileSync(join(site, "index.json"), `${JSON.stringify(index, null, 2)}\n`);
 ```
 
-`.github/workflows/publish.yml` runs it on every push to `main` and deploys `site/` to Pages:
+`.github/workflows/publish.yml` runs it on every push to `main` and deploys `site/` to Pages, one deployment at a time:
 
 ```yaml
 name: Publish
@@ -131,6 +158,9 @@ on:
   push:
     branches: [main]
 permissions: {}
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -138,6 +168,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the commit dates for `published`
       - uses: actions/setup-node@v7
         with:
           node-version: "26"
@@ -164,6 +196,6 @@ jobs:
 ## See also
 
 - [Publish a plugin](publish.md): the official repository, its review and its signed index.
-- [Manifest](../reference/manifest.md): the display fields and `minPlayerVersion` the index copies.
+- [Manifest](../reference/manifest.md): the display fields, `readme`, `changelog`, `icon` and `minPlayerVersion` the index copies.
 - [Command line](../reference/cli.md): `vestra-plugin pack` and `test`.
-- The official repository's [`index.json` format](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#indexjson), the reference for the fields above.
+- The official repository's [`index.json` format](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#indexjson) and [revocations](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#revoking-a-version), the reference for the fields above.
