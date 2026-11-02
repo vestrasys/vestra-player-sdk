@@ -4048,7 +4048,7 @@ export class TestHost implements Transport {
     method: "setEnabled" | "reload" | "uninstall" | "install";
     /** The target plugin id. */
     id: string;
-    /** `setEnabled`'s value. */
+    /** `setEnabled`'s value, or `install`'s `enabled` option when given. */
     enabled?: boolean;
     /** `uninstall`'s `removeData` option. */
     removeData?: boolean;
@@ -4062,7 +4062,11 @@ export class TestHost implements Transport {
    * `.vxp` file) → its manifest. Other paths fail with `missing`. `install`
    * adds or upgrades the entry in {@link TestHost.packages} following the
    * player's source rules: the same source upgrades, another source needs
-   * `replace` (`conflict` otherwise), a built-in id is `unsupported`.
+   * `replace` (`conflict` otherwise), a built-in id is `unsupported`. As
+   * player 0.6.4 (planned), the installed entry's `state` follows
+   * {@link "@vestra-player/sdk"!InstallOptions.enabled}: a first install
+   * runs, an update of a `disabled` entry stays `disabled` unless `enabled`
+   * is `true`, and `enabled: false` installs it `disabled`.
    *
    * @example Offer a package file the plugin can install
    * The plugin can validate and install `/downloads/someone.demo-1.0.0.vxp`
@@ -6302,6 +6306,10 @@ export class TestHost implements Transport {
       if (source.kind === "bundled")
         throw new HostError("invalid", "source bundled is reserved");
       const replace = p.replace === true;
+      // As player 0.6.4: `enabled` is a boolean, or absent (`null` too).
+      const requested = p.enabled ?? undefined;
+      if (requested !== undefined && typeof requested !== "boolean")
+        throw new HostError("invalid", "enabled must be a boolean");
       const entry = this.packages.find((each) => each.id === manifest.id);
       if (entry?.builtin)
         throw new HostError(
@@ -6324,12 +6332,17 @@ export class TestHost implements Transport {
         id: manifest.id,
         source,
         replace,
+        ...(requested === undefined ? {} : { enabled: requested }),
       });
+      // As player 0.6.4: a first install runs; an update or reinstall (any
+      // source, `replace` included) keeps a disabled plugin disabled unless
+      // `enabled` is given.
+      const enabled = requested ?? entry?.state !== "disabled";
       const next = {
         id: manifest.id,
         version: manifest.version,
         origin: "installed" as const,
-        state: "running" as const,
+        state: enabled ? ("running" as const) : ("disabled" as const),
         error: null,
         capabilities: [...manifest.capabilities],
         directory: `/test-host/packages/${manifest.id}`,
