@@ -34,8 +34,8 @@ class FileTypesService {
    * The list listeners last heard, not the one read at start: a plugin
    * woken from standby reads the new list from `window.state`, then gets
    * the `resolvers.fileTypes` the player held for it, and its listeners
-   * still hear that change. The player sends the event only on a real
-   * change, so the rare extra call costs little.
+   * still hear that change. The player sends the event only when the list
+   * changed, so a first event is always news to the listeners.
    */
   #notified: readonly string[] | undefined;
   #started = false;

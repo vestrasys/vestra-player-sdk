@@ -26,19 +26,33 @@ class AppearanceService {
   language: LanguagePreference;
   readonly #listeners = new Set<(theme: ThemeId) => void>();
   /**
-   * The theme listeners last heard, not the one read at start: a plugin
-   * woken from standby reads the new theme from `window.state`, then gets
-   * the `appearance.changed` the player held for it, and its listeners
-   * still hear that change. The player sends the event only on a real
-   * change, so the rare extra call costs little.
+   * The theme listeners last heard (or the last event's), not the one read
+   * at start: a plugin woken from standby reads the new theme from
+   * `window.state`, then gets the `appearance.changed` the player held for
+   * it, and its listeners still hear that change. Left unset until the
+   * first event on purpose: set from the start-up read, it would hide that
+   * held change again.
    */
   #notified: ThemeId | undefined;
+  /**
+   * The language as the start-up read and later events carried it (not
+   * `language`, which the plugin's own `setLanguage` changes before its
+   * echo arrives). The player sends `appearance.changed` once per change
+   * of the theme or of the language, each with both values: an event whose
+   * language differs from this one is a language change, and its theme is
+   * compared with `theme` as before. Only a newest event that repeats the
+   * start-up language is taken for a theme change; a plugin woken for a
+   * language change gets that too, so its listeners may hear the unchanged
+   * theme once (the event does not say what changed).
+   */
+  #eventLanguage: LanguagePreference;
   #started = false;
   constructor(runtime: Runtime) {
     this.#runtime = runtime;
     this.theme =
       (windowOf(runtime).appearance as ThemeId | undefined) ?? "vestra";
     this.language = preference(windowOf(runtime).language) ?? "system";
+    this.#eventLanguage = this.language;
   }
   start() {
     if (this.#started) return;
@@ -49,18 +63,27 @@ class AppearanceService {
       (data) => {
         const event = data as { theme?: ThemeId; language?: string } | null;
         const language = preference(event?.language);
+        // Older players send no language: their events are theme changes.
+        const languageChanged =
+          language !== undefined && language !== this.#eventLanguage;
+        if (language) this.#eventLanguage = language;
         if (language && language !== this.language) {
           this.language = language;
           this.#runtime.invalidate();
         }
         const theme = event?.theme;
-        if (theme && THEMES.includes(theme)) this.changed(theme);
+        if (!theme || !THEMES.includes(theme)) return;
+        if (languageChanged) {
+          // The theme came along unchanged (or this plugin set it already).
+          this.accept(theme);
+          this.#notified = theme;
+        } else this.changed(theme);
       },
       "events",
       true,
     );
   }
-  /** From `appearance.changed`: listeners hear it unless they already did. */
+  /** A theme change event: listeners hear it unless they already did. */
   changed(theme: ThemeId) {
     const changed = theme !== this.theme;
     this.theme = theme;

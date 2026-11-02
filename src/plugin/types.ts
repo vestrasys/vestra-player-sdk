@@ -3263,7 +3263,10 @@ export interface Appearance {
    * go to {@link Scope.onError}. When the player starts a stopped plugin
    * for a palette change (player 0.5.21), {@link Appearance.theme} already
    * has the new palette at start and the listener still hears the change
-   * (SDK 1.5.56; before, it did not run).
+   * (SDK 1.5.56; before, it did not run). A language change does not call
+   * it, except in one case: a plugin started for a language change alone
+   * may hear the unchanged palette once, since the player's event does not
+   * say which of the two changed.
    *
    * @capability events
    *

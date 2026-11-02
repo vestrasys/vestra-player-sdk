@@ -193,3 +193,94 @@ test("appearance: a change held across standby still reaches onChange", async ()
   assert.deepEqual(changes, ["vestra-light", "vestra", "vestra-light"]);
   await stop();
 });
+
+test("appearance: a language change does not call the theme onChange", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["events", "ui.theme"],
+    host,
+  });
+  const changes: string[] = [];
+  plugin.appearance.onChange((theme) => changes.push(theme));
+  await host.settle();
+  // Another plugin (or the user) picks a language: the event carries the
+  // unchanged theme.
+  host.setLanguage("fr");
+  await host.settle();
+  assert.equal(plugin.appearance.language, "fr");
+  assert.deepEqual(changes, []);
+  // The plugin's own setLanguage, and the player's echo of it.
+  await plugin.appearance.setLanguage("de");
+  await host.settle();
+  host.emit("appearance.changed", { theme: "vestra", language: "de" });
+  await host.settle();
+  assert.equal(plugin.appearance.language, "de");
+  assert.deepEqual(changes, []);
+  // A theme change after them is heard, once.
+  host.setAppearance("vestra-light");
+  await host.settle();
+  host.emit("appearance.changed", { theme: "vestra-light", language: "de" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light"]);
+  // So is a theme change sent by an older player, without a language.
+  host.emit("appearance.changed", { theme: "vestra" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light", "vestra"]);
+  await stop();
+});
+
+test("appearance: the plugin's own setLanguage echo alone does not call onChange", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["events", "ui.theme"],
+    host,
+  });
+  const changes: string[] = [];
+  plugin.appearance.onChange((theme) => changes.push(theme));
+  await host.settle();
+  await plugin.appearance.setLanguage("fr");
+  await host.settle();
+  assert.deepEqual(changes, []);
+  await stop();
+});
+
+test("appearance: woken after a theme and a language change, onChange hears the theme", async () => {
+  // The player keeps only the newest held event: the language change's,
+  // which carries the new theme too. The start-up read has both.
+  const host = new TestHost();
+  host.appearance = "vestra-light";
+  host.language = "fr";
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["events", "ui.theme"],
+    host,
+  });
+  const changes: string[] = [];
+  plugin.appearance.onChange((theme) => changes.push(theme));
+  await host.settle();
+  host.emit("appearance.changed", { theme: "vestra-light", language: "fr" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light"]);
+  await stop();
+});
+
+test("appearance: woken for a language change alone, onChange may hear the theme once", async () => {
+  // The known limit: the held event looks like the theme change of a woken
+  // plugin, since it does not say what changed.
+  const host = new TestHost();
+  host.language = "fr";
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["events", "ui.theme"],
+    host,
+  });
+  const changes: string[] = [];
+  plugin.appearance.onChange((theme) => changes.push(theme));
+  await host.settle();
+  host.emit("appearance.changed", { theme: "vestra", language: "fr" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra"]);
+  // Only once.
+  host.setLanguage("de");
+  await host.settle();
+  assert.deepEqual(changes, ["vestra"]);
+  await stop();
+});
