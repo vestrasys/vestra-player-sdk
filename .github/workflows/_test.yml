@@ -1,7 +1,8 @@
-# Unit tests and the example plugins on Ubuntu, Windows and macOS × Node 26.
-# Both use the `dist` artifact from _build.yml (the CLI resolves the package
-# through dist/).
-# Called by ci.yml, main.yml and release.yml.
+# Unit tests and the example plugins on Ubuntu, Windows and macOS × Node 26,
+# or on the systems the caller names in `os`. Both use the `dist` artifact
+# from _build.yml (the CLI resolves the package through dist/).
+# Called by ci.yml and main.yml (every system), and twice by release.yml:
+# Ubuntu and Windows gate the publish, macOS runs beside it without gating.
 name: Tests
 
 on:
@@ -11,6 +12,10 @@ on:
         description: Use the npm cache (off for releases).
         type: boolean
         default: true
+      os:
+        description: Runner labels to test on, as a JSON array.
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
 
 permissions: {}
 
@@ -24,10 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: ubuntu-latest, node: "26" }
-          - { os: windows-latest, node: "26" }
-          - { os: macos-latest, node: "26" }
+        os: ${{ fromJSON(inputs.os) }}
+        node: ["26"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,10 +57,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: ubuntu-latest, node: "26" }
-          - { os: windows-latest, node: "26" }
-          - { os: macos-latest, node: "26" }
+        os: ${{ fromJSON(inputs.os) }}
+        node: ["26"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
