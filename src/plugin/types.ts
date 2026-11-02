@@ -431,27 +431,37 @@ export interface Scope extends Disposable {
    * @example Save a cache at once when the player is lost
    * The plugin writes its cache file at once when the player crashed or
    * was killed, instead of waiting for the next periodic save. The cleanup
-   * gets a {@link DisposeInfo}: `stopping` says the plugin itself stops
-   * (not a child scope), `reason` why (player 0.6.4; `undefined` with
-   * older players).
+   * may get a {@link DisposeInfo}: `stopping` says the plugin itself stops
+   * (not a child scope), `reason` why (planned for player 0.6.4). Players
+   * whose SDK is older than 1.5.54 call the cleanup without an argument,
+   * so read it with `?.`.
    * ```ts
    * declare function saveCacheNow(): void;
    * // ---cut---
    * plugin.onDispose((info) => {
    *   // The player is gone: ask it nothing, keep what is local.
-   *   if (info.reason === "host-lost") saveCacheNow();
+   *   if (info?.reason === "host-lost") saveCacheNow();
    * });
    * ```
    *
    * @remarks
-   * The cleanup receives a {@link DisposeInfo} (SDK 1.5.54): whether the
-   * plugin stops, and why the player stopped it. A cleanup that takes no
-   * argument works as before.
+   * From SDK 1.5.54 in the player (and in `TestHost`) the cleanup is called
+   * with one argument, a {@link DisposeInfo}: whether the plugin stops, and
+   * why. A player whose own SDK is older calls it without one (`info` is
+   * `undefined`). A cleanup that takes no argument works as before; a
+   * function with optional parameters of its own that is passed directly
+   * (`onDispose(controller.abort.bind(controller))`) now receives the
+   * `DisposeInfo` as its first argument: wrap it (`() => controller.abort()`)
+   * when that matters.
    *
    * @capability None.
    * @since 1.0.0
    */
-  onDispose(cleanup: (info: DisposeInfo) => void | Promise<void>): Disposable;
+  onDispose(
+    cleanup:
+      | ((info?: DisposeInfo) => void | Promise<void>)
+      | (() => void | Promise<void>),
+  ): Disposable;
   /**
    * Errors thrown by handlers that the SDK invoked (command `run`, window and
    * panel callbacks, `onChange` listeners) in this scope. Without a listener
@@ -581,10 +591,11 @@ export interface Plugin extends Scope {
    */
   readonly dataDirectory: string;
   /**
-   * Why the player stops this plugin (SDK 1.5.54, player 0.6.4): set when
-   * the stop begins, before any {@link Scope.onDispose} cleanup runs;
-   * `undefined` while the plugin runs, and for every stop by a player
-   * before 0.6.4. See {@link StopReason}.
+   * Why the player stops this plugin (SDK 1.5.54; the reasons are planned
+   * for player 0.6.4): set when the stop begins, before any
+   * {@link Scope.onDispose} cleanup runs. `undefined` while the plugin
+   * runs, and for every stop by an older player (one whose own SDK is older
+   * than 1.5.54 does not have the property at all). See {@link StopReason}.
    */
   readonly stopReason: StopReason | undefined;
 }
@@ -601,20 +612,21 @@ export interface Plugin extends Scope {
  * - `upgrade`: a new version replaces it.
  * - `idle`: lazy activation stops it after a while without use; its next
  *   use starts it again ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
- * - `failed`: the player stops it for a fault (an unreadable or oversized
- *   line, a malformed request, an input queue that overflowed, an uncaught
- *   exception in the shared process).
+ * - `failed`: the player stops it for a fault (planned to cover an
+ *   unreadable or oversized line, a malformed request, an input queue that
+ *   overflowed, an uncaught exception in the shared process).
  * - `host-lost`: the plugin's runner saw its pipe to the player close
  *   without a stop: the player crashed or was killed. Requests are refused
  *   with `disabled`; clean up locally only.
  *
- * The player sends the reason with `runtime.stop`, and its runner reports
- * `host-lost`, from player 0.6.4 on. Older players give no reason for any
- * stop, a lost player included (`undefined`); so does a stop that does not
- * come from the player (a `TestHost` `stop()` without a reason). A value
- * this SDK does not know reads as `undefined`.
+ * Planned for player 0.6.4: the player sends the reason with
+ * `runtime.stop` and its runner reports `host-lost`; the exact list may
+ * still change with that release. Players up to 0.6.3 give no reason for
+ * any stop, a lost player included (`undefined`); so does a stop that
+ * does not come from the player (a `TestHost` `stop()` without a reason).
+ * A value this SDK does not know reads as `undefined`.
  *
- * @player 0.6.4; older players give no reason (`undefined`).
+ * @player 0.6.4 (planned); older players give no reason (`undefined`).
  * @since 1.5.54
  * @category Plugin
  */
@@ -629,7 +641,9 @@ export type StopReason =
   | "host-lost";
 
 /**
- * What a {@link Scope.onDispose} cleanup is told (SDK 1.5.54).
+ * What a {@link Scope.onDispose} cleanup is told (SDK 1.5.54). A player
+ * whose own SDK is older passes nothing, so the cleanup's parameter is
+ * optional.
  *
  * @since 1.5.54
  * @category Plugin
@@ -641,7 +655,7 @@ export interface DisposeInfo {
    */
   readonly stopping: boolean;
   /**
-   * Why the player stops the plugin (player 0.6.4); `undefined` while
+   * Why the player stops the plugin (planned for player 0.6.4); `undefined` while
    * `stopping` is false, and for every stop by an older player.
    */
   readonly reason?: StopReason;
@@ -6997,8 +7011,11 @@ export interface RenderSettings {
  * result shows in `status`. For shaders that several plugins add at the
  * same time, use {@link VideoShaders} (SDK 1.5.39). After a run of the
  * player that ended abnormally while plugin shaders were drawing, a `set`
- * with a non-empty `shaders` list is refused with `previous-crash`
- * (player 0.6.3; the rules are on {@link VideoShaders}).
+ * whose merged values hold a non-empty `shaders` list is refused with
+ * `previous-crash` (player 0.6.3; the rules are on {@link VideoShaders}).
+ * Every `set` sends all the values set so far, the refused `shaders`
+ * included, so include `shaders: []` in the next `set` to go on without
+ * them.
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
@@ -7031,8 +7048,11 @@ export interface RenderOptions extends Disposable {
    * `failed` with `previous-crash` (player 0.6.3) when a `set` with a
    * non-empty `shaders` list comes after a run of the player that ended
    * abnormally while plugin shaders were drawing (the rules are the same
-   * as for {@link VideoShaders}; a `set` without `shaders`, or with an
-   * empty list, and `dispose` still work).
+   * as for {@link VideoShaders}). The handle keeps the refused list among
+   * its values and every `set` sends them all, so a later `set` without
+   * `shaders` is refused again: include `shaders: []` in it
+   * (`set({ shaders: [], toneMapping: "bt.2390" })`); `dispose` always
+   * works.
    */
   readonly status: FilterStatus;
   /**

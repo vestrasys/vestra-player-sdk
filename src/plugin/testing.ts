@@ -2200,9 +2200,10 @@ export class TestHost implements Transport {
    * or switches to software rendering (`unsupported`, which also sets
    * `videoRender.gpu` to false and `rendering.reason` to `window-fallback`
    * with `message`). Pushed only when this plugin is the owner.
-   * `previous-crash` (SDK 1.5.54) only sets the handle's status the way the
-   * player's refusal does; {@link TestHost.previousCrash} refuses the
-   * requests themselves, as the player does.
+   * `previous-crash` (SDK 1.5.54) is a shortcut that only sets the handle's
+   * status and reaches `onError`: the real player never pushes it, it
+   * refuses the `set` request itself. To test that, set
+   * {@link TestHost.previousCrash}.
    *
    * @example Make a shader fail to compile
    * The plugin's render options report `failed`, as when mpv rejects a
@@ -2282,10 +2283,11 @@ export class TestHost implements Transport {
    * rendering (`unsupported`; use {@link TestHost.failVideoRender}, which
    * also tells the handles). Pushed only to a handle that holds shaders.
    *
-   * `code` (SDK 1.5.54, default `failed`) is the error code pushed, for
-   * example `previous-crash` to see how the plugin reports it; to have the
-   * player refuse the plugin's lists as player 0.6.3 does after an
-   * abnormal end, set {@link TestHost.previousCrash} instead.
+   * `code` (SDK 1.5.54, default `failed`) is the error code pushed.
+   * `previous-crash` is a shortcut that only sets the handle's status and
+   * reaches `onError`: the real player (0.6.3) never pushes it, it refuses
+   * the `set` request itself after an abnormal end. To test that, set
+   * {@link TestHost.previousCrash}.
    *
    * @capability None.
    *
@@ -2312,7 +2314,11 @@ export class TestHost implements Transport {
    *
    * @since 1.5.39
    */
-  failVideoShaders(id: string, message: string, code = "failed") {
+  failVideoShaders(
+    id: string,
+    message: string,
+    code: "failed" | "previous-crash" = "failed",
+  ) {
     if ((this.videoShaders.handles.get(id)?.length ?? 0) > 0)
       this.emit("video.shaders.status", {
         id,
@@ -2988,9 +2994,22 @@ export class TestHost implements Transport {
   #inFlight = 0;
   /** `disconnect()` of `startPlugin`: the player is gone. */
   #lost = false;
-  /** @internal `startPlugin`'s `disconnect()`: refuse every request. */
+  #lose: (error: Error) => void = () => {};
+  /** Rejects when the player is lost: requests in flight fail with it. */
+  readonly #gone = (() => {
+    const gone = new Promise<never>((_, reject) => {
+      this.#lose = reject;
+    });
+    gone.catch(() => {});
+    return gone;
+  })();
+  /**
+   * @internal `startPlugin`'s `disconnect()`: refuse every request, the
+   * ones in flight included, as the runner does once the player is gone.
+   */
   loseConnection() {
     this.#lost = true;
+    this.#lose(new HostError("disabled", "plugin stopped"));
   }
   #next = { snapshot: 0, job: 0, producer: 0, source: 0, resolution: 0 };
   #sourceBook = new Map<number, Json>();
@@ -3543,10 +3562,14 @@ export class TestHost implements Transport {
     this.#inFlight++;
     try {
       await tick();
+      if (this.#lost) throw new HostError("disabled", "plugin stopped");
       const handler = this.#overrides.get(method) ?? this.#defaults[method];
       if (!handler)
         throw new HostError("unsupported", `test host has no ${method}`);
-      return (await handler(record)) as T;
+      const work = Promise.resolve(handler(record));
+      // `disconnect()` fails the requests still waiting, as the runner does.
+      work.catch(() => {});
+      return (await Promise.race([work, this.#gone])) as T;
     } finally {
       this.#inFlight--;
     }
@@ -6888,6 +6911,24 @@ export async function startPlugin(
   }
   await host.settle();
   tellResidency(host);
+  // Zero declared parameters (`stop.length === 0`) and a `()` overload, so
+  // `t.after(stop)`, `promise.then(stop)` and done-callback test runners
+  // see the same function as before 1.5.54.
+  const stop: {
+    (): Promise<void>;
+    (options: { reason?: StopReason }): Promise<void>;
+  } = async (...args: unknown[]) => {
+    // Only an object with `reason` counts (a value `then` or a test
+    // runner passes is ignored; an unknown reason reads as none).
+    const first = args[0];
+    const reason =
+      typeof first === "object" && first !== null && "reason" in first
+        ? (first as { reason?: unknown }).reason
+        : undefined;
+    await instance.dispose({ reason });
+    await host.settle();
+    host.close();
+  };
   return {
     /** The test host the plugin talks to. */
     host,
@@ -6895,25 +6936,18 @@ export async function startPlugin(
     plugin: instance.plugin,
     /**
      * Stop the plugin, wait for the host, and remove temporary files.
-     * `reason` (SDK 1.5.54) is the reason the player gives
-     * (`plugin.stopReason`, the `onDispose` cleanups' `info.reason`);
-     * none: `undefined`, as with players before 0.6.4.
+     * `stop({ reason })` (SDK 1.5.54): `reason` is the reason the player
+     * gives (`plugin.stopReason`, the `onDispose` cleanups'
+     * `info.reason`); `stop()`: none (`undefined`), as with players up to
+     * 0.6.3. It still takes no declared parameter, so it can be passed as
+     * a callback (`t.after(stop)`, `promise.then(stop)`).
      */
-    async stop(options?: { reason?: StopReason } | void) {
-      // `void`: `promise.then(stop)` keeps working (any value is ignored).
-      const reason =
-        typeof options === "object" && options !== null
-          ? options.reason
-          : undefined;
-      await instance.dispose({ reason });
-      await host.settle();
-      host.close();
-    },
+    stop,
     /**
      * Lose the player (SDK 1.5.54): as when it crashes or is killed, the
-     * runner stops the plugin with reason `host-lost`; from then on every
-     * request is refused with `disabled`. Then waits and removes the
-     * temporary files like `stop`.
+     * runner stops the plugin with reason `host-lost`; requests still
+     * waiting for their answer and every later request are refused with
+     * `disabled`. Then waits and removes the temporary files like `stop`.
      */
     async disconnect() {
       host.loseConnection();

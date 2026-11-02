@@ -27,10 +27,10 @@ test("stop reason: stop({ reason }) reaches stopReason and every cleanup", async
   const seen: (DisposeInfo & { during?: string })[] = [];
   const child = plugin.scope();
   child.onDispose((info) => {
-    seen.push({ ...info, during: plugin.stopReason });
+    if (info) seen.push({ ...info, during: plugin.stopReason });
   });
   plugin.onDispose((info) => {
-    seen.push(info);
+    if (info) seen.push(info);
   });
   // The zero-argument form still works.
   let plain = 0;
@@ -50,12 +50,12 @@ test("stop reason: stop({ reason }) reaches stopReason and every cleanup", async
 test("stop reason: none from an older player, and a child scope disposed by the plugin", async () => {
   const { plugin, stop } = await started();
   const child = plugin.scope();
-  const infos: DisposeInfo[] = [];
+  const infos: (DisposeInfo | undefined)[] = [];
   child.onDispose((info) => {
     infos.push(info);
   });
   await child.dispose();
-  assert.deepEqual(infos, [{ stopping: false }]);
+  assert.deepEqual([...infos], [{ stopping: false }]);
   plugin.onDispose((info) => {
     infos.push(info);
   });
@@ -64,14 +64,70 @@ test("stop reason: none from an older player, and a child scope disposed by the 
   assert.equal(plugin.stopReason, undefined);
 });
 
-test("stop reason: stop works as a then callback (its argument is ignored)", async () => {
-  const { plugin, stop } = await started();
-  let reason: unknown = "unset";
-  plugin.onDispose((info) => {
-    reason = info.reason;
+test("stop reason: a runner that calls dispose() without an argument (player 0.6.3)", async () => {
+  const host = new TestHost();
+  const instance = await createPlugin(
+    host,
+    { id: "test.plugin", capabilities: [] },
+    process.cwd(),
+  );
+  const infos: (DisposeInfo | undefined)[] = [];
+  instance.plugin.onDispose((info) => {
+    infos.push(info);
   });
-  await Promise.resolve().then(stop);
+  await instance.dispose();
+  assert.deepEqual(infos, [{ stopping: true }]);
+  assert.equal(instance.plugin.stopReason, undefined);
+  host.close();
+});
+
+test("stop reason: old cleanup shapes still compile and run", async () => {
+  const { plugin, stop } = await started();
+  // A cleanup with optional parameters of its own (a `save(force?)`, a
+  // socket's `close(code?, reason?)`) is still accepted.
+  const calls: unknown[][] = [];
+  function save(force?: unknown) {
+    calls.push(["save", typeof force]);
+  }
+  const socket = {
+    close(code?: number, why?: string) {
+      calls.push(["close", code, why]);
+    },
+  };
+  plugin.onDispose(save);
+  plugin.onDispose(socket.close.bind(socket));
+  plugin.onDispose(async () => {
+    calls.push(["async"]);
+  });
+  await stop();
+  // Reverse order; a function passed directly receives the DisposeInfo.
+  assert.deepEqual(calls, [
+    ["async"],
+    ["close", { stopping: true }, undefined],
+    ["save", "object"],
+  ]);
+});
+
+test("stop reason: stop keeps zero arity and works as a callback", async () => {
+  const first = await started();
+  assert.equal(first.stop.length, 0, "done-callback runners see no `done`");
+  let reason: unknown = "unset";
+  first.plugin.onDispose((info) => {
+    reason = info?.reason;
+  });
+  // `Promise<number>.then(stop)`: the number is ignored.
+  await Promise.resolve(42).then(first.stop);
   assert.equal(reason, undefined);
+  // A hook that passes a context and a callback, like `t.after`.
+  const second = await started();
+  const register = (hook: (t: unknown, done: () => void) => unknown) => hook;
+  await register(second.stop)({ name: "context" }, () => {});
+  assert.equal(second.plugin.stopReason, undefined);
+});
+
+test("stop reason: t.after(stop) type checks", async (t) => {
+  const { stop } = await started();
+  t.after(stop);
 });
 
 test("stop reason: disconnect() is host-lost and requests are refused", async () => {
@@ -79,7 +135,7 @@ test("stop reason: disconnect() is host-lost and requests are refused", async ()
   const { plugin, disconnect } = await started(host, ["ui.osd"]);
   let refused: string | undefined;
   plugin.onDispose(async (info) => {
-    assert.equal(info.reason, "host-lost");
+    assert.equal(info?.reason, "host-lost");
     await plugin.osd.show("bye").catch((error: PluginError) => {
       refused = error.code;
     });
@@ -87,6 +143,18 @@ test("stop reason: disconnect() is host-lost and requests are refused", async ()
   await disconnect();
   assert.equal(plugin.stopReason, "host-lost");
   assert.equal(refused, "disabled");
+});
+
+test("stop reason: disconnect() fails requests still in flight with disabled", async () => {
+  const host = new TestHost();
+  host.handle("osd.show", () => new Promise(() => {})); // never answered
+  const { plugin, disconnect } = await started(host, ["ui.osd"]);
+  const pending = plugin.osd.show("waiting").then(
+    () => "answered",
+    (error: PluginError) => error.code,
+  );
+  await disconnect();
+  assert.equal(await pending, "disabled");
 });
 
 test("stop reason: the runtime keeps known reasons only, and the first one", async () => {

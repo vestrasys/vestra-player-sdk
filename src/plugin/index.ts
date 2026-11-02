@@ -29,7 +29,7 @@ export interface PluginInstance {
   /**
    * Stop the plugin: dispose the root scope, then stop the runtime.
    * `info.reason` (SDK 1.5.54) is why: the runner passes `runtime.stop`'s
-   * `data.reason` (player 0.6.4), or `"host-lost"` when its input closed
+   * `data.reason` (planned for player 0.6.4), or `"host-lost"` when its input closed
    * without a `runtime.stop`. It reaches `plugin.stopReason` and every
    * `onDispose` cleanup; a reason the SDK does not know reads as
    * `undefined`. A second call runs no cleanup again and keeps the first reason.

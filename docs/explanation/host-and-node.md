@@ -295,7 +295,7 @@ Runner::Own { child, outbound } => {
 
 Source: src/host/src/process/mod.rs
 
-In the runner, `boot.ts` rejects pending requests with `code: "disabled"` and disposes the root scope. From player 0.6.4 the stop carries why (`{"event":"runtime.stop","data":{"reason":"disable"}}`; `quit`, `disable`, `uninstall`, `reload`, `upgrade`, `idle`, `failed`), the runner passes it to the SDK's `dispose`, and a runner whose stdin closes (or whose stdout breaks) without a `runtime.stop` passes `host-lost`; the plugin reads it as {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} and in its `onDispose` cleanups (SDK 1.5.54). Older players send `"data":null`. The waits involved:
+In the runner, `boot.ts` rejects pending requests with `code: "disabled"` and disposes the root scope. Planned for player 0.6.4 (not in a released player yet): the stop will carry why (`{"event":"runtime.stop","data":{"reason":"disable"}}`; `quit`, `disable`, `uninstall`, `reload`, `upgrade`, `idle`, `failed`), the runner will pass it to the SDK's `dispose`, and a runner whose stdin closes (or whose stdout breaks) without a `runtime.stop` will pass `host-lost`; the plugin reads it as {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} and in its `onDispose` cleanups (SDK 1.5.54). Players up to 0.6.3 send `"data":null` and their runner calls `dispose()` without a reason. The waits involved:
 
 | | Own process | Shared-runner member |
 | --- | --- | --- |

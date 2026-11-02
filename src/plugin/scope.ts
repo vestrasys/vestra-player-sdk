@@ -115,7 +115,11 @@ export class ScopeImpl implements Plugin {
   forget(item: Disposable) {
     this.#items = this.#items.filter((each) => each !== item);
   }
-  onDispose(cleanup: (info: DisposeInfo) => void | Promise<void>): Disposable {
+  onDispose(
+    cleanup:
+      | ((info?: DisposeInfo) => void | Promise<void>)
+      | (() => void | Promise<void>),
+  ): Disposable {
     let done = false;
     const item: Disposable = {
       dispose: async () => {
