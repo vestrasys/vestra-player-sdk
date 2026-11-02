@@ -121,7 +121,7 @@ The rule that follows: **state you change outside a handler, or after an `await`
 
 ## Stopping
 
-The player stops a plugin when the user disables or uninstalls it, when it is reloaded or upgraded, when the player quits, and, with lazy activation, when nothing has used it for a while ([Idle plugins](#idle-plugins-are-stopped)).
+The player stops a plugin when the user or another plugin with `plugins.manage` disables or uninstalls it, when it is reloaded or upgraded, when the player quits, and, with lazy activation, when nothing has used it for a while ([Idle plugins](#idle-plugins-are-stopped)).
 
 - First the player removes everything the plugin owns on its side: menu items, windows, panels, settings pages, filter chains, subtitle layers, snapshots, export jobs, resolvers, generated streams.
 - Then the SDK refuses new requests, fails pending ones with `code: "disabled"` and disposes the root scope. That disposal only cleans up locally (timers, abort signals, sockets): the player-side resources are already gone.
@@ -150,10 +150,10 @@ Everything in the process is gone after such a restart: variables, timers, cache
 | Where | Survives a restart of the plugin | Survives the player quitting | Cleared when |
 | --- | --- | --- | --- |
 | Variables in the process | no | no | the process stops |
-| {@linkcode "@vestra-player/sdk"!SessionStorage plugin.storage.session} (player 0.5.5) | yes | no | the user disables or uninstalls the plugin; the player quits |
+| {@linkcode "@vestra-player/sdk"!SessionStorage plugin.storage.session} (player 0.5.5) | yes | no | the user or a plugin with `plugins.manage` disables the plugin (`packages.setEnabled(id, false)`, or an update installed with `enabled: false`); the plugin is uninstalled; an earlier installation kept for a later reinstall is dropped; the player quits |
 | {@linkcode "@vestra-player/sdk"!Storage.json plugin.storage.json}, files in the [data directory](#the-data-directory) | yes | yes | uninstalling with `removeData` |
 
-Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin is the user switching it off, so its session values go; a reload, a crash or a failed start keeps them.
+Session storage is for state that belongs to this run of the player: a queue the plugin is working through, the item a panel was showing, a token that expires anyway. Settings and history the user expects to find tomorrow go in `storage.json`. Session storage keeps JSON values in the player's memory, at most 1 MiB per plugin (one value a little less, since it travels in one 1 MiB message; split large state over several keys), and does not keep the order of an object's properties. Each `set` is kept as soon as its promise resolves, so a crash right after loses nothing. Disabling a plugin (by the user, or by a store or another plugin with `plugins.manage`) switches it off, so its session values go; a reload, a crash or a failed start keeps them.
 
 Write `activate` so that running it twice in one session is normal: read what you kept, then build the interface from it.
 

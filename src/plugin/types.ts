@@ -3260,7 +3260,10 @@ export interface Appearance {
    * Needs `events`: without it the listener never runs for other plugins'
    * changes. Views need no help to follow the palette; use this for things
    * the plugin draws itself (a rendered image, colours it computes). Errors
-   * go to {@link Scope.onError}.
+   * go to {@link Scope.onError}. When the player starts a stopped plugin
+   * for a palette change (player 0.5.21), {@link Appearance.theme} already
+   * has the new palette at start and the listener still hears the change
+   * (SDK 1.5.56; before, it did not run).
    *
    * @capability events
    *
@@ -8690,6 +8693,10 @@ export interface Resolvers {
   /**
    * {@link Resolvers.fileTypes} changed: a file resolver was added, or its
    * plugin stopped. Needs `events`; without it the listener never fires.
+   * When the player starts a stopped plugin for this change (player
+   * 0.5.21), {@link Resolvers.fileTypes} already has the new list at start
+   * and the listener still hears the change (SDK 1.5.56; before, it did not
+   * run).
    *
    * @param listener - Receives the new list.
    * @returns A handle that removes the listener.
@@ -10030,7 +10037,10 @@ export interface Storage {
  * | --- | --- |
  * | The plugin's process restarts: reload, upgrade, crash | kept |
  * | The plugin failed to start or failed, and starts again | kept |
- * | The user disables the plugin, or uninstalls it | cleared |
+ * | The user, or a plugin with `plugins.manage` (`packages.setEnabled(id, false)`), disables the plugin | cleared |
+ * | An update or reinstall with `enabled: false` switches an enabled plugin off (player 0.6.4) | cleared |
+ * | The plugin is uninstalled | cleared |
+ * | An earlier installation kept for a later reinstall (after a `replace`) is dropped because the player keeps only so many | cleared |
  * | The player quits | cleared |
  *
  * - **Per plugin.** A plugin sees only its own keys. Like

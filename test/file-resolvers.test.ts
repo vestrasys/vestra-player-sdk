@@ -419,3 +419,53 @@ test("fileTypes needs no capability; without events it is the list of the first 
   assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
   await stop();
 });
+
+test("fileTypes: a change held across standby still reaches onFileTypesChange", async () => {
+  // Woken from standby: the start-up read already has the new list, then
+  // the player delivers the resolvers.fileTypes it held for the plugin.
+  const testHost = host();
+  testHost.otherResolvers.push({ owner: "vestra.gb", extensions: ["gb"] });
+  let plugin!: Plugin;
+  const { stop } = await startPlugin((p) => void (plugin = p), {
+    capabilities: ["events"],
+    host: testHost,
+  });
+  assert.deepEqual(plugin.resolvers.fileTypes, ["gb"]);
+  const seen: string[][] = [];
+  plugin.resolvers.onFileTypesChange((types) => seen.push(types));
+  await testHost.settle();
+  assert.deepEqual(seen, [], "the start-up list is not a change");
+  testHost.emit("resolvers.fileTypes", { fileTypes: ["gb"] });
+  await testHost.settle();
+  assert.deepEqual(seen, [["gb"]]);
+  // The same list again is not a change for the listeners.
+  testHost.emit("resolvers.fileTypes", { fileTypes: ["gb"] });
+  await testHost.settle();
+  assert.deepEqual(seen, [["gb"]]);
+  testHost.emit("resolvers.fileTypes", { fileTypes: ["gb", "nes"] });
+  await testHost.settle();
+  assert.deepEqual(seen, [["gb"], ["gb", "nes"]]);
+  assert.deepEqual(plugin.resolvers.fileTypes, ["gb", "nes"]);
+  await stop();
+});
+
+test("fileTypes: a change seen by the subscription read is heard once", async () => {
+  const testHost = host();
+  let plugin!: Plugin;
+  const { stop } = await startPlugin((p) => void (plugin = p), {
+    capabilities: ["events"],
+    host: testHost,
+  });
+  assert.deepEqual(plugin.resolvers.fileTypes, []);
+  // Another plugin adds a type before this one subscribes: the read that
+  // follows the subscription finds it, then the event repeats it.
+  testHost.otherResolvers.push({ owner: "vestra.gb", extensions: ["gb"] });
+  const seen: string[][] = [];
+  plugin.resolvers.onFileTypesChange((types) => seen.push(types));
+  await testHost.settle();
+  assert.deepEqual(seen, [["gb"]]);
+  testHost.updateFileTypes();
+  await testHost.settle();
+  assert.deepEqual(seen, [["gb"]]);
+  await stop();
+});

@@ -25,6 +25,14 @@ class AppearanceService {
   /** The saved interface language (the next start's). */
   language: LanguagePreference;
   readonly #listeners = new Set<(theme: ThemeId) => void>();
+  /**
+   * The theme listeners last heard, not the one read at start: a plugin
+   * woken from standby reads the new theme from `window.state`, then gets
+   * the `appearance.changed` the player held for it, and its listeners
+   * still hear that change. The player sends the event only on a real
+   * change, so the rare extra call costs little.
+   */
+  #notified: ThemeId | undefined;
   #started = false;
   constructor(runtime: Runtime) {
     this.#runtime = runtime;
@@ -46,17 +54,29 @@ class AppearanceService {
           this.#runtime.invalidate();
         }
         const theme = event?.theme;
-        if (theme && THEMES.includes(theme)) this.accept(theme);
+        if (theme && THEMES.includes(theme)) this.changed(theme);
       },
       "events",
       true,
     );
   }
+  /** From `appearance.changed`: listeners hear it unless they already did. */
+  changed(theme: ThemeId) {
+    const changed = theme !== this.theme;
+    this.theme = theme;
+    if (theme !== this.#notified) this.#notify(theme);
+    if (changed) this.#runtime.invalidate();
+  }
+  /** After this plugin's own `set`: only a change from the current theme. */
   accept(theme: ThemeId) {
     if (theme === this.theme) return;
     this.theme = theme;
-    for (const listener of [...this.#listeners]) listener(theme);
+    this.#notify(theme);
     this.#runtime.invalidate();
+  }
+  #notify(theme: ThemeId) {
+    this.#notified = theme;
+    for (const listener of [...this.#listeners]) listener(theme);
   }
   watch(listener: (theme: ThemeId) => void) {
     this.#listeners.add(listener);

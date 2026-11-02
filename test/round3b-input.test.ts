@@ -161,3 +161,35 @@ test("settings: pages register with bound properties, callbacks, show", async ()
   await stop();
   assert.equal(host.settings.pages.size, 0, "disposed with the plugin");
 });
+
+test("appearance: a change held across standby still reaches onChange", async () => {
+  // Woken from standby: the start-up read already has the new palette, then
+  // the player delivers the appearance.changed it held for the plugin.
+  const host = new TestHost();
+  host.appearance = "vestra-light";
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["events", "ui.theme"],
+    host,
+  });
+  assert.equal(plugin.appearance.theme, "vestra-light");
+  const changes: string[] = [];
+  plugin.appearance.onChange((theme) => changes.push(theme));
+  await host.settle();
+  host.emit("appearance.changed", { theme: "vestra-light" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light"]);
+  // The same palette again is not a change for the listeners.
+  host.emit("appearance.changed", { theme: "vestra-light" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light"]);
+  host.setAppearance("vestra");
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light", "vestra"]);
+  assert.equal(plugin.appearance.theme, "vestra");
+  // The plugin's own set is heard once, not again with the player's echo.
+  await plugin.appearance.set("vestra-light");
+  host.emit("appearance.changed", { theme: "vestra-light" });
+  await host.settle();
+  assert.deepEqual(changes, ["vestra-light", "vestra", "vestra-light"]);
+  await stop();
+});
