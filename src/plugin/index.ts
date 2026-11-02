@@ -6,7 +6,7 @@
  * @internal
  */
 import type { Transport } from "../wire.ts";
-import { failure, Runtime } from "./runtime.ts";
+import { failure, Runtime, stopReason } from "./runtime.ts";
 import type { PluginManifest, RuntimeOptions } from "./runtime.ts";
 import { ScopeImpl } from "./scope.ts";
 import { playerOf } from "./player.ts";
@@ -26,7 +26,15 @@ export interface PluginInstance {
    * `RuntimeOptions.strictDeclarations` is set.
    */
   activated(): Promise<void>;
-  dispose(): Promise<void>;
+  /**
+   * Stop the plugin: dispose the root scope, then stop the runtime.
+   * `info.reason` (SDK 1.5.54) is why: the runner passes `runtime.stop`'s
+   * `data.reason` (player 0.6.4), or `"host-lost"` when its input closed
+   * without a `runtime.stop`. It reaches `plugin.stopReason` and every
+   * `onDispose` cleanup; a reason the SDK does not know reads as
+   * `undefined`. A second call runs no cleanup again and keeps the first reason.
+   */
+  dispose(info?: { reason?: unknown }): Promise<void>;
 }
 
 export async function createPlugin(
@@ -70,7 +78,8 @@ export async function createPlugin(
   return {
     plugin: root,
     activated: () => runtime.activated(),
-    dispose: async () => {
+    dispose: async (info) => {
+      runtime.stopping ??= { reason: stopReason(info?.reason) };
       await root.dispose();
       runtime.stop();
     },

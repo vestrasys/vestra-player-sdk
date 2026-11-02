@@ -133,6 +133,7 @@ export interface Disposable {
  * | `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
  * | `revisionConflict` | {@link Packages}: the installed revision changed since it was read (another install or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
  * | `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
+ * | `previous-crash` | {@link VideoShaders}, {@link RenderOptions} `shaders` (player 0.6.3): plugin shaders are off because the player ended abnormally while they were drawing; clearing still works. Do not retry while refused (the player shows its own OSD line). |
  * | `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
  * | `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
  *
@@ -427,10 +428,30 @@ export interface Scope extends Disposable {
    * plugin.onDispose(() => clearInterval(timer));
    * ```
    *
+   * @example Save a cache at once when the player is lost
+   * The plugin writes its cache file at once when the player crashed or
+   * was killed, instead of waiting for the next periodic save. The cleanup
+   * gets a {@link DisposeInfo}: `stopping` says the plugin itself stops
+   * (not a child scope), `reason` why (player 0.6.4; `undefined` with
+   * older players).
+   * ```ts
+   * declare function saveCacheNow(): void;
+   * // ---cut---
+   * plugin.onDispose((info) => {
+   *   // The player is gone: ask it nothing, keep what is local.
+   *   if (info.reason === "host-lost") saveCacheNow();
+   * });
+   * ```
+   *
+   * @remarks
+   * The cleanup receives a {@link DisposeInfo} (SDK 1.5.54): whether the
+   * plugin stops, and why the player stopped it. A cleanup that takes no
+   * argument works as before.
+   *
    * @capability None.
    * @since 1.0.0
    */
-  onDispose(cleanup: () => void | Promise<void>): Disposable;
+  onDispose(cleanup: (info: DisposeInfo) => void | Promise<void>): Disposable;
   /**
    * Errors thrown by handlers that the SDK invoked (command `run`, window and
    * panel callbacks, `onChange` listeners) in this scope. Without a listener
@@ -559,6 +580,71 @@ export interface Plugin extends Scope {
    * none. See [How a plugin runs](../../docs/explanation/plugins.md#the-data-directory).
    */
   readonly dataDirectory: string;
+  /**
+   * Why the player stops this plugin (SDK 1.5.54, player 0.6.4): set when
+   * the stop begins, before any {@link Scope.onDispose} cleanup runs;
+   * `undefined` while the plugin runs, and for every stop by a player
+   * before 0.6.4. See {@link StopReason}.
+   */
+  readonly stopReason: StopReason | undefined;
+}
+
+/**
+ * Why the player stopped the plugin ({@link DisposeInfo.reason},
+ * {@link Plugin.stopReason}).
+ *
+ * - `quit`: the player quits.
+ * - `disable`: the user disabled the plugin.
+ * - `uninstall`: the user uninstalls it.
+ * - `reload`: it is reloaded (from the plugin manager, or a development
+ *   load with `--plugin`).
+ * - `upgrade`: a new version replaces it.
+ * - `idle`: lazy activation stops it after a while without use; its next
+ *   use starts it again ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
+ * - `failed`: the player stops it for a fault (an unreadable or oversized
+ *   line, a malformed request, an input queue that overflowed, an uncaught
+ *   exception in the shared process).
+ * - `host-lost`: the plugin's runner saw its pipe to the player close
+ *   without a stop: the player crashed or was killed. Requests are refused
+ *   with `disabled`; clean up locally only.
+ *
+ * The player sends the reason with `runtime.stop`, and its runner reports
+ * `host-lost`, from player 0.6.4 on. Older players give no reason for any
+ * stop, a lost player included (`undefined`); so does a stop that does not
+ * come from the player (a `TestHost` `stop()` without a reason). A value
+ * this SDK does not know reads as `undefined`.
+ *
+ * @player 0.6.4; older players give no reason (`undefined`).
+ * @since 1.5.54
+ * @category Plugin
+ */
+export type StopReason =
+  | "quit"
+  | "disable"
+  | "uninstall"
+  | "reload"
+  | "upgrade"
+  | "idle"
+  | "failed"
+  | "host-lost";
+
+/**
+ * What a {@link Scope.onDispose} cleanup is told (SDK 1.5.54).
+ *
+ * @since 1.5.54
+ * @category Plugin
+ */
+export interface DisposeInfo {
+  /**
+   * `true` when the plugin itself stops (the player stops it), `false`
+   * when the plugin's own code disposed this scope or one of its parents.
+   */
+  readonly stopping: boolean;
+  /**
+   * Why the player stops the plugin (player 0.6.4); `undefined` while
+   * `stopping` is false, and for every stop by an older player.
+   */
+  readonly reason?: StopReason;
 }
 
 // ---------------------------------------------------------------- commands
@@ -6909,7 +6995,10 @@ export interface RenderSettings {
  * the player's first answer to `render()` (reported to `onError` too), and so is
  * every `set`. Single owner, like {@link VideoView}. `set` never throws; the
  * result shows in `status`. For shaders that several plugins add at the
- * same time, use {@link VideoShaders} (SDK 1.5.39).
+ * same time, use {@link VideoShaders} (SDK 1.5.39). After a run of the
+ * player that ended abnormally while plugin shaders were drawing, a `set`
+ * with a non-empty `shaders` list is refused with `previous-crash`
+ * (player 0.6.3; the rules are on {@link VideoShaders}).
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
@@ -6938,7 +7027,12 @@ export interface RenderOptions extends Disposable {
    * `failed` with `unsupported` while the player renders in software;
    * `failed` with `failed` when mpv cannot compile a shader (pushed later;
    * while other plugins' {@link VideoShaders} are on too, the player
-   * cannot tell whose shader failed and says so in the message).
+   * cannot tell whose shader failed and says so in the message);
+   * `failed` with `previous-crash` (player 0.6.3) when a `set` with a
+   * non-empty `shaders` list comes after a run of the player that ended
+   * abnormally while plugin shaders were drawing (the rules are the same
+   * as for {@link VideoShaders}; a `set` without `shaders`, or with an
+   * empty list, and `dispose` still work).
    */
   readonly status: FilterStatus;
   /**
@@ -6999,6 +7093,20 @@ export interface RenderOptions extends Disposable {
  * Players before 0.5.20 refuse the request (the handle is `failed`): declare
  * `"minPlayerVersion": "0.5.20"`.
  *
+ * **After an abnormal end** (player 0.6.3): when the previous run of the
+ * player ended while plugin shaders were drawing (a crash, the process
+ * being ended, a lost GPU device), the player refuses every non-empty
+ * list of every plugin with `previous-crash`, its message naming the
+ * plugins whose shaders were on: one such end keeps them off for the next
+ * start only; two within a day keep them off until the GPU, its driver or
+ * the player changes, or for 7 days. Clearing (`[]`, `clear`,
+ * `dispose`) still works. The player shows one OSD line about it itself;
+ * the handle is `failed` with `previous-crash` and the SDK does not
+ * retry it. Do not set the list again in a loop while it is refused, and
+ * do not show an OSD line of your own for it; a later start of the player
+ * applies lists again once the guard lets it. Players before 0.6.3 never
+ * refuse with it.
+ *
  * @example Add a sharpening shader the plugin ships
  * The video looks sharper on the GPU renderer; under software rendering
  * the OSD says why it is not. The shader file lives in the plugin's
@@ -7029,7 +7137,8 @@ export interface VideoShaders extends Disposable {
    *
    * @remarks
    * Never throws: a refused list shows in `status` (`invalid`, `missing`,
-   * `limit`, `unsupported`) and goes to {@link Scope.onError}, and what the
+   * `limit`, `unsupported`, and `previous-crash` from player 0.6.3: see
+   * the interface's remarks) and goes to {@link Scope.onError}, and what the
    * player held stays.
    *
    * @capability processing.video

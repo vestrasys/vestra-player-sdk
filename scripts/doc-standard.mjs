@@ -28,6 +28,8 @@ export const STRICT_CATEGORIES = {
       "SystemInfo",
       "DisplayInfo",
       "Json",
+      "StopReason",
+      "DisposeInfo",
     ],
   },
   Testing: {

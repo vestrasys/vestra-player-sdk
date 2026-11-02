@@ -145,6 +145,7 @@ import type {
   LanguagePreference,
   Locale,
   Plugin,
+  StopReason,
   TemplateArgs,
   TextValue,
   ThemeId,
@@ -2199,6 +2200,9 @@ export class TestHost implements Transport {
    * or switches to software rendering (`unsupported`, which also sets
    * `videoRender.gpu` to false and `rendering.reason` to `window-fallback`
    * with `message`). Pushed only when this plugin is the owner.
+   * `previous-crash` (SDK 1.5.54) only sets the handle's status the way the
+   * player's refusal does; {@link TestHost.previousCrash} refuses the
+   * requests themselves, as the player does.
    *
    * @example Make a shader fail to compile
    * The plugin's render options report `failed`, as when mpv rejects a
@@ -2220,7 +2224,10 @@ export class TestHost implements Transport {
    * @capability None.
    * @since 1.0.0
    */
-  failVideoRender(code: "failed" | "unsupported", message: string) {
+  failVideoRender(
+    code: "failed" | "unsupported" | "previous-crash",
+    message: string,
+  ) {
     if (code === "unsupported") {
       this.videoRender.gpu = false;
       this.rendering.reason = { code: "window-fallback", message };
@@ -2275,6 +2282,11 @@ export class TestHost implements Transport {
    * rendering (`unsupported`; use {@link TestHost.failVideoRender}, which
    * also tells the handles). Pushed only to a handle that holds shaders.
    *
+   * `code` (SDK 1.5.54, default `failed`) is the error code pushed, for
+   * example `previous-crash` to see how the plugin reports it; to have the
+   * player refuse the plugin's lists as player 0.6.3 does after an
+   * abnormal end, set {@link TestHost.previousCrash} instead.
+   *
    * @capability None.
    *
    * @example Make the plugin's shader fail to compile
@@ -2300,14 +2312,44 @@ export class TestHost implements Transport {
    *
    * @since 1.5.39
    */
-  failVideoShaders(id: string, message: string) {
+  failVideoShaders(id: string, message: string, code = "failed") {
     if ((this.videoShaders.handles.get(id)?.length ?? 0) > 0)
       this.emit("video.shaders.status", {
         id,
         state: "failed",
-        error: { code: "failed", message },
+        error: { code, message },
       });
   }
+  /**
+   * Play a run after an abnormal end with plugin shaders on (player 0.6.3):
+   * while set, a non-empty `video.shaders` list and a render options
+   * `set` with a non-empty `shaders` list are refused with
+   * `previous-crash` and this message; clearing still works. `null`
+   * (default): shaders apply.
+   *
+   * @example Check that the plugin stops retrying while shaders are off
+   * The plugin's shader handle turns `failed` with `previous-crash`, as
+   * in the player after a crash while plugin shaders were drawing. The
+   * player refuses the list itself (and shows its own OSD line), so the
+   * plugin should report it once and not set the list again.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * import { join } from "node:path";
+   * import { writeFileSync } from "node:fs";
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.previousCrash = "plugin shaders are off for this start";
+   * const file = join(plugin.dataDirectory, "sharpen.glsl");
+   * writeFileSync(file, "//!HOOK MAIN\n");
+   * const shaders = plugin.video.shaders("sharpen");
+   * shaders.set([file]); // refused: the previous run ended abnormally
+   * await host.settle();
+   * assert.equal(shaders.status.state, "failed");
+   * ```
+   *
+   * @since 1.5.54
+   */
+  previousCrash: string | null = null;
   /**
    * The player's processing (filter) state. Wire-level; may change in minor
    * versions. `resources` holds each `video.filter` / `audio.filter` chain the
@@ -2944,6 +2986,12 @@ export class TestHost implements Transport {
   readonly #overrides = new Map<string, Handler>();
   readonly #listeners = new Map<string, Set<(data: unknown) => void>>();
   #inFlight = 0;
+  /** `disconnect()` of `startPlugin`: the player is gone. */
+  #lost = false;
+  /** @internal `startPlugin`'s `disconnect()`: refuse every request. */
+  loseConnection() {
+    this.#lost = true;
+  }
   #next = { snapshot: 0, job: 0, producer: 0, source: 0, resolution: 0 };
   #sourceBook = new Map<number, Json>();
   /** The pending resolutions' stamps and operations (beside `resolutions`). */
@@ -3479,6 +3527,9 @@ export class TestHost implements Transport {
    * override from {@link TestHost.handle} or the default behaviour.
    */
   async request<T>(method: string, params: Json = {}): Promise<T> {
+    // After `disconnect()`: refused as the runner refuses them once the
+    // player is gone.
+    if (this.#lost) throw new HostError("disabled", "plugin is stopping");
     const record = (params ?? {}) as Record<string, Json>;
     // The plugin runner refuses a request over the message limit before
     // sending it (runtime/runner.ts): the player never sees it.
@@ -4388,7 +4439,19 @@ export class TestHost implements Transport {
    */
   close() {
     for (const producer of this.producers.values()) producer.server.close();
-    rmSync(this.#scratch, { recursive: true, force: true });
+    // Cleanup never fails a test: on Windows a file a closing handle still
+    // holds makes the removal fail now and then (`ENOTEMPTY`, `EBUSY`,
+    // `EPERM`); retry, then leave the directory to the system's cleanup.
+    try {
+      rmSync(this.#scratch, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 100,
+      });
+    } catch {
+      // Left in the temporary directory.
+    }
   }
 
   // ------------------------------------------------------------ simulated host
@@ -5685,6 +5748,14 @@ export class TestHost implements Transport {
       return null;
     },
     "video.render.set": (p) => {
+      // The player's crash guard comes first (`processing_video.rs`).
+      const listed = (p.values as { shaders?: unknown } | null)?.shaders;
+      if (
+        this.previousCrash !== null &&
+        Array.isArray(listed) &&
+        listed.length > 0
+      )
+        throw new HostError("previous-crash", this.previousCrash);
       if (!this.videoRender.gpu)
         throw new HostError(
           "unsupported",
@@ -5736,6 +5807,9 @@ export class TestHost implements Transport {
           VIDEO_PROCESSING_LIMITS.shaderBytes,
         ),
       );
+      // The player's crash guard, after the files are checked.
+      if (paths.length > 0 && this.previousCrash !== null)
+        throw new HostError("previous-crash", this.previousCrash);
       if (paths.length > 0 && !this.videoRender.gpu)
         throw new HostError(
           "unsupported",
@@ -6674,7 +6748,11 @@ function tellResidency(host: TestHost) {
  * @returns `host`: the {@link TestHost}; `plugin`: the object passed to
  *   `activate` (call the plugin API on it directly); `stop()`: dispose the
  *   plugin like the player stopping it (scopes released, stores flushed),
- *   wait until the host is idle and remove the host's temporary files.
+ *   wait until the host is idle and remove the host's temporary files;
+ *   `stop({ reason })` (SDK 1.5.54): `reason` is the `StopReason` the player
+ *   sends; `disconnect()` (SDK 1.5.54) stops it as when the player is lost
+ *   (`host-lost`, requests refused with `disabled`). Removing the
+ *   temporary files never fails a test.
  *
  * @example Test that a setting survives a restart
  * The test turns on the 10-step option, stops the plugin, starts it again
@@ -6815,9 +6893,31 @@ export async function startPlugin(
     host,
     /** The `plugin` object passed to `activate`. */
     plugin: instance.plugin,
-    /** Stop the plugin, wait for the host, and remove temporary files. */
-    async stop() {
-      await instance.dispose();
+    /**
+     * Stop the plugin, wait for the host, and remove temporary files.
+     * `reason` (SDK 1.5.54) is the reason the player gives
+     * (`plugin.stopReason`, the `onDispose` cleanups' `info.reason`);
+     * none: `undefined`, as with players before 0.6.4.
+     */
+    async stop(options?: { reason?: StopReason } | void) {
+      // `void`: `promise.then(stop)` keeps working (any value is ignored).
+      const reason =
+        typeof options === "object" && options !== null
+          ? options.reason
+          : undefined;
+      await instance.dispose({ reason });
+      await host.settle();
+      host.close();
+    },
+    /**
+     * Lose the player (SDK 1.5.54): as when it crashes or is killed, the
+     * runner stops the plugin with reason `host-lost`; from then on every
+     * request is refused with `disabled`. Then waits and removes the
+     * temporary files like `stop`.
+     */
+    async disconnect() {
+      host.loseConnection();
+      await instance.dispose({ reason: "host-lost" });
       await host.settle();
       host.close();
     },

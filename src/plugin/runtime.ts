@@ -12,6 +12,7 @@ import type {
   Disposable,
   Locale,
   PluginError,
+  StopReason,
   SystemInfo,
 } from "./types.ts";
 import { LOCALES } from "../i18n.ts";
@@ -150,6 +151,25 @@ export interface RuntimeOptions {
   strictDeclarations?: boolean;
 }
 
+/** The reasons `StopReason` names; anything else reads as `undefined`. */
+const STOP_REASONS: ReadonlySet<string> = new Set<StopReason>([
+  "quit",
+  "disable",
+  "uninstall",
+  "reload",
+  "upgrade",
+  "idle",
+  "failed",
+  "host-lost",
+]);
+
+/** A stop reason the runner passed on, if this SDK knows it. */
+export function stopReason(value: unknown): StopReason | undefined {
+  return typeof value === "string" && STOP_REASONS.has(value)
+    ? (value as StopReason)
+    : undefined;
+}
+
 export const same = (a: Json | undefined, b: Json | undefined) =>
   JSON.stringify(a) === JSON.stringify(b);
 
@@ -268,6 +288,11 @@ export class Runtime {
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
   readonly services = new Map<string, unknown>();
+  /**
+   * Set when the player stops the plugin (`PluginInstance.dispose`), before
+   * the root scope is disposed: `DisposeInfo` and `plugin.stopReason`.
+   */
+  stopping: { reason: StopReason | undefined } | undefined;
   /** `plugin.app`, from the start-up handshake; `system()` asks the player. */
   readonly app: App;
   /** `plugin.i18n.locale`, from the start-up handshake; English when unknown. */

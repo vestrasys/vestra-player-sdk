@@ -129,6 +129,8 @@ The player stops a plugin when the user disables or uninstalls it, when it is re
 
 So `onDispose` cleanup must be quick and must not rely on the player. Media the plugin opened with {@link "@vestra-player/sdk"!Player.open | player.open} **keeps playing** after it stops.
 
+**Why it stops** (SDK 1.5.54, player 0.6.4): every `onDispose` cleanup receives a {@link "@vestra-player/sdk"!DisposeInfo | DisposeInfo}, and {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} is set before the first cleanup runs. `reason` is `quit`, `disable`, `uninstall`, `reload`, `upgrade`, `idle` or `failed` for a stop the player asked for, and `host-lost` when the plugin's runner saw its pipe to the player close without a stop (the player crashed or was killed; requests are refused, so only local cleanup makes sense). Older players send no reason and their runner does not report a lost player: `reason` is `undefined` for every stop there. `stopping` tells a stop of the plugin from a child scope its own code disposed. In tests, `stop({ reason })` and `disconnect()` from `startPlugin` play both.
+
 ## Restarts: activate can run more than once
 
 A plugin's process does not live as long as the player. Within one player session the player stops a plugin and starts it again, and `activate` runs again in a new process, when:
