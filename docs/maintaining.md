@@ -172,13 +172,14 @@ ci.yml / main.yml
   ci-ok   needs all; fails if any needed job failed or was cancelled
 
 release.yml (tag v*)
-  verify ─▶ static ─▶ build ─┬─▶ test ─┬─▶ publish  [environment vestra, id-token: write]
-                             └─▶ docs ─┘
+  verify ─▶ static ─▶ build ─┬─▶ test  ubuntu, windows ─┬─▶ publish  [environment vestra, id-token: write]
+                             ├─▶ docs ──────────────────┘
+                             └─▶ test-macos  macos (runs, does not gate publish)
 ```
 
 - `_static.yml`: `tsc` (src + test), Prettier, oxlint, typos; actionlint and zizmor on `.github/`.
 - `_build.yml`: `npm run build`, `npm pack`, the tarball's allow list (`scripts/check-pack.mjs`), publint, `attw --profile esm-only` (the package is ESM only, Node >= 26; the text export `llms.txt` is excluded), the install smoke test (`scripts/smoke-pack.mjs`). Uploads `dist` and `package` (the .tgz a release publishes unchanged).
-- `_test.yml`: `npm test` on the matrix above, and an `examples` job: `npm run examples` (every example: install, check, test, pack) on the same matrix.
+- `_test.yml`: `npm test` on the matrix above, and an `examples` job: `npm run examples` (every example: install, check, test, pack) on the same matrix. The `os` input (a JSON array of runner labels, all three by default) lets `release.yml` call it twice: Ubuntu and Windows as `test`, macOS as `test-macos`.
 - `_docs.yml`: TypeDoc with warnings as errors, `docs:check` and the `doc-lint` report; on `main` also the Pages artifact.
 - Make **`ci-ok`** the only required status check for `main` (branch protection or a ruleset).
 - Hardening: `permissions: {}` at the top of every workflow, the minimum per job; actions pinned by commit SHA with the version in a comment (Dependabot, `.github/dependabot.yml`, keeps them current); checkouts without persisted credentials; `npm ci --ignore-scripts`; concurrency per branch (`ci.yml` cancels superseded runs, `main.yml` and `release.yml` queue); timeouts on every job. `.github/zizmor.yml` disables only zizmor's `self-repository` hint, because actionlint does not accept `uses: $/...` yet.
@@ -187,7 +188,7 @@ release.yml (tag v*)
 
 1. Change `version` in `package.json` (and `package-lock.json`, e.g. with `npm version <x.y.z> --no-git-tag-version`), add the CHANGELOG entry, commit, push `main` and wait for `main.yml` to pass.
 2. Tag `v<version>` (annotated) and push the tag.
-3. `release.yml` checks that the tag equals `v` + `package.json` version and that the version is not on npm yet, runs every check again on the tagged commit (no npm cache), then the `publish` job (environment `vestra`) publishes the tarball the build job packed and smoke-tested, with `npm publish <tgz> --provenance`.
+3. `release.yml` checks that the tag equals `v` + `package.json` version and that the version is not on npm yet, runs every check again on the tagged commit (no npm cache), then the `publish` job (environment `vestra`) publishes the tarball the build job packed and smoke-tested, with `npm publish <tgz> --provenance`. `publish` waits for `verify`, `static`, `build`, `docs` and the Ubuntu and Windows tests and examples, not for macOS (product-owner ruling, 2026-11-02): GitHub-hosted macOS runners are often short of capacity, and runner capacity must never block a release (1.5.56 was tagged but never published because its macOS jobs got no runner). `test-macos` still runs on every release; a macOS failure marks the run as failed after the publish, so look at it and follow up with a fix release.
 4. The player then updates its dependency (`npm install @vestra-player/sdk@<version>`) and runs its full checks.
 
 ### npm Trusted Publishing

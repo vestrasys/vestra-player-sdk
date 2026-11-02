@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.57
+
+**Who must change: nobody.** The first npm release with 1.5.56's fix: no change to the TypeScript API or the wire, `apiVersion` stays `vestra/1`, no new capability, no player version needed.
+
+- **1.5.56 never reached npm.** Its tag was pushed, but the release run (41502365359) skipped `publish` because GitHub never gave its two macOS jobs a hosted runner (capacity) and they were cancelled. 1.5.57 publishes the same code: `appearance.onChange` and `resolvers.onFileTypesChange` hear a change the player woke the plugin for, and the session-storage clearing docs, as described under [1.5.56](#1556). Install 1.5.57; there is no `@vestra-player/sdk@1.5.56` on npm.
+- _Release process_: runner capacity no longer blocks a release (product-owner ruling, 2026-11-02). `release.yml` publishes once `verify`, `static`, `build`, `docs` and the Ubuntu and Windows tests and examples pass; macOS tests and examples still run on every release as `test-macos`, beside `publish` and without gating it. `_test.yml` takes an `os` input (a JSON array of runner labels, all three by default), so pull requests and `main` still test and gate on Ubuntu, Windows and macOS as before. [Maintaining › Releasing](docs/maintaining.md#releasing) says so.
+
 ## 1.5.56
 
 **Who must change: nobody.** A fix: no change to the TypeScript API or the wire, `apiVersion` stays `vestra/1`, no new capability, no player version needed.

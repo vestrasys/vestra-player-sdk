@@ -2,9 +2,16 @@
 # publish exactly the tarball the build job packed, smoke-tested and checked.
 #
 #   verify (tag == package.json version, not yet on npm)
-#     ─▶ static ─▶ build (pack · publint · attw · install smoke) ─┬─▶ test
-#                                                                └─▶ docs
+#     ─▶ static ─▶ build (pack · publint · attw · install smoke) ─┬─▶ test (ubuntu, windows)
+#                                                                ├─▶ docs
+#                                                                └─▶ test-macos (does not gate)
 #     ─▶ publish  [environment: vestra]  npm publish <tgz> --provenance
+#        needs verify, static, build, test, docs; not test-macos
+#
+# macOS still runs on every release, but GitHub-hosted macOS runners are often
+# short of capacity (run 41502365359 never got one and skipped the publish of
+# 1.5.56), so it does not hold the release back. Its failure still marks the
+# run as failed; check it before announcing a release.
 #
 # Publishing: npm Trusted Publishing (OIDC, `id-token: write`, npm >= 11.5)
 # once it is configured for this repository on npmjs.com (publisher:
@@ -68,6 +75,16 @@ jobs:
     uses: ./.github/workflows/_test.yml
     with:
       cache: false
+      os: '["ubuntu-latest", "windows-latest"]'
+    permissions:
+      contents: read
+  # Not in publish's needs: runner capacity never blocks a release.
+  test-macos:
+    needs: build
+    uses: ./.github/workflows/_test.yml
+    with:
+      cache: false
+      os: '["macos-latest"]'
     permissions:
       contents: read
   docs:
@@ -79,7 +96,8 @@ jobs:
       contents: read
 
   publish:
-    needs: [build, test, docs]
+    # Not test-macos (see the top of this file).
+    needs: [verify, static, build, test, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # NPM_TOKEN (fallback) lives in the "vestra" environment; the npm trusted
