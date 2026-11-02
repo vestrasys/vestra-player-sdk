@@ -220,6 +220,32 @@ test("packages.install enabled (SDK 1.5.55): updates keep a disabled plugin disa
   await stop();
 });
 
+test("TestHost.installKeepsDisabled = false plays players up to 0.6.3: every install runs", async () => {
+  const host = new TestHost();
+  host.installKeepsDisabled = false;
+  const paths = ["1.0.0", "1.1.0", "1.2.0"].map((version) => {
+    const path = resolve(`/downloads/someone.demo-${version}.vxp`);
+    host.candidates.set(path, manifest("someone.demo", version));
+    return path;
+  });
+  const { plugin, stop } = await manager(host);
+  const state = async () =>
+    (await plugin.packages.list()).find((p) => p.id === "someone.demo")?.state;
+  const install = async (path: string, options?: InstallOptions) =>
+    (await (await plugin.packages.validateArchive(path)).install(options)).done;
+  assert.equal(await install(paths[0]!), "committed");
+  await plugin.packages.setEnabled("someone.demo", false);
+  // An update of a disabled plugin runs it again.
+  assert.equal(await install(paths[1]!), "committed");
+  assert.equal(await state(), "running");
+  // `enabled` is ignored, but still sent and recorded.
+  assert.equal(await install(paths[2]!, { enabled: false }), "committed");
+  assert.equal(await state(), "running");
+  assert.equal(host.sent("packages.install").at(-1)?.enabled, false);
+  assert.equal(host.packageCalls.at(-1)?.enabled, false);
+  await stop();
+});
+
 /** A 1×1 PNG. */
 const PNG = Buffer.from(
   "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +

@@ -15,7 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
-| [1.5.55](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1555) | **Nobody.** Additive: `InstallOptions` gains `enabled`, `apiVersion` stays `vestra/1`, no new capability, and existing code still compiles. | — |
+| [1.5.55](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1555) | **Nobody, but check `TestHost` tests that update a disabled plugin.** Additive: `InstallOptions` gains `enabled` and `TestHost` gains `installKeepsDisabled`, `apiVersion` stays `vestra/1`, no new capability, and existing code still compiles. | — |
 | [1.5.54](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1554) | **Nobody, but check cleanup functions passed directly to `onDispose`.** Additive: `Plugin.stopReason`, the types `StopReason` and `DisposeInfo`, an optional argument for `onDispose` cleanups, `TestHost.previousCrash`, an optional `code` for `TestHost.failVideoShaders` and `stop({ reason })` / `disconnect()` from `startPlugin`; `apiVersion` stays `vestra/1`, no new capability, and existing code still compiles. | — |
 | [1.5.53](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1553) | **Nobody.** No changes to the TypeScript API, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.5.52](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1552) | **Nobody.** Additive: `WindowState` gains `maximized`, `apiVersion` stays `vestra/1`, no new capability. | — |

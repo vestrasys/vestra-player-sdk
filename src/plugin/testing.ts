@@ -4066,7 +4066,9 @@ export class TestHost implements Transport {
    * player 0.6.4 (planned), the installed entry's `state` follows
    * {@link "@vestra-player/sdk"!InstallOptions.enabled}: a first install
    * runs, an update of a `disabled` entry stays `disabled` unless `enabled`
-   * is `true`, and `enabled: false` installs it `disabled`.
+   * is `true`, and `enabled: false` installs it `disabled`. Set
+   * {@link TestHost.installKeepsDisabled} to `false` for the older players'
+   * rule (every install runs).
    *
    * @example Offer a package file the plugin can install
    * The plugin can validate and install `/downloads/someone.demo-1.0.0.vxp`
@@ -4083,6 +4085,32 @@ export class TestHost implements Transport {
    * ```
    */
   readonly candidates = new Map<string, PackageManifest>();
+  /**
+   * Which player's install rule `packages.install` plays. `true` (default,
+   * SDK 1.5.55): player 0.6.4 (planned), where an update or reinstall
+   * keeps a `disabled` plugin disabled unless the plugin passes
+   * {@link "@vestra-player/sdk"!InstallOptions.enabled}. `false`: players
+   * up to 0.6.3, where every install runs the plugin and `enabled` is
+   * ignored (it is still checked and recorded in
+   * {@link TestHost.packageCalls}). A test written for the older rule that
+   * updates a disabled plugin sets it to `false`; one that keeps testing
+   * both runs once with each.
+   *
+   * @example Keep a test written for players up to 0.6.3
+   * The plugin under test installs an update over a plugin the user
+   * disabled and expects it to run afterwards, as players up to 0.6.3 do.
+   * With `false` the host plays that rule; the default plays player 0.6.4,
+   * where the update stays disabled.
+   * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.installKeepsDisabled = false; // every install runs, as before 0.6.4
+   * ```
+   *
+   * @capability None.
+   * @since 1.5.55
+   */
+  installKeepsDisabled = true;
   /**
    * Remote images (`plugin.ui.markdown`, `plugin.ui.remoteImage`): address
    * → a local PNG or JPEG file served for it, or `null` for a failing
@@ -6336,8 +6364,10 @@ export class TestHost implements Transport {
       });
       // As player 0.6.4: a first install runs; an update or reinstall (any
       // source, `replace` included) keeps a disabled plugin disabled unless
-      // `enabled` is given.
-      const enabled = requested ?? entry?.state !== "disabled";
+      // `enabled` is given. Players up to 0.6.3 run every install.
+      const enabled = !this.installKeepsDisabled
+        ? true
+        : (requested ?? entry?.state !== "disabled");
       const next = {
         id: manifest.id,
         version: manifest.version,

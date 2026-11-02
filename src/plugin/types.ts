@@ -609,15 +609,33 @@ export interface Plugin extends Scope {
  * - `uninstall`: the user uninstalls it.
  * - `reload`: it is reloaded (from the plugin manager, or a development
  *   load with `--plugin`).
- * - `upgrade`: a new version replaces it.
- * - `idle`: lazy activation stops it after a while without use; its next
- *   use starts it again ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
- * - `failed`: the player stops it for a fault (planned to cover an
- *   unreadable or oversized line, a malformed request, an input queue that
- *   overflowed, an uncaught exception in the shared process).
+ * - `upgrade`: an install or update replaces the running version; also a
+ *   new version stopped because its install was cancelled (the previous
+ *   version comes back).
+ * - `idle`: lazy activation parks it; its next use starts it again
+ *   ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
+ *   Lazy activation is off by default (`VESTRA_LAZY=1` turns it on); when
+ *   on, it parks a plugin after a while without use, and parks one whose
+ *   first run it judges lazy right after it is ready.
+ * - `failed`: the player stops it for a fault it can still tell the plugin
+ *   about (planned to cover a malformed request, an unreadable or
+ *   oversized line, an activation timeout, an uncaught exception the
+ *   shared process attributes to this plugin).
  * - `host-lost`: the plugin's runner saw its pipe to the player close
  *   without a stop: the player crashed or was killed. Requests are refused
- *   with `disabled`; clean up locally only.
+ *   with `disabled`; clean up locally only. Player 0.6.4 sends `quit` on a
+ *   normal exit; read `host-lost` as "the player is gone", not as proof of
+ *   a crash.
+ *
+ * Some ends are no stop at all: the plugin gets no reason and its
+ * {@link Scope.onDispose} cleanups do not run. That is the case when its
+ * own process is killed because its input queue is full or a write to it
+ * failed, when its own process fails to activate (the runner exits without
+ * cleaning up), when the process has already exited, and when the shared
+ * runner is restarted as a whole (a hang, a fault it cannot attribute, an
+ * unreadable line of its own, a member's full input queue, the runner
+ * exiting): every member is killed with it. Keep state that must survive
+ * such an end in storage as it changes, not only in a cleanup.
  *
  * Planned for player 0.6.4: the player sends the reason with
  * `runtime.stop` and its runner reports `host-lost`; the exact list may
@@ -8888,7 +8906,7 @@ export interface PackageCandidate {
    * declare const candidate: PackageCandidate;
    * // ---cut---
    * const change = await candidate.install({ replace: true });
-   * await change.done; // "committed" once the new plugin runs
+   * await change.done; // "committed" once installed (running unless it stays disabled)
    * ```
    *
    * @example Enable a fixed version of a plugin the store disabled
