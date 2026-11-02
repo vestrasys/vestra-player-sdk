@@ -609,15 +609,33 @@ export interface Plugin extends Scope {
  * - `uninstall`: the user uninstalls it.
  * - `reload`: it is reloaded (from the plugin manager, or a development
  *   load with `--plugin`).
- * - `upgrade`: a new version replaces it.
- * - `idle`: lazy activation stops it after a while without use; its next
- *   use starts it again ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
- * - `failed`: the player stops it for a fault (planned to cover an
- *   unreadable or oversized line, a malformed request, an input queue that
- *   overflowed, an uncaught exception in the shared process).
+ * - `upgrade`: an install or update replaces the running version; also a
+ *   new version stopped because its install was cancelled (the previous
+ *   version comes back).
+ * - `idle`: lazy activation parks it; its next use starts it again
+ *   ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
+ *   Lazy activation is off by default (`VESTRA_LAZY=1` turns it on); when
+ *   on, it parks a plugin after a while without use, and parks one whose
+ *   first run it judges lazy right after it is ready.
+ * - `failed`: the player stops it for a fault it can still tell the plugin
+ *   about (planned to cover a malformed request, an unreadable or
+ *   oversized line, an activation timeout, an uncaught exception the
+ *   shared process attributes to this plugin).
  * - `host-lost`: the plugin's runner saw its pipe to the player close
  *   without a stop: the player crashed or was killed. Requests are refused
- *   with `disabled`; clean up locally only.
+ *   with `disabled`; clean up locally only. Player 0.6.4 sends `quit` on a
+ *   normal exit; read `host-lost` as "the player is gone", not as proof of
+ *   a crash.
+ *
+ * Some ends are no stop at all: the plugin gets no reason and its
+ * {@link Scope.onDispose} cleanups do not run. That is the case when its
+ * own process is killed because its input queue is full or a write to it
+ * failed, when its own process fails to activate (the runner exits without
+ * cleaning up), when the process has already exited, and when the shared
+ * runner is restarted as a whole (a hang, a fault it cannot attribute, an
+ * unreadable line of its own, a member's full input queue, the runner
+ * exiting): every member is killed with it. Keep state that must survive
+ * such an end in storage as it changes, not only in a cleanup.
  *
  * Planned for player 0.6.4: the player sends the reason with
  * `runtime.stop` and its runner reports `host-lost`; the exact list may
@@ -8792,6 +8810,27 @@ export interface InstallOptions {
    * reconnects to it.
    */
   replace?: boolean;
+  /**
+   * Whether the plugin runs once installed (SDK 1.5.55). Left out, a first
+   * install runs and an update or reinstall (from any source, `replace`
+   * included) keeps the installed plugin's state: one the user or a store
+   * disabled stays disabled, and only its files are installed (nothing
+   * starts it, so the change commits without an `activating` step). `true`
+   * enables and starts it, for example a version the store disabled that
+   * an update fixes; if it fails to start, the old version is restored,
+   * still disabled. `false` installs it disabled: a running version is
+   * stopped and its session values go, as with {@link Packages.setEnabled}.
+   * Built-in plugins always run (and cannot be installed over). A value
+   * that is not a boolean is `invalid`.
+   *
+   * Planned for player 0.6.4: older players ignore it and an install there
+   * always runs the plugin, so after a committed install call
+   * {@link Packages.setEnabled} when the state matters.
+   *
+   * @player 0.6.4 (planned); older players ignore it (an install always
+   *   enables the plugin).
+   */
+  enabled?: boolean;
 }
 
 /**
@@ -8837,9 +8876,14 @@ export interface PackageCandidate {
    * a built-in id fails with `unsupported` (built-ins update with the
    * player). A reserved id (`vestra` or `vestra.*`, which every built-in
    * uses) fails with `reserved` (player 0.4.1; already when validated), as
-   * only the player installs built-in plugins.
+   * only the player installs built-in plugins. An update keeps a disabled
+   * plugin disabled unless `enabled` says otherwise (planned for player
+   * 0.6.4; see {@link InstallOptions.enabled}).
    *
    * @capability plugins.manage
+   * @throws `invalid` (rejects) An option is malformed: a `source` the
+   *   player does not accept, or a `replace` or `enabled` that is not a
+   *   boolean.
    * @throws `conflict` (rejects) The plugin is installed from another source
    *   and `replace` is not set.
    * @throws `unsupported` (rejects) A built-in plugin's id.
@@ -8862,7 +8906,19 @@ export interface PackageCandidate {
    * declare const candidate: PackageCandidate;
    * // ---cut---
    * const change = await candidate.install({ replace: true });
-   * await change.done; // "committed" once the new plugin runs
+   * await change.done; // "committed" once installed (running unless it stays disabled)
+   * ```
+   *
+   * @example Enable a fixed version of a plugin the store disabled
+   * A store disabled a version it revoked; the update that fixes it
+   * should run again. Without `enabled` the update keeps the plugin
+   * disabled (player 0.6.4); `true` enables it once installed. Older
+   * players ignore the option and enable every install.
+   * ```ts
+   * declare const candidate: PackageCandidate;
+   * // ---cut---
+   * const change = await candidate.install({ enabled: true });
+   * await change.done; // "committed" once the fixed version runs
    * ```
    *
    * @since 1.0.0

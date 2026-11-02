@@ -179,6 +179,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.packages} | What `packages.list` reports; `setEnabled`, `uninstall` and `install` update it. |
 | {@link "@vestra-player/sdk/testing"!TestHost.packageCalls} | Every `packages.setEnabled` / `uninstall` / `install`, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.candidates} | Packages `validate` and `validateArchive` accept: path (directory or `.vxp` file) → its manifest. |
+| {@link "@vestra-player/sdk/testing"!TestHost.installKeepsDisabled} | Which player's install rule `packages.install` plays. |
 | {@link "@vestra-player/sdk/testing"!TestHost.remoteImages} | Remote images (`plugin.ui.markdown`, `plugin.ui.remoteImage`): address → a local PNG or JPEG file served for it, or `null` for a failing download. |
 | {@link "@vestra-player/sdk/testing"!TestHost.markdown}() | The Markdown document a value holds (its wire form read back), or `null` when the value is not one. |
 | {@link "@vestra-player/sdk/testing"!TestHost.audioDevices} | What `player.audioDevices()` lists. |

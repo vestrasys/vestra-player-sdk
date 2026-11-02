@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type {
+  InstallOptions,
   PackageManifest,
   Plugin,
   PluginError,
@@ -140,6 +141,108 @@ test("packages: .vxp install with a source, conflict, replace and built-ins", as
     "invalid",
   );
   await rejects(plugin.packages.validateArchive("/nowhere.vxp"), "missing");
+  await stop();
+});
+
+test("packages.install enabled (SDK 1.5.55): updates keep a disabled plugin disabled unless asked", async () => {
+  const host = new TestHost();
+  const archive = (version: string) => {
+    const path = resolve(`/downloads/someone.demo-${version}.vxp`);
+    host.candidates.set(path, manifest("someone.demo", version));
+    return path;
+  };
+  const versions = ["1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"].map(archive);
+  const { plugin, stop } = await manager(host);
+  const state = async () =>
+    (await plugin.packages.list()).find((p) => p.id === "someone.demo")?.state;
+  const install = async (path: string, options?: InstallOptions) =>
+    (await (await plugin.packages.validateArchive(path)).install(options)).done;
+
+  // A first install runs; `enabled` is not sent when not given.
+  assert.equal(await install(versions[0]!), "committed");
+  assert.equal(await state(), "running");
+  assert.equal("enabled" in host.sent("packages.install").at(-1)!, false);
+  assert.equal("enabled" in host.packageCalls.at(-1)!, false);
+
+  // The user disables it: an update (any source, `replace` too) keeps it so.
+  await plugin.packages.setEnabled("someone.demo", false);
+  assert.equal(await install(versions[1]!), "committed");
+  assert.equal(await state(), "disabled");
+  assert.equal(
+    await install(versions[1]!, {
+      source: { kind: "workshop" },
+      replace: true,
+    }),
+    "committed",
+  );
+  assert.equal(await state(), "disabled");
+
+  // `true` enables the fixed version; it is sent and recorded.
+  assert.equal(
+    await install(versions[2]!, {
+      source: { kind: "workshop" },
+      enabled: true,
+    }),
+    "committed",
+  );
+  assert.equal(await state(), "running");
+  assert.equal(host.sent("packages.install").at(-1)?.enabled, true);
+  assert.deepEqual(host.packageCalls.at(-1), {
+    method: "install",
+    id: "someone.demo",
+    source: { kind: "workshop" },
+    replace: false,
+    enabled: true,
+  });
+
+  // `false` installs it disabled; a later plain update keeps that.
+  assert.equal(
+    await install(versions[3]!, {
+      source: { kind: "workshop" },
+      enabled: false,
+    }),
+    "committed",
+  );
+  assert.equal(await state(), "disabled");
+  assert.equal(host.sent("packages.install").at(-1)?.enabled, false);
+  assert.equal(
+    await install(versions[4]!, { source: { kind: "workshop" } }),
+    "committed",
+  );
+  assert.equal(await state(), "disabled");
+
+  // Anything but a boolean is refused before it is sent.
+  const sent = host.sent("packages.install").length;
+  const candidate = await plugin.packages.validateArchive(versions[0]!);
+  for (const enabled of [null, "yes", 1])
+    await rejects(candidate.install({ enabled } as never), "invalid");
+  assert.equal(host.sent("packages.install").length, sent);
+  await stop();
+});
+
+test("TestHost.installKeepsDisabled = false plays players up to 0.6.3: every install runs", async () => {
+  const host = new TestHost();
+  host.installKeepsDisabled = false;
+  const paths = ["1.0.0", "1.1.0", "1.2.0"].map((version) => {
+    const path = resolve(`/downloads/someone.demo-${version}.vxp`);
+    host.candidates.set(path, manifest("someone.demo", version));
+    return path;
+  });
+  const { plugin, stop } = await manager(host);
+  const state = async () =>
+    (await plugin.packages.list()).find((p) => p.id === "someone.demo")?.state;
+  const install = async (path: string, options?: InstallOptions) =>
+    (await (await plugin.packages.validateArchive(path)).install(options)).done;
+  assert.equal(await install(paths[0]!), "committed");
+  await plugin.packages.setEnabled("someone.demo", false);
+  // An update of a disabled plugin runs it again.
+  assert.equal(await install(paths[1]!), "committed");
+  assert.equal(await state(), "running");
+  // `enabled` is ignored, but still sent and recorded.
+  assert.equal(await install(paths[2]!, { enabled: false }), "committed");
+  assert.equal(await state(), "running");
+  assert.equal(host.sent("packages.install").at(-1)?.enabled, false);
+  assert.equal(host.packageCalls.at(-1)?.enabled, false);
   await stop();
 });
 
