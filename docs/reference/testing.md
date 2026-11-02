@@ -16,7 +16,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 
 ## startPlugin
 
-`startPlugin(activate, options)` resolves with `{ host, plugin, stop }` once activation and every registration made during it are done, and rejects when the player would fail the activation (`activate` throws, or a registration made during it fails, for example with `limit`, `conflict` or `invalid`). `plugin` is the object `activate` received; `stop()` disposes the plugin as when the player stops it (scopes released, stores flushed) and removes the host's temporary files. Each test creates its own host.
+`startPlugin(activate, options)` resolves with `{ host, plugin, stop, disconnect }` once activation and every registration made during it are done, and rejects when the player would fail the activation (`activate` throws, or a registration made during it fails, for example with `limit`, `conflict` or `invalid`). `plugin` is the object `activate` received; `stop()` disposes the plugin as when the player stops it (scopes released, stores flushed) and removes the host's temporary files; `stop({ reason })` passes the stop reason the player sends, and `disconnect()` stops it as when the player is lost (`host-lost`; requests refused with `disabled`) (SDK 1.5.54). Each test creates its own host.
 
 | Option | Meaning |
 | --- | --- |
@@ -129,6 +129,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.videoShaders} | The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists the player holds for this plugin's handles by id (the real paths, after following links), and how many shaders other plugins hold, which count against `VIDEO_PROCESSING_LIMITS``.shaders` (`limit`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.fileRoots} | Where the plugin's own files may be: its package directory and its data directory (`startPlugin` sets both when the list is still empty). |
 | {@link "@vestra-player/sdk/testing"!TestHost.failVideoShaders}() | What the player pushes to a shader handle when mpv cannot compile a shader (code `failed`; the player cannot tell whose shader failed, so every handle with shaders hears it) or the player switches to software rendering (`unsupported`; use `TestHost.failVideoRender`, which also tells the handles). |
+| {@link "@vestra-player/sdk/testing"!TestHost.previousCrash} | Play a run after an abnormal end with plugin shaders on (player 0.6.3): while set, a non-empty `video.shaders` list and a render options `set` with a non-empty `shaders` list are refused with `previous-crash` and this message; clearing still works. |
 | {@link "@vestra-player/sdk/testing"!TestHost.processing} | The player's processing (filter) state. |
 | {@link "@vestra-player/sdk/testing"!TestHost.subtitles} | The player's subtitle state: tracks, selection, style layers, fonts and loaded resources. |
 | {@link "@vestra-player/sdk/testing"!TestHost.uploads} | Subtitle uploads in progress, by upload id. |

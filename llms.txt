@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.5.53: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
+> @vestra-player/sdk 1.5.54: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
 
 ## Read the documentation
 
@@ -32,7 +32,7 @@
 - `/API/Media`: 6 entries: CaptureOptions, Snapshot, ExportOptions, JobState, ExportJob, MediaCapture
 - `/API/Packages`: 10 entries: PackageManifest, PackageSource, InstallOptions, PackageCandidate, PackageChangeStatus, PackageChange, PluginInfo, PluginDisplay, PluginWarning, Packages
 - `/API/Playback`: 18 entries: MarkKind, TimelineMark, TimelineLayer, Timeline, AudioTrack, PlayerState, AudioDevice, Chapter, Conditional, Media, Scrub, StreamFrame, StreamOptions, StreamStartError, Stream,…
-- `/API/Plugin`: 11 entries: Disposable, PluginError, Scope, Plugin, WindowState, MainWindow, AppInfo, App, SystemInfo, DisplayInfo, Json
+- `/API/Plugin`: 13 entries: Disposable, PluginError, Scope, Plugin, StopReason, DisposeInfo, WindowState, MainWindow, AppInfo, App, SystemInfo, DisplayInfo, Json
 - `/API/Processing`: 18 entries: FilterStatus, VideoFilter, AudioFilter, ViewSettings, VideoView, RenderSettings, RenderOptions, VideoShaders, UpscalingReasonCode, UpscalingReason, UpscalingDecodingCause,…
 - `/API/Services`: 15 entries: Clipboard, Power, ToolResult, Tools, JsonStore, Storage, SessionStorage, System, Secrets, RenderingMode, RenderingPreference, RenderingReasonCode, RenderingReason, RenderingState,…
 - `/API/Sources`: 7 entries: ResolverOptions, WebResolverOptions, FileResolverOptions, ResolvedStream, Resolver, Resolvers, ResolvedMedia

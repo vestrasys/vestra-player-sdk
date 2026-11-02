@@ -48,6 +48,7 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
 | `revisionConflict` | {@link "@vestra-player/sdk"!Packages}: the installed revision changed since it was read (another install or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
 | `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
+| `previous-crash` | {@link "@vestra-player/sdk"!VideoShaders}, {@link "@vestra-player/sdk"!RenderOptions} `shaders` (player 0.6.3): plugin shaders are off because the player ended abnormally while they were drawing; clearing still works. Do not retry while refused (the player shows its own OSD line). |
 | `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
 | `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
 

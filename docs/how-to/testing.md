@@ -61,7 +61,7 @@ assert.equal(window.props["status-text"], expected);
 
 ### Stop
 
-`await stop()` disposes the plugin as the player does (scopes released, stores flushed) and removes the host's temporary files. Each test creates its own host.
+`await stop()` disposes the plugin as the player does (scopes released, stores flushed) and removes the host's temporary files (a removal Windows refuses for a moment is retried, and never fails the test). `stop({ reason: "idle" })` gives the stop reason the player would send, and `disconnect()` stops the plugin as when the player is lost (`host-lost`, requests refused) (SDK 1.5.54). Each test creates its own host.
 
 ### Test a restart
 

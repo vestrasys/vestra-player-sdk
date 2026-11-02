@@ -1,7 +1,14 @@
 /** Scopes own handles. Disposal runs newest first and never throws. */
 import { failure, toError } from "./runtime.ts";
 import type { Change, Runtime } from "./runtime.ts";
-import type { Disposable, Plugin, PluginError, Scope } from "./types.ts";
+import type {
+  Disposable,
+  DisposeInfo,
+  Plugin,
+  PluginError,
+  Scope,
+  StopReason,
+} from "./types.ts";
 import { commands } from "./commands.ts";
 import { WHEN } from "./when.ts";
 import { dialogs, panels, ui, windows } from "./ui.ts";
@@ -51,6 +58,9 @@ export class ScopeImpl implements Plugin {
     if (!directory)
       throw failure("unavailable", "the player provided no data directory");
     return directory;
+  }
+  get stopReason(): StopReason | undefined {
+    return this.runtime.stopping?.reason;
   }
   get disposed(): boolean {
     return this.#disposed || (this.#parent?.disposed ?? false);
@@ -105,14 +115,27 @@ export class ScopeImpl implements Plugin {
   forget(item: Disposable) {
     this.#items = this.#items.filter((each) => each !== item);
   }
-  onDispose(cleanup: () => void | Promise<void>): Disposable {
+  onDispose(
+    cleanup:
+      | ((info?: DisposeInfo) => void | Promise<void>)
+      | (() => void | Promise<void>),
+  ): Disposable {
     let done = false;
     const item: Disposable = {
       dispose: async () => {
         if (done) return;
         done = true;
         this.forget(item);
-        await cleanup();
+        const stopping = this.runtime.stopping;
+        await cleanup(
+          Object.freeze(
+            stopping
+              ? stopping.reason === undefined
+                ? { stopping: true }
+                : { stopping: true, reason: stopping.reason }
+              : { stopping: false },
+          ),
+        );
       },
     };
     return this.add(item);
