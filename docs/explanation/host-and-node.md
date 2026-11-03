@@ -1,6 +1,6 @@
 ---
 title: How the player runs and talks to plugins
-description: How the Rust host starts and stops plugin Node.js processes, the JSON-lines protocol between them, the capability check per request, crashes and lazy activation.
+description: How the Rust host starts and stops plugin Node.js processes, the JSON-lines protocol between them, the capability check per request, crashes, restarts, memory limits and on-demand start.
 ---
 
 # How the player runs and talks to plugins
@@ -14,8 +14,8 @@ Nothing here is API. The protocol is internal to the player and the SDK version 
 ```mermaid
 flowchart LR
     HOST["vestra-host"]
-    A["node runner.js (plugin directory)<br/>a third-party plugin"]
-    B["node runner.js (plugin directory)<br/>a development load"]
+    A["node --max-old-space-size=512 runner.js (plugin directory)<br/>a third-party plugin"]
+    B["node runner.js (plugin directory)<br/>a development load, no heap cap"]
     subgraph SHARED["node --max-old-space-size=1024 shared-runner.js (one V8 isolate)"]
         P1["vestra.playlist (g 12)"]
         P2["vestra.video (g 13)"]
@@ -26,8 +26,8 @@ flowchart LR
     HOST -- "stdin/stdout, every line tagged with g" --> SHARED
 ```
 
-- **An own process** (`src/runtime/runner.ts`): one plugin, one Node.js process, one pipe each way. Every third-party plugin and every development load (`--plugin`) runs like this.
-- **The shared runner** (`src/runtime/shared-runner.ts`, host 0.5.6): the built-in plugins share one Node.js process to save memory. Every line on its pipe carries the member's owner generation `g`.
+- **An own process** (`src/runtime/runner.ts`): one plugin, one Node.js process, one pipe each way. Every third-party plugin and every development load (`--plugin`) runs like this. From player 0.6.6 its JavaScript heap is capped at 512 MB, except for a development load ([Memory](#memory)).
+- **The shared runner** (`src/runtime/shared-runner.ts`, host 0.5.6): the built-in plugins share one Node.js process to save memory, with one 1024 MB heap for all of them. Every line on its pipe carries the member's owner generation `g`.
 
 Both runners hand the plugin's life to one module, `src/runtime/boot.ts`: it loads the entry, builds the SDK's `plugin` object, calls `activate`, and reports `runtime.ready` or `runtime.failed`. `boot.ts` never touches `process.argv`, `process.env`, stdout or `process.exit`, so several plugins can run side by side in one isolate. A plugin therefore behaves the same in either runner.
 
@@ -60,6 +60,9 @@ The host starts `node runner.js <plugin directory>` and passes the rest in the e
 
 ```rust
 let mut command = paths.node_command();
+if let Some(mib) = heap_mib {
+    command.arg(heap_flag(mib)); // --max-old-space-size=512 (player 0.6.6)
+}
 if let Some(dir) = data_directory {
     command.env("VESTRA_PLUGIN_DATA_DIR", dir);
 }
@@ -73,12 +76,12 @@ let mut child = command
     .arg(directory)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
-    .stderr(Stdio::inherit())
+    .stderr(Stdio::piped())
 ```
 
 Source: src/host/src/process/mod.rs
 
-stdin and stdout are the protocol; stderr is the player's own, so a plugin's `console.log` (which `runner.ts` redirects to stderr) ends up in the player's log. For each process the host starts a writer thread fed by a bounded queue of 1024 messages and a reader thread that turns each line into `Event::Request(generation, message)` for the UI thread.
+stdin and stdout are the protocol. A plugin's `console.log` (which `runner.ts` redirects to stderr) ends up in the player's log: from player 0.6.6 the host reads the process's stderr and copies it to its own line by line, which is how it sees V8's "JavaScript heap out of memory" line (before, the process wrote to the player's stderr directly). For each process the host starts a writer thread fed by a bounded queue of 1024 messages and a reader thread that turns each line into `Event::Request(generation, message)` for the UI thread.
 
 ### A member of the shared runner
 
@@ -115,17 +118,18 @@ Shape from src/host/src/process/shared_runner.rs
 
 The runner has one pipe pair, served by one writer thread (`shared-runner-write`) and one reader thread (`shared-runner-read`) for all its members; the reader routes each line by its `g`.
 
-### The activation deadline
+### The start deadline
 
-The host opens an activation record with a deadline when it starts a plugin: 15 seconds for an installed plugin, 120 seconds for a development load. The plugin must report `runtime.ready` before then:
+From player 0.6.6 every start and stop of a plugin goes through one **supervisor** in the host, modelled on systemd's service manager: each start is a job, a plugin has at most one job at a time, and a second request (a reload while it starts, a click while it is stopped) is merged with it. The plugin must report `runtime.ready` within the start timeout, counted from the moment its process is created (time spent waiting for a free start slot does not count):
 
-```rust
-self.activations.begin(owner, self.now_ms() + 15_000)?;
-```
+| | Player 0.6.6 | Planned for player 0.6.7 |
+| --- | --- | --- |
+| Installed plugin | 15 s | 60 s (Chrome's service worker start) |
+| Development load (`--plugin`) | 120 s | 120 s |
 
-Source: src/host/src/packages/package_manager.rs
+`boot.ts` sends `runtime.ready` only after `activate` returned and every registration started during activation succeeded (a slot, sequence or resolver another plugin holds does not count as a failure, and the SDK skips a command declaration the player refuses with `invalid`, `conflict` or `limit`: it logs it and reports it to `onError`, SDK 1.5.49). Otherwise it sends `runtime.failed` with a `code`. A plugin that sent `runtime.failed` said it cannot start: it is stopped and listed as failed with the message, and never tried again by itself. A start that fails otherwise (the process cannot be created, or it is not ready in time and is stopped with the reason `failed`) is tried up to three more times (player 0.6.6), about 250 ms, 500 ms and 1 s apart (plus up to 10 %), each try with the full start timeout; only then is the plugin listed as failed. A development load is not tried again.
 
-`boot.ts` sends `runtime.ready` only after `activate` returned and every registration started during activation succeeded (a slot, sequence or resolver another plugin holds does not count as a failure, and the SDK skips a command declaration the player refuses with `invalid`, `conflict` or `limit`: it logs it and reports it to `onError`, SDK 1.5.49). Otherwise it sends `runtime.failed` with a `code`. A failure or a missed deadline stops the plugin, and the plugin manager lists it as failed with the message. At start-up the installed plugins are started from a queue, about 25 ms of process spawning per UI tick, so the window stays responsive while they come up.
+At start-up the built-ins start first. Installed plugins are started from a queue, about 25 ms of process spawning per UI tick, so the window stays responsive while they come up. With on-demand start (below), at most `min(4, max(2, cores / 2))` third-party plugins start at the same time, clicks before events before background starts; a click may take one or two places beyond that, and built-ins do not count ([Reference: limits](../reference/limits.md#plugin-processes)).
 
 ## The wire protocol
 
@@ -279,66 +283,71 @@ The check is a contract, not a sandbox: the plugin process has the user's file a
 
 ## Stopping a plugin
 
-The host stops a plugin when the user disables, uninstalls, reloads or upgrades it, when it fails, and when the player quits. It first revokes everything the plugin owns on the player's side (menus and keys, windows, panels, settings pages, filter chains, subtitle layers, jobs, resolvers, streams), then sends `runtime.stop` and waits on a separate thread:
+The host stops a plugin when the user disables, uninstalls, reloads or upgrades it, when it fails, when it goes to standby ([On-demand start](#on-demand-start)), and when the player quits. It first revokes everything the plugin owns on the player's side (menus and keys, windows, panels, settings pages, filter chains, subtitle layers, jobs, resolvers, streams; a plugin going to standby keeps its recorded entries), then sends `runtime.stop` with the reason (`{"event":"runtime.stop","data":{"reason":"disable"}}`, player 0.6.4) and hands the process to one reaper thread, which waits for every stopping process together and kills each one whose grace has run out.
 
-```rust
-Runner::Own { child, outbound } => {
-    let _ = outbound.try_send(json!({"event":"runtime.stop","data":null}));
-    let deadline = Instant::now() + self.stop_wait;
-    // … poll every 5 ms until the process exits or the deadline passes
-    if !exited {
-        let _ = child.kill();
-        let _ = child.wait();
-    }
-}
-```
+In the runner, `boot.ts` rejects pending requests with `code: "disabled"`, passes the reason to the SDK's `dispose` and disposes the root scope; the plugin reads it as {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} and in its `onDispose` cleanups (SDK 1.5.54). A runner whose stdin closes (or whose stdout breaks) without a `runtime.stop` passes `host-lost`. Players up to 0.6.3 send `"data":null` and their runner calls `dispose()` without a reason. Player 0.6.4 and later send `quit` on a normal exit, before the pipes close; an older player could close them first when its window closed, so `host-lost` means the player is gone, not necessarily that it crashed. Which reason comes when is listed at {@link "@vestra-player/sdk"!StopReason | StopReason}.
 
-Source: src/host/src/process/mod.rs
+A `runtime.stop` is sent only where it can still reach the plugin: an own process whose input queue is full or whose stdin write failed is killed without one, an own process whose activation failed exits without running its cleanups, a process that ended by itself (it exited or ran out of memory) gets none (exactly none from player 0.6.6; before, one was written into its closed pipe), and a restart of the shared runner kills it with every member, so none of them gets a stop and their cleanups do not run. The grace a stopping own process gets before it is killed:
 
-In the runner, `boot.ts` rejects pending requests with `code: "disabled"` and disposes the root scope. Planned for player 0.6.4 (not in a released player yet): the stop will carry why (`{"event":"runtime.stop","data":{"reason":"disable"}}`; `quit`, `disable`, `uninstall`, `reload`, `upgrade`, `idle`, `failed`), the runner will pass it to the SDK's `dispose`, and a runner whose stdin closes (or whose stdout breaks) without a `runtime.stop` will pass `host-lost`; the plugin reads it as {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} and in its `onDispose` cleanups (SDK 1.5.54). Players up to 0.6.3 send `"data":null` and their runner calls `dispose()` without a reason. Player 0.6.4 sends `quit` on a normal exit, before its pipes close; an older player could close them first when its window closed, so `host-lost` means the player is gone, not necessarily that it crashed. `upgrade` also covers a new version stopped because its install was cancelled; `idle` is a park by lazy activation (off by default), after a while without use or right after `runtime.ready` for a first run it judges lazy. A `runtime.stop` is sent only where it can still reach the plugin: an own process whose input queue is full or whose stdin write failed is killed without one, an own process whose activation failed exits without running its cleanups, a process that already exited gets none, and a restart of the shared runner kills it with every member, so none of them gets a stop and their cleanups do not run. The waits involved:
-
-| | Own process | Shared-runner member |
+| Stop | Player 0.6.6 | Planned for player 0.6.7 |
 | --- | --- | --- |
-| Host's wait after `runtime.stop` | 300 ms, then the process is killed | 300 ms, then counted as leaked; the host waits up to 6 s for `runner.stopped` before it reports the plugin gone |
-| Runner's own limit for the cleanup | 5 s, then `process.exit(0)` | 5 s, then the member is abandoned (`timedOut: true`) |
-| A park (lazy activation) | 2 s, then killed | as any stop |
+| Disable, uninstall, reload, upgrade | 300 ms | 5 s |
+| Standby (idle time; from 0.6.7 also the process budget and memory pressure) | 2 s | 5 s |
+| After a fault (`failed`), and any stop of a development load | 300 ms | 300 ms |
+| Quit | every plugin at once, 1 s in all (before 0.6.6: 300 ms each, one after another) | the same |
+| Restart after a lost GPU device | every plugin at once, 300 ms in all | the same |
 
-A member cannot be killed without killing its neighbours, which is why the host waits for the runner's report instead. A reload or install of the same plugin starts the new process only once the old one is gone, so two instances never write the same data directory at once.
+A shared-runner member cannot be killed without killing its neighbours: past 300 ms it is counted as leaked, and the host waits up to 6 s for the runner's `runner.stopped` before it reports the plugin gone. The runner's own limit for the cleanups is 5 s; then an own process exits (`process.exit(0)`) and a member is abandoned (`timedOut: true`).
+
+A new start of the same plugin (a reload, switching it back on, a reinstall, a click while it goes to standby) waits until the old process is gone and cleaned up, at most 20 s from its own request. So two instances never write the same data directory at once (player 0.6.6; before, switching a running plugin off and straight back on could start the second process during the first one's grace).
 
 ## Crashes and restarts
 
-An own process that ends while it is still running (its stdout closes) is recorded as failed with "plugin process exited", and its resources are revoked as for any stop. One that writes invalid JSON or a line over 1 MiB is recorded and stopped the same way. One that sends a malformed request is stopped too (from player 0.6.4 with the reason `failed`). One that reads its input so slowly that the host's queue of 1024 messages for it fills up, or whose stdin the host cannot write to, is killed without a stop: its cleanups do not run. The host does not restart such a plugin by itself; it starts again when the user reloads it or at the next player start.
+What ends a plugin unexpectedly, and how the host tells:
+
+- **Its process exits** (its stdout closes): recorded as "plugin process exited"; from player 0.6.6 the player also shows "<name> stopped unexpectedly".
+- **It runs out of memory**: V8 writes "JavaScript heap out of memory" to stderr and aborts with exit code 134; the host needs both. The player shows "<name> ran out of memory" and records "plugin ran out of memory" (player 0.6.6, [Memory](#memory)).
+- **It breaks the protocol**: invalid JSON, a line over 1 MiB or a malformed request stop it with the reason `failed`.
+- **It does not read its input**: when the host's queue of 1024 messages for it fills up, or its stdin cannot be written, it is killed without a stop (its cleanups do not run) and listed as failed. This one is never restarted by itself.
+- **It does not answer** (planned for player 0.6.7): a request from the player that awaits the plugin's reply (a `source.resolveRequest` to its resolver) and is still unanswered after 5 minutes stops it with the reason `failed`, as Chrome ends a service worker whose event runs longer than 5 minutes. Work the plugin declares itself, such as a command in its `busy` state, has no such cap.
+
+What happens next (player 0.6.6):
+
+- **A built-in** starts again by itself after 3 s, then 6 s, 12 s… while it keeps crashing; the count starts over once it has run for a minute.
+- **A third-party plugin with on-demand start** ([below](#on-demand-start)) keeps its menu items, keys, settings pages and resolvers in standby and starts again on its next use, after a pause of 1 s, then 2 s, 4 s… (at most 60 s). During the pause its commands are shown disabled with the reason "<name> stopped after a fault; try again in a moment", a click or key shows that reason, and a file or link it would resolve fails with it. A resident plugin (one that held something live when it became ready) starts again by itself after the same pause. Without on-demand start (the default in player 0.6.6) a third-party plugin that crashes is listed as failed at once, as before.
+- **The start limit**: the fifth crash within 10 minutes stops a plugin with its own process for good: the player shows "<name> stopped after repeated faults", and the plugin manager lists it as failed with "<cause>; stopped after 5 failures within 10 minutes (reload it to start it again)". Reloading it or switching it back on clears the count. A development load fails at its first crash; for the shared runner see below.
 
 The shared runner handles faults per member when it can:
 
-- An uncaught exception that `AsyncLocalStorage` attributes to one member stops that member only (`runner.fault` with its `g`), and the host runs that plugin in its own process for the rest of the session.
-- The runner exiting, an unattributed exception (`runner.fault` with `g` 0), a line from the runner itself that the host cannot read, a hang (a `runner.ping` every 2 s, five unanswered) or a member queue that fills up because the runner reads nothing restarts **every** member in a new runner, after checking their digests again, with an OSD notice. The old runner is killed first, so its members get no stop and their cleanups do not run.
+- An uncaught exception that `AsyncLocalStorage` attributes to one member stops that member only (`runner.fault` with its `g`, the reason `failed`), and the host runs that plugin in its own process for the rest of the session.
+- The runner exiting, an unattributed exception (`runner.fault` with `g` 0), a line from the runner itself that the host cannot read, a hang (a `runner.ping` every 2 s, five unanswered) or a member queue that fills up because the runner reads nothing restarts **every** member in a new runner, after checking their digests again, with an OSD notice. The old runner is killed first, so its members get no stop and their cleanups do not run. The first such restart is immediate; from player 0.6.6 a later one within a minute waits 3 s, then 6 s….
 - The third restart within 60 seconds runs all of them in their own processes until the player quits.
 
-Session storage is kept in the host's memory, keyed by the plugin's data key rather than by process, so it survives all of these restarts.
+Session storage is kept in the host's memory, keyed by the plugin's data key rather than by process, so it survives all of these restarts, running out of memory and the start limit included. Only switching the plugin off, uninstalling it and quitting the player clear it.
 
-## Lazy activation and idle stop
+## Memory
 
-What a plugin sees of this, what stays while it is stopped and what keeps it running, is in [Idle plugins are stopped](plugins.md#idle-plugins-are-stopped); this section is the host's side.
+From player 0.6.6 every own process starts with `--max-old-space-size=512`: the plugin's **JavaScript heap** may grow to 512 MB, as Chrome caps the V8 heap of a renderer. The cap counts JavaScript objects, strings and arrays; it does not count memory outside the V8 heap, such as the contents of a `Buffer` or `ArrayBuffer`, native addons or child processes (`plugin.tools`). A plugin that passes it is ended by V8 itself, without a stop, and handled as a crash (above). The built-ins in the shared runner share 1024 MB; a development load has no cap. A plugin typically uses about 60 MB; keep large data in files or in a `Buffer`, not in one JavaScript structure.
 
-Host 0.5.17 adds step A1 of lazy activation, **off by default**: `VESTRA_LAZY=1` turns it on, and `VESTRA_IDLE_MS` sets the idle time (default 60 000 ms). It applies to installed plugins only; development loads are never parked.
+Planned for player 0.6.7, with on-demand start the player also bounds how many third-party processes run, and puts idle ones in standby when the system runs low on memory (below).
 
-- **Record.** Every 250 ms the host looks for plugins that are ready, unused for the idle time and have nothing in flight, and asks the playback worker what each holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) keeps running. From SDK 1.5.38 (read by player 0.5.18) the SDK marks the subscriptions it makes only to keep its own state mirrors current as `events.subscribe { event, mirror: true }`, and subscribes plainly only while the plugin has a listener or a binding that reads that state; a plugin whose subscriptions are all mirrors stays parkable. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`.
-- **Park.** The host writes the recording to `<package store>/activation/<instance GUID>.json` and stops the process as a disable does, but keeps its menu items, keys, settings pages, drop targets and resolvers, marked as recorded. A park gives the process 2 s instead of 300 ms.
-- **Wake.** One of these events for a parked plugin starts it under a new owner generation:
+## On-demand start
 
-  ```rust
-  const TRIGGERS: &[&str] = &[
-      "commands.execute",
-      "source.resolveRequest",
-      "drops.drop",
-      "ui.callback",
-  ];
-  ```
+What a plugin sees of this, what stays while it is stopped and what keeps it running, is in [Idle plugins are stopped](plugins.md#idle-plugins-are-stopped); this section is the host's side. "Standby" is the host's word for a plugin that is switched on and keeps its entries registered but has no process; the plugin manager shows it as `process: "idle"` and the plugin hears the stop reason `idle`. It applies to installed plugins only; development loads always run.
 
-  Source: src/host/src/host/lazy.rs
+- **Player 0.6.6:** on-demand start (named lazy activation since host 0.5.17) is **off by default**. `VESTRA_LAZY=1` turns it on, with the idle time `VESTRA_IDLE_MS` (default 60 000 ms).
+- **Planned for player 0.6.7:** on for everyone, with no switch; the idle time is 30 s, as for Chrome's extension service workers, and a resident plugin never goes to standby.
 
-  The recorded entries move to the new generation, the triggers wait until `runtime.ready`, and are then delivered, each checked again against what the plugin registered. A wake slower than 400 ms shows "Starting <name>…" on the OSD.
-- **Replay.** At the next start, a recording that matches the package digest and version, the player version and build, and the format version is registered without starting the plugin; the plugin wakes on first use as above.
+- **First run.** A plugin without a recording starts normally. When it is ready, the host asks the playback worker what it holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) is **resident** for this run; the host asks again at every later start. From SDK 1.5.38 (read by player 0.5.18) the SDK marks the subscriptions it makes only to keep its own state mirrors current as `events.subscribe { event, mirror: true }`, and subscribes plainly only while the plugin has a listener or a binding that reads that state; mirrors do not make a plugin resident. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`.
+- **Standby.** After the idle time without use, with nothing in flight and nothing live held, the host writes the recording to `<package store>/activation/<instance GUID>.json` and stops the process with the reason `idle`, but keeps its menu items, keys, settings pages, drop targets and resolvers, marked as recorded. A plugin that is busy then (a command in its `busy` state, an open dialog, a settings page shown, a package request or a resolution in flight) keeps running, and its idle time starts again when that work ends (player 0.6.6).
+- **Wake.** A click on one of its commands (`commands.execute`), a file or link to resolve (`source.resolveRequest`), a drop (`drops.drop`) or a callback of its settings page (`ui.callback`) starts the plugin under a new owner generation, and so do the four events it may listen to in standby (`packages.changed`, `bindings.changed`, `appearance.changed`, `resolvers.fileTypes`). The recorded entries move to the new generation. The triggers wait until `runtime.ready` and are then delivered in order, each checked again against what the plugin registered. A start slower than 400 ms shows "Starting <name>…" on the OSD. From player 0.6.6 `appearance.changed` also says what changed (`"changed":["theme"]` or `["language"]`); SDK 1.5.58 does not read it yet.
+- **Replay.** At the next player start, a recording that matches the package digest and version, the player version and build, and the format version is registered without starting the plugin; the plugin starts on first use as above.
 
-Work a parked plugin was doing outside the host (a timer, its own network request) is lost, as with an idle service worker, so state it needs belongs in session storage. The design and the remaining steps are in the [lazy activation round record](https://github.com/vestrasys/vestra-player/blob/main/doc/process/rounds/2026-10-lazy-activation.md).
+Bounds with on-demand start (player 0.6.6), each answered rather than dropped in silence; the numbers are in [Reference: limits](../reference/limits.md#plugin-processes):
+
+- **Held triggers**: at most 64 per plugin; only events merge (the newest of one name wins). A click past that shows "<name> is busy", a resolution fails at once with that text, a drop or callback is dropped with a log line. At most 256 third-party starts wait for a slot, answered the same way past that. A click held for a plugin that is switched off meanwhile shows "<name> is disabled"; one whose start fails shows "<name> could not start" (its entries stay, and the next click tries again).
+- **Every start holds its triggers until ready**, not only a wake: a reload, switching it on or an install too. An `activate` that awaits a click on its own command or a callback from its own view therefore never gets it: it waits until the start timeout stops it. Never await your own entry points in `activate`.
+- **Process budget** (planned for player 0.6.7): a number of third-party processes for this machine's memory (built-ins do not count). When a click or a background start would go past it, idle plugins go to standby first: those used longest ago, a plugin used in the last minute only after the others, a busy or resident one never; with none to take, the budget is exceeded. An event wake never puts other plugins in standby.
+- **Memory pressure** (planned for player 0.6.7): every 5 s the host reads the system's memory (Windows: available physical memory, with Chrome's thresholds, or the system's low-memory signal; Linux: `/proc/pressure/memory`; macOS: none, the budget alone). When the level rises to low or critical, every idle third-party plugin that is not resident goes to standby; at critical a click no longer takes the second extra start slot.
+
+A standby for the budget or for memory pressure is the same as one after the idle time: the plugin hears `idle`, session storage is kept, and the plugin manager shows `idle`. Work a plugin in standby was doing outside the host (a timer, its own network request) is lost, as with an idle service worker, so state it needs belongs in session storage. The design is the player's [plugin process supervisor](https://github.com/vestrasys/vestra-player/blob/main/doc/architecture/supervisor.md).
