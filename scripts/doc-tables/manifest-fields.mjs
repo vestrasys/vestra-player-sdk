@@ -63,7 +63,7 @@ const RULES = {
   ],
   minPlayerVersion: [
     "optional",
-    '`x.y.z`: the oldest player that loads the plugin (compared with `plugin.app.version`, three numbers). An older player refuses it with `versionMismatch` ("requires Vestra Player ≥ x.y.z") before it reads anything else, so a manifest with newer fields fails with that, not with an unknown field. See [Player versions](#player-versions).',
+    '`x.y.z`: the oldest player that loads the plugin (compared with `plugin.app.version`, three numbers; from player 0.7.1 the player release version, which can differ from the host binary version). An older player refuses it with `versionMismatch` ("requires Vestra Player ≥ x.y.z") before it reads anything else, so a manifest with newer fields fails with that, not with an unknown field. See [Player versions](#player-versions).',
   ],
 };
 

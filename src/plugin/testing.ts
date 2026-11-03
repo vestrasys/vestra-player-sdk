@@ -4063,7 +4063,7 @@ export class TestHost implements Transport {
    * adds or upgrades the entry in {@link TestHost.packages} following the
    * player's source rules: the same source upgrades, another source needs
    * `replace` (`conflict` otherwise), a built-in id is `unsupported`. As
-   * player 0.6.4 (planned), the installed entry's `state` follows
+   * player 0.6.4 and later, the installed entry's `state` follows
    * {@link "@vestra-player/sdk"!InstallOptions.enabled}: a first install
    * runs, an update of a `disabled` entry stays `disabled` unless `enabled`
    * is `true`, and `enabled: false` installs it `disabled`. Set
@@ -4087,7 +4087,7 @@ export class TestHost implements Transport {
   readonly candidates = new Map<string, PackageManifest>();
   /**
    * Which player's install rule `packages.install` plays. `true` (default,
-   * SDK 1.5.55): player 0.6.4 (planned), where an update or reinstall
+   * SDK 1.5.55): player 0.6.4 and later, where an update or reinstall
    * keeps a `disabled` plugin disabled unless the plugin passes
    * {@link "@vestra-player/sdk"!InstallOptions.enabled}. `false`: players
    * up to 0.6.3, where every install runs the plugin and `enabled` is

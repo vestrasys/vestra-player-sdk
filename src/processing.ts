@@ -199,6 +199,39 @@ export type VideoNode =
        * 16 MiB) inside the plugin's package directory or data directory
        * after following links; a path with `[` or `]` is refused. Outside
        * those: `invalid`; a file that does not exist: `missing`.
+       *
+       * The player checks only that header; the table itself is read by
+       * FFmpeg's `.cube` reader (`parse_cube` in FFmpeg's
+       * [`libavfilter/vf_lut3d.c`](https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/vf_lut3d.c)),
+       * which takes a subset of the
+       * Adobe/Resolve format:
+       *
+       * - Every line before `LUT_3D_SIZE N` is skipped (a `TITLE`, comments,
+       *   and also a `DOMAIN_MIN` or `DOMAIN_MAX` there, which then has no
+       *   effect).
+       * - After it, optional `TITLE`, `DOMAIN_MIN r g b` and
+       *   `DOMAIN_MAX r g b` lines (default `0 0 0` and `1 1 1`), blank
+       *   lines and `#` comments, then N³ data lines of three numbers
+       *   `r g b`, red changing fastest, then green, then blue.
+       * - Any other keyword after `LUT_3D_SIZE`, such as `MIN` or `MAX`, is
+       *   read as a data line, and FFmpeg refuses the file, as it does one
+       *   with fewer than N³ data lines. The chain then fails and the
+       *   player reports mpv's "error running command (-12)".
+       *
+       * ```text
+       * TITLE "Identity"
+       * LUT_3D_SIZE 2
+       * DOMAIN_MIN 0 0 0
+       * DOMAIN_MAX 1 1 1
+       * 0 0 0
+       * 1 0 0
+       * 0 1 0
+       * 1 1 0
+       * 0 0 1
+       * 1 0 1
+       * 0 1 1
+       * 1 1 1
+       * ```
        */
       file: string;
       /** How colours between the table's points are computed; `tetrahedral` is FFmpeg's default. */
