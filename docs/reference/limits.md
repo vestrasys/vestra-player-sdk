@@ -215,12 +215,12 @@ The player's plugin supervisor (player 0.6.6) bounds what a plugin's process may
 | Quit / restart after a lost GPU device | 1 s / 300 ms for all plugins together | the same | Every process left is killed. |
 | Wait for the previous process before a new start of the same plugin | 20 s from the new request | the same | The start fails. |
 | Idle time before standby | 60 s (`VESTRA_IDLE_MS`) | 30 s | The plugin goes to standby (stop reason `idle`). |
-| A player request awaiting the plugin's reply (a resolution) | no limit | 5 min | Stopped with `failed`, handled as a crash. Work the plugin declares (a `busy` command) has no limit. |
+| A player request awaiting the plugin's reply (a resolution) | no limit | 5 min (development load: no limit) | Stopped with `failed`, handled as a crash. Work the plugin declares (a `busy` command) has no limit. |
 | Third-party starts at the same time (with on-demand start) | `min(4, max(2, cores / 2))`, plus 2 for clicks; built-ins do not count | the same, but only 1 for clicks while memory pressure is critical | The start waits for a slot; the start timeout counts only from the process's creation. |
 | Held triggers per plugin while it starts (with on-demand start) | 64 (events merge by name) | the same | A click shows "<name> is busy", a resolution fails with that text, a drop or view callback is dropped. |
 | Third-party starts waiting for a slot (with on-demand start) | 256 | the same | Answered as a full backlog. |
 | Third-party processes (with on-demand start) | no limit | `clamp(physical MiB / 2 × 0.30 / 85, 3, 16)`: 3 at 2 GiB, 7 at 4 GiB, 14 at 8 GiB, 16 from about 9 GiB; 8 GiB assumed when the system does not say. Built-ins do not count. | Idle plugins go to standby, used longest ago first (not one used in the last minute before older ones, never a busy or resident one); with none to take, the budget is exceeded. |
-| Memory pressure, read every 5 s (with on-demand start) | not read | Windows: low below 1000 MiB available, critical below 400 MiB (below 4 GiB installed: 500 and 200 MiB), critical also on the system's low-memory signal; Linux: `/proc/pressure/memory` `some` avg10 ≥ 20 % low, `full` avg10 ≥ 70 % critical; macOS: not read | On a rise to low or critical, every idle plugin that is not resident goes to standby. |
+| Memory pressure, read every 5 s (with on-demand start) | not read | Windows: low below 1000 MiB available, critical below 400 MiB (below 4 GiB installed: 500 and 200 MiB), critical also on the system's low-memory signal; Linux: `/proc/pressure/memory` `some` avg10 ≥ 20 % low, `full` avg10 ≥ 70 % critical; macOS: not read | When the level changes to low or critical (critical back to low too), every idle third-party plugin that is not resident goes to standby; built-ins never do. |
 
 ## Limits documented at their API
 
