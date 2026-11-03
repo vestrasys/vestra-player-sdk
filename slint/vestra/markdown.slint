@@ -9,7 +9,15 @@
 // row (a chat message: a `[MarkdownBlock]` field of the row's struct).
 // `code-copy: true` adds a Copy button to code blocks that reports
 // `copy-code(code)`; the plugin copies it (`plugin.clipboard`).
-import { ListView } from "std-widgets.slint";
+// `selectable: true` lets the user select and copy text with the mouse:
+// paragraphs, headings, list items and quotes without links then show their
+// plain text (`MarkdownBlock.plain`, no inline styles) in a read-only text
+// field, one field per block, with a Copy / Select All menu. A block with
+// links keeps its styled text (links stay clickable); its right-click menu
+// copies the block as plain text with each address after its link text,
+// `text (url)`, and offers Copy Link when the block has one link. Code
+// blocks are always selectable.
+import { ListView, Palette } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { Icon } from "icons.slint";
 
@@ -36,21 +44,119 @@ export struct MarkdownBlock {
     // Task list item: 0 none, 1 open, 2 done (a drawn box, no font glyph).
     task: int,
     text: styled-text,
+    // The block's text without styles, what `selectable` shows: a code
+    // block's code, a table's cells (tab-separated lines), an image's alt.
+    plain: string,
     code: string,
     image: image,
     has-image: bool,
     image-width: int,
     image-height: int,
     alt: string,
+    // The addresses of the block's links, in order.
+    links: [string],
     rows: [MarkdownRow],
     // Table column alignment: "left", "center", "right" or "" (left).
     aligns: [string],
+}
+
+// Read-only text the user can select: a right-click menu with Copy and
+// Select All (as Slint's own text fields), and Ctrl+C / Ctrl+A (⌘C / ⌘A)
+// while it has focus. No caret, as selectable text on a web page.
+component SelectableText {
+    in property <string> text;
+    in property <brush> color: Theme.text;
+    in property <length> font-size: Theme.font-tab;
+    in property <int> font-weight: 400;
+    in property <string> font-family;
+    min-height: input.min-height;
+    preferred-height: input.preferred-height;
+    ContextMenuArea {
+        Menu {
+            MenuItem {
+                title: @tr("Copy");
+                enabled: root.text != "";
+                activated => { input.copy(); }
+            }
+            MenuItem {
+                title: @tr("Select All");
+                enabled: root.text != "";
+                activated => { input.select-all(); }
+            }
+        }
+        input := TextInput {
+            width: root.width;
+            height: root.height;
+            text: root.text;
+            read-only: true;
+            single-line: false;
+            wrap: word-wrap;
+            color: root.color;
+            font-size: root.font-size;
+            font-weight: root.font-weight;
+            font-family: root.font-family;
+            text-cursor-width: 0px;
+            // The std-widgets LineEdit's selection colours, legible in both
+            // palettes (as the info plugin's properties).
+            selection-background-color: Palette.selection-background;
+            selection-foreground-color: Palette.selection-foreground;
+        }
+    }
+}
+
+// A block with links in a selectable view: its styled text (links stay
+// clickable) under a right-click menu that copies `plain` (with the
+// addresses) and, for one link, the link. The menu lies above the text: a
+// left click passes through it to the links.
+component LinkText {
+    in property <styled-text> text;
+    in property <string> plain;
+    in property <[string]> links;
+    in property <brush> color: Theme.text;
+    in property <length> font-size: Theme.font-tab;
+    callback link-clicked(string);
+    min-height: styled.min-height;
+    preferred-height: styled.preferred-height;
+    function put(text: string) {
+        clip.text = text;
+        clip.select-all();
+        clip.copy();
+    }
+    styled := StyledText {
+        width: root.width;
+        height: root.height;
+        text: root.text;
+        default-color: root.color;
+        default-font-size: root.font-size;
+        link-color: Theme.accent;
+        link-clicked(url) => { root.link-clicked(url); }
+    }
+    ContextMenuArea {
+        Menu {
+            MenuItem {
+                title: @tr("Copy");
+                activated => { root.put(root.plain); }
+            }
+            if root.links.length == 1: MenuItem {
+                title: @tr("Copy Link");
+                activated => { root.put(root.links[0]); }
+            }
+        }
+    }
+    // Puts text on the clipboard (Slint has no clipboard function).
+    clip := TextInput {
+        visible: false;
+        width: 0px;
+        height: 0px;
+        read-only: true;
+    }
 }
 
 component MarkdownBlockView {
     in property <MarkdownBlock> block;
     in property <length> available;
     in property <bool> code-copy;
+    in property <bool> selectable;
     callback link-clicked(string);
     callback copy-code(string);
     private property <length> quote-indent: block.quote * 12px;
@@ -61,7 +167,21 @@ component MarkdownBlockView {
     HorizontalLayout {
         padding-left: root.quote-indent + root.list-indent;
         VerticalLayout {
-            if block.kind == "heading": StyledText {
+            if block.kind == "heading" && root.selectable && block.links.length > 0: LinkText {
+                width: root.inner;
+                text: block.text;
+                plain: block.plain;
+                links: block.links;
+                font-size: root.heading-size;
+                link-clicked(url) => { root.link-clicked(url); }
+            }
+            if block.kind == "heading" && root.selectable && block.links.length == 0: SelectableText {
+                width: root.inner;
+                text: block.plain;
+                font-size: root.heading-size;
+                font-weight: 700;
+            }
+            if block.kind == "heading" && !root.selectable: StyledText {
                 width: root.inner;
                 text: block.text;
                 default-color: Theme.text;
@@ -69,7 +189,20 @@ component MarkdownBlockView {
                 link-color: Theme.accent;
                 link-clicked(url) => { root.link-clicked(url); }
             }
-            if block.kind == "paragraph": StyledText {
+            if block.kind == "paragraph" && root.selectable && block.links.length > 0: LinkText {
+                width: root.inner;
+                text: block.text;
+                plain: block.plain;
+                links: block.links;
+                color: block.quote > 0 ? Theme.text-dim : Theme.text;
+                link-clicked(url) => { root.link-clicked(url); }
+            }
+            if block.kind == "paragraph" && root.selectable && block.links.length == 0: SelectableText {
+                width: root.inner;
+                text: block.plain;
+                color: block.quote > 0 ? Theme.text-dim : Theme.text;
+            }
+            if block.kind == "paragraph" && !root.selectable: StyledText {
                 width: root.inner;
                 text: block.text;
                 default-color: block.quote > 0 ? Theme.text-dim : Theme.text;
@@ -106,7 +239,18 @@ component MarkdownBlockView {
                         }
                     }
                 }
-                StyledText {
+                if root.selectable && block.links.length > 0: LinkText {
+                    width: root.inner - 20px;
+                    text: block.text;
+                    plain: block.plain;
+                    links: block.links;
+                    link-clicked(url) => { root.link-clicked(url); }
+                }
+                if root.selectable && block.links.length == 0: SelectableText {
+                    width: root.inner - 20px;
+                    text: block.plain;
+                }
+                if !root.selectable: StyledText {
                     width: root.inner - 20px;
                     text: block.text;
                     default-color: Theme.text;
@@ -123,12 +267,12 @@ component MarkdownBlockView {
                 VerticalLayout {
                     padding: 6px;
                     // Plain lines in the monospace font; CJK falls back.
-                    StyledText {
+                    // Always selectable: code is there to be copied.
+                    SelectableText {
                         width: root.inner - 12px;
-                        text: block.text;
-                        default-color: Theme.text;
-                        default-font-family: Theme.font-mono;
-                        default-font-size: Theme.font-body;
+                        text: block.code;
+                        font-family: Theme.font-mono;
+                        font-size: Theme.font-body;
                     }
                 }
                 if root.code-copy: Rectangle {
@@ -216,6 +360,8 @@ export component MarkdownBlocks inherits Rectangle {
     in property <[MarkdownBlock]> blocks;
     // A Copy button on code blocks, reporting `copy-code(code)`.
     in property <bool> code-copy: false;
+    // Text the user can select and copy (see the top of this file).
+    in property <bool> selectable: false;
     callback link-clicked(string);
     callback copy-code(string);
     min-height: column.min-height;
@@ -228,6 +374,7 @@ export component MarkdownBlocks inherits Rectangle {
             block: block;
             available: root.width;
             code-copy: root.code-copy;
+            selectable: root.selectable;
             link-clicked(url) => { root.link-clicked(url); }
             copy-code(code) => { root.copy-code(code); }
         }
@@ -244,6 +391,10 @@ export component MarkdownView inherits Rectangle {
     in property <length> inset: 10px;
     // A Copy button on code blocks, reporting `copy-code(code)`.
     in property <bool> code-copy: false;
+    // Text the user can select and copy (see the top of this file). A
+    // selection is lost when its block scrolls out of view (the `ListView`
+    // drops the row).
+    in property <bool> selectable: false;
     callback link-clicked(string);
     callback copy-code(string);
     list := ListView {
@@ -261,6 +412,7 @@ export component MarkdownView inherits Rectangle {
                 block: block;
                 available: self.width;
                 code-copy: root.code-copy;
+                selectable: root.selectable;
                 link-clicked(url) => { root.link-clicked(url); }
                 copy-code(code) => { root.copy-code(code); }
             }

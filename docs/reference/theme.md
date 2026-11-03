@@ -333,6 +333,10 @@ A component's public functions are called from your own Slint code, through an e
 
 `@vestra/markdown.slint` shows a document made by {@link "@vestra-player/sdk"!Ui.markdown | plugin.ui.markdown}: give `blocks` its value. Links report `link-clicked(url)`, resolved against the document's base; the plugin decides what to open (usually {@link "@vestra-player/sdk"!System | plugin.system}). `code-copy: true` adds a Copy button to code blocks that reports `copy-code(code)`; the plugin copies it ({@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}).
 
+**Selectable text** (player 0.6.8): `selectable: true` (default `false`) on `MarkdownView` or `MarkdownBlocks` lets the user select and copy text with the mouse. A paragraph, heading, list item or quote without links then shows its plain text (no bold, italics or inline code styling) in a read-only text field, one field per block, with a right-click menu of **Copy** and **Select All**; Ctrl+C and Ctrl+A (⌘C and ⌘A on macOS) work while it has the focus. A block with links keeps its styled text, so its links stay clickable; its right-click menu has **Copy**, which copies the block as plain text with each address after its link text, `text (url)`, and **Copy Link** when the block has exactly one link. Code blocks are always selectable, whatever `selectable` says. A selection stays inside one block (it cannot span two paragraphs), and in `MarkdownView` it is lost when its block scrolls out of view (the `ListView` drops the row). Copying needs no capability: the player's text field puts the text on the clipboard. Older players do not know the property, so a Slint file that sets it fails to compile there: set `"minPlayerVersion": "0.6.8"`.
+
+`MarkdownBlock` also has two fields a plugin may read in its own Slint code (player 0.6.8): `plain: string`, the block's text without styles, each link followed by its address, `text (url)` (only the address when the link text is the address, as an autolink), a code block's code, a table's cells (tab-separated lines) or an image's alt text; and `links: [string]`, the addresses of the block's links in order.
+
 <!-- generated:widgets markdown -->
 
 **`MarkdownBlocks`**: Markdown blocks without scrolling, as tall as their content.
@@ -341,6 +345,7 @@ A component's public functions are called from your own Slint code, through an e
 | --- | --- | --- | --- |
 | `blocks` | in `[MarkdownBlock]` |  |  |
 | `code-copy` | in `bool` | `false` | A Copy button on code blocks, reporting `copy-code(code)`. |
+| `selectable` | in `bool` | `false` | Text the user can select and copy (see the top of this file). |
 | `link-clicked` | callback `(string)` |  |  |
 | `copy-code` | callback `(string)` |  |  |
 
@@ -351,6 +356,7 @@ A component's public functions are called from your own Slint code, through an e
 | `blocks` | in `[MarkdownBlock]` |  |  |
 | `inset` | in `length` | `10px` | Space around the document. |
 | `code-copy` | in `bool` | `false` | A Copy button on code blocks, reporting `copy-code(code)`. |
+| `selectable` | in `bool` | `false` | Text the user can select and copy (see the top of this file). A selection is lost when its block scrolls out of view (the `ListView` drops the row). |
 | `link-clicked` | callback `(string)` |  |  |
 | `copy-code` | callback `(string)` |  |  |
 

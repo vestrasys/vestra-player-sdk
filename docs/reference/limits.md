@@ -205,8 +205,8 @@ The player's plugin supervisor (player 0.6.6) bounds what a plugin's process may
 | Limit | Player 0.6.6 | Planned for player 0.6.7 | When it is reached |
 | --- | --- | --- | --- |
 | JavaScript heap of an own process | 512 MB (shared runner: 1024 MB for all built-ins; development load: none) | the same | V8 ends the process: "ran out of memory", handled as a crash. Memory outside the V8 heap (`Buffer` contents, addons) is not counted. |
-| Start timeout, from the process's creation to `runtime.ready` | 15 s (development load: 120 s) | 60 s (development load: 120 s) | Stopped with `failed`, then tried again. |
-| Start retries | 3, about 250 ms, 500 ms and 1 s apart (+ up to 10 %) | the same | Listed as failed. A plugin that sends `runtime.failed` is not tried again. |
+| Start timeout, from the process's creation to `runtime.ready` | 15 s (development load: 120 s) | 60 s (development load: 120 s) | Stopped with `failed`. Player 0.6.6 tried the start again (start retries); from 0.6.7 the start has failed, and a click waiting for it shows "<name> could not start". |
+| Start retries | 3, about 250 ms, 500 ms and 1 s apart (+ up to 10 %), after a process that cannot be created or a start timeout | 3, the same delays, only after a process that cannot be created; a start timeout is not retried | Listed as failed. A plugin that sends `runtime.failed` is not tried again. |
 | Start limit | 5 crashes within 10 minutes (development load: 1; a third-party plugin without on-demand start: 1) | the same | Stopped and listed as failed until reloaded or switched back on. The shared runner: 3 restarts within 60 s run its members in their own processes. |
 | Pause before a crashed plugin starts again | built-ins: 3 s, doubling, count reset after 60 s running; with on-demand start, other plugins: 1 s, doubling, at most 60 s | the same | Commands shown disabled with the reason during the pause. |
 | Grace of a stop (disable, uninstall, reload, upgrade) | 300 ms | 5 s | The process is killed. |

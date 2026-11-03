@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.59
+
+**Who must change: nobody.** No change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability. The SDK's copy of the player's Slint library gains what player 0.6.8 adds to `@vestra/markdown.slint`; a plugin that uses it needs player 0.6.8.
+
+- **Selectable Markdown** (player 0.6.8; the SDK's `slint/vestra/markdown.slint` is synced with the player's). `MarkdownView` and `MarkdownBlocks` take `in property <bool> selectable: false`. With `true`, a paragraph, heading, list item or quote without links is shown as its plain text in a read-only selectable text field (right-click Copy / Select All, Ctrl+C / Ctrl+A); a block with links keeps its clickable links, and its right-click menu copies it as plain text with each address after its link text, `text (url)`, plus Copy Link when it has one link. Code blocks are always selectable, whatever `selectable` says (in player 0.6.8 this applies to every plugin's Markdown). A selection stays inside one block and is lost when its row scrolls out of a `MarkdownView`. `MarkdownBlock` gains `plain: string` (the block as plain text) and `links: [string]` (its link addresses). Older players do not have the property: set `"minPlayerVersion": "0.6.8"` before using it. See [Reference: theme › Markdown](docs/reference/theme.md#markdown).
+- **Start retries corrected** ([How the player runs and talks to plugins](docs/explanation/host-and-node.md#the-start-deadline), [Reference: limits](docs/reference/limits.md#plugin-processes), [How a plugin runs](docs/explanation/plugins.md#restarts-activate-can-run-more-than-once)). 1.5.58 said a start that is not ready within the start timeout is tried up to three more times. That was player 0.6.6; from player 0.6.7 a timed-out start gets one try (60 s) and is not retried, and only a process that cannot be created is tried again (about 250 ms, 500 ms and 1 s apart).
+
 ## 1.5.58
 
 **Who must change: nobody.** Documentation only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. Plugin authors should read what the player's new plugin supervisor does with their plugin (player 0.6.6, and the defaults planned for 0.6.7), and check that `activate` never waits for its own commands or views.
