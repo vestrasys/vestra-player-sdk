@@ -83,6 +83,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.6.4 | {@linkcode "@vestra-player/sdk"!Scope.onDispose Scope.onDispose}, {@linkcode "@vestra-player/sdk"!Plugin.stopReason Plugin.stopReason}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!DisposeInfo.reason DisposeInfo.reason}, {@linkcode "@vestra-player/sdk"!InstallOptions.enabled InstallOptions.enabled}, {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install}, {@linkcode "@vestra-player/sdk"!SessionStorage SessionStorage} |
 | 0.6.6 | {@linkcode "@vestra-player/sdk"!Plugin Plugin}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!PluginInfo.process PluginInfo.process} |
 | 0.6.7 | {@linkcode "@vestra-player/sdk"!Plugin Plugin}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!PluginInfo.process PluginInfo.process} |
+| 0.6.8 | {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown} |
 
 <!-- /generated -->
 

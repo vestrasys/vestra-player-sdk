@@ -97,4 +97,5 @@ Start the player with `--plugin <path to examples/markdown>` and choose **Exampl
 1. **Open links.** Add `callback open-link(string);` to the window, forward `link-clicked(url) => { root.open-link(url); }` from `MarkdownView`, and handle it with `window.on("openLink", (url: string) => plugin.system.openUrl(url))` before the first `show()`.
 2. **Remote images.** Put `![Avatar](https://github.com/vestrasys.png?size=128)` in the document: `ui.markdown` downloads `https:` images first (pass `remoteImages: false` to turn that off).
 3. **Copy code.** Set `code-copy: true` on `MarkdownView`: code blocks get a **Copy** button (labelled in the interface language) that reports `copy-code(code)`. Forward it as a callback and copy the text with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}, which needs the `clipboard` capability.
-4. **Show the plugin's own README** instead of `sample.md`; the build always packs the README.
+4. **Selectable text.** Set `selectable: true` on `MarkdownView` (player 0.6.8; set `"minPlayerVersion": "0.6.8"`): the reader can select a paragraph with the mouse and copy it with Ctrl+C or the right-click menu, and a paragraph with links copies with each address after its link text. Code blocks are selectable without it.
+5. **Show the plugin's own README** instead of `sample.md`; the build always packs the README.

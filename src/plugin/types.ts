@@ -1877,6 +1877,13 @@ export interface Ui {
    * the list on every streamed chunk keeps the scroll position and costs
    * little.
    *
+   * From player 0.6.8 both views take `selectable: true` (default `false`):
+   * the user can select and copy the text, one block at a time; blocks with
+   * links keep their clickable links and copy as `text (url)`. Code blocks
+   * are always selectable. `MarkdownBlock.plain` (the block as plain text)
+   * and `MarkdownBlock.links` (its link addresses) are readable in Slint.
+   * See [Reference: theme › Markdown](../../docs/reference/theme.md#markdown).
+   *
    * @capability None.
    * @player 0.2.0 (set `"minPlayerVersion": "0.2.0"` in the manifest)
    *

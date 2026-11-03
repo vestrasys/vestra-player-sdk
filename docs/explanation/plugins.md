@@ -140,9 +140,9 @@ A plugin's process does not live as long as the player. Within one player sessio
 - the plugin is **reloaded** (from the plugin manager, or a development load with `--plugin`) or **upgraded**;
 - it **crashed**, or failed to start, and is started again.
 
-The player also restarts a plugin in these cases, so write the plugin for them too:
+The player also restarts a plugin by itself:
 
-- a failed start is tried up to three more times (player 0.6.6);
+- player 0.6.6 tried a start not ready in time up to three more times (0.6.7 does not);
 - a crashed built-in restarts by itself (player 0.6.6);
 - with on-demand start, a crashed resident plugin restarts by itself, another one on its next use (player 0.6.6, [Crashes and restarts](host-and-node.md#crashes-and-restarts));
 - plugins that share one process (player 0.5.6 and later) are restarted together when that process faults, hangs or exits;
