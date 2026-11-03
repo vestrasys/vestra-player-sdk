@@ -61,8 +61,11 @@ export struct MarkdownBlock {
 }
 
 // Read-only text the user can select: a right-click menu with Copy and
-// Select All (as Slint's own text fields), and Ctrl+C / Ctrl+A (⌘C / ⌘A)
-// while it has focus. No caret, as selectable text on a web page.
+// Select All (as Slint's own text fields; Copy without a selection copies
+// the whole block), and Ctrl+C / Ctrl+A (⌘C / ⌘A) while it has focus. No
+// caret, as selectable text on a web page. Each one is a Tab stop, and
+// while one has focus the arrow keys move in it (Slint 1.18's read-only
+// TextInput).
 component SelectableText {
     in property <string> text;
     in property <brush> color: Theme.text;
@@ -76,7 +79,15 @@ component SelectableText {
             MenuItem {
                 title: @tr("Copy");
                 enabled: root.text != "";
-                activated => { input.copy(); }
+                activated => {
+                    if input.anchor-position-byte-offset == input.cursor-position-byte-offset {
+                        input.select-all();
+                        input.copy();
+                        input.clear-selection();
+                    } else {
+                        input.copy();
+                    }
+                }
             }
             MenuItem {
                 title: @tr("Select All");
