@@ -43,7 +43,7 @@ description: Every manifest.json field with its rules, and the player version ea
 | `changelog` | display | The same rules; default `CHANGELOG.md` when present. |
 | `sourceUrl` | display | An `https:` address of at most 2048 bytes. |
 | `license` | display | 1–64 characters, preferably an SPDX expression such as `MIT`. |
-| `minPlayerVersion` | optional | `x.y.z`: the oldest player that loads the plugin (compared with `plugin.app.version`, three numbers). An older player refuses it with `versionMismatch` ("requires Vestra Player ≥ x.y.z") before it reads anything else, so a manifest with newer fields fails with that, not with an unknown field. See [Player versions](#player-versions). |
+| `minPlayerVersion` | optional | `x.y.z`: the oldest player that loads the plugin (compared with `plugin.app.version`, three numbers; from player 0.7.1 the player release version, which can differ from the host binary version). An older player refuses it with `versionMismatch` ("requires Vestra Player ≥ x.y.z") before it reads anything else, so a manifest with newer fields fails with that, not with an unknown field. See [Player versions](#player-versions). |
 
 <!-- /generated -->
 
@@ -54,6 +54,8 @@ description: Every manifest.json field with its rules, and the player version ea
 ## Player versions
 
 The SDK's major version follows the plugin API: every 1.x release implements `apiVersion` `vestra/1`, minor releases only add to it, and a breaking change gets a new `apiVersion` and a new major version. Some additions also need a newer player. A plugin that uses one sets `minPlayerVersion` to the highest version it needs; an older player then refuses it with `versionMismatch` instead of failing at the first call.
+
+From player 0.7.1 the player version (`plugin.app.version`, and what `minPlayerVersion` is compared with) is the **player release version**, the version of the published release; it can differ from the version of the host binary inside it. Compare against the release version. The player versions in this documentation are release versions from 0.7.1 on. Player 0.6.6 to 0.6.8 and 0.7.0 were internal builds that were never published: 0.7.1 is the first published player with their features, so an API this documentation once gave for one of them needs 0.7.1.
 
 The table lists the API whose documentation names a player version, newest last:
 
@@ -81,9 +83,7 @@ The table lists the API whose documentation names a player version, newest last:
 | 0.6.0 | {@linkcode "@vestra-player/sdk"!PropValue PropValue} |
 | 0.6.3 | {@linkcode "@vestra-player/sdk"!PluginError PluginError}, {@linkcode "@vestra-player/sdk"!MenuId MenuId}, {@linkcode "@vestra-player/sdk"!CommandOptions CommandOptions}, {@linkcode "@vestra-player/sdk"!CommandOptions.path CommandOptions.path}, {@linkcode "@vestra-player/sdk"!WindowState.maximized WindowState.maximized}, {@linkcode "@vestra-player/sdk"!RenderOptions RenderOptions}, {@linkcode "@vestra-player/sdk"!RenderOptions.status RenderOptions.status}, {@linkcode "@vestra-player/sdk"!VideoShaders VideoShaders}, {@linkcode "@vestra-player/sdk"!VideoShaders.set VideoShaders.set}, {@linkcode "@vestra-player/sdk/testing"!MENU_IDS MENU_IDS} |
 | 0.6.4 | {@linkcode "@vestra-player/sdk"!Scope.onDispose Scope.onDispose}, {@linkcode "@vestra-player/sdk"!Plugin.stopReason Plugin.stopReason}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!DisposeInfo.reason DisposeInfo.reason}, {@linkcode "@vestra-player/sdk"!InstallOptions.enabled InstallOptions.enabled}, {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install}, {@linkcode "@vestra-player/sdk"!SessionStorage SessionStorage} |
-| 0.6.6 | {@linkcode "@vestra-player/sdk"!Plugin Plugin}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!PluginInfo.process PluginInfo.process} |
-| 0.6.7 | {@linkcode "@vestra-player/sdk"!Plugin Plugin}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!PluginInfo.process PluginInfo.process} |
-| 0.6.8 | {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown} |
+| 0.7.1 | {@linkcode "@vestra-player/sdk"!Plugin Plugin}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown}, {@linkcode "@vestra-player/sdk"!AppInfo.version AppInfo.version}, {@linkcode "@vestra-player/sdk"!PluginInfo.process PluginInfo.process} |
 
 <!-- /generated -->
 

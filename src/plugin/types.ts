@@ -432,7 +432,7 @@ export interface Scope extends Disposable {
    * The plugin writes its cache file at once when the player crashed or
    * was killed, instead of waiting for the next periodic save. The cleanup
    * may get a {@link DisposeInfo}: `stopping` says the plugin itself stops
-   * (not a child scope), `reason` why (planned for player 0.6.4). Players
+   * (not a child scope), `reason` why (player 0.6.4). Players
    * whose SDK is older than 1.5.54 call the cleanup without an argument,
    * so read it with `?.`.
    * ```ts
@@ -540,9 +540,9 @@ export interface Scope extends Disposable {
  * (menus, windows, panels, filters, subtitle layers, snapshots, jobs,
  * resolvers, streams); pending requests then fail with `disabled` and the
  * root scope is disposed for local cleanup (timers, signals, sockets). A
- * process that has not exited after its grace is killed: 300 ms in player
- * 0.6.6 (2 s when it goes to standby), planned to be 5 s from player 0.6.7
- * (300 ms after a fault); at quit all plugins together get 1 s. Media the
+ * process that has not exited after its grace is killed: 5 s from player
+ * 0.7.1 (before it 300 ms; 300 ms after a fault); at quit all plugins
+ * together get 1 s. Media the
  * plugin opened with {@link Player.open} keeps playing.
  *
  * @example Write a minimal plugin with one menu item
@@ -608,7 +608,7 @@ export interface Plugin extends Scope {
  *
  * - `quit`: the player quits (or restarts after a lost GPU device). Every
  *   plugin is stopped at the same time, with 1 s in all (300 ms after a
- *   lost device; player 0.6.6).
+ *   lost device; player 0.7.1).
  * - `disable`: the user, or a plugin with `plugins.manage`, switched the
  *   plugin off. Its session storage is cleared.
  * - `uninstall`: the user uninstalls it.
@@ -621,25 +621,23 @@ export interface Plugin extends Scope {
  *   its menu items, keys, settings pages, resolvers and drop targets stay,
  *   and so does its session storage
  *   ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
- *   Only with on-demand start (lazy activation), off by default up to
- *   player 0.6.6 (`VESTRA_LAZY=1` turns it on) and planned for everyone in
- *   player 0.6.7. It comes after the idle time without use (60 s; 30 s
- *   planned for 0.6.7), right after a first run that holds nothing live,
- *   and when the player's limit on third-party processes or low system
- *   memory puts an idle plugin in standby early (planned for 0.6.7). A busy
- *   plugin never gets it; a resident one (it held something live when it
- *   became ready) only after the idle time, and from player 0.6.7 (planned)
- *   never.
+ *   Only with on-demand start (lazy activation): on for everyone from
+ *   player 0.7.1, off by default before it (`VESTRA_LAZY=1` turns it on).
+ *   It comes after the idle time without use (30 s; 60 s before 0.7.1),
+ *   right after a first run that holds nothing live, and, from player
+ *   0.7.1, when the player's limit on third-party processes or low system
+ *   memory puts an idle plugin in standby early. A busy plugin never gets
+ *   it; a resident one (it held something live when it became ready) never
+ *   from player 0.7.1 (before it, after the idle time).
  * - `failed`: the player stops it for a fault it can still tell the plugin
  *   about: a malformed request, an unreadable or oversized line, a start
- *   that is not ready within the start timeout (15 s; 60 s planned for
- *   player 0.6.7; the stop may come while `activate` still runs), an
- *   uncaught exception the shared process attributes to this plugin, and,
- *   planned for player 0.6.7, a request from the player (a resolution) it
- *   leaves unanswered for 5 minutes. From player 0.6.6 the player may
- *   start it again afterwards (a built-in or resident plugin by itself, a
- *   plugin with on-demand start on its next use), until the fifth fault
- *   within 10 minutes.
+ *   that is not ready within the start timeout (60 s from player 0.7.1;
+ *   the stop may come while `activate` still runs), an uncaught exception
+ *   the shared process attributes to this plugin, and, from player 0.7.1,
+ *   a request from the player (a resolution) it leaves unanswered for 5
+ *   minutes. From player 0.7.1 the player may start it again afterwards (a
+ *   built-in or resident plugin by itself, a plugin that has run before on
+ *   its next use), until the fifth fault within 10 minutes.
  * - `host-lost`: the plugin's runner saw its pipe to the player close
  *   without a stop: the player crashed or was killed. Requests are refused
  *   with `disabled`; clean up locally only. Player 0.6.4 sends `quit` on a
@@ -651,7 +649,7 @@ export interface Plugin extends Scope {
  * own process is killed because its input queue is full or a write to it
  * failed, when its own process fails to activate (the runner exits without
  * cleaning up), when the process ended by itself (it crashed, or its
- * JavaScript heap passed the 512 MB cap of player 0.6.6 and V8 ended it:
+ * JavaScript heap passed the 512 MB cap of player 0.7.1 and V8 ended it:
  * "ran out of memory"), and when the shared runner is restarted as a whole
  * (a hang, a fault it cannot attribute, an unreadable line of its own, a
  * member's full input queue, the runner exiting): every member is killed
@@ -1877,7 +1875,7 @@ export interface Ui {
    * the list on every streamed chunk keeps the scroll position and costs
    * little.
    *
-   * From player 0.6.8 both views take `selectable: true` (default `false`):
+   * From player 0.7.1 both views take `selectable: true` (default `false`):
    * the user can select and copy the text, one block at a time; blocks with
    * links keep their clickable links and copy as `text (url)`. Code blocks
    * are always selectable. `MarkdownBlock.plain` (the block as plain text)
@@ -4562,7 +4560,13 @@ export interface MainWindow {
  * @category Plugin
  */
 export interface AppInfo {
-  /** The player's version, e.g. `"1.0.0"`. */
+  /**
+   * The player's version, e.g. `"0.7.1"`. From player 0.7.1 this is the
+   * player's release version (the version of the published release), which
+   * can differ from the version of the host binary inside it. The player
+   * compares `minPlayerVersion` with this value, and plugins compare with
+   * it too.
+   */
   readonly version: string;
   /** Short git hash of the build, `null` when unknown. */
   readonly build: string | null;
@@ -8862,11 +8866,11 @@ export interface InstallOptions {
    * Built-in plugins always run (and cannot be installed over). A value
    * that is not a boolean is `invalid`.
    *
-   * Planned for player 0.6.4: older players ignore it and an install there
+   * Player 0.6.4 and later: older players ignore it and an install there
    * always runs the plugin, so after a committed install call
    * {@link Packages.setEnabled} when the state matters.
    *
-   * @player 0.6.4 (planned); older players ignore it (an install always
+   * @player 0.6.4; older players ignore it (an install always
    *   enables the plugin).
    */
   enabled?: boolean;
@@ -8916,8 +8920,8 @@ export interface PackageCandidate {
    * player). A reserved id (`vestra` or `vestra.*`, which every built-in
    * uses) fails with `reserved` (player 0.4.1; already when validated), as
    * only the player installs built-in plugins. An update keeps a disabled
-   * plugin disabled unless `enabled` says otherwise (planned for player
-   * 0.6.4; see {@link InstallOptions.enabled}).
+   * plugin disabled unless `enabled` says otherwise (player 0.6.4; see
+   * {@link InstallOptions.enabled}).
    *
    * @capability plugins.manage
    * @throws `invalid` (rejects) An option is malformed: a `source` the
@@ -9133,11 +9137,11 @@ export interface PluginInfo {
    * while the plugin is switched on but has no process. That is standby
    * with on-demand start (lazy activation): nothing used it for the idle
    * time, or the player's limit on third-party processes or low system
-   * memory stopped it early (planned for player 0.6.7); it starts again on its next
+   * memory stopped it early (player 0.7.1); it starts again on its next
    * use, and its menu items, keys, settings pages, resolvers and drop
-   * targets stay. From player 0.6.6 it is also the pause after a crash: a
+   * targets stay. From player 0.7.1 it is also the pause after a crash: a
    * built-in or resident plugin waiting to start again by itself, or a
-   * plugin with on-demand start whose commands are shown disabled with the
+   * plugin that has run before whose commands are shown disabled with the
    * reason until the pause ends. Absent in other states and from players
    * before 0.5.18. A change between the two alone does not fire
    * {@link Packages.onChange}; a plugin stopped by the start limit (five
