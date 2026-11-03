@@ -540,8 +540,10 @@ export interface Scope extends Disposable {
  * (menus, windows, panels, filters, subtitle layers, snapshots, jobs,
  * resolvers, streams); pending requests then fail with `disabled` and the
  * root scope is disposed for local cleanup (timers, signals, sockets). A
- * process that has not exited after 300 ms is killed. Media the plugin
- * opened with {@link Player.open} keeps playing.
+ * process that has not exited after its grace is killed: 300 ms in player
+ * 0.6.6 (2 s when it goes to standby), planned to be 5 s from player 0.6.7
+ * (300 ms after a fault); at quit all plugins together get 1 s. Media the
+ * plugin opened with {@link Player.open} keeps playing.
  *
  * @example Write a minimal plugin with one menu item
  * Tools ▸ Say hello, or Ctrl+H, shows "Hello from" and the plugin's id.
@@ -591,8 +593,8 @@ export interface Plugin extends Scope {
    */
   readonly dataDirectory: string;
   /**
-   * Why the player stops this plugin (SDK 1.5.54; the reasons are planned
-   * for player 0.6.4): set when the stop begins, before any
+   * Why the player stops this plugin (SDK 1.5.54, player 0.6.4): set when
+   * the stop begins, before any
    * {@link Scope.onDispose} cleanup runs. `undefined` while the plugin
    * runs, and for every stop by an older player (one whose own SDK is older
    * than 1.5.54 does not have the property at all). See {@link StopReason}.
@@ -604,23 +606,40 @@ export interface Plugin extends Scope {
  * Why the player stopped the plugin ({@link DisposeInfo.reason},
  * {@link Plugin.stopReason}).
  *
- * - `quit`: the player quits.
- * - `disable`: the user disabled the plugin.
+ * - `quit`: the player quits (or restarts after a lost GPU device). Every
+ *   plugin is stopped at the same time, with 1 s in all (300 ms after a
+ *   lost device; player 0.6.6).
+ * - `disable`: the user, or a plugin with `plugins.manage`, switched the
+ *   plugin off. Its session storage is cleared.
  * - `uninstall`: the user uninstalls it.
  * - `reload`: it is reloaded (from the plugin manager, or a development
  *   load with `--plugin`).
  * - `upgrade`: an install or update replaces the running version; also a
  *   new version stopped because its install was cancelled (the previous
  *   version comes back).
- * - `idle`: lazy activation parks it; its next use starts it again
+ * - `idle`: the plugin goes to standby and its next use starts it again;
+ *   its menu items, keys, settings pages, resolvers and drop targets stay,
+ *   and so does its session storage
  *   ([Idle plugins](../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
- *   Lazy activation is off by default (`VESTRA_LAZY=1` turns it on); when
- *   on, it parks a plugin after a while without use, and parks one whose
- *   first run it judges lazy right after it is ready.
+ *   Only with on-demand start (lazy activation), off by default up to
+ *   player 0.6.6 (`VESTRA_LAZY=1` turns it on) and planned for everyone in
+ *   player 0.6.7. It comes after the idle time without use (60 s; 30 s
+ *   planned for 0.6.7), right after a first run that holds nothing live,
+ *   and when the player's limit on third-party processes or low system
+ *   memory puts an idle plugin in standby early (planned for 0.6.7). A busy
+ *   plugin never gets it; a resident one (it held something live when it
+ *   became ready) only after the idle time, and from player 0.6.7 (planned)
+ *   never.
  * - `failed`: the player stops it for a fault it can still tell the plugin
- *   about (planned to cover a malformed request, an unreadable or
- *   oversized line, an activation timeout, an uncaught exception the
- *   shared process attributes to this plugin).
+ *   about: a malformed request, an unreadable or oversized line, a start
+ *   that is not ready within the start timeout (15 s; 60 s planned for
+ *   player 0.6.7; the stop may come while `activate` still runs), an
+ *   uncaught exception the shared process attributes to this plugin, and,
+ *   planned for player 0.6.7, a request from the player (a resolution) it
+ *   leaves unanswered for 5 minutes. From player 0.6.6 the player may
+ *   start it again afterwards (a built-in or resident plugin by itself, a
+ *   plugin with on-demand start on its next use), until the fifth fault
+ *   within 10 minutes.
  * - `host-lost`: the plugin's runner saw its pipe to the player close
  *   without a stop: the player crashed or was killed. Requests are refused
  *   with `disabled`; clean up locally only. Player 0.6.4 sends `quit` on a
@@ -631,20 +650,22 @@ export interface Plugin extends Scope {
  * {@link Scope.onDispose} cleanups do not run. That is the case when its
  * own process is killed because its input queue is full or a write to it
  * failed, when its own process fails to activate (the runner exits without
- * cleaning up), when the process has already exited, and when the shared
- * runner is restarted as a whole (a hang, a fault it cannot attribute, an
- * unreadable line of its own, a member's full input queue, the runner
- * exiting): every member is killed with it. Keep state that must survive
- * such an end in storage as it changes, not only in a cleanup.
+ * cleaning up), when the process ended by itself (it crashed, or its
+ * JavaScript heap passed the 512 MB cap of player 0.6.6 and V8 ended it:
+ * "ran out of memory"), and when the shared runner is restarted as a whole
+ * (a hang, a fault it cannot attribute, an unreadable line of its own, a
+ * member's full input queue, the runner exiting): every member is killed
+ * with it. Keep state that must survive such an end in storage as it
+ * changes, not only in a cleanup. Timings and restarts are in
+ * [How the player runs and talks to plugins](../../docs/explanation/host-and-node.md#crashes-and-restarts).
  *
- * Planned for player 0.6.4: the player sends the reason with
- * `runtime.stop` and its runner reports `host-lost`; the exact list may
- * still change with that release. Players up to 0.6.3 give no reason for
- * any stop, a lost player included (`undefined`); so does a stop that
- * does not come from the player (a `TestHost` `stop()` without a reason).
- * A value this SDK does not know reads as `undefined`.
+ * Player 0.6.4 and later send the reason with `runtime.stop`, and their
+ * runner reports `host-lost`. Players up to 0.6.3 give no reason for any
+ * stop, a lost player included (`undefined`); so does a stop that does not
+ * come from the player (a `TestHost` `stop()` without a reason). A value
+ * this SDK does not know reads as `undefined`.
  *
- * @player 0.6.4 (planned); older players give no reason (`undefined`).
+ * @player 0.6.4; older players give no reason (`undefined`).
  * @since 1.5.54
  * @category Plugin
  */
@@ -673,8 +694,9 @@ export interface DisposeInfo {
    */
   readonly stopping: boolean;
   /**
-   * Why the player stops the plugin (planned for player 0.6.4); `undefined` while
-   * `stopping` is false, and for every stop by an older player.
+   * Why the player stops the plugin (player 0.6.4; the causes are listed at
+   * {@link StopReason}); `undefined` while `stopping` is false, and for
+   * every stop by an older player.
    */
   readonly reason?: StopReason;
 }
@@ -9101,11 +9123,19 @@ export interface PluginInfo {
   display?: PluginDisplay;
   /**
    * For `state: "running"`: `"running"` while its process runs, `"idle"`
-   * while the player stopped it because nothing used it (lazy activation:
-   * it starts again on its next use, its menu items, keys, settings pages,
-   * resolvers and drop targets stay). Absent in other states and from
-   * players before 0.5.18. A change between the two alone does not fire
-   * {@link Packages.onChange}.
+   * while the plugin is switched on but has no process. That is standby
+   * with on-demand start (lazy activation): nothing used it for the idle
+   * time, or the player's limit on third-party processes or low system
+   * memory stopped it early (planned for player 0.6.7); it starts again on its next
+   * use, and its menu items, keys, settings pages, resolvers and drop
+   * targets stay. From player 0.6.6 it is also the pause after a crash: a
+   * built-in or resident plugin waiting to start again by itself, or a
+   * plugin with on-demand start whose commands are shown disabled with the
+   * reason until the pause ends. Absent in other states and from players
+   * before 0.5.18. A change between the two alone does not fire
+   * {@link Packages.onChange}; a plugin stopped by the start limit (five
+   * crashes within 10 minutes) is `state: "failed"` with that in
+   * {@link PluginInfo.error}.
    *
    * @since 1.5.38
    */

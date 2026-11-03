@@ -198,6 +198,30 @@ The `convolution` and `lut3d` {@link "@vestra-player/sdk"!VideoNode | VideoNode}
 
 <!-- /generated -->
 
+## Plugin processes
+
+The player's plugin supervisor (player 0.6.6) bounds what a plugin's process may cost and how long the player waits for it. These are the player's values, not SDK constants, and `TestHost` does not play them. "On-demand start" is off by default in player 0.6.6 (`VESTRA_LAZY=1`) and planned for everyone in player 0.6.7; what each limit means for a plugin is in [How the player runs and talks to plugins](../explanation/host-and-node.md#on-demand-start).
+
+| Limit | Player 0.6.6 | Planned for player 0.6.7 | When it is reached |
+| --- | --- | --- | --- |
+| JavaScript heap of an own process | 512 MB (shared runner: 1024 MB for all built-ins; development load: none) | the same | V8 ends the process: "ran out of memory", handled as a crash. Memory outside the V8 heap (`Buffer` contents, addons) is not counted. |
+| Start timeout, from the process's creation to `runtime.ready` | 15 s (development load: 120 s) | 60 s (development load: 120 s) | Stopped with `failed`, then tried again. |
+| Start retries | 3, about 250 ms, 500 ms and 1 s apart (+ up to 10 %) | the same | Listed as failed. A plugin that sends `runtime.failed` is not tried again. |
+| Start limit | 5 crashes within 10 minutes (development load: 1; a third-party plugin without on-demand start: 1) | the same | Stopped and listed as failed until reloaded or switched back on. The shared runner: 3 restarts within 60 s run its members in their own processes. |
+| Pause before a crashed plugin starts again | built-ins: 3 s, doubling, count reset after 60 s running; with on-demand start, other plugins: 1 s, doubling, at most 60 s | the same | Commands shown disabled with the reason during the pause. |
+| Grace of a stop (disable, uninstall, reload, upgrade) | 300 ms | 5 s | The process is killed. |
+| Grace of a stop for standby | 2 s | 5 s | The process is killed. |
+| Grace after a fault, and of a development load | 300 ms | 300 ms | The process is killed. |
+| Quit / restart after a lost GPU device | 1 s / 300 ms for all plugins together | the same | Every process left is killed. |
+| Wait for the previous process before a new start of the same plugin | 20 s from the new request | the same | The start fails. |
+| Idle time before standby | 60 s (`VESTRA_IDLE_MS`) | 30 s | The plugin goes to standby (stop reason `idle`). |
+| A player request awaiting the plugin's reply (a resolution) | no limit | 5 min (development load: no limit) | Stopped with `failed`, handled as a crash. Work the plugin declares (a `busy` command) has no limit. |
+| Third-party starts at the same time (with on-demand start) | `min(4, max(2, cores / 2))`, plus 2 for clicks; built-ins do not count | the same, but only 1 for clicks while memory pressure is critical | The start waits for a slot; the start timeout counts only from the process's creation. |
+| Held triggers per plugin while it starts (with on-demand start) | 64 (events merge by name) | the same | A click shows "<name> is busy", a resolution fails with that text, a drop or view callback is dropped. |
+| Third-party starts waiting for a slot (with on-demand start) | 256 | the same | Answered as a full backlog. |
+| Third-party processes (with on-demand start) | no limit | `clamp(physical MiB / 2 × 0.30 / 85, 3, 16)`: 3 at 2 GiB, 7 at 4 GiB, 14 at 8 GiB, 16 from about 9 GiB; 8 GiB assumed when the system does not say. Built-ins do not count. | Idle plugins go to standby, used longest ago first (not one used in the last minute before older ones, never a busy or resident one); with none to take, the budget is exceeded. |
+| Memory pressure, read every 5 s (with on-demand start) | not read | Windows: low below 1000 MiB available, critical below 400 MiB (below 4 GiB installed: 500 and 200 MiB), critical also on the system's low-memory signal; Linux: `/proc/pressure/memory` `some` avg10 ≥ 20 % low, `full` avg10 ≥ 70 % critical; macOS: not read | When the level changes to low or critical (critical back to low too), every idle third-party plugin that is not resident goes to standby; built-ins never do. |
+
 ## Limits documented at their API
 
 - Filter chains: the number of nodes across all plugins, one `frameBlend`, and the range of every node's parameters, at {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}; the audio delay at {@link "@vestra-player/sdk"!AudioFilter | AudioFilter}.

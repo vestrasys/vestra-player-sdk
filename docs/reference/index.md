@@ -21,7 +21,7 @@ Every capability a manifest can declare: the members it opens, the capabilities 
 
 ## Limits
 
-The player's runtime limits in one place: commands, property values, text values, Markdown, the on-screen display, secrets and the size of a message.
+The player's runtime limits in one place: commands, property values, text values, Markdown, the on-screen display, secrets, the size of a message, and what a plugin process may cost (heap, timeouts, restarts, how many run at once).
 
 [Read the limits reference](limits.md)
 

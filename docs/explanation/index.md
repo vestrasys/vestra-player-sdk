@@ -51,6 +51,6 @@ What is on the other side of the API: the host's modules and their responsibilit
 
 ## How the player runs and talks to plugins
 
-How the host starts a plugin (its own Node.js process or the shared runner for the built-ins), checks its package, and exchanges requests, replies and events with it; how it checks capabilities, stops plugins, handles crashes, and parks and wakes plugins with lazy activation.
+How the host starts a plugin (its own Node.js process or the shared runner for the built-ins), checks its package, and exchanges requests, replies and events with it; how it checks capabilities, stops plugins, restarts them after crashes, caps their memory, and starts them on demand.
 
 [Read the page](host-and-node.md)
