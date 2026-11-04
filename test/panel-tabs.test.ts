@@ -185,6 +185,6 @@ test("the sidebar takes any number of tabs; a background tab does not keep the p
   assert.deepEqual(host.keepsRunning, []);
   host.selectTab("test.list");
   await host.settle();
-  assert.deepEqual(host.keepsRunning, ["a mounted panel"]);
+  assert.deepEqual(host.keepsRunning, ["its sidebar tab is the current tab"]);
   await stop();
 });

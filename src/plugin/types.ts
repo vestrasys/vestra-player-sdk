@@ -2849,9 +2849,9 @@ export interface Panel extends View, Disposable {
    * Behaviour from player 0.7.3: the sidebar takes any number of tabs; the
    * strip shows the tabs that fit and a `»` menu lists all of them.
    * Players 0.4.x to 0.7.2 refused a ninth tab with `conflict`. A plugin
-   * whose only live thing is a sidebar panel in a background tab goes to
-   * standby when idle and showing the tab starts it again (see
-   * {@link Panel.state}).
+   * whose sidebar tab is in the background, and that holds nothing else
+   * that keeps it running, goes to standby when idle; showing the tab
+   * starts it again (see {@link Panel.state}).
    *
    * @throws `ui-prepare` (rejects) The Slint file does not compile, or a
    *   bound property is not declared on the bridge global; `message` has the
