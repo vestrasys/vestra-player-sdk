@@ -17,7 +17,7 @@ Create the store with `plugin.storage.json(name, { defaults, validate })` at the
 
 ### Bind the window to the stored value
 
-Write the window's properties with `window.bind(() => …)` reading `store.value`, not a copy of it, so every change and every later opening shows the current values.
+Write the window's properties with `brightnessWindow.bind(() => …)` reading `store.value`, not a copy of it, so every change and every later opening shows the current values.
 
 ### Save on every change
 
@@ -25,7 +25,7 @@ In each callback that changes a value, call `store.save({ ...store.value, … })
 
 ### Record whether the window is open
 
-Save `open: true` when your command shows the window, and `open: false` in `window.onClose`. Do nothing on stop.
+Save `open: true` when your command shows the window, and `open: false` in `brightnessWindow.onClose`. Do nothing on stop.
 
 ### Reopen it after binding
 
@@ -105,24 +105,24 @@ export default async function activate(plugin: Plugin) {
   apply(); // the effect is back before the window is
 
   // 2. Show: the window always displays the stored state.
-  const window = plugin.windows.create("ui/brightness.slint");
-  window.bind(() => ({
+  const brightnessWindow = plugin.windows.create("ui/brightness.slint");
+  brightnessWindow.bind(() => ({
     brightness: store.value.brightness,
     label: store.value.brightness.toFixed(2),
   }));
-  window.on("brightnessChanged", (value: number) => {
+  brightnessWindow.on("brightnessChanged", (value: number) => {
     remember({ brightness: Math.min(1, Math.max(-1, value)) });
     apply();
   });
-  window.on("reset", () => {
+  brightnessWindow.on("reset", () => {
     remember({ brightness: 0 });
     apply();
   });
 
   // 3. Track whether it is open: only the user closing it counts as "closed".
-  window.onClose(() => remember({ open: false }));
+  brightnessWindow.onClose(() => remember({ open: false }));
   const open = async () => {
-    await window.show();
+    await brightnessWindow.show();
     remember({ open: true });
   };
   plugin.commands.add({

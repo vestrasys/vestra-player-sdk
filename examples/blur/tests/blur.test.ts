@@ -27,23 +27,23 @@ test("Video ▸ Blur… opens the window; the slider blurs the video", async () 
     "Blur…",
   ]);
   await command.run();
-  const window = host.window("blur");
-  assert.equal(window.visible, true);
+  const blurWindow = host.window("blur");
+  assert.equal(blurWindow.visible, true);
 
-  window.emit("strength-changed", 4);
+  blurWindow.emit("strength-changed", 4);
   await host.settle();
   assert.deepEqual(chain(host), [{ kind: "gblur", sigma: 4, steps: 3 }]);
-  assert.equal(window.props["problem"], "");
+  assert.equal(blurWindow.props["problem"], "");
   await stop();
 });
 
 test("strength 0 removes the blur", async () => {
   const { host, stop } = await start();
   await host.command("blur").run();
-  const window = host.window("blur");
-  window.emit("strength-changed", 6.5);
+  const blurWindow = host.window("blur");
+  blurWindow.emit("strength-changed", 6.5);
   await host.settle();
-  window.emit("strength-changed", 0.02); // rounds to 0
+  blurWindow.emit("strength-changed", 0.02); // rounds to 0
   await host.settle();
   assert.deepEqual(chain(host), []);
   assert.equal(host.processing.resources.size, 0);

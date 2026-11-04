@@ -15,7 +15,7 @@ This window shows the **core Markdown component**: *italic*, ~~strikethrough~~ a
 
 ```ts
 const doc = await plugin.ui.markdown(text, { base });
-window.set({ doc });
+documentWindow.set({ doc });
 ```
 
 > The player parses and draws the Markdown; the plugin only passes the text.

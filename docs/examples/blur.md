@@ -104,7 +104,7 @@ The SDK is imported with `import type` only: the player passes the `plugin` obje
 
 {@includeCode ../../examples/blur/tests/blur.test.ts}
 
-`startPlugin` runs `activate` against `TestHost`, an in-memory player that speaks the real protocol, so the SDK's filter logic runs unchanged; there is no video and no Slint. `host.setSource({ phase: "ready" })` pretends a video is playing, `window.emit` fires a Slint callback as if the user had moved the slider, and `host.processing.resources` holds what the player currently applies for each plugin. Always `await host.settle()` before checking: it waits until every request has been answered.
+`startPlugin` runs `activate` against `TestHost`, an in-memory player that speaks the real protocol, so the SDK's filter logic runs unchanged; there is no video and no Slint. `host.setSource({ phase: "ready" })` pretends a video is playing, `blurWindow.emit` fires a Slint callback as if the user had moved the slider, and `host.processing.resources` holds what the player currently applies for each plugin. Always `await host.settle()` before checking: it waits until every request has been answered.
 
 ## Run it
 

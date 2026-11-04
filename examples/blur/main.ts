@@ -21,20 +21,20 @@ export default function activate(plugin: Plugin) {
   // #endregion filter
 
   // #region window
-  const window = plugin.windows.create("ui/blur.slint");
-  window.bind(() => ({
+  const blurWindow = plugin.windows.create("ui/blur.slint");
+  blurWindow.bind(() => ({
     strength,
     // Empty unless the player refused the blur.
     problem: blur.status.state === "failed" ? blur.status.error.message : "",
   }));
-  window.on("strengthChanged", setStrength);
+  blurWindow.on("strengthChanged", setStrength);
   // #endregion window
 
   // #region command
   plugin.commands.add({
     id: "blur",
     path: ["@video", "Blur…"], // the player's Video menu, in any language
-    run: () => window.show(),
+    run: () => blurWindow.show(),
   });
   // #endregion command
 }

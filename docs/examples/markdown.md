@@ -72,7 +72,7 @@ examples/markdown/
 - `run` does three things each time the item is chosen:
   1. It reads `sample.md` from the package. Reading it on every run means an edited file shows its changes the next time.
   2. {@link "@vestra-player/sdk"!Ui.markdown | plugin.ui.markdown} prepares the document. `base` is what relative images resolve against, so `assets/icon.png` in the text means the package's icon. Without `base`, the image shows its alternative text.
-  3. {@link "@vestra-player/sdk"!View.set | window.set} writes the document, then `show()` opens the window. `set` rather than `bind`, because the document is a one-off value, not something computed from state. Set before `show()`, it is there when the window appears.
+  3. {@link "@vestra-player/sdk"!View.set | documentWindow.set} writes the document, then `show()` opens the window. `set` rather than `bind`, because the document is a one-off value, not something computed from state. Set before `show()`, it is there when the window appears.
 
 ## The test
 
@@ -94,7 +94,7 @@ Start the player with `--plugin <path to examples/markdown>` and choose **Exampl
 
 ## Try next
 
-1. **Open links.** Add `callback open-link(string);` to the window, forward `link-clicked(url) => { root.open-link(url); }` from `MarkdownView`, and handle it with `window.on("openLink", (url: string) => plugin.system.openUrl(url))` before the first `show()`.
+1. **Open links.** Add `callback open-link(string);` to the window, forward `link-clicked(url) => { root.open-link(url); }` from `MarkdownView`, and handle it with `documentWindow.on("openLink", (url: string) => plugin.system.openUrl(url))` before the first `show()`.
 2. **Remote images.** Put `![Avatar](https://github.com/vestrasys.png?size=128)` in the document: `ui.markdown` downloads `https:` images first (pass `remoteImages: false` to turn that off).
 3. **Copy code.** Set `code-copy: true` on `MarkdownView`: code blocks get a **Copy** button (labelled in the interface language) that reports `copy-code(code)`. Forward it as a callback and copy the text with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}, which needs the `clipboard` capability.
 4. **Selectable text.** Set `selectable: true` on `MarkdownView` (player 0.7.1; set `"minPlayerVersion": "0.7.1"`): the reader can select a paragraph with the mouse and copy it with Ctrl+C or the right-click menu, and a paragraph with links copies with each address after its link text. Code blocks are selectable without it.

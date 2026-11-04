@@ -300,7 +300,7 @@ type Call = { method: string; params: Record<string, Json> };
  * import assert from "node:assert/strict";
  * declare const host: TestHost;
  * // ---cut---
- * await host.command("open-picture").run(); // the plugin calls window.show()
+ * await host.command("open-picture").run(); // the plugin calls pictureWindow.show()
  * const picture = host.window("picture");
  * assert.equal(picture.visible, true);
  * picture.emit("adjust", "brightness", 40); // fire a Slint callback
@@ -4449,11 +4449,11 @@ export class TestHost implements Transport {
    * declare const host: TestHost;
    * declare const expected: string;
    * // ---cut---
-   * const window = host.window("import");
-   * window.emit("load-file"); // the plugin reads and parses the file itself
-   * for (let i = 0; i < 100 && window.props["status-text"] !== expected; i++)
+   * const importWindow = host.window("import");
+   * importWindow.emit("load-file"); // the plugin reads and parses the file itself
+   * for (let i = 0; i < 100 && importWindow.props["status-text"] !== expected; i++)
    *   await host.settle(20);
-   * assert.equal(window.props["status-text"], expected);
+   * assert.equal(importWindow.props["status-text"], expected);
    * ```
    *
    * @capability None.

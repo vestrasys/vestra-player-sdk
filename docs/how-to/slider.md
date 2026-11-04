@@ -36,7 +36,7 @@ Pass the value on with a call that has latest-value semantics, such as `filter.s
 
 ### Bind the derived values instead of setting them
 
-Send the slider's value and its label with `window.bind(() => …)`, not `set`, so an unchanged value is never written back under the user's pointer; a Reset that changes the model still moves the thumb.
+Send the slider's value and its label with `brightnessWindow.bind(() => …)`, not `set`, so an unchanged value is never written back under the user's pointer; a Reset that changes the model still moves the thumb.
 
 ### Give your own slow work latest-value behaviour
 
@@ -69,13 +69,13 @@ declare function renderPreview(strength: number): Promise<string>; // your own s
 
 export default async function activate(plugin: Plugin) {
   let preview = "";
-  const window = plugin.windows.create("ui/preview.slint");
-  window.bind(() => ({ preview }));
+  const previewWindow = plugin.windows.create("ui/preview.slint");
+  previewWindow.bind(() => ({ preview }));
   const refresh = latest(async (strength: number) => {
     preview = await renderPreview(strength);
     plugin.update(); // changed after an await: send it now
   });
-  window.on("strengthChanged", (strength: number) => refresh(strength));
+  previewWindow.on("strengthChanged", (strength: number) => refresh(strength));
 }
 ```
 
@@ -164,18 +164,18 @@ export default async function activate(plugin: Plugin) {
       { kind: "eq", brightness, contrast: 1, saturation: 1, gamma: 1 },
     ]);
 
-  const window = plugin.windows.create("ui/brightness.slint");
+  const brightnessWindow = plugin.windows.create("ui/brightness.slint");
   // Derived from the model: sent only when it changes.
-  window.bind(() => ({ brightness, label: brightness.toFixed(2) }));
+  brightnessWindow.bind(() => ({ brightness, label: brightness.toFixed(2) }));
 
-  window.on("brightnessChanged", (value: number) => {
+  brightnessWindow.on("brightnessChanged", (value: number) => {
     brightness = Math.min(1, Math.max(-1, value)); // record the newest value…
     apply(); // …and hand it on; no await
   });
-  window.on("brightnessReleased", () => {
+  brightnessWindow.on("brightnessReleased", () => {
     void plugin.osd.show("Brightness {}", [brightness.toFixed(2)]); // once per drag
   });
-  window.on("reset", () => {
+  brightnessWindow.on("reset", () => {
     brightness = 0; // the bound value moves the slider back
     apply();
   });
@@ -183,7 +183,7 @@ export default async function activate(plugin: Plugin) {
   plugin.commands.add({
     id: "brightness",
     path: ["@video", "Brightness…"],
-    run: () => window.show(),
+    run: () => brightnessWindow.show(),
   });
 }
 ```

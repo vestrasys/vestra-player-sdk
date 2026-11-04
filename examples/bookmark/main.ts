@@ -11,16 +11,16 @@ export default async function activate(plugin: Plugin) {
   // #endregion state
 
   // #region window
-  const window = plugin.windows.create("ui/bookmark.slint");
+  const bookmarkWindow = plugin.windows.create("ui/bookmark.slint");
   // Re-evaluated after every handler and player change; only changes are sent.
-  window.bind(() => ({
+  bookmarkWindow.bind(() => ({
     label: mark === null ? "No bookmark" : `Bookmark: ${mark.toFixed(1)} s`,
     canMark: player.state.position !== null,
     canJump: mark !== null && player.state.can.seek,
   }));
   // The Slint callbacks `mark` and `jump` of ui/bookmark.slint.
-  window.on("mark", () => (mark = player.state.position));
-  window.on("jump", () => player.seek(mark!));
+  bookmarkWindow.on("mark", () => (mark = player.state.position));
+  bookmarkWindow.on("jump", () => player.seek(mark!));
   // #endregion window
 
   // #region command
@@ -28,7 +28,7 @@ export default async function activate(plugin: Plugin) {
     id: "bookmark.open",
     path: ["@playback", "Bookmark…"],
     order: 270,
-    run: () => window.show(), // opens it, or brings back the open one
+    run: () => bookmarkWindow.show(), // opens it, or brings back the open one
   });
   // #endregion command
 }

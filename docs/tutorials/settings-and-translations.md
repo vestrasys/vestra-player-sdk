@@ -121,9 +121,9 @@ Button { text: @tr("Back 10 s"); enabled: root.can-seek; clicked => { root.jump(
 In `main.ts`, the window's fallback message is words, not data, so pass it as a text value:
 
 ```ts
-declare const window: Window;
+declare const helloWindow: Window;
 // ---cut---
-window.bind(() => ({
+helloWindow.bind(() => ({
   message: plugin.player.state.source ?? plugin.i18n.text("Nothing is playing"),
   canSeek: plugin.player.state.can.seek,
 }));
