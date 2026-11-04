@@ -51,6 +51,9 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
            the summary and the tags below do not say. Long background goes to an explanation page.
 @capability  The manifest capability ("None." when there is none).
 @player    The minimum player version, only when above the vestra/1 baseline.
+           Prose "player x.y.z" also counts for Reference: manifest › Player versions;
+           a change in what existing API does that needs no newer player is written
+           "behaviour from player x.y.z" (or "behaviour change in/since") and gets no row.
 @param     Meaning, unit, range, default. Inline option objects: one @param for
            `options`, and a summary on each field.
 @returns   When it resolves and what has taken effect by then.

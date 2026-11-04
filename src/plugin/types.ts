@@ -2846,15 +2846,22 @@ export interface Panel extends View, Disposable {
    * A second sidebar panel is not refused: it resolves as another tab
    * (see {@link Panel.state}). Built-in plugins mount first at start-up,
    * so the playlist's tab is first and a built-in panel keeps its position.
+   * Behaviour from player 0.7.3: the sidebar takes any number of tabs; the
+   * strip shows the tabs that fit and a `»` menu lists all of them.
+   * Players 0.4.x to 0.7.2 refused a ninth tab with `conflict`. A plugin
+   * whose only live thing is a sidebar panel in a background tab goes to
+   * standby when idle and showing the tab starts it again (see
+   * {@link Panel.state}).
    *
    * @throws `ui-prepare` (rejects) The Slint file does not compile, or a
    *   bound property is not declared on the bridge global; `message` has the
    *   diagnostics. (Players 0.4.0 and older also answer a taken bottom bar
    *   or sidebar with it.)
    * @throws `conflict` (rejects) Another plugin's panel holds the bottom bar
-   *   or the backdrop (shown, or being mounted), or the sidebar has all the
-   *   tabs it takes (8); `message` names the position and the holder
-   *   (「侧栏已被 vestra.playlist 使用」). Not an activation failure.
+   *   or the backdrop (shown, or being mounted); `message` names the
+   *   position and the holder (「底栏已被 vestra.playback 使用」). Not an
+   *   activation failure. Never for the sidebar (behaviour from player
+   *   0.7.3); players 0.4.x to 0.7.2 also refused a ninth sidebar tab.
    * @throws `busy` (rejects) The player is still preparing this plugin's
    *   previous mount, or its queue of mounts is full.
    * @throws `invalid` (rejects) `title` is longer than 128 bytes or has
@@ -2874,6 +2881,19 @@ export interface Panel extends View, Disposable {
    * user switching tabs, other plugins, the window size), without `events`
    * only this plugin's own changes. A sidebar panel in a background tab
    * has `active: false`, `effective: false` and `reason: "otherTab"`.
+   *
+   * Behaviour from player 0.7.3: a background tab does not keep the plugin
+   * running.
+   * If the panel is all that keeps it running, the plugin goes to standby
+   * after the idle time (stop reason `idle`): the player keeps its tab, with
+   * its title, in the strip and the `»` menu. When the user shows the tab,
+   * the player starts the plugin again; `activate` runs and mounts the same
+   * panel (same file and component), which takes the tab over, and
+   * {@link Panel.ready} resolves again. Anything the plugin kept only in
+   * memory is gone: restore the view from storage (session storage
+   * survives standby). While it is in the background, the player may also
+   * drop the panel's component and build it again from the bridge
+   * properties last written, as it does on any rebuild.
    *
    * @throws Never; `null` stands for "not mounted".
    *

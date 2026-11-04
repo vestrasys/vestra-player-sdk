@@ -3,7 +3,10 @@
  * player than 0.1.0, by player version. A symbol counts when its doc
  * comment has an `@player x.y.z` tag or names "player x.y.z" (not "before"
  * or "older than" it); the tags are being completed with the API
- * reference, the prose covers the rest until then.
+ * reference, the prose covers the rest until then. A behaviour note, a
+ * change in what existing API does that a plugin needs no newer player for,
+ * names its version as "behaviour from player x.y.z" (or "behaviour change
+ * in" / "since"): it gets no row, since `minPlayerVersion` need not change.
  */
 import {
   docText,
@@ -20,6 +23,9 @@ const SOURCES = [
   { file: "src/capabilities.ts", module: "@vestra-player/sdk/testing" },
 ];
 const VERSION = /\d+\.\d+\.\d+/;
+/** A behaviour note's version mention, which gets no row. */
+const BEHAVIOUR =
+  /\bbehaviou?r(?: change)?\s+(?:from|in|since)\s+player\s+\d+\.\d+\.\d+\b/gi;
 
 /** The player versions a doc comment names as needed. */
 function versions(text) {
@@ -28,7 +34,7 @@ function versions(text) {
     const match = VERSION.exec(tag);
     if (match) found.add(match[0]);
   }
-  const prose = plain(text.replace(/^@player.*$/gm, ""));
+  const prose = plain(text.replace(/^@player.*$/gm, "")).replace(BEHAVIOUR, "");
   for (const match of prose.matchAll(/\b(\w+\s+)?player (\d+\.\d+\.\d+)\b/gi))
     if (!/^(before|older|than|after)\s/i.test(match[1] ?? ""))
       found.add(match[2]);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.2
+
+**Who must change: nobody, but check `TestHost` tests of a full sidebar or of `keepsRunning` with a background tab.** No change to the TypeScript API or the wire, `apiVersion` stays `vestra/1`, no new capability, no player version needed. `TestHost` follows player 0.7.3: it no longer refuses a ninth sidebar tab, and `keepsRunning` no longer lists a sidebar panel in a background tab. A test that expected `conflict` for a ninth tab, or `"a mounted panel"` while another tab is current, now fails.
+
+- **Sidebar tabs without a limit** (player 0.7.3; the player's [sidebar tabs design](https://github.com/vestrasys/vestra-player/blob/main/doc/architecture/sidebar-tabs.md)). The sidebar takes any number of tabs: the strip shows the tabs that fit and a `»` menu at its end lists all of them, the current one checked. Players 0.4.x to 0.7.2 refused a ninth tab with `conflict` (「侧栏最多 8 个页签」); player 0.7.3 never refuses a sidebar mount for that. `Panel.ready`, [Windows, panels, settings pages, dialogs and the OSD](docs/explanation/ui.md#shared-space) and `TestHost` say so. The SDK's copy of the player's Chinese texts (`HOST_ZH_HANS`) drops "The sidebar holds at most {} tabs", which the player no longer has.
+- **A background tab does not keep its plugin running** (player 0.7.3). Only the current tab's plugin is kept live. A plugin whose sidebar panel is in a background tab, and that holds nothing else that keeps it running, goes to standby after the idle time like any idle plugin (stop reason `idle`); the player keeps its tab, with its title, in the strip and the `»` menu. Showing the tab starts the plugin again: `activate` runs and mounts the same panel (same file and component), which takes the tab over, and `Panel.ready` resolves again. Keep what the panel shows in session storage or bridge properties and restore it in `activate`. `Panel.state`, [Windows, panels…](docs/explanation/ui.md#panel), [How a plugin runs › Idle plugins are stopped](docs/explanation/plugins.md#idle-plugins-are-stopped) and [How the player runs and talks to plugins](docs/explanation/host-and-node.md) (the recorded `ui.mount`, the `panel_shown` wake) describe it. `TestHost.keepsRunning` lists `"a mounted panel"` only while the plugin's sidebar tab is the current one.
+
 ## 1.6.1
 
 **Who must change: nobody.** Docs only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability.
