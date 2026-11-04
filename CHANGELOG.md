@@ -4,7 +4,7 @@
 
 **Who must change: nobody.** Documentation only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed.
 
-- **Examples name window handles after their window.** The API examples, guides, tutorials and example plugins call a window handle after its Slint file instead of `window`: `readmeWindow` for `ui/readme.slint`, `presetsWindow`, `thumbnailWindow`, `bookmarkWindow`, `blurWindow` and so on, in `plugin.windows.create(…)` and `host.window(…)` alike.
+- **Examples name window handles after the window they name (its Slint file where there is one).** The API examples, guides, tutorials and example plugins no longer call a window handle `window`: `readmeWindow` for `ui/readme.slint`, `presetsWindow`, `thumbnailWindow`, `bookmarkWindow`, `blurWindow` and so on, in `plugin.windows.create(…)` and `host.window(…)` alike.
 
 ## 1.6.2
 

@@ -25,7 +25,7 @@ In each callback that changes a value, call `store.save({ ...store.value, … })
 
 ### Record whether the window is open
 
-Save `open: true` when your command shows the brightnessWindow, and `open: false` in `brightnessWindow.onClose`. Do nothing on stop.
+Save `open: true` when your command shows the window, and `open: false` in `brightnessWindow.onClose`. Do nothing on stop.
 
 ### Reopen it after binding
 

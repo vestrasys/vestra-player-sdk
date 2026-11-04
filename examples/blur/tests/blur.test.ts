@@ -19,7 +19,7 @@ function chain(host: TestHost) {
   return resource?.nodes ?? [];
 }
 
-test("Video ▸ Blur… opens the blurWindow; the slider blurs the video", async () => {
+test("Video ▸ Blur… opens the window; the slider blurs the video", async () => {
   const { host, stop } = await start();
   const command = host.command("blur");
   assert.deepEqual("path" in command.declaration && command.declaration.path, [
