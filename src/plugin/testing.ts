@@ -790,9 +790,6 @@ const TEST_ZH_HANS: Readonly<Record<string, string>> = {
   "External SRT": "外部 SRT",
   "External ASS": "外部 ASS",
 };
-/** The player's limit of sidebar tabs. */
-const MAX_SIDEBAR_TABS = 8;
-
 /**
  * The player's refusal of a declaration (commands.rs `CommandError`): code
  * `invalid`, `conflict` or `limit`, its message prefixed as the player's.
@@ -5005,12 +5002,18 @@ export class TestHost implements Transport {
   }
   /**
    * Why the player would keep this plugin running while nothing uses it
-   * (lazy activation, player 0.5.21), one line per reason, as the player's
-   * log says it: an event it listens to that is not one the player wakes
-   * it for (with what listens and where it was added), its mounted panel,
-   * its open windows. Empty: the player may stop it while idle and start
-   * it again on its next use. Filter chains, streams, jobs and the like
-   * (which also keep a plugin running) are not listed.
+   * (lazy activation, player 0.5.21), one line per reason: an event it
+   * listens to that is not one the player wakes it for (with what listens
+   * and where it was added), its panel in the bottom bar or the backdrop,
+   * its open windows (these as the player's log says them), and, from
+   * player 0.7.3, its sidebar tab while that is the current tab. The
+   * player counts the current tab as busy work, not as something live: it
+   * keeps the plugin running only while the tab is shown, and a sidebar
+   * panel in a background tab is no reason at all (the plugin may go to
+   * standby; showing the tab starts it again). Empty: the player may stop
+   * it while idle and start it again on its next use. Filter chains,
+   * streams, jobs and the like (which also keep a plugin running) are not
+   * listed.
    *
    * @capability None.
    * @since 1.5.40
@@ -5034,7 +5037,12 @@ export class TestHost implements Transport {
       if (!WAKE_EVENTS.includes(event))
         for (const why of this.listeningWhy.get(event) ?? ["a listener"])
           reasons.push(`listens to ${event}: ${why}`);
-    if (this.panel) reasons.push("a mounted panel");
+    // A sidebar panel is never live (player 0.7.3): the current tab keeps
+    // the plugin running as busy work, a background tab not at all.
+    if (this.panel?.slot === "sidebar") {
+      if (this.layout.sidebar?.owner === 1)
+        reasons.push("its sidebar tab is the current tab");
+    } else if (this.panel) reasons.push("a mounted panel");
     for (const [id, window] of this.windows)
       if (window.visible) reasons.push(`an open window (${id})`);
     return reasons;
@@ -5292,8 +5300,8 @@ export class TestHost implements Transport {
     },
     "ui.mount": (p) => {
       if (this.panel) throw new HostError("conflict", "owner already mounted");
-      // Like the player: one panel in the bottom bar and the backdrop, tabs
-      // in the sidebar (up to 8).
+      // Like the player: one panel in the bottom bar and the backdrop, any
+      // number of tabs in the sidebar (player 0.7.3; 0.4.x to 0.7.2 took 8).
       const holder =
         p.slot === "backdrop"
           ? this.backdrop?.owner
@@ -5305,15 +5313,6 @@ export class TestHost implements Transport {
           this.#hostText("The {} is used by {}", [
             this.#hostText(SLOT_LABELS[String(p.slot)]!),
             String(holder),
-          ]),
-        );
-      if (
-        p.slot === "sidebar" &&
-        (this.layout.sidebar?.panels?.length ?? 0) >= MAX_SIDEBAR_TABS
-      )
-        throw taken(
-          this.#hostText("The sidebar holds at most {} tabs", [
-            MAX_SIDEBAR_TABS,
           ]),
         );
       const properties = this.#initialValues(

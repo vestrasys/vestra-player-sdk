@@ -166,3 +166,25 @@ test("a sole panel's state is its position's, and the backdrop cannot be shown b
   await assert.rejects(backdrop!.show(), { code: "invalid" });
   await second.stop();
 });
+
+test("the sidebar takes any number of tabs; a background tab does not keep the plugin running (player 0.7.3)", async () => {
+  const host = new TestHost();
+  for (let i = 0; i < 12; i++) host.mountOther("sidebar", `other.p${i}`);
+  let list!: Panel;
+  const { stop } = await startPlugin(
+    (plugin: Plugin) => {
+      list = plugin.panels.mount("sidebar", "list.slint", { title: "List" });
+    },
+    { host, directory: packageWith() },
+  );
+  await list.ready;
+  void list.state; // Read when first used.
+  await host.settle();
+  assert.equal(host.layout.sidebar?.panels?.length, 13);
+  assert.equal(list.state?.reason, "otherTab");
+  assert.deepEqual(host.keepsRunning, []);
+  host.selectTab("test.list");
+  await host.settle();
+  assert.deepEqual(host.keepsRunning, ["its sidebar tab is the current tab"]);
+  await stop();
+});

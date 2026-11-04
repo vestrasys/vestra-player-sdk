@@ -192,6 +192,6 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.sent}() | The parameters of every request of one wire method, oldest first. |
 | {@link "@vestra-player/sdk/testing"!TestHost.settle}() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
 | {@link "@vestra-player/sdk/testing"!TestHost.close}() | Close the fake stream servers and delete the host's temporary directories. |
-| {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason, as the player's log says it: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its mounted panel, its open windows. |
+| {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its panel in the bottom bar or the backdrop, its open windows (these as the player's log says them), and, from player 0.7.3, its sidebar tab while that is the current tab. |
 
 <!-- /generated -->

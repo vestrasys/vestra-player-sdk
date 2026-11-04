@@ -1008,7 +1008,6 @@ export const HOST_ZH_HANS: Readonly<Record<string, string>> = {
   sidebar: "侧栏",
   "video backdrop": "视频背景",
   "The {} is used by {}": "{}已被 {} 使用",
-  "The sidebar holds at most {} tabs": "侧栏最多 {} 个页签",
   "{} is resolved by {}": "{} 已由 {} 解析",
   "File type .{}": "文件类型 .{}",
   "Not available in fullscreen": "全屏时不可用",
