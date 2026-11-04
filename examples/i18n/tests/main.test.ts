@@ -30,11 +30,11 @@ test("Simplified Chinese: the menu and the message from locales/zh-Hans.po", asy
   assert.deepEqual(counter.declaration.path, ["Tools", "Counter…"]);
   assert.deepEqual(counter.display.path, ["工具", "计数器…"]);
   await counter.run();
-  const window = host.window("counter");
-  window.emit("add");
-  window.emit("add");
+  const counterWindow = host.window("counter");
+  counterWindow.emit("add");
+  counterWindow.emit("add");
   await host.settle();
-  assert.equal(window.props["count"], 2);
+  assert.equal(counterWindow.props["count"], 2);
   assert.deepEqual(host.osd, ["计数：1", "计数：2"]);
   await stop();
 });

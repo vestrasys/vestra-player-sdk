@@ -12,9 +12,9 @@ export default function activate(plugin: Plugin) {
 
   // #region window
   // The window's texts are in its Slint file (@tr); TypeScript passes data.
-  const window = plugin.windows.create("ui/counter.slint");
-  window.bind(() => ({ count }));
-  window.on("add", () => {
+  const counterWindow = plugin.windows.create("ui/counter.slint");
+  counterWindow.bind(() => ({ count }));
+  counterWindow.on("add", () => {
     count += 1;
     // A template and its arguments, never a sentence built in TypeScript.
     return plugin.osd.show("Count: {}", [count]);
@@ -26,7 +26,7 @@ export default function activate(plugin: Plugin) {
   plugin.commands.add({
     id: "counter",
     path: ["Tools", "Counter…"],
-    run: () => window.show(),
+    run: () => counterWindow.show(),
   });
   // #endregion command
 }

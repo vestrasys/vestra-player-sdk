@@ -378,10 +378,10 @@ export interface Scope extends Disposable {
    *       return;
    *     }
    *     live = plugin.scope();
-   *     const window = live.windows.create("ui/stats.slint");
+   *     const statsWindow = live.windows.create("ui/stats.slint");
    *     const timer = setInterval(() => live?.update(), 1000);
    *     live.onDispose(() => clearInterval(timer));
-   *     await window.show();
+   *     await statsWindow.show();
    *   },
    * });
    * ```
@@ -502,12 +502,12 @@ export interface Scope extends Disposable {
    * promise settles; state changed between the awaits of a long handler
    * shows only after an explicit `update()`.
    * ```ts
-   * declare const window: Window;
+   * declare const downloadWindow: Window;
    * declare function downloadPart(part: number): Promise<void>;
    * // ---cut---
    * let done = 0;
-   * window.bind(() => ({ progress: done }));
-   * window.on("start", async () => {
+   * downloadWindow.bind(() => ({ progress: done }));
+   * downloadWindow.on("start", async () => {
    *   for (let part = 0; part < 10; part++) {
    *     await downloadPart(part);
    *     done = part + 1;
@@ -1786,11 +1786,11 @@ export interface Ui {
    * calls `image()` again after rewriting it, because the SDK does not send
    * a value that did not change.
    * ```ts
-   * const window = plugin.windows.create("ui/thumbnail.slint");
+   * const thumbnailWindow = plugin.windows.create("ui/thumbnail.slint");
    * const file = `${plugin.dataDirectory}/thumbnail.png`;
    * // … write the PNG to `file` (for example with plugin.tools.run("ffmpeg", …)) …
-   * window.set({ thumbnail: plugin.ui.image(file) });
-   * await window.show();
+   * thumbnailWindow.set({ thumbnail: plugin.ui.image(file) });
+   * await thumbnailWindow.show();
    * ```
    *
    * @since 1.0.0
@@ -1954,11 +1954,11 @@ export interface Ui {
    * const response = await fetch(readmeUrl);
    * if (!response.ok) throw new Error(`README: HTTP ${response.status}`);
    * const text = await response.text();
-   * const window = plugin.windows.create("ui/readme.slint");
+   * const readmeWindow = plugin.windows.create("ui/readme.slint");
    * // Bound before the first `show`, as a tool window requires.
-   * window.on("openLink", (url: string) => plugin.system.openUrl(url));
-   * window.set({ doc: await plugin.ui.markdown(text, { base: readmeUrl }) });
-   * await window.show();
+   * readmeWindow.on("openLink", (url: string) => plugin.system.openUrl(url));
+   * readmeWindow.set({ doc: await plugin.ui.markdown(text, { base: readmeUrl }) });
+   * await readmeWindow.show();
    * ```
    *
    * @since 1.1.0
@@ -2107,10 +2107,10 @@ export interface View {
    * sends the value even though it equals the one sent before, which is
    * what pulls a control the user moved back to the plugin's value.
    * ```ts
-   * const window = plugin.windows.create("ui/presets.slint");
+   * const presetsWindow = plugin.windows.create("ui/presets.slint");
    * let presetIndex = 0;
-   * window.on("presetChosen", (index: number) => {
-   *   if (index > 2) window.set({ presetIndex }); // "Custom" is not a preset
+   * presetsWindow.on("presetChosen", (index: number) => {
+   *   if (index > 2) presetsWindow.set({ presetIndex }); // "Custom" is not a preset
    *   else presetIndex = index;
    * });
    * ```
@@ -2274,9 +2274,9 @@ export interface Window extends View, Disposable {
    * window; it rejects with a code, such as `host` for a Slint file that
    * does not compile or `unavailable` without a user interface.
    * ```ts
-   * const window = plugin.windows.create("ui/inspector.slint");
+   * const inspectorWindow = plugin.windows.create("ui/inspector.slint");
    * try {
-   *   await window.show();
+   *   await inspectorWindow.show();
    * } catch (error) {
    *   // The code is data; `message` has the details for the log.
    *   await plugin.osd.show("Cannot open the inspector ({})", [(error as PluginError).code]);
@@ -2385,8 +2385,8 @@ export interface Window extends View, Disposable {
    * store writes the change to `window.json` shortly after.
    * ```ts
    * const store = plugin.storage.json("window", { defaults: { open: false } });
-   * const window = plugin.windows.create("ui/notes.slint");
-   * window.onClose(() => store.save({ open: false }));
+   * const notesWindow = plugin.windows.create("ui/notes.slint");
+   * notesWindow.onClose(() => store.save({ open: false }));
    * ```
    *
    * @see [Remember a window's state between runs](../../docs/how-to/window-state.md)
@@ -5561,9 +5561,9 @@ export interface Stream extends Disposable {
    * connection; it resolves once both are closed.
    * ```ts
    * declare const stream: Stream;
-   * declare const window: Window;
+   * declare const generatorWindow: Window;
    * // ---cut---
-   * window.onClose(() => stream.stop());
+   * generatorWindow.onClose(() => stream.stop());
    * ```
    *
    * @since 1.0.0
@@ -9964,10 +9964,10 @@ export interface JsonStore<T> extends Disposable {
    * writes the file only once the user stops for 300 ms. Each `save`
    * replaces the value and restarts the debounce timer.
    * ```ts
-   * declare const window: Window;
+   * declare const volumeWindow: Window;
    * // ---cut---
    * const store = plugin.storage.json("prefs", { defaults: { volume: 100 } });
-   * window.on("volumeChanged", (volume: number) => store.save({ ...store.value, volume }));
+   * volumeWindow.on("volumeChanged", (volume: number) => store.save({ ...store.value, volume }));
    * ```
    *
    * @since 1.0.0

@@ -109,7 +109,7 @@ sequenceDiagram
     participant P as plugin
     U->>S: clicks Mark this position
     S->>P: the callback mark (clicked => root.mark())
-    P->>P: the window.on("mark") handler runs, mark = 42
+    P->>P: the bookmarkWindow.on("mark") handler runs, mark = 42
     P->>P: the handler returns, the update pass evaluates every binding
     P->>S: label Bookmark: 42.0 s (changed, sent)
     Note over P: canMark true is the same as last sent, not sent

@@ -72,11 +72,11 @@ Names are converted for you: Slint's `can-mark` is `canMark` in TypeScript.
 {@includeCode ../../examples/bookmark/main.ts#window}
 
 - {@link "@vestra-player/sdk"!Windows.create | plugin.windows.create} makes a handle. Nothing opens yet.
-- {@link "@vestra-player/sdk"!View.bind | window.bind} gives the function that computes the window's properties. The SDK calls it again after every handler and every change of the player's state, and sends only what changed. So there is no update code:
+- {@link "@vestra-player/sdk"!View.bind | bookmarkWindow.bind} gives the function that computes the window's properties. The SDK calls it again after every handler and every change of the player's state, and sends only what changed. So there is no update code:
   - `label` follows `mark`.
   - `canMark` follows `player.state.position`, which is `null` while nothing is open.
   - `canJump` needs a bookmark and a video that can seek.
-- {@link "@vestra-player/sdk"!View.on | window.on} handles a callback. `mark` stores the position; `jump` seeks back. The `!` is safe because the button is only enabled while there is a bookmark.
+- {@link "@vestra-player/sdk"!View.on | bookmarkWindow.on} handles a callback. `mark` stores the position; `jump` seeks back. The `!` is safe because the button is only enabled while there is a bookmark.
 - Register callbacks before the first `show()`: a tool window takes its callbacks when it opens.
 
 ### The menu command
@@ -85,7 +85,7 @@ Names are converted for you: Slint's `can-mark` is `canMark` in TypeScript.
 
 - `path: ["@playback", "Bookmark…"]` adds the item to the player's own **Playback** menu. A first segment that starts with `@` names a built-in menu ({@link "@vestra-player/sdk"!MenuId | MenuId}).
 - `order: 270` places it among the Playback menu's items.
-- `run` opens the window with {@link "@vestra-player/sdk"!Window.show | window.show()}. The bound values are already in place when it appears.
+- `run` opens the window with {@link "@vestra-player/sdk"!Window.show | bookmarkWindow.show()}. The bound values are already in place when it appears.
 
 ## The test
 

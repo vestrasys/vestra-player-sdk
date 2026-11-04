@@ -61,18 +61,18 @@ export component Hello inherits Window {
 Add to the end of `activate` in `main.ts`:
 
 ```ts
-const window = plugin.windows.create("ui/hello.slint");
-window.bind(() => ({
+const helloWindow = plugin.windows.create("ui/hello.slint");
+helloWindow.bind(() => ({
   message: plugin.player.state.source ?? "Nothing is playing",
   canSeek: plugin.player.state.can.seek,
 }));
-window.on("jump", (delta: number) =>
+helloWindow.on("jump", (delta: number) =>
   plugin.player.seek(Math.max(0, (plugin.player.state.position ?? 0) + delta)),
 );
 plugin.commands.add({
   id: "hello",
   path: ["Tools", "Hello…"],
-  run: () => window.show(),
+  run: () => helloWindow.show(),
 });
 ```
 

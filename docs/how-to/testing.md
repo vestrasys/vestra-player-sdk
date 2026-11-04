@@ -53,10 +53,10 @@ host.handle("processing.replace", () => {
 `settle` waits only for calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine; poll the value you assert on instead:
 
 ```ts nocheck
-window.emit("load-file"); // the plugin reads and parses the file itself
-for (let i = 0; i < 100 && window.props["status-text"] !== expected; i++)
+importWindow.emit("load-file");
+for (let i = 0; i < 100 && importWindow.props["status-text"] !== expected; i++)
   await host.settle(20);
-assert.equal(window.props["status-text"], expected);
+assert.equal(importWindow.props["status-text"], expected);
 ```
 
 ### Stop

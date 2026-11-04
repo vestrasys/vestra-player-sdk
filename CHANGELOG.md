@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.3
+
+**Who must change: nobody.** Documentation only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed.
+
+- **Examples name window handles after their window.** The API examples, guides, tutorials and example plugins call a window handle after its Slint file instead of `window`: `readmeWindow` for `ui/readme.slint`, `presetsWindow`, `thumbnailWindow`, `bookmarkWindow`, `blurWindow` and so on, in `plugin.windows.create(…)` and `host.window(…)` alike.
+
 ## 1.6.2
 
 **Who must change: nobody, but check `TestHost` tests of a full sidebar or of `keepsRunning` with a background tab.** No change to the TypeScript API or the wire, `apiVersion` stays `vestra/1`, no new capability, no player version needed. `TestHost` follows player 0.7.3: it no longer refuses a ninth sidebar tab, and `keepsRunning` lists a sidebar panel only while its tab is the current tab, as `"its sidebar tab is the current tab"`. A test that expected `conflict` for a ninth tab, or `"a mounted panel"` for a sidebar panel, now fails.

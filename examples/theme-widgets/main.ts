@@ -4,17 +4,20 @@ import type { Plugin } from "@vestra-player/sdk";
 export default async function activate(plugin: Plugin) {
   // #region window
   let level = 0.5;
-  const window = plugin.windows.create("ui/theme-widgets.slint");
-  window.bind(() => ({ level, label: `Level ${Math.round(level * 100)}` }));
-  window.on("levelChanged", (value: number) => (level = value));
-  window.on("reset", () => (level = 0.5));
+  const themeWidgetsWindow = plugin.windows.create("ui/theme-widgets.slint");
+  themeWidgetsWindow.bind(() => ({
+    level,
+    label: `Level ${Math.round(level * 100)}`,
+  }));
+  themeWidgetsWindow.on("levelChanged", (value: number) => (level = value));
+  themeWidgetsWindow.on("reset", () => (level = 0.5));
   // #endregion window
 
   // #region command
   plugin.commands.add({
     id: "open",
     path: ["Examples", "Theme widgets…"],
-    run: () => window.show(),
+    run: () => themeWidgetsWindow.show(),
   });
   // #endregion command
 }

@@ -13,13 +13,13 @@ test("mark the position, then jump back to it", async () => {
   });
 
   await host.command("bookmark.open").run();
-  const window = host.window("bookmark");
-  window.emit("mark");
+  const bookmarkWindow = host.window("bookmark");
+  bookmarkWindow.emit("mark");
   await host.settle();
-  assert.equal(window.props.label, "Bookmark: 42.0 s");
+  assert.equal(bookmarkWindow.props.label, "Bookmark: 42.0 s");
 
   host.setSource({ position: 300 }); // playback moves on
-  window.emit("jump");
+  bookmarkWindow.emit("jump");
   await host.settle();
   assert.equal(host.source.position, 42);
   await stop();
