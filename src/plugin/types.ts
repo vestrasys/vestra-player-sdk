@@ -2817,7 +2817,9 @@ export interface PanelSlot {
    *
    * @remarks
    * Reads the state from the player first, so it is right even without
-   * `events`.
+   * `events`. A sidebar or adjust column wanted shown but collapsed at the
+   * right edge of fullscreen (`reason: "fullscreen"`) slides out instead of
+   * being turned off (SDK 1.6.12; player 0.7.6 pops it out).
    *
    * @capability ui.mount
    *
@@ -3124,7 +3126,10 @@ export interface Panel extends View, Disposable {
    * Reads the state from the player first. When the position is shown
    * (`preferred`) and this panel's tab is the current one, it hides the
    * position; otherwise it does {@link Panel.show}: a panel in a background
-   * tab comes to the front instead of the sidebar closing. A "Show list"
+   * tab comes to the front instead of the sidebar closing, and a column
+   * collapsed at the right edge of fullscreen (`reason: "fullscreen"`) slides
+   * out instead of being turned off (SDK 1.6.12; player 0.7.6 pops it out),
+   * like the player's own Alt+1…4 and Adjust button. A "Show list"
    * command checked by `state.preferred && state.active` matches it. Waits
    * for {@link Panel.ready} first.
    *

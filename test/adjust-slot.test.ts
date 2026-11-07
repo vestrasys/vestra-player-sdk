@@ -133,3 +133,47 @@ test("a player that refuses the slot fails the activation; a layout without adju
   assert.equal(plugin.panels.adjust.panels, null);
   await stop();
 });
+
+test("in fullscreen a collapsed column slides out on toggle instead of closing", async () => {
+  const host = new TestHost();
+  host.mountOther("sidebar", "vestra.playlist");
+  let wheels!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      wheels = plugin.panels.mount("adjust", "wheels.slint");
+    },
+    { host, directory: packageWith() },
+  );
+  await wheels.show();
+  // Fullscreen: both columns wanted shown, collapsed at the right edge.
+  const collapse = () => {
+    for (const slot of [host.layout.adjust!, host.layout.sidebar!]) {
+      slot.effective = false;
+      slot.reason = "fullscreen";
+    }
+    host.emit("window.state", {});
+  };
+  collapse();
+  await host.settle();
+  assert.equal(wheels.state?.reason, "fullscreen");
+  // Panel.toggle (its key): slides out, not off.
+  await wheels.toggle();
+  assert.deepEqual(
+    [host.layout.adjust?.preferred, host.layout.adjust?.effective],
+    [true, true],
+  );
+  // Shown: the next toggle turns it off.
+  await wheels.toggle();
+  assert.equal(host.layout.adjust?.preferred, false);
+  // PanelSlot.toggle (a "Show sidebar" command) alike.
+  collapse();
+  await host.settle();
+  await plugin.panels.sidebar.toggle();
+  assert.deepEqual(
+    [host.layout.sidebar?.preferred, host.layout.sidebar?.effective],
+    [true, true],
+  );
+  await plugin.panels.sidebar.toggle();
+  assert.equal(host.layout.sidebar?.preferred, false);
+  await stop();
+});

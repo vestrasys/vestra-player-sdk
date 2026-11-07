@@ -47,7 +47,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 - The changes of {@link "@vestra-player/sdk"!Subtitles | Subtitles} (`select`, `load`, `remove`, `setStyle`) also need `subtitles.read`: they read the current selection first.
 - A `processed` snapshot or export ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) also needs `playback.read` and `subtitles.read`.
 - A file resolver ({@link "@vestra-player/sdk"!Resolvers.add | Resolvers.add} with file types) also needs `producer.av`.
-- Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere.
+- Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere. The test host behaves the same. From SDK 1.6.12 a plugin that follows the state without `events` (an `onChange`, or a `bind` whose function reads the state) gets one warning in its log; nothing else changes.
 
 ## Without a capability
 

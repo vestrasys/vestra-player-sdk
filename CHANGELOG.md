@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.12
+
+**Who must change: nobody.** A behaviour fix of `toggle` in fullscreen, an example fix and a development warning; no new API, `apiVersion` stays `vestra/1`.
+
+- **`Panel.toggle` and `PanelSlot.toggle` slide a collapsed column out.** In fullscreen a sidebar or adjust column the user wants shown is collapsed at the right edge (`reason: "fullscreen"`). Toggling it then turned it off; it now shows it, which player 0.7.6 answers by sliding the column out, as its own Adjust button and Alt+1…4 do. Toggling a column that is on screen still turns it off. With players before 0.7.6 a show of a collapsed column changes nothing on screen, as before.
+- **[adjust-panel](docs/examples/adjust-panel.md)** declares `events`: without it `plugin.player.state` changes only after the plugin's own calls, so a panel activated before a file was opened stayed disabled at 1×. A new test opens the file after activation. Its presets are four (0.5×, 1×, 1.5×, 2×), which fit the adjust column at its least width. No other example reads `player.state` without `events`.
+- **A development warning for state followed without `events`.** A plugin that registers an `onChange` or a `bind` whose function reads changing state (`player.state`, a panel position, and the like) without the `events` capability gets one line in its log, once per plugin: changes made elsewhere never reach it. Only a warning; behaviour is unchanged. `TestHost` already behaved like the player here (it delivers `source.state` and the other state events only to a plugin that subscribed, which needs `events`): a new test pins that down. The example's old tests passed because they opened the file before starting the plugin or did not check `enabled`. No SDK example or test relied on the opposite, so nobody must change.
 ## 1.6.11
 
 **Who must change: nobody.** Additions only: a mount slot, a panel position, a button icon and `TestHost` support; `apiVersion` stays `vestra/1`, no new capability. A plugin that mounts `"adjust"` sets `minPlayerVersion` to `0.7.6`: older players refuse the slot (`invalid`), which fails the activation like any refused mount.
