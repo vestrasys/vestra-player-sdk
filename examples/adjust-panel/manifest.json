@@ -1,0 +1,13 @@
+{
+  "id": "examples.adjust-panel",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.7.6",
+  "capabilities": ["commands", "ui.mount", "playback.read", "playback.control"],
+  "name": "Speed Panel",
+  "author": "Vestra Player SDK examples",
+  "punchline": "A speed slider in the player's adjust column",
+  "description": "A tab in the adjust column, beside the video: a slider and presets for the playback speed. Alt+5 opens the column at this tab and closes it again.\nSDK example: the adjust slot, a panel command and its home.",
+  "tags": ["playback", "speed", "panel", "example"]
+}

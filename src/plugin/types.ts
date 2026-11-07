@@ -2689,13 +2689,14 @@ export interface PanelState {
    * else the position's reason ({@link SlotState.reason}).
    */
   reason: SlotState["reason"] | "otherTab";
-  /** The sidebar floats in its own window (with all its tabs). */
+  /** The sidebar floats in its own window (with all its tabs); always `false` in the adjust column. */
   detached: boolean;
 }
 
 /**
- * The bottom bar or the sidebar position (`plugin.panels.bottom`,
- * `plugin.panels.sidebar`), independent of who mounted the panel there.
+ * The bottom bar, the sidebar or the adjust column position
+ * (`plugin.panels.bottom`, `plugin.panels.sidebar`, `plugin.panels.adjust`),
+ * independent of who mounted the panel there.
  *
  * @remarks
  * The position does not belong to the plugin that mounted the panel: any
@@ -4290,6 +4291,38 @@ export interface Panels {
    *   takes no pointer or keyboard input. While it is mounted, the player does
    *   not show the cover art of audio files itself (from the next file
    *   opened on), so the plugin can draw it.
+   * - `"adjust"` (player 0.7.6, SDK 1.6.11): **controls that change what is
+   *   playing**: the picture, the sound, the subtitles, the speed (the
+   *   player's own Picture, Audio, Subtitles and Playback panels, a colour
+   *   grading tool). Several plugins may mount here, one tab each, labelled
+   *   `title` (else the plugin's name). Declare `minPlayerVersion: "0.7.6"`:
+   *   older players refuse the slot (`invalid`, "unknown mount slot"), and a
+   *   mount refused during `activate` fails the activation.
+   *
+   * **Choosing between `"sidebar"` and `"adjust"`.** The slot says what the
+   * panel is for; the player decides how it looks and may change that at any
+   * time. Ask: after the user closes the panel, do they still look at what it
+   * showed? If yes (a list, chapters, search results, another video), it is
+   * content: `"sidebar"`. If it only changes what is playing, it is
+   * `"adjust"`.
+   *
+   * **What the player shows today (may change; do not depend on it).** The
+   * adjust column is a second column between the video and the sidebar
+   * (`[video][adjust][sidebar]`; both can be open, the sidebar always
+   * rightmost), 317 wide by default, 280 to half the window, with text tabs
+   * and the key that opens each tab under its title (the key of the command
+   * your other commands name as their {@link CommandOptions.home | home}). It
+   * has no close or detach button: the bottom bar's Adjust button, your
+   * panel's own command ({@link Panel.toggle}) and the menus open and close
+   * it. It starts closed. In a window too narrow to dock it beside a video at
+   * least 480 wide, it floats over the right of the video, 300 wide; in
+   * fullscreen it slides out from the right edge, left of the sidebar. Its
+   * width, open state, current tab and tab order are remembered across
+   * launches. Its strip is always drawn, so panel coordinates (drops) start
+   * below it, and the bridge global's `tabbed` property, if declared, is
+   * `true`. As in the sidebar, only the current tab's plugin is kept
+   * running while the column is open, and the player compiles a panel the
+   * first time it is shown, not at start-up.
    *
    * @capability ui.mount
    *
@@ -4327,14 +4360,14 @@ export interface Panels {
    * @since 1.0.0
    */
   mount(
-    slot: "bottom" | "sidebar" | "backdrop",
+    slot: "bottom" | "sidebar" | "adjust" | "backdrop",
     file: string,
     options?: {
       /** The exported component to mount, if the file exports several. */
       component?: string;
       /** The exported global to use as the bridge, if the file exports several. */
       global?: string;
-      /** The floating sidebar window's title (at most 128 bytes). */
+      /** The tab label and the floating sidebar window's title (at most 128 bytes). */
       title?: string;
     },
   ): Panel;
@@ -4347,6 +4380,51 @@ export interface Panels {
   readonly bottom: PanelSlot;
   /** The sidebar position, including its floating state; any plugin may read and toggle it. */
   readonly sidebar: SidebarSlot;
+  /**
+   * The adjust column (player 0.7.6, SDK 1.6.11), whoever mounted there;
+   * any plugin may read and toggle it. The same shape as
+   * {@link Panels.sidebar} without floating: the adjust column never
+   * detaches.
+   *
+   * @remarks
+   * `state` is `null` while no plugin has a panel there. Players before
+   * 0.7.6 build the `plugin` object with their own SDK, which has no
+   * `adjust`: there `plugin.panels.adjust` is `undefined` and reading its
+   * `state` throws a `TypeError`, so declare `"minPlayerVersion": "0.7.6"`
+   * (or test `plugin.panels.adjust` first). The column starts hidden (`preferred: false`, `reason:
+   * "userHidden"`) until the user opens it. To open the column at your own
+   * panel, call {@link Panel.show} (or {@link Panel.toggle}, which closes it
+   * again when your tab is already the current one, the behaviour of the
+   * player's own `Alt+1…4`).
+   *
+   * @example Open the adjust column at this plugin's tab with a key
+   * One command opens the column at the plugin's tab, and pressing it again
+   * while that tab is shown closes the column. The panel's other commands
+   * name it as their `home`, so the player shows its key under the tab and
+   * the command palette knows where they live.
+   * ```ts
+   * const panel = plugin.panels.mount("adjust", "ui/wheels.slint", { title: "Wheels" });
+   * plugin.commands.add({
+   *   id: "wheels",
+   *   title: "Colour Wheels",
+   *   bindings: ["Alt+5"],
+   *   // Opens the column at this tab; closes it when this tab is shown.
+   *   run: () => panel.toggle(),
+   * });
+   * plugin.commands.add({
+   *   id: "wheels-reset",
+   *   title: "Reset Colour Wheels",
+   *   // Lives in the panel `wheels` opens: its key shows under the tab.
+   *   home: "wheels",
+   *   run: () => panel.set({ lift: 0 }),
+   * });
+   * ```
+   *
+   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
+   *   have no `adjust`: reading its `state` throws a `TypeError`).
+   * @since 1.6.11
+   */
+  readonly adjust: PanelSlot;
 }
 
 // ---------------------------------------------------------------- timeline
@@ -9718,7 +9796,7 @@ export interface PluginWarning {
    * 0.4.1); a newer player may add codes.
    */
   code: string;
-  /** The panel position (`"bottom"`, `"sidebar"`, `"backdrop"`) for `slot-occupied`. */
+  /** The panel position (`"bottom"`, `"backdrop"`; the sidebar and the adjust column hold any number of tabs) for `slot-occupied`. */
   slot?: string;
   /**
    * What was taken, for `resolver-taken`: 「文件类型 .nes」 or the

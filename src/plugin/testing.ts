@@ -815,7 +815,10 @@ const SLOT_LABELS: Record<string, string> = {
   bottom: "bottom bar",
   sidebar: "sidebar",
   backdrop: "video backdrop",
+  adjust: "adjust column",
 };
+/** The positions that hold tabs: any number of plugins, one tab each. */
+type TabSlot = "bottom" | "sidebar" | "adjust";
 /** Texts only the test host uses, with their Chinese of SDK 1.5.8. */
 const TEST_ZH_HANS: Readonly<Record<string, string>> = {
   "this site": "这个网站",
@@ -1042,7 +1045,7 @@ export class TestHost implements Transport {
    */
   panel:
     | (Omit<FakeWindow, "callbacks" | "userClose"> & {
-        /** `"bottom"`, `"sidebar"` or `"backdrop"`. */
+        /** `"bottom"`, `"sidebar"`, `"adjust"` or `"backdrop"`. */
         slot: string;
         /** The exported component the SDK found in the file. */
         component: string;
@@ -1085,9 +1088,16 @@ export class TestHost implements Transport {
      * the current tab's (the plugin under test is owner 1).
      */
     sidebar: LayoutSlot | null;
+    /**
+     * The adjust column (SDK 1.6.11, player 0.7.6), like the sidebar but
+     * never `detached`. It starts hidden (`preferred: false`, `reason:
+     * "userHidden"`), as the player's does until the user opens it.
+     */
+    adjust: LayoutSlot | null;
   } = {
     bottom: null,
     sidebar: null,
+    adjust: null,
   };
   /**
    * Every `osd.show` text as the player shows it (translated with the
@@ -2185,7 +2195,7 @@ export class TestHost implements Transport {
    * @capability None.
    */
   mountOther(
-    slot: "bottom" | "sidebar" | "backdrop",
+    slot: "bottom" | "sidebar" | "adjust" | "backdrop",
     plugin: string,
     options: { title?: string } = {},
   ) {
@@ -2229,7 +2239,7 @@ export class TestHost implements Transport {
     if (!other) throw new Error(`${plugin} has no panel`);
     this.#others.delete(plugin);
     if (other.slot === "backdrop") this.backdrop = null;
-    else this.#removePanel(other.slot as "bottom" | "sidebar", other.owner);
+    else this.#removePanel(other.slot as TabSlot, other.owner);
     this.emit("window.state", this.#windowFacts());
   }
   /**
@@ -2254,26 +2264,31 @@ export class TestHost implements Transport {
    * ```
    */
   selectTab(plugin: string) {
-    const slot = this.layout.sidebar;
+    const slot = [this.layout.sidebar, this.layout.adjust].find((each) =>
+      each?.panels?.some((entry) => entry.plugin === plugin),
+    );
     const panel = slot?.panels?.find((entry) => entry.plugin === plugin);
-    if (!slot || !panel) throw new Error(`${plugin} has no sidebar tab`);
+    if (!slot || !panel) throw new Error(`${plugin} has no tab`);
     slot.owner = panel.owner;
     this.emit("window.state", this.#windowFacts());
   }
-  #addPanel(slot: "bottom" | "sidebar", panel: LayoutPanel) {
+  #addPanel(slot: TabSlot, panel: LayoutPanel) {
     const state = this.layout[slot];
     if (state) state.panels = [...(state.panels ?? []), panel];
-    else
+    else {
+      // The adjust column starts hidden, as the player's.
+      const shown = slot !== "adjust";
       this.layout[slot] = {
         owner: panel.owner,
-        preferred: true,
-        effective: true,
-        reason: null,
+        preferred: shown,
+        effective: shown,
+        reason: shown ? null : "userHidden",
         detached: false,
         panels: [panel],
       };
+    }
   }
-  #removePanel(slot: "bottom" | "sidebar", owner: number) {
+  #removePanel(slot: TabSlot, owner: number) {
     const state = this.layout[slot];
     if (!state) return;
     const panels = state.panels ?? [];
@@ -5326,10 +5341,14 @@ export class TestHost implements Transport {
         for (const why of this.listeningWhy.get(event) ?? ["a listener"])
           reasons.push(`listens to ${event}: ${why}`);
     // A sidebar panel is never live (player 0.7.3): the current tab keeps
-    // the plugin running as busy work, a background tab not at all.
+    // the plugin running as busy work, a background tab not at all. The
+    // adjust column's current tab only while the column is open (0.7.6).
     if (this.panel?.slot === "sidebar") {
       if (this.layout.sidebar?.owner === 1)
         reasons.push("its sidebar tab is the current tab");
+    } else if (this.panel?.slot === "adjust") {
+      if (this.layout.adjust?.owner === 1 && this.layout.adjust.preferred)
+        reasons.push("its adjust tab is the current tab");
     } else if (this.panel) reasons.push("a mounted panel");
     for (const [id, window] of this.windows)
       if (window.visible) reasons.push(`an open window (${id})`);
@@ -5603,8 +5622,11 @@ export class TestHost implements Transport {
     },
     "ui.mount": (p) => {
       if (this.panel) throw new HostError("conflict", "owner already mounted");
+      if (!(String(p.slot) in SLOT_LABELS))
+        throw new HostError("invalid", "unknown mount slot");
       // Like the player: one panel in the bottom bar and the backdrop, any
-      // number of tabs in the sidebar (player 0.7.3; 0.4.x to 0.7.2 took 8).
+      // number of tabs in the sidebar (player 0.7.3; 0.4.x to 0.7.2 took 8)
+      // and in the adjust column (player 0.7.6).
       const holder =
         p.slot === "backdrop"
           ? this.backdrop?.owner
@@ -5643,7 +5665,7 @@ export class TestHost implements Transport {
         this.backdrop = { owner: this.manifestId, effective: true };
         return { status: "ready", prepareMs: 0, shellGeneration: 1 };
       }
-      const slot = String(p.slot) as "bottom" | "sidebar";
+      const slot = String(p.slot) as TabSlot;
       this.#addPanel(slot, {
         owner: 1,
         plugin: this.manifestId,
@@ -5656,13 +5678,16 @@ export class TestHost implements Transport {
     },
     "ui.unmount": () => {
       if (this.panel?.slot === "backdrop") this.backdrop = null;
-      else if (this.panel)
-        this.#removePanel(this.panel.slot as "bottom" | "sidebar", 1);
+      else if (this.panel) this.#removePanel(this.panel.slot as TabSlot, 1);
       this.panel = null;
     },
     "ui.menu": (p) => {
       if (!this.panel) throw new HostError("unavailable", "panel not shown");
-      if (this.panel.slot === "sidebar" && this.layout.sidebar?.owner !== 1)
+      const tabs =
+        this.panel.slot === "sidebar" || this.panel.slot === "adjust"
+          ? this.layout[this.panel.slot]
+          : null;
+      if (tabs && tabs.owner !== 1)
         throw new HostError(
           "unavailable",
           "the panel's tab is not the current one",
@@ -5681,11 +5706,15 @@ export class TestHost implements Transport {
       },
     }),
     "layout.set": (p) => {
-      const slot = String(p.slot) as "bottom" | "sidebar";
+      const slot = String(p.slot) as TabSlot;
+      if (!["bottom", "sidebar", "adjust"].includes(slot))
+        throw new HostError("invalid", "unknown slot");
       const state = this.layout[slot];
       if (!state) throw new HostError("missing", "no panel at this position");
       if (p.detached !== undefined && slot === "bottom")
         throw new HostError("invalid", "the bottom bar cannot be detached");
+      if (p.detached === true && slot === "adjust")
+        throw new HostError("invalid", "the adjust column cannot be detached");
       if (p.active !== undefined && p.active !== null) {
         const panel = state.panels?.find((entry) => entry.plugin === p.active);
         if (!panel)

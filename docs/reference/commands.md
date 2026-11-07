@@ -428,6 +428,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Command Palette (not in the menu) | `Ctrl+Shift+P` | `host/palette` |
+| Adjust (not in the menu) |  | `host/adjust` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
 | Add Files… (not in the menu) | `Ctrl+I` (panel focus) | `vestra.playlist/playlist.list-add` |

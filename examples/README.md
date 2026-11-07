@@ -9,6 +9,7 @@ Complete Vestra Player plugins, each with a manifest, its source, Slint files, t
 | [signal-generator](signal-generator) | Generates its own video and audio: colour bars and a 1 kHz tone.                      |
 | [bookmark](bookmark)                 | A tool window bound to the playback state: remember the position and jump back to it. |
 | [panel-menu](panel-menu)             | A sidebar panel with its own right-click menu.                                        |
+| [adjust-panel](adjust-panel)         | A speed slider in the adjust column, opened by its own key (player 0.7.6).            |
 | [menus](menus)                       | Radio menu items, separator groups and a menu item whose title changes.               |
 | [theme-widgets](theme-widgets)       | A tool window drawn with the player's theme and widgets.                              |
 | [markdown](markdown)                 | A window that shows a Markdown document.                                              |

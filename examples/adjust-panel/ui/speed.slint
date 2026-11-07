@@ -1,0 +1,54 @@
+import { Button, Slider } from "@vestra/widgets.slint";
+import { Theme } from "@vestra/theme.slint";
+
+export global SpeedBridge {
+    in-out property <float> rate: 1;
+    in property <bool> enabled: true;
+    callback rate-changed(float);
+    callback reset();
+}
+
+// The adjust column is about 317 px wide: one column of rows, top to bottom.
+export component SpeedPanel inherits Rectangle {
+    background: Theme.bg-list;
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+        alignment: start;
+        HorizontalLayout {
+            Text {
+                text: @tr("Speed");
+                color: Theme.text;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+            Text {
+                text: round(SpeedBridge.rate * 100) / 100 + "×";
+                color: Theme.text-dim;
+                font-size: Theme.font-body;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+        Slider {
+            enabled: SpeedBridge.enabled;
+            minimum: 0.25;
+            maximum: 4;
+            value <=> SpeedBridge.rate;
+            changed(value) => { SpeedBridge.rate-changed(value); }
+        }
+        HorizontalLayout {
+            spacing: 4px;
+            for preset in [0.5, 1, 1.25, 1.5, 2]: Button {
+                text: preset + "×";
+                enabled: SpeedBridge.enabled;
+                clicked => { SpeedBridge.rate-changed(preset); }
+            }
+        }
+        Button {
+            text: @tr("Normal Speed");
+            enabled: SpeedBridge.enabled;
+            clicked => { SpeedBridge.reset(); }
+        }
+    }
+}

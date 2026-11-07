@@ -955,15 +955,20 @@ export function exported(directory: string, file: string, kind: string) {
 
 type Locks = { focused: boolean; dragging: boolean; popupOpen: boolean };
 
+/** Where a panel mounts (`Panels.mount`). */
+type MountSlot = "bottom" | "sidebar" | "adjust" | "backdrop";
+/** The positions `layout.state` reports and `layout.set` changes. */
+type LayoutName = "bottom" | "sidebar" | "adjust";
+
 class PanelHandle extends ViewBase implements Panel {
   readonly ready: Promise<void>;
-  readonly #slot: "bottom" | "sidebar" | "backdrop";
+  readonly #slot: MountSlot;
   #mounted = false;
   readonly #locks = { focused: false, dragging: false, popupOpen: false };
   readonly #interaction: Latest<Locks>;
   constructor(
     scope: ScopeImpl,
-    slot: "bottom" | "sidebar" | "backdrop",
+    slot: MountSlot,
     file: string,
     options: { component?: string; global?: string; title?: string },
   ) {
@@ -1095,7 +1100,7 @@ class PanelHandle extends ViewBase implements Panel {
 /** One panel's view of its position (`Panel.state`). */
 function panelState(
   layout: Layout,
-  slot: "bottom" | "sidebar" | "backdrop",
+  slot: MountSlot,
   plugin: string,
 ): PanelState | null {
   if (slot === "backdrop")
@@ -1132,10 +1137,13 @@ export const windows = (scope: ScopeImpl): Windows => ({
 type Layout = {
   bottom: SlotState | null;
   sidebar: SlotState | null;
+  /** Player 0.7.6; `null` from older players. */
+  adjust: SlotState | null;
   /** `PanelSlot.panels` (null from players without tabs). */
   tabs: {
     bottom: readonly SlotPanel[] | null;
     sidebar: readonly SlotPanel[] | null;
+    adjust: readonly SlotPanel[] | null;
   };
   backdrop: { readonly effective: boolean } | null;
 };
@@ -1150,7 +1158,8 @@ class LayoutService {
   state: Layout = {
     bottom: null,
     sidebar: null,
-    tabs: { bottom: null, sidebar: null },
+    adjust: null,
+    tabs: { bottom: null, sidebar: null, adjust: null },
     backdrop: null,
   };
   readonly #listeners = new Set<(layout: Layout) => void>();
@@ -1213,10 +1222,16 @@ class LayoutService {
                 ),
               )
             : null;
+        const adjust = raw.adjust ?? null;
         const next = {
           bottom: view(raw.bottom),
           sidebar: view(raw.sidebar),
-          tabs: { bottom: tabs(raw.bottom), sidebar: tabs(raw.sidebar) },
+          adjust: view(adjust),
+          tabs: {
+            bottom: tabs(raw.bottom),
+            sidebar: tabs(raw.sidebar),
+            adjust: tabs(adjust),
+          },
           backdrop: raw.backdrop
             ? Object.freeze({ effective: raw.backdrop.effective === true })
             : null,
@@ -1231,7 +1246,7 @@ class LayoutService {
     }
   }
   async set(
-    slot: "bottom" | "sidebar",
+    slot: LayoutName,
     change: { visible?: boolean; detached?: boolean; active?: string },
   ) {
     this.start();
@@ -1243,9 +1258,9 @@ class LayoutService {
 const layoutOf = (runtime: Runtime) =>
   runtime.service("layout", () => new LayoutService(runtime));
 
-function slot(scope: ScopeImpl, name: "bottom"): PanelSlot;
+function slot(scope: ScopeImpl, name: "bottom" | "adjust"): PanelSlot;
 function slot(scope: ScopeImpl, name: "sidebar"): SidebarSlot;
-function slot(scope: ScopeImpl, name: "bottom" | "sidebar"): SidebarSlot {
+function slot(scope: ScopeImpl, name: LayoutName): SidebarSlot {
   const service = () => layoutOf(scope.runtime);
   return {
     get state() {
@@ -1314,6 +1329,7 @@ export const panels = (scope: ScopeImpl): Panels => ({
     new PanelHandle(scope, position, file, options),
   bottom: slot(scope, "bottom"),
   sidebar: slot(scope, "sidebar"),
+  adjust: slot(scope, "adjust"),
   backdrop: backdrop(scope),
 });
 
