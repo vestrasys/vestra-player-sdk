@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.7
+
+**Who must change: nobody.** The 1.6.6 release below, published again under a new number: its npm publish failed (the provenance transparency log returned 500, then 409 for the same tarball), so 1.6.6 never reached npm. Nothing else changed.
+
 ## 1.6.6
 
 **Who must change: nobody.** Additions only: two members of `plugin.commands`, a wire method and event, two Slint widget additions and a `TestHost` method. `apiVersion` stays `vestra/1`, no new capability (`commands` covers them). A plugin that does not use them sends exactly what it sent before. One that uses them needs player 0.7.6 (`"minPlayerVersion": "0.7.6"`): the player builds `plugin` from its own SDK, so on older players `plugin.commands.keys` does not exist (a `TypeError`), and their `@vestra/widgets.slint` has no `KeyHint` or `ToolTipKey`, so a Slint file that uses them does not compile.
