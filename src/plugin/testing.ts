@@ -1095,6 +1095,8 @@ export class TestHost implements Transport {
    * @throws `Error` (rejects) The newest message has no button `index`.
    *
    * @example Press "Show in Folder" on the saved message
+   * The test checks the button the plugin put on its newest message, then
+   * presses it as the user would: the plugin's `reveal` command runs.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
@@ -1607,6 +1609,9 @@ export class TestHost implements Transport {
    * @param ranges - All its ranges.
    *
    * @example Let another plugin publish a clip range
+   * The plugin under test sees a range another plugin put on the seek bar:
+   * `setTimelineRanges` stores that plugin's ranges and pushes
+   * `timeline.changed`, and `settle()` lets it arrive.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;

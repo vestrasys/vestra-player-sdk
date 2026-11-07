@@ -27,6 +27,7 @@ import type {
  * // ---cut---
  * import { TIMELINE_LIMITS } from "@vestra-player/sdk/testing";
  *
+ * // A longer list would be refused whole.
  * plugin.timeline.layer().setRanges(
  *   segments
  *     .slice(0, TIMELINE_LIMITS.ranges)

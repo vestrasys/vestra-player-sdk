@@ -4487,6 +4487,7 @@ export interface TimelineLayer extends Disposable {
    * declare const clip: { start: number; end: number };
    * // ---cut---
    * const layer = plugin.timeline.layer();
+   * // Only while the tab is on screen; [] takes the range away.
    * const show = () =>
    *   layer.setRanges(
    *     panel.state?.effective
@@ -4554,6 +4555,7 @@ export interface Timeline {
    * declare const bar: View;
    * // ---cut---
    * bar.bind(() => {
+   *   // Reading `ranges` here runs the binding again when they change.
    *   const duration = plugin.player.state.duration ?? 0;
    *   return {
    *     ranges: duration
@@ -7043,7 +7045,7 @@ export interface Osd {
    * ```ts
    * declare const path: string;
    * // ---cut---
-   * let saved = path;
+   * let saved = path; // the command acts on the last saved file
    * plugin.commands.add({
    *   id: "reveal",
    *   title: "Show Last Saved File in Folder",
@@ -7051,7 +7053,7 @@ export interface Osd {
    *   run: () => plugin.system.reveal(saved),
    * });
    * await plugin.osd.show("Saved {}", [saved.split(/[\\/]/).pop() ?? saved], {
-   *   actions: [{ title: "Show in Folder", command: "reveal" }],
+   *   actions: [{ title: "Show in Folder", command: "reveal" }], // one button
    * });
    * ```
    *

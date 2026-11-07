@@ -115,6 +115,8 @@ export const STRICT_CATEGORIES = {
       "TextValue",
       "TextError",
       "OsdPanelOptions",
+      "OsdAction",
+      "OsdShowOptions",
       "DropModifiers",
       "DropHandler",
     ],
@@ -148,6 +150,8 @@ export const STRICT_CATEGORIES = {
       "PlaybackStats",
       "MarkKind",
       "TimelineMark",
+      "RangeStyle",
+      "TimelineRange",
     ],
   },
   Services: {
