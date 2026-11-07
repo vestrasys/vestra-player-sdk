@@ -10,7 +10,7 @@ What a plugin's Slint file can import from the player's library. How Slint and T
 ```slint nocheck
 import { Theme } from "@vestra/theme.slint";
 import { Icon } from "@vestra/icons.slint";
-import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint";
+import { Button, KeyHint, Slider, ToolTipArea, ToolTipKey, UrlInputRow } from "@vestra/widgets.slint";
 import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
 ```
 
@@ -187,11 +187,19 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 
 <!-- generated:widgets widgets -->
 
-**`ToolTipArea`**: Hover for about half a second to show `text` beside the pointer. The tip closes when the pointer leaves, or presses on content that does not take the press itself; it shows again on the next hover. It is Slint's input-transparent tooltip: every press reaches the control under the pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a PopupWindow, which swallowed the first press after it showed and took the focus while it was open.)
+**`KeyHint`**: A key cap: the label of a shortcut as the player's menus write it (`plugin.commands.keys`: `W`, `Ctrl+B`, `⌘B` on macOS), in small monospace `text-dim` type inside a 1px border. Put it at the right end of a control's row, the minus key before the plus key (`W` `E`). An empty `text` draws nothing and takes no space, so a command without a key (or one the user cleared) shows no cap; the element stays the same either way.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `text` | in `string` |  |  |
+
+**`ToolTipArea`**: Hover for about half a second to show `text` beside the pointer. The tip closes when the pointer leaves, or presses on content that does not take the press itself; it shows again on the next hover. It is Slint's input-transparent tooltip: every press reaches the control under the pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a PopupWindow, which swallowed the first press after it showed and took the focus while it was open.) With `keys` (SDK 1.6.6) the tip names the control's keys after its title, each as a key cap and what it does: "Brightness [W] − [E] +"; `detail` follows dimmed ("· double-click: Default"). Changing `keys` or `detail` changes the tip's text, never which elements exist while hovering.
+
+| Member | Kind | Default | Note |
+| --- | --- | --- | --- |
+| `text` | in `string` |  |  |
+| `keys` | in `[ToolTipKey]` |  |  |
+| `detail` | in `string` |  |  |
 | `showing` | out `bool` |  | The tip is showing (read-only); it follows the tip's delay closely, not exactly. |
 
 **`Button`**: Dialog button: text (21px, or 18px when `small`), or an icon button when `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height viewbox (filled, or 1.5px round-capped lines when `stroked`, as the @vestra/icons.slint set). The caller sizes icon buttons.
@@ -324,6 +332,8 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `select` | function `(index: int)` |  |  |
 | `show-list` | function `()` |  |  |
 | `close-list` | function `()` |  |  |
+
+Struct **`ToolTipKey`**: One key in a tooltip (`ToolTipArea.keys`): its label (`KeyHint`) and what it does, a word or a sign (`−`, `+`). An empty `key` is left out.
 
 <!-- /generated -->
 

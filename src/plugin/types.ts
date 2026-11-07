@@ -1537,6 +1537,81 @@ export interface Commands {
    * @since 1.0.0
    */
   add(options: CommandOptions): Command;
+  /**
+   * The keys of one of this plugin's own commands (its local id, as in
+   * {@link CommandOptions.id}), written as the player's menus and command
+   * palette write them: `["W"]`, `["Ctrl+B"]`, `["⌘B"]` on macOS, arrows as
+   * `←`. Read-only, and always what is bound now: the user's own keys
+   * after a change in Keyboard Shortcuts, none when the user cleared them
+   * or turned on Ignore Default Shortcuts, and none for a key another
+   * command holds. Mouse bindings are left out, and so are `Cmd`
+   * bindings outside macOS (as in the menus). The first label is the one
+   * the menus show.
+   *
+   * @remarks
+   * For key hints beside a panel's controls (`KeyHint` and the `keys` of
+   * `ToolTipArea` in `@vestra/widgets.slint`). Read it in a
+   * {@link View.bind} function and the view follows every change; or
+   * listen with {@link Commands.onKeysChange}. The first read asks the
+   * player, and until its answer arrives (a few milliseconds) every
+   * command reads `[]`; a binding that read it runs again then.
+   *
+   * Only the plugin's own commands: an id the plugin has not added (or
+   * another plugin's) reads `[]`. Needs nothing beyond `commands`, not
+   * `bindings.manage` (the whole binding table, every plugin's, is
+   * {@link Bindings.list}). Without the `commands` capability every
+   * command reads `[]`. Players before 0.7.6 have no `keys` (the player
+   * builds `plugin` from its own SDK) and no `KeyHint` in their widgets,
+   * so declare `"minPlayerVersion": "0.7.6"`.
+   *
+   * @example Show a slider's keys beside it
+   * The Brightness row shows its two keys, W and E by default, as key caps
+   * (`KeyHint` in `ui/picture.slint`). `keys` is read inside the `bind` function,
+   * so the view gets the new labels whenever the user changes a key or
+   * clears it (an empty list hides the cap).
+   * ```ts
+   * const pictureWindow = plugin.windows.create("ui/picture.slint");
+   * plugin.commands.add({ id: "brightness.down", path: ["@video", "Brightness −"], bindings: ["W"], run() {} });
+   * plugin.commands.add({ id: "brightness.up", path: ["@video", "Brightness +"], bindings: ["E"], run() {} });
+   * pictureWindow.bind(() => ({
+   *   // Read in bind: the view follows every key change; "" hides a cap.
+   *   brightnessDown: plugin.commands.keys("brightness.down")[0] ?? "",
+   *   brightnessUp: plugin.commands.keys("brightness.up")[0] ?? "",
+   * }));
+   * ```
+   *
+   * @capability commands
+   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
+   *   have no `keys`: calling it throws a `TypeError`).
+   * @since 1.6.6
+   */
+  keys(id: string): readonly string[];
+  /**
+   * Run `listener` after the keys of any of this plugin's commands changed
+   * (read them again with {@link Commands.keys}): the user changed or
+   * cleared a key, turned Ignore Default Shortcuts on or off, a command with
+   * keys was added or removed, or the player's first answer arrived. At most every
+   * 200 ms. A plugin in standby that listens is started for it, as for a
+   * key change in {@link Bindings.onChange}.
+   *
+   * @capability commands
+   *
+   * @example Name the current key in a status line
+   * The OSD tells the user the new key after they change it. The listener
+   * carries no data; it reads the labels with `keys`.
+   * ```ts
+   * plugin.commands.onKeysChange(() => {
+   *   const [key] = plugin.commands.keys("toggle-blur");
+   *   if (key) void plugin.osd.show("Blur: {}", [key]);
+   *   else void plugin.osd.show("Blur has no key");
+   * });
+   * ```
+   *
+   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
+   *   have no `onKeysChange`).
+   * @since 1.6.6
+   */
+  onKeysChange(listener: () => void): Disposable;
 }
 
 // ---------------------------------------------------------------- windows and panels

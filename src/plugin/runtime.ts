@@ -37,6 +37,8 @@ export type Why = () => string;
 export const WAKE_EVENTS: readonly string[] = [
   "packages.changed",
   "bindings.changed",
+  // Player 0.7.6: sent only to the plugin whose own keys changed.
+  "commands.keys",
   "appearance.changed",
   "resolvers.fileTypes",
 ];
@@ -50,6 +52,7 @@ const STATE: Record<string, { name: string; when: boolean }> = {
   "window.state": { name: "plugin.window.state", when: true },
   "appearance.changed": { name: "plugin.appearance", when: true },
   "timeline.changed": { name: "plugin.timeline.marks", when: false },
+  "commands.keys": { name: "plugin.commands.keys", when: false },
   "playback.backend": { name: "plugin.subtitles.state", when: false },
   "resolvers.fileTypes": {
     name: "plugin.resolvers.fileTypes",

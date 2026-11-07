@@ -791,6 +791,16 @@ export type CommandDeclaration = {
    */
   home?: string;
 };
+/**
+ * `commands.keys` (player 0.7.6): each of the plugin's own commands, by
+ * local id, with the labels of its current keys; the answer to the request
+ * and the data of the event of that name.
+ */
+export type CommandKeys = {
+  keys: Record<string, string[]>;
+  /** The player's binding table revision: a larger one is newer. */
+  revision: number;
+};
 export function commandClient(transport: Transport) {
   return {
     register: (
@@ -810,6 +820,12 @@ export function commandClient(transport: Transport) {
     /** Remove the command from the menu and the binding table; the id is free again. */
     unregister: (id: string) =>
       transport.request<void>("commands.unregister", { id }),
+    /**
+     * The key labels of the plugin's own commands, as menus show them
+     * (player 0.7.6); later changes come as the `commands.keys` event, in
+     * the same shape. `revision` orders answers and events.
+     */
+    keys: () => transport.request<CommandKeys>("commands.keys", {}),
     update: (
       id: string,
       revision: number,

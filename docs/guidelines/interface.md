@@ -49,11 +49,12 @@ The size each surface gets is in [Theme: surface sizes](../reference/theme.md#su
 
 ## Controls
 
-- **Use the player's widgets** from `@vestra/widgets.slint`: `Button` (with a `small` size), `Slider` (the bottom bar style, or `panel: true` in tool windows), `ToolTipArea`, `UrlInputRow`. They take their sizes and colours from `Theme`. Other controls come from `std-widgets.slint`.
+- **Use the player's widgets** from `@vestra/widgets.slint`: `Button` (with a `small` size), `Slider` (the bottom bar style, or `panel: true` in tool windows), `ToolTipArea`, `KeyHint`, `UrlInputRow`. They take their sizes and colours from `Theme`. Other controls come from `std-widgets.slint`.
 - **Control sizes are tokens**: `Theme.button-height`, `Theme.button-primary-height` (the main action at the bottom of a dialog), `Theme.button-small-height` (a "Default" button in a row), `Theme.input-height`, `Theme.checkbox-row-height`, `Theme.label-height`, `Theme.form-row-gap`, `Theme.dialog-padding`.
 - **Corners**: `Theme.radius-control` for buttons, rows, hover plates and tooltips; `Theme.radius-panel` for menus, floating layers and larger plates.
 - **Icon buttons have no separators between them.** Hover and press light a rounded plate behind the icon (`Theme.hover-bg`, `Theme.press-bg`).
 - **Explain icon buttons with a tooltip** (`ToolTipArea`), and put long values (a full path) in a tooltip instead of a line of text.
+- **Show a control's keys** when a command does what the control does: `KeyHint` caps at the right end of its row, the minus key before the plus key, and the same keys in its tooltip (`ToolTipArea.keys`). Take the labels from `plugin.commands.keys`, never write them by hand, so they follow the user's changes ([Key hints beside controls](../explanation/commands.md#key-hints-beside-controls)).
 
 ## Tool windows
 

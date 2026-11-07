@@ -112,6 +112,8 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Resolvers.add": [{ method: "sourceResolvers.register" }],
     "Resolvers.onFileTypesChange": [listen("resolvers.fileTypes")],
     "Commands.add": [{ method: "commands.register" }],
+    "Commands.keys": [{ method: "commands.keys" }, listen("commands.keys")],
+    "Commands.onKeysChange": [listen("commands.keys")],
     "Host.run": [{ method: "host.run" }],
     "Windows.create": [{ method: "ui.open" }],
     "Dialogs.confirm": [{ method: "dialogs.confirm" }],

@@ -176,6 +176,46 @@ plugin.commands.add({
 });
 ```
 
+## Key hints beside controls
+
+From player 0.7.6 a plugin can show its commands' keys next to the controls that do the same thing: a slider with **Brightness −** on W and **Brightness +** on E shows `W` `E` at the end of its row, and its tooltip reads "Brightness  W −  E +". {@link "@vestra-player/sdk"!Commands.keys | plugin.commands.keys(id)} gives the labels of one of the plugin's **own** commands as the player's menus and command palette write them (`Ctrl+B` on Windows, `⌘B` on macOS, arrows as `←`), and always what is bound now: the user's own keys after a change in Keyboard Shortcuts, none when the user cleared them or turned on Ignore Default Shortcuts, none for a key another command holds. Mouse bindings are left out. It needs only `commands`, not `bindings.manage`, and reads `[]` for any id that is not one of the plugin's commands.
+
+Read it inside a {@link "@vestra-player/sdk"!View.bind | bind} function and the view follows every change (the player pushes the new labels, at most every 200 ms); {@link "@vestra-player/sdk"!Commands.onKeysChange | onKeysChange} runs a listener instead. The first read asks the player, so until its answer arrives every command reads `[]` and the binding runs again a moment later. A plugin that uses it declares `"minPlayerVersion": "0.7.6"`: the player builds `plugin` from its own SDK, so on older players `plugin.commands.keys` does not exist (a `TypeError`), and their `@vestra/widgets.slint` has no `KeyHint` or `ToolTipKey`, so a Slint file that uses them does not compile.
+
+In Slint, `KeyHint` from `@vestra/widgets.slint` draws one key cap (an empty `text` draws nothing and takes no space), and `ToolTipArea` takes `keys`, a list of `ToolTipKey` (`{ key, text }`), and an optional dimmed `detail` ([Reference: theme](../reference/theme.md#widgets)):
+
+```slint nocheck
+import { KeyHint, Slider, ToolTipArea, ToolTipKey } from "@vestra/widgets.slint";
+
+export component Picture inherits Window {
+    in-out property <float> brightness;
+    in property <string> brightness-down; // plugin.commands.keys("brightness.down")[0]
+    in property <string> brightness-up;
+    HorizontalLayout {
+        spacing: 6px;
+        ToolTipArea {
+            text: "Brightness";
+            keys: [{ key: root.brightness-down, text: "−" }, { key: root.brightness-up, text: "+" }];
+            detail: "· double-click: Default";
+            Text { text: "Brightness"; }
+        }
+        Slider { panel: true; value <=> root.brightness; }
+        KeyHint { text: root.brightness-down; }
+        KeyHint { text: root.brightness-up; }
+    }
+}
+```
+
+```ts
+const pictureWindow = plugin.windows.create("ui/picture.slint");
+pictureWindow.bind(() => ({
+  brightnessDown: plugin.commands.keys("brightness.down")[0] ?? "",
+  brightnessUp: plugin.commands.keys("brightness.up")[0] ?? "",
+}));
+```
+
+A control whose command has no key shows no cap; let the user set one in **Settings ▸ Keyboard Shortcuts**. In tests, {@link "@vestra-player/sdk/testing"!TestHost.rebind | TestHost.rebind} changes a key as the user does, and the test host writes labels as macOS does unless `host.systemInfo.os` says otherwise. The [theme-widgets example](../examples/theme-widgets.md) shows a slider with its keys.
+
 ## The player's own commands
 
 The player registers some commands itself, with the owner `host`: **Toggle Fullscreen** (`Escape` from player 0.6.0), **Enter Fullscreen** and **Leave Fullscreen** (player 0.6.0: no default key, each enabled only where it acts), **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10), **Command Palette** (`Ctrl+Shift+P`, player 0.7.6) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
@@ -186,4 +226,4 @@ A plugin button that does what a core action does should run that action with {@
 
 The members are in the API reference, from {@link "@vestra-player/sdk"!Commands | Commands} and {@link "@vestra-player/sdk"!Bindings | Bindings} on; menu ids, menu keys, binding names and the core actions are in [Reference: commands](../reference/commands.md).
 
-Examples: [menus](../examples/menus.md) (submenus, groups, radio items and bindings), [panel-menu](../examples/panel-menu.md) (a context menu of commands without a menu path).
+Examples: [menus](../examples/menus.md) (submenus, groups, radio items and bindings), [panel-menu](../examples/panel-menu.md) (a context menu of commands without a menu path), [theme-widgets](../examples/theme-widgets.md) (key hints beside a slider).

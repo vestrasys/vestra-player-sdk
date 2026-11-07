@@ -9,7 +9,7 @@ A tool window drawn with the player's own theme and controls, so it looks like p
 
 ## What it demonstrates
 
-`@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property.
+`@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property · the keys of the slider's commands beside it (`plugin.commands.keys`, `KeyHint`, `ToolTipArea.keys`; SDK 1.6.6, player 0.7.6).
 
 [Add a window](../tutorials/add-a-window.md) teaches a window with the player's theme and widgets; the rules are in [Interface guidelines](../guidelines/interface.md).
 
@@ -19,7 +19,7 @@ A tool window drawn with the player's own theme and controls, so it looks like p
 
 **Examples ▸ Theme widgets…** opens a small window with:
 
-- a label "Level 50" with a tooltip, a slider in the panel style and a small **Default** button;
+- a label "Level 50" with a tooltip that names the keys ("Level  F7 −  F8 +  · Default resets it"), a slider in the panel style, the key caps `F7` `F8` and a small **Default** button;
 - a second slider in the bar style, moving together with the first;
 - two icon buttons: a cross (with a tooltip) that resets the level, and a play icon that lights up above 50.
 
@@ -38,7 +38,7 @@ examples/theme-widgets/
 
 {@includeCode ../../examples/theme-widgets/manifest.json}
 
-`commands` for the menu item, `ui.window` for the window.
+`commands` for the menu item and the keys, `ui.window` for the window. `"minPlayerVersion": "0.7.6"`: older players have no `plugin.commands.keys` and no `KeyHint`.
 
 ## The window
 
@@ -50,7 +50,8 @@ From top to bottom:
 - **The window.** A fixed `width`; `Theme.bg-panel` instead of a hard-coded colour, so the background follows the player's palette.
 - **The properties.** `level` is `in-out` because both the plugin and the user change it; `label` is only written by the plugin. `level-changed` reports a drag; `reset` reports the reset buttons.
 - **The layout.** `Theme.dialog-padding` and `Theme.font-body` give the spacing and text size of the player's dialogs.
-- **`ToolTipArea`** shows its `text` after the pointer rests on its content for about half a second (600 ms before player 0.5.2). The tip never takes a press or the keyboard focus: a click goes to the control under the pointer even while the tip shows.
+- **`KeyHint`** draws one key cap. `level-down` and `level-up` are the labels the plugin passes; an empty one draws nothing and takes no space, so a key the user cleared leaves no gap. The caps sit at the end of the slider's row, minus before plus.
+- **`ToolTipArea`** shows its `text` after the pointer rests on its content for about half a second (600 ms before player 0.5.2). The tip never takes a press or the keyboard focus: a click goes to the control under the pointer even while the tip shows. With `keys` (a list of `{ key, text }`) it names the keys after the title as caps, each followed by what it does; an entry with an empty `key` is left out. `detail` follows dimmed.
 - **The sliders** are bound _two-way_ to `level` with `<=>`, so dragging one moves the other at once, inside Slint. `changed` passes the value to the plugin. A one-way binding (`value: root.level`) would be broken by Slint the first time the user moved the slider. `panel: true` is the panel style; without it, the bar style.
 - **`Button`** with `text` is a dialog button; `small: true` is the 18-pixel one.
 - **Icon buttons** have no `text`; `icon` is SVG-style path data drawn in an `icon-width` × `icon-height` box (14×12 by default). `stroked: true` draws lines instead of filling. `checked` draws the icon in the accent colour.
@@ -66,6 +67,13 @@ From top to bottom:
 - `levelChanged` stores the dragged value. `bind` then sends it back, but it is the value the slider already shows, so nothing jumps.
 - `reset` sets the state back to 0.5; `bind` moves both sliders and the label.
 
+### The keys
+
+{@includeCode ../../examples/theme-widgets/main.ts#keys}
+
+- Two commands outside the menu (no `path`): the command palette and their keys F7 and F8 run them; `repeat` keeps stepping while a key is held.
+- In the window's `bind`, {@link "@vestra-player/sdk"!Commands.keys | plugin.commands.keys} gives each command's keys as the menus write them. They are always the current ones: when the user changes or clears a key in **Settings ▸ Keyboard Shortcuts**, the player sends the new labels and `bind` runs again. `[0]` is the key the menus show; `?? ""` hides the cap when there is none.
+
 ### The menu command
 
 {@includeCode ../../examples/theme-widgets/main.ts#command}
@@ -76,7 +84,7 @@ From top to bottom:
 
 {@includeCode ../../examples/theme-widgets/tests/theme-widgets.test.ts}
 
-`emit` plays the user's part (a drag, a click on **Default**); `props` shows what the window displays afterwards.
+`emit` plays the user's part (a drag, a click on **Default**); `props` shows what the window displays afterwards. `press` presses a key, and `rebind` changes or clears a key as the user does in Keyboard Shortcuts; the test host writes labels as macOS does (`⇧F8`) unless `host.systemInfo.os` says otherwise.
 
 ## Run it
 

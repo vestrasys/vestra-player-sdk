@@ -244,3 +244,44 @@ export const bindingsApi = (scope: ScopeImpl): Bindings => ({
     });
   },
 });
+
+/** Named keys whose label is not their name (the player's `label_in`). */
+const NAMED_LABELS: Readonly<Record<string, string>> = {
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  Escape: "Esc",
+  PageUp: "PgUp",
+  PageDown: "PgDn",
+  Delete: "Del",
+  Plus: "+",
+  NumpadPlus: "Num+",
+  NumpadMinus: "Num-",
+  NumpadMultiply: "Num*",
+  NumpadDivide: "Num/",
+  NumpadEnter: "NumEnter",
+  NumpadDecimal: "Num.",
+};
+
+/**
+ * How the player's menus write a canonical binding (`bindings.rs`
+ * `label_in`), for `TestHost`'s `commands.keys`: `Ctrl+O` and arrows as
+ * ← → ↑ ↓ (`Esc`, `PgUp`, `Num5`); on macOS (`mac`) symbols in Apple's
+ * order ⌃⌥⇧⌘, a `Ctrl` binding as ⌘ (it answers to ⌘ there) and ⌃ only
+ * next to ⌘. `null` for a binding menus do not show: a mouse binding, and
+ * a `Cmd` one outside macOS.
+ */
+export function keyLabel(binding: string, mac: boolean): string | null {
+  if (binding.startsWith("Mouse:")) return null;
+  const parts = binding.split("+");
+  const input = parts.pop()!;
+  const has = (mod: string) => parts.includes(mod);
+  const [ctrl, alt, shift, cmd] = ["Ctrl", "Alt", "Shift", "Cmd"].map(has);
+  if (cmd && !mac) return null;
+  const mods = mac
+    ? `${ctrl && cmd ? "⌃" : ""}${alt ? "⌥" : ""}${shift ? "⇧" : ""}${ctrl || cmd ? "⌘" : ""}`
+    : parts.map((mod) => `${mod}+`).join("");
+  const digit = /^Numpad(\d)$/.exec(input)?.[1];
+  return mods + (NAMED_LABELS[input] ?? (digit ? `Num${digit}` : input));
+}

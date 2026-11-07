@@ -95,6 +95,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
           needs: {
             cases: {
               "bindings.changed": "bindings.manage",
+              "commands.keys": "commands",
               "packages.changed": null,
               "video.upscaling.changed": "video.upscaling",
             },
@@ -107,6 +108,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
           needs: {
             cases: {
               "bindings.changed": "bindings.manage",
+              "commands.keys": "commands",
               "packages.changed": null,
               "video.upscaling.changed": "video.upscaling",
             },
@@ -127,6 +129,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
         { name: "commands.update", needs: "commands" },
         { name: "commands.unregister", needs: "commands" },
         { name: "host.run", needs: "commands" },
+        { name: "commands.keys", needs: "commands" },
       ],
       name: "commands",
       requires: [],
