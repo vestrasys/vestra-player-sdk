@@ -103,7 +103,7 @@ export interface Disposable {
  * | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
  * | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path), or this plugin already uses the id (a window or command id). |
  * | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
- * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream). |
+ * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
  * | `backend` | Loading or resolving failed; `message` is the backend's reason. |
  * | `failed` | The operation ran and failed (`media.ready()` load error, a non-zero `tools.run` exit, the system refused). |
  * | `replaced` | Accepted, but another source replaced it before it finished. |
@@ -124,6 +124,7 @@ export interface Disposable {
  * | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
  * | `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
  * | `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |
+ * | `export-failed` | An export job ({@link ExportJob}) failed: the code of its `outcome.error`, not a rejection; `message` has the worker's or FFmpeg's reason. |
  * | `input-overflow` | `openStream` input: the player's queue of physical key transitions was full; the input was revoked and its keys released. |
  * | `internal` | An internal step of the player failed (keeping an operation's result, a subtitle or media job); `message` has the reason. |
  * | `javascript`, `slint` | {@link Packages.validate}: the package's entry module does not pass `node --check` / one of its Slint files does not compile; `message` has the diagnostics. |
@@ -8554,11 +8555,30 @@ export interface Snapshot extends Disposable {
    * Start exporting; the job runs in the host's offline worker.
    * One snapshot can be exported several times.
    *
+   * A **stream copy** (`format: "copy"`, player 0.7.6) writes the video
+   * stream and the snapshot's audio track as they are in the file, without
+   * decoding: lossless and about as fast as the disk, but a copy can only
+   * begin on a keyframe. It starts at the video's last keyframe at or before
+   * the snapshot time (its first keyframe when the video itself starts
+   * later; keyframes an MP4 edit list discards do not count) and is cut at
+   * `end`, where it may run a few frames past `end`. An open GOP can write
+   * a frame or two that present before the keyframe; `start` includes them.
+   * The finished job's `outcome` gives the `start` and `end` actually
+   * written; a plugin that previews the cut (with `plugin.tools.run`
+   * and ffprobe's packet flags, say) shows those once the job is done.
+   * Copies need a raw snapshot (effects and burned-in subtitles need a
+   * re-encode) and leave subtitle tracks and chapters out. `auto` writes
+   * MP4 for H.264, HEVC, AV1 or MPEG-4 video with AAC, MP3, AC-3, E-AC-3 or
+   * ALAC audio (or none), and MKV for anything else. A copy the player
+   * cannot make (no video stream, a cover image, an external audio track,
+   * codecs `mp4` cannot hold) ends `failed` with the code `unsupported`.
+   *
    * @capability media.read and media.control
    * @throws `released` (rejects) The snapshot was already released.
    * @throws `invalid` (rejects) Bad options (`quality` outside 1–100, a
    *   relative destination, a clip `end` not after the snapshot time or
-   *   past the duration).
+   *   past the duration, an {@link ExportEncoding} value outside its set,
+   *   `copy` from a processed snapshot).
    * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
    * @throws `unavailable` (rejects) No FFmpeg, or the export worker could not
    *   start.
@@ -8578,6 +8598,24 @@ export interface Snapshot extends Disposable {
    * if (end.status !== "completed") await plugin.osd.show("Export {}", [end.status]);
    * ```
    *
+   * @example Cut without re-encoding and report where it starts
+   * The clip is copied as it is in the file. A copy starts on a keyframe,
+   * so the OSD says where it actually starts; a file the player cannot
+   * copy ends with `unsupported`, and the plugin offers a re-encode instead.
+   * ```ts
+   * declare const snapshot: Snapshot;
+   * // ---cut---
+   * const job = await snapshot.export({ format: "copy", destination: "/tmp/clip.mp4", end: snapshot.time + 20 });
+   * const state = await job.done;
+   * const outcome = state.outcome;
+   * // The copy starts on a keyframe: outcome.start says where.
+   * if (outcome && "destination" in outcome)
+   *   await plugin.osd.show("Saved {} from {} s", [outcome.destination, (outcome.start ?? snapshot.time).toFixed(1)]);
+   * // Codecs the container cannot hold, a cover image, …
+   * else if (outcome && "error" in outcome && outcome.error.code === "unsupported")
+   *   await plugin.osd.show("Fast cut is not possible for this file");
+   * ```
+   *
    * @since 1.0.0
    */
   export(options: ExportOptions): Promise<ExportJob>;
@@ -8585,12 +8623,24 @@ export interface Snapshot extends Disposable {
 
 /**
  * One frame as PNG, JPEG (`quality` 1–100, default 90) or BMP (24-bit), or
- * a clip as MP4.
+ * a clip: re-encoded as MP4 (`mp4`, frame-accurate, optional
+ * {@link ExportEncoding}) or copied without re-encoding (`copy`, player
+ * 0.7.6, starting on a keyframe).
  *
  * `destination` is never overwritten if it exists. The extension does not
- * choose the format. `sampleTime` picks the frame (default: the snapshot
- * time); `end` is the clip's end in source seconds. On Windows the export
- * worker needs FFmpeg 6.1 or newer.
+ * choose the format (a copy's extension is set to its container).
+ * `sampleTime` picks the frame (default: the snapshot time); `end` is the
+ * clip's end in source seconds. On Windows the export worker needs FFmpeg
+ * 6.1 or newer.
+ *
+ * **Which players have `copy`, `encoding` and the progress and range of
+ * a job**: player 0.7.6 and later. Declare `"minPlayerVersion": "0.7.6"`,
+ * or, to keep older players and offer these only where they exist, compare
+ * {@link AppInfo.version | plugin.app.version} with `0.7.6`, as for any
+ * newer API. Do not probe by trying: on an older player the `plugin`
+ * object comes from that player's own, older SDK, which rejects `copy` with
+ * `invalid` but builds a re-encode request without the `encoding` it does
+ * not know, so the clip is encoded with the fixed settings and no error.
  *
  * @since 1.0.0
  * @category Media
@@ -8615,19 +8665,134 @@ export type ExportOptions =
       quality?: number;
     }
   | {
-      /** A clip from the snapshot time. */
+      /** A clip from the snapshot time, re-encoded as H.264 + AAC. */
       format: "mp4";
       /** Absolute path of the new file. */
       destination: string;
       /** Clip end, source seconds. */
       end: number;
+      /**
+       * Encoder settings (player 0.7.6); without it, the settings before
+       * they existed.
+       *
+       * @since 1.6.10
+       */
+      encoding?: ExportEncoding;
+    }
+  | {
+      /**
+       * A clip copied stream by stream, without re-encoding (player 0.7.6):
+       * lossless and about as fast as the disk. It starts on the video
+       * keyframe at or before the snapshot time; see {@link Snapshot.export}.
+       *
+       * @since 1.6.10
+       */
+      format: "copy";
+      /**
+       * Absolute path of the new file. The player gives it the extension of
+       * the container it writes (`.mp4` or `.mkv`); the finished job's
+       * `outcome.destination` is the actual path.
+       */
+      destination: string;
+      /** Clip end, source seconds. */
+      end: number;
+      /**
+       * `auto` (default): MP4 when the codecs fit it, otherwise MKV. `mp4`
+       * fails with `unsupported` when they do not; `mkv` always writes MKV.
+       */
+      container?: "auto" | "mp4" | "mkv";
     };
+
+/**
+ * The encoder settings of a re-encoded clip (`format: "mp4"`, player
+ * 0.7.6): a closed set of values, never encoder arguments. Every field is
+ * optional; the defaults are the settings clips had before: CRF 18, the
+ * fastest speed, the source's size and frame rate, AAC 192 kb/s, one thread.
+ * A value outside its set rejects the export with `invalid`. `videoBitrate:
+ * "source"` replaces the CRF with the source's bitrate, for a "Same as
+ * source" preset.
+ *
+ * @example A small file
+ * A 720p, 30 fps clip at a lower quality, encoded with the cores the player
+ * can spare.
+ * ```ts
+ * declare const snapshot: Snapshot;
+ * // ---cut---
+ * // Each field is a ceiling or a choice from a closed set.
+ * const job = await snapshot.export({
+ *   format: "mp4",
+ *   destination: "/tmp/small.mp4",
+ *   end: snapshot.time + 30,
+ *   encoding: { crf: 26, maxHeight: 720, fps: 30, audioBitrate: 128, threads: "auto" },
+ * });
+ * ```
+ *
+ * @since 1.6.10
+ * @category Media
+ */
+export interface ExportEncoding {
+  /**
+   * H.264 quality, an integer 14–30 (x264's CRF): lower is a better picture
+   * and a bigger file. Default 18.
+   */
+  crf?: number;
+  /**
+   * Encoding effort: `faster` (default), `balanced` or `smaller` (slower,
+   * a smaller file at the same quality); x264's `veryfast`, `medium` and
+   * `slow`.
+   */
+  speed?: "faster" | "balanced" | "smaller";
+  /**
+   * The tallest picture: a taller one is scaled down to this height,
+   * keeping its shape; a shorter one is left as it is. Default: the
+   * source's size.
+   */
+  maxHeight?: 1080 | 720 | 480;
+  /**
+   * The highest frame rate: a faster source drops frames to it; a slower
+   * one is left as it is. Default: the source's rate.
+   */
+  fps?: 60 | 30;
+  /** AAC audio bitrate in kb/s. Default 192. */
+  audioBitrate?: 128 | 192 | 256;
+  /**
+   * `single` (default) encodes on one thread, leaving the other cores to
+   * playback. `auto` lets the player use more: half the logical
+   * processors, at most 8, so playback and the interface keep their rate.
+   * From player 0.7.6 every export runs at below-normal priority (as
+   * HandBrake and OBS run their encoders), with either setting.
+   */
+  threads?: "single" | "auto";
+  /**
+   * `source`: aim at the source video's average bitrate instead of a
+   * quality level (peaks up to 1.5 times it), so the file comes out about
+   * the size of that stretch of the source: a "Same as source" preset. Not
+   * together with `crf` (`invalid`). A source whose bitrate the player
+   * cannot tell ends the job `failed` with `unsupported`.
+   */
+  videoBitrate?: "source";
+}
 
 /**
  * An export job's state. `status` is `queued`, `running`, `cancelling`,
  * `completed`, `failed` or `cancelled`; once terminal, `outcome` is
  * `{ destination }`, `{ error: { code, message } }` or `{ cancelled: true }`.
  * `facts` describes what the worker produced (versions, range, streams).
+ *
+ * From player 0.7.6:
+ * - a finished clip's `outcome` also has `start` and `end`, the source
+ *   times of its first frame and of the end of its last frame as written: a
+ *   copy's earliest written frame (its keyframe, or the leading frames of
+ *   an open GOP) and actual end; a re-encode's start and start
+ *   plus the encoded length.
+ * - `progress` is `{ done, total }` in seconds of the clip while FFmpeg
+ *   writes it (at most 4 updates a second; the SDK reads it about every
+ *   350 ms), `null` while unknown: before writing starts, and always for a
+ *   frame. Show an indeterminate bar then. After `done` reaches `total` the
+ *   player still checks the file before the job completes.
+ * - `error.code` is `export-failed`, or `unsupported` for an export the
+ *   player cannot make as asked (a stream copy it cannot make, a
+ *   `videoBitrate: "source"` whose source bitrate it cannot tell).
  *
  * @since 1.0.0
  * @category Media

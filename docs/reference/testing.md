@@ -139,6 +139,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.snapshots} | Snapshots taken with `media.capture`, by snapshot id. |
 | {@link "@vestra-player/sdk/testing"!TestHost.exports} | Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.jobs} | Export jobs by job id. |
+| {@link "@vestra-player/sdk/testing"!TestHost.exportFailure} | Set it to make every running export end `failed` with this error on its next state query, as the player reports one (`unsupported` for a stream copy it cannot make, `export-failed` otherwise); `null` (the default) completes them. |
 | {@link "@vestra-player/sdk/testing"!TestHost.producerTransport} | `openStream`'s transport: a local stream (a Unix socket on macOS and Linux, a named pipe on Windows) or, with `"tcp"`, loopback TCP where the plugin must send the token first, as the player on Windows answers. |
 | {@link "@vestra-player/sdk/testing"!TestHost.producers} | Generated streams (`player.openStream`) by producer id: the fake player end of each frame connection. |
 | {@link "@vestra-player/sdk/testing"!TestHost.resolvers} | Registered source resolvers (`resolvers.add`) by id: their declarations. |

@@ -250,6 +250,27 @@ export { LIST_SEPARATORS };
 export { LOCALES };
 
 type Handler = (params: Record<string, Json>) => unknown;
+/** `jobs.start`'s `encoding`, checked against the player's sets. */
+function validEncoding(value: Json | undefined): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const sets: Record<string, readonly Json[]> = {
+    crf: Array.from({ length: 17 }, (_, i) => i + 14),
+    speed: ["faster", "balanced", "smaller"],
+    maxHeight: [1080, 720, 480],
+    fps: [60, 30],
+    audioBitrate: [128, 192, 256],
+    threads: ["single", "auto"],
+    videoBitrate: ["source"],
+  };
+  const fields = value as Record<string, Json>;
+  if (fields.crf !== undefined && fields.videoBitrate !== undefined)
+    return false;
+  return Object.entries(value).every(
+    ([key, v]) => sets[key]?.includes(v as Json) ?? false,
+  );
+}
+
 /** A `plugin.storage.session` key, checked as the player does. */
 function sessionKey(key: Json | undefined): string {
   if (
@@ -2597,9 +2618,39 @@ export class TestHost implements Transport {
   /**
    * Export jobs by job id. Each state query advances a job one step
    * (`queued` → `running` → `completed`; `cancelling` → `cancelled`).
-   * Wire-level.
+   * A running clip reports half its `progress`; a finished clip's
+   * `outcome` has `start` and `end` (a stream copy starts 1 s before the
+   * snapshot time, as if snapped to a keyframe, and its destination gets
+   * the extension of its container: `.mkv` for `container: "mkv"`, else
+   * `.mp4`). Wire-level.
    */
   readonly jobs = new Map<number, MediaJob>();
+  /**
+   * Set it to make every running export end `failed` with this error on
+   * its next state query, as the player reports one (`unsupported` for a
+   * stream copy it cannot make, `export-failed` otherwise); `null` (the
+   * default) completes them.
+   *
+   * @since 1.6.10
+   */
+  exportFailure: {
+    /** The `outcome.error.code`. */
+    code: string;
+    /** The `outcome.error.message`. */
+    message: string;
+  } | null = null;
+  /** What each job was asked to write, for its outcome. */
+  readonly #exportJobs = new Map<
+    number,
+    {
+      destination: string;
+      clip: {
+        start: number;
+        end: number;
+        container: "mp4" | "mkv" | null;
+      } | null;
+    }
+  >();
   /**
    * `openStream`'s transport: a local stream (a Unix socket on macOS and
    * Linux, a named pipe on Windows) or, with `"tcp"`, loopback TCP where the
@@ -6947,9 +6998,22 @@ export class TestHost implements Transport {
     "jobs.start": (p) => {
       if (!this.snapshots.has(Number(p.snapshotId)))
         throw new HostError("missing", "snapshot released");
+      const kind = String(p.kind);
+      const snapshot = this.snapshots.get(Number(p.snapshotId)) as {
+        kind: string;
+        time: number;
+      };
+      const clip = /^(rawMp4|processedMp4|rawCopy)$/.test(kind);
       if (
-        !/^(raw|processed)(Png|Jpeg|Bmp|Mp4)$/.test(String(p.kind)) ||
-        (p.quality !== undefined && !String(p.kind).endsWith("Jpeg"))
+        !(/^(raw|processed)(Png|Jpeg|Bmp)$/.test(kind) || clip) ||
+        (p.quality !== undefined && !kind.endsWith("Jpeg")) ||
+        (p.encoding !== undefined &&
+          (!kind.endsWith("Mp4") || !validEncoding(p.encoding))) ||
+        (p.container !== undefined &&
+          (kind !== "rawCopy" ||
+            !["auto", "mp4", "mkv"].includes(String(p.container)))) ||
+        (clip && typeof p.end !== "number") ||
+        !kind.startsWith(snapshot.kind)
       )
         throw new HostError("invalid", `unknown job kind ${p.kind}`);
       this.exports.push(structuredClone(p));
@@ -6960,22 +7024,75 @@ export class TestHost implements Transport {
         publicationStarted: false,
         facts: null,
         outcome: null,
+        progress: null,
+      });
+      this.#exportJobs.set(jobId, {
+        destination: String(p.destination),
+        // A copy starts 1 s early (on a "keyframe"), the player's own way of
+        // saying the start moved; a re-encode starts on the frame.
+        clip: clip
+          ? {
+              start:
+                kind === "rawCopy"
+                  ? Math.max(0, snapshot.time - 1)
+                  : snapshot.time,
+              end: Number(p.end),
+              container:
+                kind !== "rawCopy"
+                  ? null
+                  : p.container === "mkv"
+                    ? "mkv"
+                    : "mp4",
+            }
+          : null,
       });
       return { jobId, status: "queued", snapshotId: p.snapshotId! };
     },
-    // Each read advances a job one step: queued → running → completed.
+    // Each read advances a job one step: queued → running → completed. A
+    // clip reports half its progress while running.
     "jobs.state": (p) => {
       const job = this.jobs.get(Number(p.jobId));
       if (!job) throw new HostError("missing", "job");
       const current = structuredClone(job);
-      if (job.status === "queued") job.status = "running";
-      else if (job.status === "running")
+      const made = this.#exportJobs.get(job.jobId);
+      const clip = made?.clip;
+      if (job.status === "queued") {
+        job.status = "running";
+        if (clip) {
+          const total = clip.end - clip.start;
+          job.progress = { done: total / 2, total };
+        }
+      } else if (job.status === "running" && this.exportFailure)
+        Object.assign(job, {
+          status: "failed",
+          outcome: { error: { ...this.exportFailure } },
+        });
+      else if (job.status === "running") {
+        const destination =
+          clip?.container === "mkv"
+            ? made!.destination.replace(/(\.(mp4|m4v|mov|mkv|webm))?$/i, ".mkv")
+            : clip?.container === "mp4"
+              ? made!.destination.replace(
+                  /(\.(mp4|m4v|mov|mkv|webm))?$/i,
+                  ".mp4",
+                )
+              : "/tmp/output";
         Object.assign(job, {
           status: "completed",
           publicationStarted: true,
-          outcome: { destination: "/tmp/output" },
+          outcome: clip
+            ? { destination, start: clip.start, end: clip.end }
+            : { destination },
+          ...(job.progress
+            ? {
+                progress: {
+                  done: job.progress.total,
+                  total: job.progress.total,
+                },
+              }
+            : {}),
         });
-      else if (job.status === "cancelling")
+      } else if (job.status === "cancelling")
         Object.assign(job, {
           status: "cancelled",
           outcome: { cancelled: true },
