@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.6.7](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#167) | **Nobody.** The 1.6.6 release below, published again under a new number: its npm publish failed (the provenance transparency log returned 500, then 409 for the same tarball), so 1.6.6 never reached npm. | — |
 | [1.6.6](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#166) | **Nobody.** Additions only: two members of `plugin.commands`, a wire method and event, two Slint widget additions and a `TestHost` method. | — |
 | [1.6.5](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#165) | **Nobody, but run `vestra-plugin i18n extract` again if a command sets a `category`.** A fix in the plugin CLI only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.6.4](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#164) | **Nobody, but check tests that compare whole `bindings.list()` entries.** Additions only: two optional `CommandOptions` fields, one optional `BindingInfo` field, a `COMMAND_LIMITS` entry and a new built-in command. | — |
