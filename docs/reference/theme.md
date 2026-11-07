@@ -382,7 +382,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 <!-- generated:widgets bar-buttons -->
 
-**`BarButtons`**: Deprecated (SDK 1.6.7; the player places its strip): the strip a bar placed at its right end with the width it could spare. A bar that still places it shows this one instead of the player's (no palette cell, no `»`): the cells that fit in `room`, lost from its outer (left) end inward, the sidebar toggle last; it is as wide as the cells it shows.
+**`BarButtons`**: Deprecated (SDK 1.6.8; the player places its strip): the strip a bar placed at its right end with the width it could spare. A bar that still places it shows this one instead of the player's (no palette cell, no `»`): the cells that fit in `room`, lost from its outer (left) end inward, the sidebar toggle last; it is as wide as the cells it shows.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |

@@ -324,7 +324,7 @@ test("an id without a prefix is only a hint", () => {
   assert.match(result.stdout, /hint: id "hello" has no prefix/);
 });
 
-test("a bottom bar without BarButtons is not a warning (SDK 1.6.7: the player places the strip)", () => {
+test("a bottom bar without BarButtons is not a warning (SDK 1.6.8: the player places the strip)", () => {
   const directory = project(
     [
       'import type { Plugin } from "@vestra-player/sdk";',

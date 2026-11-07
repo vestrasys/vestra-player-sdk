@@ -94,7 +94,7 @@ The bottom bar holds one panel. From player 0.7.6 the player draws the strip of 
 - **End your row at the strip**: read `BarButtonsHost.width` from `@vestra/bar-buttons.slint` (read only) and lay your controls out in the width the strip leaves, less the same small margin (as in the example below). Anything optional beyond `content-min-width` shows only while it fits there. To keep an optional control ahead of the plugins' buttons, as the built-in bar does with Fullscreen, count it in `content-min-width` while it fits beside the player's own cells: `BarButtonsHost.fixed` (read only) is how many cells, one cell wide each, your bar must always leave free: the player's own and, while any plugin button exists, the » cell.
 - **Decide what goes first when the window narrows.** Plugin buttons move into the » menu first; the player's own cells always show. In a very narrow window they may then cover the right end of your row, so keep `content-min-width` small.
 - **Do not draw a sidebar toggle or a command palette button of your own**: the strip has the player's (`host/sidebar`, `host/palette`), with their state.
-- **`BarButtons` is deprecated** (SDK 1.6.7). A bar that still places it gets that strip instead of the player's (without the palette button and the » menu; the player draws no second strip). Remove it, and the `room` you computed for it, when you add `content-min-width`.
+- **`BarButtons` is deprecated** (SDK 1.6.8). A bar that still places it gets that strip instead of the player's (without the palette button and the » menu; the player draws no second strip). Remove it, and the `room` you computed for it, when you add `content-min-width`.
 
 ```slint
 import { BarButtonsHost } from "@vestra/bar-buttons.slint";
