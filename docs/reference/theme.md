@@ -378,11 +378,11 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 ## Bar buttons
 
-`@vestra/bar-buttons.slint` (player 0.5.10) is the strip of command buttons a bottom bar places at its right end: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle. Each button is a cell 41 wide and 40 high. The player fills and runs it; the bar only places it and gives it `room`, the width it can spare. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
+`@vestra/bar-buttons.slint` (player 0.5.10) holds the bottom bar's strip of command buttons: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's own. Each button is a cell 41 wide and 40 high. From player 0.7.6 the player places the strip itself; a bar reads `BarButtonsHost.width` (read only: the strip's width) and reports `content-min-width`. `BarButtons`, the strip a bar placed itself, is deprecated. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
 
 <!-- generated:widgets bar-buttons -->
 
-**`BarButtons`**: The strip: place it at the bar's right end and give it the width you can spare; it is as wide as the cells it shows (read `width` to lay out the rest).
+**`BarButtons`**: Deprecated (SDK 1.6.7; the player places its strip): the strip a bar placed at its right end with the width it could spare. A bar that still places it shows this one instead of the player's (no palette cell, no `»`): the cells that fit in `room`, lost from its outer (left) end inward, the sidebar toggle last; it is as wide as the cells it shows.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |

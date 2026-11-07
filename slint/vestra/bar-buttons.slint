@@ -1,15 +1,26 @@
-// Command buttons of a bottom bar (player 0.5.10, SDK 1.5.29): the buttons
+// Command buttons of the bottom bar (player 0.5.10, SDK 1.5.29): the buttons
 // that plugins' commands contribute (`commands.add({ button })`) and the
-// player's sidebar toggle, rightmost. The player fills `BarButtonsHost` in
-// every window it composes and runs the clicks; a bottom bar places one
-// `BarButtons` in its own layout and gives it the width it can spare:
-//   import { BarButtons } from "@vestra/bar-buttons.slint";
-//   strip := BarButtons { x: parent.width - self.width - 4px; room: ...; }
-// It shows as many 41×40 cells as fit in `room`, the strip as wide as the
-// cells shown (`width`). Cells go from the strip's outer (left) end inward:
-// of the plugins' buttons (ascending `order`, left to right) the lowest
-// order goes first, and the sidebar toggle goes last. A bar without a `BarButtons` shows none of them (their menu
-// entries stay; the player logs which buttons are hidden).
+// player's own. Since SDK 1.6.7 (menu redesign step 3a) the player draws
+// the strip itself, at the right end of the bottom slot, its 40px cells on
+// the slot's bottom edge (a bar's 40px button row), and also when no plugin
+// mounts a bottom bar: `[plugin buttons…][»][Command Palette][Toggle
+// Sidebar]`. A bottom bar places nothing: it lays its controls out left of
+// the strip and says how wide they must stay:
+//   import { BarButtonsHost } from "@vestra/bar-buttons.slint";
+//   export component MyBar inherits Rectangle {
+//       out property <length> content-min-width: ...; // the least your row needs
+//       // your row ends at: root.width - BarButtonsHost.width - 4px
+//   }
+// The player gives its strip `bar width - content-min-width - 4px` (all of
+// the width without `content-min-width`), so plugin buttons never cover
+// what the bar needs (its time label, UI-BAR-10). Plugin buttons go left to
+// right by ascending `order`, then plugin id, then registration; at most 8
+// are in the strip, and the ones past 8 or past the room are in the `»`
+// menu, in the same order: the lowest order stays longest. `»` shows only
+// while something is in it; the player's own cells always show.
+//
+// `BarButtons` (below) is deprecated: the strip a bar placed itself before
+// SDK 1.6.7. While a bar still places it, the player draws no second strip.
 //
 // The cells look like the bar's own icon buttons: a 32×32 plate on hover
 // and press, the bar's tooltip (ToolTipArea). Every enabled cell draws its
@@ -43,14 +54,56 @@ export struct BarButtonItem {
     dimmed: bool,
 }
 
-// Filled by the player; a bar reads it only through `BarButtons`.
+// Filled by the player. A bar reads `width` (to end its own row left of
+// the strip) and `fixed`; everything else is the player's.
 export global BarButtonsHost {
-    // The plugins' buttons, left to right, at most 8.
+    // The plugins' buttons for the strip, left to right, at most 8.
     in property <[BarButtonItem]> buttons;
+    // How many plugin buttons are past those 8 (always in the `»` menu).
+    in property <int> overflow;
     // The sidebar toggle (`token` "" while there is none).
     in property <BarButtonItem> toggle;
-    // Set when a `BarButtons` exists in this window.
+    // The command palette (`host/palette`; `token` "" while there is none).
+    in property <BarButtonItem> palette;
+    // Set when a (deprecated) `BarButtons` exists in this window.
     in-out property <bool> placed;
+    // The width the player gives its strip (the player sets it).
+    in-out property <length> room;
+    // The player's own cells, always shown (step 3b adds Adjust).
+    private property <int> own: (root.palette.token != "" ? 1 : 0) + (root.toggle.token != "" ? 1 : 0);
+    // The cells a bar must always leave free, 41px each: the player's own,
+    // and the `»` cell whenever any plugin button exists (drawn only on
+    // overflow, but always reserved, so `»` never covers the bar). Never
+    // depends on `room`. A bar that keeps an optional control ahead of the
+    // plugins' buttons counts it in `content-min-width` while it fits
+    // beside these.
+    out property <int> fixed: root.own + (root.buttons.length > 0 || root.overflow > 0 ? 1 : 0);
+    // The strip's layout for a room, as pure functions, so the player's
+    // strip binds them to its own `room` (no frame behind the shell's
+    // layout) and the properties below give the same numbers for `room`.
+    // The plugin buttons in the strip (the first of `buttons`) at `room`.
+    public pure function shown-in(room: length) -> int {
+        // Cells left for plugin buttons and `»`.
+        let free = Math.max(0, Math.floor(room / 41px) - root.own);
+        if root.overflow == 0 && root.buttons.length <= free {
+            return root.buttons.length;
+        }
+        return Math.max(0, Math.min(root.buttons.length, free - 1));
+    }
+    // Whether `»` shows at `room` (a button past 8 or past the room).
+    public pure function more-in(room: length) -> bool {
+        return root.shown-in(room) < root.buttons.length || root.overflow > 0;
+    }
+    // The strip's width at `room` (0 while a bar places `BarButtons`).
+    public pure function width-in(room: length) -> length {
+        if root.placed {
+            return 0px;
+        }
+        return (root.shown-in(room) + (root.more-in(room) ? 1 : 0) + root.own) * 41px;
+    }
+    out property <int> shown: root.shown-in(root.room);
+    out property <bool> more: root.more-in(root.room);
+    out property <length> width: root.width-in(root.room);
     // A click on the cell with this token.
     callback clicked(string);
 }
@@ -127,8 +180,11 @@ component Cell inherits Rectangle {
     }
 }
 
-// The strip: place it at the bar's right end and give it the width you can
-// spare; it is as wide as the cells it shows (read `width` to lay out the rest).
+// Deprecated (SDK 1.6.7; the player places its strip): the strip a bar
+// placed at its right end with the width it could spare. A bar that still
+// places it shows this one instead of the player's (no palette cell, no
+// `»`): the cells that fit in `room`, lost from its outer (left) end
+// inward, the sidebar toggle last; it is as wide as the cells it shows.
 export component BarButtons {
     // The width the bar can give the strip; the cells that fit show.
     in property <length> room;

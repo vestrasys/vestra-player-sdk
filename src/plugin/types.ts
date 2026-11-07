@@ -1035,17 +1035,17 @@ export type BarButtonIcon =
  * A command's button on the bottom bar: {@link CommandOptions.button}.
  *
  * @remarks
- * **Where it shows.** The bottom bar places the player's strip of command
- * buttons, `BarButtons` from `@vestra/bar-buttons.slint`, at its right end;
- * the player fills it with the buttons of every plugin, left to right by
- * `order`, and its own sidebar toggle rightmost. When the window is narrow
- * the strip loses cells from its outer (left) end inward: the lowest order
- * goes first, the sidebar toggle last. A
- * bottom bar that does not place `BarButtons` shows no buttons: the
- * command's menu entry stays, and the player logs the buttons it cannot
- * show and whose bar hides them. The built-in bar (`vestra.playback`) places
- * it; see
- * [Writing a bottom bar](../../docs/guidelines/interface.md#writing-a-bottom-bar).
+ * **Where it shows.** The player draws the bottom bar's button strip and
+ * decides where it goes: today at the right end of the bottom bar; this may
+ * change (older players let the bar place `BarButtons` itself). Buttons
+ * are ordered by `order`, then by plugin id; lower `order` comes first and
+ * stays visible longest. When the strip runs out of room, or more than 8
+ * plugin buttons are declared, the remaining buttons move to the strip's »
+ * menu, in the same order. A button is never dropped: it is either in the
+ * strip or in the » menu, and its command keeps its menu entry, its key and
+ * its place in the command palette. Users may pin and unpin buttons later;
+ * do not rely on a position. See
+ * [Bottom-bar buttons](../../docs/explanation/commands.md#bottom-bar-buttons).
  *
  * **What it shows.** The icon, the command's title (translated, a trailing
  * "…" removed) and its first key as the tooltip ("Plugin Store (F9)"),
@@ -1055,9 +1055,9 @@ export type BarButtonIcon =
  * a command with `checked` shows a small dot under its icon while checked.
  * A click runs the command exactly like a click on its menu item.
  *
- * **Limits.** One button per plugin and eight in the player
- * (`BAR_BUTTON_LIMITS`): a button past them is left out (its command and
- * menu entry stay) and the player logs it with `limit`. The button goes
+ * **Limits.** One button per plugin, the first it declares (a later one
+ * stays a menu item only), and eight in the strip (`BAR_BUTTON_LIMITS`); the
+ * rest are in the » menu. The button goes
  * with its command: disposing the command, or disabling, stopping or
  * uninstalling the plugin, removes it.
  *
@@ -1065,8 +1065,7 @@ export type BarButtonIcon =
  * A Store icon appears in the bottom bar's button strip; a click opens
  * the store window, exactly like the menu item. The player draws the
  * button from the command's title, keys and state, and places it by
- * `order` (200 is where the player's own Plugin Store button sits); a
- * bar that does not place `BarButtons` shows only the menu item.
+ * `order` (200 is where the player's own Plugin Store button sits).
  * ```ts
  * const store = plugin.windows.create("ui/store.slint");
  * plugin.commands.add({
@@ -1320,8 +1319,8 @@ export interface CommandOptions {
   /**
    * A button for this command on the bottom bar (SDK 1.5.29, player 0.5.10):
    * an icon and a place, `{ icon: "store", order: 200 }`. Needs a `path`: the
-   * menu entry is where the command stays reachable when the bar shows no
-   * button (a bar without `BarButtons`, a narrow window, a limit). See
+   * menu entry is where the command stays reachable wherever the button
+   * is (the strip or its » menu). See
    * {@link CommandButton} for where it shows, what it shows and the limits.
    * Fails with `invalid` for an unknown icon name, an order outside 0–999 or
    * a button without a path.
