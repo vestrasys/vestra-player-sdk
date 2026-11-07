@@ -1,4 +1,4 @@
-// plugin.commands.keys and onKeysChange (SDK 1.6.6, player 0.7.7): the key
+// plugin.commands.keys and onKeysChange (SDK 1.6.6, player 0.7.6): the key
 // labels of the plugin's own commands as the menus write them, always the
 // current binding (the user's keys, a cleared key, a key another command
 // holds), pushed as `commands.keys` when they change; a view bound to them

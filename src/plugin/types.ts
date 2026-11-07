@@ -1559,8 +1559,10 @@ export interface Commands {
    * Only the plugin's own commands: an id the plugin has not added (or
    * another plugin's) reads `[]`. Needs nothing beyond `commands`, not
    * `bindings.manage` (the whole binding table, every plugin's, is
-   * {@link Bindings.list}). Without the `commands` capability, and on
-   * players before 0.7.6, every command reads `[]`.
+   * {@link Bindings.list}). Without the `commands` capability every
+   * command reads `[]`. Players before 0.7.6 have no `keys` (the player
+   * builds `plugin` from its own SDK) and no `KeyHint` in their widgets,
+   * so declare `"minPlayerVersion": "0.7.6"`.
    *
    * @example Show a slider's keys beside it
    * The Brightness row shows its two keys, W and E by default, as key caps
@@ -1579,7 +1581,8 @@ export interface Commands {
    * ```
    *
    * @capability commands
-   * @player 0.7.6; older players: every command reads `[]`.
+   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
+   *   have no `keys`: calling it throws a `TypeError`).
    * @since 1.6.6
    */
   keys(id: string): readonly string[];
@@ -1604,7 +1607,8 @@ export interface Commands {
    * });
    * ```
    *
-   * @player 0.7.6; older players: never runs.
+   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
+   *   have no `onKeysChange`).
    * @since 1.6.6
    */
   onKeysChange(listener: () => void): Disposable;

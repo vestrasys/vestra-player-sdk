@@ -38,7 +38,7 @@ examples/theme-widgets/
 
 {@includeCode ../../examples/theme-widgets/manifest.json}
 
-`commands` for the menu item, `ui.window` for the window.
+`commands` for the menu item and the keys, `ui.window` for the window. `"minPlayerVersion": "0.7.6"`: older players have no `plugin.commands.keys` and no `KeyHint`.
 
 ## The window
 
