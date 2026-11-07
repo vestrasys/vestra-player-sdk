@@ -7,9 +7,11 @@ import { isTextValue, textProblem } from "../i18n.ts";
 import { conditionJson, isCondition } from "./when.ts";
 import type {
   CommandDeclaration,
+  CommandKeys,
   CommandState as WireState,
   CommandWhen,
 } from "../commands.ts";
+import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   Bindable,
@@ -315,6 +317,107 @@ class CommandHandle implements Command {
   }
 }
 
+const NONE: readonly string[] = Object.freeze([]);
+const KEYS = "commands.keys";
+
+/**
+ * One per plugin: the SDK's copy of the key labels of the plugin's own
+ * commands (player 0.7.6). Started by the first `keys` read or
+ * `onKeysChange`: it subscribes to `commands.keys` (a mirror, unless a
+ * listener or a binding holds it), then asks once; the player pushes every
+ * later change. Answers and events carry the binding table's revision, and
+ * an older one than what the copy has is dropped.
+ */
+class KeysService {
+  readonly #runtime: Runtime;
+  #keys = new Map<string, readonly string[]>();
+  #revision = -1;
+  #started = false;
+  readonly #listeners = new Set<() => void>();
+  constructor(runtime: Runtime) {
+    this.#runtime = runtime;
+  }
+  start() {
+    if (this.#started) return;
+    this.#started = true;
+    const runtime = this.#runtime;
+    // Without `commands` the plugin has no commands: every read is [].
+    if (!runtime.can("commands")) return;
+    runtime.on(KEYS, (data) => this.#accept(data), "commands", true);
+    // Subscribed first: a change after this answer comes as an event.
+    runtime.host.commands.keys().then(
+      (answer) => this.#accept(answer),
+      // An older player (`unsupported`): no keys, as without a binding.
+      () => {},
+    );
+  }
+  #accept(data: unknown) {
+    const answer = data as Partial<CommandKeys> | null;
+    const revision = answer?.revision;
+    const keys = answer?.keys;
+    if (typeof revision !== "number" || !keys || typeof keys !== "object")
+      return;
+    if (revision < this.#revision) return;
+    this.#revision = revision;
+    const next = new Map<string, readonly string[]>();
+    for (const [id, labels] of Object.entries(keys))
+      if (Array.isArray(labels) && labels.length)
+        next.set(id, Object.freeze(labels.map(String)));
+    const changed: string[] = [];
+    for (const id of new Set([...this.#keys.keys(), ...next.keys()])) {
+      const before = this.#keys.get(id) ?? NONE;
+      const after = next.get(id) ?? NONE;
+      if (
+        before.length !== after.length ||
+        before.some((label, at) => label !== after[at])
+      )
+        changed.push(id);
+      // The same labels keep the same array.
+      else if (after !== NONE) next.set(id, before);
+    }
+    this.#keys = next;
+    if (!changed.length) return;
+    this.#runtime.changed(KEYS, changed);
+    for (const listener of [...this.#listeners]) listener();
+  }
+  get(id: string): readonly string[] {
+    return this.#keys.get(id) ?? NONE;
+  }
+  watch(listener: () => void) {
+    this.#listeners.add(listener);
+    const held = this.#runtime.hold(KEYS);
+    return {
+      dispose: async () => {
+        this.#listeners.delete(listener);
+        await held.dispose();
+      },
+    };
+  }
+}
+
+const keysOf = (runtime: Runtime) =>
+  runtime.service("commands.keys", () => new KeysService(runtime));
+
 export const commands = (scope: ScopeImpl): Commands => ({
   add: (options) => new CommandHandle(scope, options),
+  keys(id) {
+    if (typeof id !== "string")
+      throw failure("invalid", "keys takes a command id of this plugin");
+    const service = keysOf(scope.runtime);
+    service.start();
+    scope.runtime.reading(KEYS);
+    scope.runtime.depends(KEYS, id);
+    return service.get(id);
+  },
+  onKeysChange(listener) {
+    const service = keysOf(scope.runtime);
+    service.start();
+    const watch = service.watch(() => scope.run(listener));
+    return scope.add({
+      dispose: async () => {
+        scope.forget(watch);
+        await watch.dispose();
+      },
+    });
+  },
 });

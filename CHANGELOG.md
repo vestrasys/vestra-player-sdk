@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.6
+
+**Who must change: nobody.** Additions only: two members of `plugin.commands`, a wire method and event, two Slint widget additions and a `TestHost` method. `apiVersion` stays `vestra/1`, no new capability (`commands` covers them). A plugin that does not use them sends exactly what it sent before. One that uses them works on every player: before player 0.7.6 every command reads `[]` (no key caps), so it needs no `minPlayerVersion` for them.
+
+- **`plugin.commands.keys(id)`** (player 0.7.6): the keys of one of the plugin's **own** commands, as the player's menus and command palette write them (`["W"]`, `["Ctrl+B"]`, `["⌘B"]` on macOS, arrows as `←`), always the current binding: the user's keys after a change, `[]` when the user cleared them or turned on Ignore Default Shortcuts, `[]` for a key another command holds; mouse bindings and (outside macOS) `Cmd` bindings left out. Read-only and synchronous; read in a `bind` function, the view follows every change. Another plugin's commands, or an unknown id, read `[]`; it needs `commands` only, not `bindings.manage`. The first read asks the player (`commands.keys`) and subscribes to the `commands.keys` event, which the player sends only to the plugin whose own labels changed, at most every 200 ms; until the first answer every command reads `[]`. See [Key hints beside controls](docs/explanation/commands.md#key-hints-beside-controls).
+- **`plugin.commands.onKeysChange(listener)`** (player 0.7.6): runs after any of the plugin's keys changed. `commands.keys` is a wake event, like `bindings.changed`: a listener (or a binding that reads `keys`) does not keep a plugin running while idle, and a plugin in standby is started for a change of its keys.
+- **`KeyHint`** in `@vestra/widgets.slint`: a key cap (monospace `font-xs`, `text-dim`, a 1px border, both palettes); an empty `text` draws nothing and takes no space.
+- **`ToolTipArea.keys`** (a list of the new struct `ToolTipKey`, `{ key, text }`) and **`ToolTipArea.detail`**: the tip reads "Brightness  [W] −  [E] +  · double-click: Default" with key caps. Without them the tip is the plain text tip as before.
+- **`TestHost.rebind(command, inputs | null)`** changes or clears a key of the plugin's command as the user does; `TestHost` answers `commands.keys` and pushes the event like the player, writing labels for `host.systemInfo.os` (macOS by default: `⇧W`, `⌘B`). `bindings.set` and `bindings.reset` push it too.
+- The [theme-widgets example](examples/theme-widgets) shows a slider's two commands (F7, F8) as key caps and in its tooltip.
+
 ## 1.6.5
 
 **Who must change: nobody, but run `vestra-plugin i18n extract` again if a command sets a `category`.** A fix in the plugin CLI only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. A plugin whose commands set `category` as a string literal that is not already a message now has those texts in `locales/messages.pot`, so its next `vestra-plugin i18n check` fails with "messages.pot is out of date" until `i18n extract` runs. A category written with `plugin.i18n.text(…)` was already extracted, and a plugin that sets no category sees no change.

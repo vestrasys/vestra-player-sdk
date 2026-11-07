@@ -414,6 +414,7 @@ type HostEvent =
   | "window.state"
   | "packages.changed"
   | "bindings.changed"
+  | "commands.keys"
   | "timeline.changed"
   | "appearance.changed"
   | "resolvers.fileTypes"

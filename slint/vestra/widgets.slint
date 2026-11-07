@@ -1,5 +1,5 @@
 // Compact controls built on the Vestra theme (core-ui-design.md §2.1):
-//   import { Button, Slider, ToolTipArea, UrlInputRow } from "@vestra/widgets.slint";
+//   import { Button, KeyHint, Slider, ToolTipArea, ToolTipKey, UrlInputRow } from "@vestra/widgets.slint";
 //   import { Choice, Check, Radio, RadioGroup, RadioMark, Tab, Tabs } from "@vestra/widgets.slint";
 // Icons: @vestra/icons.slint. Other controls come from std-widgets, which the
 // host compiles as fluent-dark and switches to light for a light palette.
@@ -9,9 +9,47 @@
 // so a click on a panel control leaves the player's shortcuts (Space, the
 // arrows) with the video, as on macOS. A focused control shows a 1px accent
 // ring.
-import { TextEdit, ListView } from "std-widgets.slint";
+import { TextEdit, ListView, Palette } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { Icon } from "icons.slint";
+
+// A key cap: the label of a shortcut as the player's menus write it
+// (`plugin.commands.keys`: `W`, `Ctrl+B`, `⌘B` on macOS), in small
+// monospace `text-dim` type inside a 1px border. Put it at the right end of
+// a control's row, the minus key before the plus key (`W` `E`). An empty
+// `text` draws nothing and takes no space, so a command without a key (or
+// one the user cleared) shows no cap; the element stays the same either way.
+export component KeyHint {
+    in property <string> text;
+    private property <bool> shown: root.text != "";
+    visible: root.shown;
+    width: root.shown ? max(16px, label.preferred-width + 8px) : 0px;
+    height: root.shown ? 15px : 0px;
+    accessible-role: AccessibleRole.text;
+    accessible-label: root.text;
+    Rectangle {
+        border-width: 1px;
+        border-radius: 3px;
+        // The cap's edge: a step above the panel in both palettes.
+        border-color: Theme.icon-disabled;
+        background: Theme.bg-list;
+        label := Text {
+            text: root.text;
+            font-family: Theme.font-mono;
+            font-size: Theme.font-xs;
+            color: Theme.text-dim;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// One key in a tooltip (`ToolTipArea.keys`): its label (`KeyHint`) and what
+// it does, a word or a sign (`−`, `+`). An empty `key` is left out.
+export struct ToolTipKey {
+    key: string,
+    text: string,
+}
 
 // Hover for about half a second to show `text` beside the pointer. The tip
 // closes when the pointer leaves, or presses on content that does not take
@@ -20,8 +58,16 @@ import { Icon } from "icons.slint";
 // pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a
 // PopupWindow, which swallowed the first press after it showed and took the
 // focus while it was open.)
+// With `keys` (SDK 1.6.6) the tip names the control's keys after its title,
+// each as a key cap and what it does: "Brightness  [W] −  [E] +"; `detail`
+// follows dimmed ("· double-click: Default"). Changing `keys` or `detail`
+// changes the tip's text, never which elements exist while hovering.
 export component ToolTipArea {
     in property <string> text;
+    in property <[ToolTipKey]> keys;
+    in property <string> detail;
+    // The tip names keys or a detail: drawn with key caps.
+    private property <bool> rich: root.keys.length > 0 || root.detail != "";
     // The tip is showing (read-only); it follows the tip's delay closely,
     // not exactly.
     out property <bool> showing;
@@ -44,9 +90,55 @@ export component ToolTipArea {
             }
         }
         // Removing it closes an open tip.
-        if root.text != "" && !root.done: Tooltip {
+        if root.text != "" && !root.done && !root.rich: Tooltip {
             // Interpolated text is plain: `*` or `_` in it are not markup.
             text: @markdown("\{root.text}");
+        }
+        // The tip with key caps, drawn as the text tip is (std-widgets'
+        // ToolTipImpl). Its own element: one Tooltip per parent.
+        if root.text != "" && !root.done && root.rich: Rectangle {
+            width: 100%;
+            height: 100%;
+            Tooltip {
+                Rectangle {
+                    background: Palette.alternate-background;
+                    border-radius: 4px;
+                    border-width: 1px;
+                    border-color: Palette.border;
+                    HorizontalLayout {
+                        padding-left: 9px;
+                        padding-right: 9px;
+                        padding-top: 6px;
+                        padding-bottom: 6px;
+                        Text {
+                            text: root.text;
+                            color: Palette.foreground;
+                            vertical-alignment: center;
+                        }
+                        for entry in root.keys: HorizontalLayout {
+                            padding-left: entry.key == "" ? 0px : 10px;
+                            spacing: entry.key == "" ? 0px : 4px;
+                            VerticalLayout {
+                                alignment: center;
+                                KeyHint { text: entry.key; }
+                            }
+                            Text {
+                                text: entry.key == "" ? "" : entry.text;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
+                        HorizontalLayout {
+                            padding-left: root.detail == "" ? 0px : 10px;
+                            Text {
+                                text: root.detail;
+                                color: Theme.text-dim;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     Timer {

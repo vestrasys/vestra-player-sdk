@@ -1,5 +1,5 @@
 import { Theme } from "@vestra/theme.slint";
-import { Button, Slider, ToolTipArea } from "@vestra/widgets.slint";
+import { Button, KeyHint, Slider, ToolTipArea } from "@vestra/widgets.slint";
 
 export component ThemeWidgets inherits Window {
     title: "Theme widgets";
@@ -7,6 +7,8 @@ export component ThemeWidgets inherits Window {
     background: Theme.bg-panel;
     in-out property <float> level;
     in property <string> label;
+    in property <string> level-down;
+    in property <string> level-up;
     callback level-changed(float);
     callback reset();
     VerticalLayout {
@@ -15,11 +17,19 @@ export component ThemeWidgets inherits Window {
         HorizontalLayout {
             spacing: 8px;
             ToolTipArea {
-                text: "Drag a slider, or press Default";
+                text: "Level";
+                keys: [{ key: root.level-down, text: "−" }, { key: root.level-up, text: "+" }];
+                detail: "· Default resets it";
                 width: 65px;
                 Text { text: root.label; color: Theme.text; font-size: Theme.font-body; horizontal-alignment: right; vertical-alignment: center; }
             }
             Slider { panel: true; value <=> root.level; changed(value) => { root.level-changed(value); } }
+            HorizontalLayout {
+                spacing: 2px;
+                alignment: center;
+                VerticalLayout { alignment: center; KeyHint { text: root.level-down; } }
+                VerticalLayout { alignment: center; KeyHint { text: root.level-up; } }
+            }
             Button { text: "Default"; small: true; clicked => { root.reset(); } }
         }
         Slider { value <=> root.level; changed(value) => { root.level-changed(value); } }
