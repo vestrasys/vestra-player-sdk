@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.6.10](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1610) | **Nobody.** Additions only: a clip format, optional export fields, two optional `JobState` fields, an error code and a `TestHost` field. | — |
 | [1.6.9](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#169) | **Nobody.** Additions only: timeline ranges, OSD messages with action buttons, a limits constant, a wire method and `TestHost` support, and documentation of a bottom bar's `content-full-width`. | — |
 | [1.6.8](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#168) | **Nobody; authors of a bottom bar should move to `content-min-width`.** Documentation, a read-only Slint property and a removed CLI warning: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.6.7](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#167) | **Nobody.** The 1.6.6 release below, published again under a new number: its npm publish failed (the provenance transparency log returned 500, then 409 for the same tarball), so 1.6.6 never reached npm. | — |
