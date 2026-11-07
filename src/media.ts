@@ -135,12 +135,44 @@ export type MediaJob = {
       coverageValidated: true;
     };
     output?: { streams: unknown[]; format: { duration: string } };
+    /** A stream copy (player 0.7.6): what was copied and from where. */
+    copy?: {
+      container: "mp4" | "mkv";
+      videoCodec: string;
+      audioCodec: string | null;
+      /** The keyframe the copy starts on, source seconds. */
+      keyframe: number;
+      /** FFmpeg's input seek, the keyframe rounded down to a microsecond. */
+      seek: number;
+      written: { start: number; end: number };
+    };
   };
   outcome:
     | null
-    | { destination: string }
+    | {
+        destination: string;
+        /** Clips (player 0.7.6): first frame, source seconds. */
+        start?: number;
+        /** Clips (player 0.7.6): end of the last frame, source seconds. */
+        end?: number;
+      }
     | { error: { code: string; message: string } }
     | { cancelled: true };
+  /**
+   * Player 0.7.6: seconds of a clip written and to write while FFmpeg runs;
+   * `null` (or absent from older players) while unknown.
+   */
+  progress?: { done: number; total: number } | null;
+};
+/** The wire form of `ExportEncoding` (`jobs.start`). */
+export type WireEncoding = {
+  crf?: number;
+  speed?: "faster" | "balanced" | "smaller";
+  maxHeight?: 1080 | 720 | 480;
+  fps?: 60 | 30;
+  audioBitrate?: 128 | 192 | 256;
+  threads?: "single" | "auto";
+  videoBitrate?: "source";
 };
 export type MediaOperation =
   | { status: "pending" | "unknown" | "unknownExpired" }
@@ -181,7 +213,18 @@ export function mediaClients(transport: Transport) {
               /** 1–100, default 90. */
               quality?: number;
             }
-          | { kind: "rawMp4" | "processedMp4"; end: number }
+          | {
+              kind: "rawMp4" | "processedMp4";
+              end: number;
+              /** Player 0.7.6. */
+              encoding?: WireEncoding;
+            }
+          | {
+              /** Stream copy, player 0.7.6. */
+              kind: "rawCopy";
+              end: number;
+              container?: "auto" | "mp4" | "mkv";
+            }
         ),
       ) =>
         transport.request<{

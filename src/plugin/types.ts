@@ -103,7 +103,7 @@ export interface Disposable {
  * | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
  * | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path), or this plugin already uses the id (a window or command id). |
  * | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
- * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream). |
+ * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
  * | `backend` | Loading or resolving failed; `message` is the backend's reason. |
  * | `failed` | The operation ran and failed (`media.ready()` load error, a non-zero `tools.run` exit, the system refused). |
  * | `replaced` | Accepted, but another source replaced it before it finished. |
@@ -124,6 +124,7 @@ export interface Disposable {
  * | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
  * | `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
  * | `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |
+ * | `export-failed` | An export job ({@link ExportJob}) failed: the code of its `outcome.error`, not a rejection; `message` has the worker's or FFmpeg's reason. |
  * | `input-overflow` | `openStream` input: the player's queue of physical key transitions was full; the input was revoked and its keys released. |
  * | `internal` | An internal step of the player failed (keeping an operation's result, a subtitle or media job); `message` has the reason. |
  * | `javascript`, `slint` | {@link Packages.validate}: the package's entry module does not pass `node --check` / one of its Slint files does not compile; `message` has the diagnostics. |
@@ -4450,6 +4451,38 @@ export interface TimelineMark {
 }
 
 /**
+ * How a timeline range is drawn; readers choose colours by it.
+ *
+ * - `"selection"`: a span the user picked to act on, such as a clip to
+ *   export. The player's seek bar draws it in the accent colour.
+ * - `"region"`: a part of the media the plugin describes, such as an intro
+ *   or a chapter's span. Drawn dimmer, under selections.
+ *
+ * @since 1.6.9
+ * @category Playback
+ */
+export type RangeStyle = "selection" | "region";
+
+/**
+ * One range on the seek bar (player 0.7.6).
+ *
+ * @since 1.6.9
+ * @category Playback
+ */
+export interface TimelineRange {
+  /** Seconds from the start. */
+  readonly start: number;
+  /** Seconds from the start, after `start`. */
+  readonly end: number;
+  /** How it is drawn. */
+  readonly style: RangeStyle;
+  /** Label, `null` without one. */
+  readonly title: string | null;
+  /** The manifest id of the plugin that published it. */
+  readonly plugin: string;
+}
+
+/**
  * This plugin's own marks; disposing it removes them.
  *
  * @remarks
@@ -4503,6 +4536,55 @@ export interface TimelineLayer extends Disposable {
     marks: { time: number; kind: MarkKind; title?: string | Text }[],
     options?: { ifCurrent?: PlayerState },
   ): void;
+  /**
+   * Replace the layer's ranges (last write wins; `[]` clears them), spans of
+   * the media drawn on the seek bar (player 0.7.6). The marks and the ranges
+   * of a layer are replaced on their own: `set` keeps the ranges and
+   * `setRanges` keeps the marks. Disposing the layer, its scope or stopping
+   * the plugin removes both, and a new source clears every layer.
+   *
+   * At most 100 ranges (`TIMELINE_LIMITS.ranges`), `0 ≤ start < end`, `end`
+   * within the media while its duration is known, titles ≤ 100 characters.
+   * Ranges may overlap. Failures go to `onError`; with `ifCurrent`, a
+   * write for another source is dropped silently. A title is data or a
+   * {@link Text} the player translates, as in `set`.
+   *
+   * Players before 0.7.6 build `plugin` from an SDK without `setRanges`, so
+   * the call throws a `TypeError` there: declare
+   * `"minPlayerVersion": "0.7.6"`.
+   *
+   * @example Show the clip range on the seek bar while a panel is open
+   * The span the user picked shows on the seek bar in the accent colour
+   * while the plugin's tab is showing, and goes when it is not. Two point
+   * marks would show the ends but not the span between them.
+   * ```ts
+   * declare const panel: Panel;
+   * declare const clip: { start: number; end: number };
+   * // ---cut---
+   * const layer = plugin.timeline.layer();
+   * // Only while the tab is on screen; [] takes the range away.
+   * const show = () =>
+   *   layer.setRanges(
+   *     panel.state?.effective
+   *       ? [{ start: clip.start, end: clip.end, style: "selection", title: "Clip" }]
+   *       : [],
+   *     { ifCurrent: plugin.player.state },
+   *   );
+   * panel.onChange(show);
+   * ```
+   *
+   * @capability timeline.marks
+   * @since 1.6.9
+   */
+  setRanges(
+    ranges: {
+      start: number;
+      end: number;
+      style: RangeStyle;
+      title?: string | Text;
+    }[],
+    options?: { ifCurrent?: PlayerState },
+  ): void;
 }
 
 /**
@@ -4534,6 +4616,38 @@ export interface TimelineLayer extends Disposable {
 export interface Timeline {
   /** Every layer merged, by time (`playback.read`). Empty on a new source. */
   readonly marks: readonly TimelineMark[];
+  /**
+   * Every layer's ranges merged, by start (`playback.read`; player 0.7.6:
+   * on older players `ranges` does not exist and reads `undefined`). Empty
+   * on a new source. Kept current like `marks` (with `events`): read it in
+   * a {@link View.bind} function and the view follows it. `onChange` runs
+   * only when the marks change.
+   *
+   * @example Draw the published ranges in a seek bar of your own
+   * A bottom bar draws a band for every range on the seek bar, whoever
+   * published it, as fractions of the duration.
+   * ```ts
+   * declare const bar: View;
+   * // ---cut---
+   * bar.bind(() => {
+   *   // Reading `ranges` here runs the binding again when they change.
+   *   const duration = plugin.player.state.duration ?? 0;
+   *   return {
+   *     ranges: duration
+   *       ? plugin.timeline.ranges.map((range) => ({
+   *           from: range.start / duration,
+   *           to: range.end / duration,
+   *           selection: range.style === "selection",
+   *         }))
+   *       : [],
+   *   };
+   * });
+   * ```
+   *
+   * @capability playback.read
+   * @since 1.6.9
+   */
+  readonly ranges: readonly TimelineRange[];
   /**
    * The merged list changed (needs `events`; at most every 100 ms).
    *
@@ -6973,12 +7087,19 @@ export interface Osd {
    *
    * @param text - The template, 1–200 characters once translated and
    *   formatted; line breaks become spaces.
+   * With `options.actions` (player 0.7.6) the message ends in up to two
+   * buttons, each running one of the plugin's own commands
+   * ({@link OsdShowOptions}). Older players show the message without them.
+   *
    * @param args - Values for its placeholders (player 0.4.3; older players
-   *   show the template as it is).
+   *   show the template as it is). Pass `null` with a `Text` and options.
+   * @param options - Action buttons after the text (SDK 1.6.9).
    * @returns Resolves once the message is on screen.
    *
    * @throws `invalid` (rejects) The shown text is empty, only white space,
-   *   or longer than 200 characters, or `args` is not a {@link TemplateArgs}.
+   *   or longer than 200 characters, or `args` is not a {@link TemplateArgs};
+   *   or there are more than 2 actions, a title is empty or longer than 40
+   *   characters once translated, or a command is not one of the plugin's.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `capability` (rejects) The manifest does not declare `ui.osd`.
    *
@@ -6992,9 +7113,32 @@ export interface Osd {
    * await plugin.osd.show("Speed {}×", [plugin.player.state.rate]);
    * ```
    *
+   * @example Offer "Show in Folder" after saving a file
+   * The OSD reads "Saved clip.mp4 [Show in Folder]" for about 4 seconds,
+   * longer while the pointer is on it. A click runs the plugin's own
+   * `reveal` command, which knows the last saved file; the message goes.
+   * ```ts
+   * declare const path: string;
+   * // ---cut---
+   * let saved = path; // the command acts on the last saved file
+   * plugin.commands.add({
+   *   id: "reveal",
+   *   title: "Show Last Saved File in Folder",
+   *   enabled: () => saved !== "",
+   *   run: () => plugin.system.reveal(saved),
+   * });
+   * await plugin.osd.show("Saved {}", [saved.split(/[\\/]/).pop() ?? saved], {
+   *   actions: [{ title: "Show in Folder", command: "reveal" }], // one button
+   * });
+   * ```
+   *
    * @since 1.0.0
    */
-  show(text: TextValue, args?: TemplateArgs): Promise<void>;
+  show(
+    text: TextValue,
+    args?: TemplateArgs | null,
+    options?: OsdShowOptions,
+  ): Promise<void>;
   /**
    * Create this plugin's information block.
    *
@@ -7020,6 +7164,56 @@ export interface Osd {
    * @since 1.0.0
    */
   panel(): OsdPanel;
+}
+
+/**
+ * One button at the end of an OSD message ({@link Osd.show}, player 0.7.6).
+ *
+ * @since 1.6.9
+ * @category UI
+ */
+export interface OsdAction {
+  /**
+   * The button's label: English source text the player translates with the
+   * plugin's catalog, or a {@link Text}; 1–40 characters once translated
+   * (`OSD_LIMITS.actionChars`). A verb, as on a menu item: "Show in
+   * Folder", "Copy", "Undo".
+   */
+  title: TextValue;
+  /**
+   * The local id of one of this plugin's own commands
+   * ({@link CommandOptions.id}), declared when the message is shown. A
+   * click runs it as if the user picked it from a menu: a disabled command
+   * does nothing. The command takes no arguments, so it acts on what the
+   * plugin remembers (the file it just saved).
+   */
+  command: string;
+}
+
+/**
+ * Options of {@link Osd.show} (SDK 1.6.9).
+ *
+ * @remarks
+ * A message with actions stays about 4 seconds instead of 2, and does not
+ * fade while the pointer is on it and moving: it goes 2 seconds after the
+ * pointer leaves or rests (the player's idle time), and at the latest 30
+ * seconds after it showed, hovered or not. A click on a button runs its
+ * command and removes the message.
+ * It is still one line: the buttons follow the text. Buttons take no
+ * keyboard focus; screen readers can press them. A newer message, from any
+ * plugin or the player, replaces the message with its buttons, and the
+ * buttons go when the plugin stops. While its buttons show, the plugin is
+ * not stopped for being idle.
+ *
+ * Players before 0.7.6 ignore `actions` and show the text alone for 2
+ * seconds, so do not make an action the only way to reach something.
+ *
+ * @since 1.6.9
+ * @category UI
+ */
+export interface OsdShowOptions {
+  /** At most 2 buttons (`OSD_LIMITS.actions`), in order after the text. */
+  actions?: readonly OsdAction[];
 }
 
 // ---------------------------------------------------------------- video and audio filters
@@ -8435,11 +8629,30 @@ export interface Snapshot extends Disposable {
    * Start exporting; the job runs in the host's offline worker.
    * One snapshot can be exported several times.
    *
+   * A **stream copy** (`format: "copy"`, player 0.7.6) writes the video
+   * stream and the snapshot's audio track as they are in the file, without
+   * decoding: lossless and about as fast as the disk, but a copy can only
+   * begin on a keyframe. It starts at the video's last keyframe at or before
+   * the snapshot time (its first keyframe when the video itself starts
+   * later; keyframes an MP4 edit list discards do not count) and is cut at
+   * `end`, where it may run a few frames past `end`. An open GOP can write
+   * a frame or two that present before the keyframe; `start` includes them.
+   * The finished job's `outcome` gives the `start` and `end` actually
+   * written; a plugin that previews the cut (with `plugin.tools.run`
+   * and ffprobe's packet flags, say) shows those once the job is done.
+   * Copies need a raw snapshot (effects and burned-in subtitles need a
+   * re-encode) and leave subtitle tracks and chapters out. `auto` writes
+   * MP4 for H.264, HEVC, AV1 or MPEG-4 video with AAC, MP3, AC-3, E-AC-3 or
+   * ALAC audio (or none), and MKV for anything else. A copy the player
+   * cannot make (no video stream, a cover image, an external audio track,
+   * codecs `mp4` cannot hold) ends `failed` with the code `unsupported`.
+   *
    * @capability media.read and media.control
    * @throws `released` (rejects) The snapshot was already released.
    * @throws `invalid` (rejects) Bad options (`quality` outside 1–100, a
    *   relative destination, a clip `end` not after the snapshot time or
-   *   past the duration).
+   *   past the duration, an {@link ExportEncoding} value outside its set,
+   *   `copy` from a processed snapshot).
    * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
    * @throws `unavailable` (rejects) No FFmpeg, or the export worker could not
    *   start.
@@ -8459,6 +8672,24 @@ export interface Snapshot extends Disposable {
    * if (end.status !== "completed") await plugin.osd.show("Export {}", [end.status]);
    * ```
    *
+   * @example Cut without re-encoding and report where it starts
+   * The clip is copied as it is in the file. A copy starts on a keyframe,
+   * so the OSD says where it actually starts; a file the player cannot
+   * copy ends with `unsupported`, and the plugin offers a re-encode instead.
+   * ```ts
+   * declare const snapshot: Snapshot;
+   * // ---cut---
+   * const job = await snapshot.export({ format: "copy", destination: "/tmp/clip.mp4", end: snapshot.time + 20 });
+   * const state = await job.done;
+   * const outcome = state.outcome;
+   * // The copy starts on a keyframe: outcome.start says where.
+   * if (outcome && "destination" in outcome)
+   *   await plugin.osd.show("Saved {} from {} s", [outcome.destination, (outcome.start ?? snapshot.time).toFixed(1)]);
+   * // Codecs the container cannot hold, a cover image, …
+   * else if (outcome && "error" in outcome && outcome.error.code === "unsupported")
+   *   await plugin.osd.show("Fast cut is not possible for this file");
+   * ```
+   *
    * @since 1.0.0
    */
   export(options: ExportOptions): Promise<ExportJob>;
@@ -8466,12 +8697,24 @@ export interface Snapshot extends Disposable {
 
 /**
  * One frame as PNG, JPEG (`quality` 1–100, default 90) or BMP (24-bit), or
- * a clip as MP4.
+ * a clip: re-encoded as MP4 (`mp4`, frame-accurate, optional
+ * {@link ExportEncoding}) or copied without re-encoding (`copy`, player
+ * 0.7.6, starting on a keyframe).
  *
  * `destination` is never overwritten if it exists. The extension does not
- * choose the format. `sampleTime` picks the frame (default: the snapshot
- * time); `end` is the clip's end in source seconds. On Windows the export
- * worker needs FFmpeg 6.1 or newer.
+ * choose the format (a copy's extension is set to its container).
+ * `sampleTime` picks the frame (default: the snapshot time); `end` is the
+ * clip's end in source seconds. On Windows the export worker needs FFmpeg
+ * 6.1 or newer.
+ *
+ * **Which players have `copy`, `encoding` and the progress and range of
+ * a job**: player 0.7.6 and later. Declare `"minPlayerVersion": "0.7.6"`,
+ * or, to keep older players and offer these only where they exist, compare
+ * {@link AppInfo.version | plugin.app.version} with `0.7.6`, as for any
+ * newer API. Do not probe by trying: on an older player the `plugin`
+ * object comes from that player's own, older SDK, which rejects `copy` with
+ * `invalid` but builds a re-encode request without the `encoding` it does
+ * not know, so the clip is encoded with the fixed settings and no error.
  *
  * @since 1.0.0
  * @category Media
@@ -8496,19 +8739,134 @@ export type ExportOptions =
       quality?: number;
     }
   | {
-      /** A clip from the snapshot time. */
+      /** A clip from the snapshot time, re-encoded as H.264 + AAC. */
       format: "mp4";
       /** Absolute path of the new file. */
       destination: string;
       /** Clip end, source seconds. */
       end: number;
+      /**
+       * Encoder settings (player 0.7.6); without it, the settings before
+       * they existed.
+       *
+       * @since 1.6.10
+       */
+      encoding?: ExportEncoding;
+    }
+  | {
+      /**
+       * A clip copied stream by stream, without re-encoding (player 0.7.6):
+       * lossless and about as fast as the disk. It starts on the video
+       * keyframe at or before the snapshot time; see {@link Snapshot.export}.
+       *
+       * @since 1.6.10
+       */
+      format: "copy";
+      /**
+       * Absolute path of the new file. The player gives it the extension of
+       * the container it writes (`.mp4` or `.mkv`); the finished job's
+       * `outcome.destination` is the actual path.
+       */
+      destination: string;
+      /** Clip end, source seconds. */
+      end: number;
+      /**
+       * `auto` (default): MP4 when the codecs fit it, otherwise MKV. `mp4`
+       * fails with `unsupported` when they do not; `mkv` always writes MKV.
+       */
+      container?: "auto" | "mp4" | "mkv";
     };
+
+/**
+ * The encoder settings of a re-encoded clip (`format: "mp4"`, player
+ * 0.7.6): a closed set of values, never encoder arguments. Every field is
+ * optional; the defaults are the settings clips had before: CRF 18, the
+ * fastest speed, the source's size and frame rate, AAC 192 kb/s, one thread.
+ * A value outside its set rejects the export with `invalid`. `videoBitrate:
+ * "source"` replaces the CRF with the source's bitrate, for a "Same as
+ * source" preset.
+ *
+ * @example A small file
+ * A 720p, 30 fps clip at a lower quality, encoded with the cores the player
+ * can spare.
+ * ```ts
+ * declare const snapshot: Snapshot;
+ * // ---cut---
+ * // Each field is a ceiling or a choice from a closed set.
+ * const job = await snapshot.export({
+ *   format: "mp4",
+ *   destination: "/tmp/small.mp4",
+ *   end: snapshot.time + 30,
+ *   encoding: { crf: 26, maxHeight: 720, fps: 30, audioBitrate: 128, threads: "auto" },
+ * });
+ * ```
+ *
+ * @since 1.6.10
+ * @category Media
+ */
+export interface ExportEncoding {
+  /**
+   * H.264 quality, an integer 14–30 (x264's CRF): lower is a better picture
+   * and a bigger file. Default 18.
+   */
+  crf?: number;
+  /**
+   * Encoding effort: `faster` (default), `balanced` or `smaller` (slower,
+   * a smaller file at the same quality); x264's `veryfast`, `medium` and
+   * `slow`.
+   */
+  speed?: "faster" | "balanced" | "smaller";
+  /**
+   * The tallest picture: a taller one is scaled down to this height,
+   * keeping its shape; a shorter one is left as it is. Default: the
+   * source's size.
+   */
+  maxHeight?: 1080 | 720 | 480;
+  /**
+   * The highest frame rate: a faster source drops frames to it; a slower
+   * one is left as it is. Default: the source's rate.
+   */
+  fps?: 60 | 30;
+  /** AAC audio bitrate in kb/s. Default 192. */
+  audioBitrate?: 128 | 192 | 256;
+  /**
+   * `single` (default) encodes on one thread, leaving the other cores to
+   * playback. `auto` lets the player use more: half the logical
+   * processors, at most 8, so playback and the interface keep their rate.
+   * From player 0.7.6 every export runs at below-normal priority (as
+   * HandBrake and OBS run their encoders), with either setting.
+   */
+  threads?: "single" | "auto";
+  /**
+   * `source`: aim at the source video's average bitrate instead of a
+   * quality level (peaks up to 1.5 times it), so the file comes out about
+   * the size of that stretch of the source: a "Same as source" preset. Not
+   * together with `crf` (`invalid`). A source whose bitrate the player
+   * cannot tell ends the job `failed` with `unsupported`.
+   */
+  videoBitrate?: "source";
+}
 
 /**
  * An export job's state. `status` is `queued`, `running`, `cancelling`,
  * `completed`, `failed` or `cancelled`; once terminal, `outcome` is
  * `{ destination }`, `{ error: { code, message } }` or `{ cancelled: true }`.
  * `facts` describes what the worker produced (versions, range, streams).
+ *
+ * From player 0.7.6:
+ * - a finished clip's `outcome` also has `start` and `end`, the source
+ *   times of its first frame and of the end of its last frame as written: a
+ *   copy's earliest written frame (its keyframe, or the leading frames of
+ *   an open GOP) and actual end; a re-encode's start and start
+ *   plus the encoded length.
+ * - `progress` is `{ done, total }` in seconds of the clip while FFmpeg
+ *   writes it (at most 4 updates a second; the SDK reads it about every
+ *   350 ms), `null` while unknown: before writing starts, and always for a
+ *   frame. Show an indeterminate bar then. After `done` reaches `total` the
+ *   player still checks the file before the job completes.
+ * - `error.code` is `export-failed`, or `unsupported` for an export the
+ *   player cannot make as asked (a stream copy it cannot make, a
+ *   `videoBitrate: "source"` whose source bitrate it cannot tell).
  *
  * @since 1.0.0
  * @category Media

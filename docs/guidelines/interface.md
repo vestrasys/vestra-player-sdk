@@ -11,7 +11,7 @@ All sizes are logical pixels (Slint `px`).
 
 ## Choose the smallest surface
 
-- **Feedback is an OSD message, not a window.** Confirm what just happened with {@link "@vestra-player/sdk"!Osd.show | osd.show} ("Bookmark added", a new volume, a new speed). Do not open a dialog to say that something succeeded: the player's own snapshot command saves at once and shows a message; only "Save As…" asks.
+- **Feedback is an OSD message, not a window.** Confirm what just happened with {@link "@vestra-player/sdk"!Osd.show | osd.show} ("Bookmark added", a new volume, a new speed). Do not open a dialog to say that something succeeded: the player's own snapshot command saves at once and shows a message; only "Save As…" asks. When the user is likely to want the result next, end the message in a button that runs one of your commands ("Saved clip.mp4 [Show in Folder]", player 0.7.6; {@link "@vestra-player/sdk"!OsdShowOptions | OsdShowOptions}): at most two, short verbs, and never the only way to reach something.
 - **Errors are messages too.** A failed load or a failed action shows one sentence in the OSD; in a window the user is working in, a failure state is drawn in `Theme.danger`.
 - **No permanent text over the video.** Nothing sits above the video, and diagnostic numbers are not always on: show them in an OSD info block ({@link "@vestra-player/sdk"!Osd.panel | osd.panel}) behind a command with a check mark, off by default (the player's "Playback Info", Tab, works this way).
 - **A dialog only for a real question** (before something destructive) or a path (the system file dialogs).
@@ -91,8 +91,9 @@ Use the layout of [Theme: small adjustment windows](../reference/theme.md#small-
 The bottom bar holds one panel. From player 0.7.6 the player draws the strip of command buttons ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, [Bottom-bar buttons](../explanation/commands.md#bottom-bar-buttons)) itself, at the right end of the bottom slot, its cells on the slot's bottom edge, so they line up with a button row of the same height at the bottom of your bar ([Theme: bar buttons](../reference/theme.md#bar-buttons) has the sizes). It shows the plugins' buttons, a » menu when some do not fit, and the player's own **Command Palette**, **Adjust** (player 0.7.6: the adjust column's toggle, `host/adjust`) and **Toggle Sidebar**. A bar that replaces the built-in one (`vestra.playback`) places nothing; it shares the width with the strip:
 
 - **Report the least width of your own controls** in `content-min-width`, a public `length` property of the mounted component (`out`; `in` works too), declared on it or on a base component it inherits. The player gives the strip the rest of the bar (less a small margin), so plugin buttons never cover what you need (the built-in bar keeps its five buttons and the time). It must not depend on `BarButtonsHost.width`. Without it the strip takes the width it needs from the right end of the bar.
+- **A bar that drops controls of its own also reports its full width** in `content-full-width` (player 0.7.6), a public `length` property declared the same way: your row with every one of its controls shown, whatever the bar shows now. The player then gives the strip only the width beyond it, so as the window narrows every plugin button moves into the » menu before your bar drops a control, and narrowing never brings a button back out of ». With `content-min-width` alone the strip gets the width beyond what your bar shows now: when the bar drops a control, the room it frees can let a plugin button back into the strip. Like `content-min-width`, it must not depend on `BarButtonsHost.width` or on the bar's `width`. A bar whose controls never change needs only `content-min-width`.
 - **End your row at the strip**: read `BarButtonsHost.width` from `@vestra/bar-buttons.slint` (read only) and lay your controls out in the width the strip leaves, less the same small margin (as in the example below). Anything optional beyond `content-min-width` shows only while it fits there. To keep an optional control ahead of the plugins' buttons, as the built-in bar does with Fullscreen, count it in `content-min-width` while it fits beside the player's own cells: `BarButtonsHost.fixed` (read only) is how many cells, one cell wide each, your bar must always leave free: the player's own and, while any plugin button exists, the » cell.
-- **Decide what goes first when the window narrows.** Plugin buttons move into the » menu first; the player's own cells always show. In a very narrow window they may then cover the right end of your row, so keep `content-min-width` small.
+- **Decide what goes first when the window narrows.** Plugin buttons move into the » menu first (all of them before your bar drops anything, when you report `content-full-width`); the player's own cells always show. In a very narrow window they may then cover the right end of your row, so keep `content-min-width` small.
 - **Do not draw a sidebar toggle or a command palette button of your own**: the strip has the player's (`host/sidebar`, `host/palette`), with their state.
 - **`BarButtons` is deprecated** (SDK 1.6.8). A bar that still places it gets that strip instead of the player's (without the palette button and the » menu; the player draws no second strip). Remove it, and the `room` you computed for it, when you add `content-min-width`.
 
@@ -103,6 +104,9 @@ export component MyBar inherits Rectangle {
     height: 40px;
     // Your three 41px buttons and 8px to spare.
     out property <length> content-min-width: 3 * 41px + 8px;
+    // A bar that hides an optional fourth button when narrow also reports
+    // its row with every control shown (player 0.7.6):
+    // out property <length> content-full-width: 4 * 41px + 8px;
     HorizontalLayout {
         x: 0px;
         width: max(0px, root.width - BarButtonsHost.width - 4px);

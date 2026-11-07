@@ -60,6 +60,7 @@ export const STRICT_CATEGORIES = {
       "THEME_PALETTES",
       "BINDING_INPUTS",
       "OSD_LIMITS",
+      "TIMELINE_LIMITS",
       "SESSION_STORAGE_LIMITS",
       "SECRET_LIMITS",
       "SUBTITLE_LIMITS",
@@ -114,6 +115,8 @@ export const STRICT_CATEGORIES = {
       "TextValue",
       "TextError",
       "OsdPanelOptions",
+      "OsdAction",
+      "OsdShowOptions",
       "DropModifiers",
       "DropHandler",
     ],
@@ -147,6 +150,8 @@ export const STRICT_CATEGORIES = {
       "PlaybackStats",
       "MarkKind",
       "TimelineMark",
+      "RangeStyle",
+      "TimelineRange",
     ],
   },
   Services: {
@@ -191,7 +196,7 @@ export const STRICT_CATEGORIES = {
   },
   Media: {
     full: ["MediaCapture", "Snapshot", "ExportJob"],
-    data: ["CaptureOptions", "ExportOptions", "JobState"],
+    data: ["CaptureOptions", "ExportOptions", "ExportEncoding", "JobState"],
   },
   Packages: {
     full: ["Packages", "PackageCandidate", "PackageChange"],

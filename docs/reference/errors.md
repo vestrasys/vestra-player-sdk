@@ -18,7 +18,7 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
 | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path), or this plugin already uses the id (a window or command id). |
 | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
-| `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream). |
+| `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
 | `backend` | Loading or resolving failed; `message` is the backend's reason. |
 | `failed` | The operation ran and failed (`media.ready()` load error, a non-zero `tools.run` exit, the system refused). |
 | `replaced` | Accepted, but another source replaced it before it finished. |
@@ -39,6 +39,7 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
 | `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
 | `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |
+| `export-failed` | An export job ({@link "@vestra-player/sdk"!ExportJob}) failed: the code of its `outcome.error`, not a rejection; `message` has the worker's or FFmpeg's reason. |
 | `input-overflow` | `openStream` input: the player's queue of physical key transitions was full; the input was revoked and its keys released. |
 | `internal` | An internal step of the player failed (keeping an operation's result, a subtitle or media job); `message` has the reason. |
 | `javascript`, `slint` | {@link "@vestra-player/sdk"!Packages.validate}: the package's entry module does not pass `node --check` / one of its Slint files does not compile; `message` has the diagnostics. |
