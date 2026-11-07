@@ -105,6 +105,22 @@ Counted on the text as shown, after translation and with its arguments filled in
 | `OSD_LIMITS.panelBytes` | 4096 (4 KiB) | UTF-8 bytes of the information block. |
 | `OSD_LIMITS.minColumns` | 8 | The smallest `OsdPanelOptions.maxColumns`. |
 | `OSD_LIMITS.maxColumns` | 1000 | The largest `OsdPanelOptions.maxColumns`. |
+| `OSD_LIMITS.actions` | 2 | Action buttons of one `osd.show` message (`OsdShowOptions.actions`; player 0.7.6). |
+| `OSD_LIMITS.actionChars` | 40 | Characters of an action's title, as shown. |
+
+<!-- /generated -->
+
+## Timeline
+
+One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!TimelineLayer | TimelineLayer}), counted per layer; titles are counted as shown, after translation. A list over a limit is refused whole with code `invalid`, reported to `Scope.onError`.
+
+<!-- generated:limits TIMELINE_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `TIMELINE_LIMITS.marks` | 1000 | Marks in one layer (`TimelineLayer.set`). |
+| `TIMELINE_LIMITS.ranges` | 100 | Ranges in one layer (`TimelineLayer.setRanges`; player 0.7.6). |
+| `TIMELINE_LIMITS.titleChars` | 100 | Characters of a mark's or a range's title, as shown. |
 
 <!-- /generated -->
 

@@ -89,6 +89,8 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.coreCommands} | The player's 14 core actions (`host/<id>`), kept apart from the plugin's `commands`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.layout} | Both panel positions as the player reports them (`null` while no panel is mounted there). |
 | {@link "@vestra-player/sdk/testing"!TestHost.osd} | Every `osd.show` text as the player shows it (translated with the plugin's catalog and formatted with its args), newest last. |
+| {@link "@vestra-player/sdk/testing"!TestHost.osdActions} | The action buttons of each `osd.show` message, in step with `osd` (index for index): each button's title as shown and its command; `[]` for a message without actions (SDK 1.6.9). |
+| {@link "@vestra-player/sdk/testing"!TestHost.pressOsdAction}() | Press button `index` of the newest OSD message, as the user does (player 0.7.6): its command runs as if picked from a menu, and settles. |
 | {@link "@vestra-player/sdk/testing"!TestHost.osdPanel} | The text of this plugin's osd panel as shown, `null` when hidden. |
 | {@link "@vestra-player/sdk/testing"!TestHost.locale} | The interface language the test host plays (`plugin.i18n.locale`), `"en"` by default. |
 | {@link "@vestra-player/sdk/testing"!TestHost.loadCatalog}() | Read the plugin's translations for `TestHost.locale` from a package directory, as the player would (`locales/<locale>.json` of a built package, else the source `locales/<locale>.po`); `startPlugin` does this. |
@@ -106,6 +108,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.system} | Paths given to `system.reveal` / `system.openPath`, newest last; inject failures with `host.handle("system.openPath", …)`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.menus} | Every `panel.showMenu`, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.timeline} | Timeline layers by plugin id (this plugin's is `manifestId`) and the merged list `plugin.timeline.marks` reads. |
+| {@link "@vestra-player/sdk/testing"!TestHost.setTimelineRanges}() | Simulate another plugin publishing its timeline ranges (or clearing them with `[]`); pushes `timeline.changed` when the plugin subscribed. |
 | {@link "@vestra-player/sdk/testing"!TestHost.setTimelineLayer}() | Simulate another plugin publishing its timeline layer (or clearing it with `[]`); pushes `timeline.changed` when the plugin subscribed. |
 | {@link "@vestra-player/sdk/testing"!TestHost.images} | Runtime images written to views (`plugin.ui.image`, `plugin.ui.remoteImage`), whole values and (SDK 1.5.19) images nested in rows, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.imagePath}() | The file an image property shows, or `null` when the value is not a runtime image. |

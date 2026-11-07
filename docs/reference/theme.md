@@ -378,7 +378,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 ## Bar buttons
 
-`@vestra/bar-buttons.slint` (player 0.5.10) holds the bottom bar's strip of command buttons: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's own. Each button is a cell 41 wide and 40 high. From player 0.7.6 the player places the strip itself; a bar reads `BarButtonsHost.width` (read only: the strip's width) and reports `content-min-width`. `BarButtons`, the strip a bar placed itself, is deprecated. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
+`@vestra/bar-buttons.slint` (player 0.5.10) holds the bottom bar's strip of command buttons: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's own. Each button is a cell 41 wide and 40 high. From player 0.7.6 the player places the strip itself; a bar reads `BarButtonsHost.width` (read only: the strip's width) and reports `content-min-width`, and `content-full-width` when it drops controls of its own. `BarButtons`, the strip a bar placed itself, is deprecated. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
 
 <!-- generated:widgets bar-buttons -->
 

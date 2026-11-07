@@ -85,8 +85,12 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Subtitles.remove": [{ method: "subtitles.remove" }, readsSubtitles],
     "Subtitles.setStyle": [{ method: "subtitles.style" }, readsSubtitles],
     "Timeline.marks": [{ method: "timeline.marks" }],
+    "Timeline.ranges": [{ method: "timeline.marks" }],
     "Timeline.onChange": [listen("timeline.changed")],
-    "Timeline.layer": [{ method: "timeline.set" }],
+    "Timeline.layer": [
+      { method: "timeline.set" },
+      { method: "timeline.setRanges" },
+    ],
     "MainWindow.onChange": [listen("window.state")],
     "MainWindow.setVideoArea": [{ method: "window.setVideoArea" }],
     "MainWindow.setAlwaysOnTop": [{ method: "window.setAlwaysOnTop" }],
