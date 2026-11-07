@@ -208,12 +208,11 @@ export const BAR_BUTTON_ICONS = [
 /**
  * The player's limits on bottom-bar buttons (`CommandOptions.button`), the
  * same values as the player's (its tests check that they agree). A button
- * past `perPlugin` or `total` is left out: its command still registers and
- * its menu entry stays, and the player logs the button it left out
- * (`limit`). Which ones stay: each plugin's first declared button, then the
- * `total` highest by order, plugin id and declaration order: as in a narrow
- * strip, the lowest order goes first (equal orders: the smaller plugin id,
- * then the earlier declaration, goes first).
+ * past `perPlugin` has none (its command still registers and its menu entry
+ * stays). `total` is what the strip holds: the `total` lowest by order,
+ * plugin id and declaration order; the rest are in the strip's » menu, in
+ * the same order (older players keep the `total` highest and leave the
+ * others out).
  *
  * @since 1.5.29
  *
@@ -222,7 +221,7 @@ export const BAR_BUTTON_ICONS = [
 export const BAR_BUTTON_LIMITS = {
   /** Buttons one plugin shows (1). */
   perPlugin: 1,
-  /** Buttons the player shows, every plugin together, besides its own sidebar toggle (8). */
+  /** Buttons in the strip, every plugin together, besides the player's own (8); the rest are in its » menu. */
   total: 8,
   /** The highest `order` (999; the lowest is 0). */
   maxOrder: 999,

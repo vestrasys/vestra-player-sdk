@@ -465,7 +465,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 ## Bottom-bar buttons
 
-`button: { icon, order }` on {@link "@vestra-player/sdk"!Commands.add | commands.add} ({@link "@vestra-player/sdk"!CommandButton | CommandButton}, SDK 1.5.29, player 0.5.10) gives a command a button in the bottom bar's strip of command buttons (`BarButtons`, [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
+`button: { icon, order }` on {@link "@vestra-player/sdk"!Commands.add | commands.add} ({@link "@vestra-player/sdk"!CommandButton | CommandButton}, SDK 1.5.29, player 0.5.10) gives a command a button in the bottom bar's strip of command buttons, which the player draws ([Bottom-bar buttons](../explanation/commands.md#bottom-bar-buttons), [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
 
 | Field | Rule |
 | --- | --- |
@@ -475,8 +475,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 - **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. The icon is drawn in the accent colour (player 0.5.22; the text colour before), darker while pressed. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: a small dot in the icon's colour under the icon (before player 0.5.22: the icon in the accent colour, the others in the text colour). Accessibility: a button named by the title, with its enabled and checked state and a default action.
 - **Click**: runs the command exactly as a click on its menu item does.
-- **Order and room**: left to right by `order`, the player's **Toggle Sidebar** rightmost; in a narrow window the strip loses cells from its outer (left) end inward: the lowest order goes first, the sidebar toggle last. `order` is position only: low is further left and goes first.
-- **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared), eight in the player (the highest orders; the lowest go first, ties: the smaller plugin id, then the earlier declaration). A button past them is left out and logged with `limit`; the command and its menu entry stay.
+- **Order and room** (player 0.7.6): left to right by `order`, then plugin id, then declaration order; lower `order` comes first and stays in the strip longest. The buttons that do not fit, and those past eight, are in the strip's » menu, in the same order, with their icon, title, key and check state; » shows only while something is in it. The player's **Command Palette** and **Toggle Sidebar** sit right of », always shown. Before player 0.7.6 a narrow strip lost its lowest orders first.
+- **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared; a later one stays a menu item only), eight in the strip, the rest in its » menu. No button is left out for the total (before player 0.7.6 the player kept the eight highest orders and logged the others with `limit`).
 - **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
 - **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
 

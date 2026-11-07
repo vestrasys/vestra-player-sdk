@@ -4389,8 +4389,8 @@ export class TestHost implements Transport {
    * The plugin's bottom-bar buttons (`CommandOptions.button`) as the player
    * shows them: at most one, the first declared (`BAR_BUTTON_LIMITS`; a
    * later one stays a menu item only). Empty once the command is disposed.
-   * Whether the bar places them is the bar's business: the list is what
-   * the player hands to `BarButtons`.
+   * Whether one is in the strip or its » menu is the player's business
+   * (the room and the other plugins' buttons).
    *
    * @example Click the plugin's bottom-bar button in a test
    * The test finds the plugin's Store button, clicks it and checks that the

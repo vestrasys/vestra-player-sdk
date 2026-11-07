@@ -30,14 +30,14 @@ A command added past `perPlugin` or `total` fails with code `limit` (its `ready`
 
 ## Bottom-bar buttons
 
-A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) past a limit is left out, not refused: the command registers and its menu entry stays, and the player logs the button with `limit`. Each plugin keeps its first declared button; of those, the player keeps the eight highest orders, so the lowest go first, as in a narrow strip (equal orders: the smaller plugin id, then the earlier declaration, goes first). The player's own sidebar toggle is extra.
+A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) is never refused for a limit: the command registers and its menu entry stays. Each plugin keeps its first declared button; a later one stays a menu item only. From player 0.7.6 the strip holds the eight lowest by order, plugin id and declaration order, and the rest are in its » menu (before, the player kept the eight highest orders and left the others out). The player's own Command Palette and Toggle Sidebar cells are extra.
 
 <!-- generated:limits BAR_BUTTON_LIMITS -->
 
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `BAR_BUTTON_LIMITS.perPlugin` | 1 | Buttons one plugin shows. |
-| `BAR_BUTTON_LIMITS.total` | 8 | Buttons the player shows, every plugin together, besides its own sidebar toggle. |
+| `BAR_BUTTON_LIMITS.total` | 8 | Buttons in the strip, every plugin together, besides the player's own (8); the rest are in its » menu. |
 | `BAR_BUTTON_LIMITS.maxOrder` | 999 | The highest `order`. |
 
 <!-- /generated -->

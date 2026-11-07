@@ -16,7 +16,7 @@ All sizes are logical pixels (Slint `px`).
 - **No permanent text over the video.** Nothing sits above the video, and diagnostic numbers are not always on: show them in an OSD info block ({@link "@vestra-player/sdk"!Osd.panel | osd.panel}) behind a command with a check mark, off by default (the player's "Playback Info", Tab, works this way).
 - **A dialog only for a real question** (before something destructive) or a path (the system file dialogs).
 - **Prefer the smallest surface that works**: an OSD message before a dialog, a settings page before a tool window. Every window the user has to close is a cost.
-- **Mount a panel only when the plugin's main purpose is to live there.** Panels are shared space; a command that needs a one-click entry point gets a bottom-bar button instead ([Writing a bottom bar](#writing-a-bottom-bar)).
+- **Mount a panel only when the plugin's main purpose is to live there.** Panels are shared space; a command that needs a one-click entry point gets a bottom-bar button instead ([Bottom-bar buttons](../explanation/commands.md#bottom-bar-buttons)).
 
 Which surface for which purpose:
 
@@ -88,23 +88,27 @@ Use the layout of [Theme: small adjustment windows](../reference/theme.md#small-
 
 ### Writing a bottom bar
 
-The bottom bar holds one panel, and every plugin's command buttons ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's sidebar toggle show inside it, in a strip the player fills. A bar that replaces the built-in one (`vestra.playback`) must place that strip, or those buttons show nowhere while it is mounted (their menu entries stay):
+The bottom bar holds one panel. From player 0.7.6 the player draws the strip of command buttons ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, [Bottom-bar buttons](../explanation/commands.md#bottom-bar-buttons)) itself, at the right end of the bottom slot, its cells on the slot's bottom edge, so they line up with a button row of the same height at the bottom of your bar ([Theme: bar buttons](../reference/theme.md#bar-buttons) has the sizes). It shows the plugins' buttons, a » menu when some do not fit, and the player's own **Command Palette** and **Toggle Sidebar**. A bar that replaces the built-in one (`vestra.playback`) places nothing; it shares the width with the strip:
 
-- **Place `BarButtons`** from `@vestra/bar-buttons.slint` at the right end of the button row, and give it `room`: the width left after your own controls. It shows as many button cells as fit ([Theme: bar buttons](../reference/theme.md#bar-buttons)) and loses them from its outer (left) end inward: of the plugins' buttons the lowest order goes first, and the sidebar toggle goes last. The strip is as wide as the cells it shows, so lay your controls out against its `width`. Do not put it under an `if`: it must exist for the player to see it placed. `first-shown` (out) is the index of the leftmost plugin button shown, if your layout needs it.
-- **Decide what goes first when the window narrows.** The built-in bar gives the strip only the room its own buttons and the time leave, so the strip shrinks first, then its Fullscreen button hides, and the time is never cut.
-- **Do not draw a sidebar toggle of your own**: the strip has the player's (**Toggle Sidebar**, `host/sidebar`), with its state.
-- `vestra-plugin check` warns when a plugin mounts a bottom bar whose Slint file does not import `BarButtons` from `@vestra/bar-buttons.slint`, itself or through the plugin's own Slint files it imports, and the player logs the buttons a mounted bar hides.
+- **Report the least width of your own controls** in `content-min-width`, a public `length` property of the mounted component (`out`; `in` works too), declared on it or on a base component it inherits. The player gives the strip the rest of the bar (less a small margin), so plugin buttons never cover what you need (the built-in bar keeps its five buttons and the time). It must not depend on `BarButtonsHost.width`. Without it the strip takes the width it needs from the right end of the bar.
+- **End your row at the strip**: read `BarButtonsHost.width` from `@vestra/bar-buttons.slint` (read only) and lay your controls out in the width the strip leaves, less the same small margin (as in the example below). Anything optional beyond `content-min-width` shows only while it fits there. To keep an optional control ahead of the plugins' buttons, as the built-in bar does with Fullscreen, count it in `content-min-width` while it fits beside the player's own cells: `BarButtonsHost.fixed` (read only) is how many cells, one cell wide each, your bar must always leave free: the player's own and, while any plugin button exists, the » cell.
+- **Decide what goes first when the window narrows.** Plugin buttons move into the » menu first; the player's own cells always show. In a very narrow window they may then cover the right end of your row, so keep `content-min-width` small.
+- **Do not draw a sidebar toggle or a command palette button of your own**: the strip has the player's (`host/sidebar`, `host/palette`), with their state.
+- **`BarButtons` is deprecated** (SDK 1.6.8). A bar that still places it gets that strip instead of the player's (without the palette button and the » menu; the player draws no second strip). Remove it, and the `room` you computed for it, when you add `content-min-width`.
 
 ```slint
-import { BarButtons } from "@vestra/bar-buttons.slint";
+import { BarButtonsHost } from "@vestra/bar-buttons.slint";
 
 export component MyBar inherits Rectangle {
     height: 40px;
-    // Your controls on the left, 3 × 41px wide …
-    strip := BarButtons {
-        x: root.width - self.width - 4px;
-        y: 0px;
-        room: max(0px, root.width - 3 * 41px - 8px);
+    // Your three 41px buttons and 8px to spare.
+    out property <length> content-min-width: 3 * 41px + 8px;
+    HorizontalLayout {
+        x: 0px;
+        width: max(0px, root.width - BarButtonsHost.width - 4px);
+        height: root.height;
+        alignment: start;
+        // Your controls …
     }
 }
 ```
