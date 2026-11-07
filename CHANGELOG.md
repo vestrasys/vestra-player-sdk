@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.11
+
+**Who must change: nobody.** Additions only: a mount slot, a panel position, a button icon and `TestHost` support; `apiVersion` stays `vestra/1`, no new capability. A plugin that mounts `"adjust"` sets `minPlayerVersion` to `0.7.6`: older players refuse the slot (`invalid`), which fails the activation like any refused mount.
+
+- **The adjust slot** (player 0.7.6, menu redesign step 3b): `plugin.panels.mount("adjust", file, { title })` puts a panel in the adjust column, for controls that change what is playing (picture, sound, subtitles, speed). Any number of plugins mount there, one tab each. The slot is a contract about purpose; the player decides how it looks and may change that. The rule, in [Slots](docs/explanation/ui.md#slots-what-each-one-is-for) and on `Panels.mount`: if the user still looks at the panel after closing it, it is `"sidebar"`; otherwise it is `"adjust"`. Today the player draws a second column between the video and the sidebar, with text tabs and the opening key under each title (the key of the command the panel's commands name as their `home`), no close or detach button, floating over the video in a narrow window and sliding out from the right edge in fullscreen; it starts closed and is compiled the first time it opens.
+- **`plugin.panels.adjust`**: the position, the same shape as `panels.sidebar` without `setDetached` (`PanelSlot`: `state`, `panels`, `onChange`, `setVisible`, `toggle`, `activate`). `Panel.show` and `Panel.toggle` work on an adjust panel as on a sidebar tab. `null` on older players.
+- **Wire**: `ui.mount` and `layout.set` take `slot: "adjust"`; `layout.state` reports `adjust` (a `LayoutSlot`, never `detached`); `LayoutSlot` names the adjust column.
+- **`BAR_BUTTON_ICONS`** gains `"sliders"` (the player's Adjust button), and `BUILTIN_COMMANDS` the player's `host/adjust`. `@vestra/bar-buttons.slint` (synced): `BarButtonsHost.adjust`, counted in `fixed`; `@vestra/icons.slint`: `sliders`.
+- **`TestHost`**: `layout.adjust` (starts hidden), `mountOther("adjust", …)`, `selectTab` for adjust tabs, `layout.set` refuses detaching the adjust column, `keepsRunning` names an open adjust column's current tab; an unknown mount slot is refused with `invalid`, as by the player.
+- **Example** [adjust-panel](docs/examples/adjust-panel.md): a speed slider in the adjust column, opened and closed by its own key.
 ## 1.6.8
 
 **Who must change: nobody; authors of a bottom bar should move to `content-min-width`.** Documentation, a read-only Slint property and a removed CLI warning: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability. A plugin's `button` declarations stay as they are. A bottom bar that still places `BarButtons` keeps working on player 0.7.6 (it shows that strip, and the player draws no second one); it is deprecated and goes in a later patch.

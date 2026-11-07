@@ -11,6 +11,8 @@ A speed slider in the player's **adjust column**, the column of controls for wha
 
 The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} as the panel's own key · {@link "@vestra-player/sdk"!CommandOptions.home | CommandOptions.home} · `minPlayerVersion`.
 
+[Add a window](../tutorials/add-a-window.md) teaches the view surface panels share with tool windows; [Write a slider](../how-to/slider.md) covers the slider itself.
+
 ## What you'll build
 
 - A **Speed** tab in the adjust column: the speed, a slider from 0.25× to 4×, five presets and **Normal Speed**.

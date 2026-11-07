@@ -178,6 +178,7 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `exit-fullscreen` | 14 × 12 | 1.5px |
 | `store` | 14 × 12 | 1.5px |
 | `ai` | 14 × 12 | 1.5px |
+| `sliders` | 14 × 12 | 1.5px |
 
 <!-- /generated -->
 

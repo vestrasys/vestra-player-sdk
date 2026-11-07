@@ -4405,11 +4405,13 @@ export interface Panels {
    *   id: "wheels",
    *   title: "Colour Wheels",
    *   bindings: ["Alt+5"],
+   *   // Opens the column at this tab; closes it when this tab is shown.
    *   run: () => panel.toggle(),
    * });
    * plugin.commands.add({
    *   id: "wheels-reset",
    *   title: "Reset Colour Wheels",
+   *   // Lives in the panel `wheels` opens: its key shows under the tab.
    *   home: "wheels",
    *   run: () => panel.set({ lift: 0 }),
    * });

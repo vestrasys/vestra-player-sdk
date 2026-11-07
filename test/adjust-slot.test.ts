@@ -74,7 +74,11 @@ test("Panel.toggle opens the column at this tab and closes it when it is shown",
   assert.deepEqual(host.keepsRunning, ["its adjust tab is the current tab"]);
   await wheels.toggle();
   assert.equal(host.layout.adjust?.preferred, false);
-  assert.deepEqual(host.keepsRunning, [], "a closed column keeps nothing running");
+  assert.deepEqual(
+    host.keepsRunning,
+    [],
+    "a closed column keeps nothing running",
+  );
   // The position: activate, setVisible, toggle, as the sidebar's.
   await adjust.activate("vestra.audio");
   assert.equal(wheels.state?.reason, "otherTab");
