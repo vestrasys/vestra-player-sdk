@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.5
+
+**Who must change: nobody, but run `vestra-plugin i18n extract` again if a command sets a `category`.** A fix in the plugin CLI only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. A plugin whose commands set `category` as a string literal that is not already a message now has those texts in `locales/messages.pot`, so its next `vestra-plugin i18n check` fails with "messages.pot is out of date" until `i18n extract` runs. A category written with `plugin.i18n.text(…)` was already extracted, and a plugin that sets no category sees no change.
+
+- **`vestra-plugin i18n extract` finds `CommandOptions.category`** (added in 1.6.4). It reads a command's `category` wherever it reads its `title`, with the same rules: a string literal, both branches of a `?:`, an `as const` table, a field spread into the options or an options object built elsewhere (through its type), a `plugin.i18n.text(…)` source, and a `TRANSLATORS:` note on the property. A category it cannot read is reported like a title (`category of Commands.add is not a literal`, `not English`, `i18n-ignore` to quiet it). In 1.6.4 a category never reached `messages.pot`, so it stayed English in every language and `i18n check` did not notice. `home` is a command id, not text, and is not extracted. [Reference: translations](docs/reference/i18n.md) lists `category` with the other command texts.
+
 ## 1.6.4
 
 **Who must change: nobody, but check tests that compare whole `bindings.list()` entries.** Additions only: two optional `CommandOptions` fields, one optional `BindingInfo` field, a `COMMAND_LIMITS` entry and a new built-in command. `apiVersion` stays `vestra/1`, no new capability. A plugin that does not set the new fields sends exactly what it sent before; one that sets them needs player 0.7.6 (`"minPlayerVersion": "0.7.6"`), because older players refuse a declaration with fields they do not know (`invalid`).

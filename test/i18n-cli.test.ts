@@ -327,6 +327,105 @@ test("build compiles the .po files and packs no translation sources", () => {
   assert.equal(run(directory, "build").status, 1);
 });
 
+test("a command's category is extracted like its title; home is not (SDK 1.6.5)", () => {
+  const directory = project(`import type { Plugin } from "@vestra-player/sdk";
+
+const SYNC = [
+  { id: "sync-earlier", category: "Subtitle Sync" },
+  { id: "sync-later", category: "Subtitle Timing" },
+] as const;
+
+export default async function activate(plugin: Plugin) {
+  const fast = Date.now() > 0;
+  plugin.commands.add({ id: "tune", path: ["@subtitles", "Tuning…"], run: () => {} });
+  plugin.commands.add({
+    id: "earlier",
+    title: "Earlier 0.5 s",
+    // TRANSLATORS: a group of commands in the command palette.
+    category: "Audio Sync",
+    home: "tune",
+    run: () => {},
+  });
+  plugin.commands.add({ id: "rate", title: "Rate", category: plugin.i18n.text("Speed {}", [2]), run: () => {} });
+  plugin.commands.add({ id: "mode", title: "Mode", category: fast ? "Fast Mode" : "Slow Mode", run: () => {} });
+  for (const row of SYNC)
+    plugin.commands.add({ id: row.id, title: "Shift", category: row.category, home: "tune", run: () => {} });
+  const options = { id: "built", title: "Built" as const, category: "Built Elsewhere" as const, run: () => {} };
+  plugin.commands.add(options);
+  const extra = { category: "Spread Category" as const };
+  plugin.commands.add({ id: "spread", title: "Spread", ...extra, run: () => {} });
+  plugin.commands.add({ id: "cjk", title: "Cjk", category: "字幕", run: () => {} });
+  plugin.commands.add({ id: "dynamic", title: "Dynamic", category: String(Date.now()), run: () => {} });
+}
+`);
+  writeFileSync(join(directory, "ui/page.slint"), "export component Page {}\n");
+  let result = run(directory, "i18n", "extract", "--locale", "de");
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  const pot = entries(join(directory, "locales/messages.pot"));
+  const ids = pot.map((e) => e.id);
+  for (const id of [
+    "Audio Sync",
+    "Speed {}",
+    "Fast Mode",
+    "Slow Mode",
+    "Subtitle Sync",
+    "Subtitle Timing",
+    "Built Elsewhere",
+    "Spread Category",
+  ])
+    assert.ok(ids.includes(id), `${id} in ${ids.join(", ")}`);
+  // `home` is a command id, not text.
+  assert.ok(!ids.includes("tune"), ids.join(", "));
+  const audio = pot.find((e) => e.id === "Audio Sync")!;
+  assert.deepEqual(audio.notes, [
+    "a group of commands in the command palette.",
+  ]);
+  assert.deepEqual(audio.references, ["main.ts:15"]);
+  // A category extract cannot read is reported, as a title is.
+  assert.match(result.stdout, /main\.ts:\d+: not English/);
+  assert.match(
+    result.stdout,
+    /main\.ts:\d+: category of Commands\.add is not a literal/,
+  );
+  // The category is a message of its own in de.po, counted by check.
+  const file = join(directory, "locales/de.po");
+  writeFileSync(
+    file,
+    readFileSync(file, "utf8").replace(
+      'msgid "Audio Sync"\nmsgstr ""',
+      'msgid "Audio Sync"\nmsgstr "Audio-Synchronisation"',
+    ),
+  );
+  result = run(directory, "i18n", "check");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /i18n: de: 1\/\d+ translated/);
+  // A new category is a message that is not translated yet: i18n check fails
+  // until extract puts it into messages.pot and de.po.
+  writeFileSync(
+    join(directory, "main.ts"),
+    readFileSync(join(directory, "main.ts"), "utf8").replace(
+      '"Audio Sync"',
+      '"Audio Delay"',
+    ),
+  );
+  result = run(directory, "i18n", "check");
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /messages\.pot is out of date/);
+  assert.match(result.stderr, /de\.po: 1 message is not in this file/);
+  assert.equal(run(directory, "i18n", "extract").status, 0);
+  const de = entries(file);
+  assert.deepEqual(de.find((e) => e.id === "Audio Delay")!.strings, [""]);
+  const old = de.find((e) => e.id === "Audio Sync")!;
+  assert.equal(old.obsolete, true);
+  assert.deepEqual(old.strings, ["Audio-Synchronisation"]);
+  result = run(directory, "i18n", "check");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    result.stdout,
+    /i18n: de: 0\/\d+ translated, 0 fuzzy, 1 obsolete/,
+  );
+});
+
 test("an i18n-ignore comment leaves a text out and quiets check", () => {
   const directory = project(`import type { Plugin } from "@vestra-player/sdk";
 
