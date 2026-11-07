@@ -1079,7 +1079,12 @@ export class TestHost implements Transport {
    * (index for index): each button's title as shown and its command; `[]`
    * for a message without actions (SDK 1.6.9).
    */
-  readonly osdActions: { title: string; command: string }[][] = [];
+  readonly osdActions: {
+    /** The button title as shown, in the plugin's locale. */
+    title: string;
+    /** The local id of the plugin's command the button runs. */
+    command: string;
+  }[][] = [];
   /**
    * Press button `index` of the newest OSD message, as the user does
    * (player 0.7.6): its command runs as if picked from a menu, and settles.
