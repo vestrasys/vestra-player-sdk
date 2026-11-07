@@ -59,6 +59,14 @@ A list in the sidebar with its own right-click menu. Next to the player's playli
 
 [Walkthrough](panel-menu.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/panel-menu)
 
+## Adjust panel
+
+A speed slider in the adjust column, the column of controls for what is playing (player 0.7.6). Alt+5 opens the column at its tab and closes it again.
+
+**You learn:** the `"adjust"` slot and when to choose it over `"sidebar"` · a panel's own key with `Panel.toggle` · `CommandOptions.home`, which puts that key under the tab · `minPlayerVersion`.
+
+[Walkthrough](adjust-panel.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/adjust-panel)
+
 ## Menus
 
 ![Menus in Vestra Player](../../examples/menus/screenshot.png)

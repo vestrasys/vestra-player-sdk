@@ -1,0 +1,129 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import type { Plugin } from "../src/plugin/index.ts";
+import type { Panel } from "../src/plugin/types.ts";
+
+/** A package with one panel file, `ui.mount` and `events`. */
+function packageWith(id = "test.wheels") {
+  const directory = mkdtempSync(join(tmpdir(), "adjust-"));
+  writeFileSync(
+    join(directory, "wheels.slint"),
+    "export global WheelsBridge { in property <float> lift; }\nexport component Wheels inherits Rectangle {}\n",
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({ id, capabilities: ["ui.mount", "events", "commands"] }),
+  );
+  return directory;
+}
+
+test("an adjust panel is a tab of the adjust column, which starts hidden", async () => {
+  const host = new TestHost();
+  host.mountOther("adjust", "vestra.video", { title: "Picture" });
+  let wheels!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      wheels = plugin.panels.mount("adjust", "wheels.slint", {
+        title: "Wheels",
+      });
+    },
+    { host, directory: packageWith() },
+  );
+  await wheels.ready;
+  // The position is read when first used.
+  void plugin.panels.adjust.state;
+  await host.settle();
+  assert.equal(host.mounted().slot, "adjust");
+  assert.deepEqual(plugin.panels.adjust.state, {
+    preferred: false,
+    effective: false,
+    reason: "userHidden",
+    detached: false,
+  });
+  assert.deepEqual(plugin.panels.adjust.panels, [
+    { plugin: "vestra.video", title: "Picture", active: true },
+    { plugin: "test.wheels", title: "Wheels", active: false },
+  ]);
+  assert.equal(wheels.state?.reason, "otherTab");
+  // The sidebar and the adjust column are separate positions.
+  assert.equal(plugin.panels.sidebar.state, null);
+  await stop();
+});
+
+test("Panel.toggle opens the column at this tab and closes it when it is shown", async () => {
+  const host = new TestHost();
+  host.mountOther("adjust", "vestra.audio", { title: "Audio" });
+  let wheels!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      wheels = plugin.panels.mount("adjust", "wheels.slint");
+    },
+    { host, directory: packageWith() },
+  );
+  const adjust = plugin.panels.adjust;
+  await wheels.toggle();
+  assert.deepEqual(
+    [host.layout.adjust?.preferred, host.layout.adjust?.owner],
+    [true, 1],
+  );
+  assert.equal(wheels.state?.effective, true);
+  assert.deepEqual(host.keepsRunning, ["its adjust tab is the current tab"]);
+  await wheels.toggle();
+  assert.equal(host.layout.adjust?.preferred, false);
+  assert.deepEqual(host.keepsRunning, [], "a closed column keeps nothing running");
+  // The position: activate, setVisible, toggle, as the sidebar's.
+  await adjust.activate("vestra.audio");
+  assert.equal(wheels.state?.reason, "otherTab");
+  await adjust.setVisible(true);
+  assert.equal(adjust.state?.effective, true);
+  await adjust.toggle();
+  assert.equal(adjust.state?.preferred, false);
+  // It never detaches (the type has no setDetached; the player refuses it).
+  const raw = adjust as unknown as {
+    setDetached(detached: boolean): Promise<void>;
+  };
+  await assert.rejects(raw.setDetached(true), { code: "invalid" });
+  await stop();
+});
+
+test("players before 0.7.6: no adjust state, and the mount is refused", async () => {
+  const host = new TestHost();
+  // An older player: layout.state has no adjust, ui.mount knows no such slot.
+  host.handle("layout.state", () => ({
+    bottom: host.layout.bottom,
+    sidebar: host.layout.sidebar,
+  }));
+  host.handle("ui.mount", () => {
+    throw new HostError("invalid", "unknown mount slot");
+  });
+  // A failed mount fails the activation, as any refused mount does: hence
+  // `minPlayerVersion: "0.7.6"`, so older players do not load the plugin.
+  await assert.rejects(
+    startPlugin(
+      (plugin: Plugin) => {
+        plugin.panels.mount("adjust", "wheels.slint");
+      },
+      { host, directory: packageWith() },
+    ),
+    { code: "invalid" },
+  );
+  // Another plugin reading the position there: nothing to report.
+  const reader = new TestHost();
+  reader.handle("layout.state", () => ({
+    bottom: reader.layout.bottom,
+    sidebar: reader.layout.sidebar,
+  }));
+  const { plugin, stop } = await startPlugin(() => {}, {
+    host: reader,
+    directory: packageWith("test.reader"),
+  });
+  void plugin.panels.adjust.state;
+  await reader.settle();
+  assert.equal(plugin.panels.adjust.state, null);
+  assert.equal(plugin.panels.adjust.panels, null);
+  await stop();
+});

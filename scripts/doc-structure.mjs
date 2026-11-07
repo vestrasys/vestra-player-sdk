@@ -279,6 +279,10 @@ export const GROUPS = [
         why: "Walkthrough of examples/panel-menu.",
       },
       {
+        file: "adjust-panel.md",
+        why: "Walkthrough of examples/adjust-panel.",
+      },
+      {
         file: "menus.md",
         why: "Walkthrough of examples/menus.",
       },

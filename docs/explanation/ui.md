@@ -22,6 +22,7 @@ flowchart LR
             BD["2 backdrop panel, while there is no video"]
         end
         BAR["2 bottom bar panel, under the video"]
+        ADJ["2 adjust panel, between the video and the sidebar"]
         SIDE["2 sidebar panel, on the right"]
     end
     subgraph OWN["separate operating-system windows"]
@@ -32,12 +33,14 @@ flowchart LR
         DLG["5 dialogs"]
     end
     VIDEO --> BAR
+    VIDEO --> ADJ
+    ADJ --> SIDE
     SIDE -- "detach" --> FL
 ```
 
 **① On-screen display** ({@link "@vestra-player/sdk"!Osd | plugin.osd}, capability `ui.osd`). Text the player draws over the top-left of the video: a one-line message that disappears after 2 seconds ({@link "@vestra-player/sdk"!Osd.show | osd.show}), and one multi-line information block per plugin that stays until you clear it ({@link "@vestra-player/sdk"!Osd.panel | osd.panel}). It takes no input and needs no Slint.
 
-**② Panels** ({@link "@vestra-player/sdk"!Panels | plugin.panels}, `ui.mount`). A Slint component the player places _inside its main window_: in the **bottom bar** under the video, in the **sidebar** on the right (which the user can detach into a floating window of its own), or as the **backdrop** drawn over the video area while there is no video picture. A panel is part of the player's layout: it moves, resizes, hides in fullscreen and auto-hides with the player's own controls. Each plugin mounts at most one panel.
+**② Panels** ({@link "@vestra-player/sdk"!Panels | plugin.panels}, `ui.mount`). A Slint component the player places _inside its main window_: in the **bottom bar** under the video, in the **sidebar** on the right (which the user can detach into a floating window of its own), in the **adjust column** (player 0.7.6) between the video and the sidebar, or as the **backdrop** drawn over the video area while there is no video picture. A panel is part of the player's layout: it moves, resizes, hides in fullscreen and auto-hides with the player's own controls. Each plugin mounts at most one panel.
 
 **③ Tool windows** ({@link "@vestra-player/sdk"!Windows | plugin.windows}, `ui.window`). A separate, top-level operating-system window owned by the plugin: it has its own title bar, the user can move it, resize it (if the Slint file allows) and close it, and it is not modal: the main window keeps playing and keeps taking input while it is open. A plugin can have any number of them.
 
@@ -45,9 +48,22 @@ flowchart LR
 
 **⑤ Dialogs** ({@link "@vestra-player/sdk"!Dialogs | plugin.dialogs}, `ui.dialog`). The system's own dialogs: a confirmation alert ({@link "@vestra-player/sdk"!Dialogs.confirm | confirm}) and the open-file, open-folder and save-file dialogs. The plugin passes text and gets an answer back; it does not draw anything. Only one dialog is open at a time, player-wide.
 
+### Slots: what each one is for
+
+A plugin chooses a slot by what its panel is **for**. The player decides how each slot is drawn and where; the "today" column describes player 0.7.6 and **may change** at any release, so do not depend on a size or a place.
+
+| Slot | What it is for | What the player shows today (may change) |
+| --- | --- | --- |
+| `"bottom"` | The playback controls (one panel for all plugins) | 62 px under the video; in fullscreen over the video while the pointer is at the bottom |
+| `"backdrop"` | What shows while there is no video (one panel) | Behind the video layer |
+| `"sidebar"` | **Content**: things to browse and pick (lists, chapters, search results, another video) | The rightmost column, text tabs, can be detached into a floating window |
+| `"adjust"` | **Adjusting what is playing**: controls that change the picture, the sound, the subtitles, the speed | A second column between the video and the sidebar, text tabs with the key that opens each one under its title, no close or detach button; in a narrow window it floats over the video, in fullscreen it slides out from the right edge left of the sidebar |
+
+**The rule.** After the user closes the panel, do they still look at what it showed? If yes, it is content: `"sidebar"`. If it only changes what is playing, it is `"adjust"`. A plugin that mounts `"adjust"` declares `minPlayerVersion: "0.7.6"`; older players refuse the slot with `invalid`. See [adjust-panel](../examples/adjust-panel.md).
+
 ### Shared space
 
-There is one sidebar, one bottom bar and one backdrop for all plugins. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). From player 0.7.3 it takes any number of tabs: the strip shows the tabs that fit and a `»` menu lists all of them (players 0.4.x to 0.7.2 refused a ninth tab with `conflict`). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there. A command that needs a one-click entry point does not need a panel: give it a bottom-bar button (`button` on {@link "@vestra-player/sdk"!Commands.add | commands.add}), which the player shows in the strip of command buttons every bottom bar places ([Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
+There is one sidebar, one adjust column, one bottom bar and one backdrop for all plugins. The adjust column holds panels as tabs like the sidebar, always with its tab strip; it starts closed, opens and closes as a whole (the bottom bar's Adjust button, `host/adjust`; a panel's own command), never detaches, and the player compiles its panels the first time it opens rather than at start-up. The sidebar holds several panels as tabs (the player draws the tab strip while there are two or more; showing, hiding and detaching apply to all of them). From player 0.7.3 it takes any number of tabs: the strip shows the tabs that fit and a `»` menu lists all of them (players 0.4.x to 0.7.2 refused a ninth tab with `conflict`). The bottom bar and the backdrop hold one: while one plugin's panel is there, another plugin's mount rejects with `conflict`, which does not fail its activation. Mount a panel only when the plugin's main purpose is to live there. A command that needs a one-click entry point does not need a panel: give it a bottom-bar button (`button` on {@link "@vestra-player/sdk"!Commands.add | commands.add}), which the player shows in the strip of command buttons every bottom bar places ([Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
 
 ## Life cycles
 
@@ -97,7 +113,7 @@ stateDiagram-v2
 - **Mounting rebuilds the main window.** The player compiles its main window together with every mounted panel, so mounting or unmounting any panel (from any plugin) rebuilds it. The player restores each panel's bridge properties to the last values its plugin wrote, but anything kept only inside the Slint component (a scroll position, a `property` the plugin never writes, the text of a field the plugin does not mirror) starts over. The same happens when the sidebar is detached or attached: the floating window holds a new instance of the component.
 - The position (`plugin.panels.bottom`, `.sidebar`) is separate from the panel: it has the user's preference (`preferred`), whether it is on screen now (`effective`) and why not (`reason`), and its tabs (`panels`). Any plugin with `ui.mount` can read and toggle it, so a "Show playlist" command can live in a different plugin than the playlist. The panel's own state ({@link "@vestra-player/sdk"!Panel.state | Panel.state}) adds whether its tab is the current one (`reason: "otherTab"` when not); {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} brings a background tab forward instead of closing the sidebar.
 - **A background tab does not keep the plugin running** (player 0.7.3). A sidebar panel never makes a plugin resident; the current tab keeps its plugin running as busy work, only while it is shown. A plugin whose sidebar panel is in a background tab, and that holds nothing else that [keeps it running](plugins.md#idle-plugins-are-stopped), goes to standby after the idle time like any idle plugin (stop reason `idle`); its tab stays in the strip and the `»` menu with its title. Showing the tab starts the plugin again: `activate` runs and mounts the same panel (same file and component), which takes the tab over, and {@link "@vestra-player/sdk"!Panel.ready | Panel.ready} resolves again. The new process mounts with the properties its `activate` passes; nothing of the old run survives except [session storage](plugins.md#restarts-activate-can-run-more-than-once), so keep what the panel shows there and restore it in `activate`. While the plugin is still running, the player may also drop a background tab's component and build it again later from the bridge properties last written, as on any rebuild.
-- The player remembers the sidebar's visibility, width, detached state and floating window position across launches.
+- The player remembers the sidebar's visibility, width, detached state and floating window position across launches, and the adjust column's visibility, width, current tab and tab order. The adjust column's tabs follow the same rules as the sidebar's (`plugin.panels.adjust`, the same shape without `setDetached`); its current tab keeps its plugin running only while the column is open.
 
 ### Settings page
 

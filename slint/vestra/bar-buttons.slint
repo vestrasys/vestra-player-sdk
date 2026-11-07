@@ -3,8 +3,8 @@
 // player's own. Since SDK 1.6.8 (menu redesign step 3a) the player draws
 // the strip itself, at the right end of the bottom slot, its 40px cells on
 // the slot's bottom edge (a bar's 40px button row), and also when no plugin
-// mounts a bottom bar: `[plugin buttons…][»][Command Palette][Toggle
-// Sidebar]`. A bottom bar places nothing: it lays its controls out left of
+// mounts a bottom bar: `[plugin buttons…][»][Command Palette][Adjust]
+// [Toggle Sidebar]`. A bottom bar places nothing: it lays its controls out left of
 // the strip and says how wide they must stay:
 //   import { BarButtonsHost } from "@vestra/bar-buttons.slint";
 //   export component MyBar inherits Rectangle {
@@ -65,12 +65,16 @@ export global BarButtonsHost {
     in property <BarButtonItem> toggle;
     // The command palette (`host/palette`; `token` "" while there is none).
     in property <BarButtonItem> palette;
+    // The adjust column's toggle (`host/adjust`, player 0.7.6; `token` ""
+    // while there is none).
+    in property <BarButtonItem> adjust;
     // Set when a (deprecated) `BarButtons` exists in this window.
     in-out property <bool> placed;
     // The width the player gives its strip (the player sets it).
     in-out property <length> room;
-    // The player's own cells, always shown (step 3b adds Adjust).
-    private property <int> own: (root.palette.token != "" ? 1 : 0) + (root.toggle.token != "" ? 1 : 0);
+    // The player's own cells, always shown: Command Palette, Adjust,
+    // Toggle Sidebar.
+    private property <int> own: (root.palette.token != "" ? 1 : 0) + (root.adjust.token != "" ? 1 : 0) + (root.toggle.token != "" ? 1 : 0);
     // The cells a bar must always leave free, 41px each: the player's own,
     // and the `»` cell whenever any plugin button exists (drawn only on
     // overflow, but always reserved, so `»` never covers the bar). Never
