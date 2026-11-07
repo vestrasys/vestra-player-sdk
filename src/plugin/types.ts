@@ -4291,7 +4291,7 @@ export interface Panels {
    *   takes no pointer or keyboard input. While it is mounted, the player does
    *   not show the cover art of audio files itself (from the next file
    *   opened on), so the plugin can draw it.
-   * - `"adjust"` (player 0.7.6, SDK 1.6.10): **controls that change what is
+   * - `"adjust"` (player 0.7.6, SDK 1.6.11): **controls that change what is
    *   playing**: the picture, the sound, the subtitles, the speed (the
    *   player's own Picture, Audio, Subtitles and Playback panels, a colour
    *   grading tool). Several plugins may mount here, one tab each, labelled
@@ -4381,15 +4381,17 @@ export interface Panels {
   /** The sidebar position, including its floating state; any plugin may read and toggle it. */
   readonly sidebar: SidebarSlot;
   /**
-   * The adjust column (player 0.7.6, SDK 1.6.10), whoever mounted there;
+   * The adjust column (player 0.7.6, SDK 1.6.11), whoever mounted there;
    * any plugin may read and toggle it. The same shape as
    * {@link Panels.sidebar} without floating: the adjust column never
    * detaches.
    *
    * @remarks
-   * `state` is `null` while no plugin has a panel there, and on players
-   * before 0.7.6 (`setVisible`, `toggle` and `activate` reject with `invalid`
-   * there). The column starts hidden (`preferred: false`, `reason:
+   * `state` is `null` while no plugin has a panel there. Players before
+   * 0.7.6 build the `plugin` object with their own SDK, which has no
+   * `adjust`: there `plugin.panels.adjust` is `undefined` and reading its
+   * `state` throws a `TypeError`, so declare `"minPlayerVersion": "0.7.6"`
+   * (or test `plugin.panels.adjust` first). The column starts hidden (`preferred: false`, `reason:
    * "userHidden"`) until the user opens it. To open the column at your own
    * panel, call {@link Panel.show} (or {@link Panel.toggle}, which closes it
    * again when your tab is already the current one, the behaviour of the
@@ -4418,7 +4420,9 @@ export interface Panels {
    * });
    * ```
    *
-   * @since 1.6.10
+   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
+   *   have no `adjust`: reading its `state` throws a `TypeError`).
+   * @since 1.6.11
    */
   readonly adjust: PanelSlot;
 }

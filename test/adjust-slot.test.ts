@@ -94,7 +94,7 @@ test("Panel.toggle opens the column at this tab and closes it when it is shown",
   await stop();
 });
 
-test("players before 0.7.6: no adjust state, and the mount is refused", async () => {
+test("a player that refuses the slot fails the activation; a layout without adjust reads null", async () => {
   const host = new TestHost();
   // An older player: layout.state has no adjust, ui.mount knows no such slot.
   host.handle("layout.state", () => ({
@@ -115,7 +115,9 @@ test("players before 0.7.6: no adjust state, and the mount is refused", async ()
     ),
     { code: "invalid" },
   );
-  // Another plugin reading the position there: nothing to report.
+  // A layout without `adjust` (no field on the wire) reads as no position.
+  // A real older player has no `plugin.panels.adjust` at all: it builds the
+  // plugin object with its own SDK.
   const reader = new TestHost();
   reader.handle("layout.state", () => ({
     bottom: reader.layout.bottom,
