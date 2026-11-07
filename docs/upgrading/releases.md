@@ -15,7 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
-| [1.6.4](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#164) | **Nobody.** Additions only: two optional `CommandOptions` fields, one optional `BindingInfo` field, a `COMMAND_LIMITS` entry and a new built-in command. | — |
+| [1.6.4](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#164) | **Nobody, but check tests that compare whole `bindings.list()` entries.** Additions only: two optional `CommandOptions` fields, one optional `BindingInfo` field, a `COMMAND_LIMITS` entry and a new built-in command. | — |
 | [1.6.3](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#163) | **Nobody.** Documentation only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.6.2](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#162) | **Nobody, but check `TestHost` tests of a full sidebar or of `keepsRunning` with a background tab.** No change to the TypeScript API or the wire, `apiVersion` stays `vestra/1`, no new capability, no player version needed. | — |
 | [1.6.1](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#161) | **Nobody.** Docs only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability. | — |

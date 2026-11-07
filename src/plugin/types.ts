@@ -1242,7 +1242,9 @@ export interface CommandOptions {
    * that place next to the command. A local id, like `id`: ASCII letters,
    * digits, `.`, `_` and `-`, 1–128 bytes; the player refuses anything else
    * with `invalid`. The command it names need not be registered yet; while
-   * it is not, the palette shows no place. Sent only when set: players
+   * it is not, the palette shows the place it would show without `home`:
+   * the menu path above the item, "Menu" for a top-level item, nothing for
+   * a command outside the menu. Sent only when set: players
    * before 0.7.6 refuse the field with `invalid`, so declare
    * `"minPlayerVersion": "0.7.6"` when you set it.
    *
