@@ -152,9 +152,33 @@ plugin.commands.add({
 });
 ```
 
+## The command palette and categories
+
+From player 0.7.6 the user finds any command by name in the player's command palette: **Ctrl+Shift+P** (⌘⇧P on macOS; the command `host/palette`, which the user can rebind). It lists every registered command, the player's and every plugin's, except commands with `focus: "panel"` and commands that are disabled without a `reason`, whatever their keys (a greyed "No Audio Tracks" placeholder, too), as VS Code hides a command whose `when` is false. A disabled command with a reason is listed greyed, with its reason, so **give a `reason` to a command that should stay findable while it is disabled**. Each row reads **Category: Title**, then the plugin's name, where the command lives, its check mark and its current key; a disabled command is greyed with its reason and does not run. Typing matches the category, the title, the menu path and the plugin name loosely (the letters in order, not necessarily together), in the interface language and in the English source text, so `sync` finds 同步 items in a Chinese interface too.
+
+Two optional fields of {@link "@vestra-player/sdk"!CommandOptions | CommandOptions} feed it:
+
+- **`category`**: what the command is about, in a word or two, translated like the title (`"Subtitle Sync"`). Without it the player takes the menu path above the item (`Video ▸ Snapshot`), then the plugin's name. Give one to every command whose title alone is ambiguous outside its menu ("Earlier 0.5 s", "Off", "90°"), and to commands without a `path`.
+- **`home`**: the local id of the plugin's own command that opens the window or panel where this command's control lives. The palette shows that command's title as the place.
+
+Both are sent only when set; players before 0.7.6 refuse a declaration that has them with `invalid`, so a plugin that sets them declares `"minPlayerVersion": "0.7.6"`. {@link "@vestra-player/sdk"!BindingInfo | BindingInfo} carries the shown category (`category`) for a keyboard shortcuts page that names commands the same way.
+
+```ts
+declare function shift(seconds: number): void;
+// ---cut---
+plugin.commands.add({
+  id: "sync-earlier",
+  title: "Earlier 0.5 s",
+  category: "Subtitle Sync",
+  home: "tune", // the command that opens the Subtitle Tuning window
+  bindings: ["."],
+  run: () => shift(-0.5),
+});
+```
+
 ## The player's own commands
 
-The player registers some commands itself, with the owner `host`: **Toggle Fullscreen** (`Escape` from player 0.6.0), **Enter Fullscreen** and **Leave Fullscreen** (player 0.6.0: no default key, each enabled only where it acts), **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
+The player registers some commands itself, with the owner `host`: **Toggle Fullscreen** (`Escape` from player 0.6.0), **Enter Fullscreen** and **Leave Fullscreen** (player 0.6.0: no default key, each enabled only where it acts), **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10), **Command Palette** (`Ctrl+Shift+P`, player 0.7.6) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
 
 A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); what they do to playback is in [Playback](playback.md#core-actions).
 

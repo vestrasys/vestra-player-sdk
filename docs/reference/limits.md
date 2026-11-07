@@ -22,6 +22,7 @@ A command added past `perPlugin` or `total` fails with code `limit` (its `ready`
 | `COMMAND_LIMITS.titleBytes` | 128 | UTF-8 bytes of a title, a text value counted by its English rendering. Like every command text: not empty, no control characters, no whitespace at either end. |
 | `COMMAND_LIMITS.segmentBytes` | 80 | UTF-8 bytes of a menu path segment, a text value counted by its English rendering. |
 | `COMMAND_LIMITS.groupBytes` | 80 | UTF-8 bytes of a group. |
+| `COMMAND_LIMITS.categoryBytes` | 80 | UTF-8 bytes of a category (`CommandOptions.category`), a text value counted by its English rendering. |
 | `COMMAND_LIMITS.reasonBytes` | 512 | UTF-8 bytes of a state's reason, as shown in the player's language. |
 | `COMMAND_LIMITS.order` | 1000000 | The largest `order` either way: an order is within ±1,000,000. |
 

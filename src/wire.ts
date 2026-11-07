@@ -203,6 +203,8 @@ export interface BindingTable {
     path: string[] | null;
     /** The path's keys (player 0.4.3). */
     key?: string[] | null;
+    /** The shown category (player 0.7.6). */
+    category?: string | null;
     scope: "global" | "panel";
     defaults: string[];
     current: string[];

@@ -457,6 +457,14 @@ export interface FakeCommand {
      * @since 1.5.11
      */
     reason?: string | null;
+    /**
+     * The category as shown (`CommandOptions.category`, translated with
+     * the plugin's catalog), `null` without one. Not enumerable, like
+     * `reason`.
+     *
+     * @since 1.6.4
+     */
+    category?: string | null;
   };
   /**
    * The conditions the plugin sent for `enabled` and `checked`
@@ -844,7 +852,13 @@ function checkDeclaration(
   id: string,
   title: string,
   path: readonly string[],
-  declaration: { group?: unknown; order?: unknown; bindings?: unknown },
+  declaration: {
+    group?: unknown;
+    order?: unknown;
+    bindings?: unknown;
+    home?: unknown;
+  },
+  category: string | null = null,
 ) {
   commandText(id, "localId", COMMAND_LIMITS.idBytes);
   if (!/^[A-Za-z0-9._-]+$/.test(id))
@@ -862,6 +876,19 @@ function checkDeclaration(
   if (typeof group !== "string")
     throw new HostError("invalid", "group is a string");
   commandText(group, "group", COMMAND_LIMITS.groupBytes);
+  // Player 0.7.6: the category and the home command's local id.
+  if (category !== null)
+    commandText(category, "category", COMMAND_LIMITS.categoryBytes);
+  const home = declaration.home;
+  if (home !== undefined && home !== null) {
+    if (typeof home !== "string")
+      throw new HostError("invalid", "home is a command id");
+    commandText(home, "home", COMMAND_LIMITS.idBytes);
+    if (!/^[A-Za-z0-9._-]+$/.test(home))
+      throw commandInvalid(
+        "home permits ASCII letters, digits, '.', '_' and '-'",
+      );
+  }
   const order = declaration.order ?? 0;
   if (
     !Number.isInteger(order) ||
@@ -1197,6 +1224,7 @@ export class TestHost implements Transport {
     path: readonly (string | TextJson)[],
     title: string | TextJson,
     reason: TextValue | null = null,
+    category: string | TextJson | null = null,
   ) {
     const keys = menuKeys(
       path.map((segment) =>
@@ -1216,6 +1244,10 @@ export class TestHost implements Transport {
     // Not enumerable: `deepEqual(display, { title, path })` keeps passing.
     Object.defineProperty(display, "reason", {
       value: reason === null ? null : this.translate(reason),
+      enumerable: false,
+    });
+    Object.defineProperty(display, "category", {
+      value: category === null ? null : this.translate(category as TextValue),
       enumerable: false,
     });
     return display;
@@ -4202,6 +4234,8 @@ export class TestHost implements Transport {
                 ),
               )
             : null,
+          // Player 0.7.6: the category as shown, `null` without one.
+          category: shown?.display.category ?? null,
           scope: scope as "panel" | "global",
           defaults: declaration.bindings,
           current,
@@ -5112,7 +5146,12 @@ export class TestHost implements Transport {
       if (menu !== null && keys.length < 2)
         throw commandInvalid(`menu id @${menu} needs an item after it`);
       const path = menuKeys(keys);
-      checkDeclaration(id, title, path, declaration);
+      // Player 0.7.6: the category, keyed like a menu text.
+      const category =
+        declaration.category === undefined || declaration.category === null
+          ? null
+          : menuTextKey(declaration.category);
+      checkDeclaration(id, title, path, declaration, category);
       if (button !== undefined && button !== null) {
         if (path.length === 0)
           throw commandInvalid(
@@ -5194,6 +5233,7 @@ export class TestHost implements Transport {
             declaration.path ?? [],
             declaration.title,
             this.state.reason,
+            declaration.category ?? null,
           );
         },
         ...(p.when ? { when: p.when as CommandWhen } : {}),
