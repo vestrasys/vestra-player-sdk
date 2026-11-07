@@ -427,6 +427,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
+| Command Palette (not in the menu) | `Ctrl+Shift+P` | `host/palette` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
 | Add Files… (not in the menu) | `Ctrl+I` (panel focus) | `vestra.playlist/playlist.list-add` |
@@ -537,7 +538,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), and **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key) and **Command Palette** (`host/palette`, player 0.7.6: `Ctrl+Shift+P`, ⌘⇧P on macOS, outside the menu; see [The command palette and categories](../explanation/commands.md#the-command-palette-and-categories)); their keys are in [Built-in commands](#built-in-commands).
 
 ## Keys the system takes first
 

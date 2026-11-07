@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.4
+
+**Who must change: nobody.** Additions only: two optional `CommandOptions` fields, one optional `BindingInfo` field, a `COMMAND_LIMITS` entry and a new built-in command. `apiVersion` stays `vestra/1`, no new capability. A plugin that does not set the new fields sends exactly what it sent before; one that sets them needs player 0.7.6 (`"minPlayerVersion": "0.7.6"`), because older players refuse a declaration with fields they do not know (`invalid`).
+
+- **`CommandOptions.category`** (player 0.7.6): what a command is about, in a word or two (`"Subtitle Sync"`), English source text translated like the title, or a `Text`. The player's new command palette (Ctrl+Shift+P, ⌘⇧P on macOS) and lists of commands name a command `Category: Title`, so a title such as "Earlier 0.5 s" or "Off" still says what it changes outside its menu. Without one the player uses the menu path above the item, then the plugin's name. 1–80 bytes (`COMMAND_LIMITS.categoryBytes`), checked like the other command texts. See [The command palette and categories](docs/explanation/commands.md#the-command-palette-and-categories).
+- **`CommandOptions.home`** (player 0.7.6): the local id of the plugin's command that opens the window or panel where this command's control lives; the palette shows that place. Checked like a command id.
+- **`BindingInfo.category`** (player 0.7.6): the shown category from `bindings.list`, `null` without one, for a keyboard shortcuts page that names commands like the palette.
+- **`BUILTIN_COMMANDS`** lists the player's **Command Palette** (`host/palette`, `Ctrl+Shift+P`, outside the menu). From player 0.7.6 a plugin that declares `Ctrl+Shift+P` as a default key loses it to this command (the player's own commands win conflicts); no built-in plugin declares it.
+- `TestHost` checks `category` and `home` as the player does, shows the translated category in `FakeCommand.display.category` (not enumerable, like `reason`) and in its `bindings.list` entries.
+
 ## 1.6.3
 
 **Who must change: nobody.** Documentation only: no change to the TypeScript API, the wire or `TestHost`, `apiVersion` stays `vestra/1`, no new capability, no player version needed.
