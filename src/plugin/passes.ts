@@ -6,6 +6,7 @@
  * (`scripts/check-layers.mjs`).
  */
 import type { Connection, Why } from "./connection.ts";
+import { failure } from "./errors.ts";
 import type { Disposable } from "./types.ts";
 
 /**
@@ -64,6 +65,18 @@ function merge(into: Deps, from: Deps) {
 export const SAFETY_PASS_MS = 1000;
 
 /**
+ * The most passes in a row that a pass itself asks for (something it
+ * evaluated changed what it reads, `plugin.state` written in a `bind`
+ * function). The next one is dropped and reported once: without it such a
+ * plugin would spin in microtasks and never yield. It counts passes, not
+ * loops: a legitimate chain deeper than this (101 bindings, each writing a
+ * `plugin.state` field the next one reads) is cut the same way: the
+ * readers of the dropped pass's changes run again only in the next full
+ * pass (after a handler, `update()`).
+ */
+export const MAX_CHAINED_PASSES = 100;
+
+/**
  * Read-only counters of the update passes, for the SDK's own
  * characterisation tests and benchmark (`test/golden-traces.test.ts`,
  * `scripts/bench.mjs`): how many passes ran, how many were full, how many
@@ -88,12 +101,30 @@ export interface PassCounts {
   safetyPasses: number;
 }
 
+/**
+ * One `Passes.bind` registration as its owner holds it: dispose it, or ask
+ * for it alone to be evaluated again ({@link BindingHandle.invalidate}).
+ */
+export interface BindingHandle extends Disposable {
+  /**
+   * Evaluate this binding in the next pass even if nothing it read
+   * changed (a precise pass, not a full one): its owner changed something
+   * the binding reads that no state copy tracks (`Command.set`).
+   */
+  invalidate(): void;
+}
+
 /** The update pass scheduler of one plugin (`Runtime` delegates to it). */
 export class Passes {
   /** The plugin's connection: holds the events a binding reads. */
   readonly #connection: Connection;
-  /** Each binding with the events whose state it read last time (held). */
-  readonly #bindings = new Map<() => void, Binding>();
+  /**
+   * Each binding with the events whose state it read last time (held), in
+   * the order of their slots (`slot`): the order they are evaluated in.
+   */
+  #bindings = new Map<() => void, Binding>();
+  /** The last slot handed out (`slot`). */
+  #slots = 0;
   /** The events read by the binding being evaluated, with who read them. */
   #reads: Map<string, Why> | undefined;
   /** Who reads now (a command's field and where it was added). */
@@ -103,6 +134,8 @@ export class Passes {
   #full = false;
   /** State copy changes since the last pass (a precise pass, unless `#full`). */
   #pending = new Map<string, Set<string>>();
+  /** Bindings their owner asked to evaluate in the next pass (`BindingHandle.invalidate`). */
+  readonly #dirty = new Set<Binding>();
   /** The change the running precise pass is for; `undefined` in a full pass. */
   #pass: Change | undefined;
   /** The state copy fields read by what is being evaluated now. */
@@ -118,6 +151,17 @@ export class Passes {
   #skipped = false;
   /** The plugin was disposed: no safety pass is armed any more. */
   #stopped = false;
+  /** A pass is evaluating bindings now. */
+  #running = false;
+  /** The scheduled pass was asked for while a pass ran. */
+  #nested = false;
+  /** Passes in a row that the pass before asked for (`MAX_CHAINED_PASSES`). */
+  #chain = 0;
+  /** The runaway was reported (once per plugin). */
+  #reportedChain = false;
+  /** Where a runaway goes: the plugin's error handlers (`createPlugin`). */
+  report: (error: unknown) => void = (error) =>
+    console.error(`[${this.#connection.manifest.id}]`, error);
   /** Pass counters, read by the SDK's own tests and benchmark ({@link PassCounts}). */
   readonly counts: PassCounts = {
     passes: 0,
@@ -130,19 +174,46 @@ export class Passes {
   constructor(connection: Connection) {
     this.#connection = connection;
   }
-  bind(evaluate: () => void): Disposable {
+  /**
+   * Register a binding: `evaluate` runs in a full pass now and in every
+   * pass that concerns it. Only what calls this takes part in the passes:
+   * a view on its first `bind()`, a command with a function field, a
+   * sequence provider (SDK 1.7.0; before, every view and command).
+   */
+  bind(evaluate: () => void, slot = this.slot()): BindingHandle {
     const held = new Map<string, Disposable>();
-    const binding: Binding = { held, deps: new Map() };
+    const binding: Binding = { held, deps: new Map(), slot };
+    const last = [...this.#bindings.values()].at(-1);
     this.#bindings.set(evaluate, binding);
+    // A slot reserved earlier (a view made before it was bound): evaluated
+    // where it was made, as when every view joined the passes when made.
+    if (last && last.slot > slot)
+      this.#bindings = new Map(
+        [...this.#bindings].sort((a, b) => a[1].slot - b[1].slot),
+      );
     this.invalidate();
     return {
+      invalidate: () => {
+        if (this.#bindings.get(evaluate) !== binding) return;
+        this.#dirty.add(binding);
+        this.#schedule();
+      },
       dispose: async () => {
         if (this.#bindings.get(evaluate) !== binding) return;
         this.#bindings.delete(evaluate);
+        this.#dirty.delete(binding);
         for (const hold of held.values()) await hold.dispose();
         held.clear();
       },
     };
+  }
+  /**
+   * A place in the evaluation order, for a binding made later (`bind`): a
+   * view or a command reserves one when it is made, so it is evaluated in
+   * the order of making whenever it joins.
+   */
+  slot(): number {
+    return ++this.#slots;
   }
   /**
    * A service's state for `event` is read: a binding evaluated now depends
@@ -311,8 +382,17 @@ export class Passes {
     this.#schedule();
   }
   #schedule() {
+    // Nothing takes part in the passes (a plugin of handlers, `set()` and
+    // constant commands only): no pass at all. The first `bind` asks for
+    // a full pass anyway.
+    if (this.#bindings.size === 0) {
+      this.#full = false;
+      this.#pending.clear();
+      return;
+    }
     if (this.#scheduled) return;
     this.#scheduled = true;
+    this.#nested = this.#running;
     queueMicrotask(() => this.#run());
   }
   /**
@@ -322,10 +402,32 @@ export class Passes {
    */
   #run() {
     this.#scheduled = false;
+    this.#chain = this.#nested ? this.#chain + 1 : 0;
+    this.#nested = false;
+    if (this.#chain >= MAX_CHAINED_PASSES) {
+      // A loop: each pass changed what it reads. Drop this one; the next
+      // change from outside a pass starts afresh.
+      this.#chain = 0;
+      this.#full = false;
+      this.#pending = new Map();
+      this.#dirty.clear();
+      if (!this.#reportedChain) {
+        this.#reportedChain = true;
+        this.report(
+          failure(
+            "limit",
+            `${MAX_CHAINED_PASSES} update passes in a row each changed what they read (a bind function or a command's state function that writes plugin.state it reads); the next was dropped`,
+          ),
+        );
+      }
+      return;
+    }
     const full = this.#full;
     const change: Change = this.#pending;
+    const dirty = new Set(this.#dirty);
     this.#full = false;
     this.#pending = new Map();
+    this.#dirty.clear();
     this.counts.passes++;
     if (full) this.counts.fullPasses++;
     if (full) {
@@ -333,13 +435,15 @@ export class Passes {
       this.#safety = undefined;
     }
     this.#skipped = false;
+    this.#running = true;
     for (const [evaluate, binding] of [...this.#bindings]) {
       if (this.#bindings.get(evaluate) !== binding) continue;
-      if (!full && !affected(binding.deps, change)) {
+      if (!full && !dirty.has(binding) && !affected(binding.deps, change)) {
         this.#skipped = true;
         continue;
       }
-      this.#pass = full ? undefined : change;
+      // A binding its owner invalidated is evaluated whole (every part).
+      this.#pass = full || dirty.has(binding) ? undefined : change;
       try {
         this.#evaluate(evaluate, binding);
       } catch (error) {
@@ -351,6 +455,7 @@ export class Passes {
         this.#pass = undefined;
       }
     }
+    this.#running = false;
     if (this.#skipped && !this.#safety && !this.#stopped) {
       this.#safety = setTimeout(() => {
         this.#safety = undefined;
@@ -374,6 +479,8 @@ interface Binding {
   held: Map<string, Disposable>;
   /** The state copy fields it read last time. */
   deps: Deps;
+  /** Its place in the evaluation order (`Passes.slot`). */
+  slot: number;
 }
 
 /** Who reads a service's state in a binding (`Passes.reader`). */

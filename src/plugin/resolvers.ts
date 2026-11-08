@@ -4,9 +4,8 @@
  */
 import { failure, quiet } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
-import { playerOf } from "./player.ts";
+import { resolvedPlayerStream } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
-import { resolvedStream } from "./stream.ts";
 import { windowOf } from "./window.ts";
 import type {
   FileResolverOptions,
@@ -131,7 +130,7 @@ export const resolvers = (scope: ScopeImpl): Resolvers => ({
                 "invalid",
                 'a file resolver returns { kind: "stream", width, height, frame }',
               );
-            return resolvedStream(scope, playerOf(runtime), stream, signal);
+            return resolvedPlayerStream(scope, stream, signal);
           },
         )
       : runtime.host.sourceResolvers.register(

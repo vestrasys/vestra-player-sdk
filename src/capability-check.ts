@@ -15,20 +15,40 @@
  * (their object comes from a call that is checked) and options that need
  * more (a `processed` capture, a file resolver).
  *
+ * Members whose capability depends on an argument (SDK 1.7.0:
+ * `plugin.player.on` and `plugin.wire.on` by event name,
+ * `plugin.wire.request` by method name, `ARGUMENT_APIS`) are checked by
+ * that argument when its type fixes it to one string (a literal, a
+ * constant); otherwise (a computed name, a union of several, the member
+ * taken by destructuring or as a value) the call is reported as unchecked
+ * ({@link checkCapabilities}), and the player still checks it.
+ *
  * The TypeScript module is passed in, never imported: the CLI uses the
  * SDK's own compiler, the editor its TypeScript server's.
  *
  * @internal
  */
 import type TS from "typescript";
-import { memberNeeds, RULES } from "./capability-rules.ts";
-import type { CapabilityRules } from "./capability-rules.ts";
+import { ARGUMENT_APIS } from "./api-requests.ts";
+import {
+  argumentRequests,
+  memberNeeds,
+  requestsNeed,
+  RULES,
+} from "./capability-rules.ts";
+import type { CapabilityRules, MemberNeed } from "./capability-rules.ts";
 
 /** @internal The module plugins import the API types from. */
 export const SDK_MODULE = "@vestra-player/sdk";
 
 /** @internal The diagnostic code the editor shows (and its quick fix keys on). */
 export const CAPABILITY_DIAGNOSTIC = 95_301;
+
+/**
+ * @internal The warning code the editor shows for a call whose capability
+ * the checker cannot read (`plugin.wire.request` with a computed method).
+ */
+export const CAPABILITY_UNCHECKED = 95_302;
 
 /** @internal One use of a member whose capability is not declared. */
 export interface CapabilityFinding {
@@ -64,6 +84,7 @@ export interface CheckOptions {
 
 type Members = Map<TS.Declaration, string>;
 const memberCache = new WeakMap<TS.Program, Members>();
+const argumentCache = new WeakMap<TS.Program, Members>();
 
 /**
  * The module `@vestra-player/sdk` as the program resolved it: from the
@@ -95,6 +116,40 @@ function sdkModule(
   return undefined;
 }
 
+/** The SDK's declarations of the members named (`Interface.member`). */
+function resolveMembers(
+  ts: typeof TS,
+  program: TS.Program,
+  apis: Iterable<string>,
+): Members {
+  const members: Members = new Map();
+  const checker = program.getTypeChecker();
+  const module = sdkModule(ts, program, checker);
+  if (!module) return members;
+  const exports = new Map<string, TS.Symbol>();
+  for (const symbol of checker.getExportsOfModule(module))
+    exports.set(
+      symbol.name,
+      symbol.flags & ts.SymbolFlags.Alias
+        ? checker.getAliasedSymbol(symbol)
+        : symbol,
+    );
+  for (const api of apis) {
+    const [head, ...path] = api.split(".");
+    const root = exports.get(head!);
+    if (!root || !path.length) continue;
+    let type: TS.Type | undefined = checker.getDeclaredTypeOfSymbol(root);
+    let property: TS.Symbol | undefined;
+    for (const name of path) {
+      property = type?.getProperty(name);
+      type = property && checker.getTypeOfSymbol(property);
+    }
+    for (const declaration of property?.declarations ?? [])
+      if (!members.has(declaration)) members.set(declaration, api);
+  }
+  return members;
+}
+
 /** The SDK's declarations of the members in the table. */
 function sdkMembers(
   ts: typeof TS,
@@ -103,34 +158,86 @@ function sdkMembers(
 ): Members {
   const cached = memberCache.get(program);
   if (cached && rules === RULES) return cached;
-  const members: Members = new Map();
-  const checker = program.getTypeChecker();
-  const module = sdkModule(ts, program, checker);
-  if (module) {
-    const exports = new Map<string, TS.Symbol>();
-    for (const symbol of checker.getExportsOfModule(module))
-      exports.set(
-        symbol.name,
-        symbol.flags & ts.SymbolFlags.Alias
-          ? checker.getAliasedSymbol(symbol)
-          : symbol,
-      );
-    for (const api of Object.keys(rules.apis)) {
-      const [head, ...path] = api.split(".");
-      const root = exports.get(head!);
-      if (!root || !path.length) continue;
-      let type: TS.Type | undefined = checker.getDeclaredTypeOfSymbol(root);
-      let property: TS.Symbol | undefined;
-      for (const name of path) {
-        property = type?.getProperty(name);
-        type = property && checker.getTypeOfSymbol(property);
-      }
-      for (const declaration of property?.declarations ?? [])
-        if (!members.has(declaration)) members.set(declaration, api);
-    }
-  }
+  const members = resolveMembers(ts, program, Object.keys(rules.apis));
   if (rules === RULES) memberCache.set(program, members);
   return members;
+}
+
+/** The SDK's declarations of the members of `ARGUMENT_APIS`. */
+function argumentMembers(ts: typeof TS, program: TS.Program): Members {
+  let members = argumentCache.get(program);
+  if (!members) {
+    members = resolveMembers(ts, program, Object.keys(ARGUMENT_APIS));
+    argumentCache.set(program, members);
+  }
+  return members;
+}
+
+/**
+ * @internal A call whose capability the checker cannot tell (SDK 1.7.0): a
+ * member of `ARGUMENT_APIS` (`plugin.wire.request`, `player.on`,
+ * `wire.on`) whose name argument is not a string the types fix, or a method
+ * the player's table does not know. The player still checks it at run time.
+ */
+export interface UncheckedCall {
+  readonly file: string;
+  /** 1-based line and column of the member's name. */
+  readonly line: number;
+  readonly column: number;
+  /** Offset and length of the member's name in the file. */
+  readonly start: number;
+  readonly length: number;
+  /** The member, `Interface.member` (`Wire.request`). */
+  readonly api: string;
+  /** One line for people. */
+  readonly message: string;
+}
+
+/**
+ * The strings an expression's type fixes: a string literal, a constant of
+ * one, or a union of them (the caller takes one only); `undefined` when
+ * the type allows any other.
+ */
+function literalStrings(
+  ts: typeof TS,
+  checker: TS.TypeChecker,
+  node: TS.Expression | undefined,
+): string[] | undefined {
+  if (!node) return undefined;
+  if (ts.isStringLiteralLike(node)) return [node.text];
+  const type = checker.getTypeAtLocation(node);
+  const parts = type.isUnion() ? type.types : [type];
+  const values: string[] = [];
+  for (const part of parts) {
+    if (!part.isStringLiteral()) return undefined;
+    values.push(part.value);
+  }
+  return values.length ? values : undefined;
+}
+
+/**
+ * The string fields of a request's parameters that the player's rules may
+ * read (`event`, `stage`): those of an object literal whose value is one
+ * string the types fix.
+ */
+function stringFields(
+  ts: typeof TS,
+  checker: TS.TypeChecker,
+  node: TS.Expression | undefined,
+): Record<string, string> | undefined {
+  if (!node || !ts.isObjectLiteralExpression(node)) return undefined;
+  const fields: Record<string, string> = {};
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const name = property.name;
+    const key =
+      ts.isIdentifier(name) || ts.isStringLiteralLike(name)
+        ? name.text
+        : undefined;
+    const values = literalStrings(ts, checker, property.initializer);
+    if (key !== undefined && values?.length === 1) fields[key] = values[0]!;
+  }
+  return Object.keys(fields).length ? fields : undefined;
 }
 
 /**
@@ -144,58 +251,167 @@ export function findUndeclaredCapabilities(
   program: TS.Program,
   options: CheckOptions,
 ): CapabilityFinding[] {
+  return checkCapabilities(ts, program, options).findings;
+}
+
+/**
+ * The capability check (SDK 1.7.0): the uses of members whose capability
+ * the manifest does not declare (`findings`, as
+ * {@link findUndeclaredCapabilities}), and the calls whose capability
+ * depends on a name the checker cannot read (`unchecked`).
+ *
+ * A call of `plugin.player.on` or `plugin.wire.on` is checked by its event
+ * name, one of `plugin.wire.request` by its method name and the string
+ * fields of its parameters (`{ event: "…" }`), when the types fix them.
+ *
+ * @internal
+ */
+export function checkCapabilities(
+  ts: typeof TS,
+  program: TS.Program,
+  options: CheckOptions,
+): { findings: CapabilityFinding[]; unchecked: UncheckedCall[] } {
   const rules = options.rules ?? RULES;
+  const findings: CapabilityFinding[] = [];
+  const unchecked: UncheckedCall[] = [];
   const files = options.files
     .map((file) => program.getSourceFile(file))
     .filter((file): file is TS.SourceFile => !!file);
-  if (!files.length) return [];
+  if (!files.length) return { findings, unchecked };
   const members = sdkMembers(ts, program, rules);
-  if (!members.size) return [];
+  const calls = argumentMembers(ts, program);
+  if (!members.size && !calls.size) return { findings, unchecked };
   const checker = program.getTypeChecker();
-  const findings: CapabilityFinding[] = [];
-  const memberOf = (symbol: TS.Symbol | undefined) => {
+  const apiOf = (table: Members, symbol: TS.Symbol | undefined) => {
     for (const declaration of symbol?.declarations ?? []) {
-      const api = members.get(declaration);
+      const api = table.get(declaration);
       if (api) return api;
     }
     return undefined;
   };
   for (const file of files) {
-    const report = (name: TS.Node, symbol: TS.Symbol | undefined) => {
-      const api = memberOf(symbol);
-      if (!api) return;
+    const position = (name: TS.Node) => {
       const start = name.getStart(file);
       const { line, character } = file.getLineAndCharacterOfPosition(start);
-      for (const need of memberNeeds(api, options.capabilities, rules) ?? []) {
+      return {
+        file: file.fileName,
+        line: line + 1,
+        column: character + 1,
+        start,
+        length: name.getEnd() - start,
+      };
+    };
+    const missing = (
+      name: TS.Node,
+      api: string,
+      needs: readonly MemberNeed[],
+      shown = api,
+    ) => {
+      for (const need of needs) {
         if (options.capabilities.includes(need.capability)) continue;
         findings.push({
-          file: file.fileName,
-          line: line + 1,
-          column: character + 1,
-          start,
-          length: name.getEnd() - start,
+          ...position(name),
           api,
           capability: need.capability,
           method: need.method,
           ...(need.requiredBy ? { requiredBy: need.requiredBy } : {}),
           message: need.requiredBy
-            ? `${api} needs the capability "${need.capability}" (required by "${need.requiredBy}"), which manifest.json does not declare`
-            : `${api} needs the capability "${need.capability}", which manifest.json does not declare`,
+            ? `${shown} needs the capability "${need.capability}" (required by "${need.requiredBy}"), which manifest.json does not declare`
+            : `${shown} needs the capability "${need.capability}", which manifest.json does not declare`,
         });
       }
     };
+    const report = (name: TS.Node, symbol: TS.Symbol | undefined) => {
+      const api = apiOf(members, symbol);
+      if (!api) return;
+      missing(name, api, memberNeeds(api, options.capabilities, rules) ?? []);
+    };
+    /** A call of a member of `ARGUMENT_APIS`, by its name argument. */
+    const call = (node: TS.CallExpression) => {
+      const callee = node.expression;
+      const name = ts.isPropertyAccessExpression(callee)
+        ? callee.name
+        : ts.isElementAccessExpression(callee) &&
+            ts.isStringLiteralLike(callee.argumentExpression)
+          ? callee.argumentExpression
+          : undefined;
+      if (!name) return;
+      const api = apiOf(calls, checker.getSymbolAtLocation(name));
+      if (!api) return;
+      const kind = ARGUMENT_APIS[api]!;
+      const values = literalStrings(ts, checker, node.arguments[0]);
+      // One name, or not checked: a union could be any of its names at run
+      // time, and none of them is known to be used.
+      if (values?.length !== 1) {
+        unchecked.push({
+          ...position(name),
+          api,
+          message: `${api} with ${kind === "event" ? "an event" : "a method"} name that is not one literal: its capability is not checked here (the player checks it)`,
+        });
+        return;
+      }
+      const params =
+        kind === "method"
+          ? stringFields(ts, checker, node.arguments[1])
+          : undefined;
+      for (const value of values) {
+        const requests = argumentRequests(kind, value, params, rules);
+        const shown = `${api}(${JSON.stringify(value)})`;
+        if (!requests) {
+          unchecked.push({
+            ...position(name),
+            api,
+            message: `${shown}: the player's capability table has no such method; not checked`,
+          });
+          continue;
+        }
+        missing(
+          name,
+          api,
+          requestsNeed(requests, options.capabilities, rules),
+          shown,
+        );
+      }
+    };
+    /**
+     * A member of `ARGUMENT_APIS` taken other than by a direct call (`const
+     * { request } = plugin.wire`, `const on = plugin.player.on`): its calls
+     * cannot be followed, so it is unchecked where it is taken.
+     */
+    const taken = (name: TS.Node, symbol: TS.Symbol | undefined) => {
+      const api = apiOf(calls, symbol);
+      if (!api) return;
+      const access = name.parent;
+      const parent = access?.parent;
+      if (
+        access &&
+        (ts.isPropertyAccessExpression(access) ||
+          ts.isElementAccessExpression(access)) &&
+        parent &&
+        ts.isCallExpression(parent) &&
+        parent.expression === access
+      )
+        return; // a direct call: `call` checks it
+      unchecked.push({
+        ...position(name),
+        api,
+        message: `${api} taken other than by a direct call: the calls of it are not checked here (the player checks them)`,
+      });
+    };
     const visit = (node: TS.Node): void => {
-      if (ts.isPropertyAccessExpression(node))
-        report(node.name, checker.getSymbolAtLocation(node.name));
-      else if (
+      if (ts.isCallExpression(node)) call(node);
+      if (ts.isPropertyAccessExpression(node)) {
+        const symbol = checker.getSymbolAtLocation(node.name);
+        report(node.name, symbol);
+        taken(node.name, symbol);
+      } else if (
         ts.isElementAccessExpression(node) &&
         ts.isStringLiteralLike(node.argumentExpression)
-      )
-        report(
-          node.argumentExpression,
-          checker.getSymbolAtLocation(node.argumentExpression),
-        );
-      else if (
+      ) {
+        const symbol = checker.getSymbolAtLocation(node.argumentExpression);
+        report(node.argumentExpression, symbol);
+        taken(node.argumentExpression, symbol);
+      } else if (
         ts.isBindingElement(node) &&
         ts.isObjectBindingPattern(node.parent)
       ) {
@@ -204,17 +420,19 @@ export function findUndeclaredCapabilities(
           ts.isIdentifier(name) || ts.isStringLiteralLike(name)
             ? name.text
             : undefined;
-        if (text !== undefined)
-          report(
-            name,
-            checker.getTypeAtLocation(node.parent).getProperty(text),
-          );
+        if (text !== undefined) {
+          const symbol = checker
+            .getTypeAtLocation(node.parent)
+            .getProperty(text);
+          report(name, symbol);
+          taken(name, symbol);
+        }
       }
       ts.forEachChild(node, visit);
     };
     visit(file);
   }
-  return findings;
+  return { findings, unchecked };
 }
 
 /**

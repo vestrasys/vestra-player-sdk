@@ -10,6 +10,7 @@ import type { Plugin, Scope } from "./base.ts";
 import type { System } from "./services.ts";
 import type { Panel, Window } from "./ui-layout.ts";
 import type { SettingsPage } from "./ui-shell.ts";
+import type { WireView } from "./plugin-wire.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- windows and panels
@@ -642,7 +643,16 @@ export interface View {
    * Do not `set` a property that a {@link View.bind} function also returns:
    * the next update pass replaces the set value with the bound one.
    *
-   * Never throws. A write that fails is retried with back-off and reported
+   * On a view nothing was bound to, `set` alone writes (SDK 1.7.0): each
+   * value is sent whole, a large list in parts, one write in flight per
+   * view; the SDK neither compares nor turns lists into row patches, and
+   * the view takes no part in update passes. From the view's first
+   * {@link View.bind} on, `set` values go the bound way: a list that
+   * differs from the one sent is sent as a row patch where one applies.
+   *
+   * A property the plugin writes directly ({@link WireView.write}, SDK
+   * 1.7.0) cannot be `set`: one track per property. Otherwise it never
+   * throws. A write that fails is retried with back-off and reported
    * to {@link Scope.onError} (the first failure of a run of failures; the
    * message names the property). A value over the limits of
    * {@link PropValue} fails with `limit`. As an initial property (written
@@ -654,6 +664,10 @@ export interface View {
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
    * @param props - Properties by name; see {@link Props}.
+   *
+   * @throws `invalid` (throws) A property of `props` is written directly
+   *   with {@link WireView.write} ("property `rows` is written directly;
+   *   bind it or write it, not both"); nothing of `props` is kept.
    *
    * @example Put a drop-down back when the user picks an entry the plugin refuses
    * Choosing "Custom" snaps the drop-down back to the last real preset.
@@ -677,9 +691,11 @@ export interface View {
    *
    * @remarks
    * The SDK calls `props` in every update pass (and right after `bind`) and
-   * sends the values that differ from the ones it sent last. After a change
-   * of the player state alone it calls `props` only if it read a field of
-   * `plugin.player.state` that changed (SDK 1.5.45); a full pass follows
+   * sends the values that differ from the ones it sent last; a view takes
+   * part in the update passes from its first `bind` on (SDK 1.7.0). After a
+   * change of the player state alone it calls `props` only if it read a
+   * field of `plugin.player.state` (or of a {@link Scope.state} object) that
+   * changed (SDK 1.5.45); a full pass follows
    * after each handler, on {@link Scope.update} and at least once a second
    * while the player state keeps changing. Because an
    * unchanged value is not sent again, text the user typed into an `in-out`
@@ -693,6 +709,9 @@ export interface View {
    * Never throws. Writes that fail are not repeated until the value
    * changes, and are reported to {@link Scope.onError} like a failed
    * {@link View.set} (a value over the limits of {@link PropValue}: `limit`).
+   * A property the plugin writes directly ({@link WireView.write}, SDK
+   * 1.7.0) is left out of what the function returns, reported once to
+   * `onError` with `invalid`: one track per property.
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *

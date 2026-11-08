@@ -46,6 +46,12 @@ export interface CommandState {
  * `plugin.player.state` that changed (see {@link Scope.update}); only
  * changes are sent to the player.
  *
+ * @remarks
+ * Only a command with at least one function field takes part in the update
+ * passes (SDK 1.7.0): a command whose fields are all values or
+ * `plugin.when` conditions is registered once and evaluated again only
+ * when {@link Command.set} changes it.
+ *
  * @example Mix a computed state with a fixed one
  * The Loop item carries a check mark while a loop is set and is always
  * enabled. A function is evaluated again in every full update pass (after
@@ -682,7 +688,8 @@ export interface CommandOptions {
  * `busy`, `reason`) is bound: functions given to {@link Commands.add} or
  * {@link Command.set} are evaluated again in every full update pass (after
  * a player state change only if they read a changed field of
- * `plugin.player.state`) and only changes reach the player. Its title, path, bindings and button cannot
+ * `plugin.player.state` or {@link Scope.state}) and only changes reach the
+ * player; a command without functions is left out of the passes. Its title, path, bindings and button cannot
  * change in place; dispose the command (or a child {@link Scope}) and add it
  * again. Disposing it, its scope or stopping the plugin removes the menu
  * item, its keys and its bar button.
@@ -715,6 +722,15 @@ export interface Command extends Disposable {
   readonly id: string;
   /**
    * Replace some state fields (values or functions). Last write wins.
+   *
+   * @remarks
+   * Only this command is evaluated again (SDK 1.7.0; before, `set` ran a
+   * full update pass over every binding and command of the plugin). Several
+   * calls within one microtask send one update. A function field makes the
+   * command take part in the update passes from then on. A binding that
+   * reads a plugin variable changed together with `set` outside a handler
+   * the SDK runs (a timer) is not refreshed by it: call {@link Scope.update}
+   * or keep that variable in {@link Scope.state}.
    *
    * @example Show a command as busy while it works
    * The Export item shows as busy with "Exporting…" as its reason while the

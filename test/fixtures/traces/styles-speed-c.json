@@ -1,0 +1,231 @@
+{
+  "scenario": "styles/speed-c",
+  "command": "rate.cycle",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "ui.mount",
+        "params": {
+          "slot": "bottom",
+          "file": "ui/bar.slint",
+          "component": "Bar",
+          "global": "BarBridge",
+          "properties": {}
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate.cycle",
+          "revision": 1,
+          "declaration": {
+            "title": "Cycle Speed",
+            "path": [
+              "Playback",
+              "Cycle Speed"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "C"
+            ],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "1.00×",
+          "seq": 1
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "1.00×",
+          "seq": 2
+        }
+      }
+    ],
+    "changes": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "1.50×",
+          "seq": 3
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "1.50×",
+          "seq": 4
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "1.50×",
+          "seq": 5
+        }
+      }
+    ],
+    "command": [
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 1,
+          "intent": {
+            "kind": "control",
+            "control": {
+              "kind": "rate",
+              "rate": 2
+            },
+            "expected": {
+              "generation": 1,
+              "intentVersion": 1
+            }
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "2.00×",
+          "seq": 6
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate.cycle"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "ui.unmount",
+        "params": {}
+      }
+    ]
+  }
+}

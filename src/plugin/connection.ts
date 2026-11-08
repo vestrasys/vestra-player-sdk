@@ -100,6 +100,27 @@ export function stopReason(value: unknown): StopReason | undefined {
 type Listener = (data: unknown) => void;
 
 /**
+ * How primitives tell the framework above them about plugin-visible state
+ * they changed or read, without importing it (refactor plan §2.1: L1 never
+ * imports the passes). `Runtime` installs the update passes here; on a
+ * bare connection every call does nothing.
+ */
+export interface StateSignals {
+  /** `key`'s `field` (without one: all of it) is read by what is evaluated now. */
+  read(key: string, field?: string): void;
+  /** Fields of `key` changed: what read them is evaluated again. */
+  changed(key: string, fields: Iterable<string>): void;
+  /** Something the plugin sees changed that no key describes: everything is evaluated again. */
+  invalidate(): void;
+}
+
+const SILENT: StateSignals = {
+  read: () => {},
+  changed: () => {},
+  invalidate: () => {},
+};
+
+/**
  * One host event's listeners. `active` counts the plugin's own listeners
  * and holds (an `onChange`, a binding that read the state); the SDK's own
  * state mirrors do not count. The player is told whether anything but a
@@ -147,7 +168,21 @@ export class Connection {
   #warnedEvents = false;
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
+  /**
+   * Command unregistrations in flight, by id: a command registered again
+   * with the id (`commands.add` or `plugin.wire.commands.register`) waits
+   * for its removal, or the player would refuse it with `conflict`.
+   */
+  readonly removals = new Map<string, Promise<void>>();
   readonly services = new Map<string, unknown>();
+  /**
+   * How to read a state copy again, by the event that keeps it current: a
+   * mirror registers itself (`source.state` → the player's), an action that
+   * changed that state elsewhere asks for it (`reread`).
+   */
+  readonly rereads = new Map<string, () => Promise<unknown>>();
+  /** The framework's ears ({@link StateSignals}); silent until `Runtime` sets them. */
+  signals: StateSignals = SILENT;
   /**
    * Set when the player stops the plugin (`PluginInstance.dispose`), before
    * the root scope is disposed: `DisposeInfo` and `plugin.stopReason`.
@@ -210,6 +245,12 @@ export class Connection {
   }
   can(capability: string) {
     return this.manifest.capabilities.includes(capability);
+  }
+  /** Read the state copy kept by `event` again, if one exists; never rejects. */
+  async reread(event: string): Promise<void> {
+    await this.rereads
+      .get(event)?.()
+      .catch(() => {});
   }
   /** Lazily created singletons shared by every scope of this plugin. */
   service<T>(name: string, create: () => T): T {
@@ -438,6 +479,15 @@ export class Connection {
     for (const [event, group] of this.#events)
       if (group.active > 0) result.set(event, allWhys(group));
     return result;
+  }
+  /**
+   * One request by its method name, as given (`plugin.wire.request`, SDK
+   * 1.7.0): nothing added, nothing checked here, the player checks the
+   * capability. Every other part of the SDK uses the typed clients
+   * (`host`); `scripts/check-layers.mjs` keeps it so.
+   */
+  request<T>(method: string, params?: Json): Promise<T> {
+    return this.#transport.request<T>(method, params);
   }
   /** Raw transport events the host pushes without a subscription. */
   raw(event: string, listener: Listener): Disposable {

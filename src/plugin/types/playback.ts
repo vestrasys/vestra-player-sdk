@@ -3,6 +3,14 @@
 import type { Disposable, PluginError } from "./base.ts";
 import type { Bindable } from "./commands.ts";
 import type { Text } from "./ui-locale.ts";
+import type { CommandKeys } from "../../commands.ts";
+import type { SourceState } from "../../source.ts";
+import type {
+  PackageInfo,
+  WindowFacts,
+  WireTimeline,
+  WireUpscalingState,
+} from "../../wire.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
@@ -11,6 +19,7 @@ import type { PluginInfo } from "./packages.ts";
 import type { MediaCapture } from "./snapshots.ts";
 import type { FileResolverOptions, Resolver } from "./sources.ts";
 import type { View } from "./ui-content.ts";
+import type { Scope, WindowState } from "./base.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- timeline
@@ -975,7 +984,13 @@ export interface PlaybackStats {
  * @category Playback
  */
 export interface Player {
-  /** Latest state; always newer than anything delivered before. */
+  /**
+   * Latest state; always newer than anything delivered before.
+   *
+   * With `events` the SDK follows the player's events for this copy from
+   * the plugin's start; without it the copy moves only with the start-up
+   * read and the plugin's own calls (`playback.read`).
+   */
   readonly state: PlayerState;
   /**
    * The state changed (needs `events` for outside changes).
@@ -998,6 +1013,66 @@ export interface Player {
    * @since 1.0.0
    */
   onChange(listener: (state: PlayerState) => void): Disposable;
+  /**
+   * Listen to one event of the player, with its data as the player sent
+   * it: no state copy, no comparison.
+   *
+   * @remarks
+   * `event` is one of the {@link HostEvent} names (`"source.state"`,
+   * `"window.state"`, `"timeline.changed"`…), whatever part of the plugin
+   * API it concerns; `listener` gets a copy of that event's data, typed
+   * {@link EventPayload} (`source.state`: the player's source state, with
+   * `rate`, `paused`, `position`, `stamp`…). Each subscription counts as a
+   * listener of the plugin: the player keeps the plugin running while one
+   * exists (unless the event is one the player wakes a stopped plugin for),
+   * and its log names where the plugin added it
+   * (`a listener added at main.ts:12`). Every name, its payload and its
+   * capability: [Events](../../../docs/reference/events.md).
+   *
+   * Unlike {@link Player.onChange} it does not start the SDK's copy of the
+   * state: `plugin.player.state` is not kept current by it, and the
+   * listener runs for every event, changed or not. It suits pushing
+   * values yourself (`view.set` from the listener) or reading a field the
+   * SDK does not expose. Errors go to {@link Scope.onError}, as for every
+   * handler; unlike the others, no full update pass follows it, so bound
+   * values do not re-evaluate on every event: a write to a
+   * {@link Scope.state} field re-runs only its readers, and
+   * {@link Scope.update} re-runs everything.
+   *
+   * Each event needs a capability: `events` for most, `bindings.manage`
+   * for `bindings.changed`, `commands` for `commands.keys`,
+   * `video.upscaling` for `video.upscaling.changed`, none for
+   * `packages.changed`. Without it the listener never runs (for `events`,
+   * a warning in the log says so). An event an older player does not know
+   * yet (`commands.keys`, `video.upscaling.changed`) is refused with
+   * `unsupported`; added during `activate`, that fails the activation.
+   *
+   * @param event - The event's name.
+   * @param listener - Receives each event's data.
+   * @returns A handle that stops listening; it is disposed with the scope.
+   *
+   * @throws `invalid` (throws) `event` is not a {@link HostEvent} name, or
+   *   `listener` is not a function.
+   *
+   * @capability That of the event: `events`, or `bindings.manage`,
+   * `commands`, `video.upscaling` for the events named above.
+   *
+   * @example Push the speed to a panel as it changes
+   * A bottom panel shows the playback speed. The listener gets each
+   * `source.state` event's data and writes the text with `set`; no update
+   * pass runs and the SDK keeps no copy of the state for this.
+   * ```ts
+   * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
+   * plugin.player.on("source.state", (s) => bar.set({ rate: `${s.rate.toFixed(2)}×` }));
+   * ```
+   *
+   * @see [Three ways to write a plugin](../../../docs/explanation/three-ways.md)
+   * @since 1.7.0
+   */
+  on<E extends HostEvent>(
+    event: E,
+    listener: (data: EventPayload<E>) => void,
+  ): Disposable;
   /**
    * Read the state from the player now (`playback.read`).
    *
@@ -1674,3 +1749,106 @@ export interface Player {
    */
   setAudioDevice(id: string | null): Promise<void>;
 }
+
+// ------------------------------------------------------------------ events
+
+/**
+ * The events a plugin can listen to with {@link Player.on}, by the name
+ * the player gives them.
+ *
+ * @remarks
+ * The same names the SDK subscribes to for its own copies of the player's
+ * state (`plugin.player.state`, `plugin.window.state`,
+ * `plugin.timeline.marks`…). {@link EventPayloads} says what each one
+ * carries. A name outside this list is refused with `invalid`.
+ *
+ * @example Name the event a listener follows
+ * A plugin logs each change of its own key labels. The name completes in
+ * the editor, and the listener's parameter takes the type of that event's
+ * data.
+ * ```ts
+ * const event: HostEvent = "commands.keys";
+ * plugin.player.on(event, (data) => console.log("keys changed", data));
+ * ```
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
+export type HostEvent =
+  | "source.state"
+  | "playback.backend"
+  | "window.state"
+  | "packages.changed"
+  | "bindings.changed"
+  | "commands.keys"
+  | "timeline.changed"
+  | "appearance.changed"
+  | "resolvers.fileTypes"
+  | "video.upscaling.changed";
+
+/**
+ * The data each {@link HostEvent} carries, as the player sends it: the
+ * listener of {@link Player.on} gets a copy.
+ *
+ * @remarks
+ * These are the player's wire shapes, not the SDK's views of them: field
+ * names and units are the player's (`source.state` names the source
+ * generation `stamp.generation`, where {@link PlayerState} says
+ * `sourceId`). They follow the player's protocol and can gain fields with
+ * a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
+export interface EventPayloads {
+  /** The player's source: phase, position, rate, volume, its stamp (what {@link PlayerState} is made from). */
+  "source.state": SourceState;
+  /** A playback backend event: the backend's name for it (`event`) and the source generation it belongs to. */
+  "playback.backend": {
+    /** The source generation it belongs to. */
+    currentSession: number;
+    /** The backend's name for the event. */
+    event: string;
+  };
+  /** The main window: fullscreen, maximized, video area, picture-in-picture (what {@link WindowState} is made from). */
+  "window.state": WindowFacts;
+  /** Every installed plugin, after an install, an uninstall or a change of one (needs no capability). */
+  "packages.changed": PackageInfo[];
+  /** A key binding changed somewhere; read them again with `plugin.bindings.list()`. */
+  "bindings.changed": null;
+  /** The key labels of this plugin's own commands, with the binding table's revision. */
+  "commands.keys": CommandKeys;
+  /** Every timeline mark and range, after any plugin or the player changed one. */
+  "timeline.changed": WireTimeline;
+  /** The palette changed (`theme`), or the interface language the user saved (`language`; the oldest players send no language). */
+  "appearance.changed": {
+    /** The palette now (`ThemeId`; a newer player may name one this SDK does not list). */
+    theme: string;
+    /** The interface language the user saved, `"system"` or a locale (absent from the oldest players). */
+    language?: string;
+  };
+  /** The file extensions the plugins' file resolvers claim now. */
+  "resolvers.fileTypes": {
+    /** The extensions, lower case without the dot. */
+    fileTypes: string[];
+  };
+  /** The AI upscaling state, without this plugin's own `enabled`. */
+  "video.upscaling.changed": Omit<WireUpscalingState, "enabled">;
+}
+
+/**
+ * The data of event `E`, as the listener of {@link Player.on} gets it.
+ *
+ * @example Type a listener kept apart from the call
+ * A function that handles the player's source state is written on its
+ * own and passed to `on` later. `EventPayload` gives its parameter the
+ * type of that event's data.
+ * ```ts
+ * const showRate = (s: EventPayload<"source.state">) => void plugin.osd.show("{}×", [s.rate]);
+ * plugin.player.on("source.state", showRate);
+ * ```
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
+export type EventPayload<E extends HostEvent> = EventPayloads[E];

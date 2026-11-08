@@ -186,6 +186,14 @@ export const GROUPS = [
         why: "Every error code in one generated table, from the PluginError doc comment.",
       },
       {
+        file: "events.md",
+        why: "Every player event a plugin can listen to by name (HostEvent), generated from the types and the capability tables: what styles B and C subscribe to; the API reference has one member per payload, not the table across them.",
+      },
+      {
+        file: "messages.md",
+        why: "Every request method of the player's protocol, generated from the player's capability table and the SDK's clients: what style C sends; too large and too different (protocol, not API) to join Capabilities.",
+      },
+      {
         file: "i18n.md",
         why: "The languages, file formats, template rules, extract/check behaviour, review markers and limits of translations: lookup, split from the translation how-to.",
       },
@@ -204,6 +212,10 @@ export const GROUPS = [
       {
         file: "plugins.md",
         why: "How a plugin runs (process, activate, handles and scopes, the update pass, stopping, data directory, failures): the base every other explanation page builds on.",
+      },
+      {
+        file: "three-ways.md",
+        why: "The three plugin styles (bind, player.on with set, plugin.wire) compared on four scenarios side by side with their call chains: builds on the update pass, but as a section it would push How a plugin runs over its limit.",
       },
       {
         file: "commands.md",
@@ -231,7 +243,7 @@ export const GROUPS = [
       },
       {
         file: "host-and-node.md",
-        why: "How the Rust host starts plugin processes and talks to them (own process or shared runner, wire protocol, capability checks, stop, crash, lazy activation): too large to join How a plugin runs.",
+        why: "How the Rust host starts plugin processes and talks to them (own process or shared runner, wire protocol, the SDK side and its layers with their stability, capability checks, stop, crash, lazy activation): too large to join How a plugin runs.",
       },
     ],
   },

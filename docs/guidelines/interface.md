@@ -85,6 +85,25 @@ Use the layout of [Theme: small adjustment windows](../reference/theme.md#small-
 - **Long lists use `ListView`.** A list whose length the user decides (a playlist, search results, files, messages) goes in a `ListView` from `std-widgets.slint`, with the `for` inside it: it creates only the rows in view, so a list of thousands of rows scrolls as smoothly as one of ten. A `for` in a layout builds every row up front. Keep a bare `for` for a short list of a fixed size, such as a row of buttons. [Example: Panel menu](../examples/panel-menu.md) is a panel list drawn this way.
 - **Commands of a panel go into its right-click menu**, made of the plugin's commands ({@link "@vestra-player/sdk"!Panel.showMenu | panel.showMenu}); see [Menus](menus.md).
 - **The bottom bar is icons only**: no text buttons, no source path, no status text (the source name is in the window title, status is an OSD message).
+- **Give the keys back after a list action.** The player's shortcuts (Space, the arrows…) fire while the video has the focus, or when a key bubbles up unaccepted from a panel; a list with keyboard navigation or a text field keeps the keys it accepts. A click on an empty part of a panel gives the panel the focus (its `focus: "panel"` bindings apply, other keys still bubble up to the player); a click on a button or a row's `TouchArea` does not move it. After the user plays or opens an item from your list (Enter, a double click), and on Esc in the list, call `VestraFocus.release()` from `@vestra/focus.slint` (SDK 1.7.0, player 0.7.6, so set `"minPlayerVersion": "0.7.6"`), as desktop players do. In the main window the video takes the focus; in the floating sidebar window, the window's own key scope; elsewhere it does nothing ([Reference: theme › Focus](../reference/theme.md#focus)).
+
+```slint nocheck
+import { VestraFocus } from "@vestra/focus.slint";
+
+export global ListBridge {
+    callback play(int); // the plugin plays this row
+}
+
+// The list's key handler; `current` is the selected row.
+component ListKeys inherits FocusScope {
+    in property <int> current;
+    key-pressed(event) => {
+        if event.text == Key.Return { ListBridge.play(root.current); VestraFocus.release(); return accept; }
+        if event.text == Key.Escape { VestraFocus.release(); return accept; }
+        reject
+    }
+}
+```
 
 ### Writing a bottom bar
 

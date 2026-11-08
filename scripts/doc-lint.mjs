@@ -32,6 +32,16 @@
  * `CAPABILITY_INFO`, and the tag must name at least one unless it starts
  * with "None" or "That of".
  *
+ * Two more enforced rules (SDK 1.7.0, the three plugin styles):
+ *
+ * - events      every `HostEvent` has a member of `EventPayloads` with a
+ *               summary, and a row in the generated table of
+ *               docs/reference/events.md (what styles B and C subscribe to)
+ * - experimental  every declaration or member marked `@experimental`
+ *               (`plugin.wire` and its types) says in its comment that
+ *               "the wire protocol is not semver; this member changes with
+ *               versions"
+ *
  * The rules above are a report (exit 0). The categories listed in
  * scripts/doc-standard.mjs are enforced; `example-lead` and `stale-refs`
  * are enforced for every `@example` of the API and every Markdown code
@@ -55,6 +65,8 @@ import {
   strictDeclarations,
 } from "./doc-standard.mjs";
 import { typeFile } from "./doc-tables/lib/source.mjs";
+import { hostEvents } from "./doc-tables/events.mjs";
+import { generatedBlocks } from "./doc-tables.mjs";
 import { CAPABILITY_INFO } from "../src/capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -91,11 +103,19 @@ const check = (rule, name, ok) => {
   if (!ok) stats[rule].missing.push(name);
 };
 
-const commentOf = (reflection) =>
-  reflection.comment ??
-  reflection.signatures?.[0]?.comment ??
-  reflection.getSignature?.comment ??
-  reflection.type?.declaration?.signatures?.[0]?.comment;
+const commentOf = (reflection) => {
+  const signature =
+    reflection.signatures?.[0]?.comment ??
+    reflection.getSignature?.comment ??
+    reflection.type?.declaration?.signatures?.[0]?.comment;
+  const own = reflection.comment;
+  // A modifier tag on a method (`@experimental`, `plugin.wire`) gives the
+  // method a comment of its own that holds only the modifier: the text
+  // is the signature's.
+  if (own && signature && !own.summary.length && !own.blockTags.length)
+    return signature;
+  return own ?? signature;
+};
 const hasSummary = (comment) =>
   !!comment && comment.summary.some((part) => part.text.trim() !== "");
 const hasTag = (comment, tag) =>
@@ -555,6 +575,66 @@ const capabilityProblems = [];
   scan(join(root, "src"));
 }
 
+// Every HostEvent is in the event table (docs/reference/events.md).
+const eventProblems = [];
+{
+  let events = [];
+  try {
+    events = hostEvents(); // HostEvent = EventPayloads, each with a summary
+  } catch (error) {
+    eventProblems.push(error.message);
+  }
+  const page = "docs/reference/events.md";
+  const block = generatedBlocks(readFileSync(join(root, page), "utf8")).find(
+    (each) => each.name === "events",
+  );
+  if (!block) eventProblems.push(`${page}: no generated events table`);
+  else
+    for (const { name } of events)
+      if (!block.inner.includes(`| \`${name}\` |`))
+        eventProblems.push(
+          `${page}: HostEvent "${name}" has no row (run npm run docs:tables)`,
+        );
+}
+
+// @experimental declarations and members carry the stability sentence
+// ("the wire protocol is not semver; this member changes with versions",
+// or "this type" for a wire type). TypeDoc cascades the modifier to the
+// children of a marked declaration: those are covered by their parent.
+const STABILITY = /wire protocol[^.]*not semver[^.]*changes with versions/;
+const experimentalProblems = [];
+let experimentalCount = 0;
+{
+  const text = (comment) =>
+    [...comment.summary, ...comment.blockTags.flatMap((tag) => tag.content)]
+      .map((part) => part.text)
+      .join("")
+      .replace(/\s+/g, " ");
+  for (const reflection of Object.values(project.reflections)) {
+    const marked = (each) =>
+      [
+        each?.comment,
+        ...(each?.signatures ?? []).map((signature) => signature.comment),
+      ].filter(Boolean);
+    const comments = marked(reflection);
+    const experimental = (list) =>
+      list.some((comment) => comment.hasModifier("@experimental"));
+    if (!experimental(comments)) continue;
+    // Signatures are read with their method; a field or an inherited
+    // member of a marked declaration is covered by it (cascaded), a method
+    // of its own is not.
+    if (reflection.kindOf(ReflectionKind.SomeSignature)) continue;
+    const own =
+      reflection.kindOf(ReflectionKind.Method) && !reflection.inheritedFrom;
+    if (!own && experimental(marked(reflection.parent))) continue;
+    experimentalCount++;
+    if (!comments.some((comment) => STABILITY.test(text(comment))))
+      experimentalProblems.push(
+        `${reflection.getFullName()}: @experimental without "the wire protocol is not semver; this member changes with versions"`,
+      );
+  }
+}
+
 // Report.
 console.log(
   `Public API: ${declarations} declarations, ${members} members (entry types: ${entryTypes.size})\n`,
@@ -619,6 +699,16 @@ strictFailures += exampleReport.problems.length;
 console.log(`\n@capability tags: ${capabilityProblems.length} problems`);
 for (const text of capabilityProblems) console.log(`::error::${text}`);
 strictFailures += capabilityProblems.length;
+
+console.log(`HostEvent in the event table: ${eventProblems.length} problems`);
+for (const text of eventProblems) console.log(`::error::${text}`);
+strictFailures += eventProblems.length;
+
+console.log(
+  `@experimental (${experimentalCount} declarations and members) with the stability sentence: ${experimentalProblems.length} problems`,
+);
+for (const text of experimentalProblems) console.log(`::error::${text}`);
+strictFailures += experimentalProblems.length;
 
 if (process.argv.includes("--baseline")) {
   console.log("\nEXAMPLE_BASELINE keys of the new problems:");

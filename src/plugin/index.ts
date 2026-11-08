@@ -57,13 +57,22 @@ export async function createPlugin(
     app,
     options,
   );
-  // Player, window and timeline state are synchronous for plugins: read them first.
+  // Player, window and timeline state are synchronous for plugins: read them
+  // first. With `events` the copy of the player's state follows the events
+  // from the start, subscribed before the read, as before 1.7.0: a read in
+  // any later handler is current. Without `events` nothing can be
+  // subscribed, and the copy starts on its first use. Window and timeline
+  // subscribe on their first use.
+  const player = playerOf(runtime);
+  if (runtime.can("events")) void player.start(false);
   await Promise.all([
-    playerOf(runtime).init(),
+    player.init(),
     windowOf(runtime).init(),
     timelineOf(runtime).init(),
   ]);
   const root = new ScopeImpl(runtime);
+  // A runaway of the update passes goes to the plugin's error handlers.
+  runtime.passes.report = (error) => root.report(error);
   // Failures the plugin did not ask about: a property the player could not
   // show when it rebuilt a panel or the Options window (an image removed
   // since), a callback whose arguments it could not convert, a detached

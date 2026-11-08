@@ -4,9 +4,10 @@
  * the plugin only renders frames.
  */
 import { abortError, failure, sleep, toError } from "./errors.ts";
-import type { PlayerService } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { ResolvedProducer } from "../source-resolvers.ts";
+import type { SourceIntent, SourceState, SourceTicket } from "../source.ts";
+import type { Wire } from "../wire.ts";
 import type {
   PluginError,
   ResolvedStream,
@@ -15,9 +16,30 @@ import type {
   StreamStartError,
 } from "./types.ts";
 
-type Socket = Awaited<
-  ReturnType<PlayerService["runtime"]["host"]["producer"]["connect"]>
->;
+/**
+ * The player's source as a stream uses it: submit and close it, read it
+ * again. `player.ts` passes its state copy (`PlayerService`), which follows
+ * the source while a stream exists; this file depends only on this shape,
+ * not on the copy (refactor plan §2.1).
+ */
+export interface StreamSource {
+  readonly runtime: {
+    readonly host: Wire;
+    can(capability: string): boolean;
+  };
+  /** The newest source state seen. */
+  readonly raw: SourceState;
+  /** The same, as the plugin sees it (`error` in the player's words). */
+  readonly state: { readonly error: string | null };
+  refresh(): Promise<unknown>;
+  submit(
+    intent: SourceIntent,
+    options?: { accepted?: (ticket: SourceTicket) => void },
+  ): Promise<SourceTicket>;
+  closeIfCurrent(generation: number): Promise<void>;
+}
+
+type Socket = Awaited<ReturnType<Wire["producer"]["connect"]>>;
 
 /**
  * Frames of audio buffered ahead of the device before rendering pauses
@@ -54,7 +76,7 @@ class StreamHandle implements Stream {
   #stopping: Promise<void> | undefined;
   readonly #listeners = new Set<(error: PluginError | null) => void>();
   readonly #scope: ScopeImpl;
-  readonly #service: PlayerService;
+  readonly #service: StreamSource;
   readonly #producer: number;
   readonly #socket: Socket;
   readonly #generation: number;
@@ -67,7 +89,7 @@ class StreamHandle implements Stream {
   #pumping: Promise<void> = Promise.resolve();
   constructor(
     scope: ScopeImpl,
-    service: PlayerService,
+    service: StreamSource,
     setup: {
       producer: number;
       socket: Socket;
@@ -210,7 +232,7 @@ class StreamHandle implements Stream {
  * words, or `undefined` when the error is not a retirement.
  */
 async function retirement(
-  service: PlayerService,
+  service: StreamSource,
   generation: number,
   error: unknown,
 ): Promise<PluginError | null | undefined> {
@@ -290,7 +312,7 @@ type Prepared = {
  * `check` throws to give up (an abort); the producer is then released.
  */
 async function prepare(
-  host: PlayerService["runtime"]["host"],
+  host: Wire,
   options: Pick<StreamOptions, "width" | "height" | "frame">,
   check: () => void,
 ): Promise<Prepared> {
@@ -368,7 +390,7 @@ const clockOf = (p: Prepared): Clock => ({
  * `check` throws to give up.
  */
 async function activate(
-  host: PlayerService["runtime"]["host"],
+  host: Wire,
   p: Prepared,
   check: () => void,
   selected: (() => boolean) | "selected",
@@ -399,7 +421,7 @@ async function activate(
 
 /** Give a prepared producer up: its source (if still ours), connection, producer. */
 async function abandon(
-  service: PlayerService,
+  service: StreamSource,
   p: Prepared,
   generation: number | undefined,
 ) {
@@ -413,7 +435,7 @@ async function abandon(
 
 const handleOf = (
   scope: ScopeImpl,
-  service: PlayerService,
+  service: StreamSource,
   p: Prepared,
   generation: number,
 ) =>
@@ -429,7 +451,7 @@ const handleOf = (
 
 export async function openStream(
   scope: ScopeImpl,
-  service: PlayerService,
+  service: StreamSource,
   options: StreamOptions,
 ): Promise<Stream> {
   const host = service.runtime.host;
@@ -516,7 +538,7 @@ function startFailure(scope: ScopeImpl, error: unknown): unknown {
  */
 export async function resolvedStream(
   scope: ScopeImpl,
-  service: PlayerService,
+  service: StreamSource,
   stream: ResolvedStream,
   signal: AbortSignal,
 ): Promise<ResolvedProducer> {

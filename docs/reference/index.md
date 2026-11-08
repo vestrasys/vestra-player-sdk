@@ -39,7 +39,7 @@ What differs between macOS and Windows: the clipboard, dialogs, window control, 
 
 ## Theme
 
-The `Theme` tokens with their current values, fonts, the sizes of each surface and the layouts of the player's own windows, the icon names, and the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`.
+The `Theme` tokens with their current values, fonts, the sizes of each surface and the layouts of the player's own windows, the icon names, the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`, and `VestraFocus` of `@vestra/focus.slint`.
 
 [Read the theme reference](theme.md)
 
@@ -54,6 +54,18 @@ The `vestra-plugin` commands and options, what `build` puts into a package, and 
 Every `error.code` the API fails with and what it means, from the `PluginError` table.
 
 [Read the error codes](errors.md)
+
+## Events
+
+Every player event a plugin can listen to by name, with its payload, the SDK members that listen to it, whether it wakes a stopped plugin and the capability it needs.
+
+[Read the events reference](events.md)
+
+## Messages
+
+Every request method of the player's protocol, by capability: its parameters and result, the errors documented for it and the SDK member that sends it. Changes with player versions.
+
+[Read the messages reference](messages.md)
 
 ## Translations
 

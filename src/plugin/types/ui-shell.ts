@@ -405,6 +405,7 @@ export interface Panels {
    *   after 0.4.0): each panel is a tab, labelled `title` (else the plugin's
    *   name), and the player draws a 31px tab strip above the current one
    *   while there are two or more (with one panel, nothing changes).
+   *   Before player 0.7.3 a ninth tab was refused with `conflict`.
    *   Showing, hiding and detaching apply to the whole sidebar. If the
    *   bridge global declares `in property <bool> tabbed`, the player sets
    *   it to `true` while it draws the strip, so a panel with a tab strip of

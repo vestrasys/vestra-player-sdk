@@ -28,10 +28,11 @@ import type { Ui } from "./ui-content.ts";
 import type { Drops, Windows } from "./ui-layout.ts";
 import type { Appearance, I18n } from "./ui-locale.ts";
 import type { Dialogs, Osd, Panels, Settings } from "./ui-shell.ts";
+import type { Wire } from "./plugin-wire.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
-import type { Command } from "./commands.ts";
+import type { Command, CommandOptions } from "./commands.ts";
 import type { PackageCandidate, PluginInfo } from "./packages.ts";
 import type { Conditional, Media, Stream } from "./playback.ts";
 import type {
@@ -41,7 +42,7 @@ import type {
 } from "./services.ts";
 import type { ExportJob, Snapshot } from "./snapshots.ts";
 import type { Resolver } from "./sources.ts";
-import type { PropValue } from "./ui-content.ts";
+import type { PropValue, View } from "./ui-content.ts";
 import type { Panel, Window } from "./ui-layout.ts";
 /* oxlint-enable no-unused-vars */
 
@@ -378,6 +379,16 @@ export interface Scope extends Disposable {
   /** Pages in the player's options window (`ui.settings`). */
   readonly settings: Settings;
   /**
+   * Direct messages to the player: requests by method name, raw events,
+   * direct property writes, bare command registrations (SDK 1.7.0).
+   * Experimental: the wire protocol is not semver; this member changes
+   * with versions. See {@link Wire}.
+   *
+   * @experimental
+   * @since 1.7.0
+   */
+  readonly wire: Wire;
+  /**
    * A child scope; disposing it releases only what was created through it.
    * The child is itself owned by this scope.
    *
@@ -542,6 +553,71 @@ export interface Scope extends Disposable {
    * @since 1.0.0
    */
   update(): void;
+  /**
+   * Plugin-owned state that bound values follow by themselves: reading a
+   * field in a `bind` function or a command's state function records it,
+   * and writing that field re-evaluates exactly those readers.
+   *
+   * @remarks
+   * Returns an object of the same shape as `initial` (a copy of its own
+   * fields; `initial` itself is not tracked). A read inside a
+   * {@link View.bind} function or a {@link CommandOptions} field given as a
+   * function is recorded like a read of `plugin.player.state`; anywhere
+   * else (a handler, an `onChange` listener, a timer) it is a plain read,
+   * and writing there is how a handler updates what is bound. A write of a
+   * field (or a new field, or `delete`) schedules one
+   * update pass for the microtask turn, however many fields change, and that
+   * pass evaluates only the readers of what changed, not every binding and
+   * command as {@link Scope.update} does. Writing a value equal to the
+   * current one (`Object.is`) changes nothing.
+   *
+   * Tracking is one level deep: a field holding an object or array is
+   * compared by identity, so changing something inside it is not seen.
+   * Replace the object instead (`st.list = [...st.list, item]`). Do not
+   * write a field from a `bind` function that reads it: each write runs the
+   * function again; the SDK stops such a loop after 100 passes in a row and
+   * reports it to {@link Scope.onError} once (`limit`). The limit counts
+   * passes, not loops: a chain of bindings that is not a loop but deeper
+   * than 100 (each writing a field the next one reads) is cut the same
+   * way: what the dropped pass would have evaluated waits for the next full
+   * pass (after a handler, or {@link Scope.update}). Keep derived values in
+   * one function instead of chaining fields.
+   *
+   * The object is a `Proxy`: spread, `Object.keys` and `JSON.stringify` give
+   * its values; `structuredClone` does not take it (clone `{ ...st }`). It
+   * belongs to this scope: once the scope is disposed it is a plain object,
+   * whose reads and writes still work but are no longer recorded and
+   * schedule no pass (as other handles of a disposed scope go quiet).
+   * `update()` stays for state the SDK cannot see.
+   *
+   * @param initial - The fields and their first values: a plain object.
+   * @returns The tracked object.
+   *
+   * @throws `invalid` (throws) `initial` is not a plain object (`null`, an
+   *   array, a class instance).
+   *
+   * @capability None.
+   *
+   * @example Show a check's answer without a manual update
+   * A panel shows whether the current file has video once an asynchronous
+   * check answers. The answer is written to a tracked field; only the
+   * `bind` function that reads it runs again and sends the new value, with
+   * no `plugin.update()` and no pass over every other binding.
+   * ```ts
+   * declare const bar: Panel;
+   * declare function hasVideo(path: string): Promise<boolean>;
+   * // ---cut---
+   * const st = plugin.state({ video: null as boolean | null });
+   * bar.bind(() => ({ keyframes: st.video === true })); // reads st.video
+   * plugin.player.onChange((state) => {
+   *   if (state.source === null) return;
+   *   void hasVideo(state.source).then((video) => (st.video = video)); // re-runs the bind above
+   * });
+   * ```
+   *
+   * @since 1.7.0
+   */
+  state<T extends object>(initial: T): T;
 }
 
 /**

@@ -5,9 +5,9 @@
   "polled": [],
   "counts": {
     "start": {
-      "passes": 2,
-      "fullPasses": 2,
-      "evaluations": 2,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -29,9 +29,9 @@
       "safetyPasses": 0
     },
     "command": {
-      "passes": 2,
-      "fullPasses": 2,
-      "evaluations": 4,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0

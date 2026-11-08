@@ -107,6 +107,10 @@ A tool window drawn with the player's own theme and controls: sliders, buttons, 
 
 [Walkthrough](i18n.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/i18n)
 
+## Three ways
+
+Four jobs (a speed display, a status line pushed every frame, a list of 20,000 rows, a command waiting for an answer) each written in style A (`bind()`), B (`player.on`, `set()`) and C (`plugin.wire`). **You learn:** which style fits which job and what each sends. Signal generator and Panel menu also come in styles B and C. [Walkthrough](../explanation/three-ways.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways)
+
 ## Running an example
 
 ```sh

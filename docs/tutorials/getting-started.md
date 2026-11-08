@@ -44,7 +44,7 @@ Add the scripts to `package.json`:
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.6.0" }
+  "devDependencies": { "@vestra-player/sdk": "^1.7.0" }
 }
 ```
 

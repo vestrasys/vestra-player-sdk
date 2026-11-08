@@ -52,7 +52,13 @@ export class ViewBinder {
         );
         if (!result) continue;
         for (const [key, value] of Object.entries(result.value))
-          this.#writer.assign(key, value);
+          try {
+            this.#writer.assign(key, value);
+          } catch (error) {
+            // A property written directly (`plugin.wire.view`): reported
+            // once, the binding's other values still count.
+            this.#scope.report(error);
+          }
       } catch (error) {
         this.#scope.report(error);
       }

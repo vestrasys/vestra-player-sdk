@@ -11,7 +11,7 @@ import { HostError } from "../../wire.ts";
 import type { PackageSource } from "../types.ts";
 import type { Json, WireSystemInfo } from "../../wire.ts";
 import { SESSION_STORAGE_LIMITS } from "../services.ts";
-import { validStep } from "../player.ts";
+import { validStep } from "../player/rules.ts";
 import type { FileDialogText, TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 import { runCore, windowFacts } from "./core-actions.ts";

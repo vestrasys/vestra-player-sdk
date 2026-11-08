@@ -77,25 +77,110 @@ export interface UiCallback {
   args: Json[];
 }
 /**
- * One row operation of a patch, by index, applied to the result of the
- * ones before (player 0.6.0, feature `ui.patch`). `move` takes `count` rows
- * out at `from` and puts them back at `to`, an index of the list without
- * them.
+ * One row operation of a list property's patch, by index, applied to the
+ * result of the ones before (player 0.6.0, feature `ui.patch`).
+ *
+ * @remarks
+ * Part of the wire protocol, which is not semver: this type changes with
+ * versions. `set` replaces the row at `at`; `insert` puts `rows` before
+ * index `at` (the list's length: at the end); `remove` takes `count` rows
+ * out at `at`; `move` takes `count` rows out at `from` and puts them back
+ * at `to`, an index of the list without them. The SDK sends them for
+ * bound lists by itself; a plugin writes them with
+ * {@link WireView.writeRows}.
+ *
+ * @example Move the first row to the end
+ * A three-row list becomes rows 2, 3, 1: the first row is taken out and
+ * put back at index 2 of the two rows left.
+ * ```ts
+ * const op: RowOp = { op: "move", from: 0, count: 1, to: 2 };
+ * ```
+ *
+ * @experimental
+ * @since 1.7.0
+ * @category Plugin
  */
 export type RowOp =
-  | { op: "set"; at: number; row: Json }
-  | { op: "insert"; at: number; rows: Json[] }
-  | { op: "remove"; at: number; count: number }
-  | { op: "move"; from: number; count: number; to: number };
+  | {
+      /** Replace one row. */
+      op: "set";
+      /** The row's index. */
+      at: number;
+      /** The new row. */
+      row: Json;
+    }
+  | {
+      /** Insert rows. */
+      op: "insert";
+      /** The index the first new row gets (the list's length: at the end). */
+      at: number;
+      /** The new rows, in order. */
+      rows: Json[];
+    }
+  | {
+      /** Remove a run of rows. */
+      op: "remove";
+      /** The index of the first row removed. */
+      at: number;
+      /** How many rows. */
+      count: number;
+    }
+  | {
+      /** Move a run of rows. */
+      op: "move";
+      /** The index of the first row moved. */
+      from: number;
+      /** How many rows. */
+      count: number;
+      /** Where they go, an index of the list without them. */
+      to: number;
+    };
 /**
- * A property write: a whole value (with its `seq` to players that take
- * patches), or a row patch of an array applying on the write numbered
- * `base` (0: the initial properties).
+ * One write of a view property as the player takes it: a whole value, or
+ * a row patch of a list.
+ *
+ * @remarks
+ * Part of the wire protocol, which is not semver: this type changes with
+ * versions. `{ value }` replaces the property; to a player that takes row
+ * patches (player 0.6.0) it carries a `seq` that later patches apply on.
+ * `{ patch: { base, seq, ops } }` applies `ops` on the write numbered
+ * `base` (0: the view's initial properties) and is numbered `seq` itself;
+ * the player refuses it with `stale` when the property changed since
+ * `base`. `more` marks a part of a whole value sent in several, not the
+ * last: the player shows the value at the last part. The SDK writes these
+ * for `set()` and `bind()`; a plugin writes them with
+ * {@link WireView.write}.
+ *
+ * @example Write a whole list, numbered
+ * The property `items` becomes a list of two rows; a later patch with
+ * `base: 7` applies on it.
+ * ```ts
+ * const write: PropertyWrite = { value: [{ id: "a" }, { id: "b" }], seq: 7 };
+ * ```
+ *
+ * @experimental
+ * @since 1.7.0
+ * @category Plugin
  */
 export type PropertyWrite =
-  | { value: Json; seq?: number; more?: boolean }
   | {
-      patch: { base: number; seq: number; ops: RowOp[] };
+      /** The property's new value. */
+      value: Json;
+      /** This write's number, which later patches name as their `base`. */
+      seq?: number;
+      /** A part of a whole value sent in parts, not the last (player 0.6.0). */
+      more?: boolean;
+    }
+  | {
+      /** Row operations on a list property. */
+      patch: {
+        /** The `seq` of the write they apply on (0: the initial properties). */
+        base: number;
+        /** This patch's own number (1 or more). */
+        seq: number;
+        /** The operations, applied in order. */
+        ops: RowOp[];
+      };
       /** A part of a whole value sent in parts, not the last (player 0.6.0). */
       more?: boolean;
     };
@@ -162,38 +247,97 @@ export class HostError extends Error {
     this.name = "HostError";
   }
 }
-/** One plugin as `packages.list` reports it. */
+/**
+ * One plugin as `packages.list` and the event `packages.changed` report
+ * it: what `PluginInfo` (`plugin.packages`) is made from.
+ *
+ * @remarks
+ * The player's wire shape (`packages.list`, `packages.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export interface PackageInfo {
+  /** The manifest id. */
   id: string;
+  /** The installed version; `null` for a development directory without one. */
   version: string | null;
+  /** Installed from a package, or loaded from a development directory. */
   origin: "installed" | "development";
+  /** Its lifecycle state. */
   state: "starting" | "running" | "disabled" | "failed" | "stopped";
+  /** Why it failed, when `state` is `failed`; else `null`. */
   error: string | null;
+  /** The capabilities its manifest declares. */
   capabilities: string[];
+  /** Its directory on disk. */
   directory: string;
-  /** Player 0.2.0; absent from older players. */
+  /** One of the player's built-in plugins (player 0.2.0; absent from older players). */
   builtin?: boolean;
+  /** Where an installed package came from; `null` for a development directory. */
   source?: WireSource | null;
+  /** Its data directory, `null` when it has none. */
   dataDirectory?: string | null;
   /** What the plugin was refused because another plugin holds it (player 0.4.x, after 0.4.0). */
-  warnings?: { code: string; slot?: string; owner?: string }[];
+  warnings?: {
+    /** Why: `slot-occupied`, `sequence-taken` or `resolver-taken`; a newer player may add codes. */
+    code: string;
+    /** The panel position concerned, if any. */
+    slot?: string;
+    /** The manifest id of the plugin holding it, if any. */
+    owner?: string;
+  }[];
   /** The manifest's display texts in the interface language (player 0.4.3). */
   display?: {
+    /** The display name, or `null`. */
     name: string | null;
+    /** The one-line pitch, or `null`. */
     punchline: string | null;
+    /** The description, or `null`. */
     description: string | null;
+    /** The store tags. */
     tags: string[];
   };
   /** Whether it has a process now (player 0.5.18, `state: "running"`). */
   process?: "running" | "idle";
 }
-/** Where an installed package came from (`packages.install` `source`). */
+/**
+ * Where an installed package came from (`packages.install` `source`),
+ * as {@link PackageInfo.source} reports it.
+ *
+ * @remarks
+ * The player's wire shape (`source` of `packages.list`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export type WireSource =
-  | { kind: "repository"; url: string }
-  | { kind: "link"; url: string }
-  | { kind: "file" }
-  | { kind: "workshop" }
-  | { kind: "bundled" };
+  | {
+      /** A plugin repository. */
+      kind: "repository";
+      /** The repository's URL. */
+      url: string;
+    }
+  | {
+      /** A download link. */
+      kind: "link";
+      /** The link. */
+      url: string;
+    }
+  | {
+      /** A package file. */
+      kind: "file";
+    }
+  | {
+      /** The plugin workshop. */
+      kind: "workshop";
+    }
+  | {
+      /** Shipped with the player. */
+      kind: "bundled";
+    };
 /** `bindings.list`. */
 export interface BindingTable {
   commands: {
@@ -214,14 +358,38 @@ export interface BindingTable {
   }[];
   orphans: { ref: { plugin: string; command: string }; inputs: string[] }[];
 }
-/** `window.state`: the main window, in logical points (zero without one). */
+/**
+ * The main window as `window.state` reports it, in logical points (zero
+ * without one): what `WindowState` (`plugin.window`) is made from, plus
+ * the palette, the resolvers' file types and the language that come with
+ * the same answer.
+ *
+ * @remarks
+ * The player's wire shape (`window.state`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export interface WindowFacts {
+  /** The main window is fullscreen. */
   fullscreen: boolean;
   /** The main window is maximized, `false` in fullscreen (player 0.6.3; absent from older players: `false`). */
   maximized?: boolean;
-  videoArea: { width: number; height: number };
+  /** The video area's size. */
+  videoArea: {
+    /** Width in logical points. */
+    width: number;
+    /** Height in logical points. */
+    height: number;
+  };
   /** System picture-in-picture (absent from older players: unsupported). */
-  pictureInPicture?: { supported: boolean; active: boolean };
+  pictureInPicture?: {
+    /** The system offers it. */
+    supported: boolean;
+    /** It is on. */
+    active: boolean;
+  };
   /** The palette (`plugin.appearance`), with the `window.state` reply; a newer player may name a palette this SDK does not list. */
   appearance?: string;
   /** The file resolvers' extensions (`plugin.resolvers.fileTypes`; player 0.4.2). */
@@ -231,24 +399,65 @@ export interface WindowFacts {
   /** The interface language of this run (player 0.4.3). */
   locale?: string;
 }
-/** One timeline mark as the player merges them (`timeline.marks`). */
+/**
+ * One timeline mark as the player merges them (`timeline.marks`): what
+ * `TimelineMark` is made from.
+ *
+ * @remarks
+ * The player's wire shape (`timeline.marks`, `timeline.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export interface WireMark {
+  /** Its position in seconds. */
   time: number;
+  /** What it marks. */
   kind: "chapter" | "bookmark" | "marker";
+  /** Its title, or `null`. */
   title: string | null;
+  /** The manifest id of the plugin that published it. */
   plugin: string;
 }
-/** One timeline range as the player merges them (player 0.7.6). */
+/**
+ * One timeline range as the player merges them (player 0.7.6): what
+ * `TimelineRange` is made from.
+ *
+ * @remarks
+ * The player's wire shape (`timeline.marks`, `timeline.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export interface WireRange {
+  /** Its start in seconds. */
   start: number;
+  /** Its end in seconds. */
   end: number;
+  /** How it is drawn. */
   style: "selection" | "region";
+  /** Its title, or `null`. */
   title: string | null;
+  /** The manifest id of the plugin that published it. */
   plugin: string;
 }
-/** `timeline.marks` and `timeline.changed`; `ranges` from player 0.7.6. */
+/**
+ * Every timeline mark and range, merged from every layer: the answer to
+ * `timeline.marks` and the data of the event `timeline.changed`.
+ *
+ * @remarks
+ * The player's wire shape (`timeline.marks`, `timeline.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export interface WireTimeline {
+  /** The marks, in time order. */
   marks: WireMark[];
+  /** The ranges (from player 0.7.6; absent from older players). */
   ranges?: WireRange[];
 }
 /** A panel position (`ui.mount`'s `slot`). */
@@ -360,9 +569,20 @@ export interface WireSystemInfo {
   /** Why `rendering` is what it is (player 0.5.13; older players leave it out). */
   renderingReason?: WireRenderingReason;
 }
-/** A rendering reason: a stable kebab-case `code` and English text. */
+/**
+ * A rendering reason: a stable kebab-case `code` and English text.
+ *
+ * @remarks
+ * The player's wire shape (`rendering.state`, `app.system`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
+ */
 export interface WireRenderingReason {
+  /** The stable code, to branch on. */
   code: string;
+  /** English text, to show. */
   message: string;
 }
 /** `rendering.state` and `rendering.setPreference` (player 0.5.13). */
@@ -378,31 +598,73 @@ export interface WireRenderingState {
 /**
  * An upscaling reason: `{ code, message }` as a rendering reason; with
  * `decoding` a `cause`, with cause `copy-back` the `plugins` (player 0.5.25).
+ * What `UpscalingReason` is made from.
+ *
+ * @remarks
+ * The player's wire shape (`video.upscaling.state`, `video.upscaling.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
  */
 export interface WireUpscalingReason extends WireRenderingReason {
+  /** Why decoding stands in the way, with code `decoding`. */
   cause?: string;
-  plugins?: { id: string; name: string }[];
+  /** The plugins whose filters copy frames back, with cause `copy-back`. */
+  plugins?: {
+    /** The plugin's id. */
+    id: string;
+    /** Its display name. */
+    name: string;
+  }[];
 }
 /**
- * `video.upscaling.state` and `video.upscaling.set` (player 0.5.16); the
- * monitoring fields from player 0.5.25, which also sends the state without
- * `enabled` as the event `video.upscaling.changed`.
+ * The GPU video upscaler's state as `video.upscaling.state` and
+ * `video.upscaling.set` answer it (player 0.5.16; the monitoring fields
+ * from player 0.5.25, which also sends it without `enabled` as the event
+ * `video.upscaling.changed`): what `UpscalingState` is made from.
+ *
+ * @remarks
+ * The player's wire shape (`video.upscaling.state`, `video.upscaling.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
  */
 export interface WireUpscalingState {
+  /** The upscaler works now. */
   available: boolean;
+  /** Why not, when `available` is `false`; else `null`. */
   reason: WireUpscalingReason | null;
+  /** This plugin asked for upscaling and has not turned it off. */
   enabled: boolean;
+  /** The player has the upscaler in the video filter chain now, for this plugin or another one. */
   requested: boolean;
+  /** The scale factor the upscaler was asked for, in hundredths; `null` while nothing is requested. */
   factor: number | null;
+  /** The video's size as the upscaler gets it; `null` while no video decodes. */
   video?: {
+    /** The frames' stored width in pixels. */
     width: number;
+    /** The frames' stored height in pixels. */
     height: number;
+    /** The width the video is meant to be shown at (non-square pixels). */
     displayWidth: number;
+    /** The height the video is meant to be shown at. */
     displayHeight: number;
   } | null;
-  area?: { width: number; height: number } | null;
+  /** The area the video is shown in, in pixels; `null` while the player shows no video area. */
+  area?: {
+    /** Width in physical pixels. */
+    width: number;
+    /** Height in physical pixels. */
+    height: number;
+  } | null;
+  /** The name of the GPU that renders; `null` in software rendering or where the player does not know it. */
   gpu?: string | null;
+  /** The hardware decoder in use, as mpv names it (`no`: software); `null` while no video decodes. */
   hwdecCurrent?: string | null;
+  /** The upscaler is in the player's video filter chain now, read from the chain itself. */
   inChain?: boolean;
 }
 /**
@@ -425,8 +687,12 @@ export interface Transport {
   locale?: string;
 }
 
-/** The events a plugin subscribes to (`events.subscribe`). */
-type HostEvent =
+/**
+ * The events a plugin subscribes to (`events.subscribe`). The plugin API
+ * names the same list `HostEvent` (`plugin.player.on`, SDK 1.7.0); a test
+ * keeps the two equal.
+ */
+export type HostEvent =
   | "source.state"
   | "playback.backend"
   | "window.state"

@@ -42,6 +42,7 @@ Each call returns one picture and **the audio that plays while that picture is o
 examples/signal-generator/
   manifest.json                   id and capabilities
   main.ts                         the picture, the tone, frame(), start and stop, the command
+  main-b.ts, main-c.ts            the command, start and stop in styles B and C
   tests/signal-generator.test.ts  tests of frame() and of the stream on the in-memory test host
   package.json                    the SDK as a dev dependency, and the npm scripts
 ```
@@ -130,12 +131,26 @@ When the plugin is disabled or the player quits, the SDK stops the stream the sa
 - `checked` is a function. The SDK calls it again after every handler and every `onStop`, and updates the check mark when the result changes.
 - `run` starts the stream when there is none and stops it when there is one. It returns the promise so that a failure reaches the plugin log.
 
+## In style B and C
+
+`main.ts` is the main version, in style A ([Three ways to write a plugin](../explanation/three-ways.md)): the check mark is a function, and the SDK's update passes evaluate it after every handler and every `onStop`. Two more entry files hold the same plugin in the other styles; point the manifest's `entry` at one to run it. Everything except the command and the start and stop functions is imported from `main.ts`.
+
+**Style B** (`main-b.ts`): the check mark is a value that the plugin sets when the stream starts and stops. The command never takes part in an update pass, and {@link "@vestra-player/sdk"!Command.set | set} sends this command's state alone.
+
+{@includeCode ../../examples/signal-generator/main-b.ts#command,start-stop}
+
+**Style C** (`main-c.ts`): the command is registered from the player's own declaration with {@link "@vestra-player/sdk"!WireCommands.register | plugin.wire.commands.register}, and each change of the check mark is one `commands.update` that the plugin sends with {@link "@vestra-player/sdk"!WireCommand.update | update}. Experimental: the declaration's fields are the player's and change with its versions.
+
+{@includeCode ../../examples/signal-generator/main-c.ts#command}
+
+The stream itself is the same in all three: `openStream` is a primitive that every style calls the same way. The tests run the start-and-stop test against each entry file.
+
 ## The tests
 
 {@includeCode ../../examples/signal-generator/tests/signal-generator.test.ts}
 
 - The first two tests call `frame()` directly, with no player: the picture's size and colours, the 1601/1602 sample counts and their total, and that no step between two neighbouring samples is larger than a clean 1 kHz sine allows, across frame boundaries too.
-- The third runs the plugin against `TestHost`, the SDK's in-memory player. It speaks the real protocol, including the frame connection, so the SDK's start-up and stop sequence run unchanged. `host.producers.get(1)` is the player's end of the stream: `released` says the plugin let go of it, and `droppedWhileSelected` would be `true` if the connection had closed while the stream was still the player's source.
+- The others run the plugin against `TestHost`, once per entry file, the SDK's in-memory player. It speaks the real protocol, including the frame connection, so the SDK's start-up and stop sequence run unchanged. `host.producers.get(1)` is the player's end of the stream: `released` says the plugin let go of it, and `droppedWhileSelected` would be `true` if the connection had closed while the stream was still the player's source.
 - A stream runs on timers, so the test polls with `until()` instead of relying on `host.settle()`.
 
 ## Run it

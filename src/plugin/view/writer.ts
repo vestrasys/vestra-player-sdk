@@ -7,6 +7,27 @@
  * the back-off after a failed write. It knows nothing of update passes or
  * bindings: the binder (`binder.ts`, L2) puts values in, the view
  * (`base.ts`) says where a write goes.
+ *
+ * Two modes (SDK 1.7.0, refactor Step 2). Until the view's first `bind()`
+ * (`track()`), the writer serves `set()` alone: each value is sent whole
+ * (limits checked, large arrays in parts with `more`, one write in
+ * flight per view), only the properties `set()` named are looked at, and
+ * no row-patch base is kept, so nothing is diffed. Once tracked it is the
+ * binder's: every value is compared with what was sent and arrays become
+ * row patches where one applies; a `set()` then takes the same path, so
+ * mixed use stays consistent. Patch planning stays here, used only in the
+ * tracked mode: it needs what was sent and the player's base, which are
+ * this writer's, and moving it above would split one property's write
+ * state across two layers.
+ *
+ * A third track (SDK 1.7.0, refactor Step 3): properties written directly
+ * through `plugin.wire.view(v)` (`direct`, `directRows`). Such a property
+ * is the plugin's alone: its `PropertyWrite`s and `RowOp`s go out as
+ * given, with only one write in flight per property, a `seq` when the
+ * player takes patches, and large writes in parts; nothing is encoded,
+ * compared or checked against the limits. One track per property: a
+ * property written directly cannot be `set()` or bound, and the other
+ * way round (`invalid`), so `#sent` and `#bases` never go stale.
  */
 import { HostError } from "../../wire.ts";
 import type { Json, PropertyWrite, RowOp } from "../../wire.ts";
@@ -338,6 +359,56 @@ function rowPatch(
   return { ops, counts };
 }
 
+/**
+ * How `plugin.wire.view(v)` (`wire-facade.ts`) reaches a view's writer
+ * without importing the view classes (which load the binder): a view
+ * answers this key with its {@link DirectWrites}, given a scope of the
+ * plugin that made it.
+ */
+export const DIRECT = Symbol("direct writes");
+
+/** A view's direct writes, as `plugin.wire.view(v)` hands them out. */
+export interface DirectWrites {
+  write(property: string, write: PropertyWrite): Promise<boolean>;
+  writeRows(property: string, ops: readonly RowOp[]): Promise<boolean>;
+}
+
+/** The message of a write on the other track of a property. */
+export const bothTracks = (property: string, written: boolean) =>
+  written
+    ? `property \`${property}\` is written directly; bind it or write it, not both`
+    : `property \`${property}\` is set or bound; bind it or write it, not both`;
+
+/** One direct write waiting: a whole `PropertyWrite`, or row operations. */
+type DirectJob = (
+  | { kind: "write"; write: PropertyWrite }
+  | { kind: "rows"; ops: readonly RowOp[] }
+) & { settle: (ok: boolean, error?: unknown) => void };
+
+/** A property written directly (`plugin.wire.view(v)`). */
+interface DirectTrack {
+  /**
+   * The `seq` of its last write the player took since the view showed its
+   * initial properties (`undefined`: none, so a patch applies on 0).
+   */
+  base: number | undefined;
+  /** Writes waiting, oldest first; a whole write drops the ones before it. */
+  queue: DirectJob[];
+  running: boolean;
+}
+
+/** Row operations `chunkOps` can split: the four shapes, rows in arrays. */
+const wellFormed = (ops: readonly RowOp[]) =>
+  ops.every(
+    (op) =>
+      op !== null &&
+      typeof op === "object" &&
+      (op.op === "set" ||
+        op.op === "remove" ||
+        op.op === "move" ||
+        (op.op === "insert" && Array.isArray(op.rows))),
+  );
+
 /** Where a {@link ViewWriter}'s writes go, and what it asks of its view. */
 export interface WriterTarget {
   /** The view shows its properties: writes may be sent. */
@@ -382,8 +453,42 @@ export class ViewWriter {
   #broken = false;
   #retry: ReturnType<typeof setTimeout> | undefined;
   #flushing = false;
+  /**
+   * The view was bound (`track()`): every value is compared with what was
+   * sent and arrays are patched. Before, only `set()` values are sent,
+   * whole, and no patch base is kept.
+   */
+  #tracked = false;
+  /**
+   * Initial arrays `wired` cut to one request's size, by key: how many
+   * rows went (until `shown`).
+   */
+  readonly #cut = new Map<string, number>();
+  /**
+   * Not bound: initial arrays the view shows the first rows of, by key,
+   * whose next write inserts only the rest (SDK 1.7.0).
+   */
+  readonly #rest = new Map<string, { count: number; enc: string[] }>();
+  /** Properties written directly (`plugin.wire.view(v)`, SDK 1.7.0). */
+  readonly #direct = new Map<string, DirectTrack>();
+  /** Direct properties a binding produced: reported once each. */
+  readonly #refused = new Set<string>();
   constructor(target: WriterTarget) {
     this.#target = target;
+  }
+  /**
+   * The view's first `bind()`: compare and patch from now on. What was
+   * sent before is known as whole values, so the first patchable write of
+   * an array goes whole and patches follow it.
+   */
+  track() {
+    this.#tracked = true;
+    // Bound values go the bound way, compared with what was sent.
+    this.#rest.clear();
+  }
+  /** Row patches apply: the player takes them and the view is bound. */
+  get #patching() {
+    return this.#tracked && this.#patches;
   }
   /** The player takes row patches (and `seq` on whole writes). */
   get #patches() {
@@ -431,6 +536,7 @@ export class ViewWriter {
           }
           const count = room > 0 ? prefixWithin(sizes, room) : 0;
           wire = wire.slice(0, count);
+          this.#cut.set(key, count);
           room -= sizes.slice(0, count).reduce((a, b) => a + b, 0);
         } else room -= total;
       }
@@ -438,18 +544,258 @@ export class ViewWriter {
     }
     return out;
   }
-  /** `View.set`: each value is sent once even if equal to what was sent. */
+  /**
+   * `View.set`: each value is sent once even if equal to what was sent. A
+   * property written directly is refused (`invalid`), before anything is
+   * kept.
+   */
   set(props: Props) {
-    for (const [key, value] of Object.entries(encode(props))) {
+    const values = Object.entries(encode(props));
+    for (const [key] of values)
+      if (this.#direct.has(key))
+        throw failure("invalid", bothTracks(key, true));
+    for (const [key, value] of values) {
       this.#values.set(key, value);
       this.#forced.add(key);
       this.#failed.delete(key); // an explicit write is tried again (after any back-off)
+      this.#rest.delete(key); // a new value: no longer the initial rows' rest
     }
     this.flush();
   }
-  /** A bound value (Slint name): sent by the next flush if it changed. */
+  /**
+   * A bound value (Slint name): sent by the next flush if it changed. A
+   * property written directly is refused (`invalid`, the first time; the
+   * binder reports it) and the value is never kept.
+   */
   assign(key: string, value: PropValue) {
+    if (this.#direct.has(key)) {
+      if (this.#refused.has(key)) return;
+      this.#refused.add(key);
+      throw failure("invalid", bothTracks(key, true));
+    }
     this.#values.set(key, value);
+  }
+  /**
+   * `plugin.wire.view(v).write`: one property's `PropertyWrite`, sent as
+   * given after the property's earlier direct writes (a whole value drops
+   * those still waiting, which resolve `false`). With a player that takes
+   * row patches, a whole value without `seq` gets one, so that row
+   * operations can follow it, and an array larger than one request goes in
+   * parts (`more`). The property is marked: `set()` and `bind()` refuse it
+   * from now on. Rejects with `unavailable` while the view does not show.
+   */
+  direct(property: string, write: PropertyWrite): Promise<boolean> {
+    const key = this.#directKey(property);
+    if (
+      write === null ||
+      typeof write !== "object" ||
+      !("value" in write || "patch" in write)
+    )
+      throw failure(
+        "invalid",
+        "write takes a PropertyWrite: { value } or { patch: { base, seq, ops } }",
+      );
+    return this.#queueDirect(
+      key,
+      { kind: "write", write },
+      !("patch" in write),
+    );
+  }
+  /**
+   * `plugin.wire.view(v).writeRows`: row operations on the property's last
+   * direct write (or on its initial value), in as many patches as one
+   * request carries, each applying on the one before. Needs a player that
+   * takes row patches (`unsupported` otherwise).
+   */
+  directRows(property: string, ops: readonly RowOp[]): Promise<boolean> {
+    const key = this.#directKey(property);
+    if (!Array.isArray(ops))
+      throw failure("invalid", "writeRows takes an array of row operations");
+    return this.#queueDirect(key, { kind: "rows", ops: [...ops] }, false);
+  }
+  /** A direct write's property (Slint name), refused when `set()` or bound. */
+  #directKey(property: string): string {
+    if (typeof property !== "string" || property === "")
+      throw failure("invalid", "a property name is a non-empty string");
+    const key = kebab(property);
+    if (this.#values.has(key)) throw failure("invalid", bothTracks(key, false));
+    return key;
+  }
+  #queueDirect(
+    key: string,
+    job:
+      | { kind: "write"; write: PropertyWrite }
+      | { kind: "rows"; ops: readonly RowOp[] },
+    whole: boolean,
+  ): Promise<boolean> {
+    if (!this.#target.live())
+      return Promise.reject(
+        failure(
+          "unavailable",
+          `${key}: the view does not show (a window before show(), a panel or settings page before ready, or closed)`,
+        ),
+      );
+    let track = this.#direct.get(key);
+    if (!track)
+      this.#direct.set(
+        key,
+        (track = { base: undefined, queue: [], running: false }),
+      );
+    const queued = track;
+    return new Promise((resolve, reject) => {
+      if (whole)
+        for (const older of queued.queue.splice(0)) older.settle(false);
+      queued.queue.push({
+        ...job,
+        settle: (ok, error) =>
+          error === undefined ? resolve(ok) : reject(error),
+      });
+      if (!queued.running) void this.#drainDirect(key, queued);
+    });
+  }
+  /** Send one property's direct writes in order, one in flight. */
+  async #drainDirect(key: string, track: DirectTrack) {
+    track.running = true;
+    try {
+      let job;
+      while ((job = track.queue.shift())) {
+        try {
+          if (!this.#target.live()) throw new Abandoned();
+          if (job.kind === "rows") await this.#sendRows(key, track, job.ops);
+          else await this.#sendDirect(key, track, job.write);
+          job.settle(true);
+        } catch (error) {
+          job.settle(
+            false,
+            error instanceof Abandoned
+              ? failure(
+                  "unavailable",
+                  `${key}: the view closed or showed its initial properties again during the write`,
+                )
+              : error,
+          );
+        }
+      }
+    } finally {
+      track.running = false;
+    }
+  }
+  /**
+   * One direct write, sent while the view shows what it showed when the
+   * job started (`generation`): a failure after the view closed or showed
+   * its initial properties again is not the write's ({@link Abandoned}, so
+   * `unavailable`), and `true` says the player took it for the view that
+   * is shown now, so its `seq` may serve as a base.
+   */
+  async #writeNow(
+    key: string,
+    write: PropertyWrite,
+    generation: number,
+  ): Promise<boolean> {
+    if (!this.#target.live() || this.#generation !== generation)
+      throw new Abandoned();
+    try {
+      await this.#target.write(key, write);
+    } catch (error) {
+      if (!this.#target.live() || this.#generation !== generation)
+        throw new Abandoned();
+      throw error;
+    }
+    return this.#target.live() && this.#generation === generation;
+  }
+  /**
+   * A direct `PropertyWrite`: as given, with a `seq` and in parts where it
+   * applies. A part the player answers after the view closed or showed its
+   * initial properties again was not taken for the view shown now
+   * ({@link Abandoned}, so `unavailable`, as for row operations).
+   */
+  async #sendDirect(key: string, track: DirectTrack, write: PropertyWrite) {
+    const generation = this.#generation;
+    const send = async (part: PropertyWrite) => {
+      if (!(await this.#writeNow(key, part, generation))) throw new Abandoned();
+    };
+    if ("patch" in write) {
+      await send(write);
+      const seq = (write.patch as { seq?: unknown } | null)?.seq;
+      if (typeof seq === "number") track.base = seq;
+      return;
+    }
+    if (!this.#patches) {
+      await send(write);
+      return;
+    }
+    const seq = typeof write.seq === "number" ? write.seq : ++this.#seq;
+    const value = write.value;
+    if (
+      Array.isArray(value) &&
+      write.more === undefined &&
+      !JSON.stringify(value).includes(MARKDOWN_KEY)
+    ) {
+      const sizes = value.map(rowBytes);
+      const count = prefixWithin(sizes, CHUNK_BYTES);
+      // In parts only when each row fits one request; otherwise whole, for
+      // the player to take or refuse.
+      if (
+        count > 0 &&
+        count < value.length &&
+        sizes.every((size) => size <= CHUNK_BYTES)
+      ) {
+        await send({ value: value.slice(0, count), seq, more: true });
+        let last = seq;
+        const insert: RowOp = {
+          op: "insert",
+          at: count,
+          rows: value.slice(count),
+        };
+        const groups = chunkOps([insert]);
+        for (const [i, ops] of groups.entries()) {
+          const next = ++this.#seq;
+          await send({
+            patch: { base: last, seq: next, ops },
+            ...(i < groups.length - 1 ? { more: true } : {}),
+          });
+          last = next;
+        }
+        track.base = last;
+        return;
+      }
+    }
+    // A base only for the view that is shown now: after a reopen the
+    // player shows the property's default, not this write.
+    await send({ ...write, seq });
+    track.base = seq;
+  }
+  /**
+   * Direct row operations: patches on the property's last direct write
+   * since the view showed its initial properties. Without one the player
+   * has no rows of the property's own to apply them on (a direct property
+   * is never an initial property): refused with `stale` before anything is
+   * sent, as the player would refuse it.
+   */
+  async #sendRows(key: string, track: DirectTrack, ops: readonly RowOp[]) {
+    if (!this.#patches)
+      throw failure(
+        "unsupported",
+        `${key}: row operations need a player that takes row patches (player 0.6.0)`,
+      );
+    if (track.base === undefined)
+      throw failure(
+        "stale",
+        `${key}: no whole value was written directly since the view showed its initial properties; write the whole value first`,
+      );
+    const generation = this.#generation;
+    // Malformed operations go in one patch, for the player to refuse.
+    const groups = wellFormed(ops) ? chunkOps(ops) : [[...ops]];
+    for (const group of groups) {
+      const seq = ++this.#seq;
+      const current = await this.#writeNow(
+        key,
+        { patch: { base: track.base, seq, ops: group } },
+        generation,
+      );
+      if (!current) throw new Abandoned();
+      track.base = seq;
+    }
   }
   /** Every property's value now, by Slint name. */
   values(): Record<string, PropValue> {
@@ -458,7 +804,7 @@ export class ViewWriter {
   /** The host already shows these values (e.g. sent as initial properties). */
   shown(values: Record<string, Json>) {
     this.#generation++;
-    const patches = this.#patches;
+    const patches = this.#patching;
     this.#sent = new Map(
       Object.entries(values).map(([k, v]) => [k, sentOf(v, patches)]),
     );
@@ -468,6 +814,36 @@ export class ViewWriter {
     this.#stales.clear();
     this.#forced.clear();
     for (const key of Object.keys(values)) this.#failed.delete(key);
+    // A property written directly shows its initial value again: its
+    // next patch applies on 0.
+    for (const track of this.#direct.values()) track.base = undefined;
+    // Not bound, a flush sends only what is marked: mark every value the
+    // view does not show as it is now, such as a `set()` made while the view
+    // was opening (after its initial properties were taken) or an initial
+    // array cut to one request's size (`wired`), whose rest goes now:
+    // only the rest, inserted on the initial rows (base 0), when the value
+    // still begins with them (`#rest`).
+    const cut = new Map(this.#cut);
+    this.#cut.clear();
+    this.#rest.clear();
+    if (!this.#tracked)
+      for (const [key, value] of this.#values) {
+        if (!this.#encode(key, value).changed) continue;
+        this.#forced.add(key);
+        const count = cut.get(key);
+        const shown = values[key];
+        if (
+          count !== undefined &&
+          this.#patches &&
+          Array.isArray(value) &&
+          Array.isArray(shown) &&
+          shown.length === count &&
+          count < value.length
+        )
+          // The rows shown, as encoded: the value is compared with them
+          // when it is sent (`#send`), not now; it may change before.
+          this.#rest.set(key, { count, enc: shown.map(encodeRow) });
+      }
   }
   /** `value` encoded, and whether it differs from what was sent. */
   #encode(key: string, value: PropValue): Pending {
@@ -500,21 +876,27 @@ export class ViewWriter {
       // Keys only for a write: an unchanged array costs its encoding alone.
       let keys: ReturnType<typeof keyOf> | undefined;
       const keyed = () => (keys === undefined ? (keys = keyOf(value)) : keys);
+      // Not bound: remembered as its JSON, for a later bind() to compare
+      // with; no rows or keys are kept until patches can follow.
+      const tracked = this.#tracked;
       return {
         key,
         value,
         changed,
         signature,
         rows: { ...encoded, keyed },
-        sent: (counts = []) => ({
-          kind: "rows",
-          rows: {
-            enc,
-            field: keyed()?.field ?? null,
-            keys: keyed()?.keys ?? null,
-            counts,
-          },
-        }),
+        sent: (counts = []) =>
+          tracked
+            ? {
+                kind: "rows",
+                rows: {
+                  enc,
+                  field: keyed()?.field ?? null,
+                  keys: keyed()?.keys ?? null,
+                  counts,
+                },
+              }
+            : { kind: "json", enc: signature() },
       };
     }
     const enc = JSON.stringify(value);
@@ -542,6 +924,47 @@ export class ViewWriter {
       return pending.sent();
     }
     const generation = this.#generation;
+    // An initial list cut to one request's size, not bound: the player shows
+    // its first `rest` rows (the initial properties, base 0); only the
+    // others go, as insert patches each applying on the one before.
+    // Only while the value still begins with those rows, as encoded now
+    // (a later `set()`, a deferred flush); a `stale` refusal of the first
+    // patch falls back to the whole value below.
+    const rest = this.#rest.get(key);
+    this.#rest.delete(key);
+    if (
+      rest !== undefined &&
+      Array.isArray(value) &&
+      pending.rows &&
+      !pending.rows.markdown &&
+      rest.count < value.length &&
+      sameRows(pending.rows.enc.slice(0, rest.count), rest.enc)
+    ) {
+      const insert: RowOp = {
+        op: "insert",
+        at: rest.count,
+        rows: (value as PropValue[])
+          .slice(rest.count)
+          .map((row) => wireValue(row ?? null)),
+      };
+      tooLarge(key, [insert]);
+      const [first, ...others] = chunkOps([insert]);
+      const seq = ++this.#seq;
+      let applied = false;
+      try {
+        await this.#target.write(key, {
+          patch: { base: 0, seq, ops: first! },
+        });
+        applied = true;
+      } catch (error) {
+        if (!(error instanceof HostError && error.code === "stale"))
+          throw error;
+      }
+      if (applied) {
+        await this.#parts(key, seq, others, false, generation);
+        return pending.sent();
+      }
+    }
     const base = this.#bases.get(key);
     this.#bases.delete(key);
     const sent = this.#sent.get(key);
@@ -619,7 +1042,8 @@ export class ViewWriter {
       }
     }
     await this.#target.write(key, { value: wireValue(value), seq });
-    this.#bases.set(key, seq);
+    // A base for the next patch, once the view is bound.
+    if (this.#tracked) this.#bases.set(key, seq);
     return pending.sent();
   }
   /**
@@ -655,7 +1079,7 @@ export class ViewWriter {
       }
       last = seq;
     }
-    this.#bases.set(key, last);
+    if (this.#tracked) this.#bases.set(key, last);
   }
   /**
    * Send what changed. A bound value is sent when it differs from the last one
@@ -677,7 +1101,12 @@ export class ViewWriter {
         let pending: Pending[];
         do {
           pending = [];
-          for (const [key, value] of this.#values) {
+          // Not bound: only what `set()` named is sent (whole), nothing is
+          // compared. Bound: every value against what was sent.
+          const keys = this.#tracked ? this.#values.keys() : [...this.#forced];
+          for (const key of keys) {
+            if (!this.#values.has(key)) continue;
+            const value = this.#values.get(key) as PropValue;
             const encoded = this.#encode(key, value);
             const failedAs = this.#failed.get(key);
             if (failedAs !== undefined && failedAs === encoded.signature())
@@ -722,8 +1151,10 @@ export class ViewWriter {
       if (failure !== undefined) this.#target.report(failure);
     })();
   }
-  /** The view closed: no retry after a back-off. */
+  /** The view closed: no retry after a back-off, no direct write waiting. */
   stop() {
     clearTimeout(this.#retry);
+    for (const track of this.#direct.values())
+      for (const job of track.queue.splice(0)) job.settle(false);
   }
 }

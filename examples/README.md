@@ -14,6 +14,7 @@ Complete Vestra Player plugins, each with a manifest, its source, Slint files, t
 | [theme-widgets](theme-widgets)       | A tool window drawn with the player's theme and widgets.                              |
 | [markdown](markdown)                 | A window that shows a Markdown document.                                              |
 | [i18n](i18n)                         | A plugin in the player's language: English source text, a Chinese translation.       |
+| [three-ways](three-ways)             | Four scenarios in each of the three plugin styles: `bind()`, `player.on` + `set()`, `plugin.wire`. |
 
 Run one (the SDK is linked from this repository, so build it first):
 
@@ -24,4 +25,6 @@ npm install
 npm run check && npm test && npm run pack
 ```
 
-Each example is laid out the same way: `manifest.json` (id `examples.<name>`), `main.ts`, `ui/*.slint`, `tests/*.test.ts`, `package.json` (depends on `"@vestra-player/sdk": "file:../.."`), `README.md`. To start your own plugin from one, copy its folder and change the dependency to `"@vestra-player/sdk": "^1.6.0"` and the manifest `id`.
+Each example has one main version in `main.ts`; `signal-generator` and `panel-menu` also have `main-b.ts` and `main-c.ts`, the same plugin in styles B and C (point the manifest's `entry` at one to run it), and `three-ways` has one file per style.
+
+Each example is laid out the same way: `manifest.json` (id `examples.<name>`), `main.ts`, `ui/*.slint`, `tests/*.test.ts`, `package.json` (depends on `"@vestra-player/sdk": "file:../.."`), `README.md`. To start your own plugin from one, copy its folder and change the dependency to `"@vestra-player/sdk": "^1.7.0"` and the manifest `id`.
