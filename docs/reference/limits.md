@@ -30,7 +30,7 @@ A command added past `perPlugin` or `total` fails with code `limit` (its `ready`
 
 ## Bottom-bar buttons
 
-A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) is never refused for a limit: the command registers and its menu entry stays. Each plugin keeps its first declared button; a later one stays a menu item only. From player 0.7.6 the strip holds the eight lowest by order, plugin id and declaration order, and the rest are in its » menu (before, the player kept the eight highest orders and left the others out). The player's own Command Palette and Toggle Sidebar cells are extra.
+A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) is never refused for a limit: the command registers and its menu entry stays. Each plugin keeps its first declared button; a later one stays a menu item only. From player 0.7.6 the strip holds the eight lowest by order, plugin id and declaration order, and the rest are in its » menu (before, the player kept the eight highest orders and left the others out). The player's own Command Palette, Adjustments and Effects and Sidebar cells are extra.
 
 <!-- generated:limits BAR_BUTTON_LIMITS -->
 

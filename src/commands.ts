@@ -147,7 +147,7 @@ export const MENU_IDS = [
  * every icon of the player's V-Line set, `@vestra/icons.slint` (draw one
  * in your own Slint with `Icon { name: "store"; }`). The player's tests check
  * that this list is its icon set. `"sliders"` (three sliders, the player's
- * Adjust button) is new in player 0.7.6 (SDK 1.6.11); older players refuse
+ * Adjustments and Effects button) is new in player 0.7.6 (SDK 1.6.11); older players refuse
  * it as a button icon with `invalid`.
  *
  * @example Check in a test that the button's icon exists
@@ -342,11 +342,8 @@ vestra.capture | capture.copy | Snapshot ▸ Copy Current Frame | Ctrl+C
 vestra.capture | capture.burst | Snapshot ▸ Burst… | Ctrl+G
 vestra.capture | capture.clip | Snapshot ▸ Export Clip…
 vestra.capture | capture.panel | Snapshot ▸ Capture… | Alt+S
-vestra.video | video.picture | Picture… | Alt+1
-vestra.audio | audio.workbench | Audio… | Alt+2
-vestra.subtitles | tune | Subtitles… | Alt+3
-vestra.playback | panel | Playback… | Alt+4
-vestra.playlist | playlist.visibility | Playlist | F6
+host | adjust | Adjustments and Effects
+host | sidebar | Sidebar
 vestra.marks | marks.list | Chapter and Bookmark List… | H
 host | fullscreen | Toggle Fullscreen | Escape
 vestra.workshop | workshop.open | Vestra Player AI…
@@ -359,8 +356,6 @@ host | previous | (Previous) | PageUp, Mouse:X2
 host | next | (Next) | PageDown, Mouse:X1
 host | enter-fullscreen | (Enter Fullscreen)
 host | exit-fullscreen | (Leave Fullscreen)
-host | sidebar | (Toggle Sidebar)
-host | adjust | (Adjust)
 host | volume-up | (Volume +) | ArrowUp, Mouse:WheelUp
 host | volume-down | (Volume −) | ArrowDown, Mouse:WheelDown
 host | mute | (Mute) | M
@@ -371,6 +366,11 @@ host | seek-forward | (Forward 5 s) | ArrowRight
 host | rate-normal | (Normal) | Z
 host | rate-down | (Slower 0.1) | X
 host | rate-up | (Faster 0.1) | C
+vestra.video | video.picture | (Picture…) | Alt+1
+vestra.audio | audio.workbench | (Audio…) | Alt+2
+vestra.subtitles | tune | (Subtitles…) | Alt+3
+vestra.playback | panel | (Playback…) | Alt+4
+vestra.playlist | playlist.visibility | (Playlist) | F6
 vestra.playback | reopen | (Reopen Current/Last File) | Ctrl+Y
 vestra.playback | copy-name | (File Name)
 vestra.playback | copy-folder | (Folder Path)
