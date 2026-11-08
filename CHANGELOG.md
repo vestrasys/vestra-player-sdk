@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.18
 
 **Who must change: nobody.** Characterisation tests for the SDK refactor (step 0 of the plan, `doc/specs/sdk-refactor.md` §4.0 in the player repository); no API change, no wire change, `apiVersion` stays `vestra/1`.
 
