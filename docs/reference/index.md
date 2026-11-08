@@ -39,7 +39,7 @@ What differs between macOS and Windows: the clipboard, dialogs, window control, 
 
 ## Theme
 
-The `Theme` tokens with their current values, fonts, the sizes of each surface and the layouts of the player's own windows, the icon names, and the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`.
+The `Theme` tokens with their current values, fonts, the sizes of each surface and the layouts of the player's own windows, the icon names, the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`, and `VestraFocus` of `@vestra/focus.slint`.
 
 [Read the theme reference](theme.md)
 

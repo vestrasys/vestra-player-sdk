@@ -1,0 +1,29 @@
+// Keyboard focus between a panel and the video (SDK 1.7.0).
+//   import { VestraFocus } from "@vestra/focus.slint";
+//
+// The player's shortcuts (Space, the arrows, …) fire when the video has
+// the keyboard focus, or when a key bubbles up unaccepted from a panel. A
+// panel that takes the focus itself (a list with keyboard navigation, a
+// text field) keeps the keys it accepts until the focus moves elsewhere.
+// `VestraFocus.release()` gives it back to the video, as desktop players
+// do after a list item is played: call it after the user played or opened
+// an item from the keyboard or by double click (Enter, a double click), or
+// on Esc in the list, so the arrows control the player again:
+//   key-pressed(event) => {
+//       if event.text == Key.Return { Bridge.play(root.current); VestraFocus.release(); return accept; }
+//       if event.text == Key.Escape { VestraFocus.release(); return accept; }
+//       ...
+//   }
+//
+// It acts at once, inside the handler: the video area takes the focus in
+// the main window (from the sidebar, the adjust column, the bottom bar or
+// their fullscreen overlays); in the detached sidebar window, which has no
+// video, the window's own key scope takes it, so unaccepted keys reach the
+// player's shortcuts there. Elsewhere (the Options window, tool windows) it
+// does nothing. A click on an empty part of a panel never takes the focus
+// from the video, so a panel only needs this after giving the focus to
+// one of its own controls.
+export global VestraFocus {
+    // Give the keyboard focus back to the video. Filled by the player.
+    callback release();
+}

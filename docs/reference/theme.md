@@ -1,6 +1,6 @@
 ---
 title: Theme
-description: The Theme tokens with their current values, fonts, the icon set, and the components of @vestra/widgets.slint and @vestra/markdown.slint.
+description: The Theme tokens with their current values, fonts, the icon set, the components of @vestra/widgets.slint and @vestra/markdown.slint, and VestraFocus.
 ---
 
 # Theme
@@ -12,6 +12,7 @@ import { Theme } from "@vestra/theme.slint";
 import { Icon } from "@vestra/icons.slint";
 import { Button, KeyHint, Slider, ToolTipArea, ToolTipKey, UrlInputRow } from "@vestra/widgets.slint";
 import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.slint";
+import { VestraFocus } from "@vestra/focus.slint";
 ```
 
 > **Current values; they may change — use the tokens.** The values below are what the player uses today. A later player may adjust them; a token keeps its meaning, a value you copy does not follow.
@@ -376,6 +377,16 @@ Struct **`MarkdownRow`**: One table row (cells are plain text).
 Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through; the fields are filled by the player.
 
 <!-- /generated -->
+
+## Focus
+
+`@vestra/focus.slint` (SDK 1.7.0, player 0.7.6) exports one global, `VestraFocus`, filled by the player:
+
+| Member | Kind | Note |
+| --- | --- | --- |
+| `release` | callback `()` | Gives the keyboard focus back to the video, at once, inside the handler: the video area in the main window (from the sidebar, the adjust column, the bottom bar or their fullscreen overlays); the window's own key scope in the floating sidebar window, so unaccepted keys reach the player's shortcuts; nothing elsewhere (the Options window, tool windows). |
+
+Call it after the user played or opened an item from the keyboard or by double click, and on Esc in a list, so the arrows control the player again. A click on an empty part of a panel never takes the focus from the video, so a panel needs it only after giving the focus to one of its own controls. See [Focus and keyboard](../explanation/ui.md#focus-and-keyboard).
 
 ## Bar buttons
 
