@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.21
 
 **Who must change: nobody.** Step 1 of the SDK refactor, batch G (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/types.ts` is split by domain; no API, behaviour or wire change, `apiVersion` stays `vestra/1`. A tool that reads `dist/plugin/types.d.ts` by path must now read `dist/plugin/types/*.d.ts` as well, since that file only re-exports them (the player's host-agreement test and the Workshop prompt follow with the player's upgrade).
 
