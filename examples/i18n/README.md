@@ -18,6 +18,6 @@ npm run i18n                # find the texts again (locales/messages.pot), merge
 npm run pack                # build dist/ (with dist/locales/zh-Hans.json) and pack examples.i18n-0.1.0.vxp
 ```
 
-In the player (0.4.3 or later): start it with `--plugin <path to examples/i18n>`, then choose **Settings → Language → 简体中文** and restart the player.
+Start the player with `--plugin <path to examples/i18n>`, choose **简体中文** among the Language commands of the command palette (`Ctrl+Shift+P`) and restart the player.
 
 Walkthrough: [Counter (i18n)](https://vestrasys.github.io/vestra-player-sdk/documents/Counter_%28i18n%29.html).

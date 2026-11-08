@@ -360,7 +360,7 @@ export interface PluginInfo {
    * What a running plugin was refused because another plugin holds it: a
    * panel position (`slot-occupied`, with `slot`) or the next/previous
    * sequence (`sequence-taken`). Neither fails activation; `error` has the
-   * same as text. Empty from players before 0.4.x (after 0.4.0).
+   * same as text.
    * Always set by the SDK; optional so that code building `PluginInfo`
    * values itself (tests) keeps compiling.
    *
@@ -585,8 +585,7 @@ export interface Packages {
    * disabled across launches; a development load only for this run.
    * `invalid` to disable oneself, `missing` unknown.
    * `busy` while it is being installed or reloaded. `unsupported` to disable a built-in
-   * ({@link PluginInfo.builtin}): users manage third-party plugins only
-   * (players released with SDK 1.5.18 on; older ones disabled built-ins too).
+   * ({@link PluginInfo.builtin}): users manage third-party plugins only.
    *
    * @capability plugins.manage
    * @throws `invalid` (rejects) Disabling the calling plugin itself.

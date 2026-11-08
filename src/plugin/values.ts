@@ -111,7 +111,7 @@ export function valueLimitProblem(value: Json): string | null {
     if (budget.values === L.values)
       return `UI value exceeds ${L.values} total nodes`;
     budget.values += 1;
-    // An image (nested from SDK 1.5.19) is one value, like a document.
+    // An image (also nested) is one value, like a document.
     if (isObject(value) && "$vestraImage" in value) return null;
     const doc = documentText(value);
     if (doc !== null) {

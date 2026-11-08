@@ -138,7 +138,6 @@ export const GROUPS = [
       },
       {
         file: "design-rules.md",
-        aliases: ["plugins", "interface", "menus"],
         why: "The rules every plugin, its interface and its menus follow, on one page (the former guidelines), written as a guide to applying them.",
       },
       {
@@ -250,6 +249,169 @@ export const GROUPS = [
 
 /** Files under docs/ that are deliberately not on the site. */
 export const OFF_SITE = ["maintaining.md"];
+
+/**
+ * Pages that moved or were folded into others, for the documentation tree:
+ * an old path `/Guides/<old group>/<old file or title>` opens the page the
+ * site redirects it to (scripts/docs-tree.mjs stores the table, src/docs.ts
+ * reads it before resolving a path). `OLD_GROUPS` names each old folder's
+ * group titles; each `MOVED_PAGES` entry is an old file (folder/file.md),
+ * its title and the page it opens now (folder/file.md of `GROUPS`).
+ */
+export const OLD_GROUPS = {
+  "how-to": ["How-to", "How-to guides"],
+  tutorials: ["Tutorials"],
+  explanation: ["Explanation", "Concepts"],
+  guidelines: ["Guidelines"],
+  upgrading: ["Upgrading"],
+};
+
+export const MOVED_PAGES = [
+  // The how-to guides: same file names under guides/.
+  ...[
+    ["control-playback", "Control playback"],
+    ["store-data", "Store a plugin's data"],
+    ["subtitles", "Load subtitles from a plugin"],
+    ["slider", "Keep a slider responsive while dragging"],
+    ["gpu-rendering", "Offer a GPU rendering switch"],
+    [
+      "command-state",
+      "Keep a command's state without keeping the plugin running",
+    ],
+    ["testing", "Test a plugin"],
+    ["publish", "Publish a plugin"],
+    ["own-store", "Host your own plugin store"],
+    ["agent-docs", "Give a coding agent the documentation"],
+    ["troubleshooting", "Troubleshooting"],
+  ].map(([file, title]) => ({
+    from: `how-to/${file}.md`,
+    title,
+    to: `guides/${file}.md`,
+  })),
+  { from: "how-to/index.md", title: "How-to guides", to: "guides/index.md" },
+  { from: "how-to/i18n.md", title: "Translate a plugin", to: "guides/i18n.md" },
+  {
+    from: "how-to/window-state.md",
+    title: "Remember a window's state between runs",
+    to: "guides/windows.md",
+  },
+  // The tutorials.
+  { from: "tutorials/index.md", title: "Tutorials", to: "tutorial/index.md" },
+  {
+    from: "tutorials/getting-started.md",
+    title: "Getting started",
+    to: "tutorial/index.md",
+  },
+  {
+    from: "tutorials/add-a-window.md",
+    title: "Add a window",
+    to: "guides/windows.md",
+  },
+  {
+    from: "tutorials/settings-and-translations.md",
+    title: "Add settings and translations",
+    to: "guides/i18n.md",
+  },
+  {
+    from: "tutorials/test-and-publish.md",
+    title: "Test, check, pack and publish",
+    to: "guides/publish.md",
+  },
+  {
+    from: "tutorials/blur-kernel.md",
+    title: "Write your own blur kernel",
+    to: "guides/filters.md",
+  },
+  // The explanation pages.
+  {
+    from: "explanation/index.md",
+    title: "Explanation",
+    to: "tutorial/index.md",
+  },
+  {
+    from: "explanation/plugins.md",
+    title: "How a plugin runs",
+    to: "tutorial/index.md",
+  },
+  {
+    from: "explanation/three-ways.md",
+    title: "Three ways to write a plugin",
+    to: "tutorial/index.md",
+  },
+  {
+    from: "explanation/commands.md",
+    title: "Commands, menus and key bindings",
+    to: "reference/commands.md",
+  },
+  {
+    from: "explanation/playback.md",
+    title: "Playback state, controls and sources",
+    to: "guides/control-playback.md",
+  },
+  {
+    from: "explanation/processing.md",
+    title: "Video and audio processing",
+    to: "guides/filters.md",
+  },
+  {
+    from: "explanation/ui.md",
+    title: "Windows, panels, settings pages, dialogs and the OSD",
+    to: "guides/windows.md",
+  },
+  {
+    from: "explanation/rendering.md",
+    title: "GPU and software rendering",
+    to: "guides/gpu-rendering.md",
+  },
+  {
+    from: "explanation/architecture.md",
+    title: "The player's Rust core",
+    to: "tutorial/index.md",
+  },
+  {
+    from: "explanation/host-and-node.md",
+    title: "How the player runs and talks to plugins",
+    to: "tutorial/index.md",
+  },
+  // The guidelines.
+  {
+    from: "guidelines/index.md",
+    title: "Guidelines",
+    to: "guides/design-rules.md",
+  },
+  {
+    from: "guidelines/plugins.md",
+    title: "Plugin rules",
+    to: "guides/design-rules.md",
+  },
+  {
+    from: "guidelines/interface.md",
+    title: "Interface guidelines",
+    to: "guides/design-rules.md",
+  },
+  {
+    from: "guidelines/menus.md",
+    title: "Menu guidelines",
+    to: "guides/design-rules.md",
+  },
+  // The upgrading pages.
+  { from: "upgrading/index.md", title: "Upgrading", to: "guides/index.md" },
+  {
+    from: "upgrading/i18n-migration.md",
+    title: "Migrate a plugin to English source text",
+    to: "guides/i18n.md",
+  },
+  {
+    from: "upgrading/rollback-migration.md",
+    title: "Migrating off package rollback (1.5.16, removed in 1.5.17)",
+    to: "guides/publish.md",
+  },
+  {
+    from: "upgrading/releases.md",
+    title: "Who must change, release by release",
+    to: "guides/index.md",
+  },
+];
 
 /**
  * Site addresses that moved, old → new (both relative to the site's root).

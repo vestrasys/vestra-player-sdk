@@ -485,7 +485,7 @@ export interface LayoutSlot {
   effective: boolean;
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
   detached: boolean;
-  /** The position's panels in tab order; absent from players without sidebar tabs (0.4.0 and older). */
+  /** The position's panels in tab order. */
   panels?: LayoutPanel[];
 }
 export interface PlaybackStats {

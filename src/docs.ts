@@ -78,6 +78,8 @@ interface Tree {
   version: string;
   root: DocNode;
   nodes: DocNode[];
+  /** Old guide paths, `"<old group>/<old page>"` in loose form → their page now. */
+  moved: Map<string, DocNode>;
 }
 
 let loaded: Tree | undefined;
@@ -86,7 +88,11 @@ let loaded: Tree | undefined;
 function tree(): Tree {
   if (loaded) return loaded;
   const file = new URL("../dist/docs-tree.json.gz", import.meta.url);
-  let data: { version: string; nodes: StoredNode[] };
+  let data: {
+    version: string;
+    nodes: StoredNode[];
+    m?: Record<string, number>;
+  };
   try {
     data = JSON.parse(gunzipSync(readFileSync(file)).toString("utf8"));
   } catch (error) {
@@ -122,7 +128,10 @@ function tree(): Tree {
   };
   const root = nodes[0]!;
   assign(root);
-  loaded = { version: data.version, root, nodes };
+  const moved = new Map(
+    Object.entries(data.m ?? {}).map(([key, index]) => [key, nodes[index]!]),
+  );
+  loaded = { version: data.version, root, nodes, moved };
   return loaded;
 }
 
@@ -276,6 +285,14 @@ function resolve(
   const { root } = tree();
   const none: Resolution = { node: root, jumps: 0, inexact: 0, dropped: 0 };
   if (!segments.length) return { node: root, jumped: false };
+  // A page of an old group (`/Guides/How-to/testing`, `/Guides/Explanation/plugins`)
+  // opens the page it moved to, as the site's redirects do.
+  const old = loose(segments[0]!) === "guides" ? segments.slice(1) : segments;
+  if (old.length === 2) {
+    const page = old[1]!.replace(/\.md$/i, "");
+    const moved = tree().moved.get(`${loose(old[0]!)}/${loose(page)}`);
+    if (moved) return { node: moved, jumped: false };
+  }
   const attempts = [segments];
   const dotted = segments.flatMap((segment) =>
     segment.split(".").filter(Boolean),

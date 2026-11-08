@@ -864,7 +864,7 @@ export class ViewWriter {
     if (Array.isArray(value) && this.#patches) {
       // Row by row: the same work as one `JSON.stringify`, and the rows to
       // diff against those last sent. Rows that cannot change (deep-frozen
-      // objects bound again, SDK 1.5.47) are taken from `settledRows`.
+      // objects bound again) are taken from `settledRows`.
       const encoded = encodeRows(value);
       const { enc } = encoded;
       const signature = () => `[${enc.join(",")}]`;

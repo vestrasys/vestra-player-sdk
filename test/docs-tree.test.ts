@@ -242,6 +242,28 @@ test("a name alone, dot notation, a stale segment and a .md suffix find their no
     head("</Guides/Guides/Test a plugin>"),
     "/Guides/Guides/Test a plugin · Page",
   );
+  // Old pages (MOVED_PAGES) open where the site redirects them.
+  assert.equal(head("/Guides/Explanation/plugins"), "/Guides/Tutorial · Group");
+  assert.equal(
+    head("/Guides/How-to/testing"),
+    "/Guides/Guides/Test a plugin · Page",
+  );
+  assert.equal(
+    head("/Guides/How-to/window-state"),
+    "/Guides/Guides/Open a tool window and remember its state · Page",
+  );
+  assert.equal(
+    head("/Guides/Tutorials/settings-and-translations"),
+    "/Guides/Guides/Add settings and translations · Page",
+  );
+  assert.equal(
+    head("/Guides/Guidelines/menus"),
+    "/Guides/Guides/Design rules · Page",
+  );
+  assert.equal(
+    head("/Guides/Explanation/Commands, menus and key bindings"),
+    "/Guides/Reference/Commands, menus and bindings · Page",
+  );
 });
 
 test("links are paths of the tree; site addresses and images are gone", () => {

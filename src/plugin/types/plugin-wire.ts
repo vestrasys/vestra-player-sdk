@@ -410,9 +410,8 @@ export interface WireCommands {
    * @remarks
    * Experimental: the wire protocol is not semver; this member changes
    * with versions. `declaration` is `commands.register`'s: `title`, `path`,
-   * `order`, `group`, `radio`, `bindings`, `focus`, `repeat`, and the
-   * fields newer players added (`button`, `category`, `home`: see
-   * {@link CommandOptions} for the player each needs). The SDK adds the id,
+   * `order`, `group`, `radio`, `bindings`, `focus`, `repeat`, `button`,
+   * `category` and `home` (as in {@link CommandOptions}). The SDK adds the id,
    * the revision and the state and checks nothing in it: bindings must
    * already be in the player's canonical form (`Ctrl+H`).
    *

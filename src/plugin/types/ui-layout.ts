@@ -432,8 +432,7 @@ export interface PanelSlot {
   readonly state: SlotState | null;
   /**
    * The position's panels in tab order: the sidebar's tabs, the bottom
-   * bar's one panel; `null` while there is none (as `state`), and from
-   * players without sidebar tabs (0.4.0 and older). Refreshed with `state`.
+   * bar's one panel; `null` while there is none (as `state`). Refreshed with `state`.
    *
    * @throws Never.
    *
@@ -545,8 +544,7 @@ export interface PanelSlot {
    * The sidebar holds the panels of several plugins as tabs (see
    * {@link Panels.mount}); this switches which one it shows, like a click on
    * its tab. To show this plugin's own panel, use {@link Panel.show}. The
-   * bottom bar has one panel: activating it changes nothing. Players
-   * without sidebar tabs (0.4.0 and older) ignore it.
+   * bottom bar has one panel: activating it changes nothing.
    *
    * @capability ui.mount
    *
@@ -778,8 +776,7 @@ export interface Panel extends View, Disposable {
    *
    * @remarks
    * Sets the position's preference like {@link PanelSlot.setVisible}`(true)`
-   * (remembered; in fullscreen the sidebar overlay pops out). On players
-   * without sidebar tabs (0.4.0 and older) it is just that. Waits for
+   * (remembered; in fullscreen the sidebar overlay pops out). Waits for
    * {@link Panel.ready} first.
    *
    * @capability ui.mount

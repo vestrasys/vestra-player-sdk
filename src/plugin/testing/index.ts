@@ -1849,7 +1849,7 @@ export class TestHost implements Transport {
    *
    * `code` (default `failed`) is the error code pushed. `previous-crash` is a
    * shortcut that only sets the handle's status and reaches `onError`: the real
-   * player (0.6.3) never pushes it, it refuses the `set` request itself after
+   * player never pushes it, it refuses the `set` request itself after
    * an abnormal end. To test that, set {@link TestHost.previousCrash}.
    *
    * @capability None.
