@@ -45,9 +45,9 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A panel mount or a dialog is refused
 
-**Cause:** There is one panel per plugin, one bottom bar and one backdrop for all plugins (`conflict`), one OSD info block per plugin, and one open dialog at a time player-wide (`busy`).
+**Cause:** There is one panel per slot per plugin (one in all before player 0.7.6), one bottom bar and one backdrop for all plugins (`conflict`), one OSD info block per plugin, and one open dialog at a time player-wide (`busy`).
 
-**Fix:** Mount only the plugin's one panel and treat a `conflict` for a shared slot as "another plugin is there"; keep one OSD info block handle and change its text; wait for an open dialog to be answered.
+**Fix:** Mount at most one panel per slot (on players before 0.7.6, one panel in all) and treat a `conflict` for a shared slot as "another plugin is there"; keep one OSD info block handle and change its text; wait for an open dialog to be answered.
 
 ## The video drops frames while the pointer moves over a window
 

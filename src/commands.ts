@@ -385,12 +385,8 @@ vestra.playback | copy-path | Copy to Clipboard ▸ Full Path
 host | play-pause | Playback ▸ Play/Pause | Space, Mouse:LeftClick
 host | previous | Playback ▸ Previous | PageUp, Mouse:X2
 host | next | Playback ▸ Next | PageDown, Mouse:X1
-host | frame-back | Playback ▸ Seek ▸ Previous Frame | D
-host | frame-forward | Playback ▸ Seek ▸ Next Frame | F
 vestra.playback | keyframe-back | Playback ▸ Seek ▸ Previous Keyframe | Ctrl+Shift+ArrowLeft
 vestra.playback | keyframe-forward | Playback ▸ Seek ▸ Next Keyframe | Ctrl+Shift+ArrowRight
-host | seek-backward | Playback ▸ Seek ▸ Back 5 s | ArrowLeft
-host | seek-forward | Playback ▸ Seek ▸ Forward 5 s | ArrowRight
 vestra.playback | backward-2 | Playback ▸ Seek ▸ Back 30 s | Ctrl+ArrowLeft
 vestra.playback | forward-2 | Playback ▸ Seek ▸ Forward 30 s | Ctrl+ArrowRight
 vestra.playback | backward-3 | Playback ▸ Seek ▸ Back 60 s | Shift+ArrowLeft
@@ -403,9 +399,6 @@ vestra.subtitles | dialogue-current | Playback ▸ Seek ▸ Current Subtitle Sta
 vestra.playback | jump-start | Playback ▸ Seek ▸ Jump to Start | Backspace
 vestra.playback | time-jump | Playback ▸ Seek ▸ Seek Steps…
 vestra.playback | jump | Playback ▸ Jump to Time… | G
-host | rate-normal | Playback ▸ Speed ▸ Normal | Z
-host | rate-down | Playback ▸ Speed ▸ Slower 0.1 | X
-host | rate-up | Playback ▸ Speed ▸ Faster 0.1 | C
 vestra.playback | rate-05 | Playback ▸ Speed ▸ 0.5×
 vestra.playback | rate-15 | Playback ▸ Speed ▸ 1.5×
 vestra.playback | rate-20 | Playback ▸ Speed ▸ 2×
@@ -649,6 +642,13 @@ host | exit-fullscreen | (Leave Fullscreen)
 host | sidebar | (Toggle Sidebar)
 host | palette | (Command Palette) | Ctrl+Shift+P
 host | adjust | (Adjust)
+host | frame-back | (Previous Frame) | D
+host | frame-forward | (Next Frame) | F
+host | seek-backward | (Back 5 s) | ArrowLeft
+host | seek-forward | (Forward 5 s) | ArrowRight
+host | rate-normal | (Normal) | Z
+host | rate-down | (Slower 0.1) | X
+host | rate-up | (Faster 0.1) | C
 vestra.capture | capture.clipExport | (Export Clip Range) | Ctrl+Shift+E
 vestra.capture | capture.saveAs | (Save Current Frame As…)
 vestra.capture | capture.saveScreen | (Save Rendered Frame) | Ctrl+Alt+E

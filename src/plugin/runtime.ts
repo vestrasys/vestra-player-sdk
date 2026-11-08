@@ -340,8 +340,16 @@ export class Runtime {
     this.manifest = manifest;
     this.directory = directory;
     transport.on("ui.callback", (data) => {
-      const event = data as UiCallback;
-      this.views.get(event.view)?.(event.callback, event.args);
+      const event = data as UiCallback & { slot?: string };
+      // A panel's callback names its slot (player 0.7.6: one panel per
+      // slot); older players name only `"$mount"`, and the plugin has one.
+      const view =
+        event.view === "$mount"
+          ? event.slot
+            ? `panel:${event.slot}`
+            : [...this.views.keys()].find((key) => key.startsWith("panel:"))
+          : event.view;
+      if (view) this.views.get(view)?.(event.callback, event.args);
     });
     transport.on("commands.execute", (data) => {
       this.commands.get((data as { id: string }).id)?.();
