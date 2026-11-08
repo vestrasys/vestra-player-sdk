@@ -174,5 +174,4 @@ export default async function activate(plugin: Plugin) {
 
 ## See also
 
-- [Playback state, controls and sources](../explanation/playback.md): phases, sources, resolvers and streams.
 - The API reference: `Player`, `Media`, `Scrub`, `Conditional`, `Host`.

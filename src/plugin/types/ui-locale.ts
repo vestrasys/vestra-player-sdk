@@ -10,15 +10,13 @@ import type { ConfirmOptions, Dialogs, Osd, OsdPanel } from "./ui-shell.ts";
 /* oxlint-enable no-unused-vars */
 
 /**
- * The player's palettes: `vestra`, the dark default, and `vestra-light`
- * (player 0.4.0, SDK 1.5.0), a light palette whose video area stays dark.
- * Both draw on the logo's colours. Read colours from `Theme` instead of
- * branching on the id: a later version may add palettes.
+ * The player's palettes: `vestra`, the dark default, and `vestra-light`, a
+ * light palette whose video area stays dark. Both draw on the logo's colours.
+ * Read colours from `Theme` instead of branching on the id: a later version may
+ * add palettes.
  *
  * @remarks
- * The player treats an id it does not have as `vestra`: plugins built with an
- * older SDK that still ask for a palette removed in SDK 1.4.0 keep working,
- * and a player older than 0.4.0 answers `vestra-light` with `vestra`.
+ * The player treats an id it does not have as `vestra`.
  *
  * @since 1.0.0
  * @category UI
@@ -60,7 +58,7 @@ export type ThemeId = "vestra" | "vestra-light";
  * });
  * ```
  *
- * @see [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md) (theme tokens)
+ * @see [Theme](../../../docs/reference/theme.md)
  * @since 1.0.0
  * @category UI
  */
@@ -76,15 +74,14 @@ export interface Appearance {
    *
    * @remarks
    * Needs `events`: without it the listener never runs for other plugins'
-   * changes. Views need no help to follow the palette; use this for things
-   * the plugin draws itself (a rendered image, colours it computes). Errors
-   * go to {@link Scope.onError}. When the player starts a stopped plugin
-   * for a palette change (player 0.5.21), {@link Appearance.theme} already
-   * has the new palette at start and the listener still hears the change
-   * (SDK 1.5.56; before, it did not run). A language change does not call
-   * it, except in one case: a plugin started for a language change alone
-   * may hear the unchanged palette once, since the player's event does not
-   * say which of the two changed.
+   * changes. Views need no help to follow the palette; use this for things the
+   * plugin draws itself (a rendered image, colours it computes). Errors go to
+   * {@link Scope.onError}. When the player starts a stopped plugin for a
+   * palette change, {@link Appearance.theme} already has the new palette at
+   * start and the listener still hears the change. A
+   * language change does not call it, except in one case: a plugin started for
+   * a language change alone may hear the unchanged palette once, since the
+   * player's event does not say which of the two changed.
    *
    * @capability events
    *
@@ -207,12 +204,11 @@ export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
 export type LanguagePreference = "system" | Locale;
 
 /**
- * Arguments of a template sentence ({@link Osd.show},
- * {@link OsdPanel.set}, {@link ConfirmOptions.args}, {@link I18n.text}): an
- * array for `{}` and `{0}`, `{1}` placeholders, or an object for `{name}`
- * placeholders. At most 16. Strings and finite numbers are data, shown as
- * they are (whole numbers without a fraction); a {@link Text} or
- * {@link TextList} argument (SDK 1.5.11, player 0.4.3) is translated too,
+ * Arguments of a template sentence ({@link Osd.show}, {@link OsdPanel.set},
+ * {@link ConfirmOptions.args}, {@link I18n.text}): an array for `{}` and `{0}`,
+ * `{1}` placeholders, or an object for `{name}` placeholders. At most 16.
+ * Strings and finite numbers are data, shown as they are (whole numbers without
+ * a fraction); a {@link Text} or {@link TextList} argument is translated too,
  * so a sentence can be built from translated parts.
  *
  * @since 1.5.9
@@ -228,12 +224,12 @@ export type TemplateArgs =
  *
  * @remarks
  * Accepted wherever the player shows a plugin's text: command titles, path
- * segments and reasons, {@link Osd.show} and {@link OsdPanel.set} (as the
- * text or an argument), the texts of {@link Dialogs.confirm}, file dialog
- * titles and `saveFile`'s `fileName`, and property values where Slint
- * expects a `string` (at any depth: a `[string]` model, a struct field).
- * Nested in another text's arguments it is translated too. Requires player
- * 0.4.3. Limits: `TEXT_LIMITS` in `@vestra-player/sdk/testing`.
+ * segments and reasons, {@link Osd.show} and {@link OsdPanel.set} (as the text
+ * or an argument), the texts of {@link Dialogs.confirm}, file dialog titles and
+ * `saveFile`'s `fileName`, and property values where Slint expects a `string`
+ * (at any depth: a `[string]` model, a struct field). Nested in another text's
+ * arguments it is translated too. Limits: `TEXT_LIMITS` in
+ * `@vestra-player/sdk/testing`.
  *
  * The wire form `{ $vestraText, args }` is what the player reads; write it
  * with {@link I18n.text}, so that `vestra-plugin i18n extract` finds the
@@ -319,16 +315,16 @@ export type TextValue = string | Text | TextList;
  *    its arguments (`osd.show("Speed {}×", [rate])`), never a sentence
  *    composed in TypeScript.
  *
- * Where words and data cannot be separated that way (a menu item with a
- * number, a `[string]` model, a sentence made of translated parts), the
- * plugin passes a text value ({@link I18n.text}, {@link I18n.list}; SDK
- * 1.5.11): data the player translates, never a translated string.
+ * Where words and data cannot be separated that way (a menu item with a number,
+ * a `[string]` model, a sentence made of translated parts), the plugin passes a
+ * text value ({@link I18n.text}, {@link I18n.list}): data the player
+ * translates, never a translated string.
  *
  * The language is fixed when the player starts: {@link I18n.locale} never
  * changes during a run. Read it for what is not text, such as the order of
  * names or a date format. `vestra-plugin i18n extract` collects the texts
  * into `locales/messages.pot`; see the
- * [i18n guide](../../../docs/how-to/i18n.md).
+ * [i18n guide](../../../docs/guides/i18n.md).
  *
  * @capability None.
  *
@@ -425,23 +421,23 @@ export interface I18n {
   list(items: readonly TextArg[], style?: ListStyle): TextList;
   /**
    * An `Error` whose words the player shows translated: throw it where the
-   * player shows a plugin's failure to the user, such as from a
-   * file or web resolver's `resolve` ({@link FileResolverOptions}, {@link WebResolverOptions}) (also when a stream
-   * fails while it starts). The player shows `text` translated with this
-   * plugin's catalog (as `player.state.error` and the failure message);
-   * `message` is the English rendering, for logs and older players.
-   * Elsewhere it is an ordinary `Error`.
+   * player shows a plugin's failure to the user, such as from a file or web
+   * resolver's `resolve` ({@link FileResolverOptions},
+   * {@link WebResolverOptions}) (also when a stream fails while it starts). The
+   * player shows `text` translated with this plugin's catalog (as
+   * `player.state.error` and the failure message); `message` is the English
+   * rendering, for logs. Elsewhere it is an ordinary `Error`.
    *
    * @param source - English source text, as {@link I18n.text}'s.
    * @param args - Values for its placeholders.
    * @throws `invalid` A malformed or over-limit value.
    *
    * @example Fail an open with a message the user can read
-   * Opening a `.ch8` file the plugin cannot load shows "The program file
-   * was not found." in the user's language. The player shows the message of
-   * an error thrown from `resolve`; `i18n.error` makes an `Error` whose text
-   * the player translates with this plugin's catalog, while its `message`
-   * stays English for logs and older players.
+   * Opening a `.ch8` file the plugin cannot load shows "The program file was
+   * not found." in the user's language. The player shows the message of an
+   * error thrown from `resolve`; `i18n.error` makes an `Error` whose text the
+   * player translates with this plugin's catalog, while its `message` stays
+   * English for logs.
    * ```ts
    * import { readFile } from "node:fs/promises";
    * declare function startEmulator(program: Uint8Array): ResolvedStream;

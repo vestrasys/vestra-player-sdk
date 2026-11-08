@@ -41,7 +41,7 @@ export type {
   VideoNode,
   SubtitleStyle,
   ResolvedMedia,
-  // The wire shapes of the events `EventPayloads` lists (SDK 1.7.0).
+  // The wire shapes of the events `EventPayloads` lists.
   CommandKeys,
   PackageInfo,
   WindowFacts,

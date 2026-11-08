@@ -5,7 +5,7 @@ description: Built-in menu ids, submenu keys in use, every built-in command with
 
 # Commands, menus and bindings
 
-The names to look up while declaring a command with {@link "@vestra-player/sdk"!Commands.add | plugin.commands.add}. How menus merge and how a key finds its command is explained in [Commands, menus and key bindings](../explanation/commands.md); where a command should go is in [Guidelines: menus](../guidelines/menus.md).
+The names to look up while declaring a command with {@link "@vestra-player/sdk"!Commands.add | plugin.commands.add}. Where a command should go is in [Design rules](../guides/design-rules.md).
 
 ## Menu paths
 
@@ -32,9 +32,7 @@ A command's `path` is a list of 1 to 8 segments in English source text, the last
 
 <!-- /generated -->
 
-`@reset` needs player 0.6.3; older players refuse it with `invalid`. Players before 0.3.0 show `@video` as a menu of its own; players up to 0.4.2 titled these menus in Chinese, where only the id form reaches them. The fixed orders of the built-in menus and of the player's own items are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
-
-Since the slim menu (player 0.7.6) the built-in menus hold no item of the player's own: each shows only while a plugin has a command in it, at its fixed order (Playback 200, Subtitles 300, Video 400, Audio 500 and Screen 710 among the domain items, Settings 830 and Reset 840 in the settings group). The controls that used to fill them are in the Picture, Audio, Subtitles and Playback panels and in the command palette.
+Each built-in menu shows only while a plugin has a command in it, at its fixed order (Playback 200, Subtitles 300, Video 400, Audio 500 and Screen 710 among the domain items, Settings 830 and Reset 840 in the settings group); the fixed orders are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}. The player's own controls are in the Picture, Audio, Subtitles and Playback panels and in the command palette.
 
 ## The top level
 
@@ -66,7 +64,7 @@ About Vestra Player…          F1
 Quit                          Cmd+Q         group exit
 ```
 
-The groups of the top level and their `order` ranges ([Guidelines: menus](../guidelines/menus.md#the-top-level) says which to use):
+The groups of the top level and their `order` ranges ([Design rules](../guides/design-rules.md) says which to use):
 
 | Group                  | `order`          | For                                                                                                                                                                 |
 | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -79,7 +77,7 @@ The groups of the top level and their `order` ranges ([Guidelines: menus](../gui
 
 ## The Reset menu
 
-**Reset ▸** (`@reset`, player 0.6.3) sits at order 840, directly below Settings and in its separator group, and is shown only once a command is in it. Inside it, items use the order range and a group of their domain ([Guidelines: menus](../guidelines/menus.md#reset) says why): Playback 200–299 `reset-playback`, Subtitles 300–399 `reset-subtitles`, Video 400–499 `reset-video`, Audio 500–599 `reset-audio`, Screen 700–799 `reset-screen`, anything else 800–899 in a group of its own.
+**Reset ▸** (`@reset`) sits at order 840, directly below Settings and in its separator group, and is shown only once a command is in it. Inside it, items use the order range and a group of their domain: Playback 200–299 `reset-playback`, Subtitles 300–399 `reset-subtitles`, Video 400–499 `reset-video`, Audio 500–599 `reset-audio`, Screen 700–799 `reset-screen`, anything else 800–899 in a group of its own.
 
 ## Submenu keys in use
 
@@ -100,7 +98,7 @@ The submenus that exist already, by key path. Write the same keys to add a comma
 
 ## Built-in commands
 
-Every command the player (`host`) and its built-in plugins register when the player starts with nothing open, in menu order; commands outside the main menu (a panel's shortcuts) come last. Items built from content (tracks, recent files, output devices) are not listed. The **Command** column is `<owner>/<id>`, the key under which the user's own bindings are stored. The same list is {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS}, for tests that check your defaults against it.
+Every command the player (`host`) and its built-in plugins register when the player starts with nothing open, in menu order; commands outside the main menu come last. The **Command** column is `<owner>/<id>`, the key under which the user's own bindings are stored. The same list is {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS}.
 
 <!-- generated:builtin-commands -->
 
@@ -448,20 +446,11 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 ## Bottom-bar buttons
 
-`button: { icon, order }` on {@link "@vestra-player/sdk"!Commands.add | commands.add} ({@link "@vestra-player/sdk"!CommandButton | CommandButton}, SDK 1.5.29, player 0.5.10) gives a command a button in the bottom bar's strip of command buttons, which the player draws ([Bottom-bar buttons](../explanation/commands.md#bottom-bar-buttons), [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar)).
+`button: { icon, order }` on {@link "@vestra-player/sdk"!Commands.add | commands.add} gives a command a button in the bottom bar's strip, which the player draws; the fields and how it looks are at {@link "@vestra-player/sdk"!CommandButton | CommandButton}.
 
-| Field | Rule |
-| --- | --- |
-| `icon` | A name of the player's icon set (the names in [Theme: Icons](theme.md#icons), `BAR_BUTTON_ICONS`), or an image from {@link "@vestra-player/sdk"!Ui.image | plugin.ui.image} drawn in the 14×12 icon box in the icon colour (only its alpha counts). Unknown name: `invalid`. |
-| `order` | Integer 0–999, left to right ascending; equal orders by plugin id, then declaration order. The built-in plugins use 100 (Vestra Player AI) and 200 (Plugin Store). |
-| `path` | Required: a button without a menu path is `invalid`. |
-
-- **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. The icon is drawn in the accent colour (player 0.5.22; the text colour before), darker while pressed. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: a small dot in the icon's colour under the icon (before player 0.5.22: the icon in the accent colour, the others in the text colour). Accessibility: a button named by the title, with its enabled and checked state and a default action.
-- **Click**: runs the command exactly as a click on its menu item does.
-- **Order and room** (player 0.7.6): left to right by `order`, then plugin id, then declaration order; lower `order` comes first and stays in the strip longest. The buttons that do not fit, and those past eight, are in the strip's » menu, in the same order, with their icon, title, key and check state; » shows only while something is in it. The player's **Command Palette**, **Adjustments and Effects** and **Sidebar** sit right of », always shown. Before player 0.7.6 a narrow strip lost its lowest orders first.
-- **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared; a later one stays a menu item only), eight in the strip, the rest in its » menu. No button is left out for the total (before player 0.7.6 the player kept the eight highest orders and logged the others with `limit`).
-- **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
-- **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
+- `icon`: a name of the player's icon set ([Theme: Icons](theme.md#icons)) or an image from {@link "@vestra-player/sdk"!Ui.image | plugin.ui.image}; `order`: 0–999, left to right; a menu `path` is required.
+- Lower `order` stays in the strip longest; buttons that do not fit, and those past eight, are in the strip's » menu. One button per plugin ([Limits](limits.md#bottom-bar-buttons)).
+- A click runs the command as its menu item does; disposing the command or stopping the plugin removes the button.
 
 ## Binding syntax
 
@@ -491,7 +480,7 @@ A menu item shows the first of its keyboard bindings that is in effect.
 | `digits` | `0`–`9` | Digit keys of the main keyboard: `0` to `9`. |
 | `functionKeys` | `F1`–`F24` | Function keys: `F1` to `F24`. |
 | `named` | `Space`, `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`, `Plus`, `Numpad0`, `Numpad1`, `Numpad2`, `Numpad3`, `Numpad4`, `Numpad5`, `Numpad6`, `Numpad7`, `Numpad8`, `Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`, `NumpadDivide`, `NumpadEnter`, `NumpadDecimal` | Other named keys, matched by the physical key. `Plus` is the `+` key however it is typed; the `Numpad…` names are the numeric keypad only, never the main keyboard. |
-| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window or the floating sidebar window, except while a menu is open (player 0.6.0). `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
+| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window or the floating sidebar window, except while a menu is open. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
 
 <!-- /generated -->
 
@@ -521,7 +510,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), **Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, no default key; a top-level menu item at order 800, group `windows`; earlier players title it Toggle Sidebar and keep it outside the menu), **Adjustments and Effects** (`host/adjust`, player 0.7.6: the bottom bar's sliders button, no default key; a top-level menu item at order 791, group `windows`; earlier players title it Adjust and keep it outside the menu) and **Command Palette** (`host/palette`, player 0.7.6: `Ctrl+Shift+P`, ⌘⇧P on macOS, outside the menu; see [The command palette and categories](../explanation/commands.md#the-command-palette-and-categories)); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Enter Fullscreen** (`host/enter-fullscreen`: no default key, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key, enabled only in fullscreen), **Quit** (`host/quit`), **Sidebar** (`host/sidebar`: the bottom bar's sidebar button, order 800, group `windows`), **Adjustments and Effects** (`host/adjust`: the bottom bar's sliders button, order 791, group `windows`) and **Command Palette** (`host/palette`, `Ctrl+Shift+P`, outside the menu); their keys are in [Built-in commands](#built-in-commands).
 
 ## Keys the system takes first
 

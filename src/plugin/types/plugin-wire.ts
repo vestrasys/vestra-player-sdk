@@ -42,10 +42,9 @@ import type { SettingsPage } from "./ui-shell.ts";
  * name and says which one; a method name it cannot read is reported as
  * unchecked).
  *
- * [Three ways to write a plugin](../../../docs/explanation/three-ways.md)
- * compares `bind()` (the default), {@link Player.on} with
- * {@link View.set}, and `plugin.wire` on four scenarios; the method and
- * event names are in [Messages](../../../docs/reference/messages.md) and
+ * The [Tutorial](../../../docs/tutorial/index.md) shows `bind()` (the
+ * default), {@link Player.on} with {@link View.set}, and `plugin.wire`
+ * side by side, from examples/three-ways; the method and event names are in [Messages](../../../docs/reference/messages.md) and
  * [Events](../../../docs/reference/events.md).
  *
  * @example Show the speed with direct messages
@@ -73,14 +72,12 @@ export interface Wire {
    * Send one request to the player by its method name and get its answer.
    *
    * @remarks
-   * Experimental: the wire protocol is not semver; this member changes
-   * with versions. `method` and `params` go to the player as given; the
-   * answer is the player's result, typed by the caller (`T`). The player
-   * checks the capability the method needs and refuses with `capability`
-   * when the manifest does not declare it; its other refusals arrive with
-   * their own codes (`invalid`, `missing`, `stale`…). A method an older
-   * player does not know is refused with `unsupported` or `invalid`: compare
-   * `plugin.app.version` with the player that added it.
+   * Experimental: the wire protocol is not semver; this member changes with
+   * versions. `method` and `params` go to the player as given; the answer is
+   * the player's result, typed by the caller (`T`). The player checks the
+   * capability the method needs and refuses with `capability` when the manifest
+   * does not declare it; its other refusals arrive with their own codes
+   * (`invalid`, `missing`, `stale`…).
    *
    * Nothing of the SDK's sits between: no value limits, no `seq` or
    * revision, no retry after a lost reply, no wait during activation. A
@@ -232,16 +229,15 @@ export interface Wire {
  * correct for the properties it compares.
  *
  * What the SDK does for these writes: one write in flight per property, in
- * order (a whole value drops the writes still waiting before it, which
- * resolve `false`); with a player that takes row patches (behaviour from
- * player 0.6.0) a whole value without `seq` gets one, a list larger than
- * one request
- * (512 KB of rows) goes in parts, and row operations are numbered and split
- * the same way. What it leaves to the plugin: the value limits (the player
- * refuses a value over them with `limit`), Markdown documents and images in
- * wire form, and a `stale` refusal of row operations (the player shows
- * something else than they apply on: write the whole value). Property
- * names are written in camelCase or as in Slint, as for {@link View.set}.
+ * order (a whole value drops the writes still waiting before it, which resolve
+ * `false`); with a player that takes row patches a whole value without `seq`
+ * gets one, a list larger than one request (512 KB of rows) goes in parts, and
+ * row operations are numbered and split the same way. What it leaves to the
+ * plugin: the value limits (the player refuses a value over them with `limit`),
+ * Markdown documents and images in wire form, and a `stale` refusal of row
+ * operations (the player shows something else than they apply on: write the
+ * whole value). Property names are written in camelCase or as in Slint, as for
+ * {@link View.set}.
  *
  * While the view does not show (a window before `show()`, a panel or
  * settings page before `ready`, a closed one) a write is refused with
@@ -276,14 +272,13 @@ export interface WireView {
    * Write one property: a whole value, or a row patch of the plugin's own.
    *
    * @remarks
-   * Experimental: the wire protocol is not semver; this member changes
-   * with versions. `{ value }` replaces the property; a player that takes
-   * row patches (behaviour from player 0.6.0) gets it with a `seq` (the
-   * SDK numbers it unless given) and a list over one request's size in
-   * parts with `more`.
-   * `{ patch: { base, seq, ops } }` is sent as given: `base` is the `seq`
-   * of the write it applies on. {@link WireView.writeRows} numbers patches
-   * for you.
+   * Experimental: the wire protocol is not semver; this member changes with
+   * versions. `{ value }` replaces the property; a player that takes row
+   * patches gets it with a `seq` (the SDK numbers it unless given) and a list
+   * over one request's size in parts with `more`.
+   * `{ patch: { base, seq, ops } }` is sent as given: `base` is the `seq` of
+   * the write it applies on. {@link WireView.writeRows} numbers patches for
+   * you.
    *
    * @param property - The Slint property's name.
    * @param write - The write, as the player takes it.
@@ -321,17 +316,16 @@ export interface WireView {
    * Change a list property by row operations, numbered by the SDK.
    *
    * @remarks
-   * Experimental: the wire protocol is not semver; this member changes
-   * with versions. The operations apply, in order, on what the player shows
-   * for the property after this view's last direct write of it since the
-   * view showed its initial properties: `set` one row, `insert` rows,
-   * `remove` or `move` a run of rows, by index. Without such a write (the
-   * property was never written directly, or the window was shown again
-   * since) the player has no rows of the plugin's for it: write the whole
-   * value with {@link WireView.write} first. They go as one patch, or
-   * several applying on each other when they exceed one request (1024
-   * operations or 512 KB of rows). Needs a player that takes row patches
-   * (player 0.6.0).
+   * Experimental: the wire protocol is not semver; this member changes with
+   * versions. The operations apply, in order, on what the player shows for the
+   * property after this view's last direct write of it since the view showed
+   * its initial properties: `set` one row, `insert` rows, `remove` or `move` a
+   * run of rows, by index. Without such a write (the property was never written
+   * directly, or the window was shown again since) the player has no rows of
+   * the plugin's for it: write the whole value with {@link WireView.write}
+   * first. They go as one patch, or several applying on each other when they
+   * exceed one request (1024 operations or 512 KB of rows). Needs a player that
+   * takes row patches.
    *
    * @param property - The Slint property's name.
    * @param ops - The operations, applied in order.
@@ -416,9 +410,8 @@ export interface WireCommands {
    * @remarks
    * Experimental: the wire protocol is not semver; this member changes
    * with versions. `declaration` is `commands.register`'s: `title`, `path`,
-   * `order`, `group`, `radio`, `bindings`, `focus`, `repeat`, and the
-   * fields newer players added (`button`, `category`, `home`: see
-   * {@link CommandOptions} for the player each needs). The SDK adds the id,
+   * `order`, `group`, `radio`, `bindings`, `focus`, `repeat`, `button`,
+   * `category` and `home` (as in {@link CommandOptions}). The SDK adds the id,
    * the revision and the state and checks nothing in it: bindings must
    * already be in the player's canonical form (`Ctrl+H`).
    *
@@ -483,7 +476,7 @@ export interface WireCommandOptions {
    * busy, no reason.
    */
   readonly state?: WireCommandState;
-  /** The player's conditions for `enabled` and `checked`, in wire form (player 0.5.21). */
+  /** The player's conditions for `enabled` and `checked`, in wire form. */
   readonly when?: Json;
   /** Runs when the user picks the command or presses its key. */
   readonly run?: () => unknown;

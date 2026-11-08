@@ -1,14 +1,14 @@
 /**
- * `plugin.state(initial)` (L2, the framework; refactor plan §3.5, SDK
- * 1.7.0): plugin-owned state the update passes follow like the SDK's own
- * state copies. A read of a field inside what a pass evaluates records
- * `(store, field)` through `Runtime.depends`, the mechanism
- * `plugin.player.state` uses; a write of a field that changes it
- * (`Object.is`) reports `Runtime.changed(store, [field])`, so the next pass
- * is a precise one that evaluates only that field's readers. One level:
- * the value of a field is compared by identity, nothing inside it is
- * tracked. It belongs to the calling scope: once that scope is disposed
- * the object is a plain one, read and written without tracking.
+ * `plugin.state(initial)` (L2, the framework; refactor plan §3.5): plugin-owned
+ * state the update passes follow like the SDK's own state copies. A read of a
+ * field inside what a pass evaluates records `(store, field)` through
+ * `Runtime.depends`, the mechanism `plugin.player.state` uses; a write of a
+ * field that changes it (`Object.is`) reports
+ * `Runtime.changed(store, [field])`, so the next pass is a precise one that
+ * evaluates only that field's readers. One level: the value of a field is
+ * compared by identity, nothing inside it is tracked. It belongs to the calling
+ * scope: once that scope is disposed the object is a plain one, read and
+ * written without tracking.
  */
 import { failure } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";

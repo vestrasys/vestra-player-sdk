@@ -30,11 +30,11 @@ export interface PluginInstance {
   activated(): Promise<void>;
   /**
    * Stop the plugin: dispose the root scope, then stop the runtime.
-   * `info.reason` (SDK 1.5.54) is why: the runner passes `runtime.stop`'s
-   * `data.reason` (player 0.6.4), or `"host-lost"` when its input closed
-   * without a `runtime.stop`. It reaches `plugin.stopReason` and every
-   * `onDispose` cleanup; a reason the SDK does not know reads as
-   * `undefined`. A second call runs no cleanup again and keeps the first reason.
+   * `info.reason` is why: the runner passes `runtime.stop`'s `data.reason`, or
+   * `"host-lost"` when its input closed without a `runtime.stop`. It reaches
+   * `plugin.stopReason` and every `onDispose` cleanup; a reason the SDK does
+   * not know reads as `undefined`. A second call runs no cleanup again and
+   * keeps the first reason.
    */
   dispose(info?: { reason?: unknown }): Promise<void>;
 }
@@ -76,7 +76,7 @@ export async function createPlugin(
   // Failures the plugin did not ask about: a property the player could not
   // show when it rebuilt a panel or the Options window (an image removed
   // since), a callback whose arguments it could not convert, a detached
-  // sidebar that could not be prepared. Older players send no code.
+  // sidebar that could not be prepared. A warning may come without a code.
   root.add(
     runtime.raw("ui.error", (data) => {
       const { code, message } = (data ?? {}) as {

@@ -11,7 +11,7 @@ A list in the player's sidebar with its own right-click menu. It shows the two t
 
 Mounting a sidebar panel through a Slint global · a right-click menu made of the plugin's commands.
 
-[Add a window](../tutorials/add-a-window.md) teaches the view surface panels share with tool windows; the rules for a panel's menu are in [Menu guidelines](../guidelines/menus.md#a-panels-right-click-menu).
+[Open a tool window and remember its state](../guides/windows.md) teaches the view surface panels share with tool windows; the rules for a panel's menu are in [Design rules](../guides/design-rules.md).
 
 ## What you'll build
 
@@ -83,7 +83,7 @@ The list's titles and the selected index. Everything below reads and changes the
 
 ## In style B and C
 
-`main.ts` is the main version, in style A ([Three ways to write a plugin](../explanation/three-ways.md)): `bind` keeps the panel equal to the state and the SDK compares the list with what it sent. Two more entry files hold the same plugin in the other styles; point the manifest's `entry` at one to run it.
+`main.ts` is the main version, in style A ([Tutorial](../tutorial/index.md)): `bind` keeps the panel equal to the state and the SDK compares the list with what it sent. Two more entry files hold the same plugin in the other styles; point the manifest's `entry` at one to run it.
 
 **Style B** (`main-b.ts`): no binding and no `enabled` function. After each change the plugin sends the state itself: the list whole (the SDK neither compares it nor makes a row patch of it) and `enabled` as a value.
 
@@ -113,7 +113,7 @@ npm run check && npm test
 npm run pack              # examples.panel-menu-0.1.0.vxp
 ```
 
-Start the player with `--plugin <path to examples/panel-menu>`, click the **Example list** tab above the playlist, then right-click an item. The menu opens only while the tab is the current one (`showMenu` rejects with `unavailable` in a background tab). With player 0.4.0 and older, which have no tabs, do not load it together with the playlist: the sidebar holds one panel there.
+Start the player with `--plugin <path to examples/panel-menu>`, click the **Example list** tab above the playlist, then right-click an item. The menu opens only while the tab is the current one (`showMenu` rejects with `unavailable` in a background tab).
 
 ## Try next
 

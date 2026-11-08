@@ -15,13 +15,13 @@
  * (their object comes from a call that is checked) and options that need
  * more (a `processed` capture, a file resolver).
  *
- * Members whose capability depends on an argument (SDK 1.7.0:
- * `plugin.player.on` and `plugin.wire.on` by event name,
- * `plugin.wire.request` by method name, `ARGUMENT_APIS`) are checked by
- * that argument when its type fixes it to one string (a literal, a
- * constant); otherwise (a computed name, a union of several, the member
- * taken by destructuring or as a value) the call is reported as unchecked
- * ({@link checkCapabilities}), and the player still checks it.
+ * Members whose capability depends on an argument (`plugin.player.on` and
+ * `plugin.wire.on` by event name, `plugin.wire.request` by method name,
+ * `ARGUMENT_APIS`) are checked by that argument when its type fixes it to one
+ * string (a literal, a constant); otherwise (a computed name, a union of
+ * several, the member taken by destructuring or as a value) the call is
+ * reported as unchecked ({@link checkCapabilities}), and the player still
+ * checks it.
  *
  * The TypeScript module is passed in, never imported: the CLI uses the
  * SDK's own compiler, the editor its TypeScript server's.
@@ -174,10 +174,10 @@ function argumentMembers(ts: typeof TS, program: TS.Program): Members {
 }
 
 /**
- * @internal A call whose capability the checker cannot tell (SDK 1.7.0): a
- * member of `ARGUMENT_APIS` (`plugin.wire.request`, `player.on`,
- * `wire.on`) whose name argument is not a string the types fix, or a method
- * the player's table does not know. The player still checks it at run time.
+ * @internal A call whose capability the checker cannot tell: a member of
+ * `ARGUMENT_APIS` (`plugin.wire.request`, `player.on`, `wire.on`) whose name
+ * argument is not a string the types fix, or a method the player's table does
+ * not know. The player still checks it at run time.
  */
 export interface UncheckedCall {
   readonly file: string;
@@ -255,10 +255,10 @@ export function findUndeclaredCapabilities(
 }
 
 /**
- * The capability check (SDK 1.7.0): the uses of members whose capability
- * the manifest does not declare (`findings`, as
- * {@link findUndeclaredCapabilities}), and the calls whose capability
- * depends on a name the checker cannot read (`unchecked`).
+ * The capability check: the uses of members whose capability the manifest does
+ * not declare (`findings`, as {@link findUndeclaredCapabilities}), and the
+ * calls whose capability depends on a name the checker cannot read
+ * (`unchecked`).
  *
  * A call of `plugin.player.on` or `plugin.wire.on` is checked by its event
  * name, one of `plugin.wire.request` by its method name and the string

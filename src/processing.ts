@@ -117,18 +117,16 @@ export type VideoNode =
    * Deinterlacing. `interlaced` and `all` are FFmpeg BWDIF in the chain;
    * `field` doubles the frame rate.
    *
-   * `when: "auto"` (player 0.5.4) is the player's own deinterlacer instead:
-   * decided per frame from the decoder's interlaced flag, with the decoder's
-   * hardware deinterlacer where frames stay on the GPU; progressive frames
-   * pass untouched. It needs no frames in memory, so a chain with only this
-   * node keeps zero-copy hardware decoding (any other node still needs a
-   * copy back to memory). It always outputs one frame per field, so it
-   * takes `output: "field"` only (`"frame"` fails with `invalid`). It runs
-   * before every plugin's chain wherever it is written, and is shared: on
-   * while any plugin's chain has one. A chain with it has no other
-   * `deinterlace` node. Snapshots and exports deinterlace the same frames
-   * with BWDIF at field rate. Players before 0.5.4 refuse `auto` with
-   * `invalid`.
+   * `when: "auto"` is the player's own deinterlacer instead: decided per frame
+   * from the decoder's interlaced flag, with the decoder's hardware
+   * deinterlacer where frames stay on the GPU; progressive frames pass
+   * untouched. It needs no frames in memory, so a chain with only this node
+   * keeps zero-copy hardware decoding (any other node still needs a copy back
+   * to memory). It always outputs one frame per field, so it takes
+   * `output: "field"` only (`"frame"` fails with `invalid`). It runs before
+   * every plugin's chain wherever it is written, and is shared: on while any
+   * plugin's chain has one. A chain with it has no other `deinterlace` node.
+   * Snapshots and exports deinterlace the same frames with BWDIF at field rate.
    */
   | {
       /** The node type. */
@@ -168,13 +166,12 @@ export type VideoNode =
       fps: number;
     }
   /**
-   * A convolution matrix of your own per plane (FFmpeg `convolution`, SDK
-   * 1.5.39, player 0.5.20): sharpen, blur, emboss or detect edges with a
-   * 3×3, 5×5 or 7×7 kernel, or a row or column kernel. `planes[i]` is
-   * plane `i` of the decoded picture: for the usual YUV video 0 is luma
-   * (brightness), 1 and 2 are the colour planes, 3 is alpha. A missing
-   * entry or `null` leaves that plane as it is; at least one entry has a
-   * matrix. Players before 0.5.20 refuse the kind with `invalid`.
+   * A convolution matrix of your own per plane (FFmpeg `convolution`): sharpen,
+   * blur, emboss or detect edges with a 3×3, 5×5 or 7×7 kernel, or a row or
+   * column kernel. `planes[i]` is plane `i` of the decoded picture: for the
+   * usual YUV video 0 is luma (brightness), 1 and 2 are the colour planes, 3 is
+   * alpha. A missing entry or `null` leaves that plane as it is; at least one
+   * entry has a matrix.
    */
   | {
       /** The node type. */
@@ -183,13 +180,12 @@ export type VideoNode =
       planes: (ConvolutionPlane | null)[];
     }
   /**
-   * Recolour the picture with a 3D look-up table (FFmpeg `lut3d`, SDK
-   * 1.5.39, player 0.5.20): a `.cube` file the plugin ships in its package
-   * or wrote to its {@link Plugin.dataDirectory}. The player reads the file
-   * when the chain is set (and again for each new source, snapshot or
-   * export), so it must stay there while the chain uses it. The table is
-   * applied to RGB; the player converts the picture to RGB and back.
-   * Players before 0.5.20 refuse the kind with `invalid`.
+   * Recolour the picture with a 3D look-up table (FFmpeg `lut3d`): a `.cube`
+   * file the plugin ships in its package or wrote to its
+   * {@link Plugin.dataDirectory}. The player reads the file when the chain is
+   * set (and again for each new source, snapshot or export), so it must stay
+   * there while the chain uses it. The table is applied to RGB; the player
+   * converts the picture to RGB and back.
    */
   | {
       /** The node type. */
@@ -264,10 +260,10 @@ export type ConvolutionPlane = {
   bias: number;
 };
 /**
- * The player's bounds for the video primitives of SDK 1.5.39 (player
- * 0.5.20): `convolution` and `lut3d` {@link VideoNode}s and the shader
- * channel (`plugin.video.shaders()`). Values beyond them fail with
- * `invalid`; more shaders than `shaders` fail with `limit`.
+ * The player's bounds for the video primitives: `convolution` and `lut3d`
+ * {@link VideoNode}s and the shader channel (`plugin.video.shaders()`). Values
+ * beyond them fail with `invalid`; more shaders than `shaders` fail with
+ * `limit`.
  *
  * @example Refuse a shader list the player would not take
  * The plugin checks a shader list against the player's limit before it

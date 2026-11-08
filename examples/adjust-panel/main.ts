@@ -1,6 +1,6 @@
 import type { Plugin } from "@vestra-player/sdk";
 
-/** A speed slider in the adjust column (player 0.7.6). */
+/** A speed slider in the adjust column. */
 export default async function activate(plugin: Plugin) {
   // #region mount
   // "adjust": the panel changes what is playing. After the user closes it,

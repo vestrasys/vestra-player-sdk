@@ -27,13 +27,20 @@
  * function. The file is gzipped JSON: `{ version, nodes }`, each node
  * `{ n: name, k: kind, s: one-line summary, t: text, c?: child indexes,
  * i?: TypeDoc full name or "doc:<folder>/<file>", a?: aliases }`, the root
- * first. `src/docs.ts` reads it.
+ * first, and `m`: the pages that moved (`MOVED_PAGES`), `"<old group>/<old
+ * page>"` in loose form (letters and digits, lower case) → node index.
+ * `src/docs.ts` reads it.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, posix, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { Application, Reflection, ReflectionKind } from "typedoc";
-import { GROUPS, REDIRECTS } from "./doc-structure.mjs";
+import {
+  GROUPS,
+  MOVED_PAGES,
+  OLD_GROUPS,
+  REDIRECTS,
+} from "./doc-structure.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
@@ -471,7 +478,7 @@ export function buildTree(project) {
     rootNode,
     node("Guides", "Section", {
       summary:
-        "The documentation pages, by group: tutorials, how-to guides, reference, explanation, guidelines, examples, upgrading.",
+        "The documentation pages, by group: the tutorial, the guides, the reference and the examples.",
     }),
   );
   const documents = new Map();
@@ -492,7 +499,7 @@ export function buildTree(project) {
         reflection: index,
         render: () => parts(index.content, `docs/${group.folder}`).trim(),
         id: `doc:${group.folder}/index.md`,
-        aliases: [group.folder],
+        aliases: [group.folder, ...(group.aliases ?? [])],
       }),
     );
     byReflection.set(index.id, groupNode);
@@ -508,7 +515,7 @@ export function buildTree(project) {
           reflection: doc,
           render: () => parts(doc.content, `docs/${group.folder}`).trim(),
           id: `doc:${group.folder}/${page.file}`,
-          aliases: [basename(page.file, ".md")],
+          aliases: [basename(page.file, ".md"), ...(page.aliases ?? [])],
         }),
       );
       byReflection.set(doc.id, pageNode);
@@ -628,7 +635,7 @@ export function buildTree(project) {
     modulePaths.set(module.name.replace(/[@/]/g, "_"), module.target.path);
   rootNode.text = [
     `Vestra Player SDK ${pkg.version}: the documentation of ${SITE}, as a tree of pages.`,
-    "Open a path below; each listing shows the paths one level down. Paths ignore case, spaces and punctuation, the leading / is optional, `.` works like `/` (Snapshot.export), a guide page also answers to its file name (/Guides/How-to/testing) and a name alone finds its declaration (TestHost). Long texts come in pages; a #heading opens the page that has it. Search by name or text when you do not know the path.",
+    "Open a path below; each listing shows the paths one level down. Paths ignore case, spaces and punctuation, the leading / is optional, `.` works like `/` (Snapshot.export), a guide page also answers to its file name (/Guides/Guides/testing) and a name alone finds its declaration (TestHost). Long texts come in pages; a #heading opens the page that has it. Search by name or text when you do not know the path.",
   ].join("\n\n");
   for (const n of nodes) {
     if (n === rootNode) continue;
@@ -646,8 +653,20 @@ export function buildTree(project) {
     n.children.forEach(visit);
   };
   visit(rootNode);
+  // Old paths: every name of an old group × every name of a moved page.
+  const moved = {};
+  for (const page of MOVED_PAGES) {
+    const [folder, file] = page.from.split("/");
+    const target = nodes.find((n) => n.id === `doc:${page.to}`);
+    if (!target)
+      throw new Error(`docs-tree: MOVED_PAGES ${page.to} is no page`);
+    for (const group of [folder, ...OLD_GROUPS[folder]])
+      for (const name of [basename(file, ".md"), page.title])
+        moved[`${loose(group)}/${loose(name)}`] = target.index;
+  }
   return {
     version: pkg.version,
+    m: moved,
     nodes: order.map((n) => {
       const out = { n: n.name, k: n.kind, s: n.summary ?? "", t: n.text };
       if (n.children.length) out.c = n.children.map((c) => c.index);

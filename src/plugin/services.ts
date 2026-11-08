@@ -566,9 +566,8 @@ export const rendering = (scope: ScopeImpl): Rendering => {
 };
 
 /**
- * `plugin.video.upscaling` (player 0.5.16): both requests need
- * `video.upscaling`; the player answers once its GPU check ran (the first
- * call starts it).
+ * `plugin.video.upscaling`: both requests need `video.upscaling`; the player
+ * answers once its GPU check ran (the first call starts it).
  */
 export const videoUpscaling = (scope: ScopeImpl): VideoUpscaling => {
   const declared = () => {

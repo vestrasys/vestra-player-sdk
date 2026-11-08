@@ -1,6 +1,6 @@
 ---
 title: Manifest
-description: Every manifest.json field with its rules, and the player version each newer part of the API needs.
+description: Every manifest.json field with its rules.
 ---
 
 # Manifest
@@ -22,7 +22,7 @@ description: Every manifest.json field with its rules, and the player version ea
 
 ## Fields
 
-**Kind**: *required* fields every plugin has (`version` may come from `package.json` at build time); *display* fields are optional and shown by the plugin store and the plugin manager (player 0.2.0); *optional* changes how the player loads the plugin.
+**Kind**: *required* fields every plugin has (`version` may come from `package.json` at build time); *display* fields are optional and shown by the plugin store and the plugin manager; *optional* changes how the player loads the plugin.
 
 <!-- generated:manifest-fields -->
 
@@ -43,51 +43,14 @@ description: Every manifest.json field with its rules, and the player version ea
 | `changelog` | display | The same rules; default `CHANGELOG.md` when present. |
 | `sourceUrl` | display | An `https:` address of at most 2048 bytes. |
 | `license` | display | 1–64 characters, preferably an SPDX expression such as `MIT`. |
-| `minPlayerVersion` | optional | `x.y.z`: the oldest player that loads the plugin (compared with `plugin.app.version`, three numbers; from player 0.7.1 the player release version, which can differ from the host binary version). An older player refuses it with `versionMismatch` ("requires Vestra Player ≥ x.y.z") before it reads anything else, so a manifest with newer fields fails with that, not with an unknown field. See [Player versions](#player-versions). |
+| `minPlayerVersion` | optional | `x.y.z`: the oldest player that loads the plugin, compared with `plugin.app.version` (the player release version). Set it to the player you tested with. An older player refuses the plugin with `versionMismatch` ("requires Vestra Player ≥ x.y.z") before it reads anything else. |
 
 <!-- /generated -->
 
-- `name`, `punchline`, `description` and `tags` are English source text; the player shows them translated with the plugin's own catalog ([Translate a plugin](../how-to/i18n.md)) through {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}.
+- `name`, `punchline`, `description` and `tags` are English source text; the player shows them translated with the plugin's own catalog ([Add settings and translations](../guides/i18n.md)) through {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}.
 - An `icon`, `readme` or `changelog` that is named but missing is refused. `vestra-plugin build` copies them (and a default `README.md` or `CHANGELOG.md`) into the package: the README is the plugin's page in the store, so write it for users.
 - A call to a member whose capability is not declared fails with code `capability` ([Capabilities](capabilities.md)).
 
-## Player versions
+## Versions
 
-The SDK's major version follows the plugin API: every 1.x release implements `apiVersion` `vestra/1`, minor releases only add to it, and a breaking change gets a new `apiVersion` and a new major version. Some additions also need a newer player. A plugin that uses one sets `minPlayerVersion` to the highest version it needs; an older player then refuses it with `versionMismatch` instead of failing at the first call.
-
-From player 0.7.1 the player version (`plugin.app.version`, and what `minPlayerVersion` is compared with) is the **player release version**, the version of the published release; it can differ from the version of the host binary inside it. Compare against the release version. The player versions in this documentation are release versions from 0.7.1 on. Player 0.6.6 to 0.6.8 and 0.7.0 were internal builds that were never published: 0.7.1 is the first published player with their features, so an API this documentation once gave for one of them needs 0.7.1.
-
-The table lists the API whose documentation names a player version, newest last:
-
-<!-- generated:player-versions -->
-
-| Player | API that needs it or changed with it |
-| --- | --- |
-| 0.2.0 | {@linkcode "@vestra-player/sdk"!MarkdownRef MarkdownRef}, {@linkcode "@vestra-player/sdk"!PackageManifest PackageManifest}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive}, {@linkcode "@vestra-player/sdk"!Plugin.dataDirectory Plugin.dataDirectory}, {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown} |
-| 0.3.0 | {@linkcode "@vestra-player/sdk"!CommandOptions CommandOptions}, {@linkcode "@vestra-player/sdk/testing"!MENU_IDS MENU_IDS} |
-| 0.4.0 | {@linkcode "@vestra-player/sdk"!ThemeId ThemeId} |
-| 0.4.1 | {@linkcode "@vestra-player/sdk"!FileResolverOptions FileResolverOptions}, {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install}, {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate}, {@linkcode "@vestra-player/sdk"!PluginError PluginError}, {@linkcode "@vestra-player/sdk"!PluginWarning.code PluginWarning.code} |
-| 0.4.2 | {@linkcode "@vestra-player/sdk"!Resolvers.fileTypes Resolvers.fileTypes}, {@linkcode "@vestra-player/sdk"!Resolvers.onFileTypesChange Resolvers.onFileTypesChange} |
-| 0.4.3 | {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage}, {@linkcode "@vestra-player/sdk"!CommandOptions.path CommandOptions.path}, {@linkcode "@vestra-player/sdk"!ConfirmOptions.args ConfirmOptions.args}, {@linkcode "@vestra-player/sdk"!Osd.show Osd.show}, {@linkcode "@vestra-player/sdk"!OsdPanel.set OsdPanel.set}, {@linkcode "@vestra-player/sdk"!OsdPanelOptions.maxColumns OsdPanelOptions.maxColumns}, {@linkcode "@vestra-player/sdk"!PropValue PropValue}, {@linkcode "@vestra-player/sdk"!TemplateArgs TemplateArgs}, {@linkcode "@vestra-player/sdk"!Text Text}, {@linkcode "@vestra-player/sdk"!View.set View.set} |
-| 0.5.1 | {@linkcode "@vestra-player/sdk"!Host.run Host.run}, {@linkcode "@vestra-player/sdk"!ImageOptions.maxSide ImageOptions.maxSide}, {@linkcode "@vestra-player/sdk"!ImageRef ImageRef}, {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload}, {@linkcode "@vestra-player/sdk"!Panel.setInteraction Panel.setInteraction}, {@linkcode "@vestra-player/sdk"!PlaybackStats.presentedFps PlaybackStats.presentedFps}, {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek}, {@linkcode "@vestra-player/sdk"!PropValue PropValue}, {@linkcode "@vestra-player/sdk"!SlotState.reason SlotState.reason}, {@linkcode "@vestra-player/sdk"!Ui.image Ui.image}, {@linkcode "@vestra-player/sdk"!Ui.remoteImage Ui.remoteImage} |
-| 0.5.2 | {@linkcode "@vestra-player/sdk"!HostAction HostAction} |
-| 0.5.3 | {@linkcode "@vestra-player/sdk"!Scrub.seek Scrub.seek} |
-| 0.5.5 | {@linkcode "@vestra-player/sdk"!SessionStorage SessionStorage} |
-| 0.5.10 | {@linkcode "@vestra-player/sdk"!CommandButton CommandButton}, {@linkcode "@vestra-player/sdk"!CommandOptions.button CommandOptions.button} |
-| 0.5.12 | {@linkcode "@vestra-player/sdk"!SystemInfo.rendering SystemInfo.rendering} |
-| 0.5.13 | {@linkcode "@vestra-player/sdk"!Rendering Rendering}, {@linkcode "@vestra-player/sdk"!RenderingMode RenderingMode}, {@linkcode "@vestra-player/sdk"!RenderingPreference RenderingPreference}, {@linkcode "@vestra-player/sdk"!RenderingReason RenderingReason}, {@linkcode "@vestra-player/sdk"!RenderingReasonCode RenderingReasonCode}, {@linkcode "@vestra-player/sdk"!RenderingState RenderingState}, {@linkcode "@vestra-player/sdk"!SystemInfo.renderingReason SystemInfo.renderingReason} |
-| 0.5.16 | {@linkcode "@vestra-player/sdk"!UpscalingReason UpscalingReason}, {@linkcode "@vestra-player/sdk"!UpscalingReasonCode UpscalingReasonCode}, {@linkcode "@vestra-player/sdk"!UpscalingState UpscalingState}, {@linkcode "@vestra-player/sdk"!VideoUpscaling VideoUpscaling} |
-| 0.5.20 | {@linkcode "@vestra-player/sdk"!VideoShaders VideoShaders} |
-| 0.5.21 | {@linkcode "@vestra-player/sdk"!Appearance.onChange Appearance.onChange}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange}, {@linkcode "@vestra-player/sdk"!Resolvers.onFileTypesChange Resolvers.onFileTypesChange}, {@linkcode "@vestra-player/sdk"!Scope.when Scope.when}, {@linkcode "@vestra-player/sdk"!When When}, {@linkcode "@vestra-player/sdk"!WireCommandOptions.when WireCommandOptions.when} |
-| 0.5.25 | {@linkcode "@vestra-player/sdk"!UpscalingDecodingCause UpscalingDecodingCause}, {@linkcode "@vestra-player/sdk"!UpscalingPlugin UpscalingPlugin}, {@linkcode "@vestra-player/sdk"!UpscalingReason.cause UpscalingReason.cause}, {@linkcode "@vestra-player/sdk"!UpscalingReason.plugins UpscalingReason.plugins}, {@linkcode "@vestra-player/sdk"!UpscalingState.area UpscalingState.area}, {@linkcode "@vestra-player/sdk"!UpscalingState.gpu UpscalingState.gpu}, {@linkcode "@vestra-player/sdk"!UpscalingState.hwdecCurrent UpscalingState.hwdecCurrent}, {@linkcode "@vestra-player/sdk"!UpscalingState.inChain UpscalingState.inChain}, {@linkcode "@vestra-player/sdk"!UpscalingState.video UpscalingState.video}, {@linkcode "@vestra-player/sdk"!UpscalingVideoSize UpscalingVideoSize}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} |
-| 0.6.0 | {@linkcode "@vestra-player/sdk"!PropValue PropValue}, {@linkcode "@vestra-player/sdk"!WireView.writeRows WireView.writeRows} |
-| 0.6.3 | {@linkcode "@vestra-player/sdk"!CommandOptions CommandOptions}, {@linkcode "@vestra-player/sdk"!CommandOptions.path CommandOptions.path}, {@linkcode "@vestra-player/sdk/testing"!MENU_IDS MENU_IDS}, {@linkcode "@vestra-player/sdk"!MenuId MenuId}, {@linkcode "@vestra-player/sdk"!PluginError PluginError}, {@linkcode "@vestra-player/sdk"!RenderOptions RenderOptions}, {@linkcode "@vestra-player/sdk"!RenderOptions.status RenderOptions.status}, {@linkcode "@vestra-player/sdk"!VideoShaders VideoShaders}, {@linkcode "@vestra-player/sdk"!VideoShaders.set VideoShaders.set}, {@linkcode "@vestra-player/sdk"!WindowState.maximized WindowState.maximized} |
-| 0.6.4 | {@linkcode "@vestra-player/sdk"!DisposeInfo.reason DisposeInfo.reason}, {@linkcode "@vestra-player/sdk"!InstallOptions.enabled InstallOptions.enabled}, {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install}, {@linkcode "@vestra-player/sdk"!Plugin.stopReason Plugin.stopReason}, {@linkcode "@vestra-player/sdk"!Scope.onDispose Scope.onDispose}, {@linkcode "@vestra-player/sdk"!SessionStorage SessionStorage}, {@linkcode "@vestra-player/sdk"!StopReason StopReason} |
-| 0.7.1 | {@linkcode "@vestra-player/sdk"!AppInfo.version AppInfo.version}, {@linkcode "@vestra-player/sdk"!Plugin Plugin}, {@linkcode "@vestra-player/sdk"!PluginInfo.process PluginInfo.process}, {@linkcode "@vestra-player/sdk"!StopReason StopReason}, {@linkcode "@vestra-player/sdk"!Ui.markdown Ui.markdown} |
-| 0.7.6 | {@linkcode "@vestra-player/sdk/testing"!BAR_BUTTON_ICONS BAR_BUTTON_ICONS}, {@linkcode "@vestra-player/sdk/testing"!BUILTIN_SUBMENUS BUILTIN_SUBMENUS}, {@linkcode "@vestra-player/sdk"!CommandOptions.category CommandOptions.category}, {@linkcode "@vestra-player/sdk"!CommandOptions.home CommandOptions.home}, {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Commands.onKeysChange Commands.onKeysChange}, {@linkcode "@vestra-player/sdk"!ExportEncoding ExportEncoding}, {@linkcode "@vestra-player/sdk"!ExportEncoding.threads ExportEncoding.threads}, {@linkcode "@vestra-player/sdk"!ExportOptions ExportOptions}, {@linkcode "@vestra-player/sdk"!JobState JobState}, {@linkcode "@vestra-player/sdk"!Osd.show Osd.show}, {@linkcode "@vestra-player/sdk"!OsdAction OsdAction}, {@linkcode "@vestra-player/sdk"!Panel.toggle Panel.toggle}, {@linkcode "@vestra-player/sdk"!Panels Panels}, {@linkcode "@vestra-player/sdk"!Panels.adjust Panels.adjust}, {@linkcode "@vestra-player/sdk"!Panels.mount Panels.mount}, {@linkcode "@vestra-player/sdk"!PanelSlot.toggle PanelSlot.toggle}, {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!Timeline.ranges Timeline.ranges}, {@linkcode "@vestra-player/sdk"!TimelineLayer.setRanges TimelineLayer.setRanges}, {@linkcode "@vestra-player/sdk"!TimelineRange TimelineRange} |
-
-<!-- /generated -->
-
-The Slint library carries no version tags: `Theme.danger` needs player 0.3.0; `@vestra/icons.slint` and the palette `vestra-light` need 0.4.0 ([Theme](theme.md)).
-
-`@vestra-player/sdk/runtime` is the player's own entry point and is not covered by these rules. What changed in each SDK release is in the [CHANGELOG](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md).
+Every 1.x release of the SDK implements `apiVersion` `vestra/1`: minor releases only add to it, and a breaking change gets a new `apiVersion` and a new major version. `@vestra-player/sdk/runtime` is the player's own entry point and is not covered by these rules. What changed in each SDK release is in the [CHANGELOG](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md).

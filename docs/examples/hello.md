@@ -11,7 +11,7 @@ The smallest useful plugin: one menu command that shows a message over the video
 
 The manifest and capabilities · a menu command · the on-screen display.
 
-[Getting started](../tutorials/getting-started.md) teaches the same steps from an empty folder.
+The [Tutorial](../tutorial/index.md) teaches the same steps from an empty folder.
 
 ## What you'll build
 
@@ -75,5 +75,5 @@ Or start the player with `--plugin <path to examples/hello>` to run `main.ts` di
 ## Try next
 
 1. **A shortcut.** Add `bindings: ["Ctrl+Alt+H"]` to the command; the key then runs it too.
-2. **A different menu.** Use `path: ["@playback", "Hello"]` to join the player's own **Playback** menu, and add `"minPlayerVersion": "0.3.0"` to the manifest (menu ids are new in 0.3.0).
-3. **Go further.** [Getting started](../tutorials/getting-started.md) adds a window and state; [Bookmark](bookmark.md) is the next example.
+2. **A different menu.** Use `path: ["@playback", "Hello"]` to join the player's own **Playback** menu.
+3. **Go further.** [Open a tool window and remember its state](../guides/windows.md) adds a window and state; [Bookmark](bookmark.md) is the next example.

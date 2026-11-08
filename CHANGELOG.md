@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.2
+
+**Who must change: nobody.** A documentation release: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged. The documentation goes from seven groups to four, and the remarks about players that were never released are gone.
+
+- **Four groups**: **Tutorial** (one page: what a plugin is, the three ways to write one with `examples/three-ways`, where things live, running, testing and publishing), **Guides** (one task per page: the former how-to guides, plus Open a tool window and remember its state, Add settings and translations, Process video with a shader or a filter, and Design rules, which folds in the former guidelines), **Reference** and **Examples**. The Explanation, Upgrading and Guidelines groups and the five tutorials are gone; their content is in the Tutorial, the Guides or the Reference, or was dropped. `docs/how-to/` is now `docs/guides/`, with the same file names.
+- **Old addresses keep working**: every removed or renamed page (Explanation, Concepts, How-to guides, Tutorials, Upgrading, Guidelines, each explanation, tutorial, guideline and upgrading page, Translate a plugin) redirects to the closest new page on the site, and its old title stays a name of that page in the documentation tree (`vestra-plugin docs /Guides/Concepts` opens the Tutorial). Paths in the tree: `/Guides/Tutorial`, `/Guides/Guides/<page>`, `/Guides/Reference/<page>`, `/Guides/Examples/<page>`.
+- **No version history in the documentation**: sentences about older players, earlier SDKs and what changed in which release are removed from the pages and from the doc comments (`@since` and `@player` tags stay); `minPlayerVersion` is described in one sentence ("set it to the player you tested with"). The CHANGELOG keeps the history.
+- **Reference trimmed**: the hand-written text of the Reference pages is about a third shorter; the Manifest page's "Player versions" table and its generator are gone, as are the "Introduced in" columns of Events and Messages (they held only "—") and the release-notes generator of the Upgrading group. Platforms lists current facts only.
+- **Checks** (`npm run docs:check`): page shapes `tutorial`, `guide` (`**Goal:**`, `## Steps`, an optional `## Complete example`, `## See also`), `troubleshooting`, `reference` and `example`; line limits tutorial 400, guide 220. The rules are in `docs/maintaining.md`, "Documentation structure".
+
 ## 1.7.1
 
 **Who must change: nobody.** Tables follow the playlist's trimmed list keys: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. A plugin whose tests compare a key against the table sees the player's current one.

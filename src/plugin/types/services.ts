@@ -389,7 +389,7 @@ export interface JsonStore<T> extends Disposable {
  * void queue;
  * ```
  *
- * @see [Store a plugin's data](../../../docs/how-to/store-data.md), [Remember a window's state between runs](../../../docs/how-to/window-state.md)
+ * @see [Store a plugin's data](../../../docs/guides/store-data.md), [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category Services
  */
@@ -448,24 +448,24 @@ export interface Storage {
 /**
  * `plugin.storage.session`: JSON values that live as long as the **player**,
  * not as long as the plugin's process (like `chrome.storage.session`). No
- * capability; needs player 0.5.5 (older players reject the calls with
- * `unsupported`).
+ * capability.
  *
  * `activate` can run more than once in one player session: the player stops
  * and starts a plugin's process again when the plugin is reloaded (also a
  * development load with `--plugin`) or upgraded, and after a crash or a
- * failed start. A later player may also restart plugins that share a
- * process, or stop an idle plugin and start it on its next use. Variables do
- * not survive that; keep state that must survive a restart here (or in
- * {@link Storage.json | storage.json} when it must also survive the player
- * quitting).
+ * failed start; the player also restarts plugins that share a process, and
+ * stops an idle plugin after 30 s and starts it on its next use. Variables,
+ * timers, `fetch` calls, sockets and pending promises do not survive that
+ * (nor do they keep the plugin running): keep state that must survive a
+ * restart here (or in {@link Storage.json | storage.json} when it must also
+ * survive the player quitting) and pick it up again in `activate`.
  *
  * | | Values |
  * | --- | --- |
  * | The plugin's process restarts: reload, upgrade, crash | kept |
  * | The plugin failed to start or failed, and starts again | kept |
  * | The user, or a plugin with `plugins.manage` (`packages.setEnabled(id, false)`), disables the plugin | cleared |
- * | An update or reinstall with `enabled: false` switches an enabled plugin off (player 0.6.4) | cleared |
+ * | An update or reinstall with `enabled: false` switches an enabled plugin off | cleared |
  * | The plugin is uninstalled | cleared |
  * | An earlier installation kept for a later reinstall (after a `replace`) is dropped because the player keeps only so many | cleared |
  * | The player quits | cleared |
@@ -873,9 +873,9 @@ export type RenderingMode = "gpu" | "software";
 export type RenderingPreference = "auto" | "gpu" | "software";
 
 /**
- * Why the player renders the way it does, as a stable kebab-case code. A
- * newer player may add codes: compare with the ones you handle and show
- * {@link RenderingReason.message} for the rest. The codes of player 0.5.13:
+ * Why the player renders the way it does, as a stable kebab-case code. A newer
+ * player may add codes: compare with the ones you handle and show
+ * {@link RenderingReason.message} for the rest. The codes:
  *
  * | Code | Meaning |
  * | --- | --- |
@@ -1023,11 +1023,6 @@ export interface RenderingState {
  * plugin, so change it only when the user asks. A plugin that only needs
  * to know whether render options work reads {@link SystemInfo.rendering}.
  *
- * Players before 0.5.13 do not know these requests: `state()` rejects with
- * `unsupported`, and they do not load a plugin that declares
- * `rendering.manage` (an unknown capability). Declare
- * `"minPlayerVersion": "0.5.13"` when the plugin needs this.
- *
  * @example Offer GPU rendering as a menu item
  * Settings ▸ GPU Rendering (Experimental) carries a check mark while the
  * next start will draw on the GPU, is greyed out with the player's reason
@@ -1052,9 +1047,8 @@ export interface RenderingState {
  *
  * @capability None to read the state; `rendering.manage` to change the
  *   choice or restart the player.
- * @see [Offer a GPU rendering switch](../../../docs/how-to/gpu-rendering.md)
- * @player 0.5.13; older players reject the requests as unknown
- * (`unsupported`).
+ * @see [Offer a GPU rendering switch](../../../docs/guides/gpu-rendering.md)
+ * @player 0.5.13
  * @since 1.5.35
  * @category Services
  */
@@ -1068,11 +1062,10 @@ export interface Rendering {
    *   know the request.
    *
    * @example Find out whether the GPU can be chosen
-   * The plugin reads the state once while it starts and keeps it for its
-   * menu. Each call asks the player; `gpu.available` is false, with a
-   * reason, where this player has no GPU renderer, without a user
-   * interface, or when the driver is ruled out. An older player rejects
-   * with `unsupported`, and the plugin then offers nothing.
+   * The plugin reads the state once while it starts and keeps it for its menu.
+   * Each call asks the player; `gpu.available` is false, with a reason, where
+   * this player has no GPU renderer, without a user interface, or when the
+   * driver is ruled out.
    * ```ts
    * const state = await plugin.rendering.state().catch((error: PluginError) => {
    *   if (error.code === "unsupported") return null; // a player before 0.5.13

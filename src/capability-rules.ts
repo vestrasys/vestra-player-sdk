@@ -157,11 +157,10 @@ export function memberNeeds(
 }
 
 /**
- * The requests of a call to a member of `ARGUMENT_APIS` (SDK 1.7.0), given
- * the value of its first argument and the string fields of its second:
- * a subscribed event's `events.subscribe`, nothing for an event that
- * arrives unasked, or the named method. `undefined`: a method the player's
- * table does not know (not checked).
+ * The requests of a call to a member of `ARGUMENT_APIS`, given the value of its
+ * first argument and the string fields of its second: a subscribed event's
+ * `events.subscribe`, nothing for an event that arrives unasked, or the named
+ * method. `undefined`: a method the player's table does not know (not checked).
  *
  * @param kind - What the argument names (`ARGUMENT_APIS`).
  * @param name - The event or method name.

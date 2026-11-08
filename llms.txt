@@ -1,30 +1,27 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.7.1: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
+> @vestra-player/sdk 1.7.2: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
 
 ## Read the documentation
 
 - **Command line** (any coding agent): `npx -p @vestra-player/sdk vestra-plugin docs [path] [--page N]` prints one node of the tree; `npx -p @vestra-player/sdk vestra-plugin docs --search <words>` lists the matching paths. In a project that depends on the SDK, `npx vestra-plugin docs` is enough.
 - **In a Node.js program**: `import { docs, searchDocs } from "@vestra-player/sdk/docs"`; `docs(path, { page })` and `searchDocs(query, { page })` return the same text.
-- **Paths**: `/` lists the top level; every answer lists the paths one level down with a one-line summary. `/API/<category>/<symbol>/<member>` is one declaration with its signature, parameters, return value, errors, capability, player version and examples, for example `/API/Media/Snapshot/dispose`. `/Guides/<group>/<page>` is a page of the site, for example `/Guides/How-to/Test a plugin` (the file name works too: `/Guides/How-to/testing`). Case, spaces and punctuation do not matter, the leading `/` is optional, `.` works like `/`, a name alone finds its declaration (`TestHost`, `Snapshot.export`, `plugin.player`), and `#heading` opens the page of a long answer that has that section.
+- **Paths**: `/` lists the top level; every answer lists the paths one level down with a one-line summary. `/API/<category>/<symbol>/<member>` is one declaration with its signature, parameters, return value, errors, capability, player version and examples, for example `/API/Media/Snapshot/dispose`. `/Guides/<group>/<page>` is a page of the site, for example `/Guides/Guides/Test a plugin` (the file name works too: `/Guides/Guides/testing`). Case, spaces and punctuation do not matter, the leading `/` is optional, `.` works like `/`, a name alone finds its declaration (`TestHost`, `Snapshot.export`, `plugin.player`), and `#heading` opens the page of a long answer that has that section.
 - **Size**: every answer is at most 8 KB; a longer one ends with the number of its next page (`--page 2`).
-- **Before writing code**, read `/Guides/Tutorials/Getting started` and `/Guides/Guidelines`, then the API of what you use. Test with `/Guides/How-to/Test a plugin`.
+- **Before writing code**, read `/Guides/Tutorial` and `/Guides/Guides/Design rules`, then the API of what you use. Test with `/Guides/Guides/Test a plugin`.
 
 ## Top level
 
 - `/Overview`: The package's README: what the SDK is, installing it and where to start.
-- `/Guides`: The documentation pages, by group: tutorials, how-to guides, reference, explanation, guidelines, examples, upgrading.
+- `/Guides`: The documentation pages, by group: the tutorial, the guides, the reference and the examples.
 - `/API`: Every type and value of @vestra-player/sdk (the plugin API), @vestra-player/sdk/testing (the test host) and @vestra-player/sdk/docs (this tree), by category.
 
 ## Guides
 
-- `/Guides/Tutorials`: Step-by-step lessons; the first four build one plugin, from an empty folder to a tested package in the plugin store.
-- `/Guides/How-to`: Short guides that each answer one practical question about writing, translating, testing or publishing a plugin.
-- `/Guides/Reference`: Lookup tables that span many symbols (capabilities, manifest fields and player versions, limits, menu and binding names, platform differences, theme, command line), generated from the SDK's code.
-- `/Guides/Explanation`: What each part of the player and its plugins is, why it works the way it does and how the parts fit together.
-- `/Guides/Guidelines`: The rules a plugin follows so that its windows, panels, messages and menu items look and behave like the rest of Vestra Player.
+- `/Guides/Tutorial`: Write a first plugin for Vestra Player: a menu item that shows the playback position, then the three styles a plugin can use, and how to test and publish it.
+- `/Guides/Guides`: One page per task, from adding a window to publishing a plugin, plus the design rules and troubleshooting.
+- `/Guides/Reference`: Lookup tables that span many symbols, from manifest fields and capabilities to the test host, mostly generated from the SDK's code.
 - `/Guides/Examples`: Complete, tested example plugins with a screenshot each and a step-by-step walkthrough of their code.
-- `/Guides/Upgrading`: What to change in a plugin when an SDK or player release deprecates, removes or changes something it uses.
 
 ## API
 

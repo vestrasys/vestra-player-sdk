@@ -13,7 +13,7 @@ The complete source is in [`examples/blur/`](https://github.com/vestrasys/vestra
 
 A command in the player's **Video** menu · a tool window with one slider (properties, a callback, a two-way binding, `bind`) · a video filter: setting a `gblur` chain live, and `[]` to remove it.
 
-[Add a window](../tutorials/add-a-window.md) teaches tool windows; [Keep a slider responsive while dragging](../how-to/slider.md) teaches the live slider.
+[Open a tool window and remember its state](../guides/windows.md) teaches tool windows; [Keep a slider responsive while dragging](../guides/slider.md) teaches the live slider.
 
 ## What you'll build
 
@@ -49,8 +49,6 @@ A call whose capability is missing from the manifest fails with `code: "capabili
 | `processing.video`        | `plugin.video.filter`: the blur itself.                                                                                                                                               |
 | `playback.read`, `events` | A filter reads the player's state, and follows its changes, to know when there is a video to apply the blur to. Without `events` a blur set before a video starts would stay waiting. |
 
-`minPlayerVersion` is 0.3.0 because the menu path uses the `@video` menu id and the window uses `Theme.danger`, both new in that version. Older players refuse to load the plugin with a clear message.
-
 ## main.ts, top to bottom
 
 ### Activation
@@ -85,7 +83,7 @@ The SDK is imported with `import type` only: the player passes the `plugin` obje
 
 {@includeCode ../../examples/blur/main.ts#command}
 
-- `path: ["@video", "Blur…"]` puts the item in the player's own **Video** menu. Paths merge by their English keys in every interface language, so `["Video", "Blur…"]` reaches the same menu; the id form `@video` says plainly that a built-in menu is meant, and an unknown id fails with `invalid` instead of making a new menu ([Menu paths](../reference/commands.md#menu-paths)). Players up to 0.4.2 titled their menus in Chinese and are reached only by the id. The built-in menu stays where it is, and an item without `order` goes at the end of it.
+- `path: ["@video", "Blur…"]` puts the item in the player's own **Video** menu. Paths merge by their English keys in every interface language, so `["Video", "Blur…"]` reaches the same menu; the id form `@video` says plainly that a built-in menu is meant, and an unknown id fails with `invalid` instead of making a new menu ([Menu paths](../reference/commands.md#menu-paths)). The built-in menu stays where it is, and an item without `order` goes at the end of it.
 - `run` opens the window, or shows it again after the user closed it. Returning the promise of `show()` lets the SDK report a failure to the plugin log.
 
 ## ui/blur.slint
@@ -129,5 +127,5 @@ Start the player with `--plugin <path to examples/blur>`: it runs `main.ts` dire
 
 - `VideoFilter`, `FilterStatus` and `VideoNode`: filters, their status and every node type with its ranges.
 - `View` and `Window`: properties, callbacks and `bind`.
-- [Keep a slider responsive while dragging](../how-to/slider.md).
+- [Keep a slider responsive while dragging](../guides/slider.md).
 - `TestHost` in `@vestra-player/sdk/testing`.

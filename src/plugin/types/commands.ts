@@ -34,8 +34,8 @@ export interface CommandState {
   /** Shown as busy; like `enabled: false`, the player does not call `run`. Default false. */
   busy: boolean;
   /**
-   * Shown when the command is disabled or busy: English source text the
-   * player translates, or a {@link Text} (SDK 1.5.11).
+   * Shown when the command is disabled or busy: English source text the player
+   * translates, or a {@link Text}.
    */
   reason: TextValue | null;
 }
@@ -48,9 +48,8 @@ export interface CommandState {
  *
  * @remarks
  * Only a command with at least one function field takes part in the update
- * passes (SDK 1.7.0): a command whose fields are all values or
- * `plugin.when` conditions is registered once and evaluated again only
- * when {@link Command.set} changes it.
+ * passes: a command whose fields are all values or `plugin.when` conditions is
+ * registered once and evaluated again only when {@link Command.set} changes it.
  *
  * @example Mix a computed state with a fixed one
  * The Loop item carries a check mark while a loop is set and is always
@@ -160,20 +159,18 @@ export interface Condition {
 }
 
 /**
- * `plugin.when`: the vocabulary of conditions (SDK 1.5.40, player 0.5.21).
- * It names only state the player owns: the source's phase, kind, pause
- * and controls (the same names as {@link PlayerState}), fullscreen, the
- * palette and the saved interface language.
+ * `plugin.when`: the vocabulary of conditions. It names only state the player
+ * owns: the source's phase, kind, pause and controls (the same names as
+ * {@link PlayerState}), fullscreen, the palette and the saved interface
+ * language.
  *
  * @remarks
  * Give a condition as a command's `enabled` or `checked`
- * ({@link CommandOptions}, {@link Command.set}). The player evaluates it
- * and shows the result in menus, on keys and on bar buttons, again
- * whenever that state changes, also while the plugin is stopped because
- * nothing used it. With an `enabled` condition the player shows the
- * command's `reason` only while the condition is false (or the command
- * is busy), so a fixed reason is enough. Players before 0.5.21 have no
- * `plugin.when` (declare `"minPlayerVersion": "0.5.21"`).
+ * ({@link CommandOptions}, {@link Command.set}). The player evaluates it and
+ * shows the result in menus, on keys and on bar buttons, again whenever that
+ * state changes, also while the plugin is stopped because nothing used it. With
+ * an `enabled` condition the player shows the command's `reason` only while the
+ * condition is false (or the command is busy), so a fixed reason is enough.
  *
  * State the vocabulary does not name (a plugin's own settings, an open
  * window, a track list) stays a function or a value set with
@@ -286,12 +283,11 @@ export interface When {
 }
 
 /**
- * A built-in top-level menu of the player, named in a command path as
- * `@<id>` or by its English key (see {@link CommandOptions.path}): Open,
- * Playback, Subtitles, Video, Audio, Screen, Settings, Reset. The list is
- * `MENU_IDS` in `@vestra-player/sdk/testing`. Reset (`@reset`, SDK 1.5.51,
- * player 0.6.3) gathers every command that puts something back to its
- * default; older players refuse `@reset` with `invalid`.
+ * A built-in top-level menu of the player, named in a command path as `@<id>`
+ * or by its English key (see {@link CommandOptions.path}): Open, Playback,
+ * Subtitles, Video, Audio, Screen, Settings, Reset. The list is `MENU_IDS` in
+ * `@vestra-player/sdk/testing`. Reset (`@reset`) gathers every command that
+ * puts something back to its default.
  *
  * @since 1.3.0
  * @category Commands
@@ -361,15 +357,14 @@ export type BarButtonIcon =
  * @remarks
  * **Where it shows.** The player draws the bottom bar's button strip and
  * decides where it goes: today at the right end of the bottom bar; this may
- * change (older players let the bar place `BarButtons` itself). Buttons
- * are ordered by `order`, then by plugin id; lower `order` comes first and
- * stays visible longest. When the strip runs out of room, or more than 8
- * plugin buttons are declared, the remaining buttons move to the strip's »
- * menu, in the same order. A button is never dropped: it is either in the
- * strip or in the » menu, and its command keeps its menu entry, its key and
- * its place in the command palette. Users may pin and unpin buttons later;
- * do not rely on a position. See
- * [Bottom-bar buttons](../../../docs/explanation/commands.md#bottom-bar-buttons).
+ * change. Buttons are ordered by `order`, then by plugin id; lower `order`
+ * comes first and stays visible longest. When the strip runs out of room, or
+ * more than 8 plugin buttons are declared, the remaining buttons move to the
+ * strip's » menu, in the same order. A button is never dropped: it is either in
+ * the strip or in the » menu, and its command keeps its menu entry, its key and
+ * its place in the command palette. Users may pin and unpin buttons later; do
+ * not rely on a position. See [Bottom-bar
+ * buttons](../../../docs/reference/commands.md#bottom-bar-buttons).
  *
  * **What it shows.** The icon, the command's title (translated, a trailing
  * "…" removed) and its first key as the tooltip ("Plugin Store (F9)"),
@@ -400,8 +395,7 @@ export type BarButtonIcon =
  * });
  * ```
  *
- * @player 0.5.10; older players show the menu entry without a button
- * (declare `"minPlayerVersion": "0.5.10"` when the button matters).
+ * @player 0.5.10
  * @since 1.5.29
  *
  * @category Commands
@@ -437,21 +431,18 @@ export interface CommandButton {
  *
  * Built-in menus keep their place. The built-in top-level menus
  * ({@link MenuId}) sit at fixed orders, whatever is inside them: Open 110,
- * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings
- * 830 (player 0.3.0), Reset 840 (player 0.6.3; directly below Settings and
- * in its separator group). Like every built-in menu, Reset shows only when
- * a command is in it. This holds whether the path names the menu by id
- * (`["@video", "Blur"]`) or by its key (`["Video", "Blur"]`), so a plugin's
- * item never moves the player's menu. Directly inside a built-in menu,
- * `order` 0 (the default) sorts after every other order: an item without
- * `order` goes at the end, after the player's own items (which all use 100
- * or more). Give a positive order to sit between them (the player's items
- * in menu order are in
- * [Built-in commands](../../../docs/reference/commands.md#built-in-commands)),
- * or a negative one to come first. Deeper levels (a plugin's own submenu) have no such rule.
- * Players before 0.3.0 place every submenu at its smallest order, so there
- * an item without `order` moves the whole menu to the top; to avoid that,
- * give it an order in the menu's range (Video: 400–499).
+ * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings 830,
+ * Reset 840 (directly below Settings and in its separator group). Like every
+ * built-in menu, Reset shows only when a command is in it. This holds whether
+ * the path names the menu by id (`["@video", "Blur"]`) or by its key
+ * (`["Video", "Blur"]`), so a plugin's item never moves the player's menu.
+ * Directly inside a built-in menu, `order` 0 (the default) sorts after every
+ * other order: an item without `order` goes at the end, after the player's own
+ * items (which all use 100 or more). Give a positive order to sit between them
+ * (the player's items in menu order are in [Built-in
+ * commands](../../../docs/reference/commands.md#built-in-commands)), or a
+ * negative one to come first. Deeper levels (a plugin's own submenu) have no
+ * such rule.
  *
  * {@link Commands.add} throws `invalid` synchronously for a bad path,
  * order or binding; the player refuses an empty or overlong text, a control
@@ -459,7 +450,7 @@ export interface CommandButton {
  * `invalid` (through `ready`). The same path registered twice, or a path that
  * is both an item and a submenu, fails with `conflict` (through `ready`).
  *
- * @see {@link Commands.add}, [Commands, menus and key bindings](../../../docs/explanation/commands.md)
+ * @see {@link Commands.add}, [Commands, menus and bindings](../../../docs/reference/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -471,25 +462,22 @@ export interface CommandOptions {
    * one segment is a top-level item. Omit it for a command that is not in the
    * main menu (bindings and panel menus only); `title` is then required.
    *
-   * Segments are English source text, and menus merge by them: commands
-   * of different plugins with the same leading segments share a submenu.
-   * The player shows each segment and the title in the interface language
-   * from the declaring plugin's catalog (`locales/<lang>.po`, see the
-   * [i18n guide](../../../docs/how-to/i18n.md)); the player's own menus
-   * (Open, Playback, Subtitles, Video, Audio, Screen, Settings, Reset, and
-   * Playback ▸ Speed, Playback ▸ Seek) always show the player's words.
-   * A built-in menu can also be named by its id, `@` plus a {@link MenuId}:
-   * `@open`, `@playback`, `@subtitles`, `@video`, `@audio`, `@screen`,
-   * `@settings` or `@reset` (player 0.6.3). Only the first segment is read as an id; an unknown id, or
-   * an id with nothing after it, fails with `invalid`. Players up to 0.4.2
-   * titled their menus in Chinese (视频…): there `["Video", "Blur"]` is a
-   * menu of its own, so plugins for those players write `@video`; player
-   * 0.4.3 still accepts the old Chinese titles of its own menus.
+   * Segments are English source text, and menus merge by them: commands of
+   * different plugins with the same leading segments share a submenu. The
+   * player shows each segment and the title in the interface language from the
+   * declaring plugin's catalog (`locales/<lang>.po`, see the [i18n
+   * guide](../../../docs/guides/i18n.md)); the player's own menus (Open,
+   * Playback, Subtitles, Video, Audio, Screen, Settings, Reset, and Playback ▸
+   * Speed, Playback ▸ Seek) always show the player's words. A built-in menu can
+   * also be named by its id, `@` plus a {@link MenuId}: `@open`, `@playback`,
+   * `@subtitles`, `@video`, `@audio`, `@screen`, `@settings` or `@reset`. Only
+   * the first segment is read as an id; an unknown id, or an id with nothing
+   * after it, fails with `invalid`.
    *
    * A segment that mixes words with data (a track number, a count) is a
-   * {@link Text} (SDK 1.5.11, player 0.4.3): `plugin.i18n.text("Track {}
-   * ({})", [n, codec])`. The menu shows it translated and filled in; it
-   * merges by its English rendering ("Track 2 (opus)").
+   * {@link Text}: `plugin.i18n.text("Track {} ({})", [n, codec])`. The menu
+   * shows it translated and filled in; it merges by its English rendering
+   * ("Track 2 (opus)").
    *
    * @example Put items into built-in menus, one with a track number
    * "Blur" appears in the Video menu and "Track 2 (opus)" under Audio ▸
@@ -529,9 +517,7 @@ export interface CommandOptions {
    * 1–80 UTF-8 bytes (a text value counted by its English rendering), no
    * control characters, no whitespace at either end
    * (`COMMAND_LIMITS.categoryBytes`); the player refuses anything else with
-   * `invalid`. Sent only when set: players before 0.7.6 refuse the field
-   * with `invalid`, so declare `"minPlayerVersion": "0.7.6"` when you set
-   * it.
+   * `invalid`.
    *
    * @example Name commands that have no menu path
    * The palette lists "Subtitle Sync: Earlier 0.5 s" and "Subtitle Sync:
@@ -553,23 +539,19 @@ export interface CommandOptions {
    *   });
    * ```
    *
-   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
-   * refuse the declaration with `invalid`).
+   * @player 0.7.6
    * @since 1.6.4
    */
   category?: string | Text;
   /**
-   * The id of this plugin's command that opens the window or panel where
-   * this command's control lives (`"tune"` for a Subtitle Tuning… command
-   * whose window has the sync slider). The player's command palette shows
-   * that place next to the command. A local id, like `id`: ASCII letters,
-   * digits, `.`, `_` and `-`, 1–128 bytes; the player refuses anything else
-   * with `invalid`. The command it names need not be registered yet; while
-   * it is not, the palette shows the place it would show without `home`:
-   * the menu path above the item, "Menu" for a top-level item, nothing for
-   * a command outside the menu. Sent only when set: players
-   * before 0.7.6 refuse the field with `invalid`, so declare
-   * `"minPlayerVersion": "0.7.6"` when you set it.
+   * The id of this plugin's command that opens the window or panel where this
+   * command's control lives (`"tune"` for a Subtitle Tuning… command whose
+   * window has the sync slider). The player's command palette shows that place
+   * next to the command. A local id, like `id`: ASCII letters, digits, `.`, `_`
+   * and `-`, 1–128 bytes; the player refuses anything else with `invalid`. The
+   * command it names need not be registered yet; while it is not, the palette
+   * shows the place it would show without `home`: the menu path above the item,
+   * "Menu" for a top-level item, nothing for a command outside the menu.
    *
    * @example Point a key command at its window
    * The palette row for "Subtitle Sync: Earlier 0.5 s" also says where the
@@ -593,8 +575,7 @@ export interface CommandOptions {
    * });
    * ```
    *
-   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
-   * refuse the declaration with `invalid`).
+   * @player 0.7.6
    * @since 1.6.4
    */
   home?: string;
@@ -622,7 +603,7 @@ export interface CommandOptions {
    * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, the video-area mouse
    * inputs `Mouse:LeftClick`, `Mouse:LeftDoubleClick[:LeftHalf|:RightHalf]`,
    * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
-   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), from 0.6.0 on anywhere
+   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), anywhere
    * in the main window or the floating sidebar window, except while a menu
    * is open.
    *
@@ -641,33 +622,31 @@ export interface CommandOptions {
   /** Fire again on keyboard auto-repeat while the key is held. Default false. */
   repeat?: boolean;
   /**
-   * A button for this command on the bottom bar (SDK 1.5.29, player 0.5.10):
-   * an icon and a place, `{ icon: "store", order: 200 }`. Needs a `path`: the
-   * menu entry is where the command stays reachable wherever the button
-   * is (the strip or its » menu). See
-   * {@link CommandButton} for where it shows, what it shows and the limits.
-   * Fails with `invalid` for an unknown icon name, an order outside 0–999 or
-   * a button without a path.
+   * A button for this command on the bottom bar: an icon and a place,
+   * `{ icon: "store", order: 200 }`. Needs a `path`: the menu entry is where
+   * the command stays reachable wherever the button is (the strip or its »
+   * menu). See {@link CommandButton} for where it shows, what it shows and the
+   * limits. Fails with `invalid` for an unknown icon name, an order outside
+   * 0–999 or a button without a path.
    */
   button?: CommandButton;
   /**
    * Whether the command can run (default true): a value, a function, or a
-   * {@link Condition} the player evaluates (`plugin.when`, SDK 1.5.40).
+   * {@link Condition} the player evaluates (`plugin.when`).
    */
   enabled?: Bindable<boolean> | Condition;
   /**
-   * Check mark (or radio dot with `radio`); `null` (default) draws none.
-   * A {@link Condition} (`plugin.when`, SDK 1.5.40) draws the mark while
-   * it holds.
+   * Check mark (or radio dot with `radio`); `null` (default) draws none. A
+   * {@link Condition} (`plugin.when`) draws the mark while it holds.
    */
   checked?: Bindable<boolean | null> | Condition;
   /** Busy state (default false); the player does not call `run` while busy. */
   busy?: Bindable<boolean>;
   /**
-   * Why the command is disabled or busy (shown to the user): English
-   * source text, or a {@link Text} for one with data in it (SDK 1.5.11).
-   * With an `enabled` {@link Condition} the player shows it only while the
-   * condition is false or the command is busy, so a fixed text is enough.
+   * Why the command is disabled or busy (shown to the user): English source
+   * text, or a {@link Text} for one with data in it. With an `enabled`
+   * {@link Condition} the player shows it only while the condition is false or
+   * the command is busy, so a fixed text is enough.
    */
   reason?: Bindable<TextValue | null>;
   /**
@@ -713,7 +692,7 @@ export interface CommandOptions {
  * exportCommand.set({ enabled: () => plugin.player.state.phase === "ready" });
  * ```
  *
- * @see {@link Commands.add}, [Commands, menus and key bindings](../../../docs/explanation/commands.md)
+ * @see {@link Commands.add}, [Commands, menus and bindings](../../../docs/reference/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -724,13 +703,13 @@ export interface Command extends Disposable {
    * Replace some state fields (values or functions). Last write wins.
    *
    * @remarks
-   * Only this command is evaluated again (SDK 1.7.0; before, `set` ran a
-   * full update pass over every binding and command of the plugin). Several
-   * calls within one microtask send one update. A function field makes the
-   * command take part in the update passes from then on. A binding that
-   * reads a plugin variable changed together with `set` outside a handler
-   * the SDK runs (a timer) is not refreshed by it: call {@link Scope.update}
-   * or keep that variable in {@link Scope.state}.
+   * Only this command is evaluated again, not every binding and command of
+   * the plugin. Several calls within one
+   * microtask send one update. A function field makes the command take part in
+   * the update passes from then on. A binding that reads a plugin variable
+   * changed together with `set` outside a handler the SDK runs (a timer) is not
+   * refreshed by it: call {@link Scope.update} or keep that variable in
+   * {@link Scope.state}.
    *
    * @example Show a command as busy while it works
    * The Export item shows as busy with "Exporting…" as its reason while the
@@ -766,17 +745,16 @@ export interface Command extends Disposable {
     >,
   ): void;
   /**
-   * Resolves when the host has registered the command. Rejects with
-   * `conflict` (path already taken), `invalid` or `limit` (more than 160
-   * commands in this plugin, or 1024 in the whole player). You rarely need
-   * to await it: the refusal goes to {@link Scope.onError}. During
-   * activation the SDK, in the plugin's process, logs the refusal with the
-   * command id and the player's message, skips the command and lets the
-   * rest of the plugin activate (SDK 1.5.49; before, the refusal failed
-   * activation); the error reaches `onError` once activation completes,
-   * so a listener added anywhere in `activate` hears it. `startPlugin`
-   * stays strict: there a refusal during activation fails it, so tests
-   * show the bad declaration. Any other failure during activation
+   * Resolves when the host has registered the command. Rejects with `conflict`
+   * (path already taken), `invalid` or `limit` (more than 160 commands in this
+   * plugin, or 1024 in the whole player). You rarely need to await it: the
+   * refusal goes to {@link Scope.onError}. During activation the SDK, in the
+   * plugin's process, logs the refusal with the command id and the player's
+   * message, skips the command and lets the rest of the plugin activate;
+   * the error reaches `onError` once
+   * activation completes, so a listener added anywhere in `activate` hears it.
+   * `startPlugin` stays strict: there a refusal during activation fails it, so
+   * tests show the bad declaration. Any other failure during activation
    * (`capability`, no answer) fails activation.
    *
    * Only the player's answer is skipped. What {@link Commands.add} checks
@@ -799,16 +777,16 @@ export interface Command extends Disposable {
  * `plugin.commands`: menu commands with default bindings. Needs `commands`.
  *
  * @remarks
- * A command is one action of the plugin with a menu item (`path`), default
- * keys (`bindings`), optionally a bottom-bar button (`button`) and a state
- * the menu shows (`enabled`, `checked`, `busy`, `reason`). The player owns
- * the menu, the binding table and the user's key overrides: it calls `run`
- * when the user picks the item, presses a key or clicks the button.
- * Commands of all plugins merge into the player's menus by their English
- * path keys. Registration is asynchronous: `add` returns at once, and
- * {@link Command.ready} reports the player's answer (during activation
- * the SDK logs a refusal and skips that command, SDK 1.5.49;
- * `startPlugin` fails on it). What `add` checks itself throws from `add`.
+ * A command is one action of the plugin with a menu item (`path`), default keys
+ * (`bindings`), optionally a bottom-bar button (`button`) and a state the menu
+ * shows (`enabled`, `checked`, `busy`, `reason`). The player owns the menu, the
+ * binding table and the user's key overrides: it calls `run` when the user
+ * picks the item, presses a key or clicks the button. Commands of all plugins
+ * merge into the player's menus by their English path keys. Registration is
+ * asynchronous: `add` returns at once, and {@link Command.ready} reports the
+ * player's answer (during activation the SDK logs a refusal and skips that
+ * command; `startPlugin` fails on it). What `add` checks itself throws from
+ * `add`.
  *
  * @capability commands
  *
@@ -825,7 +803,7 @@ export interface Command extends Disposable {
  * });
  * ```
  *
- * @see {@link Command}, {@link CommandOptions}, [Commands, menus and key bindings](../../../docs/explanation/commands.md)
+ * @see {@link Command}, {@link CommandOptions}, [Commands, menus and bindings](../../../docs/reference/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -840,13 +818,13 @@ export interface Commands {
    * @throws `invalid` synchronously for a malformed path (including an
    *   unknown `@` menu id), order or binding; `conflict` for an id this
    *   plugin has already declared and not disposed.
-   * @throws `invalid` (`ready` rejects; during activation, activation
-   *   fails) for a text the player refuses: an id, title, path segment,
-   *   group or reason that is empty, longer than its `COMMAND_LIMITS`
-   *   bytes (a text value counted by its English rendering), has a control
-   *   character or whitespace at either end, or an id with other characters
-   *   than ASCII letters, digits, `.`, `_` and `-`. `TestHost`
-   *   refuses the same (SDK 1.5.48).
+   * @throws `invalid` (`ready` rejects; during activation the SDK logs and
+   * skips the command and the plugin activates, see {@link Command.ready};
+   * `startPlugin` fails) for a text the player refuses: an id, title, path segment, group or reason
+   * that is empty, longer than its `COMMAND_LIMITS` bytes (a text value counted
+   * by its English rendering), has a control character or whitespace at either
+   * end, or an id with other characters than ASCII letters, digits, `.`, `_`
+   * and `-`. `TestHost` refuses the same.
    *
    * @example Pause playback from a menu item
    * Playback ▸ Pause (and Ctrl+P) pauses and resumes, shows a check mark
@@ -889,16 +867,14 @@ export interface Commands {
    * player, and until its answer arrives (a few milliseconds) every
    * command reads `[]`; a binding that read it runs again then.
    *
-   * The plugin's own commands, and the player's own as `host/<id>` (SDK
-   * 1.6.16; `host/volume-up`, `host/mute`: the ids of
-   * {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS} rows owned by `host`), for a panel that
-   * shows the player's keys beside its own controls; an id the plugin has
-   * not added (or another plugin's) reads `[]`. Needs nothing beyond `commands`, not
-   * `bindings.manage` (the whole binding table, every plugin's, is
-   * {@link Bindings.list}). Without the `commands` capability every
-   * command reads `[]`. Players before 0.7.6 have no `keys` (the player
-   * builds `plugin` from its own SDK) and no `KeyHint` in their widgets,
-   * so declare `"minPlayerVersion": "0.7.6"`.
+   * The plugin's own commands, and the player's own as `host/<id>`
+   * (`host/volume-up`, `host/mute`: the ids of
+   * {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS}
+   * rows owned by `host`), for a panel that shows the player's keys beside its
+   * own controls; an id the plugin has not added (or another plugin's) reads
+   * `[]`. Needs nothing beyond `commands`, not `bindings.manage` (the whole
+   * binding table, every plugin's, is {@link Bindings.list}). Without the
+   * `commands` capability every command reads `[]`.
    *
    * @example Show a slider's keys beside it
    * The Brightness row shows its two keys, W and E by default, as key caps
@@ -917,8 +893,7 @@ export interface Commands {
    * ```
    *
    * @capability commands
-   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
-   *   have no `keys`: calling it throws a `TypeError`).
+   * @player 0.7.6
    * @since 1.6.6
    */
   keys(id: string): readonly string[];
@@ -943,8 +918,7 @@ export interface Commands {
    * });
    * ```
    *
-   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
-   *   have no `onKeysChange`).
+   * @player 0.7.6
    * @since 1.6.6
    */
   onKeysChange(listener: () => void): Disposable;
@@ -957,20 +931,18 @@ export interface Commands {
  * | action | default bindings | behaviour |
  * | --- | --- | --- |
  * | `stop` | F4 | close the source |
- * | `play-pause` | Space, a left click on the video (player 0.5.2) | pause / resume, replay after the end |
- * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 (from 0.6.0; up to 0.5.x X1 was previous and X2 next) | ask the sequence provider |
+ * | `play-pause` | Space, a left click on the video | pause / resume, replay after the end |
+ * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
  * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
  * | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
  * | `mute` | M | toggle mute |
- * | `fullscreen` | Escape (from 0.6.0; up to 0.5.x Enter, Alt+Enter, F11) | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (SDK 1.5.21, player 0.5.2; `unavailable` when the player has no window) |
+ * | `fullscreen` | Escape | toggle the main window's fullscreen: enter it when windowed, leave it when fullscreen, as the Toggle Fullscreen command does (`unavailable` when the player has no window) |
  *
- * In the binding overlay their keys are `host/<action>`. `fullscreen`
- * changes no playback state: read the result from `window.state.fullscreen`
+ * In the binding overlay their keys are `host/<action>`. `fullscreen` changes
+ * no playback state: read the result from `window.state.fullscreen`
  * (`plugin.window.onChange`), which also changes when the user toggles it.
- * Players before 0.5.2 reject it with `invalid`: set
- * `"minPlayerVersion": "0.5.2"` when you use it.
  *
  * @see {@link Host.run}
  * @since 1.0.0
@@ -1075,8 +1047,7 @@ export interface Host {
    * once the seek is submitted, as before. `invalid` for `seconds` out of
    * range.
    *
-   * @player 0.5.1 (set `"minPlayerVersion": "0.5.1"`: older players ignore
-   * `seconds` and seek by the `setStepSeek` step)
+   * @player 0.5.1
    * @since 1.5.19
    *
    * @example Add a 30-second skip that adds up with the arrow keys
@@ -1129,23 +1100,20 @@ export interface BindingInfo extends BindingRef {
   /** Menu path as shown; `null` for a command outside the menu. */
   path: string[] | null;
   /**
-   * The menu path's keys: the English text menus merge by, the same in
-   * every interface language (`["Playback", "Seek", "Back 5 s"]`; a
-   * built-in menu by its key, `"Video"`, also when declared as `@video`).
-   * `null` for a command outside the menu, and from players before 0.4.3.
-   * Find a command by where it is in the menu with this, not with `path`.
-   * Always set by `list()`; optional so that test fakes written for older
-   * SDKs still type-check.
+   * The menu path's keys: the English text menus merge by, the same in every
+   * interface language (`["Playback", "Seek", "Back 5 s"]`; a built-in menu by
+   * its key, `"Video"`, also when declared as `@video`). `null` for a command
+   * outside the menu. Find a command by where it is in the menu with this, not
+   * with `path`. Always set by `list()`.
    *
    * @since 1.5.11
    */
   key?: string[] | null;
   /**
    * The command's category as shown ({@link CommandOptions.category},
-   * translated), `null` when it declares none (and always from players
-   * before 0.7.6). Always set by `list()`; optional so that test fakes
-   * written for older SDKs still type-check. A list of commands names one `Category: Title`; without a
-   * category, use the menu path (`path`) as before.
+   * translated), `null` when it declares none. Always set by `list()`. A list
+   * of commands names one `Category: Title`; without a category, use the menu
+   * path (`path`) as before.
    *
    * @since 1.6.4
    */
@@ -1192,7 +1160,7 @@ export interface BindingInfo extends BindingRef {
  * applies the change at once to every running plugin.
  *
  * @capability bindings.manage
- * @see [Commands, menus and key bindings](../../../docs/explanation/commands.md)
+ * @see [Commands, menus and bindings](../../../docs/reference/commands.md)
  * @since 1.0.0
  * @category Commands
  */
@@ -1274,8 +1242,8 @@ export interface Bindings {
   reset(ref?: BindingRef): Promise<void>;
   /**
    * The binding list changed (read `list()` again): a declaration or an
-   * override. At most every 200 ms; since player 0.5.21 only when the list
-   * itself changed, not when a plugin starts again with the same commands.
+   * override. At most every 200 ms, and only when the list itself changed,
+   * not when a plugin starts again with the same commands.
    *
    * @capability bindings.manage
    *

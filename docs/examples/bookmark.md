@@ -11,7 +11,7 @@ A tool window whose buttons follow the playback state: **Mark** remembers where 
 
 A tool window whose properties are bound to the playback state · handling its buttons.
 
-[Add a window](../tutorials/add-a-window.md) teaches a window bound to the playback state; [Test a plugin](../how-to/testing.md) uses its test as the complete example.
+[Open a tool window and remember its state](../guides/windows.md) teaches a window bound to the playback state; [Test a plugin](../guides/testing.md) uses its test as the complete example.
 
 ## What you'll build
 
@@ -43,8 +43,6 @@ examples/bookmark/
 | `playback.read`    | reading the position and whether the video can seek |
 | `events`           | keeping that state up to date while the plugin runs |
 | `playback.control` | the seek                                            |
-
-`minPlayerVersion` is 0.3.0 because the menu path uses the `@playback` menu id, which is new in that version.
 
 ## The window
 
@@ -110,6 +108,6 @@ Start the player with `--plugin <path to examples/bookmark>`, open a video, choo
 
 ## Try next
 
-1. **Keep the bookmark after a restart** with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage}`.json("bookmark", { defaults: { mark: null } })`. See [Remember a window's state between runs](../how-to/window-state.md).
+1. **Keep the bookmark after a restart** with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage}`.json("bookmark", { defaults: { mark: null } })`. See [Open a tool window and remember its state](../guides/windows.md).
 2. **Show it on the seek bar** with a mark of kind `"bookmark"` from `plugin.timeline.layer()` (capability `timeline.marks`).
 3. **A shortcut to jump**: a command with `title: "Jump to bookmark"`, `bindings: ["Ctrl+Alt+J"]` and `enabled: () => mark !== null`.

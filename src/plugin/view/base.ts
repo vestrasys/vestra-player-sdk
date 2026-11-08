@@ -1,10 +1,9 @@
 /**
- * `ViewBase`: what windows, panels and settings pages share — callbacks, and
- * a {@link ViewWriter} (L1) with a {@link ViewBinder} (L2) over it. A view
- * joins the update passes on its first `bind()` (SDK 1.7.0,
- * doc/specs/sdk-refactor.md §4 Step 2 in the player repository); until
- * then `set()` goes straight to the writer, which sends whole values and
- * keeps no row-patch bases for it.
+ * `ViewBase`: what windows, panels and settings pages share — callbacks, and a
+ * {@link ViewWriter} (L1) with a {@link ViewBinder} (L2) over it. A view joins
+ * the update passes on its first `bind()` (doc/specs/sdk-refactor.md §4 Step 2
+ * in the player repository); until then `set()` goes straight to the writer,
+ * which sends whole values and keeps no row-patch bases for it.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -75,8 +74,8 @@ export abstract class ViewBase implements View {
     return this.#binder.bind(props);
   }
   /**
-   * `plugin.wire.view(v)` (SDK 1.7.0): the writer's direct writes, for a
-   * scope of the plugin that made this view.
+   * `plugin.wire.view(v)`: the writer's direct writes, for a scope of the
+   * plugin that made this view.
    */
   [DIRECT](scope: ScopeImpl): DirectWrites {
     if (scope.runtime !== this.scope.runtime)

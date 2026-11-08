@@ -67,11 +67,10 @@ export function bindingKey(host: TestHost, _inner: Internals, id: string) {
 }
 
 /**
- * `commands.keys` as the player answers it: each of the plugin's own
- * commands, and the player's core commands as `host/<id>` (SDK 1.6.16),
- * with the labels of the keys it holds now (the overlay, else its
- * defaults; not a key an earlier command holds), as menus write them on
- * `systemInfo.os`.
+ * `commands.keys` as the player answers it: each of the plugin's own commands,
+ * and the player's core commands as `host/<id>`, with the labels of the keys it
+ * holds now (the overlay, else its defaults; not a key an earlier command
+ * holds), as menus write them on `systemInfo.os`.
  */
 export function commandKeys(
   host: TestHost,

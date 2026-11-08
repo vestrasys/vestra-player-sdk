@@ -135,7 +135,7 @@ export type MediaJob = {
       coverageValidated: true;
     };
     output?: { streams: unknown[]; format: { duration: string } };
-    /** A stream copy (player 0.7.6): what was copied and from where. */
+    /** A stream copy: what was copied and from where. */
     copy?: {
       container: "mp4" | "mkv";
       videoCodec: string;
@@ -151,16 +151,16 @@ export type MediaJob = {
     | null
     | {
         destination: string;
-        /** Clips (player 0.7.6): first frame, source seconds. */
+        /** Clips: first frame, source seconds. */
         start?: number;
-        /** Clips (player 0.7.6): end of the last frame, source seconds. */
+        /** Clips: end of the last frame, source seconds. */
         end?: number;
       }
     | { error: { code: string; message: string } }
     | { cancelled: true };
   /**
-   * Player 0.7.6: seconds of a clip written and to write while FFmpeg runs;
-   * `null` (or absent from older players) while unknown.
+   * Seconds of a clip written and to write while FFmpeg runs; `null` while
+   * unknown.
    */
   progress?: { done: number; total: number } | null;
 };
@@ -216,11 +216,11 @@ export function mediaClients(transport: Transport) {
           | {
               kind: "rawMp4" | "processedMp4";
               end: number;
-              /** Player 0.7.6. */
+              /** The encoder settings used. */
               encoding?: WireEncoding;
             }
           | {
-              /** Stream copy, player 0.7.6. */
+              /** Stream copy. */
               kind: "rawCopy";
               end: number;
               container?: "auto" | "mp4" | "mkv";

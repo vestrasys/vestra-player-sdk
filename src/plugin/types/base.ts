@@ -138,7 +138,7 @@ export interface Disposable {
  * | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
  * | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
  * | `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link PropValue}, or a request is longer than the player's 1 MiB message. |
- * | `reserved` | {@link Packages.validate}, {@link PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use (player 0.4.1). |
+ * | `reserved` | {@link Packages.validate}, {@link PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use. |
  * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`). |
  * | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
  * | `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. Also reported to {@link Scope.onError} without a request: a callback whose arguments the player could not convert, a property it could not show again when it rebuilt a view (an image file removed since). |
@@ -157,7 +157,7 @@ export interface Disposable {
  * | `resolution` | A file or web resolver's result could not be opened; `message` has the reason. |
  * | `revisionConflict` | {@link Packages}: the installed revision changed since it was read (another install or uninstall ran). Read again and retry; the SDK passes the revision it read, so this reaches plugins that act on old data. |
  * | `source-geometry`, `source-geometry-unsupported` | The source's picture size or rotation could not be applied: invalid decoder dimensions / a rotation that is not a multiple of 90°. |
- * | `previous-crash` | {@link VideoShaders}, {@link RenderOptions} `shaders` (player 0.6.3): plugin shaders are off because the player ended abnormally while they were drawing; clearing still works. Do not retry while refused (the player shows its own OSD line). |
+ * | `previous-crash` | {@link VideoShaders}, {@link RenderOptions} `shaders`: plugin shaders are off because the player ended abnormally while they were drawing; clearing still works. Do not retry while refused (the player shows its own OSD line). |
  * | `source-unavailable` | The source is not ready (still loading, or its time or native binding is not available yet). |
  * | `unknown-expired` | The player no longer knows the operation or snapshot (it expired or was released). The SDK maps it to `unknownExpired` results where it can; do not resubmit the operation blindly. |
  *
@@ -242,9 +242,8 @@ export interface Scope extends Disposable {
   readonly commands: Commands;
   /**
    * Conditions on the player's own state for a command's `enabled` and
-   * `checked` (SDK 1.5.40, player 0.5.21): the player evaluates them, so
-   * the menu follows playback even while the plugin is stopped. See
-   * {@link When}.
+   * `checked`: the player evaluates them, so the menu follows playback even
+   * while the plugin is stopped. See {@link When}.
    */
   readonly when: When;
   /** Tool windows from `.slint` files (`ui.window`). */
@@ -295,11 +294,10 @@ export interface Scope extends Disposable {
      */
     render(): RenderOptions;
     /**
-     * This plugin's own GPU shaders named `id` (default `"shaders"`;
-     * needs `processing.video`; SDK 1.5.39, player 0.5.20). Unlike
-     * {@link Scope.video | render()}, every plugin may hold shader
-     * handles at the same time; the player joins their lists. Nothing is
-     * sent until the first `set()`.
+     * This plugin's own GPU shaders named `id` (default `"shaders"`; needs
+     * `processing.video`). Unlike {@link Scope.video | render()}, every plugin
+     * may hold shader handles at the same time; the player joins their lists.
+     * Nothing is sent until the first `set()`.
      *
      * @param id - Local name of the handle, 1–128 bytes, unique within
      *   the plugin.
@@ -313,9 +311,9 @@ export interface Scope extends Disposable {
      */
     shaders(id?: string): VideoShaders;
     /**
-     * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on
-     * Windows; needs `video.upscaling`, player 0.5.16): whether it works
-     * here and why not, and turning it on or off for this plugin.
+     * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on Windows;
+     * needs `video.upscaling`): whether it works here and why not, and turning
+     * it on or off for this plugin.
      */
     readonly upscaling: VideoUpscaling;
   };
@@ -379,10 +377,10 @@ export interface Scope extends Disposable {
   /** Pages in the player's options window (`ui.settings`). */
   readonly settings: Settings;
   /**
-   * Direct messages to the player: requests by method name, raw events,
-   * direct property writes, bare command registrations (SDK 1.7.0).
-   * Experimental: the wire protocol is not semver; this member changes
-   * with versions. See {@link Wire}.
+   * Direct messages to the player: requests by method name, raw events, direct
+   * property writes, bare command registrations. Experimental: the wire
+   * protocol is not semver; this member changes with versions. See
+   * {@link Wire}.
    *
    * @experimental
    * @since 1.7.0
@@ -463,12 +461,10 @@ export interface Scope extends Disposable {
    * ```
    *
    * @example Save a cache at once when the player is lost
-   * The plugin writes its cache file at once when the player crashed or
-   * was killed, instead of waiting for the next periodic save. The cleanup
-   * may get a {@link DisposeInfo}: `stopping` says the plugin itself stops
-   * (not a child scope), `reason` why (player 0.6.4). Players
-   * whose SDK is older than 1.5.54 call the cleanup without an argument,
-   * so read it with `?.`.
+   * The plugin writes its cache file at once when the player crashed or was
+   * killed, instead of waiting for the next periodic save. The cleanup may get
+   * a {@link DisposeInfo}: `stopping` says the plugin itself stops (not a child
+   * scope), `reason` why.
    * ```ts
    * declare function saveCacheNow(): void;
    * // ---cut---
@@ -479,11 +475,10 @@ export interface Scope extends Disposable {
    * ```
    *
    * @remarks
-   * From SDK 1.5.54 in the player (and in `TestHost`) the cleanup is called
-   * with one argument, a {@link DisposeInfo}: whether the plugin stops, and
-   * why. A player whose own SDK is older calls it without one (`info` is
-   * `undefined`). A cleanup that takes no argument works as before; a
-   * function with optional parameters of its own that is passed directly
+   * In the player (and in `TestHost`) the cleanup is called with one argument,
+   * a {@link DisposeInfo}: whether the plugin stops, and why. A cleanup that
+   * takes no argument works as well; a function with optional parameters
+   * of its own that is passed directly
    * (`onDispose(controller.abort.bind(controller))`) now receives the
    * `DisposeInfo` as its first argument: wrap it (`() => controller.abort()`)
    * when that matters.
@@ -624,24 +619,25 @@ export interface Scope extends Disposable {
  * The object the player passes to a plugin's `activate`: the root
  * {@link Scope}, plus the plugin's identity and data directory.
  *
- * Activation: the player starts one Node process per plugin, reads the
- * initial player, window and timeline state, then calls `activate(plugin)`.
+ * Activation: the player starts one Node process per plugin, reads the initial
+ * player, window and timeline state, then calls `activate(plugin)`.
  * Registrations started during activation (commands, panels, resolvers,
- * subscriptions) do not need to be awaited: the plugin is reported ready
- * once they all succeed, and activation fails if `activate` throws or any
- * of them fails. A command declaration the player refuses is the exception
- * (SDK 1.5.49): the SDK logs and skips it, its `ready` rejects and
- * {@link Scope.onError} hears it, the rest of the plugin activates
- * (`startPlugin` still fails on it). The entry module must
- * **default-export** `activate`.
+ * subscriptions) do not need to be awaited: the plugin is reported ready once
+ * they all succeed, and activation fails if `activate` throws or any of them
+ * fails. A command declaration the player refuses is the exception: the SDK
+ * logs and skips it, its `ready` rejects and {@link Scope.onError} hears it,
+ * the rest of the plugin activates (`startPlugin` still fails on it). The entry
+ * module must **default-export** `activate`. Do not await a run of your own
+ * command or a callback of your own view inside `activate`: the player holds
+ * them until the plugin is ready, so `activate` waits until the start timeout
+ * (60 s) and the plugin stops with `failed`.
  *
  * Stopping: the player first revokes everything the plugin owns on its side
  * (menus, windows, panels, filters, subtitle layers, snapshots, jobs,
  * resolvers, streams); pending requests then fail with `disabled` and the
  * root scope is disposed for local cleanup (timers, signals, sockets). A
- * process that has not exited after its grace is killed: 5 s from player
- * 0.7.1 (before it 300 ms; 300 ms after a fault); at quit all plugins
- * together get 1 s. Media the
+ * process that has not exited after its grace is killed: 5 s (300 ms after
+ * a fault); at quit all plugins together get 1 s. Media the
  * plugin opened with {@link Player.open} keeps playing.
  *
  * @example Write a minimal plugin with one menu item
@@ -668,7 +664,7 @@ export interface Scope extends Disposable {
  * `dataDirectory`.
  *
  * @capability That of each module (see the modules).
- * @see [How a plugin runs](../../../docs/explanation/plugins.md)
+ * @see [Tutorial](../../../docs/tutorial/index.md)
  * @since 1.0.0
  * @category Plugin
  */
@@ -678,9 +674,9 @@ export interface Plugin extends Scope {
   /**
    * A writable directory for this plugin's own files (settings, caches,
    * remembered folders), created by the player before it starts the plugin.
-   * Each installation has its own directory (player 0.2.0): it is kept across
-   * restarts, disabling and upgrades, and a reinstall of the same
-   * id from a different source gets a new, empty one. It is deleted only by
+   * Each installation has its own directory: it is kept across restarts,
+   * disabling and upgrades, and a reinstall of the same id from a different
+   * source gets a new, empty one. It is deleted only by
    * `packages.uninstall(id, { removeData: true })`. No capability.
    *
    * The path's format is not part of the API: do not derive another
@@ -688,15 +684,12 @@ export interface Plugin extends Scope {
    * {@link PluginInfo.dataDirectory}). Write files atomically (to a
    * temporary name, then rename); for JSON settings prefer
    * {@link Scope.storage}. Throws `unavailable` when the player provided
-   * none. See [How a plugin runs](../../../docs/explanation/plugins.md#the-data-directory).
+   * none. See [Store a plugin's data](../../../docs/guides/store-data.md).
    */
   readonly dataDirectory: string;
   /**
-   * Why the player stops this plugin (SDK 1.5.54, player 0.6.4): set when
-   * the stop begins, before any
-   * {@link Scope.onDispose} cleanup runs. `undefined` while the plugin
-   * runs, and for every stop by an older player (one whose own SDK is older
-   * than 1.5.54 does not have the property at all). See {@link StopReason}.
+   * Why the player stops this plugin: set when the stop begins, before any
+   * {@link Scope.onDispose} cleanup runs. See {@link StopReason}.
    */
   readonly stopReason: StopReason | undefined;
 }
@@ -706,8 +699,8 @@ export interface Plugin extends Scope {
  * {@link Plugin.stopReason}).
  *
  * - `quit`: the player quits (or restarts after a lost GPU device). Every
- *   plugin is stopped at the same time, with 1 s in all (300 ms after a
- *   lost device; player 0.7.1).
+ *   plugin is stopped at the same time, with 1 s in all (300 ms after a lost
+ *   device).
  * - `disable`: the user, or a plugin with `plugins.manage`, switched the
  *   plugin off. Its session storage is cleared.
  * - `uninstall`: the user uninstalls it.
@@ -716,53 +709,46 @@ export interface Plugin extends Scope {
  * - `upgrade`: an install or update replaces the running version; also a
  *   new version stopped because its install was cancelled (the previous
  *   version comes back).
- * - `idle`: the plugin goes to standby and its next use starts it again;
- *   its menu items, keys, settings pages, resolvers and drop targets stay,
- *   and so does its session storage
- *   ([Idle plugins](../../../docs/explanation/plugins.md#idle-plugins-are-stopped)).
- *   Only with on-demand start (lazy activation): on for everyone from
- *   player 0.7.1, off by default before it (`VESTRA_LAZY=1` turns it on).
- *   It comes after the idle time without use (30 s; 60 s before 0.7.1),
- *   right after a first run that holds nothing live, and, from player
- *   0.7.1, when the player's limit on third-party processes or low system
- *   memory puts an idle plugin in standby early. A busy plugin never gets
- *   it; a resident one (it held something live when it became ready) never
- *   from player 0.7.1 (before it, after the idle time).
+ * - `idle`: the plugin goes to standby and its next use starts it again; its
+ *   menu items, keys, settings pages, resolvers and drop targets stay, and so
+ *   does its session storage ([Keep a command's state without keeping the
+ *   plugin running](../../../docs/guides/command-state.md)). It comes after the idle
+ *   time without use (30 s), right after a first run that holds nothing live,
+ *   and when the player's limit on third-party processes or low system memory
+ *   puts an idle plugin in standby early. A busy plugin never gets it, nor
+ *   does a resident one (it held something live when it became ready).
  * - `failed`: the player stops it for a fault it can still tell the plugin
- *   about: a malformed request, an unreadable or oversized line, a start
- *   that is not ready within the start timeout (60 s from player 0.7.1;
- *   the stop may come while `activate` still runs), an uncaught exception
- *   the shared process attributes to this plugin, and, from player 0.7.1,
- *   a request from the player (a resolution) it leaves unanswered for 5
- *   minutes. From player 0.7.1 the player may start it again afterwards (a
- *   built-in or resident plugin by itself, a plugin that has run before on
+ *   about: a malformed request, an unreadable or oversized line, a start that
+ *   is not ready within the start timeout (60 s; the stop may
+ *   come while `activate` still runs), an uncaught exception the shared process
+ *   attributes to this plugin, and a request from the player (a resolution) it
+ *   leaves unanswered for 5 minutes. The player may start it again afterwards
+ *   (a built-in or resident plugin by itself, a plugin that has run before on
  *   its next use), until the fifth fault within 10 minutes.
  * - `host-lost`: the plugin's runner saw its pipe to the player close
  *   without a stop: the player crashed or was killed. Requests are refused
- *   with `disabled`; clean up locally only. Player 0.6.4 sends `quit` on a
+ *   with `disabled`; clean up locally only. The player sends `quit` on a
  *   normal exit; read `host-lost` as "the player is gone", not as proof of
  *   a crash.
  *
  * Some ends are no stop at all: the plugin gets no reason and its
- * {@link Scope.onDispose} cleanups do not run. That is the case when its
- * own process is killed because its input queue is full or a write to it
- * failed, when its own process fails to activate (the runner exits without
- * cleaning up), when the process ended by itself (it crashed, or its
- * JavaScript heap passed the 512 MB cap of player 0.7.1 and V8 ended it:
- * "ran out of memory"), and when the shared runner is restarted as a whole
- * (a hang, a fault it cannot attribute, an unreadable line of its own, a
- * member's full input queue, the runner exiting): every member is killed
- * with it. Keep state that must survive such an end in storage as it
- * changes, not only in a cleanup. Timings and restarts are in
- * [How the player runs and talks to plugins](../../../docs/explanation/host-and-node.md#crashes-and-restarts).
+ * {@link Scope.onDispose} cleanups do not run. That is the case when its own
+ * process is killed because its input queue is full or a write to it failed,
+ * when its own process fails to activate (the runner exits without cleaning
+ * up), when the process ended by itself (it crashed, or its JavaScript heap
+ * passed the 512 MB cap and V8 ended it: "ran out of memory"), and when the
+ * shared runner is restarted as a whole (a hang, a fault it cannot attribute,
+ * an unreadable line of its own, a member's full input queue, the runner
+ * exiting): every member is killed with it. Keep state that must survive such
+ * an end in storage as it changes, not only in a cleanup. Timings and restarts
+ * are in [Limits](../../../docs/reference/limits.md).
  *
- * Player 0.6.4 and later send the reason with `runtime.stop`, and their
- * runner reports `host-lost`. Players up to 0.6.3 give no reason for any
- * stop, a lost player included (`undefined`); so does a stop that does not
- * come from the player (a `TestHost` `stop()` without a reason). A value
- * this SDK does not know reads as `undefined`.
+ * The player sends the reason with `runtime.stop`, and its runner reports
+ * `host-lost`. A stop that does not come from the player (a `TestHost` `stop()`
+ * without a reason) has none (`undefined`). A value this SDK does not know
+ * reads as `undefined`.
  *
- * @player 0.6.4; older players give no reason (`undefined`).
+ * @player 0.6.4
  * @since 1.5.54
  * @category Plugin
  */
@@ -777,9 +763,8 @@ export type StopReason =
   | "host-lost";
 
 /**
- * What a {@link Scope.onDispose} cleanup is told (SDK 1.5.54). A player
- * whose own SDK is older passes nothing, so the cleanup's parameter is
- * optional.
+ * What a {@link Scope.onDispose} cleanup is told. The cleanup's parameter is
+ * optional, so a cleanup without one works too.
  *
  * @since 1.5.54
  * @category Plugin
@@ -791,9 +776,8 @@ export interface DisposeInfo {
    */
   readonly stopping: boolean;
   /**
-   * Why the player stops the plugin (player 0.6.4; the causes are listed at
-   * {@link StopReason}); `undefined` while `stopping` is false, and for
-   * every stop by an older player.
+   * Why the player stops the plugin (the causes are listed at
+   * {@link StopReason}).
    */
   readonly reason?: StopReason;
 }
@@ -816,7 +800,7 @@ export interface WindowState {
    * MPC-HC and mpv do. Always `false` with players before 0.6.3, which do
    * not report it.
    *
-   * @player 0.6.3; older players: always `false`.
+   * @player 0.6.3
    * @since 1.5.52
    */
   readonly maximized: boolean;
@@ -1033,11 +1017,10 @@ export interface MainWindow {
  */
 export interface AppInfo {
   /**
-   * The player's version, e.g. `"0.7.1"`. From player 0.7.1 this is the
-   * player's release version (the version of the published release), which
-   * can differ from the version of the host binary inside it. The player
-   * compares `minPlayerVersion` with this value, and plugins compare with
-   * it too.
+   * The player's version, e.g. `"0.7.1"`. This is the player's release version
+   * (the version of the published release), which can differ from the version
+   * of the host binary inside it. The player compares `minPlayerVersion` with
+   * this value, and plugins compare with it too.
    */
   readonly version: string;
   /** Short git hash of the build, `null` when unknown. */
@@ -1144,12 +1127,10 @@ export interface SystemInfo {
    * rather than {@link SystemInfo.os}.
    *
    * @example Offer the HDR menu only where render options work
-   * The plugin adds its HDR command only when the player renders on the
-   * GPU, instead of creating the render options just to find out from a
-   * failed status. `system()` asks the player, which reports the renderer
-   * drawing at that moment; no capability is needed to ask. A player before
-   * 0.5.12 leaves the field out, so the test is for `"gpu"` exactly (an
-   * older player gets no HDR command).
+   * The plugin adds its HDR command only when the player renders on the GPU,
+   * instead of creating the render options just to find out from a failed
+   * status. `system()` asks the player, which reports the renderer drawing at
+   * that moment; no capability is needed to ask.
    * ```ts
    * const { rendering } = await plugin.app.system();
    * if (rendering === "gpu") {
@@ -1162,8 +1143,7 @@ export interface SystemInfo {
    * }
    * ```
    *
-   * @player 0.5.12; older players leave it out (declare
-   * `"minPlayerVersion": "0.5.12"` when the plugin relies on it).
+   * @player 0.5.12
    * @since 1.5.34
    */
   readonly rendering?: "gpu" | "software";
@@ -1187,8 +1167,7 @@ export interface SystemInfo {
    *   console.log(`Rendering: software (${renderingReason.message})`);
    * ```
    *
-   * @player 0.5.13; older players leave it out (declare
-   * `"minPlayerVersion": "0.5.13"` when the plugin relies on it).
+   * @player 0.5.13
    * @since 1.5.35
    */
   readonly renderingReason?: RenderingReason;

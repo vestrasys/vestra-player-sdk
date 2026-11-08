@@ -21,9 +21,9 @@ const sameTypes = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((type, i) => type === b[i]);
 
 /**
- * One per plugin: the list comes with the `window.state` read before
- * activation (`[]` from older players) and is read again when the plugin
- * first uses it; with `events`, `resolvers.fileTypes` keeps it current.
+ * One per plugin: the list comes with the `window.state` read before activation
+ * and is read again when the plugin first uses it; with `events`,
+ * `resolvers.fileTypes` keeps it current.
  */
 class FileTypesService {
   readonly #runtime: Runtime;

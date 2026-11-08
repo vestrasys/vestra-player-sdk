@@ -434,7 +434,7 @@ const structure = { errors: [], warnings: [] };
       if (key in fields)
         violation(page, `${path}: \`${key}\` front matter is not allowed`);
 
-    const kind = page.file === "index.md" ? "index" : group.kind;
+    const kind = page.file === "index.md" && !page.shape ? "index" : group.kind;
     let counted;
     try {
       counted = withoutGenerated(body);
@@ -454,12 +454,12 @@ const structure = { errors: [], warnings: [] };
       if (value > limit * 1.25) violation(page, message);
       else structure.warnings.push(message);
     }
-    // The page's shape (Diátaxis; doc-structure.mjs SHAPES).
+    // The page's shape (doc-structure.mjs SHAPES).
     const shape = page.shape ?? group.kind;
     if (kind !== "index") {
       if (!SHAPES[shape]) error(`${path}: unknown shape "${shape}"`);
       else
-        for (const problem of shapeProblems(shape, counted, body))
+        for (const problem of shapeProblems(shape, counted))
           violation(
             page,
             `${path}: ${problem} (${shape} pages: ${SHAPES[shape]})`,

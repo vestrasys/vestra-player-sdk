@@ -83,23 +83,22 @@ export interface Snapshot extends Disposable {
    * Start exporting; the job runs in the host's offline worker.
    * One snapshot can be exported several times.
    *
-   * A **stream copy** (`format: "copy"`, player 0.7.6) writes the video
-   * stream and the snapshot's audio track as they are in the file, without
-   * decoding: lossless and about as fast as the disk, but a copy can only
-   * begin on a keyframe. It starts at the video's last keyframe at or before
-   * the snapshot time (its first keyframe when the video itself starts
-   * later; keyframes an MP4 edit list discards do not count) and is cut at
-   * `end`, where it may run a few frames past `end`. An open GOP can write
-   * a frame or two that present before the keyframe; `start` includes them.
-   * The finished job's `outcome` gives the `start` and `end` actually
-   * written; a plugin that previews the cut (with `plugin.tools.run`
-   * and ffprobe's packet flags, say) shows those once the job is done.
-   * Copies need a raw snapshot (effects and burned-in subtitles need a
-   * re-encode) and leave subtitle tracks and chapters out. `auto` writes
+   * A **stream copy** (`format: "copy"`) writes the video stream and the
+   * snapshot's audio track as they are in the file, without decoding: lossless
+   * and about as fast as the disk, but a copy can only begin on a keyframe. It
+   * starts at the video's last keyframe at or before the snapshot time (its
+   * first keyframe when the video itself starts later; keyframes an MP4 edit
+   * list discards do not count) and is cut at `end`, where it may run a few
+   * frames past `end`. An open GOP can write a frame or two that present before
+   * the keyframe; `start` includes them. The finished job's `outcome` gives the
+   * `start` and `end` actually written; a plugin that previews the cut (with
+   * `plugin.tools.run` and ffprobe's packet flags, say) shows those once the
+   * job is done. Copies need a raw snapshot (effects and burned-in subtitles
+   * need a re-encode) and leave subtitle tracks and chapters out. `auto` writes
    * MP4 for H.264, HEVC, AV1 or MPEG-4 video with AAC, MP3, AC-3, E-AC-3 or
-   * ALAC audio (or none), and MKV for anything else. A copy the player
-   * cannot make (no video stream, a cover image, an external audio track,
-   * codecs `mp4` cannot hold) ends `failed` with the code `unsupported`.
+   * ALAC audio (or none), and MKV for anything else. A copy the player cannot
+   * make (no video stream, a cover image, an external audio track, codecs `mp4`
+   * cannot hold) ends `failed` with the code `unsupported`.
    *
    * @capability media.read and media.control
    * @throws `released` (rejects) The snapshot was already released.
@@ -150,25 +149,16 @@ export interface Snapshot extends Disposable {
 }
 
 /**
- * One frame as PNG, JPEG (`quality` 1–100, default 90) or BMP (24-bit), or
- * a clip: re-encoded as MP4 (`mp4`, frame-accurate, optional
- * {@link ExportEncoding}) or copied without re-encoding (`copy`, player
- * 0.7.6, starting on a keyframe).
+ * One frame as PNG, JPEG (`quality` 1–100, default 90) or BMP (24-bit), or a
+ * clip: re-encoded as MP4 (`mp4`, frame-accurate, optional
+ * {@link ExportEncoding}) or copied without re-encoding (`copy`, starting on a
+ * keyframe).
  *
  * `destination` is never overwritten if it exists. The extension does not
  * choose the format (a copy's extension is set to its container).
  * `sampleTime` picks the frame (default: the snapshot time); `end` is the
  * clip's end in source seconds. On Windows the export worker needs FFmpeg
  * 6.1 or newer.
- *
- * **Which players have `copy`, `encoding` and the progress and range of
- * a job**: player 0.7.6 and later. Declare `"minPlayerVersion": "0.7.6"`,
- * or, to keep older players and offer these only where they exist, compare
- * {@link AppInfo.version | plugin.app.version} with `0.7.6`, as for any
- * newer API. Do not probe by trying: on an older player the `plugin`
- * object comes from that player's own, older SDK, which rejects `copy` with
- * `invalid` but builds a re-encode request without the `encoding` it does
- * not know, so the clip is encoded with the fixed settings and no error.
  *
  * @since 1.0.0
  * @category Media
@@ -200,8 +190,7 @@ export type ExportOptions =
       /** Clip end, source seconds. */
       end: number;
       /**
-       * Encoder settings (player 0.7.6); without it, the settings before
-       * they existed.
+       * Encoder settings; without it, the settings before they existed.
        *
        * @since 1.6.10
        */
@@ -209,9 +198,9 @@ export type ExportOptions =
     }
   | {
       /**
-       * A clip copied stream by stream, without re-encoding (player 0.7.6):
-       * lossless and about as fast as the disk. It starts on the video
-       * keyframe at or before the snapshot time; see {@link Snapshot.export}.
+       * A clip copied stream by stream, without re-encoding: lossless and about
+       * as fast as the disk. It starts on the video keyframe at or before the
+       * snapshot time; see {@link Snapshot.export}.
        *
        * @since 1.6.10
        */
@@ -232,13 +221,12 @@ export type ExportOptions =
     };
 
 /**
- * The encoder settings of a re-encoded clip (`format: "mp4"`, player
- * 0.7.6): a closed set of values, never encoder arguments. Every field is
- * optional; the defaults are the settings clips had before: CRF 18, the
- * fastest speed, the source's size and frame rate, AAC 192 kb/s, one thread.
- * A value outside its set rejects the export with `invalid`. `videoBitrate:
- * "source"` replaces the CRF with the source's bitrate, for a "Same as
- * source" preset.
+ * The encoder settings of a re-encoded clip (`format: "mp4"`): a closed set of
+ * values, never encoder arguments. Every field is optional; the defaults are
+ * the settings clips had before: CRF 18, the fastest speed, the source's size
+ * and frame rate, AAC 192 kb/s, one thread. A value outside its set rejects the
+ * export with `invalid`. `videoBitrate: "source"` replaces the CRF with the
+ * source's bitrate, for a "Same as source" preset.
  *
  * @example A small file
  * A 720p, 30 fps clip at a lower quality, encoded with the cores the player
@@ -285,10 +273,10 @@ export interface ExportEncoding {
   audioBitrate?: 128 | 192 | 256;
   /**
    * `single` (default) encodes on one thread, leaving the other cores to
-   * playback. `auto` lets the player use more: half the logical
-   * processors, at most 8, so playback and the interface keep their rate.
-   * From player 0.7.6 every export runs at below-normal priority (as
-   * HandBrake and OBS run their encoders), with either setting.
+   * playback. `auto` lets the player use more: half the logical processors, at
+   * most 8, so playback and the interface keep their rate. Every export runs at
+   * below-normal priority (as HandBrake and OBS run their encoders), with
+   * either setting.
    */
   threads?: "single" | "auto";
   /**
@@ -307,7 +295,7 @@ export interface ExportEncoding {
  * `{ destination }`, `{ error: { code, message } }` or `{ cancelled: true }`.
  * `facts` describes what the worker produced (versions, range, streams).
  *
- * From player 0.7.6:
+ * In addition:
  * - a finished clip's `outcome` also has `start` and `end`, the source
  *   times of its first frame and of the end of its last frame as written: a
  *   copy's earliest written frame (its keyframe, or the leading frames of

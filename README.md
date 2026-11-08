@@ -10,7 +10,7 @@
 </p>
 <p align="center">
   <a href="https://vestrasys.github.io/vestra-player-sdk/">Documentation</a> ·
-  <a href="https://vestrasys.github.io/vestra-player-sdk/documents/Getting_started.html">Getting started</a> ·
+  <a href="https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html">Tutorial</a> ·
   <a href="https://github.com/vestrasys/vestra-player-sdk/tree/main/examples">Examples</a> ·
   <a href="https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md">Changelog</a> ·
   <a href="https://vestrasys.github.io/vestra-player-sdk/llms.txt">llms.txt</a>
@@ -57,7 +57,7 @@ export default async function activate(plugin: Plugin) {
 }
 ```
 
-Run `npx vestra-plugin pack` to check and package it, or start the player with `--plugin <folder>` to try it right away. This is [`examples/hello`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello); the [Tutorials](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorials.html) build a plugin in four lessons: [Getting started](https://vestrasys.github.io/vestra-player-sdk/documents/Getting_started.html) (a menu item and an on-screen message), then a window, settings and translations, and tests, packing and publishing.
+Run `npx vestra-plugin pack` to check and package it, or start the player with `--plugin <folder>` to try it right away. This is [`examples/hello`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello); the [Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html) explains what a plugin is, shows the three ways to write one, and runs, tests and publishes it.
 
 ## Examples
 
@@ -79,18 +79,15 @@ Complete, tested plugins in [`examples/`](https://github.com/vestrasys/vestra-pl
 
 The [documentation site](https://vestrasys.github.io/vestra-player-sdk/) is the one place for everything a plugin author needs:
 
-- **[Tutorials](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorials.html)**: four lessons that build one plugin, starting with [Getting started](https://vestrasys.github.io/vestra-player-sdk/documents/Getting_started.html): a menu item, a window, settings and translations, tests and the store; then a lesson on writing your own blur kernel (a GPU shader and a convolution node).
-- **[How-to guides](https://vestrasys.github.io/vestra-player-sdk/documents/How-to_guides.html)**: one task each (goal, steps, complete example): playback, storage, subtitles, sliders, window state, the GPU switch, menu state that needs no running plugin (`plugin.when`), translating, testing, publishing; and troubleshooting.
-- **[Reference](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html)**: capabilities, manifest fields, limits, menus and bindings, platforms, theme, error codes, translations, the test host, and the [command line](https://vestrasys.github.io/vestra-player-sdk/documents/Command_line.html) (`vestra-plugin check`, `test`, `build`, `pack`, `i18n extract`, `i18n check`).
-- **[Explanation](https://vestrasys.github.io/vestra-player-sdk/documents/Explanation.html)**: how a plugin runs, commands and key bindings, playback, video and audio processing, the interface, GPU and software rendering, the player's Rust core and how it runs and talks to plugins.
-- **[Guidelines](https://vestrasys.github.io/vestra-player-sdk/documents/Guidelines.html)**: rules for every plugin, the interface and the menus.
+- **[Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html)**: one page: what a plugin is (a process that talks to the player), the three ways to write one with an example each, where things live, and running, testing and publishing.
+- **[Guides](https://vestrasys.github.io/vestra-player-sdk/documents/Guides.html)**: one task each (goal, steps, often a complete example): windows, settings and translations, playback, storage, window state, sliders, subtitles, video filters, the GPU switch, menu state that needs no running plugin (`plugin.when`), testing, publishing, your own store, documentation for coding agents; the design rules every plugin follows; and troubleshooting.
+- **[Reference](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html)**: capabilities, manifest fields, limits, menus and bindings, platforms, theme, error codes, events, messages, translations, the test host, and the [command line](https://vestrasys.github.io/vestra-player-sdk/documents/Command_line.html) (`vestra-plugin check`, `test`, `build`, `pack`, `i18n extract`, `i18n check`).
 - **[Examples](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html)**: the walkthroughs above.
-- **[Upgrading](https://vestrasys.github.io/vestra-player-sdk/documents/Upgrading.html)**: what to change when a release deprecates or removes something, with the migration checklists and every release's "who must change".
 - **[API](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html)**: every type and member of `@vestra-player/sdk` and `@vestra-player/sdk/testing`.
 
 ## Compatibility
 
-Every 1.x release implements the plugin API `vestra/1`: minor releases only add backwards-compatible API, and a breaking change gets a new `apiVersion` and a new major version. Plugins run on the Node.js 26 that the player ships. API added after SDK 1.0 may need a newer player; [Player versions](https://vestrasys.github.io/vestra-player-sdk/documents/Manifest.html#player-versions) lists which API needs which player, for the manifest's `minPlayerVersion`. `@vestra-player/sdk/runtime` is for the player only and not covered by semver.
+Every 1.x release implements the plugin API `vestra/1`: minor releases only add backwards-compatible API, and a breaking change gets a new `apiVersion` and a new major version. Plugins run on the Node.js 26 that the player ships. Set the manifest's `minPlayerVersion` to the player you tested with. `@vestra-player/sdk/runtime` is for the player only and not covered by semver.
 
 ## Contributing · License
 

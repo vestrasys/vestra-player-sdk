@@ -63,7 +63,7 @@ export interface TimelineMark {
 export type RangeStyle = "selection" | "region";
 
 /**
- * One range on the seek bar (player 0.7.6).
+ * One range on the seek bar.
  *
  * @since 1.6.9
  * @category Playback
@@ -107,10 +107,10 @@ export interface TimelineLayer extends Disposable {
   /**
    * Replace the layer (last write wins; `[]` clears it). At most 1000 marks,
    * titles ≤ 100 characters, times within the media. Failures go to `onError`;
-   * with `ifCurrent`, a write for another source is dropped silently.
-   * A title is data (a chapter's or bookmark's own name), or a {@link Text}
-   * the player translates (`text("Chapter {}", [n])`, SDK 1.5.11); other
-   * plugins read the shown string.
+   * with `ifCurrent`, a write for another source is dropped silently. A title
+   * is data (a chapter's or bookmark's own name), or a {@link Text} the player
+   * translates (`text("Chapter {}", [n])`); other plugins read the shown
+   * string.
    *
    * @example Show the file's bookmarks on the timeline
    * Bookmark marks appear on the seek bar at their times, titled with the
@@ -137,20 +137,16 @@ export interface TimelineLayer extends Disposable {
   ): void;
   /**
    * Replace the layer's ranges (last write wins; `[]` clears them), spans of
-   * the media drawn on the seek bar (player 0.7.6). The marks and the ranges
-   * of a layer are replaced on their own: `set` keeps the ranges and
-   * `setRanges` keeps the marks. Disposing the layer, its scope or stopping
-   * the plugin removes both, and a new source clears every layer.
+   * the media drawn on the seek bar. The marks and the ranges of a layer are
+   * replaced on their own: `set` keeps the ranges and `setRanges` keeps the
+   * marks. Disposing the layer, its scope or stopping the plugin removes both,
+   * and a new source clears every layer.
    *
    * At most 100 ranges (`TIMELINE_LIMITS.ranges`), `0 ≤ start < end`, `end`
    * within the media while its duration is known, titles ≤ 100 characters.
    * Ranges may overlap. Failures go to `onError`; with `ifCurrent`, a
    * write for another source is dropped silently. A title is data or a
    * {@link Text} the player translates, as in `set`.
-   *
-   * Players before 0.7.6 build `plugin` from an SDK without `setRanges`, so
-   * the call throws a `TypeError` there: declare
-   * `"minPlayerVersion": "0.7.6"`.
    *
    * @example Show the clip range on the seek bar while a panel is open
    * The span the user picked shows on the seek bar in the accent colour
@@ -216,11 +212,10 @@ export interface Timeline {
   /** Every layer merged, by time (`playback.read`). Empty on a new source. */
   readonly marks: readonly TimelineMark[];
   /**
-   * Every layer's ranges merged, by start (`playback.read`; player 0.7.6:
-   * on older players `ranges` does not exist and reads `undefined`). Empty
-   * on a new source. Kept current like `marks` (with `events`): read it in
-   * a {@link View.bind} function and the view follows it. `onChange` runs
-   * only when the marks change.
+   * Every layer's ranges merged, by start (`playback.read`). Empty on a new
+   * source. Kept current like `marks` (with `events`): read it in a
+   * {@link View.bind} function and the view follows it. `onChange` runs only
+   * when the marks change.
    *
    * @example Draw the published ranges in a seek bar of your own
    * A bottom bar draws a band for every range on the seek bar, whoever
@@ -319,7 +314,7 @@ export interface AudioTrack {
  * Without `events`, {@link Player.state} only updates at start and after
  * this plugin's own operations.
  *
- * @see {@link Player.state}, [Playback state, controls and sources](../../../docs/explanation/playback.md)
+ * @see {@link Player.state}, [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -455,7 +450,7 @@ export interface Chapter {
  * });
  * ```
  *
- * @see [Playback state, controls and sources](../../../docs/explanation/playback.md)
+ * @see [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -598,7 +593,7 @@ export interface Media {
  * seeks resolve `false`.
  *
  * @capability playback.control
- * @see [Keep a slider responsive while dragging](../../../docs/how-to/slider.md)
+ * @see [Keep a slider responsive while dragging](../../../docs/guides/slider.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -608,18 +603,16 @@ export interface Scrub {
    * `false` when a newer target superseded it or the gesture ended. Rejects
    * on a host failure.
    *
-   * `keyframes: true` (player 0.5.3, SDK 1.5.22): land on the last keyframe
-   * at or before `seconds` instead of decoding up to that exact frame. The
-   * picture appears at once on any file (tens of milliseconds instead of
-   * seconds on 4K video with keyframes far apart), up to one keyframe
-   * interval before the target; the position the player reports is the
-   * keyframe's. Use it when the user chose keyframe seeks (the same switch
-   * as {@link Player.setStepSeek}), and the exact seek otherwise. The player
-   * sends a repeated target of the same gesture only once while the seek is
-   * still running (a click is a press and a release), but an exact seek to
-   * the target of a keyframe seek is always sent. Omitted or `false`: exact,
-   * as before. Older players ignore the option and seek exactly: set
-   * `"minPlayerVersion": "0.5.3"` when you rely on it.
+   * `keyframes: true`: land on the last keyframe at or before `seconds` instead
+   * of decoding up to that exact frame. The picture appears at once on any file
+   * (tens of milliseconds instead of seconds on 4K video with keyframes far
+   * apart), up to one keyframe interval before the target; the position the
+   * player reports is the keyframe's. Use it when the user chose keyframe seeks
+   * (the same switch as {@link Player.setStepSeek}), and the exact seek
+   * otherwise. The player sends a repeated target of the same gesture only once
+   * while the seek is still running (a click is a press and a release), but an
+   * exact seek to the target of a keyframe seek is always sent. Omitted or
+   * `false`: exact, as before.
    *
    * @example Scrub on keyframes for a fast picture
    * While dragging, the picture jumps to the nearest earlier keyframe at
@@ -871,8 +864,7 @@ export interface PlaybackStats {
    * a new picture on screen. Lower than `video.fps` when frames are lost
    * after decoding and rendering (the window could not keep up with the
    * source, or the display refreshes slower); `0` while paused. `null` when
-   * the player cannot measure it (no window, the first second, players
-   * before 0.5.1).
+   * the player cannot measure it (no window, the first second).
    *
    * @player 0.5.1
    * @since 1.5.15
@@ -979,7 +971,7 @@ export interface PlaybackStats {
  * `events` to follow changes made elsewhere; `producer.av` for
  * {@link Player.openStream}.
  *
- * @see [Playback state, controls and sources](../../../docs/explanation/playback.md), [Control playback](../../../docs/how-to/control-playback.md)
+ * @see [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
  * @category Playback
  */
@@ -1039,13 +1031,11 @@ export interface Player {
    * {@link Scope.state} field re-runs only its readers, and
    * {@link Scope.update} re-runs everything.
    *
-   * Each event needs a capability: `events` for most, `bindings.manage`
-   * for `bindings.changed`, `commands` for `commands.keys`,
-   * `video.upscaling` for `video.upscaling.changed`, none for
-   * `packages.changed`. Without it the listener never runs (for `events`,
-   * a warning in the log says so). An event an older player does not know
-   * yet (`commands.keys`, `video.upscaling.changed`) is refused with
-   * `unsupported`; added during `activate`, that fails the activation.
+   * Each event needs a capability: `events` for most, `bindings.manage` for
+   * `bindings.changed`, `commands` for `commands.keys`, `video.upscaling` for
+   * `video.upscaling.changed`, none for `packages.changed`. Without it the
+   * listener never runs (for `events`, a warning in the log says so). Added
+   * during `activate`, that fails the activation.
    *
    * @param event - The event's name.
    * @param listener - Receives each event's data.
@@ -1066,7 +1056,7 @@ export interface Player {
    * plugin.player.on("source.state", (s) => bar.set({ rate: `${s.rate.toFixed(2)}×` }));
    * ```
    *
-   * @see [Three ways to write a plugin](../../../docs/explanation/three-ways.md)
+   * @see [Tutorial](../../../docs/tutorial/index.md)
    * @since 1.7.0
    */
   on<E extends HostEvent>(
@@ -1363,7 +1353,7 @@ export interface Player {
    * bar.on("dragEnd", () => scrub?.end());
    * ```
    *
-   * @see [Keep a slider responsive while dragging](../../../docs/how-to/slider.md)
+   * @see [Keep a slider responsive while dragging](../../../docs/guides/slider.md)
    * @since 1.0.0
    */
   scrub(): Scrub;
@@ -1600,21 +1590,17 @@ export interface Player {
    * ← / →): 0.1–3600 seconds in tenths, default 5. The newest call of any
    * plugin wins; it reverts when that plugin stops.
    *
-   * `keyframes: true` (player 0.5.1, SDK 1.5.19): the step seeks
-   * (`seek-backward` / `seek-forward`, including {@link Host.run} with
-   * `seconds` and the picture-in-picture skips) land on a keyframe instead
-   * of the exact time: forward on the first keyframe at or after position +
-   * step, backward on the last at or before position − step, and they
-   * always move. Presses during a seek add up and continue from where it
-   * landed; the on-screen text shows the landed time. Sources without moving
-   * video seek exactly. {@link Player.seek}, chapters, loops and
+   * `keyframes: true`: the step seeks (`seek-backward` / `seek-forward`,
+   * including {@link Host.run} with `seconds` and the picture-in-picture skips)
+   * land on a keyframe instead of the exact time: forward on the first keyframe
+   * at or after position + step, backward on the last at or before position −
+   * step, and they always move. Presses during a seek add up and continue from
+   * where it landed; the on-screen text shows the landed time. Sources without
+   * moving video seek exactly. {@link Player.seek}, chapters, loops and
    * {@link Player.step} are unaffected, and so is a scrub unless it asks for
-   * keyframes itself ({@link Scrub.seek} with `keyframes: true`, SDK 1.5.22).
-   * Omitted or `false`: exact seeks, as before. `seconds` and `keyframes`
-   * are written as a pair: the newest call sets both.
-   *
-   * Older players ignore `keyframes`: set `"minPlayerVersion": "0.5.1"` in
-   * the manifest when you rely on it.
+   * keyframes itself ({@link Scrub.seek} with `keyframes: true`). Omitted or
+   * `false`: exact seeks, as before. `seconds` and `keyframes` are written as a
+   * pair: the newest call sets both.
    *
    * @capability playback.control
    * @throws `invalid` (rejects) `seconds` outside 0.1–3600 or not in tenths,

@@ -5,13 +5,13 @@ description: "Walkthrough of examples/adjust-panel: a speed slider in the player
 
 # Example: Adjust panel
 
-A speed slider in the player's **adjust column**, the column of controls for what is playing (player 0.7.6). It shows how to choose a slot by what a panel is for, how a key opens the column at your tab, and how `home` puts that key under the tab.
+A speed slider in the player's **adjust column**, the column of controls for what is playing. It shows how to choose a slot by what a panel is for, how a key opens the column at your tab, and how `home` puts that key under the tab.
 
 ## What it demonstrates
 
-The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} as the panel's own key · {@link "@vestra-player/sdk"!CommandOptions.home | CommandOptions.home} · `minPlayerVersion`.
+The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} as the panel's own key · {@link "@vestra-player/sdk"!CommandOptions.home | CommandOptions.home}.
 
-[Add a window](../tutorials/add-a-window.md) teaches the view surface panels share with tool windows; [Write a slider](../how-to/slider.md) covers the slider itself.
+[Open a tool window and remember its state](../guides/windows.md) teaches the view surface panels share with tool windows; [Keep a slider responsive while dragging](../guides/slider.md) covers the slider itself.
 
 ## What you'll build
 
@@ -21,13 +21,13 @@ The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} 
 
 ### Sidebar or adjust?
 
-Ask: after the user closes the panel, do they still look at what it showed? A playlist, chapters or search results: yes, so they are **content** and go in `"sidebar"`. A speed slider: no, it only changes what is playing, so it goes in `"adjust"`. The slot is a contract about purpose; the player decides how the column looks, and that may change (see [Slots](../explanation/ui.md#slots-what-each-one-is-for)).
+Ask: after the user closes the panel, do they still look at what it showed? A playlist, chapters or search results: yes, so they are **content** and go in `"sidebar"`. A speed slider: no, it only changes what is playing, so it goes in `"adjust"`. The slot is a contract about purpose; the player decides how the column looks, and that may change.
 
 ## Files
 
 ```text
 examples/adjust-panel/
-  manifest.json                   identity, capabilities, minPlayerVersion
+  manifest.json                   identity and capabilities
   main.ts                         the code
   ui/speed.slint                  the panel
   tests/adjust-panel.test.ts      tests against the SDK's in-memory player
@@ -38,7 +38,7 @@ examples/adjust-panel/
 
 {@includeCode ../../examples/adjust-panel/manifest.json}
 
-`minPlayerVersion` is `0.7.6`: older players have no adjust column and refuse `ui.mount("adjust")` with `invalid`, so the store does not offer the plugin to them. `playback.read` and `playback.control` read and set the speed; `events` keeps `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without it, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
+`playback.read` and `playback.control` read and set the speed; `events` keeps `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without it, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
 
 ## The panel in Slint
 
@@ -81,7 +81,7 @@ npm run check && npm test
 npm run pack              # examples.adjust-panel-0.1.0.vxp
 ```
 
-Start the player (0.7.6 or newer) with `--plugin <path to examples/adjust-panel>` and press Alt+5, or click the bottom bar's Adjustments and Effects button (the sliders).
+Start the player with `--plugin <path to examples/adjust-panel>` and press Alt+5, or click the bottom bar's Adjustments and Effects button (the sliders).
 
 ## Try next
 

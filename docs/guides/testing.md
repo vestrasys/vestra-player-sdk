@@ -48,7 +48,7 @@ host.handle("processing.replace", () => {
 
 `await host.settle()` after every action that makes the plugin talk to the player; `host.settle(400)` also lets debounces and timers due by then fire. Then assert on what the host recorded: `host.window(id).props` (kebab-case names), `host.command(id).state`, `host.osd`, `host.source`.
 
-`settle` does not wait for the once-a-second full update pass (SDK 1.5.45): after `host.setSource(...)` only the bindings that read a changed field of `plugin.player.state` run again. A value your plugin changed outside a handler (a timer, a promise continuation, a child process) without `plugin.update()` shows in the next full pass, at most about a second later; call `plugin.update()` in the plugin after such a change, or wait `await host.settle(1000)` in the test.
+`settle` does not wait for the once-a-second full update pass: after `host.setSource(...)` only the bindings that read a changed field of `plugin.player.state` run again. A value your plugin changed outside a handler (a timer, a promise continuation, a child process) without `plugin.update()` shows in the next full pass, at most about a second later; call `plugin.update()` in the plugin after such a change, or wait `await host.settle(1000)` in the test.
 
 `settle` waits only for calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine; poll the value you assert on instead:
 
@@ -61,11 +61,11 @@ assert.equal(importWindow.props["status-text"], expected);
 
 ### Stop
 
-`await stop()` disposes the plugin as the player does (scopes released, stores flushed) and removes the host's temporary files (a removal Windows refuses for a moment is retried, and never fails the test). `stop({ reason: "idle" })` gives the stop reason the player would send, and `disconnect()` stops the plugin as when the player is lost (`host-lost`, requests refused) (SDK 1.5.54). Each test creates its own host.
+`await stop()` disposes the plugin as the player does (scopes released, stores flushed) and removes the host's temporary files (a removal Windows refuses for a moment is retried, and never fails the test). `stop({ reason: "idle" })` gives the stop reason the player would send, and `disconnect()` stops the plugin as when the player is lost (`host-lost`, requests refused). Each test creates its own host.
 
 ### Test a restart
 
-Copy `host.dataDirectory` after the first run and pass it as `dataDirectory` to the second, to check what the plugin stored and restores ([Remember a window's state between runs](window-state.md) is a plugin that needs it). A restart within one player session (a reload, an upgrade, a crash) keeps {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} too: pass the first run's `host.sessionStorage` as `sessionStorage`; leave it out to test a fresh player session.
+Copy `host.dataDirectory` after the first run and pass it as `dataDirectory` to the second, to check what the plugin stored and restores ([Open a tool window and remember its state](windows.md) is a plugin that needs it). A restart within one player session (a reload, an upgrade, a crash) keeps {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} too: pass the first run's `host.sessionStorage` as `sessionStorage`; leave it out to test a fresh player session.
 
 ```ts
 import assert from "node:assert/strict";
@@ -140,5 +140,5 @@ test("a refused change is shown and can be retried", async () => {
 ## See also
 
 - [Reference: test host](../reference/testing.md): `startPlugin` options, every way to act and simulate, what the host records, every member.
-- [Translate a plugin](i18n.md#tests): tests in another language.
+- [Add settings and translations](i18n.md#test-in-another-language): tests in another language.
 - {@link "@vestra-player/sdk/testing" | @vestra-player/sdk/testing}: the API reference of `TestHost` and `startPlugin`.

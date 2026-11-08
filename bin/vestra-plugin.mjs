@@ -28,7 +28,7 @@
  *           one member's whole documentation; --search <query> lists
  *           matching paths; at most 8 KB per answer, --page N for the rest
  *
- * Translations (docs/how-to/i18n.md). English is the source text; each
+ * Translations (docs/guides/i18n.md). English is the source text; each
  * language is a gettext file locales/<lang>.po:
  *
  *   i18n extract  find the texts to translate (@tr in .slint files, the
@@ -452,9 +452,9 @@ function slintCode(text) {
 /**
  * A `for` over an array the plugin binds (an `in` or `in-out` property of
  * array type of a component or global in the same file), outside a
- * `ListView`, in the plugin's .slint files: a reminder, not a failure
- * (SDK 1.5.46). Such a `for` builds every row of the array up front; since
- * player 0.6.0 a plugin may bind a whole long list, which belongs in a
+ * `ListView`, in the plugin's .slint files: a reminder, not a failure.
+ * Such a `for` builds every row of the array up front; a plugin may bind a
+ * whole long list, which belongs in a
  * `ListView` (it builds only the rows on screen). A text scan: imported
  * components and `@children` are not followed.
  */

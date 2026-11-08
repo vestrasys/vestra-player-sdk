@@ -11,8 +11,7 @@
  * - the capability `events.subscribe` needs for it, from the player's
  *   table (`HOST_CAPABILITIES`, src/host-capabilities.ts).
  *
- * The player version an event appeared in has no source yet (see the
- * message table): the column shows "—". Fails when the union, the
+ * Fails when the union, the
  * `EventPayloads` members and `SUBSCRIBED_EVENTS` disagree, or when a
  * payload has no summary.
  */
@@ -94,7 +93,6 @@ export default async function events({ root, table }) {
       "SDK members that listen to it",
       "Wakes a stopped plugin",
       "Capability",
-      "Introduced in",
     ],
     list.map(({ name, type, doc }) => {
       const { own, also } = listeners(name);
@@ -110,7 +108,6 @@ export default async function events({ root, table }) {
         members || "none: `Player.on` only",
         WAKE_EVENTS.includes(name) ? "yes" : "no",
         capabilityRule(subscribe.needs, { event: name }),
-        "—",
       ];
     }),
   );

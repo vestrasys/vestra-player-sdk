@@ -13,7 +13,7 @@ The complete, tested source is in [`examples/signal-generator`](https://github.c
 
 Generated streams with `openStream` (the player pulls `frame()`) · the RGBA frame layout · audio samples per video frame (48000 / fps, carrying the fraction) · a phase-continuous sine · stopping a stream.
 
-[Control playback](../how-to/control-playback.md) teaches opening and following a source; how generated streams work is in [Playback state, controls and sources](../explanation/playback.md#generated-streams).
+[Control playback](../guides/control-playback.md) teaches opening and following a source; generated streams are {@link "@vestra-player/sdk"!Player.openStream | Player.openStream}.
 
 ## What you'll build
 
@@ -58,7 +58,7 @@ examples/signal-generator/
 | `playback.control` | The stream becomes the player's source, like opening a file, and Stop closes it. `openStream` needs this as well as `producer.av`.                                            |
 | `playback.read`    | When it stops, the stream reads the player's state to check that it is still the current source before closing it, so it never closes a file the user opened in the meantime. |
 
-`minPlayerVersion` is 0.3.0 because the command's path uses the `@open` menu id, new in that version. The display fields (`name`, `punchline`, `description`, …) are what the plugin manager and the store show.
+The display fields (`name`, `punchline`, `description`, …) are what the plugin manager and the store show.
 
 ## main.ts, top to bottom
 
@@ -127,13 +127,13 @@ When the plugin is disabled or the player quits, the SDK stops the stream the sa
 
 {@includeCode ../../examples/signal-generator/main.ts#command}
 
-- `path: ["@open", "Signal generator"]` puts the item in the player's own **Open** menu. Paths merge by their English keys in every interface language, so `["Open", …]` reaches the same menu; the id form `@open` names the built-in menu explicitly and also reaches it in players up to 0.4.2, whose menus were titled in Chinese ([Menu paths](../reference/commands.md#menu-paths)).
+- `path: ["@open", "Signal generator"]` puts the item in the player's own **Open** menu. Paths merge by their English keys in every interface language, so `["Open", …]` reaches the same menu; the id form `@open` names the built-in menu explicitly ([Menu paths](../reference/commands.md#menu-paths)).
 - `checked` is a function. The SDK calls it again after every handler and every `onStop`, and updates the check mark when the result changes.
 - `run` starts the stream when there is none and stops it when there is one. It returns the promise so that a failure reaches the plugin log.
 
 ## In style B and C
 
-`main.ts` is the main version, in style A ([Three ways to write a plugin](../explanation/three-ways.md)): the check mark is a function, and the SDK's update passes evaluate it after every handler and every `onStop`. Two more entry files hold the same plugin in the other styles; point the manifest's `entry` at one to run it. Everything except the command and the start and stop functions is imported from `main.ts`.
+`main.ts` is the main version, in style A ([Tutorial](../tutorial/index.md)): the check mark is a function, and the SDK's update passes evaluate it after every handler and every `onStop`. Two more entry files hold the same plugin in the other styles; point the manifest's `entry` at one to run it. Everything except the command and the start and stop functions is imported from `main.ts`.
 
 **Style B** (`main-b.ts`): the check mark is a value that the plugin sets when the stream starts and stops. The command never takes part in an update pass, and {@link "@vestra-player/sdk"!Command.set | set} sends this command's state alone.
 

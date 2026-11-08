@@ -1,11 +1,10 @@
 /**
- * `plugin.wire` (SDK 1.7.0; doc/specs/sdk-refactor.md §3.3 and §4 Step 3
- * in the player repository): the protocol (L0) and the primitives (L1)
- * behind one experimental member, for the plugin's own direct messages.
- * Not to be confused with `src/wire.ts` (later `src/wire/`), the L0 code
- * itself: this file hands out access to it, and is the only file under
- * `src/plugin/` that sends a request by a method name it was given
- * (`scripts/check-layers.mjs`, rule 7).
+ * `plugin.wire` (doc/specs/sdk-refactor.md §3.3 and §4 Step 3 in the player
+ * repository): the protocol (L0) and the primitives (L1) behind one
+ * experimental member, for the plugin's own direct messages. Not to be confused
+ * with `src/wire.ts` (later `src/wire/`), the L0 code itself: this file hands
+ * out access to it, and is the only file under `src/plugin/` that sends a
+ * request by a method name it was given (`scripts/check-layers.mjs`, rule 7).
  *
  * - `request`: `Connection.request`, the transport as is; the player
  *   checks capabilities. The subscriptions are guarded, refused with

@@ -1,11 +1,11 @@
 /**
  * The TypeScript language-service plugin `@vestra-player/sdk/ts-plugin`: the
  * capability checker of `vestra-plugin check` in the editor. A use of an API
- * member whose capability `manifest.json` does not declare is an error at
- * the member, with the quick fix "Add '<capability>' to manifest.json".
- * A call whose capability depends on a name the checker cannot read
- * (`plugin.wire.request(method)` with a computed method, SDK 1.7.0) is a
- * warning (`CAPABILITY_UNCHECKED`).
+ * member whose capability `manifest.json` does not declare is an error at the
+ * member, with the quick fix "Add '<capability>' to manifest.json". A call
+ * whose capability depends on a name the checker cannot read
+ * (`plugin.wire.request(method)` with a computed method) is a warning
+ * (`CAPABILITY_UNCHECKED`).
  *
  * A project enables it in its tsconfig.json:
  *

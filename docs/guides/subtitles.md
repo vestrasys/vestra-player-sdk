@@ -119,4 +119,4 @@ export default async function activate(plugin: Plugin) {
 ## See also
 
 - The API reference: `Subtitles`, `SubtitlesState`, `SubtitleTrack`, `SubtitleStyle`.
-- [Translate a plugin](i18n.md) for text values in titles.
+- [Add settings and translations](i18n.md) for text values in titles.

@@ -38,11 +38,11 @@ export interface WebResolverOptions {
 }
 
 /**
- * A resolver for local files by extension (SDK 1.5.3, player 0.4.1): when
- * anyone opens such a file with {@link Player.open} (the Open dialog, the
- * playlist, next / previous, the recent list, a drop that calls `open`),
- * the player asks this plugin for a stream it generates instead of
- * playing the file. Needs `source.resolve` and `producer.av`.
+ * A resolver for local files by extension: when anyone opens such a file with
+ * {@link Player.open} (the Open dialog, the playlist, next / previous, the
+ * recent list, a drop that calls `open`), the player asks this plugin for a
+ * stream it generates instead of playing the file. Needs `source.resolve` and
+ * `producer.av`.
  *
  * @remarks
  * The open keeps everything of the original call: its `ifCurrent`, its
@@ -225,7 +225,7 @@ export interface Resolver extends Disposable {
  * another plugin), so the plugin does not intercept opens itself.
  *
  * @capability source.resolve (file resolvers also `producer.av`)
- * @see [Playback state, controls and sources](../../../docs/explanation/playback.md)
+ * @see [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
  * @category Sources
  */
@@ -262,11 +262,10 @@ export interface Resolvers {
    */
   add(options: ResolverOptions): Resolver;
   /**
-   * The extensions some plugin's file resolver handles (SDK 1.5.8, player
-   * 0.4.2): lower case, without the dot, sorted, each once; not who
-   * registered them. Reading needs no capability; `[]` from older players.
-   * Without `events` it is the list from when the plugin first read it.
-   * Use it to accept such files beside the player's own media types, for
+   * The extensions some plugin's file resolver handles: lower case, without the
+   * dot, sorted, each once; not who registered them. Reading needs no
+   * capability. Without `events` it is the list from when the plugin first read
+   * it. Use it to accept such files beside the player's own media types, for
    * example in a playlist's drop or folder scan.
    *
    * @example Accept files that a resolver plugin can play
@@ -289,11 +288,10 @@ export interface Resolvers {
   readonly fileTypes: readonly string[];
   /**
    * {@link Resolvers.fileTypes} changed: a file resolver was added, or its
-   * plugin stopped. Needs `events`; without it the listener never fires.
-   * When the player starts a stopped plugin for this change (player
-   * 0.5.21), {@link Resolvers.fileTypes} already has the new list at start
-   * and the listener still hears the change (SDK 1.5.56; before, it did not
-   * run).
+   * plugin stopped. Needs `events`; without it the listener never fires. When
+   * the player starts a stopped plugin for this change,
+   * {@link Resolvers.fileTypes} already has the new list at start and the
+   * listener still hears the change.
    *
    * @param listener - Receives the new list.
    * @returns A handle that removes the listener.
