@@ -202,14 +202,14 @@ function sourceFailure(
  * One per plugin: the state store and the operation book client.
  *
  * The state copy (a mirror of `source.state`) follows the player's events
- * from the plugin's start when the manifest declares `playback.read` and
- * `events` (`createPlugin` subscribes before the start-up read, so a read
- * in any later handler is current). Without `playback.read` it follows
- * them from the first time something needs it (SDK 1.7.0; before, from the
- * start): a read of `plugin.player.state`, `onChange`, `isCurrent`, a
- * media handle's `current`/`ready`/`onEnd`, a scrub, a stream, a
- * filter, a shader or view request, a capture; such a plugin that never
- * reads it receives no `source.state`.
+ * from the plugin's start when the manifest declares `events`
+ * (`createPlugin` subscribes before the start-up read, as before 1.7.0, so
+ * a read in any later handler is current). Without `events` no event can
+ * arrive; `start` is then called by the first use of the state (a read of
+ * `plugin.player.state`, `onChange`, `isCurrent`, a media handle, a
+ * scrub, a stream, a filter, a shader or view request, a capture) and
+ * subscribes nothing. A start on demand with `events` and `playback.read`
+ * would read the state again; `createPlugin` makes it unreachable today.
  */
 export class PlayerService implements StreamSource {
   readonly runtime: Runtime;

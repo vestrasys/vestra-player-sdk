@@ -204,6 +204,23 @@ export class ScopeImpl implements Plugin {
     }
     if (full) this.update();
   }
+  /**
+   * Run a listener that pushes its own values (`player.on`, SDK 1.7.0)
+   * like `run`, except that no full pass follows it: what it writes to
+   * `plugin.state` runs the passes for its readers, and for anything else
+   * the plugin calls `update()`. Its reads are not counted as a binding's.
+   */
+  runQuiet(handler: (...args: never[]) => unknown, ...args: unknown[]) {
+    if (this.disposed) return;
+    try {
+      const { value } = this.runtime.observe(() =>
+        (handler as (...args: unknown[]) => unknown)(...args),
+      );
+      if (value instanceof Promise) value.catch((error) => this.report(error));
+    } catch (error) {
+      this.report(error);
+    }
+  }
   update() {
     this.runtime.invalidate();
   }

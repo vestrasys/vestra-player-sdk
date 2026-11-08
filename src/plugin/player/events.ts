@@ -42,7 +42,10 @@ export function playerOn<E extends HostEvent>(
   const watch = scope.runtime.on(
     event,
     // A copy: the same data also feeds the SDK's own state copies.
-    (data) => scope.run(listener, structuredClone(data) as EventPayload<E>),
+    // No full pass after it (`runQuiet`): the listener pushes its own
+    // values; `plugin.state` writes run the passes that concern them.
+    (data) =>
+      scope.runQuiet(listener, structuredClone(data) as EventPayload<E>),
     EVENT_NEEDS[event],
   );
   const handle: Disposable = {

@@ -276,9 +276,8 @@ test("Command.set pushes this command's state alone, without a full pass", async
   }
 });
 
-test("a plugin that never reads player.state subscribes to nothing", async () => {
-  // Without `playback.read`: the copy of the player's state follows the
-  // events only once something reads it.
+test("without events nothing subscribes to the player's state", async () => {
+  // Nothing can arrive without `events`: the copy subscribes nothing.
   const { plugin, host, stop } = await startPlugin(
     (p: Plugin) => {
       p.commands.add({
@@ -287,52 +286,48 @@ test("a plugin that never reads player.state subscribes to nothing", async () =>
         run: () => p.player.setRate(0.5),
       });
     },
-    { capabilities: ["events", "playback.control", "commands"] },
+    { capabilities: ["playback.control", "commands"] },
   );
   try {
     await host.settle();
-    assert.deepEqual(host.sent("events.subscribe"), []);
-    assert.deepEqual([...host.subscriptions], []);
     host.openElsewhere("/movie.mp4");
     await host.settle();
     await host.command("half").run();
+    void plugin.player.state;
     await host.settle();
     assert.equal(host.source.rate, 0.5);
     assert.deepEqual(host.sent("events.subscribe"), []);
-    // The first read follows the state from now on (a mirror).
-    void plugin.player.state;
-    await host.settle();
-    assert.deepEqual(host.sent("events.subscribe"), [
-      { event: "source.state", mirror: true },
-    ]);
-    host.setSource({ paused: true });
-    await host.settle();
-    assert.equal(plugin.player.state.source, "/movie.mp4");
-    assert.equal(plugin.player.state.paused, true);
   } finally {
     await stop();
   }
 });
 
-test("with playback.read and events the copy follows from the start: a late first read is current", async () => {
-  const { plugin, host, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "playback.read"],
-  });
-  try {
-    // Subscribed (a mirror) before the start-up read, as before 1.7.0.
-    assert.deepEqual(
-      host.calls.slice(0, 2).map((c) => c.method),
-      ["events.subscribe", "source.state"],
-    );
-    assert.deepEqual(host.sent("events.subscribe"), [
-      { event: "source.state", mirror: true },
-    ]);
-    host.openElsewhere("/movie.mp4");
-    await host.settle();
-    assert.equal(plugin.player.state.source, "/movie.mp4");
-    assert.equal(host.sent("source.state").length, 1, "no read again");
-  } finally {
-    await stop();
+test("with events the copy follows from the start, as in 1.6.21: a late first read is current", async () => {
+  for (const capabilities of [["events"], ["events", "playback.read"]]) {
+    const { plugin, host, stop } = await startPlugin(() => {}, {
+      capabilities,
+    });
+    try {
+      // Subscribed (a mirror) before the start-up read.
+      assert.deepEqual(host.calls[0]?.method, "events.subscribe");
+      assert.deepEqual(host.sent("events.subscribe"), [
+        { event: "source.state", mirror: true },
+      ]);
+      host.openElsewhere("/movie.mp4");
+      await host.settle();
+      assert.equal(
+        plugin.player.state.source,
+        "/movie.mp4",
+        String(capabilities),
+      );
+      assert.equal(
+        host.sent("source.state").length,
+        capabilities.includes("playback.read") ? 1 : 0,
+        "no read again",
+      );
+    } finally {
+      await stop();
+    }
   }
 });
 
@@ -348,8 +343,12 @@ test("player.on: the payload is the wire event data, the listener is named, no m
   );
   try {
     await host.settle();
-    assert.deepEqual(host.sent("events.subscribe").length, 1);
-    const subscribe = host.sent("events.subscribe")[0]!;
+    // The state copy's mirror (from the start, `events`), then the
+    // listener's own mark: a listener, named; `on` adds no copy.
+    const lines = host.sent("events.subscribe");
+    assert.deepEqual(lines[0], { event: "source.state", mirror: true });
+    assert.equal(lines.length, 2);
+    const subscribe = lines[1]!;
     assert.equal(subscribe.event, "source.state");
     assert.equal(subscribe.mirror, undefined, "a listener, not a mirror");
     assert.match(
@@ -389,6 +388,7 @@ test("player.on takes every HostEvent; dispose unsubscribes", async () => {
     assert.deepEqual(
       host
         .sent("events.subscribe")
+        .filter((p) => !p.mirror)
         .map((p) => p.event)
         .sort(),
       ["appearance.changed", "packages.changed", "window.state"],

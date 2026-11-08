@@ -7,7 +7,8 @@
  * (`Object.is`) reports `Runtime.changed(store, [field])`, so the next pass
  * is a precise one that evaluates only that field's readers. One level:
  * the value of a field is compared by identity, nothing inside it is
- * tracked.
+ * tracked. It belongs to the calling scope: once that scope is disposed
+ * the object is a plain one, read and written without tracking.
  */
 import { failure } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
@@ -35,19 +36,25 @@ export function trackedState<T extends object>(
   const runtime = scope.runtime;
   const key = `state:${++stores}`;
   const target: Record<PropertyKey, unknown> = { ...initial };
-  const changed = (field: string) => runtime.changed(key, [field]);
+  const live = () => !scope.disposed;
+  const depends = (field?: string) => {
+    if (live()) runtime.depends(key, field);
+  };
+  const changed = (field: string) => {
+    if (live()) runtime.changed(key, [field]);
+  };
   return new Proxy(target, {
     get(store, field, receiver) {
-      if (typeof field === "string") runtime.depends(key, field);
+      if (typeof field === "string") depends(field);
       return Reflect.get(store, field, receiver) as unknown;
     },
     has(store, field) {
-      if (typeof field === "string") runtime.depends(key, field);
+      if (typeof field === "string") depends(field);
       return Reflect.has(store, field);
     },
     ownKeys(store) {
       // The list of fields: any change of the store counts.
-      runtime.depends(key);
+      depends();
       return Reflect.ownKeys(store);
     },
     set(store, field, value) {

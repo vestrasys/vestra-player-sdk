@@ -727,7 +727,10 @@ export interface Command extends Disposable {
    * Only this command is evaluated again (SDK 1.7.0; before, `set` ran a
    * full update pass over every binding and command of the plugin). Several
    * calls within one microtask send one update. A function field makes the
-   * command take part in the update passes from then on.
+   * command take part in the update passes from then on. A binding that
+   * reads a plugin variable changed together with `set` outside a handler
+   * the SDK runs (a timer) is not refreshed by it: call {@link Scope.update}
+   * or keep that variable in {@link Scope.state}.
    *
    * @example Show a command as busy while it works
    * The Export item shows as busy with "Exporting…" as its reason while the

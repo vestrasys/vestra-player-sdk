@@ -544,17 +544,17 @@ export interface Scope extends Disposable {
   update(): void;
   /**
    * Plugin-owned state that bound values follow by themselves: reading a
-   * field in a `bind` function, a command's state function or an
-   * `onChange` listener records it, and writing that field re-evaluates
-   * exactly those readers.
+   * field in a `bind` function or a command's state function records it,
+   * and writing that field re-evaluates exactly those readers.
    *
    * @remarks
    * Returns an object of the same shape as `initial` (a copy of its own
-   * fields; `initial` itself is not tracked). A read inside what the SDK
-   * evaluates (a {@link View.bind} function, a {@link CommandOptions}
-   * field given as a function, a `plugin.player.onChange` listener) is
-   * recorded like a read of `plugin.player.state`; outside, it is a plain
-   * read. A write of a field (or a new field, or `delete`) schedules one
+   * fields; `initial` itself is not tracked). A read inside a
+   * {@link View.bind} function or a {@link CommandOptions} field given as a
+   * function is recorded like a read of `plugin.player.state`; anywhere
+   * else (a handler, an `onChange` listener, a timer) it is a plain read,
+   * and writing there is how a handler updates what is bound. A write of a
+   * field (or a new field, or `delete`) schedules one
    * update pass for the microtask turn, however many fields change, and that
    * pass evaluates only the readers of what changed, not every binding and
    * command as {@link Scope.update} does. Writing a value equal to the
@@ -564,12 +564,15 @@ export interface Scope extends Disposable {
    * compared by identity, so changing something inside it is not seen.
    * Replace the object instead (`st.list = [...st.list, item]`). Do not
    * write a field from a `bind` function that reads it: each write runs the
-   * function again.
+   * function again; the SDK stops such a loop after 100 passes in a row and
+   * reports it to {@link Scope.onError} once (`limit`).
    *
    * The object is a `Proxy`: spread, `Object.keys` and `JSON.stringify` give
    * its values; `structuredClone` does not take it (clone `{ ...st }`). It
-   * belongs to the plugin, not to this scope, and keeps working after the
-   * scope is disposed. `update()` stays for state the SDK cannot see.
+   * belongs to this scope: once the scope is disposed it is a plain object,
+   * whose reads and writes still work but are no longer recorded and
+   * schedule no pass (as other handles of a disposed scope go quiet).
+   * `update()` stays for state the SDK cannot see.
    *
    * @param initial - The fields and their first values: a plain object.
    * @returns The tracked object.

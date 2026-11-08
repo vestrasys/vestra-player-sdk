@@ -987,11 +987,9 @@ export interface Player {
   /**
    * Latest state; always newer than anything delivered before.
    *
-   * With `playback.read` and `events` the SDK follows the player's events
-   * for this copy from the plugin's start. A plugin without `playback.read`
-   * gets it followed from its first read (or first `onChange`,
-   * `isCurrent`, scrub, stream or media handle; SDK 1.7.0), and one that
-   * never reads it receives no `source.state` events.
+   * With `events` the SDK follows the player's events for this copy from
+   * the plugin's start; without it the copy moves only with the start-up
+   * read and the plugin's own calls (`playback.read`).
    */
   readonly state: PlayerState;
   /**
@@ -1033,9 +1031,11 @@ export interface Player {
    * state: `plugin.player.state` is not kept current by it, and the
    * listener runs for every event, changed or not. It suits pushing
    * values yourself (`view.set` from the listener) or reading a field the
-   * SDK does not expose. Like every handler the SDK calls, errors go to
-   * {@link Scope.onError} and an update pass follows when something is
-   * bound.
+   * SDK does not expose. Errors go to {@link Scope.onError}, as for every
+   * handler; unlike the others, no full update pass follows it, so bound
+   * values do not re-evaluate on every event: a write to a
+   * {@link Scope.state} field re-runs only its readers, and
+   * {@link Scope.update} re-runs everything.
    *
    * Each event needs a capability: `events` for most, `bindings.manage`
    * for `bindings.changed`, `commands` for `commands.keys`,

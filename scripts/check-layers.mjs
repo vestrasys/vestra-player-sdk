@@ -22,9 +22,12 @@
  *      `import type` / `export type`, so they load nothing at run time and
  *      the cycles among them are type-only (rule 3 ignores those).
  *   6. No file of `LOWER` calls the passes by name through an object it
- *      holds, which rules 1–2 cannot see: a scope's `update()`, or the
- *      runtime's `invalidate`, `changed`, `depends`, `reading`, `bind`,
- *      `part`, `observe`, `reader`, `needsFull` (`CALLS`). A primitive
+ *      holds, which rules 1–2 cannot see (`CALLS`): `.update()` on any
+ *      object, `.passes`, `invalidate`, `depends`, `reading`, `part`,
+ *      `observe`, `reader`, `needsFull` on any object but `signals`, and
+ *      `runtime.bind` / `runtime.changed`. A textual check: an alias
+ *      through destructuring (`const { invalidate } = runtime`) or a call
+ *      of a function value is not seen; review keeps to the rule there. A primitive
  *      tells the framework through the connection's `signals` and
  *      `rereads` instead (SDK 1.7.0). Running plugin code (`scope.run`)
  *      is not such a call: it is how a primitive hands control to plugin
@@ -93,8 +96,15 @@ const FRAMEWORK = [
 ];
 /** Rule 6: calls of the passes by name, as they read in source. */
 const CALLS = [
-  /\b(?:scope|#scope|plugin)\.update\(\)/,
-  /\bruntime\.(?:invalidate|changed|depends|reading|bind|part|observe|reader|needsFull)\(/,
+  // `update()` on anything (a scope, `plugin`, an alias of either).
+  /\.update\(\)/,
+  // The pass scheduler itself, however reached.
+  /\.passes\b/,
+  // Its methods on any object but the connection's `signals`, which is
+  // the allowed way (`signals.invalidate()`).
+  /(?<!\bsignals)\.(?:invalidate|depends|reading|part|observe|reader|needsFull)\(/,
+  // Names other objects use too (`Function.bind`): on a runtime only.
+  /\bruntime\.(?:bind|changed)\(/,
 ];
 /** Rule 5: files of types only (an entry ending in `/` is a directory). */
 const TYPE_ONLY = ["src/plugin/types.ts", "src/plugin/types/"];

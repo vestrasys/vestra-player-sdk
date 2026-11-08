@@ -6,6 +6,7 @@
  * (`scripts/check-layers.mjs`).
  */
 import type { Connection, Why } from "./connection.ts";
+import { failure } from "./errors.ts";
 import type { Disposable } from "./types.ts";
 
 /**
@@ -62,6 +63,14 @@ function merge(into: Deps, from: Deps) {
  * without `update()`) still shows within about this long.
  */
 export const SAFETY_PASS_MS = 1000;
+
+/**
+ * The most passes in a row that a pass itself asks for (something it
+ * evaluated changed what it reads, `plugin.state` written in a `bind`
+ * function). The next one is dropped and reported once: without it such a
+ * plugin would spin in microtasks and never yield.
+ */
+export const MAX_CHAINED_PASSES = 100;
 
 /**
  * Read-only counters of the update passes, for the SDK's own
@@ -138,6 +147,17 @@ export class Passes {
   #skipped = false;
   /** The plugin was disposed: no safety pass is armed any more. */
   #stopped = false;
+  /** A pass is evaluating bindings now. */
+  #running = false;
+  /** The scheduled pass was asked for while a pass ran. */
+  #nested = false;
+  /** Passes in a row that the pass before asked for (`MAX_CHAINED_PASSES`). */
+  #chain = 0;
+  /** The runaway was reported (once per plugin). */
+  #reportedChain = false;
+  /** Where a runaway goes: the plugin's error handlers (`createPlugin`). */
+  report: (error: unknown) => void = (error) =>
+    console.error(`[${this.#connection.manifest.id}]`, error);
   /** Pass counters, read by the SDK's own tests and benchmark ({@link PassCounts}). */
   readonly counts: PassCounts = {
     passes: 0,
@@ -368,6 +388,7 @@ export class Passes {
     }
     if (this.#scheduled) return;
     this.#scheduled = true;
+    this.#nested = this.#running;
     queueMicrotask(() => this.#run());
   }
   /**
@@ -377,6 +398,26 @@ export class Passes {
    */
   #run() {
     this.#scheduled = false;
+    this.#chain = this.#nested ? this.#chain + 1 : 0;
+    this.#nested = false;
+    if (this.#chain >= MAX_CHAINED_PASSES) {
+      // A loop: each pass changed what it reads. Drop this one; the next
+      // change from outside a pass starts afresh.
+      this.#chain = 0;
+      this.#full = false;
+      this.#pending = new Map();
+      this.#dirty.clear();
+      if (!this.#reportedChain) {
+        this.#reportedChain = true;
+        this.report(
+          failure(
+            "limit",
+            `${MAX_CHAINED_PASSES} update passes in a row each changed what they read (a bind function or a command's state function that writes plugin.state it reads); the next was dropped`,
+          ),
+        );
+      }
+      return;
+    }
     const full = this.#full;
     const change: Change = this.#pending;
     const dirty = new Set(this.#dirty);
@@ -390,6 +431,7 @@ export class Passes {
       this.#safety = undefined;
     }
     this.#skipped = false;
+    this.#running = true;
     for (const [evaluate, binding] of [...this.#bindings]) {
       if (this.#bindings.get(evaluate) !== binding) continue;
       if (!full && !dirty.has(binding) && !affected(binding.deps, change)) {
@@ -409,6 +451,7 @@ export class Passes {
         this.#pass = undefined;
       }
     }
+    this.#running = false;
     if (this.#skipped && !this.#safety && !this.#stopped) {
       this.#safety = setTimeout(() => {
         this.#safety = undefined;

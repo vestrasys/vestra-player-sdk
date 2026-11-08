@@ -498,6 +498,13 @@ export class ViewWriter {
     this.#stales.clear();
     this.#forced.clear();
     for (const key of Object.keys(values)) this.#failed.delete(key);
+    // Not bound, a flush sends only what is marked: mark every value the
+    // view does not show as it is now, such as a `set()` made while the view
+    // was opening (after its initial properties were taken) or an initial
+    // array cut to one request's size (`wired`), whose rest goes now.
+    if (!this.#tracked)
+      for (const [key, value] of this.#values)
+        if (this.#encode(key, value).changed) this.#forced.add(key);
   }
   /** `value` encoded, and whether it differs from what was sent. */
   #encode(key: string, value: PropValue): Pending {
