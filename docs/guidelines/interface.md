@@ -90,9 +90,15 @@ Use the layout of [Theme: small adjustment windows](../reference/theme.md#small-
 ```slint nocheck
 import { VestraFocus } from "@vestra/focus.slint";
 
-FocusScope {
+export global ListBridge {
+    callback play(int); // the plugin plays this row
+}
+
+// The list's key handler; `current` is the selected row.
+component ListKeys inherits FocusScope {
+    in property <int> current;
     key-pressed(event) => {
-        if event.text == Key.Return { Bridge.play(root.current); VestraFocus.release(); return accept; }
+        if event.text == Key.Return { ListBridge.play(root.current); VestraFocus.release(); return accept; }
         if event.text == Key.Escape { VestraFocus.release(); return accept; }
         reject
     }
