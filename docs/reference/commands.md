@@ -303,16 +303,16 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Forward 60 s (not in the menu) | `Shift+ArrowRight` | `vestra.playback/forward-3` |
 | Back 300 s (not in the menu) | `Ctrl+Alt+ArrowLeft` | `vestra.playback/backward-4` |
 | Forward 300 s (not in the menu) | `Ctrl+Alt+ArrowRight` | `vestra.playback/forward-4` |
-| Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
-| Add Files… (not in the menu) | `Ctrl+I` (panel focus) | `vestra.playlist/playlist.list-add` |
-| Add Folder… (not in the menu) | `Ctrl+O` (panel focus) | `vestra.playlist/playlist.list-add-folder` |
-| Add Link… (not in the menu) | `Ctrl+U` (panel focus) | `vestra.playlist/playlist.list-link` |
-| Remove Selected (not in the menu) | `Delete`, `Backspace` (panel focus) | `vestra.playlist/playlist.remove` |
+| Play (not in the menu) | `Enter` (panel focus) | `vestra.playlist/playlist.play` |
+| Add Files… (not in the menu) |  | `vestra.playlist/playlist.list-add` |
+| Add Folder… (not in the menu) |  | `vestra.playlist/playlist.list-add-folder` |
+| Add Link… (not in the menu) |  | `vestra.playlist/playlist.list-link` |
+| Remove Selected (not in the menu) | `Delete` (panel focus) | `vestra.playlist/playlist.remove` |
 | Remove Unselected (not in the menu) | `Ctrl+Delete` (panel focus) | `vestra.playlist/playlist.remove-unselected` |
-| Remove Invalid Items (not in the menu) | `Ctrl+T` (panel focus) | `vestra.playlist/playlist.remove-invalid` |
+| Remove Invalid Items (not in the menu) |  | `vestra.playlist/playlist.remove-invalid` |
 | Remove All (not in the menu) | `Alt+Delete` (panel focus) | `vestra.playlist/playlist.clear` |
 | Show in Finder (not in the menu) | `Ctrl+F` (panel focus) | `vestra.playlist/playlist.reveal` |
-| Move to Top (not in the menu) | `Ctrl+Home` (panel focus) | `vestra.playlist/playlist.move-top` |
+| Move to Top (not in the menu) |  | `vestra.playlist/playlist.move-top` |
 | Move Up (not in the menu) | `Ctrl+ArrowUp` (panel focus) | `vestra.playlist/playlist.move-up` |
 | Move Down (not in the menu) | `Ctrl+ArrowDown` (panel focus) | `vestra.playlist/playlist.move-down` |
 | Move to Bottom (not in the menu) | `Ctrl+End` (panel focus) | `vestra.playlist/playlist.move-bottom` |
@@ -330,10 +330,10 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Reverse Current Order (not in the menu) |  | `vestra.playlist/playlist.sort-reverse` |
 | Select All (not in the menu) | `Ctrl+A` (panel focus) | `vestra.playlist/playlist.select-all` |
 | Search (not in the menu) | `Ctrl+S` (panel focus) | `vestra.playlist/playlist.search` |
-| Open List File… (not in the menu) | `F3` (panel focus) | `vestra.playlist/playlist.list-open-list` |
-| Save List… (not in the menu) | `F2` (panel focus) | `vestra.playlist/playlist.list-save-list` |
-| Close List (not in the menu) | `F6` (panel focus) | `vestra.playlist/playlist.close` |
-| Playlist Settings… (not in the menu) | `F5` (panel focus) | `vestra.playlist/playlist.settings` |
+| Open List File… (not in the menu) |  | `vestra.playlist/playlist.list-open-list` |
+| Save List… (not in the menu) |  | `vestra.playlist/playlist.list-save-list` |
+| Close List (not in the menu) |  | `vestra.playlist/playlist.close` |
+| Playlist Settings… (not in the menu) |  | `vestra.playlist/playlist.settings` |
 | Show Subtitles (not in the menu) | `Alt+H` | `vestra.subtitles/show` |
 | Off (not in the menu) |  | `vestra.subtitles/second-off` |
 | Top (not in the menu) |  | `vestra.subtitles/second-position-top` |

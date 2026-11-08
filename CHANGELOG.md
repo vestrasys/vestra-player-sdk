@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.1
+
+**Who must change: nobody.** Tables follow the playlist's trimmed list keys: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. A plugin whose tests compare a key against the table sees the player's current one.
+
+- **`BUILTIN_COMMANDS`**: the built-in playlist (0.2.6) no longer gives its list commands keys that shadow a player key while the list has focus. Play (`vestra.playlist/playlist.play`) keeps `Enter` and loses `P`; Remove Selected (`playlist.remove`) keeps `Delete` and loses `Backspace`; Add Files… (`playlist.list-add`, was `Ctrl+I`), Add Folder… (`playlist.list-add-folder`, `Ctrl+O`), Add Link… (`playlist.list-link`, `Ctrl+U`), Remove Invalid Items (`playlist.remove-invalid`, `Ctrl+T`), Move to Top (`playlist.move-top`, `Ctrl+Home`), Open List File… (`playlist.list-open-list`, `F3`), Save List… (`playlist.list-save-list`, `F2`), Close List (`playlist.close`, `F6`) and Playlist Settings… (`playlist.settings`, `F5`) have no default key, and so no panel scope. Ids, titles and the other list keys are unchanged; `BUILTIN_SUBMENUS` is unchanged. The table in [Reference: commands](docs/reference/commands.md#built-in-commands) follows.
+
 ## 1.7.0
 
 **Who must change: nobody.** The one change a plugin can observe is `Command.set`, which now re-evaluates only its own command instead of running a full update pass: a binding that reads a variable changed together with `cmd.set(…)` outside a handler the SDK runs (a timer, a socket) needs `plugin.update()` after the change, or the variable in `plugin.state` (details under Step 2). Steps 2 and 3 of the SDK refactor (`doc/specs/sdk-refactor.md` §4 in the player repository) and the documentation refactor for the three ways to write a plugin. `apiVersion` stays `vestra/1`, no new capability, no player version needed; every existing golden trace keeps its wire lines and subscriptions, only the update-pass counts drop.
