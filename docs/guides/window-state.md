@@ -157,5 +157,5 @@ export default async function activate(plugin: Plugin) {
 
 ## See also
 
-- [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md): the tool window life cycle.
+- [Open a tool window and remember its state](windows.md): the tool window life cycle.
 - {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!Window.onClose | Window.onClose}

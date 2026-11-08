@@ -2,11 +2,10 @@
  * Local TypeDoc plugin (typedoc.json "plugin"):
  *
  * - Project documents are grouped by their folder, with the group names of
- *   scripts/doc-structure.mjs: docs/tutorials → "Tutorials", docs/how-to →
- *   "How-to", docs/reference → "Reference", docs/explanation →
- *   "Explanation", docs/guidelines → "Guidelines", docs/examples →
- *   "Examples", docs/upgrading → "Upgrading". A page needs no `group` front
- *   matter (and the structure check does not allow one).
+ *   scripts/doc-structure.mjs: docs/tutorial → "Tutorial", docs/guides →
+ *   "Guides", docs/reference → "Reference", docs/examples → "Examples". A
+ *   page needs no `group` front matter (and the structure check does not
+ *   allow one).
  * - Within a group, the pages follow the order of scripts/doc-structure.mjs
  *   (the index first), not the order of their file names.
  * - The two entry points (`@vestra-player/sdk`, `@vestra-player/sdk/testing`)

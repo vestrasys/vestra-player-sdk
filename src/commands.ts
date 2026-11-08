@@ -101,15 +101,12 @@ export const COMMAND_LIMITS = {
 } as const;
 /**
  * The player's built-in top-level menus, by id. Write `@<id>` as the first
- * segment of a command path (`["@video", "Blur"]`, see `CommandOptions.path`) to put a
- * command into that menu whatever language the player's menus are in. The
- * player stores the menu's title (视频 today); later segments are titles.
- * Needs player 0.3.0 (`"minPlayerVersion": "0.3.0"`); older players show
- * `@video` as a menu of its own. `reset` (SDK 1.5.51) needs player 0.6.3:
- * the Reset menu, directly below Settings, gathers every command that puts
- * something back to its default; older players refuse `@reset` with
- * `invalid`. The player's tests check that this list agrees with the
- * player's.
+ * segment of a command path (`["@video", "Blur"]`, see `CommandOptions.path`)
+ * to put a command into that menu whatever language the player's menus are in.
+ * The player stores the menu's title (视频 today); later segments are titles.
+ * `reset`: the Reset menu, directly below Settings, gathers every command that
+ * puts something back to its default. The player's tests check that this list
+ * agrees with the player's.
  *
  * @example Put a command into the built-in Video menu
  * "Blur" appears in the player's Video menu in every interface language.
@@ -143,12 +140,11 @@ export const MENU_IDS = [
 ] as const;
 
 /**
- * The icons a bottom-bar button may name (`CommandOptions.button.icon`):
- * every icon of the player's V-Line set, `@vestra/icons.slint` (draw one
- * in your own Slint with `Icon { name: "store"; }`). The player's tests check
- * that this list is its icon set. `"sliders"` (three sliders, the player's
- * Adjustments and Effects button) is new in player 0.7.6 (SDK 1.6.11); older players refuse
- * it as a button icon with `invalid`.
+ * The icons a bottom-bar button may name (`CommandOptions.button.icon`): every
+ * icon of the player's V-Line set, `@vestra/icons.slint` (draw one in your own
+ * Slint with `Icon { name: "store"; }`). The player's tests check that this
+ * list is its icon set. `"sliders"` (three sliders, the player's Adjustments
+ * and Effects button).
  *
  * @example Check in a test that the button's icon exists
  * The test fails before release if the plugin's bar button names an icon
@@ -209,13 +205,11 @@ export const BAR_BUTTON_ICONS = [
 ] as const;
 
 /**
- * The player's limits on bottom-bar buttons (`CommandOptions.button`), the
- * same values as the player's (its tests check that they agree). A button
- * past `perPlugin` has none (its command still registers and its menu entry
- * stays). `total` is what the strip holds: the `total` lowest by order,
- * plugin id and declaration order; the rest are in the strip's » menu, in
- * the same order (older players keep the `total` highest and leave the
- * others out).
+ * The player's limits on bottom-bar buttons (`CommandOptions.button`), the same
+ * values as the player's (its tests check that they agree). A button past
+ * `perPlugin` has none (its command still registers and its menu entry stays).
+ * `total` is what the strip holds: the `total` lowest by order, plugin id and
+ * declaration order; the rest are in the strip's » menu, in the same order.
  *
  * @since 1.5.29
  *
@@ -263,8 +257,8 @@ export interface BuiltinSubmenu {
  * @example Add an item to the built-in Snapshot submenu
  * "Copy Snapshot" appears in Snapshot ▸ next to the built-in capture
  * plugin's items. Paths merge by their English keys, so a command whose
- * path starts with the submenu's keys (`["Snapshot"]`, a top-level submenu
- * since player 0.7.6) lands in the same submenu whatever the interface
+ * path starts with the submenu's keys (`["Snapshot"]`, a top-level submenu)
+ * lands in the same submenu whatever the interface
  * language.
  * ```ts
  * import type { Plugin } from "@vestra-player/sdk";
@@ -715,22 +709,21 @@ export type CommandState = {
   enabled: boolean;
   checked: boolean | null;
   busy: boolean;
-  /** Source text, or a text value (player 0.4.3). */
+  /** Source text, or a text value. */
   reason: string | TextJson | ListJson | null;
 };
 /**
- * A command's conditions (SDK 1.5.40, player 0.5.21): `enabled` and
- * `checked` evaluated by the player (`plugin.when`). Older players ignore
- * the field and show the state as sent.
+ * A command's conditions: `enabled` and `checked` evaluated by the player
+ * (`plugin.when`).
  */
 export type CommandWhen = {
   enabled?: ConditionJson;
   checked?: ConditionJson;
 };
 export type CommandDeclaration = {
-  /** Source text, or a text value (player 0.4.3). */
+  /** Source text, or a text value. */
   title: string | TextJson;
-  /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. Segments may be text values (player 0.4.3). */
+  /** Complete primary menu path INCLUDING its leaf; empty = not in the main menu. Segments may be text values. */
   path: (string | TextJson)[];
   /** Sibling order, ascending; a submenu takes its first command's order (a built-in menu keeps a fixed one). */
   order: number;
@@ -745,27 +738,24 @@ export type CommandDeclaration = {
   /** Fire again on keyboard auto-repeat while held. */
   repeat: boolean;
   /**
-   * A bottom-bar button (player 0.5.10): an icon name, or an image in the
-   * `plugin.ui.image` wire form. Sent only when set: older players refuse
-   * unknown declaration fields.
+   * A bottom-bar button: an icon name, or an image in the `plugin.ui.image`
+   * wire form.
    */
   button?: { icon: string | Json; order: number };
   /**
-   * The command's category, source text or a text value (player 0.7.6).
-   * Sent only when set: older players refuse unknown declaration fields.
+   * The command's category, source text or a text value.
    */
   category?: string | TextJson;
   /**
-   * The local id of the command that opens where this one lives (player
-   * 0.7.6). Sent only when set, like `category`.
+   * The local id of the command that opens where this one lives. Sent only when
+   * set, like `category`.
    */
   home?: string;
 };
 /**
- * `commands.keys` (player 0.7.6): each of the plugin's own commands, by
- * local id, and (SDK 1.6.16) each of the player's own as `host/<id>`, with
- * the labels of its current keys; the answer to the request and the data of
- * the event of that name.
+ * `commands.keys`: each of the plugin's own commands, by local id, and each of
+ * the player's own as `host/<id>`, with the labels of its current keys; the
+ * answer to the request and the data of the event of that name.
  *
  * @remarks
  * The player's wire shape (`commands.keys`), part of the protocol, which is not
@@ -800,9 +790,9 @@ export function commandClient(transport: Transport) {
     unregister: (id: string) =>
       transport.request<void>("commands.unregister", { id }),
     /**
-     * The key labels of the plugin's own commands, as menus show them
-     * (player 0.7.6); later changes come as the `commands.keys` event, in
-     * the same shape. `revision` orders answers and events.
+     * The key labels of the plugin's own commands, as menus show them; later
+     * changes come as the `commands.keys` event, in the same shape. `revision`
+     * orders answers and events.
      */
     keys: () => transport.request<CommandKeys>("commands.keys", {}),
     update: (

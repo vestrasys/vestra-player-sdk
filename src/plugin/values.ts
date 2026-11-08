@@ -13,17 +13,15 @@ import type { Json } from "../wire.ts";
  * makes `Window.show` reject; a panel or settings page opens without it and
  * the failure goes to the plugin's `onError`.
  *
- * Since player 0.6.0 (SDK 1.5.46) they allow a whole list: a plugin binds
- * all of its rows (a playlist of 50,000 entries fits) and the view draws
- * them with a Slint `ListView`, which builds only the rows on screen. The
- * SDK sends a changed array as row patches, and an array larger than one
- * request (about 512 KiB of rows) as its first rows followed by `insert`
- * patches of the rest; the player converts large writes off its interface
- * thread. Before player 0.6.0 the limits were 4,096 rows, 16,384 values and
- * 1 MiB of text, so a long list had to be sent as a window of rows.
+ * They allow a whole list: a plugin binds all of its rows (a playlist of 50,000
+ * entries fits) and the view draws them with a Slint `ListView`, which builds
+ * only the rows on screen. The SDK sends a changed array as row patches, and an
+ * array larger than one request (about 512 KiB of rows) as its first rows
+ * followed by `insert` patches of the rest; the player converts large writes
+ * off its interface thread.
  *
- * In a row, `null` where the view declares an `image` shows no picture
- * (player 0.6.0): rows without a thumbnail need no placeholder image.
+ * In a row, `null` where the view declares an `image` shows no picture: rows
+ * without a thumbnail need no placeholder image.
  *
  * @example Bind a whole list
  * The view draws every row with a `ListView`; the SDK sends what changed.
@@ -43,18 +41,17 @@ export const UI_VALUE_LIMITS = {
   /** Nesting depth; the value itself is depth 0 (8). */
   depth: 8,
   /**
-   * Values in all, counting every array, object, string, number, boolean
-   * and null, the value itself included; a Markdown document is one
-   * (1,048,576; 16,384 before player 0.6.0).
+   * Values in all, counting every array, object, string, number, boolean and
+   * null, the value itself included; a Markdown document is one (1,048,576).
    */
   values: 1024 * 1024,
-  /** Rows of one array (100,000; 4,096 before player 0.6.0). */
+  /** Rows of one array (100,000). */
   arrayRows: 100_000,
   /** UTF-8 bytes of one string or object field name (64 KiB). */
   stringBytes: 64 * 1024,
   /**
    * UTF-8 bytes of all strings and field names together, the text of the
-   * value's Markdown documents included (32 MiB; 1 MiB before player 0.6.0).
+   * value's Markdown documents included (32 MiB).
    */
   textBytes: 32 * 1024 * 1024,
 } as const;
@@ -73,8 +70,8 @@ function documentText(value: Json): string | null {
 
 /**
  * The player's runtime image limits (`src/host/src/ui/ui_image.rs`): a file's
- * bytes and sides, the decoded pixels each plugin caches, and (SDK 1.5.19,
- * player 0.5.1) the decoded pixels the nested images of one view may show.
+ * bytes and sides, the decoded pixels each plugin caches, and the decoded
+ * pixels the nested images of one view may show.
  *
  * @since 1.5.19
  * @category Testing
@@ -86,7 +83,7 @@ export const IMAGE_LIMITS = Object.freeze({
   side: 4096,
   /** The decoded pixel bytes the player caches for each plugin's images. */
   pluginBytes: 64 * 1024 * 1024,
-  /** The decoded pixel bytes the nested images of one view may show (player 0.5.1). */
+  /** The decoded pixel bytes the nested images of one view may show. */
   viewBytes: 32 * 1024 * 1024,
 });
 

@@ -105,7 +105,7 @@ interface Filter<T> extends Disposable {
  * never throws: a refused chain shows as `failed` in `status`.
  *
  * @capability processing.video, playback.read and events
- * @see [Video and audio processing](../../../docs/explanation/processing.md)
+ * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -135,7 +135,7 @@ export type VideoFilter = Filter<VideoNode[]>;
  * result, `retry` applies it again, `dispose` withdraws it.
  *
  * @capability processing.audio, playback.read and events
- * @see [Video and audio processing](../../../docs/explanation/processing.md)
+ * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -196,7 +196,7 @@ export interface ViewSettings {
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
- * @see [Video and audio processing](../../../docs/explanation/processing.md)
+ * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -299,24 +299,22 @@ export interface RenderSettings {
  * ```
  *
  * @remarks
- * GPU renderer options (tone mapping, peak detection, shaders,
- * interpolation). Only the GPU renderer has them (macOS; Windows with GPU
- * rendering turned on, version 0.5.14 and later);
- * under software rendering the handle is `failed` with `unsupported` after
- * the player's first answer to `render()` (reported to `onError` too), and so is
+ * GPU renderer options (tone mapping, peak detection, shaders, interpolation).
+ * Only the GPU renderer has them (macOS; Windows with GPU rendering turned on);
+ * under software rendering the handle is `failed` with `unsupported` after the
+ * player's first answer to `render()` (reported to `onError` too), and so is
  * every `set`. Single owner, like {@link VideoView}. `set` never throws; the
- * result shows in `status`. For shaders that several plugins add at the
- * same time, use {@link VideoShaders} (SDK 1.5.39). After a run of the
- * player that ended abnormally while plugin shaders were drawing, a `set`
- * whose merged values hold a non-empty `shaders` list is refused with
- * `previous-crash` (player 0.6.3; the rules are on {@link VideoShaders}).
- * Every `set` sends all the values set so far, the refused `shaders`
- * included, so include `shaders: []` in the next `set` to go on without
- * them.
+ * result shows in `status`. For shaders that several plugins add at the same
+ * time, use {@link VideoShaders}. After a run of the player that ended
+ * abnormally while plugin shaders were drawing, a `set` whose merged values
+ * hold a non-empty `shaders` list is refused with `previous-crash` (the rules
+ * are on {@link VideoShaders}). Every `set` sends all the values set so far,
+ * the refused `shaders` included, so include `shaders: []` in the next `set` to
+ * go on without them.
  *
  * @capability processing.video, playback.read and events (like
  * {@link VideoFilter})
- * @see [Video and audio processing](../../../docs/explanation/processing.md)
+ * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
  */
@@ -338,18 +336,16 @@ export interface RenderOptions extends Disposable {
    */
   set(value: Partial<RenderSettings>): void;
   /**
-   * `failed` with `unsupported` while the player renders in software;
-   * `failed` with `failed` when mpv cannot compile a shader (pushed later;
-   * while other plugins' {@link VideoShaders} are on too, the player
-   * cannot tell whose shader failed and says so in the message);
-   * `failed` with `previous-crash` (player 0.6.3) when a `set` with a
-   * non-empty `shaders` list comes after a run of the player that ended
-   * abnormally while plugin shaders were drawing (the rules are the same
-   * as for {@link VideoShaders}). The handle keeps the refused list among
-   * its values and every `set` sends them all, so a later `set` without
-   * `shaders` is refused again: include `shaders: []` in it
-   * (`set({ shaders: [], toneMapping: "bt.2390" })`); `dispose` always
-   * works.
+   * `failed` with `unsupported` while the player renders in software; `failed`
+   * with `failed` when mpv cannot compile a shader (pushed later; while other
+   * plugins' {@link VideoShaders} are on too, the player cannot tell whose
+   * shader failed and says so in the message); `failed` with `previous-crash`
+   * when a `set` with a non-empty `shaders` list comes after a run of the
+   * player that ended abnormally while plugin shaders were drawing (the rules
+   * are the same as for {@link VideoShaders}). The handle keeps the refused
+   * list among its values and every `set` sends them all, so a later `set`
+   * without `shaders` is refused again: include `shaders: []` in it
+   * (`set({ shaders: [], toneMapping: "bt.2390" })`); `dispose` always works.
    */
   readonly status: FilterStatus;
   /**
@@ -375,8 +371,8 @@ export interface RenderOptions extends Disposable {
 
 /**
  * This plugin's own GPU shaders, from `plugin.video.shaders(id)`
- * (`processing.video`, SDK 1.5.39, player 0.5.20): mpv user shaders
- * (`.glsl`, `//!HOOK` …) that the GPU renderer runs on every frame.
+ * (`processing.video`): mpv user shaders (`.glsl`, `//!HOOK` …) that the GPU
+ * renderer runs on every frame.
  *
  * @remarks
  * Any number of plugins hold shader handles at the same time (unlike
@@ -405,24 +401,20 @@ export interface RenderOptions extends Disposable {
  * which file failed, so while several plugins' shaders are on, each of
  * them hears it and the message says the player cannot tell whose.
  *
- * `set` sends the whole list (last write wins); `clear` and `dispose`
- * withdraw it; the player removes a stopped plugin's shaders itself.
- * Players before 0.5.20 refuse the request (the handle is `failed`): declare
- * `"minPlayerVersion": "0.5.20"`.
+ * `set` sends the whole list (last write wins); `clear` and `dispose` withdraw
+ * it; the player removes a stopped plugin's shaders itself.
  *
- * **After an abnormal end** (player 0.6.3): when the previous run of the
- * player ended while plugin shaders were drawing (a crash, the process
- * being ended, a lost GPU device), the player refuses every non-empty
- * list of every plugin with `previous-crash`, its message naming the
- * plugins whose shaders were on: one such end keeps them off for the next
- * start only; two within a day keep them off until the GPU, its driver or
- * the player changes, or for 7 days. Clearing (`[]`, `clear`,
- * `dispose`) still works. The player shows one OSD line about it itself;
- * the handle is `failed` with `previous-crash` and the SDK does not
- * retry it. Do not set the list again in a loop while it is refused, and
- * do not show an OSD line of your own for it; a later start of the player
- * applies lists again once the guard lets it. Players before 0.6.3 never
- * refuse with it.
+ * **After an abnormal end**: when the previous run of the player ended while
+ * plugin shaders were drawing (a crash, the process being ended, a lost GPU
+ * device), the player refuses every non-empty list of every plugin with
+ * `previous-crash`, its message naming the plugins whose shaders were on: one
+ * such end keeps them off for the next start only; two within a day keep them
+ * off until the GPU, its driver or the player changes, or for 7 days. Clearing
+ * (`[]`, `clear`, `dispose`) still works. The player shows one OSD line about
+ * it itself; the handle is `failed` with `previous-crash` and the SDK does not
+ * retry it. Do not set the list again in a loop while it is refused, and do not
+ * show an OSD line of your own for it; a later start of the player applies
+ * lists again once the guard lets it.
  *
  * @example Add a sharpening shader the plugin ships
  * The video looks sharper on the GPU renderer; under software rendering
@@ -442,8 +434,8 @@ export interface RenderOptions extends Disposable {
  * ```
  *
  * @capability processing.video
- * @player 0.5.20; older players refuse the request.
- * @see [Video and audio processing](../../../docs/explanation/processing.md)
+ * @player 0.5.20
+ * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.5.39
  * @category Processing
  */
@@ -536,10 +528,10 @@ export interface VideoShaders extends Disposable {
 }
 
 /**
- * Why the GPU's video upscaler does not work, as a stable kebab-case code.
- * A newer player may add codes: compare with the ones you handle and show
- * {@link UpscalingReason.message} for the rest. The codes of player 0.5.16,
- * in the order the player checks them (the first that holds is reported):
+ * Why the GPU's video upscaler does not work, as a stable kebab-case code. A
+ * newer player may add codes: compare with the ones you handle and show
+ * {@link UpscalingReason.message} for the rest. The codes, in the order the
+ * player checks them (the first that holds is reported):
  *
  * | Code | Meaning |
  * | --- | --- |
@@ -620,7 +612,7 @@ export interface UpscalingReason {
    * that renders it ({@link UpscalingDecodingCause}). Absent with every
    * other code, and from players before 0.5.25.
    *
-   * @player 0.5.25; older players send `decoding` without a cause.
+   * @player 0.5.25
    * @since 1.5.43
    */
   readonly cause?: UpscalingDecodingCause;
@@ -641,9 +633,8 @@ export interface UpscalingReason {
 
 /**
  * Why the video is not decoded on the GPU that renders it: the
- * {@link UpscalingReason.cause} of a `decoding` reason (player 0.5.25). A
- * newer player may add causes: show {@link UpscalingReason.message} for the
- * ones you do not handle.
+ * {@link UpscalingReason.cause} of a `decoding` reason. A newer player may add
+ * causes: show {@link UpscalingReason.message} for the ones you do not handle.
  *
  * | Cause | Meaning |
  * | --- | --- |
@@ -852,9 +843,6 @@ export interface UpscalingState {
  * two GPUs the whole player must run on the NVIDIA one.
  * **macOS, Linux:** `available` is `false` with `platform`.
  *
- * Players before 0.5.16 do not know `video.upscaling` and do not load a
- * plugin that declares it: declare `"minPlayerVersion": "0.5.16"`.
- *
  * @example Offer AI upscaling as a menu item
  * A Video menu item turns upscaling on and off; once the player said it
  * cannot work here, the item is greyed out with the player's reason. The
@@ -885,8 +873,7 @@ export interface UpscalingState {
  * ```
  *
  * @capability video.upscaling
- * @player 0.5.16; older players do not load a plugin that declares
- * `video.upscaling`.
+ * @player 0.5.16
  * @since 1.5.37
  * @category Processing
  */

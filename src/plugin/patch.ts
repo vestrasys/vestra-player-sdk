@@ -1,8 +1,8 @@
 /**
- * Row patches of array properties (player 0.6.0, feature `ui.patch`): the
- * diff between the rows last sent and the rows bound now, as `set`,
- * `insert`, `remove` and `move` operations by index. Internal; plugins see
- * none of it (the player's doc/architecture/large-lists.md §2).
+ * Row patches of array properties (feature `ui.patch`): the diff between the
+ * rows last sent and the rows bound now, as `set`, `insert`, `remove` and
+ * `move` operations by index. Internal; plugins see none of it (the player's
+ * doc/architecture/large-lists.md §2).
  */
 import { UI_VALUE_LIMITS } from "./values.ts";
 
@@ -11,9 +11,9 @@ export const PATCH_FEATURE = "ui.patch";
 /** The most operations one patch carries (the player's `MAX_PATCH_OPS`). */
 export const PATCH_OPS = 1024;
 /**
- * The most operations one diff plans (SDK 1.5.46): its patch is sent as
- * several of at most {@link PATCH_OPS} each (`chunkOps`); more is sent whole
- * (in parts, which the player writes at once).
+ * The most operations one diff plans: its patch is sent as several of at most
+ * {@link PATCH_OPS} each (`chunkOps`); more is sent whole (in parts, which the
+ * player writes at once).
  */
 export const DIFF_OPS = 16 * PATCH_OPS;
 /**
@@ -387,11 +387,11 @@ export function applyOps<T>(
 }
 
 /**
- * The bytes of rows one write carries at most (SDK 1.5.46, player 0.6.0):
- * half the 1 MiB protocol line, which leaves room for the request around
- * them. A larger whole write is sent as its first rows and `insert`
- * patches of the rest; a larger patch as several patches, each applying on
- * the one before (the player's doc/architecture/large-lists.md §4).
+ * The bytes of rows one write carries at most: half the 1 MiB protocol line,
+ * which leaves room for the request around them. A larger whole write is sent
+ * as its first rows and `insert` patches of the rest; a larger patch as several
+ * patches, each applying on the one before (the player's
+ * doc/architecture/large-lists.md §4).
  */
 export const CHUNK_BYTES = 512 * 1024;
 

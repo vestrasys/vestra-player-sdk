@@ -7,13 +7,9 @@ description: Give menu items that follow playback a plugin.when condition, so th
 
 **Goal:** a "Save Snapshot" item that is greyed out unless there is a frame to capture, and a pair of palette items with a check mark on the palette in use, all following the player while your plugin is stopped because nothing used it; plus a test that fails if something keeps the plugin running.
 
-A function such as `enabled: () => plugin.player.state.phase === "ready"` is evaluated by the SDK, inside your plugin, so the plugin must run to keep it current. A condition from {@link "@vestra-player/sdk"!When | plugin.when} is evaluated by the player itself. Why this matters for idle plugins is in [Conditions the player evaluates](../explanation/commands.md#conditions-the-player-evaluates).
+A function such as `enabled: () => plugin.player.state.phase === "ready"` is evaluated by the SDK, inside your plugin, so the plugin must run to keep it current. A condition from {@link "@vestra-player/sdk"!When | plugin.when} is evaluated by the player itself. The conditions are listed in [Commands, menus and bindings](../reference/commands.md).
 
 ## Steps
-
-### Require player 0.5.21
-
-`plugin.when` exists from player 0.5.21 (SDK 1.5.40); older players build the `plugin` object without it. Set `"minPlayerVersion": "0.5.21"` in the manifest. Conditions need no capability of their own; the command they are given to needs `commands`.
 
 ### Find what keeps the plugin running
 
@@ -133,7 +129,7 @@ export default function activate(plugin: Plugin) {
 }
 ```
 
-`manifest.json` declares `"minPlayerVersion": "0.5.21"` and the capabilities `commands`, `playback.read`, `media.read`, `media.control`, `ui.dialog` and `ui.theme`.
+`manifest.json` declares the capabilities `commands`, `playback.read`, `media.read`, `media.control`, `ui.dialog` and `ui.theme`.
 
 `tests/main.test.ts`:
 
@@ -163,5 +159,5 @@ test("the menu follows the player and nothing keeps the plugin running", async (
 ## See also
 
 - {@link "@vestra-player/sdk"!When | When} and {@link "@vestra-player/sdk"!Condition | Condition} in the API reference: the whole vocabulary.
-- [Conditions the player evaluates](../explanation/commands.md#conditions-the-player-evaluates) and [Idle plugins are stopped](../explanation/plugins.md#idle-plugins-are-stopped).
+- [Commands, menus and bindings](../reference/commands.md): the conditions and the core actions.
 - [Test a plugin](testing.md) for `TestHost`.

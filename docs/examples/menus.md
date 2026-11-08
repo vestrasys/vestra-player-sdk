@@ -11,7 +11,7 @@ What a menu item can look like: radio items, separator groups, a greyed-out item
 
 Radio items · order and separator groups · changing an item's title by rebuilding a child scope.
 
-[Getting started](../tutorials/getting-started.md) teaches a first menu item; the rules for titles, groups and order are in [Menu guidelines](../guidelines/menus.md).
+The [Tutorial](../tutorial/index.md) teaches a first menu item; the rules for titles, groups and order are in [Design rules](../guides/design-rules.md).
 
 ## What you'll build
 

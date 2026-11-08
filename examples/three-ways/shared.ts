@@ -1,7 +1,7 @@
 /**
  * What the three styles share: the speed steps, a stand-in emulator that
  * makes 60 frames a second, the list's rows and the player's form of a
- * command declaration (style C). Walkthrough: docs/explanation/three-ways.md.
+ * command declaration (style C). Walkthrough: docs/tutorial/index.md.
  */
 import type { StreamFrame } from "@vestra-player/sdk";
 

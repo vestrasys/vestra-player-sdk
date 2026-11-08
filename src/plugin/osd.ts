@@ -58,7 +58,7 @@ export const OSD_LIMITS = Object.freeze({
   minColumns: 8,
   /** The largest `OsdPanelOptions.maxColumns` (1000). */
   maxColumns: 1000,
-  /** Action buttons of one `osd.show` message (`OsdShowOptions.actions`; player 0.7.6) (2). */
+  /** Action buttons of one `osd.show` message (`OsdShowOptions.actions`) (2). */
   actions: 2,
   /** Characters of an action's title, as shown (40; at least 1 that is not white space). */
   actionChars: 40,

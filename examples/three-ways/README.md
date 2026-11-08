@@ -1,6 +1,6 @@
 # Three ways
 
-One plugin written in the three styles of the SDK: four scenarios side by side, compared in [Three ways to write a plugin](https://vestrasys.github.io/vestra-player-sdk/documents/Three_ways_to_write_a_plugin.html).
+One plugin written in the three styles of the SDK: four scenarios side by side, compared in the [Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html).
 
 | File         | Style                                                        |
 | ------------ | ------------------------------------------------------------ |

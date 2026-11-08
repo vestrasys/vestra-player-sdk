@@ -1,9 +1,9 @@
 /**
- * `plugin.player.on` (L1, refactor plan §2.2; SDK 1.7.0): one listener of
- * one player event, with the event's data as the player sent it. It is a
- * plain subscription of the connection (counted as a listener, its `why`
- * naming where the plugin added it), never a state copy: nothing is kept,
- * nothing is compared.
+ * `plugin.player.on` (L1, refactor plan §2.2): one listener of one player
+ * event, with the event's data as the player sent it. It is a plain
+ * subscription of the connection (counted as a listener, its `why` naming where
+ * the plugin added it), never a state copy: nothing is kept, nothing is
+ * compared.
  */
 import { failure } from "../errors.ts";
 import type { ScopeImpl } from "../scope.ts";

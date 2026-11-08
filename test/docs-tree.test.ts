@@ -86,23 +86,28 @@ test("/Guides lists the site's groups in its order; a group lists its pages", ()
     listed,
     GROUPS.map((group) => group.title),
   );
-  const howTo = docs("/Guides/How-to");
-  assert.match(howTo, /^\/Guides\/How-to · Group/);
+  const guidesGroup = docs("/Guides/Guides");
+  assert.match(guidesGroup, /^\/Guides\/Guides · Group/);
   assert.match(
-    howTo,
-    /^- \/Guides\/How-to\/Test a plugin \(page\): Test a plugin without the player/m,
+    guidesGroup,
+    /^- \/Guides\/Guides\/Test a plugin \(page\): Test a plugin without the player/m,
+  );
+  // The Tutorial group is one page: the group itself.
+  assert.match(
+    docs("/Guides/Tutorial"),
+    /^\/Guides\/Tutorial · Group\b[^\n]*\n[\s\S]*^# Tutorial$/m,
   );
 });
 
 test("a guide page by title, by file name and in any case", () => {
-  const page = docs("/Guides/How-to/Test a plugin");
+  const page = docs("/Guides/Guides/Test a plugin");
   assert.match(
     page,
-    /^\/Guides\/How-to\/Test a plugin · Page\n\n# Test a plugin/,
+    /^\/Guides\/Guides\/Test a plugin · Page\n\n# Test a plugin/,
   );
   assert.match(page, /\*\*Goal:\*\*/);
-  assert.equal(docs("guides/how-to/testing"), page);
-  assert.equal(docs("/GUIDES/HOW-TO/test-a-plugin/"), page);
+  assert.equal(docs("guides/guides/testing"), page);
+  assert.equal(docs("/GUIDES/GUIDES/test-a-plugin/"), page);
   // Links between pages are paths of the tree.
   assert.match(page, /\]\(<\/Guides\/Reference\/Test host#[\w-]+>\)/);
 });
@@ -221,28 +226,27 @@ test("a name alone, dot notation, a stale segment and a .md suffix find their no
     "/API/Media/Snapshot/export · Method",
   );
   assert.equal(
-    head("/Guides/How-to/testing.md"),
-    "/Guides/How-to/Test a plugin · Page",
+    head("/Guides/Guides/testing.md"),
+    "/Guides/Guides/Test a plugin · Page",
   );
   // Several equally good: named, not guessed.
   assert.match(
     docs("testing"),
-    /^Several matches: \/testing\n\nName the one you mean:\n\n- \/Guides\/How-to\/Test a plugin \(page\)/,
+    /^Several matches: \/testing\n\nName the one you mean:\n\n- \/Guides\/Guides\/Test a plugin \(page\)/,
   );
-  // An old title (REDIRECTS) and a Markdown link target in angle brackets.
-  assert.equal(head("/Guides/Concepts"), "/Guides/Explanation · Group");
+  // Old titles (REDIRECTS) and a Markdown link target in angle brackets.
+  assert.equal(head("/Guides/Concepts"), "/Guides/Tutorial · Group");
+  assert.equal(head("/Guides/Explanation"), "/Guides/Tutorial · Group");
+  assert.equal(head("/Guides/How-to guides"), "/Guides/Guides · Group");
   assert.equal(
-    head("</Guides/How-to/Test a plugin>"),
-    "/Guides/How-to/Test a plugin · Page",
+    head("</Guides/Guides/Test a plugin>"),
+    "/Guides/Guides/Test a plugin · Page",
   );
 });
 
 test("links are paths of the tree; site addresses and images are gone", () => {
   const overview = docs("/Overview");
-  assert.match(
-    overview,
-    /\[Getting started\]\(<\/Guides\/Tutorials\/Getting started>\)/,
-  );
+  assert.match(overview, /\[Tutorial\]\(\/Guides\/Tutorial\)/);
   assert.match(
     overview,
     /\[Step by step\]\(<\/Guides\/Examples\/Example: Blur>\)/,
@@ -327,7 +331,7 @@ test("search ranks names first and lists paths with summaries", () => {
   );
   assert.match(
     searchDocs("test a plugin"),
-    /- \/Guides\/How-to\/Test a plugin \(page\)/,
+    /- \/Guides\/Guides\/Test a plugin \(page\)/,
   );
   assert.match(searchDocs("zzqqxx nothing"), /Nothing matches/);
   assert.match(searchDocs("  "), /Give one or more words/);
@@ -389,8 +393,8 @@ test("the command line prints the same answers", () => {
     );
   assert.equal(cli("API/Media").stdout, `${docs("/API/Media")}\n`);
   assert.equal(
-    cli("Guides/How-to/Test", "a", "plugin").stdout,
-    `${docs("/Guides/How-to/Test a plugin")}\n`,
+    cli("Guides/Guides/Test", "a", "plugin").stdout,
+    `${docs("/Guides/Guides/Test a plugin")}\n`,
   );
   assert.equal(
     cli("--search", "snapshot", "export").stdout,
@@ -473,16 +477,15 @@ test("every page and declaration of the documentation site is in the tree", asyn
   assert.ok(described < nodes / 2, `${described} described in place`);
 });
 
-test("the three plugin styles: the chapter, the event and the message tables", () => {
-  // The chapter's code comes from examples/three-ways, one file per style.
-  const chapter = pages((page) =>
-    docs("/Guides/Explanation/Three ways to write a plugin", { page }),
-  ).join("\n");
+test("the three plugin styles: the tutorial, the event and the message tables", () => {
+  // The tutorial's code comes from examples/three-ways, one file per style.
+  const chapter = pages((page) => docs("/Guides/Tutorial", { page })).join(
+    "\n",
+  );
   for (const code of [
     "bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));",
     'plugin.player.on("source.state", (s) => {',
     "const view = plugin.wire.view(bar);",
-    "plugin.update(); // a full pass",
   ])
     assert.ok(chapter.includes(code), code);
   // Every event a plugin can listen to by name has a row.

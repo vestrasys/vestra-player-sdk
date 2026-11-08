@@ -4,7 +4,7 @@
  * `locales/<lang>.json` a package carries, template formatting and the
  * Slint `@tr` scanner. Used by `vestra-plugin i18n`, `vestra-plugin build`
  * and {@link TestHost}; not part of the plugin API (plugins write no
- * translation code: see docs/how-to/i18n.md).
+ * translation code: see docs/guides/i18n.md).
  * Internal: the player's runner and tests reach it through
  * `@vestra-player/sdk/runtime`, `LOCALES` through `./testing`.
  */

@@ -2,7 +2,7 @@
  * Style A, declarative: the plugin says what each view and command shows
  * as a function of state (`bind`, function fields), and the SDK's update
  * passes decide when to send. The default style.
- * Walkthrough: docs/explanation/three-ways.md.
+ * Walkthrough: docs/tutorial/index.md.
  */
 import type { Plugin, Stream } from "@vestra-player/sdk";
 import {

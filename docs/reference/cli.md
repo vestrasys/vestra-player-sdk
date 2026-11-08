@@ -39,20 +39,18 @@ Exit codes: 0 on success, 1 when a command failed for any of the directories (ea
 ## Rules every command applies
 
 - **The manifest first.** Every command checks `manifest.json` against the player's own rules ([Manifest](manifest.md)) before anything else. `check` also prints hints that do not fail, such as an id without the `<owner>.` prefix the official repository needs.
-- **Type checking** extends the nearest `tsconfig.json` at or above the plugin directory (up to the repository root), else built-in strict settings (`strict`, `NodeNext`, `verbatimModuleSyntax`, `erasableSyntaxOnly`). Only the plugin's own files and `tests/` are checked, with the SDK's own TypeScript 5.x.
-- **Capabilities.** After the type check, `check` reports every use of an API member whose capability `manifest.json` does not declare (`file:line:column`, the member, the capability, the request) and fails; `build` and `pack` run `check` first. Only the plugin's own code is checked, not `tests/`. A member whose capability depends on a name is checked by that name when the types fix it to one string (a string literal, a constant): `plugin.player.on` and `plugin.wire.on` by the event (`Player.on("bindings.changed")` needs `bindings.manage`; an event the player sends unasked, such as `commands.execute`, needs nothing), `plugin.wire.request` by the method and the string fields of its parameters (`Wire.request("ui.setMount")` needs `ui.mount`). A call whose name the check cannot read (computed, or a union of several names), a member taken other than by a direct call (`const { request } = plugin.wire`), or a method the player's table does not know, is listed as `unchecked: …` on standard output and does not fail the check; the player still checks it when the plugin runs. The same check runs in the editor ([Capabilities](capabilities.md#catching-a-missing-capability)), where an unchecked call is a warning. `check --json` prints, instead of the text, one JSON array with an entry per plugin directory: `directory`, `plugin`, `findings` (each with `file` (absolute), `line` and `column` (1-based), `start` and `length` (the member's name as a UTF-16 offset and length in the file, as TypeScript counts), `api`, `capability`, `method`, `message`, and `requiredBy` when the capability is another one's **Also needs**), `unchecked` (the calls listed as unchecked, each with `file`, `line`, `column`, `start`, `length`, `api` and `message`; SDK 1.7.0) and `error` when the directory failed.
+- **Type checking** extends the nearest `tsconfig.json` at or above the plugin directory, else built-in strict settings. Only the plugin's own files and `tests/` are checked, with the SDK's own TypeScript 5.x.
+- **Capabilities.** `check` reports every use of a member whose capability `manifest.json` does not declare and fails; a call it cannot read is listed as `unchecked: …` and does not fail ([Capabilities](capabilities.md#catching-a-missing-capability)). `check --json` prints one JSON array with an entry per plugin directory: `directory`, `plugin`, `findings` (`file`, `line`, `column`, `start`, `length`, `api`, `capability`, `method`, `message`, `requiredBy`), `unchecked` (`file`, `line`, `column`, `start`, `length`, `api`, `message`) and `error` when the directory failed.
 - **`import type` only.** A plugin never imports SDK code at run time; `build` fails when the output still refers to `@vestra-player/sdk`. Tests import `@vestra-player/sdk/testing` freely.
-- **Translations.** With a `locales/` folder, `check` prints the `i18n check` problems as warnings and `build` compiles each `locales/<lang>.po` to `dist/locales/<lang>.json` ([Translate a plugin](../how-to/i18n.md)).
+- **Translations.** With a `locales/` folder, `check` prints the `i18n check` problems as warnings and `build` compiles each `locales/<lang>.po` to `dist/locales/<lang>.json` ([Add settings and translations](../guides/i18n.md)).
 
 ## What build puts into dist/
 
-- `.ts` files with the types stripped and relative imports changed to `.js`; `dist/manifest.json` with `entry` changed to `.js` and `version` written.
+- `.ts` files with the types stripped and relative imports changed to `.js`; `dist/manifest.json` with `entry` changed to `.js` and `version` written (from `--version`, the manifest or `package.json`).
 - `.slint` and `.mjs` files, data files and `licenses/` as they are; the manifest's `icon`, `readme` and `changelog`, and `README.md` and `CHANGELOG.md` when present.
-- Left out: `tests/`, `node_modules/`, `vendor/`, other `*.md`, `tsconfig*.json`, `package*.json`, `.po` and `.pot` files.
-- The version is `--version`, else the manifest's `version`, else `package.json`'s. `--version` takes one plugin directory.
-- `dist/` is build output; do not commit it.
+- Left out: `tests/`, `node_modules/`, `vendor/`, other `*.md`, `tsconfig*.json`, `package*.json`, `.po` and `.pot` files. Do not commit `dist/`.
 
-`pack` runs `build` and writes `dist/` as `<id>-<version>.vxp` (a zip) to `--out` (default: the current directory), printing its size and SHA-256. The same input gives the same bytes (sorted entries, fixed timestamps), so a package can be rebuilt and compared.
+`pack` runs `build` and writes `dist/` as `<id>-<version>.vxp` (a zip) to `--out`, printing its size and SHA-256. The same input gives the same bytes.
 
 ## The vestra field of package.json
 
@@ -69,5 +67,3 @@ A plugin with npm dependencies says how to package them in its own `package.json
 
 - `"bundle": true` or `{ "external": [...] }` bundles the entry and its dependencies into one file with the plugin's own `esbuild` (a devDependency). **A plugin with runtime dependencies must bundle**: the package has no `node_modules`.
 - `"assets": [...]` copies extra files or directories into the package as they are.
-
-To try a plugin without packing it, start the player with `--plugin <folder>`; it runs `main.ts` directly.

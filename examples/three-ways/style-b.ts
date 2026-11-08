@@ -2,7 +2,7 @@
  * Style B, subscribe and write: the plugin listens to the player's events
  * by name (`plugin.player.on`) and writes values when it knows they
  * changed (`set`). No update pass runs for these views and commands.
- * Walkthrough: docs/explanation/three-ways.md.
+ * Walkthrough: docs/tutorial/index.md.
  */
 import type { Plugin, Stream } from "@vestra-player/sdk";
 import {

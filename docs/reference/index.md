@@ -1,80 +1,21 @@
 ---
 title: Reference
-description: Lookup tables that span many symbols (capabilities, manifest fields and player versions, limits, menu and binding names, platform differences, theme, command line), generated from the SDK's code.
+description: Lookup tables that span many symbols, from manifest fields and capabilities to the test host, mostly generated from the SDK's code.
 ---
 
 # Reference
 
-These pages are tables to look things up in while you write a plugin. Each one collects facts that belong to many API symbols at once; what a single symbol does is in the {@link "@vestra-player/sdk" | API reference}, and how the pieces fit together is in the [Explanation](../explanation/index.md). Most tables are generated from the SDK's own constants and Slint files, so they match the version of the SDK you read them for.
+Tables to look things up in while you write a plugin. Each page collects facts that belong to many API symbols at once; what a single symbol does is in the {@link "@vestra-player/sdk" | API reference}, and how the pieces fit together is in the [Tutorial](../tutorial/index.md). Most tables are generated from the SDK's own constants and Slint files, so they match the SDK you read them for.
 
-## Manifest
-
-Every `manifest.json` field and its rules, and which player version the newer parts of the API need (`minPlayerVersion`).
-
-[Read the manifest reference](manifest.md)
-
-## Capabilities
-
-Every capability a manifest can declare: the members it opens, the capabilities they also need, and how the plugin store describes it to the user.
-
-[Read the capabilities reference](capabilities.md)
-
-## Limits
-
-The player's runtime limits in one place: commands, property values, text values, Markdown, the on-screen display, secrets, the size of a message, and what a plugin process may cost (heap, timeouts, restarts, how many run at once).
-
-[Read the limits reference](limits.md)
-
-## Commands, menus and bindings
-
-Built-in menu ids, the top level and its groups, the submenu keys already in use, every command the player and its built-in plugins register with its default keys, the binding syntax and input names, the core actions and the keys the system takes first.
-
-[Read the commands reference](commands.md)
-
-## Platforms
-
-What differs between macOS and Windows: the clipboard, dialogs, window control, keychains, rendering, keys and fonts.
-
-[Read the platforms reference](platforms.md)
-
-## Theme
-
-The `Theme` tokens with their current values, fonts, the sizes of each surface and the layouts of the player's own windows, the icon names, the components of `@vestra/widgets.slint` and `@vestra/markdown.slint`, and `VestraFocus` of `@vestra/focus.slint`.
-
-[Read the theme reference](theme.md)
-
-## Command line
-
-The `vestra-plugin` commands and options, what `build` puts into a package, and the `vestra` field of `package.json`.
-
-[Read the command line reference](cli.md)
-
-## Error codes
-
-Every `error.code` the API fails with and what it means, from the `PluginError` table.
-
-[Read the error codes](errors.md)
-
-## Events
-
-Every player event a plugin can listen to by name, with its payload, the SDK members that listen to it, whether it wakes a stopped plugin and the capability it needs.
-
-[Read the events reference](events.md)
-
-## Messages
-
-Every request method of the player's protocol, by capability: its parameters and result, the errors documented for it and the SDK member that sends it. Changes with player versions.
-
-[Read the messages reference](messages.md)
-
-## Translations
-
-The interface languages, the gettext files, template and plural rules, where text values are accepted, what `i18n extract` and `i18n check` do, the review markers and the limits.
-
-[Read the translations reference](i18n.md)
-
-## Test host
-
-What `startPlugin` takes and returns, every way `TestHost` acts like the user and simulates the player, what it records, and every member.
-
-[Read the test host reference](testing.md)
+- [Manifest](manifest.md): every `manifest.json` field and its rules.
+- [Capabilities](capabilities.md): what each capability opens, what it also needs, how the store describes it, and how a missing one is caught.
+- [Limits](limits.md): commands, property and text values, Markdown, the OSD, the timeline, secrets, session storage, subtitles, messages, video processing and plugin processes.
+- [Commands, menus and bindings](commands.md): menu ids and paths, the top level and its groups, submenu keys in use, every built-in command, bottom-bar buttons, the binding syntax and names, the core actions and the keys the system takes first.
+- [Platforms](platforms.md): what differs between macOS and Windows.
+- [Theme](theme.md): `Theme` tokens and values, fonts, surface sizes and layouts, icons, `@vestra/widgets.slint`, `@vestra/markdown.slint`, `@vestra/focus.slint` and the bar buttons.
+- [Command line](cli.md): the `vestra-plugin` commands and options, what `build` puts into a package, and the `vestra` field of `package.json`.
+- [Error codes](errors.md): every `error.code` and what it means.
+- [Events](events.md): every event a plugin can listen to, its payload, its listeners, whether it wakes a stopped plugin and its capability.
+- [Messages](messages.md): every request method of the player's protocol by capability, with its parameters, result, errors and the SDK member that sends it.
+- [Translations](i18n.md): languages, where English source text goes, templates, files, `i18n extract` and `i18n check`, review markers and limits.
+- [Test host](testing.md): what `startPlugin` takes, how `TestHost` acts like the user and simulates the player, and every member.

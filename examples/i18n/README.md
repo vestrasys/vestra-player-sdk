@@ -20,4 +20,4 @@ npm run pack                # build dist/ (with dist/locales/zh-Hans.json) and p
 
 In the player (0.4.3 or later): start it with `--plugin <path to examples/i18n>`, then choose **Settings → Language → 简体中文** and restart the player.
 
-Walkthrough: [Counter (i18n)](https://vestrasys.github.io/vestra-player-sdk/documents/Counter__i18n_.html).
+Walkthrough: [Counter (i18n)](https://vestrasys.github.io/vestra-player-sdk/documents/Counter_%28i18n%29.html).

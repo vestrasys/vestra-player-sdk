@@ -79,6 +79,6 @@ console.log(readSdkDocs({ search: "snapshot export" }));
 
 ## See also
 
-- [Getting started](../tutorials/getting-started.md): the first page an agent should read.
+- [Tutorial](../tutorial/index.md): the first page an agent should read.
 - [Command line](../reference/cli.md): every `vestra-plugin` command.
 - [Test a plugin](testing.md): how the agent checks what it wrote.

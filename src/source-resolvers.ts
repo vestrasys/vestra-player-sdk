@@ -66,8 +66,8 @@ export type ResolvedMedia = {
   audio?: ResolvedResource;
 };
 /**
- * A resolver declaration on the wire: a web resolver (`schemes` + `hosts`)
- * or, from player 0.4.1, a file resolver (`extensions`), never both.
+ * A resolver declaration on the wire: a web resolver (`schemes` + `hosts`) or,
+ * a file resolver (`extensions`), never both.
  */
 export type SourceResolverDeclaration =
   | {

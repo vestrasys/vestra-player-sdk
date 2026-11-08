@@ -9,9 +9,9 @@ A tool window drawn with the player's own theme and controls, so it looks like p
 
 ## What it demonstrates
 
-`@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property · the keys of the slider's commands beside it (`plugin.commands.keys`, `KeyHint`, `ToolTipArea.keys`; SDK 1.6.6, player 0.7.6).
+`@vestra/theme.slint` and `@vestra/widgets.slint` · a slider bound two-way to a property · the keys of the slider's commands beside it (`plugin.commands.keys`, `KeyHint`, `ToolTipArea.keys`).
 
-[Add a window](../tutorials/add-a-window.md) teaches a window with the player's theme and widgets; the rules are in [Interface guidelines](../guidelines/interface.md).
+[Open a tool window and remember its state](../guides/windows.md) teaches a window with the player's theme and widgets; the rules are in [Design rules](../guides/design-rules.md).
 
 ## What you'll build
 
@@ -38,7 +38,7 @@ examples/theme-widgets/
 
 {@includeCode ../../examples/theme-widgets/manifest.json}
 
-`commands` for the menu item and the keys, `ui.window` for the window. `"minPlayerVersion": "0.7.6"`: older players have no `plugin.commands.keys` and no `KeyHint`.
+`commands` for the menu item and the keys, `ui.window` for the window.
 
 ## The window
 
@@ -51,7 +51,7 @@ From top to bottom:
 - **The properties.** `level` is `in-out` because both the plugin and the user change it; `label` is only written by the plugin. `level-changed` reports a drag; `reset` reports the reset buttons.
 - **The layout.** `Theme.dialog-padding` and `Theme.font-body` give the spacing and text size of the player's dialogs.
 - **`KeyHint`** draws one key cap. `level-down` and `level-up` are the labels the plugin passes; an empty one draws nothing and takes no space, so a key the user cleared leaves no gap. The caps sit at the end of the slider's row, minus before plus.
-- **`ToolTipArea`** shows its `text` after the pointer rests on its content for about half a second (600 ms before player 0.5.2). The tip never takes a press or the keyboard focus: a click goes to the control under the pointer even while the tip shows. With `keys` (a list of `{ key, text }`) it names the keys after the title as caps, each followed by what it does; an entry with an empty `key` is left out. `detail` follows dimmed.
+- **`ToolTipArea`** shows its `text` after the pointer rests on its content for about half a second. The tip never takes a press or the keyboard focus: a click goes to the control under the pointer even while the tip shows. With `keys` (a list of `{ key, text }`) it names the keys after the title as caps, each followed by what it does; an entry with an empty `key` is left out. `detail` follows dimmed.
 - **The sliders** are bound _two-way_ to `level` with `<=>`, so dragging one moves the other at once, inside Slint. `changed` passes the value to the plugin. A one-way binding (`value: root.level`) would be broken by Slint the first time the user moved the slider. `panel: true` is the panel style; without it, the bar style.
 - **`Button`** with `text` is a dialog button; `small: true` is the 18-pixel one.
 - **Icon buttons** have no `text`; `icon` is SVG-style path data drawn in an `icon-width` × `icon-height` box (14×12 by default). `stroked: true` draws lines instead of filling. `checked` draws the icon in the accent colour.
@@ -102,4 +102,4 @@ Start the player with `--plugin <path to examples/theme-widgets>` and choose **E
 
 1. **Use the level.** Add `ui.osd` and show the level with `plugin.osd.show` when the slider is released (the `Slider`'s `released` callback).
 2. **A text field.** Add `UrlInputRow` from `@vestra/widgets.slint`, the player's input row with confirm and cancel buttons.
-3. **More tokens.** The [explanation page](../explanation/ui.md) lists every `Theme` token and widget property.
+3. **More tokens.** [Theme](../reference/theme.md) lists every `Theme` token and widget property.

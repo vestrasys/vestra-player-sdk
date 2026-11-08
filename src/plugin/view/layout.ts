@@ -20,9 +20,9 @@ export type LayoutName = "bottom" | "sidebar" | "adjust";
 export type Layout = {
   bottom: SlotState | null;
   sidebar: SlotState | null;
-  /** Player 0.7.6; `null` from older players. */
+  /** The adjust column. */
   adjust: SlotState | null;
-  /** `PanelSlot.panels` (null from players without tabs). */
+  /** `PanelSlot.panels`. */
   tabs: {
     bottom: readonly SlotPanel[] | null;
     sidebar: readonly SlotPanel[] | null;

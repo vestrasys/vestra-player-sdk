@@ -20,11 +20,11 @@ import type { WireView } from "./plugin-wire.ts";
  *
  * @remarks
  * Opaque: pass it where the Slint type is `image`, with {@link View.set} or
- * {@link View.bind}: the whole value of an `image` property or, from SDK
- * 1.5.19 (player 0.5.1), an `image` field at any depth, such as the logo of
- * each row of a list. Making the reference does not read the file: the
- * player checks and decodes it each time it receives the value (a property
- * write, a window opening; {@link Ui.image} has the rules and limits).
+ * {@link View.bind}: the whole value of an `image` property or, an `image`
+ * field at any depth, such as the logo of each row of a list. Making the
+ * reference does not read the file: the player checks and decodes it each time
+ * it receives the value (a property write, a window opening; {@link Ui.image}
+ * has the rules and limits).
  *
  * A reference belongs to the {@link Scope} that created it. Once that scope
  * is disposed, writing the reference fails with `invalid` (reported to
@@ -46,10 +46,10 @@ import type { WireView } from "./plugin-wire.ts";
  * ```
  *
  * @example Show a logo in each row of a list
- * Each row of the list draws its own small logo next to its name. An
- * `ImageRef` may sit in any field of a property value (SDK 1.5.19, player
- * 0.5.1), so the rows carry their icons; `maxSide: 64` decodes each logo
- * at most 64 px wide, which keeps the view's image memory small.
+ * Each row of the list draws its own small logo next to its name. An `ImageRef`
+ * may sit in any field of a property value, so the rows carry their icons;
+ * `maxSide: 64` decodes each logo at most 64 px wide, which keeps the view's
+ * image memory small.
  * ```slint
  * export struct Row { key: string, name: string, icon: image }
  * ```
@@ -66,7 +66,7 @@ import type { WireView } from "./plugin-wire.ts";
  * }));
  * ```
  *
- * @see {@link Ui.image}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link Ui.image}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -91,7 +91,7 @@ export interface ImageOptions {
    * sharp on high-density screens. It keeps the decoded memory small: a
    * 1024×1024 icon is 4 MB decoded, 16 KB at `maxSide: 64`.
    *
-   * @player 0.5.1; older players refuse the reference (`invalid`).
+   * @player 0.5.1
    */
   maxSide?: number;
 }
@@ -103,15 +103,14 @@ export interface ImageOptions {
  * @remarks
  * Opaque, like {@link ImageRef}: pass it where the Slint type is
  * `[MarkdownBlock]`: the whole value of such a property (the `blocks` of
- * `MarkdownView` from `@vestra/markdown.slint`) or, from SDK 1.5.4, a
- * `[MarkdownBlock]` field at any depth of a property value, such as the
- * `body` of each row of a chat's message list. It carries the text, the
- * base address and the local copies of its remote images; the player parses
- * and draws it. Writing a document whose text did not change (a new
- * reference for the same text included) costs the player no parsing, and a
- * changed document updates only the blocks that changed. It belongs to the
- * scope that created it: once that scope is disposed, writing it fails with
- * `invalid`, wherever it is in the value.
+ * `MarkdownView` from `@vestra/markdown.slint`) or, a `[MarkdownBlock]` field
+ * at any depth of a property value, such as the `body` of each row of a chat's
+ * message list. It carries the text, the base address and the local copies of
+ * its remote images; the player parses and draws it. Writing a document whose
+ * text did not change (a new reference for the same text included) costs the
+ * player no parsing, and a changed document updates only the blocks that
+ * changed. It belongs to the scope that created it: once that scope is
+ * disposed, writing it fails with `invalid`, wherever it is in the value.
  *
  * @example Show chat messages, one document per row
  * The chat window shows a formatted assistant message. `ui.markdown`
@@ -124,7 +123,7 @@ export interface ImageOptions {
  * chat.set({ messages: [{ id: "m1", role: "assistant", body }] });
  * ```
  *
- * @player 0.2.0; nested in a value: the player after 0.4.0
+ * @player 0.2.0
  * @see {@link Ui.markdown}, {@link MarkdownOptions}, {@link PropValue}
  * @since 1.1.0
  * @category UI
@@ -172,38 +171,32 @@ export interface MarkdownOptions {
  * is refused (Slint treats `_` and `-` as the same, so use camelCase or
  * kebab-case).
  *
- * A {@link Text} or {@link TextList} goes where the Slint type is `string`,
- * at any depth (SDK 1.5.11, player 0.4.3): the player shows it translated
- * with the plugin's catalog, so a `[string]` model (a ComboBox) can mix
- * words and data. The limits below count it as the string it becomes.
+ * A {@link Text} or {@link TextList} goes where the Slint type is `string`, at
+ * any depth: the player shows it translated with the plugin's catalog, so a
+ * `[string]` model (a ComboBox) can mix words and data. The limits below count
+ * it as the string it becomes.
  *
  * A {@link MarkdownRef} goes where the Slint type is `[MarkdownBlock]`: the
- * whole value, or a field at any depth (SDK 1.5.4; older players refuse a
- * nested one). An {@link ImageRef} goes where the Slint type is `image`: the
- * whole value, or a field at any depth (SDK 1.5.19, player 0.5.1; older
- * players refuse a nested one with `invalid`). The images nested in the
- * values of one view (a window, panel or settings page) may show at most
- * 32 MB of decoded pixels together (`IMAGE_LIMITS.viewBytes` in
- * `@vestra-player/sdk/runtime`): a write
- * that would pass it is refused with `limit`; use
- * {@link ImageOptions.maxSide} for small pictures such as logos and
- * thumbnails.
+ * whole value, or a field at any depth. An {@link ImageRef} goes where the
+ * Slint type is `image`: the whole value, or a field at any depth. The images
+ * nested in the values of one view (a window, panel or settings page) may show
+ * at most 32 MB of decoded pixels together (`IMAGE_LIMITS.viewBytes` in
+ * `@vestra-player/sdk/runtime`): a write that would pass it is refused with
+ * `limit`; use {@link ImageOptions.maxSide} for small pictures such as logos
+ * and thumbnails.
  *
- * Limits per value (`UI_VALUE_LIMITS` in `@vestra-player/sdk/testing`,
- * player 0.6.0; players 0.4.3 to 0.5: 16384 values, 4096 rows, 1 MiB of
- * text): nesting depth 8, 1,048,576 values in total (every array, object,
- * string, number, boolean and null counts, the value itself included; a
- * document or an image is one), 100,000 rows per array, 64 KiB per string
- * or field name and 32 MiB of text in total, field names and the text of
- * its Markdown documents included (256 KB per document). A list of rows
- * with 13 fields is 14 values per row, so 50,000 such rows fit. An array
- * property larger than one 1 MiB request is sent in parts (SDK 1.5.46, a
- * player that takes row patches); only the top-level array is split, so
- * any other value, and each row, must fit in one request (a row of more
- * than 512 KiB is refused with `limit`). A value over a limit is refused
- * with code
- * `limit` and the property keeps what it showed (see {@link View.set});
- * `TestHost` refuses it the same way.
+ * Limits per value (`UI_VALUE_LIMITS` in `@vestra-player/sdk/testing`): nesting
+ * depth 8, 1,048,576 values in total (every array, object, string, number,
+ * boolean and null counts, the value itself included; a document or an image is
+ * one), 100,000 rows per array, 64 KiB per string or field name and 32 MiB of
+ * text in total, field names and the text of its Markdown documents included
+ * (256 KB per document). A list of rows with 13 fields is 14 values per row, so
+ * 50,000 such rows fit. An array property larger than one 1 MiB request is sent
+ * in parts (a player that takes row patches); only the top-level array is
+ * split, so any other value, and each row, must fit in one request (a row of
+ * more than 512 KiB is refused with `limit`). A value over a limit is refused
+ * with code `limit` and the property keeps what it showed (see
+ * {@link View.set}); `TestHost` refuses it the same way.
  *
  * Bind a whole list and draw it with a Slint `ListView`, which builds only
  * the rows on screen; the SDK sends what changed (row patches).
@@ -214,8 +207,8 @@ export interface MarkdownOptions {
 export type PropValue = PropData | ImageRef;
 
 /**
- * JSON whose values may also be Markdown documents and (SDK 1.5.19) images,
- * at any depth: the part of {@link PropValue} that nests.
+ * JSON whose values may also be Markdown documents and images, at any depth:
+ * the part of {@link PropValue} that nests.
  *
  * @example Type a message list whose rows carry a document
  * A property value for a chat's message list, typed so that TypeScript
@@ -294,7 +287,7 @@ export type Props = Record<string, PropValue>;
  *
  * {@includeCode ../../../examples/markdown/ui/document.slint}
  *
- * @see {@link ImageRef}, {@link MarkdownRef}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link ImageRef}, {@link MarkdownRef}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -303,18 +296,18 @@ export interface Ui {
    * Reference a PNG or JPEG file for an `image` property.
    *
    * @remarks
-   * Returns at once without touching the file. The player checks the file
-   * each time it receives the reference (a property write, a window or
-   * settings page opening, the main window being rebuilt): it must be inside this plugin's package
-   * directory or {@link Plugin.dataDirectory} after following links, at most
-   * 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
+   * Returns at once without touching the file. The player checks the file each
+   * time it receives the reference (a property write, a window or settings page
+   * opening, the main window being rebuilt): it must be inside this plugin's
+   * package directory or {@link Plugin.dataDirectory} after following links, at
+   * most 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
    * does not matter). A failed check of a whole-value image is a failed
    * property write: `missing` for a file that does not exist, `invalid`
    * otherwise. It goes to {@link Scope.onError} and the property keeps its
    * previous image; in the initial properties of a tool window it makes
-   * {@link Window.show} reject. A nested image (a field of a row, SDK
-   * 1.5.19) that fails its check is drawn empty instead, and the rest of
-   * the value is shown, as a Markdown image shows its alt text.
+   * {@link Window.show} reject. A nested image (a field of a row) that fails
+   * its check is drawn empty instead, and the rest of the value is shown, as a
+   * Markdown image shows its alt text.
    *
    * The player caches decoded images per plugin (up to 64 MB, least recently
    * used first) by path, size and modification time, and does not watch
@@ -326,8 +319,8 @@ export interface Ui {
    *
    * @param path - Absolute path of the image file, inside the package
    *   directory or the data directory.
-   * @param options - `maxSide` (SDK 1.5.19, player 0.5.1): decode the image
-   *   scaled down, aspect kept, so that neither side is over it.
+   * @param options - `maxSide`: decode the image scaled down, aspect kept, so
+   * that neither side is over it.
    * @returns A new {@link ImageRef}, owned by this scope.
    *
    * @throws `invalid` (throws) `path` is not a non-empty string, or
@@ -421,24 +414,23 @@ export interface Ui {
    * The text is at most 256 KB; very long documents are cut off after 4000
    * blocks.
    *
-   * `MarkdownView` scrolls one document. `MarkdownBlocks` (SDK 1.5.4, players
-   * after 0.4.0) draws one without scrolling, as tall as its content, for a
-   * layout of your own or a `ListView` row. For a list of documents, write
-   * the whole list with one document per row: the player parses only the
-   * documents that changed and updates the list in place (rows added or
-   * removed at the end, a growing document's changed blocks), so re-sending
-   * the list on every streamed chunk keeps the scroll position and costs
-   * little.
+   * `MarkdownView` scrolls one document. `MarkdownBlocks` (players after 0.4.0)
+   * draws one without scrolling, as tall as its content, for a layout of your
+   * own or a `ListView` row. For a list of documents, write the whole list with
+   * one document per row: the player parses only the documents that changed and
+   * updates the list in place (rows added or removed at the end, a growing
+   * document's changed blocks), so re-sending the list on every streamed chunk
+   * keeps the scroll position and costs little.
    *
-   * From player 0.7.1 both views take `selectable: true` (default `false`):
-   * the user can select and copy the text, one block at a time; blocks with
-   * links keep their clickable links and copy as `text (url)`. Code blocks
-   * are always selectable. `MarkdownBlock.plain` (the block as plain text)
-   * and `MarkdownBlock.links` (its link addresses) are readable in Slint.
-   * See [Reference: theme › Markdown](../../../docs/reference/theme.md#markdown).
+   * Both views take `selectable: true` (default `false`): the user can select
+   * and copy the text, one block at a time; blocks with links keep their
+   * clickable links and copy as `text (url)`. Code blocks are always
+   * selectable. `MarkdownBlock.plain` (the block as plain text) and
+   * `MarkdownBlock.links` (its link addresses) are readable in Slint. See
+   * [Reference: theme › Markdown](../../../docs/reference/theme.md#markdown).
    *
    * @capability None.
-   * @player 0.2.0 (set `"minPlayerVersion": "0.2.0"` in the manifest)
+   * @player 0.2.0
    *
    * @param text - The Markdown source (CommonMark with GitHub tables, task
    *   lists and strikethrough), at most 256 KB as UTF-8.
@@ -568,7 +560,7 @@ export interface Ui {
  *
  * {@includeCode ../../../examples/bookmark/ui/bookmark.slint}
  *
- * @see {@link Window}, {@link Panel}, {@link SettingsPage}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md), [Keep a slider responsive while dragging](../../../docs/how-to/slider.md)
+ * @see {@link Window}, {@link Panel}, {@link SettingsPage}, [Open a tool window and remember its state](../../../docs/guides/windows.md), [Keep a slider responsive while dragging](../../../docs/guides/slider.md)
  * @since 1.0.0
  * @category UI
  */
@@ -643,23 +635,22 @@ export interface View {
    * Do not `set` a property that a {@link View.bind} function also returns:
    * the next update pass replaces the set value with the bound one.
    *
-   * On a view nothing was bound to, `set` alone writes (SDK 1.7.0): each
-   * value is sent whole, a large list in parts, one write in flight per
-   * view; the SDK neither compares nor turns lists into row patches, and
-   * the view takes no part in update passes. From the view's first
-   * {@link View.bind} on, `set` values go the bound way: a list that
-   * differs from the one sent is sent as a row patch where one applies.
+   * On a view nothing was bound to, `set` alone writes: each value is sent
+   * whole, a large list in parts, one write in flight per view; the SDK neither
+   * compares nor turns lists into row patches, and the view takes no part in
+   * update passes. From the view's first {@link View.bind} on, `set` values go
+   * the bound way: a list that differs from the one sent is sent as a row patch
+   * where one applies.
    *
-   * A property the plugin writes directly ({@link WireView.write}, SDK
-   * 1.7.0) cannot be `set`: one track per property. Otherwise it never
-   * throws. A write that fails is retried with back-off and reported
-   * to {@link Scope.onError} (the first failure of a run of failures; the
-   * message names the property). A value over the limits of
-   * {@link PropValue} fails with `limit`. As an initial property (written
-   * while the view is not open) it makes {@link Window.show} reject; a
-   * panel or settings page still opens without it (the property keeps its
-   * default) and the failure goes to the plugin's `onError` (player 0.4.3;
-   * older players left it out silently).
+   * A property the plugin writes directly ({@link WireView.write}) cannot be
+   * `set`: one track per property. Otherwise it never throws. A write that
+   * fails is retried with back-off and reported to {@link Scope.onError} (the
+   * first failure of a run of failures; the message names the property). A
+   * value over the limits of {@link PropValue} fails with `limit`. As an
+   * initial property (written while the view is not open) it makes
+   * {@link Window.show} reject; a panel or settings page still opens without it
+   * (the property keeps its default) and the failure goes to the plugin's
+   * `onError`.
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
@@ -691,27 +682,25 @@ export interface View {
    *
    * @remarks
    * The SDK calls `props` in every update pass (and right after `bind`) and
-   * sends the values that differ from the ones it sent last; a view takes
-   * part in the update passes from its first `bind` on (SDK 1.7.0). After a
-   * change of the player state alone it calls `props` only if it read a
-   * field of `plugin.player.state` (or of a {@link Scope.state} object) that
-   * changed (SDK 1.5.45); a full pass follows
-   * after each handler, on {@link Scope.update} and at least once a second
-   * while the player state keeps changing. Because an
-   * unchanged value is not sent again, text the user typed into an `in-out`
-   * property stays until the plugin's value for it changes.
+   * sends the values that differ from the ones it sent last; a view takes part
+   * in the update passes from its first `bind` on. After a change of the player
+   * state alone it calls `props` only if it read a field of
+   * `plugin.player.state` (or of a {@link Scope.state} object) that changed; a
+   * full pass follows after each handler, on {@link Scope.update} and at least
+   * once a second while the player state keeps changing. Because an unchanged
+   * value is not sent again, text the user typed into an `in-out` property
+   * stays until the plugin's value for it changes.
    *
    * Keep the function quick and synchronous: it runs often. An error it
    * throws is reported to {@link Scope.onError} and the other bindings still
    * run. A view can have several bindings; when two return the same name,
    * the one bound later wins.
    *
-   * Never throws. Writes that fail are not repeated until the value
-   * changes, and are reported to {@link Scope.onError} like a failed
-   * {@link View.set} (a value over the limits of {@link PropValue}: `limit`).
-   * A property the plugin writes directly ({@link WireView.write}, SDK
-   * 1.7.0) is left out of what the function returns, reported once to
-   * `onError` with `invalid`: one track per property.
+   * Never throws. Writes that fail are not repeated until the value changes,
+   * and are reported to {@link Scope.onError} like a failed {@link View.set} (a
+   * value over the limits of {@link PropValue}: `limit`). A property the plugin
+   * writes directly ({@link WireView.write}) is left out of what the function
+   * returns, reported once to `onError` with `invalid`: one track per property.
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
@@ -732,7 +721,7 @@ export interface View {
    * }));
    * ```
    *
-   * @see [Keep a slider responsive while dragging](../../../docs/how-to/slider.md)
+   * @see [Keep a slider responsive while dragging](../../../docs/guides/slider.md)
    * @since 1.0.0
    */
   bind(props: () => Props): Disposable;

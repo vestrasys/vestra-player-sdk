@@ -115,7 +115,7 @@ export type SettingsCategory =
  * }
  * ```
  *
- * @see {@link Settings.page}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link Settings.page}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -178,7 +178,7 @@ export type SettingsPage = View &
  * page.on("resumeToggled", (on: boolean) => store.save({ ...store.value, resume: on }));
  * ```
  *
- * @see {@link SettingsPage}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link SettingsPage}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -356,14 +356,14 @@ export interface BackdropSlot {
  * or the sidebar moves to or from its floating window, while the global is
  * one stable address.
  *
- * A plugin mounts at most one panel per slot (SDK 1.6.15, player 0.7.6;
- * before, one panel in all): a playback plugin can have its control bar in
- * `"bottom"` and its controls in `"adjust"`. Each {@link Panel} has its own
- * bridge, state, `toggle()` and `setInteraction()`; disposing one leaves
- * the others, and stopping the plugin unmounts them all. The bottom bar and
- * the backdrop hold one panel for all plugins; the sidebar and the adjust
- * column one tab per plugin. {@link Panels.bottom}, {@link Panels.sidebar}
- * and {@link Panels.adjust} describe the positions, whoever mounted there.
+ * A plugin mounts at most one panel per slot: a
+ * playback plugin can have its control bar in `"bottom"` and its controls in
+ * `"adjust"`. Each {@link Panel} has its own bridge, state, `toggle()` and
+ * `setInteraction()`; disposing one leaves the others, and stopping the plugin
+ * unmounts them all. The bottom bar and the backdrop hold one panel for all
+ * plugins; the sidebar and the adjust column one tab per plugin.
+ * {@link Panels.bottom}, {@link Panels.sidebar} and {@link Panels.adjust}
+ * describe the positions, whoever mounted there.
  *
  * @capability ui.mount
  *
@@ -380,7 +380,7 @@ export interface BackdropSlot {
  *
  * {@includeCode ../../../examples/panel-menu/ui/panel.slint}
  *
- * @see {@link Panel}, {@link PanelSlot}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link Panel}, {@link PanelSlot}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -401,28 +401,24 @@ export interface Panels {
    *   {@link Panel.setInteraction} locks keep it).
    * - `"sidebar"`: right of the video, the window's full height, as wide as the
    *   user drags it (at least 317). The user can detach it into a floating
-   *   window titled `title`. Several plugins may mount here (player 0.4.x
-   *   after 0.4.0): each panel is a tab, labelled `title` (else the plugin's
-   *   name), and the player draws a 31px tab strip above the current one
-   *   while there are two or more (with one panel, nothing changes).
-   *   Before player 0.7.3 a ninth tab was refused with `conflict`.
-   *   Showing, hiding and detaching apply to the whole sidebar. If the
-   *   bridge global declares `in property <bool> tabbed`, the player sets
-   *   it to `true` while it draws the strip, so a panel with a tab strip of
-   *   its own can hide it. Panel coordinates (drops) start below the strip.
+   *   window titled `title`. Several plugins may mount here (player 0.4.x after
+   *   0.4.0): each panel is a tab, labelled `title` (else the plugin's name),
+   *   and the player draws a 31px tab strip above the current one while there
+   *   are two or more (with one panel, nothing changes). Showing, hiding and
+   *   detaching apply to the whole sidebar. If the bridge global declares
+   *   `in property <bool> tabbed`, the player sets it to `true` while it draws
+   *   the strip, so a panel with a tab strip of its own can hide it. Panel
+   *   coordinates (drops) start below the strip.
    * - `"backdrop"`: the whole video area, under the OSD, while there is no
    *   video picture (see {@link Panels.backdrop}). One plugin at a time (as
    *   for the bottom bar, another one's mount rejects with `conflict`); it
    *   takes no pointer or keyboard input. While it is mounted, the player does
    *   not show the cover art of audio files itself (from the next file
    *   opened on), so the plugin can draw it.
-   * - `"adjust"` (player 0.7.6, SDK 1.6.11): **controls that change what is
-   *   playing**: the picture, the sound, the subtitles, the speed (the
-   *   player's own Picture, Audio, Subtitles and Playback panels, a colour
-   *   grading tool). Several plugins may mount here, one tab each, labelled
-   *   `title` (else the plugin's name). Declare `minPlayerVersion: "0.7.6"`:
-   *   older players refuse the slot (`invalid`, "unknown mount slot"), and a
-   *   mount refused during `activate` fails the activation.
+   * - `"adjust"`: **controls that change what is playing**: the picture, the
+   *   sound, the subtitles, the speed (the player's own Picture, Audio,
+   *   Subtitles and Playback panels, a colour grading tool). Several plugins
+   *   may mount here, one tab each, labelled `title` (else the plugin's name).
    *
    * **Choosing between `"sidebar"` and `"adjust"`.** The slot says what the
    * panel is for; the player decides how it looks and may change that at any
@@ -461,13 +457,11 @@ export interface Panels {
    * @returns A {@link Panel} owned by this scope; await {@link Panel.ready}
    *   for the result.
    *
-   * @throws `Error` without a code (throws) This plugin already has a panel
-   *   in this slot (a panel in another slot is fine from player 0.7.6;
-   *   players before 0.7.6 refuse a second panel with `conflict`, so a
-   *   plugin that mounts two declares `minPlayerVersion` 0.7.6), or the file
-   *   exports no component or global, or several and `options`
-   *   does not name one. A file that cannot be read throws Node's file system
-   *   error (`code` `ENOENT` and so on).
+   * @throws `Error` without a code (throws) This plugin already has a panel in
+   * this slot (a panel in another slot is fine from player 0.7.6), or the file
+   * exports no component or global, or several and `options` does not name one.
+   * A file that cannot be read throws Node's file system error (`code` `ENOENT`
+   * and so on).
    * @throws The errors of {@link Panel.ready} (rejects `ready`) The player
    *   refused the mount.
    *
@@ -509,21 +503,16 @@ export interface Panels {
   /** The sidebar position, including its floating state; any plugin may read and toggle it. */
   readonly sidebar: SidebarSlot;
   /**
-   * The adjust column (player 0.7.6, SDK 1.6.11), whoever mounted there;
-   * any plugin may read and toggle it. The same shape as
-   * {@link Panels.sidebar} without floating: the adjust column never
-   * detaches.
+   * The adjust column, whoever mounted there; any plugin may read and toggle
+   * it. The same shape as {@link Panels.sidebar} without floating: the adjust
+   * column never detaches.
    *
    * @remarks
-   * `state` is `null` while no plugin has a panel there. Players before
-   * 0.7.6 build the `plugin` object with their own SDK, which has no
-   * `adjust`: there `plugin.panels.adjust` is `undefined` and reading its
-   * `state` throws a `TypeError`, so declare `"minPlayerVersion": "0.7.6"`
-   * (or test `plugin.panels.adjust` first). The column starts hidden (`preferred: false`, `reason:
-   * "userHidden"`) until the user opens it. To open the column at your own
-   * panel, call {@link Panel.show} (or {@link Panel.toggle}, which closes it
-   * again when your tab is already the current one, the behaviour of the
-   * player's own `Alt+1…4`).
+   * `state` is `null` while no plugin has a panel there. The column starts
+   * hidden (`preferred: false`, `reason: "userHidden"`) until the user opens
+   * it. To open the column at your own panel, call {@link Panel.show} (or
+   * {@link Panel.toggle}, which closes it again when your tab is already the
+   * current one, the behaviour of the player's own `Alt+1…4`).
    *
    * @example Open the adjust column at this plugin's tab with a key
    * One command opens the column at the plugin's tab, and pressing it again
@@ -548,8 +537,7 @@ export interface Panels {
    * });
    * ```
    *
-   * @player 0.7.6 (declare `"minPlayerVersion": "0.7.6"`; older players
-   *   have no `adjust`: reading its `state` throws a `TypeError`).
+   * @player 0.7.6
    * @since 1.6.11
    */
   readonly adjust: PanelSlot;
@@ -585,13 +573,12 @@ export interface ConfirmOptions {
   /** A checkbox under the text, such as "Don't ask again"; 1–40 characters. */
   checkbox?: TextValue;
   /**
-   * Values for the placeholders of `message` and `detail` (player 0.4.3).
-   * Any of the texts may instead be a {@link Text} (SDK 1.5.11), which
-   * carries its own arguments; `args` only fills the string ones.
-   * Every text of the dialog is English source text that the player shows
-   * translated from the plugin's catalog; `message` and `detail` are
-   * templates like {@link Osd.show}'s. The length limits apply to the shown
-   * text.
+   * Values for the placeholders of `message` and `detail`. Any of the texts may
+   * instead be a {@link Text}, which carries its own arguments; `args` only
+   * fills the string ones. Every text of the dialog is English source text that
+   * the player shows translated from the plugin's catalog; `message` and
+   * `detail` are templates like {@link Osd.show}'s. The length limits apply to
+   * the shown text.
    *
    * @since 1.5.9
    */
@@ -644,7 +631,7 @@ export interface ConfirmOptions {
  * }
  * ```
  *
- * @see [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -822,10 +809,9 @@ export interface Dialogs {
     /** The dialog's title (English source text or a {@link Text}), at most 256 bytes. */
     title?: TextValue;
     /**
-     * The proposed file name: a plain name, at most 256 bytes. A string is
-     * data (not translated); a {@link Text} (SDK 1.5.11) is shown
-     * translated, `text("Playlist.m3u8")` (a `/` or `\\` in a translation
-     * becomes `-`).
+     * The proposed file name: a plain name, at most 256 bytes. A string is data
+     * (not translated); a {@link Text} is shown translated,
+     * `text("Playlist.m3u8")` (a `/` or `\\` in a translation becomes `-`).
      */
     fileName?: TextValue;
   }): Promise<string | null>;
@@ -878,9 +864,8 @@ export interface OsdPanel extends Disposable {
    * @param text - The text, with `\n` between lines: at most 32 lines and
    *   4096 bytes once translated and formatted. `null` hides the block. A
    *   template, like {@link Osd.show}'s.
-   * @param args - Values for its placeholders (player 0.4.3); `null` or
-   *   omitted for none.
-   * @param options - `maxColumns`: cut long lines (SDK 1.5.11).
+   * @param args - Values for its placeholders; `null` or omitted for none.
+   * @param options - `maxColumns`: cut long lines.
    *
    * @example Show two loop points, then hide the block
    * The block shows "A: 12.0 s" and "B: 18.5 s" on two lines, then
@@ -911,9 +896,8 @@ export interface OsdPanelOptions {
   /**
    * Cut every line longer than this many columns, after translation and
    * formatting, ending it with `…`: a wide character (Chinese, Japanese,
-   * Korean, full-width forms) is two columns, a combining mark none, any
-   * other one. An integer from 8 to 1000 (player 0.4.3; older players show
-   * whole lines). Measure the video area to choose it.
+   * Korean, full-width forms) is two columns, a combining mark none, any other
+   * one. An integer from 8 to 1000. Measure the video area to choose it.
    */
   maxColumns?: number;
 }
@@ -962,7 +946,7 @@ export interface OsdPanelOptions {
  * say("Blur on");
  * ```
  *
- * @see {@link OsdPanel}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link OsdPanel}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -974,27 +958,26 @@ export interface Osd {
    * Replaces the message on screen, whichever plugin showed it. A message
    * that is on screen when the plugin stops still disappears on time.
    *
-   * The text is a template in English: the player shows its translation
-   * from the plugin's catalog, with the placeholders (`{}`, `{0}`, `{name}`;
-   * `{{` and `}}` for braces) filled from `args`. Without `args` the text
-   * shows as it is (braces included). Untranslated, the English template is
-   * formatted. Never compose the sentence in TypeScript
-   * (`` `Speed ${rate}×` ``): translators can only translate whole templates.
-   * An argument that is itself words is a {@link Text} (SDK 1.5.11), and a
-   * message made of a varying number of parts is a {@link TextList} of
-   * texts; `text` may also be a `Text` (then without `args`).
+   * The text is a template in English: the player shows its translation from
+   * the plugin's catalog, with the placeholders (`{}`, `{0}`, `{name}`; `{{`
+   * and `}}` for braces) filled from `args`. Without `args` the text shows as
+   * it is (braces included). Untranslated, the English template is formatted.
+   * Never compose the sentence in TypeScript (`` `Speed ${rate}×` ``):
+   * translators can only translate whole templates. An argument that is itself
+   * words is a {@link Text}, and a message made of a varying number of parts is
+   * a {@link TextList} of texts; `text` may also be a `Text` (then without
+   * `args`).
    *
    * @capability ui.osd
    *
-   * @param text - The template, 1–200 characters once translated and
-   *   formatted; line breaks become spaces.
-   * With `options.actions` (player 0.7.6) the message ends in up to two
-   * buttons, each running one of the plugin's own commands
-   * ({@link OsdShowOptions}). Older players show the message without them.
+   * @param text - The template, 1–200 characters once translated and formatted;
+   * line breaks become spaces. With `options.actions` the message ends in up to
+   * two buttons, each running one of the plugin's own commands
+   * ({@link OsdShowOptions}).
    *
-   * @param args - Values for its placeholders (player 0.4.3; older players
-   *   show the template as it is). Pass `null` with a `Text` and options.
-   * @param options - Action buttons after the text (SDK 1.6.9).
+   * @param args - Values for its placeholders. Pass `null` with a `Text` and
+   * options.
+   * @param options - Action buttons after the text.
    * @returns Resolves once the message is on screen.
    *
    * @throws `invalid` (rejects) The shown text is empty, only white space,
@@ -1068,7 +1051,7 @@ export interface Osd {
 }
 
 /**
- * One button at the end of an OSD message ({@link Osd.show}, player 0.7.6).
+ * One button at the end of an OSD message ({@link Osd.show}).
  *
  * @since 1.6.9
  * @category UI
@@ -1092,7 +1075,7 @@ export interface OsdAction {
 }
 
 /**
- * Options of {@link Osd.show} (SDK 1.6.9).
+ * Options of {@link Osd.show}.
  *
  * @remarks
  * A message with actions stays about 4 seconds instead of 2, and does not

@@ -1,6 +1,6 @@
 /**
  * `vestra-plugin i18n extract` and `vestra-plugin i18n check`, and the
- * catalog step of `vestra-plugin build` (docs/how-to/i18n.md): find the
+ * catalog step of `vestra-plugin build` (docs/guides/i18n.md): find the
  * translatable texts of a plugin, keep `locales/messages.pot` and
  * `locales/<lang>.po` up to date, warn about what cannot be translated, and
  * compile the `.po` files the player reads.

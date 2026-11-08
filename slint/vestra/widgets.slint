@@ -55,10 +55,8 @@ export struct ToolTipKey {
 // closes when the pointer leaves, or presses on content that does not take
 // the press itself; it shows again on the next hover. It is Slint's
 // input-transparent tooltip: every press reaches the control under the
-// pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a
-// PopupWindow, which swallowed the first press after it showed and took the
-// focus while it was open.)
-// With `keys` (SDK 1.6.6) the tip names the control's keys after its title,
+// pointer, and the tip does not take the keyboard focus.
+// With `keys` the tip names the control's keys after its title,
 // each as a key cap and what it does: "Brightness  [W] −  [E] +"; `detail`
 // follows dimmed ("· double-click: Default"). Changing `keys` or `detail`
 // changes the tip's text, never which elements exist while hovering.

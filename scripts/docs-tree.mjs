@@ -471,7 +471,7 @@ export function buildTree(project) {
     rootNode,
     node("Guides", "Section", {
       summary:
-        "The documentation pages, by group: tutorials, how-to guides, reference, explanation, guidelines, examples, upgrading.",
+        "The documentation pages, by group: the tutorial, the guides, the reference and the examples.",
     }),
   );
   const documents = new Map();
@@ -628,7 +628,7 @@ export function buildTree(project) {
     modulePaths.set(module.name.replace(/[@/]/g, "_"), module.target.path);
   rootNode.text = [
     `Vestra Player SDK ${pkg.version}: the documentation of ${SITE}, as a tree of pages.`,
-    "Open a path below; each listing shows the paths one level down. Paths ignore case, spaces and punctuation, the leading / is optional, `.` works like `/` (Snapshot.export), a guide page also answers to its file name (/Guides/How-to/testing) and a name alone finds its declaration (TestHost). Long texts come in pages; a #heading opens the page that has it. Search by name or text when you do not know the path.",
+    "Open a path below; each listing shows the paths one level down. Paths ignore case, spaces and punctuation, the leading / is optional, `.` works like `/` (Snapshot.export), a guide page also answers to its file name (/Guides/Guides/testing) and a name alone finds its declaration (TestHost). Long texts come in pages; a #heading opens the page that has it. Search by name or text when you do not know the path.",
   ].join("\n\n");
   for (const n of nodes) {
     if (n === rootNode) continue;

@@ -5,18 +5,14 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 
 # Test host
 
-`@vestra-player/sdk/testing` runs a plugin against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player that speaks the real protocol, so the SDK's own logic (revisions, conditional commits, recovery after lost replies) runs as it does in the player. How to write tests with it is in [Test a plugin](../how-to/testing.md); every member's details are in the {@link "@vestra-player/sdk/testing" | @vestra-player/sdk/testing} reference.
+`@vestra-player/sdk/testing` runs a plugin against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player that speaks the real protocol, so the SDK's own logic runs as in the player. How to write tests is in [Test a plugin](../guides/testing.md).
 
-## What it simulates and what it does not
-
-- **The player side is simplified**: there is no decoding, no Slint rendering and no native window. A window is a record of its properties and callbacks, and a source is a set of facts the test chooses.
-- **It does not compile Slint files.** Check them by running the plugin in the player (`--plugin <dir>`).
-- **It checks what the player checks**: the command limits, the property value limits and the menu ids are enforced with the player's numbers, and processing values are validated with the player's ranges (an out-of-range `filter.set` ends in `failed` with `invalid`). Export jobs advance one step on every state query (`queued`, `running`, `completed`).
-- **The manifest applies.** {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin} reads `manifest.json` from `directory`, so a call that needs an undeclared capability fails with `capability`, as in the player.
+- **Simplified player side**: no decoding, no Slint rendering or compiling, no native window. A window is a record of its properties and callbacks; a source is a set of facts the test chooses. Check Slint files by running the plugin in the player (`--plugin <dir>`).
+- **The player's checks apply**: the command limits, property value limits, menu ids and processing ranges are enforced with the player's numbers, and the manifest's capabilities apply. Export jobs advance one step on every state query.
 
 ## startPlugin
 
-`startPlugin(activate, options)` resolves with `{ host, plugin, stop, disconnect }` once activation and every registration made during it are done, and rejects when the player would fail the activation (`activate` throws, or a registration made during it fails, for example with `limit`, `conflict` or `invalid`). `plugin` is the object `activate` received; `stop()` disposes the plugin as when the player stops it (scopes released, stores flushed) and removes the host's temporary files; `stop({ reason })` passes the stop reason the player sends, and `disconnect()` stops it as when the player is lost (`host-lost`; requests refused with `disabled`) (SDK 1.5.54). Each test creates its own host.
+`startPlugin(activate, options)` resolves with `{ host, plugin, stop, disconnect }` once activation and its registrations are done, and rejects when the player would fail the activation. `stop()` disposes the plugin as the player does and removes the host's temporary files; `stop({ reason })` passes a stop reason, and `disconnect()` stops it as when the player is lost (`host-lost`). Each test creates its own host.
 
 | Option | Meaning |
 | --- | --- |
@@ -24,7 +20,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | `host` | A `TestHost` prepared before activation (a preset source, preset data). |
 | `dataDirectory` | An existing folder as `plugin.dataDirectory`, to test a restart; by default an empty temporary folder. |
 | `sessionStorage` | The values of `plugin.storage.session` an earlier run left (`host.sessionStorage`), to test a restart within one player session. |
-| `locale` | The interface language (`"zh-Hans"` loads `locales/zh-Hans.po`). Without it the plugin's own texts show in English as declared and the player's own texts (core action OSD messages, menu titles and reasons) in Simplified Chinese, as in SDK 1.5.8 and older; `"en"` shows the player in English. |
+| `locale` | The interface language (`"zh-Hans"` loads `locales/zh-Hans.po`). Without it the plugin's texts show in English and the player's own texts in Simplified Chinese; `"en"` shows the player in English. |
 | `id`, `capabilities` | Start without a `manifest.json`. |
 
 ## Acting like the user
@@ -39,7 +35,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | answering a dialog | before the action: `host.dialogAnswers.push(["/media/movie.mkv"])` for a file dialog, `null` for Cancel, `{ confirmed: true, checked: false }` for `dialogs.confirm` |
 | another plugin calling `player.next()` | `await host.step("next")` |
 
-`press` follows the player's binding table: the panel's bindings first when `panel` is true, then the global ones, the player's own commands before the plugin's. A disabled command lets the key go on to the next command bound to it (SDK 1.5.12, as player 0.4.3). It resolves with what the key did:
+`press` follows the player's binding table: the panel's bindings first when `panel` is true, then the global ones, the player's own commands before the plugin's. A disabled command lets the key go on to the next command bound to it. It resolves with what the key did:
 
 | Result | Meaning |
 | --- | --- |
@@ -47,30 +43,18 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | `"reason"` | Only disabled commands hold the key, and the first one with a `reason` showed it on the OSD (it is in `host.osd`) and ate the key. |
 | `"passed"` | Only disabled commands without a reason hold it; the key goes on to the focused control and nothing runs. |
 
-It rejects when nothing is bound to the key or the command it would run is busy. User overrides preset in `host.bindings.overlay` apply, and `host.conflicts` lists keys that several commands declare.
+It rejects when nothing is bound to the key or its command is busy. Overrides preset in `host.bindings.overlay` apply; `host.conflicts` lists keys that several commands declare.
 
 ## Simulating the player
 
-- `host.openElsewhere(path, phase?)`: the user or another plugin opened a source (a new source id, then `phase`, `"ready"` by default). Calls the plugin made against the old state now fail with `stale`.
-- `host.setSource({ phase, position, duration, paused, audioTracks, … })`: the state changed (the user paused, playback reached the end). Before `startPlugin`, it presets the source the plugin finds at activation.
-- `host.setMainWindow({ fullscreen, maximized, videoArea })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the main window, the colour scheme, the installed plugins changed.
-- Preset data the player would return: `host.stats` (`player.stats()`), `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`, `host.rendering` (the GPU or software choice), `host.upscaling`; `host.tools.handle("ffprobe", (args) => ({ stdout }))` makes a tool available and answers its runs.
-- `host.handle(method, fn)` replaces the player's answer to one protocol method until `host.reset(method)`. The handler gets the request parameters and returns the reply, or throws: `throw new HostError(code, message)` is a refusal (the plugin's call rejects with that `code`, one of the [error codes](errors.md)); `throw new Error(…)` is a lost reply, and the SDK runs its recovery path. Method names are the protocol's (`"processing.replace"`, `"system.openPath"`, `"clipboard.writeText"`): `host.calls` lists every request in order, which shows the method an action uses, and `host.sent(method)` the parameters of one method's requests.
+- `host.openElsewhere(path, phase?)`: the user or another plugin opened a source; the plugin's calls against the old state now fail with `stale`.
+- `host.setSource({ … })`, `host.setMainWindow({ … })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the state changed; before `startPlugin`, a preset.
+- Preset answers: `host.stats`, `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`, `host.rendering`, `host.upscaling`, `host.tools.handle(name, fn)`.
+- `host.handle(method, fn)` replaces the player's answer to one protocol method until `host.reset(method)`. `throw new HostError(code, message)` in it is a refusal with that [code](errors.md); `throw new Error(…)` is a lost reply. `host.calls` lists every request in order, `host.sent(method)` one method's parameters.
 
 ## Waiting
 
-`await host.settle(ms?)` waits until no request is in flight and the SDK's follow-up update passes ran; with `ms` it also waits that long, so that debounces and timers due by then fire (`host.settle(400)` is past `storage.json`'s 300 ms debounce). `command(id).run()` and `press` already wait. `settle` waits only for calls to the player, not for the plugin's own file reads, child processes or network requests.
-
-## What it records
-
-| Area | Members |
-| --- | --- |
-| Windows and panels | `host.window(id).props` and `.visible`, `host.mounted().props`; property names are the Slint (kebab-case) names: `canMark` is `can-mark` |
-| Commands | `host.command(id).state` (`enabled`, `checked`, `busy`, `reason`), `.declaration` (the English path and bindings as declared), `.display` (the menu as shown, `display.reason` the shown reason) |
-| Messages | `host.osd` (every message shown, oldest first), `host.osdPanel`, `host.confirms` and `host.confirmTexts` (confirmation dialogs), `host.fileDialogs` (titles and file names), `host.translate(text, args)` (any text as shown) |
-| Playback and processing | `host.source` (`position`, `paused`, `loop`, …), `host.processing`, `host.subtitles`, `host.jobs`, `host.exports` |
-| Everything sent | `host.calls`, `host.sent(method)`; `host.system.opened`, `host.clipboard`, `host.tools.calls` for the system services |
-| Storage | `host.dataDirectory`, `host.sessionStorage` |
+`await host.settle(ms?)` waits until no request is in flight and the SDK's update passes ran; with `ms` it also lets timers due by then fire (`host.settle(400)` is past `storage.json`'s 300 ms debounce). `command(id).run()` and `press` already wait. It does not wait for the plugin's own file, process or network work.
 
 ## Every member
 
@@ -84,14 +68,14 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | {@link "@vestra-player/sdk/testing"!TestHost.windows} | Tool windows by id (see `TestHost.window`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.panels} | The plugin's mounted panels by slot, in mount order (SDK 1.6.15: one panel per slot). |
+| {@link "@vestra-player/sdk/testing"!TestHost.panels} | The plugin's mounted panels by slot, in mount order (one panel per slot). |
 | {@link "@vestra-player/sdk/testing"!TestHost.panel} | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop), the last mounted when it has several, or `null`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.commands} | The plugin's commands by local id (see `TestHost.command`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreCommands} | The player's 14 core actions (`host/<id>`), kept apart from the plugin's `commands`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.layout} | Both panel positions as the player reports them (`null` while no panel is mounted there). |
 | {@link "@vestra-player/sdk/testing"!TestHost.osd} | Every `osd.show` text as the player shows it (translated with the plugin's catalog and formatted with its args), newest last. |
-| {@link "@vestra-player/sdk/testing"!TestHost.osdActions} | The action buttons of each `osd.show` message, in step with `osd` (index for index): each button's title as shown and its command; `[]` for a message without actions (SDK 1.6.9). |
-| {@link "@vestra-player/sdk/testing"!TestHost.pressOsdAction}() | Press button `index` of the newest OSD message, as the user does (player 0.7.6): its command runs as if picked from a menu, and settles. |
+| {@link "@vestra-player/sdk/testing"!TestHost.osdActions} | The action buttons of each `osd.show` message, in step with `osd` (index for index): each button's title as shown and its command; `[]` for a message without actions. |
+| {@link "@vestra-player/sdk/testing"!TestHost.pressOsdAction}() | Press button `index` of the newest OSD message, as the user does: its command runs as if picked from a menu, and settles. |
 | {@link "@vestra-player/sdk/testing"!TestHost.osdPanel} | The text of this plugin's osd panel as shown, `null` when hidden. |
 | {@link "@vestra-player/sdk/testing"!TestHost.locale} | The interface language the test host plays (`plugin.i18n.locale`), `"en"` by default. |
 | {@link "@vestra-player/sdk/testing"!TestHost.loadCatalog}() | Read the plugin's translations for `TestHost.locale` from a package directory, as the player would (`locales/<locale>.json` of a built package, else the source `locales/<locale>.po`); `startPlugin` does this. |
@@ -111,7 +95,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.timeline} | Timeline layers by plugin id (this plugin's is `manifestId`) and the merged list `plugin.timeline.marks` reads. |
 | {@link "@vestra-player/sdk/testing"!TestHost.setTimelineRanges}() | Simulate another plugin publishing its timeline ranges (or clearing them with `[]`); pushes `timeline.changed` when the plugin subscribed. |
 | {@link "@vestra-player/sdk/testing"!TestHost.setTimelineLayer}() | Simulate another plugin publishing its timeline layer (or clearing it with `[]`); pushes `timeline.changed` when the plugin subscribed. |
-| {@link "@vestra-player/sdk/testing"!TestHost.images} | Runtime images written to views (`plugin.ui.image`, `plugin.ui.remoteImage`), whole values and (SDK 1.5.19) images nested in rows, newest last. |
+| {@link "@vestra-player/sdk/testing"!TestHost.images} | Runtime images written to views (`plugin.ui.image`, `plugin.ui.remoteImage`), whole values and images nested in rows, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.imagePath}() | The file an image property shows, or `null` when the value is not a runtime image. |
 | {@link "@vestra-player/sdk/testing"!TestHost.dropProviders} | `drops.provide` registrations of this plugin, in order (`id` is the SDK's). |
 | {@link "@vestra-player/sdk/testing"!TestHost.panelDrops} | The panel has an `onDrop` listener. |
@@ -130,10 +114,10 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.videoRender} | The render options (`plugin.video.render()`): who owns them, the values the player holds, and whether it renders on the GPU (`gpu: false` is software rendering, where every `set` fails with `unsupported`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.setVideoRenderOwner}() | Simulate another plugin owning the render options (the plugin's `video.render()` then fails with `conflict`), or, with `null`, releasing them (values reset to the defaults). |
 | {@link "@vestra-player/sdk/testing"!TestHost.failVideoRender}() | What the player pushes when mpv cannot compile a shader (code `failed`) or switches to software rendering (`unsupported`, which also sets `videoRender.gpu` to false and `rendering.reason` to `window-fallback` with `message`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.videoShaders} | The shader channel (`plugin.video.shaders(id)`, SDK 1.5.39): the lists the player holds for this plugin's handles by id (the real paths, after following links), and how many shaders other plugins hold, which count against `VIDEO_PROCESSING_LIMITS``.shaders` (`limit`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.videoShaders} | The shader channel (`plugin.video.shaders(id)`): the lists the player holds for this plugin's handles by id (the real paths, after following links), and how many shaders other plugins hold, which count against `VIDEO_PROCESSING_LIMITS``.shaders` (`limit`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.fileRoots} | Where the plugin's own files may be: its package directory and its data directory (`startPlugin` sets both when the list is still empty). |
 | {@link "@vestra-player/sdk/testing"!TestHost.failVideoShaders}() | What the player pushes to a shader handle when mpv cannot compile a shader (code `failed`; the player cannot tell whose shader failed, so every handle with shaders hears it) or the player switches to software rendering (`unsupported`; use `TestHost.failVideoRender`, which also tells the handles). |
-| {@link "@vestra-player/sdk/testing"!TestHost.previousCrash} | Play a run after an abnormal end with plugin shaders on (player 0.6.3): while set, a non-empty `video.shaders` list and a render options `set` with a non-empty `shaders` list are refused with `previous-crash` and this message; clearing still works. |
+| {@link "@vestra-player/sdk/testing"!TestHost.previousCrash} | Play a run after an abnormal end with plugin shaders on: while set, a non-empty `video.shaders` list and a render options `set` with a non-empty `shaders` list are refused with `previous-crash` and this message; clearing still works. |
 | {@link "@vestra-player/sdk/testing"!TestHost.processing} | The player's processing (filter) state. |
 | {@link "@vestra-player/sdk/testing"!TestHost.subtitles} | The player's subtitle state: tracks, selection, style layers, fonts and loaded resources. |
 | {@link "@vestra-player/sdk/testing"!TestHost.uploads} | Subtitle uploads in progress, by upload id. |
@@ -155,15 +139,15 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.sessionStorage} | `plugin.storage.session`: key → value, as the player keeps them. |
 | {@link "@vestra-player/sdk/testing"!TestHost.systemInfo} | What `plugin.app.system()` reports. |
 | {@link "@vestra-player/sdk/testing"!TestHost.app} | What `plugin.app` reports. |
-| {@link "@vestra-player/sdk/testing"!TestHost.rendering} | The player's rendering choice behind `plugin.rendering` (player 0.5.13). |
-| {@link "@vestra-player/sdk/testing"!TestHost.upscaling} | The GPU's video upscaler behind `plugin.video.upscaling` (player 0.5.16), answered as the player would: - `state()` and `set(true)` set `checked` (the player's one GPU check; a plugin that should not wake the GPU while it starts can assert it is still `false`) and report `available` from `reason` (`null`: it works), this plugin's `enabled`, and `requested` with `factor` while enabled, available and `factor` is above 1. |
-| {@link "@vestra-player/sdk/testing"!TestHost.upscalingDecoding}() | Make the upscaler's reason `decoding` with `cause`, with the player's message (player 0.5.25), and set `upscaling.hwdecCurrent` to match (`d3d11va-copy`, `no`, `nvdec`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.upscalingChanged}() | Send `video.upscaling.changed` with the state `TestHost.upscaling` describes now (without `enabled`), as the player does when it changes (player 0.5.25); a plugin listening with `plugin.video.upscaling.onChange` receives it. |
+| {@link "@vestra-player/sdk/testing"!TestHost.rendering} | The player's rendering choice behind `plugin.rendering`. |
+| {@link "@vestra-player/sdk/testing"!TestHost.upscaling} | The GPU's video upscaler behind `plugin.video.upscaling`, answered as the player would: - `state()` and `set(true)` set `checked` (the player's one GPU check; a plugin that should not wake the GPU while it starts can assert it is still `false`) and report `available` from `reason` (`null`: it works), this plugin's `enabled`, and `requested` with `factor` while enabled, available and `factor` is above 1. |
+| {@link "@vestra-player/sdk/testing"!TestHost.upscalingDecoding}() | Make the upscaler's reason `decoding` with `cause`, with the player's message, and set `upscaling.hwdecCurrent` to match (`d3d11va-copy`, `no`, `nvdec`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.upscalingChanged}() | Send `video.upscaling.changed` with the state `TestHost.upscaling` describes now (without `enabled`), as the player does when it changes; a plugin listening with `plugin.video.upscaling.onChange` receives it. |
 | {@link "@vestra-player/sdk/testing"!TestHost.chapters} | What `player.chapters()` lists while media is ready. |
 | {@link "@vestra-player/sdk/testing"!TestHost.dataDirectory} | `plugin.dataDirectory`: a fresh empty temporary directory, removed with the host on `stop()`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.manifestId} | The manifest id of the plugin under test (set by `startPlugin`; `"test.plugin"` by default). |
 | {@link "@vestra-player/sdk/testing"!TestHost.stepSeek} | The `player.setStepSeek` value in effect (default 5). |
-| {@link "@vestra-player/sdk/testing"!TestHost.stepSeekKeyframes} | The `player.setStepSeek` `keyframes` in effect (default `false`, SDK 1.5.19). |
+| {@link "@vestra-player/sdk/testing"!TestHost.stepSeekKeyframes} | The `player.setStepSeek` `keyframes` in effect (default `false`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.keyframes} | Test data: the keyframe times (seconds, ascending) of the current source, for keyframe step seeks. |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreSeeks} | Every step seek the core ran (`seek-backward` / `seek-forward`, from a key, the menu or `host.run`), newest last: the step, whether it went to a keyframe, and where it landed. |
 | {@link "@vestra-player/sdk/testing"!TestHost.seeks} | Every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest last, with the mode it asked for. |
@@ -175,17 +159,17 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.emit}() | Deliver a host event to the plugin. |
 | {@link "@vestra-player/sdk/testing"!TestHost.setSource}() | Change the source facts and broadcast them, as if the player's state changed (the user paused, playback reached the end, a file finished loading). |
 | {@link "@vestra-player/sdk/testing"!TestHost.setMainWindow}() | Simulate the user changing the main window (resizing, maximizing or restoring it, entering or leaving fullscreen, closing the picture-in-picture window) and broadcast it. |
-| {@link "@vestra-player/sdk/testing"!TestHost.popSidebar}() | The pointer reached the right edge in fullscreen (`true`) or left the popped-out columns (`false`): the attached sidebar and the adjust column (SDK 1.6.13), those switched on, pop out or collapse (reference §6.3). |
+| {@link "@vestra-player/sdk/testing"!TestHost.popSidebar}() | The pointer reached the right edge in fullscreen (`true`) or left the popped-out columns (`false`): the attached sidebar and the adjust column, those switched on, pop out or collapse (reference §6.3). |
 | {@link "@vestra-player/sdk/testing"!TestHost.openElsewhere}() | Simulate another plugin (or the user) opening a source: a new `sourceId`, then the given phase. |
 | {@link "@vestra-player/sdk/testing"!TestHost.failStream}() | Simulate a generated stream failing in the player (its audio device lost, its frame connection broken), like the player: the source fails with `message` (`phase: "error"`) and the producer is retired at once. |
 | {@link "@vestra-player/sdk/testing"!TestHost.press}() | Press a binding like the host's table would: panel-focus bindings first when `panel` is true, then global ones; within a scope the earliest registration first (the player's own commands before the plugin's), as the conflict rule orders them. |
 | {@link "@vestra-player/sdk/testing"!TestHost.conflicts} | Bindings declared by more than one command, each as `[binding, winner, ...ignored]` (command ids; core actions as `host/<id>`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.rebind}() | Change the keys of one of the plugin's commands, or of one of the player's core commands by its `host/<id>` (SDK 1.6.16), as the user does in Keyboard Shortcuts (SDK 1.6.6): `inputs` replaces its keys (`[]` clears them, as Ignore Default Shortcuts does for every default), `null` gives it its own defaults back. |
+| {@link "@vestra-player/sdk/testing"!TestHost.rebind}() | Change the keys of one of the plugin's commands, or of one of the player's core commands by its `host/<id>`, as the user does in Keyboard Shortcuts: `inputs` replaces its keys (`[]` clears them, as Ignore Default Shortcuts does for every default), `null` gives it its own defaults back. |
 | {@link "@vestra-player/sdk/testing"!TestHost.bindings} | The binding overlay `plugin.bindings.set` writes (`"<plugin>/<command>"` to inputs; preset it to simulate saved overrides). |
 | {@link "@vestra-player/sdk/testing"!TestHost.packages} | What `packages.list` reports; `setEnabled`, `uninstall` and `install` update it. |
 | {@link "@vestra-player/sdk/testing"!TestHost.packageCalls} | Every `packages.setEnabled` / `uninstall` / `install`, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.candidates} | Packages `validate` and `validateArchive` accept: path (directory or `.vxp` file) → its manifest. |
-| {@link "@vestra-player/sdk/testing"!TestHost.installKeepsDisabled} | Which player's install rule `packages.install` plays. |
+| {@link "@vestra-player/sdk/testing"!TestHost.installKeepsDisabled} | Which install rule `packages.install` plays. |
 | {@link "@vestra-player/sdk/testing"!TestHost.remoteImages} | Remote images (`plugin.ui.markdown`, `plugin.ui.remoteImage`): address → a local PNG or JPEG file served for it, or `null` for a failing download. |
 | {@link "@vestra-player/sdk/testing"!TestHost.markdown}() | The Markdown document a value holds (its wire form read back), or `null` when the value is not one. |
 | {@link "@vestra-player/sdk/testing"!TestHost.audioDevices} | What `player.audioDevices()` lists. |
@@ -194,10 +178,10 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.command}() | The plugin's command with this local id. |
 | {@link "@vestra-player/sdk/testing"!TestHost.barButtons} | The plugin's bottom-bar buttons (`CommandOptions.button`) as the player shows them: at most one, the first declared (`BAR_BUTTON_LIMITS`; a later one stays a menu item only). |
 | {@link "@vestra-player/sdk/testing"!TestHost.window}() | The plugin's tool window with this id (by default the file name without extension: `ui/picture.slint` → `picture`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.mounted}() | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop): the one in `slot`, or without it the only one (SDK 1.6.15: a plugin mounts one panel per slot; with several, name the slot). |
+| {@link "@vestra-player/sdk/testing"!TestHost.mounted}() | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop): the one in `slot`, or without it the only one (a plugin mounts one panel per slot; with several, name the slot). |
 | {@link "@vestra-player/sdk/testing"!TestHost.sent}() | The parameters of every request of one wire method, oldest first. |
 | {@link "@vestra-player/sdk/testing"!TestHost.settle}() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
 | {@link "@vestra-player/sdk/testing"!TestHost.close}() | Close the fake stream servers and delete the host's temporary directories. |
-| {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation, player 0.5.21), one line per reason: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its panel in the bottom bar or the backdrop, its open windows (these as the player's log says them), and, from player 0.7.3, its sidebar tab while that is the current tab. |
+| {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation), one line per reason: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its panel in the bottom bar or the backdrop, its open windows (these as the player's log says them), and its sidebar tab while that is the current tab. |
 
 <!-- /generated -->

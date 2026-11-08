@@ -140,7 +140,7 @@ export interface SubtitleConditional {
  * @capability `subtitles.read` to read; `subtitles.control` and
  * `subtitles.read` to change; `events` to re-read on source changes.
  *
- * @see [Load subtitles from a plugin](../../../docs/how-to/subtitles.md)
+ * @see [Load subtitles from a plugin](../../../docs/guides/subtitles.md)
  * @since 1.0.0
  * @category Subtitles
  */
@@ -227,13 +227,12 @@ export interface Subtitles {
     options?: SubtitleConditional & { role?: "primary" | "secondary" },
   ): Promise<SubtitlesState>;
   /**
-   * Upload a subtitle file's bytes (UTF-8 SRT, or ASS/SSA with
-   * `format: "ass"`) for the current source; select it unless
-   * `select: "none"`. `title` (1–200 characters) names the track: data, or
-   * a {@link Text} the player translates (`text("{} · {}", [text("Simplified
-   * Chinese"), file])`, SDK 1.5.11). Aborting
-   * `signal` before the commit discards the upload (rejects with AbortError);
-   * once the commit was sent it completes.
+   * Upload a subtitle file's bytes (UTF-8 SRT, or ASS/SSA with `format: "ass"`)
+   * for the current source; select it unless `select: "none"`. `title` (1–200
+   * characters) names the track: data, or a {@link Text} the player translates
+   * (`text("{} · {}", [text("Simplified Chinese"), file])`). Aborting `signal`
+   * before the commit discards the upload (rejects with AbortError); once the
+   * commit was sent it completes.
    *
    * Limits: SRT ≤ 2 MiB and ≤ 10,000 cues; ASS ≤ 2 MiB with `[Script Info]`
    * and `[Events]` and 1–20,000 `Dialogue:` lines. Convert other formats

@@ -30,16 +30,15 @@ import { fileURLToPath } from "node:url";
 const SDK_DIRECTORY = fileURLToPath(new URL("..", import.meta.url));
 
 /**
- * Why something listens, for the player's log line that says why a plugin
- * keeps running (`events.subscribe { why }`, player 0.5.21): computed
- * only when the player is told.
+ * Why something listens, for the player's log line that says why a plugin keeps
+ * running (`events.subscribe { why }`): computed only when the player is told.
  */
 export type Why = () => string;
 
 /**
- * Events the player wakes a stopped plugin for (player 0.5.21): a listener
- * of one does not keep the plugin running. They follow deliberate changes
- * (an install, a key edit, the palette, a resolver), not playback.
+ * Events the player wakes a stopped plugin for: a listener of one does not keep
+ * the plugin running. They follow deliberate changes (an install, a key edit,
+ * the palette, a resolver), not playback.
  */
 export const WAKE_EVENTS: readonly string[] = [
   "packages.changed",
@@ -58,9 +57,9 @@ export interface PluginManifest {
 }
 
 /**
- * The player's answers to a declaration that refuse that one declaration
- * (a command's path, texts or count): during activation they skip it
- * instead of failing the plugin (`Connection.declaring`, SDK 1.5.49).
+ * The player's answers to a declaration that refuse that one declaration (a
+ * command's path, texts or count): during activation they skip it instead of
+ * failing the plugin (`Connection.declaring`).
  */
 const DECLARATION_REFUSALS: ReadonlySet<string> = new Set([
   "invalid",
@@ -121,12 +120,12 @@ const SILENT: StateSignals = {
 };
 
 /**
- * One host event's listeners. `active` counts the plugin's own listeners
- * and holds (an `onChange`, a binding that read the state); the SDK's own
- * state mirrors do not count. The player is told whether anything but a
- * mirror listens (`events.subscribe { mirror }`, player 0.5.18): a plugin
- * whose subscriptions are all mirrors holds no listener and may be stopped
- * while idle; its state is read again when it starts.
+ * One host event's listeners. `active` counts the plugin's own listeners and
+ * holds (an `onChange`, a binding that read the state); the SDK's own state
+ * mirrors do not count. The player is told whether anything but a mirror
+ * listens (`events.subscribe { mirror }`): a plugin whose subscriptions are all
+ * mirrors holds no listener and may be stopped while idle; its state is read
+ * again when it starts.
  */
 interface EventGroup {
   listeners: Set<Listener>;
@@ -194,8 +193,8 @@ export class Connection {
   readonly locale: Locale;
   /**
    * Protocol additions the player advertises at start-up (`features` in the
-   * handshake's app data, player 0.6.0): `ui.patch` (row patches of
-   * property writes). Not part of the plugin API; empty for older players.
+   * handshake's app data): `ui.patch` (row patches of property writes). Not
+   * part of the plugin API.
    */
   readonly features: ReadonlySet<string>;
   constructor(
@@ -268,13 +267,13 @@ export class Connection {
     return work;
   }
   /**
-   * A declaration the player checks on its own (`what`: "command x"),
-   * started like `starting`. In the player's runner a refusal of it during
-   * activation (`invalid`, `conflict`, `limit`) does not fail the plugin:
-   * it is logged, skipped and reported to the scope once activation
-   * completes, so an `onError` added anywhere in `activate` hears it (SDK
-   * 1.5.49; VS Code logs a bad contribution and activates the extension).
-   * Under `strictDeclarations` (TestHost) it fails activation as before.
+   * A declaration the player checks on its own (`what`: "command x"), started
+   * like `starting`. In the player's runner a refusal of it during activation
+   * (`invalid`, `conflict`, `limit`) does not fail the plugin: it is logged,
+   * skipped and reported to the scope once activation completes, so an
+   * `onError` added anywhere in `activate` hears it (VS Code logs a bad
+   * contribution and activates the extension). Under `strictDeclarations`
+   * (TestHost) it fails activation as before.
    */
   declaring<T>(
     work: Promise<T>,
@@ -435,11 +434,10 @@ export class Connection {
     };
   }
   /**
-   * A development warning, once per plugin, no behaviour change (SDK
-   * 1.6.12): the plugin follows `event` (an `onChange`, a `bind` that reads
-   * the state) without the `events` capability, so changes made elsewhere
-   * (the user, the player, another plugin) never reach it; the state moves
-   * only after its own calls.
+   * A development warning, once per plugin, no behaviour change: the plugin
+   * follows `event` (an `onChange`, a `bind` that reads the state) without the
+   * `events` capability, so changes made elsewhere (the user, the player,
+   * another plugin) never reach it; the state moves only after its own calls.
    */
   #warnUnheard(event: string) {
     if (this.#warnedEvents) return;
@@ -481,10 +479,10 @@ export class Connection {
     return result;
   }
   /**
-   * One request by its method name, as given (`plugin.wire.request`, SDK
-   * 1.7.0): nothing added, nothing checked here, the player checks the
-   * capability. Every other part of the SDK uses the typed clients
-   * (`host`); `scripts/check-layers.mjs` keeps it so.
+   * One request by its method name, as given (`plugin.wire.request`): nothing
+   * added, nothing checked here, the player checks the capability. Every other
+   * part of the SDK uses the typed clients (`host`); `scripts/check-layers.mjs`
+   * keeps it so.
    */
   request<T>(method: string, params?: Json): Promise<T> {
     return this.#transport.request<T>(method, params);

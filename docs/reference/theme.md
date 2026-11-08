@@ -5,7 +5,7 @@ description: The Theme tokens with their current values, fonts, the icon set, th
 
 # Theme
 
-What a plugin's Slint file can import from the player's library. How Slint and TypeScript talk is in [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md); which token to use where is in [Guidelines: interface](../guidelines/interface.md).
+What a plugin's Slint file can import from the player's library. How Slint and TypeScript talk is in [Open a tool window and remember its state](../guides/windows.md); which token to use where is in [Design rules](../guides/design-rules.md).
 
 ```slint nocheck
 import { Theme } from "@vestra/theme.slint";
@@ -15,11 +15,11 @@ import { MarkdownView, MarkdownBlocks, MarkdownBlock } from "@vestra/markdown.sl
 import { VestraFocus } from "@vestra/focus.slint";
 ```
 
-> **Current values; they may change — use the tokens.** The values below are what the player uses today. A later player may adjust them; a token keeps its meaning, a value you copy does not follow.
+> **Use the tokens.** The values below are the player's current ones; a token keeps its meaning when a value changes.
 
 ## Colours
 
-`Theme` colours follow the user's palette: `vestra`, the dark default, and `vestra-light` (player 0.4.0), whose video area stays dark. The player sets the palette on every view and again when the user switches, so read colours from `Theme` (they are read-only `out` properties) and never write a colour value yourself. The table shows both palettes' current values; the same values are {@link "@vestra-player/sdk/testing"!THEME_PALETTES | THEME_PALETTES}, for tests.
+`Theme` colours follow the user's palette: `vestra`, the dark default, and `vestra-light`, whose video area stays dark. The player sets the palette on every view, so read colours from `Theme` (read-only `out` properties) and never write a colour value yourself. The same values are {@link "@vestra-player/sdk/testing"!THEME_PALETTES | THEME_PALETTES}, for tests.
 
 <!-- generated:theme colors -->
 
@@ -51,7 +51,7 @@ import { VestraFocus } from "@vestra/focus.slint";
 
 <!-- /generated -->
 
-`std-widgets.slint` controls (`CheckBox`, `ComboBox`, `LineEdit`…) are compiled in Slint's `fluent-dark` style and switched to their light colours in `vestra-light`; do not set `Palette.color-scheme` yourself.
+`std-widgets.slint` controls follow the palette; do not set `Palette.color-scheme` yourself.
 
 ### Over the video
 
@@ -59,7 +59,7 @@ The video area is dark in both palettes. Text and icons drawn over it (a backdro
 
 ## Sizes and fonts
 
-Corner radii, font sizes and control sizes are constants, the same in both palettes. `radius-control` rounds controls, menu rows and hover plates; `radius-panel` menus, panels and the OSD (4px and 8px since player 0.4.0; 3px and 6px before).
+Corner radii, font sizes and control sizes are constants, the same in both palettes. `radius-control` rounds controls, menu rows and hover plates; `radius-panel` menus, panels and the OSD.
 
 <!-- generated:theme sizes -->
 
@@ -85,12 +85,9 @@ Corner radii, font sizes and control sizes are constants, the same in both palet
 
 <!-- /generated -->
 
-- **No font family of its own.** Every window uses the system's interface font for Latin text; a plugin does not need to set a font, and a `default-font-family` it sets stays first. A character the font lacks falls back, character by character, to a font for its script.
-- **CJK fallback.** On macOS the system's own fallback (PingFang, Hiragino) covers Chinese, Japanese and Korean. On Windows the player sets a chain per script for every window, plugin windows included, and uses the first installed family that has the character:
-  1. Windows' CJK families in the interface language's order: for Han text, the language's own tradition first (Simplified Chinese, the default for other languages: Microsoft YaHei UI, Microsoft YaHei, DengXian, SimSun, NSimSun, SimHei; Traditional Chinese: Microsoft JhengHei UI, Microsoft JhengHei, PMingLiU, MingLiU; Japanese: Yu Gothic UI, Meiryo UI, Yu Gothic, Meiryo, MS UI Gothic, MS Gothic; Korean: Malgun Gothic, Gulim, Dotum, Batang), then the other traditions. Kana starts with the Japanese families, Hangul with the Korean, Bopomofo with the Traditional Chinese.
-  2. The family Windows' own fallback picks.
-  3. The bundled Noto Sans CJK SC, last, so CJK text never shows as boxes when an edition lacks the optional font packs.
-- **`Theme.font-mono`** is the system's monospace family: Menlo on macOS, Consolas on Windows ([Platforms](platforms.md)). CJK falls back in it too.
+- **The system's interface font.** A plugin does not need to set a font; a `default-font-family` it sets stays first. A character the font lacks falls back, character by character, to a font for its script.
+- **CJK fallback.** On macOS the system's fallback (PingFang, Hiragino) covers CJK. On Windows the player sets a chain per script for every window: Windows' CJK families in the interface language's order (Microsoft YaHei UI and the other Simplified Chinese families by default; Microsoft JhengHei UI, Yu Gothic UI or Malgun Gothic first for Traditional Chinese, Japanese or Korean), then the family Windows' own fallback picks, then the bundled Noto Sans CJK SC.
+- **`Theme.font-mono`** is the system's monospace family: Menlo on macOS, Consolas on Windows.
 
 ## Surface sizes
 
@@ -127,7 +124,7 @@ The player's picture, audio and subtitle tools share this layout:
 
 ## Icons
 
-`@vestra/icons.slint` is the player's own icon set (player 0.4.0): round-capped, round-joined lines, 1.5px wide (1.25px for the small glyphs), never filled, each in its own box.
+`@vestra/icons.slint` is the player's own icon set: round-capped, round-joined lines, 1.5px wide (1.25px for the small glyphs), never filled, each in its own box.
 
 ```slint nocheck
 Icon { name: "play"; color: Theme.text; }                  // its box size
@@ -195,7 +192,7 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | --- | --- | --- | --- |
 | `text` | in `string` |  |  |
 
-**`ToolTipArea`**: Hover for about half a second to show `text` beside the pointer. The tip closes when the pointer leaves, or presses on content that does not take the press itself; it shows again on the next hover. It is Slint's input-transparent tooltip: every press reaches the control under the pointer, and the tip does not take the keyboard focus. (Up to SDK 1.5.20 the tip was a PopupWindow, which swallowed the first press after it showed and took the focus while it was open.) With `keys` (SDK 1.6.6) the tip names the control's keys after its title, each as a key cap and what it does: "Brightness [W] − [E] +"; `detail` follows dimmed ("· double-click: Default"). Changing `keys` or `detail` changes the tip's text, never which elements exist while hovering.
+**`ToolTipArea`**: Hover for about half a second to show `text` beside the pointer. The tip closes when the pointer leaves, or presses on content that does not take the press itself; it shows again on the next hover. It is Slint's input-transparent tooltip: every press reaches the control under the pointer, and the tip does not take the keyboard focus. With `keys` the tip names the control's keys after its title, each as a key cap and what it does: "Brightness [W] − [E] +"; `detail` follows dimmed ("· double-click: Default"). Changing `keys` or `detail` changes the tip's text, never which elements exist while hovering.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
@@ -345,9 +342,9 @@ A component's public functions are called from your own Slint code, through an e
 
 `@vestra/markdown.slint` shows a document made by {@link "@vestra-player/sdk"!Ui.markdown | plugin.ui.markdown}: give `blocks` its value. Links report `link-clicked(url)`, resolved against the document's base; the plugin decides what to open (usually {@link "@vestra-player/sdk"!System | plugin.system}). `code-copy: true` adds a Copy button to code blocks that reports `copy-code(code)`; the plugin copies it ({@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}).
 
-**Selectable text** (player 0.7.1): `selectable: true` (default `false`) on `MarkdownView` or `MarkdownBlocks` lets the user select and copy text with the mouse. A paragraph, heading, list item or quote without links then shows its plain text (no bold, italics or inline code styling) in a read-only text field, one field per block, with a right-click menu of **Copy** and **Select All** (**Copy** with nothing selected copies the whole block); each field is a Tab stop, and the arrow keys move in the one that has the focus; Ctrl+C and Ctrl+A (⌘C and ⌘A on macOS) work while it has the focus. A block with links keeps its styled text, so its links stay clickable; its right-click menu has **Copy**, which copies the block as plain text with each address after its link text, `text (url)`, and **Copy Link** when the block has exactly one link. Code blocks are always selectable, whatever `selectable` says. A selection stays inside one block (it cannot span two paragraphs), and in `MarkdownView` it is lost when its block scrolls out of view (the `ListView` drops the row). Copying needs no capability: the player's text field puts the text on the clipboard. Older players do not know the property, so a Slint file that sets it fails to compile there: set `"minPlayerVersion": "0.7.1"`.
+**Selectable text**: `selectable: true` on `MarkdownView` or `MarkdownBlocks` lets the user select and copy text, one block at a time, with a right-click menu of **Copy** and **Select All** (and **Copy Link** in a block with one link). A block without links then shows its plain text; a block with links keeps its styles and clickable links. Code blocks are always selectable. Copying needs no capability.
 
-`MarkdownBlock` also has two fields a plugin may read in its own Slint code (player 0.7.1): `plain: string`, the block's text without styles, each link followed by its address, `text (url)` (only the address when the link text is the address, as an autolink), a code block's code, a table's cells (tab-separated lines) or an image's alt text; and `links: [string]`, the addresses of the block's links in order.
+`MarkdownBlock` has two fields a plugin may read: `plain`, the block's text without styles (each link followed by its address, `text (url)`), and `links`, the addresses of its links in order.
 
 <!-- generated:widgets markdown -->
 
@@ -380,21 +377,21 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 ## Focus
 
-`@vestra/focus.slint` (SDK 1.7.0, player 0.7.6) exports one global, `VestraFocus`, filled by the player:
+`@vestra/focus.slint` exports one global, `VestraFocus`, filled by the player:
 
 | Member | Kind | Note |
 | --- | --- | --- |
 | `release` | callback `()` | Gives the keyboard focus back to the video, at once, inside the handler: the video area in the main window (from the sidebar, the adjust column, the bottom bar or their fullscreen overlays); the window's own key scope in the floating sidebar window, so unaccepted keys reach the player's shortcuts; nothing elsewhere (the Options window, tool windows). |
 
-Call it after the user played or opened an item from the keyboard or by double click, and on Esc in a list, so the arrows control the player again. A click on an empty part of a panel gives the panel the focus, so its `focus: "panel"` bindings apply and other keys bubble up to the player's shortcuts; a click on a button or a row's `TouchArea` leaves the focus where it was. A panel needs `release()` when one of its own controls took the focus (a list with its own `FocusScope`, a text field) and accepts the keys the player would use. A panel whose empty parts should leave the focus with the video puts a `TouchArea {}` under its content. See [Focus and keyboard](../explanation/ui.md#focus-and-keyboard).
+Call it after the user played or opened an item from the keyboard or by double click, and on Esc in a list, so the arrows control the player again. A click on an empty part of a panel gives the panel the focus; a panel needs `release()` when one of its own controls took the focus and accepts the keys the player would use.
 
 ## Bar buttons
 
-`@vestra/bar-buttons.slint` (player 0.5.10) holds the bottom bar's strip of command buttons: the buttons plugins give their commands ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's own. Each button is a cell 41 wide and 40 high. From player 0.7.6 the player places the strip itself; a bar reads `BarButtonsHost.width` (read only: the strip's width) and reports `content-min-width`, and `content-full-width` when it drops controls of its own. `BarButtons`, the strip a bar placed itself, is deprecated. See [Writing a bottom bar](../guidelines/interface.md#writing-a-bottom-bar).
+`@vestra/bar-buttons.slint` holds the bottom bar's strip of command buttons ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) and the player's own, each a cell 41 wide and 40 high. The player places the strip; a bar reads `BarButtonsHost.width` and reports `content-min-width`, and `content-full-width` when it drops controls of its own ([Design rules](../guides/design-rules.md)).
 
 <!-- generated:widgets bar-buttons -->
 
-**`BarButtons`**: Deprecated (SDK 1.6.8; the player places its strip): the strip a bar placed at its right end with the width it could spare. A bar that still places it shows this one instead of the player's (no palette cell, no `»`): the cells that fit in `room`, lost from its outer (left) end inward, the sidebar toggle last; it is as wide as the cells it shows.
+**`BarButtons`**: Deprecated (the player places its strip): the strip a bar placed at its right end with the width it could spare. A bar that still places it shows this one instead of the player's (no palette cell, no `»`): the cells that fit in `room`, lost from its outer (left) end inward, the sidebar toggle last; it is as wide as the cells it shows.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |

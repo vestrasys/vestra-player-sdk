@@ -35,7 +35,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** State kept only inside the panel's Slint component is lost when the main window is rebuilt (any plugin mounting or unmounting a panel) or the sidebar is detached or attached.
 
-**Fix:** Keep anything that matters in bridge properties the plugin writes ([Life cycles: panel](../explanation/ui.md#panel)).
+**Fix:** Keep anything that matters in bridge properties the plugin writes ([Open a tool window and remember its state](windows.md)).
 
 ## Colours do not follow the palette
 
@@ -45,9 +45,9 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A panel mount or a dialog is refused
 
-**Cause:** There is one panel per slot per plugin (one in all before player 0.7.6), one bottom bar and one backdrop for all plugins (`conflict`), one OSD info block per plugin, and one open dialog at a time player-wide (`busy`).
+**Cause:** There is one panel per slot per plugin, one bottom bar and one backdrop for all plugins (`conflict`), one OSD info block per plugin, and one open dialog at a time player-wide (`busy`).
 
-**Fix:** Mount at most one panel per slot (on players before 0.7.6, one panel in all) and treat a `conflict` for a shared slot as "another plugin is there"; keep one OSD info block handle and change its text; wait for an open dialog to be answered.
+**Fix:** Mount at most one panel per slot and treat a `conflict` for a shared slot as "another plugin is there"; keep one OSD info block handle and change its text; wait for an open dialog to be answered.
 
 ## The video drops frames while the pointer moves over a window
 
@@ -65,13 +65,13 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** The SDK sends bound values in an update pass after a handler returns and again when its promise settles; a value changed after an `await` inside a longer task appears only when that task ends.
 
-**Fix:** Call `plugin.update()` when such a task has something new to show ([The update pass](../explanation/plugins.md#the-update-pass), [Keep a slider responsive while dragging](slider.md)).
+**Fix:** Call `plugin.update()` when such a task has something new to show ([Tutorial](../tutorial/index.md), [Keep a slider responsive while dragging](slider.md)).
 
 ## A call fails with `stale`
 
 **Cause:** The user or another plugin changed the source (or the subtitle selection) after the state your call depended on; nothing was done.
 
-**Fix:** Usually ignore `stale`, or read the new state and decide again. For slow work, pass the state you started from as `ifCurrent` so the call never acts on the wrong file ([Conditional controls](../explanation/playback.md#conditional-controls), [Control playback](control-playback.md)).
+**Fix:** Usually ignore `stale`, or read the new state and decide again. For slow work, pass the state you started from as `ifCurrent` so the call never acts on the wrong file ([Control playback](control-playback.md)).
 
 ## A call fails with `capability`
 
@@ -83,7 +83,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** Command key bindings belong to the main window (and the floating sidebar): they do not fire while a tool window or the Options window has focus, while a menu or a system dialog is open, or when a focused control takes the key (Space in a text field). In a tool window, the floating sidebar or the Options window, the standard close keys (Ctrl+W and Ctrl+F4 on Windows, ⌘W on macOS) close that window before any binding sees them. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`.
 
-**Fix:** Choose a default key the system does not take, and give a disabled command a `reason` when its key should be eaten. See [How a key finds its command](../explanation/commands.md#how-a-key-finds-its-command) and [Keys the system takes first](../reference/commands.md#keys-the-system-takes-first).
+**Fix:** Choose a default key the system does not take, and give a disabled command a `reason` when its key should be eaten. See [Commands, menus and bindings](../reference/commands.md) and [Keys the system takes first](../reference/commands.md#keys-the-system-takes-first).
 
 ## A test passes locally and fails in CI
 
@@ -95,10 +95,10 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** Everything in the plugin's process is gone after a reload, an upgrade or a crash.
 
-**Fix:** Keep what must survive in `plugin.storage.session` (this run of the player) or `plugin.storage.json` (across runs), and build the interface from it in `activate` ([Restarts](../explanation/plugins.md#restarts-activate-can-run-more-than-once), [Store a plugin's data](store-data.md)).
+**Fix:** Keep what must survive in `plugin.storage.session` (this run of the player) or `plugin.storage.json` (across runs), and build the interface from it in `activate` ([Store a plugin's data](store-data.md)).
 
 ## See also
 
 - [Reference: error codes](../reference/errors.md)
-- [How a plugin runs](../explanation/plugins.md#failures-and-recovery): where failures go.
+- [Tutorial](../tutorial/index.md): how a plugin runs.
 - [Test a plugin](testing.md)

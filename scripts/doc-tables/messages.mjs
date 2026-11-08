@@ -20,9 +20,6 @@
  * A method name ending in `.*` covers the prefix's other methods: the ones
  * the SDK sends get a row each, and the wildcard keeps a row of its own.
  *
- * "Introduced in" is "—" for every method: the player's table has no
- * version per method yet (docs/maintaining.md, Layers).
- *
  * Fails when a method the SDK sends is named by neither table, when
  * `WRAPPED_BY` names a method the player does not have or a member the API
  * does not declare, or when a client calls a method the player's table
@@ -381,7 +378,6 @@ export default async function messages({ root, table }) {
       members.length
         ? `SDK member: ${memberLinks(members)}`
         : "`plugin.wire` only",
-      "—",
     ];
   };
   const header = [
@@ -391,7 +387,6 @@ export default async function messages({ root, table }) {
     "Result",
     "Errors (documented)",
     "Stability",
-    "Introduced in",
   ];
   const sections = [];
   for (const group of groups) {
@@ -413,7 +408,6 @@ export default async function messages({ root, table }) {
         "—",
         "—",
         "`plugin.wire` only",
-        "—",
       ]);
     }
     sections.push(

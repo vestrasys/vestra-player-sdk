@@ -1,11 +1,23 @@
 ---
-title: How-to guides
-description: Short guides that each answer one practical question about writing, translating, testing or publishing a plugin.
+title: Guides
+description: One page per task, from adding a window to publishing a plugin, plus the design rules and troubleshooting.
 ---
 
-# How-to guides
+# Guides
 
-How-to guides are short answers to one practical question each: "how do I do X?". Each page has the same shape: the goal, the steps, a complete example and where to read on. They assume you already know the basics from the [Tutorials](../tutorials/index.md).
+Each guide answers one practical question: "how do I do X?". A guide states its goal, gives the steps, often a complete example, and ends with where to read on. They assume you know the basics from the [Tutorial](../tutorial/index.md).
+
+## Open a tool window and remember its state
+
+A tool window is a Slint component the plugin creates from TypeScript. The guide opens one from a menu item, wires its controls to the plugin, stores its values, and brings back the values and whether it was open at the next start.
+
+[Read the guide](windows.md)
+
+## Add settings and translations
+
+A settings page keeps its values in the plugin's storage. The player shows its interface in seven languages, chosen at start-up; a plugin writes every text in English (menu paths and titles, `@tr("…")` in its Slint files, templates such as `osd.show("Speed {}×", [rate])`) and ships one gettext file per language in `locales/`; the player translates, and the plugin contains no translation code. The guide adds a settings page, then covers the three places text lives, `vestra-plugin i18n extract` and `check`, and testing in another language.
+
+[Read the guide](i18n.md)
 
 ## Control playback
 
@@ -19,11 +31,11 @@ A plugin has three places to keep data, all private to it: settings files (`stor
 
 [Read the guide](store-data.md)
 
-## Load subtitles from a plugin
+## Remember a window's state between runs
 
-A subtitle plugin reads the tracks of the playing file, selects one (and handles `stale` when the user changed the selection meanwhile), uploads a file it found or converted (SRT or ASS, with the limits), and can set a style layer. The guide also explains which plugin's style the player shows when several set one.
+A tool window keeps nothing by itself: closing it destroys it, and the plugin process ends with the player. The guide keeps the window's values in `plugin.storage.json` (validated, debounced, flushed when the plugin stops), binds the window to the stored state, records whether the window is open (only the user's close counts as closed, so a window open at quit comes back), and reopens it during activation. It also says what cannot be restored: the operating system places tool windows, and the API has no position or size.
 
-[Read the guide](subtitles.md)
+[Read the guide](window-state.md)
 
 ## Keep a slider responsive while dragging
 
@@ -31,15 +43,21 @@ A slider reports every pointer move, often more than 60 times a second, so a sli
 
 [Read the guide](slider.md)
 
-## Remember a window's state between runs
+## Load subtitles from a plugin
 
-A tool window keeps nothing by itself: closing it destroys it, and the plugin process ends with the player. The guide keeps the window's values in `plugin.storage.json` (validated, debounced, flushed when the plugin stops), binds the window to the stored state, records whether the window is open (only the user's close counts as closed, so a window open at quit comes back), and reopens it during activation. It also says what cannot be restored: the operating system places tool windows, and the API has no position or size.
+A subtitle plugin reads the tracks of the playing file, selects one (and handles `stale` when the user changed the selection meanwhile), uploads a file it found or converted (SRT or ASS, with the limits), and can set a style layer. The guide also explains which plugin's style the player shows when several set one.
 
-[Read the guide](window-state.md)
+[Read the guide](subtitles.md)
+
+## Process video with a shader or a filter
+
+The guide blurs the video with a kernel of your own, first as a GPU shader, then as a convolution node that also reaches snapshots, and finally with the ready-made `gblur` filter.
+
+[Read the guide](filters.md)
 
 ## Offer a GPU rendering switch
 
-The player can draw the video on the GPU or in software, and keeps the user's choice itself, applied from the next start. The guide builds a settings item "GPU Rendering (Experimental)" from `plugin.rendering.state()`: checked when the next start uses the GPU, greyed out with the player's reason where the GPU cannot be chosen, "(Restart to Apply)" while a change waits, and a restart item that calls `restartPlayer()`. It also covers older players and testing with `TestHost.rendering`.
+The player can draw the video on the GPU or in software, and keeps the user's choice itself, applied from the next start. The guide builds a settings item "GPU Rendering (Experimental)" from `plugin.rendering.state()`: checked when the next start uses the GPU, greyed out with the player's reason where the GPU cannot be chosen, "(Restart to Apply)" while a change waits, and a restart item that calls `restartPlayer()`. It also covers testing with `TestHost.rendering`.
 
 [Read the guide](gpu-rendering.md)
 
@@ -48,12 +66,6 @@ The player can draw the video on the GPU or in software, and keeps the user's ch
 A menu item whose `enabled` or `checked` is a function that reads `plugin.player.state` keeps the plugin running, because the SDK must evaluate it on every change. The guide finds such bindings with `TestHost.keepsRunning`, replaces them with `plugin.when` conditions that the player evaluates itself (`when.can("snapshot")`, `when.theme(id)`, combined with `and`, `or`, `not`), keeps the plugin's own state as values, and tests that nothing keeps the plugin running.
 
 [Read the guide](command-state.md)
-
-## Translate a plugin
-
-The player shows its interface in seven languages, chosen at start-up. A plugin writes every text in English (menu paths and titles, `@tr("…")` in its Slint files, templates such as `osd.show("Speed {}×", [rate])`) and ships one gettext file per language in `locales/`; the player translates, and the plugin contains no translation code. The guide covers the three places text lives, `vestra-plugin i18n extract` and `check`, and testing in another language.
-
-[Read the guide](i18n.md)
 
 ## Test a plugin
 
@@ -78,6 +90,12 @@ A store is any https address that serves an `index.json`; users add it to the pl
 Claude Code, Cursor or the player's own Vestra Player AI read this documentation as a tree of short nodes, like `go doc`: `npx -p @vestra-player/sdk vestra-plugin docs Snapshot.dispose` prints one member's signature, errors, capability and examples, `--search` finds paths, and every answer stays under 8 KB. The guide shows what to put in the agent's instructions, the path scheme, searching, paging, and the same calls from a program with `@vestra-player/sdk/docs`.
 
 [Read the guide](agent-docs.md)
+
+## Design rules
+
+The rules every plugin follows: only the public SDK, no other plugins' internals, both systems, its own id; how its windows, panels and on-screen messages use the theme and fit long or CJK text; where its commands go in the menus and which keys it may take.
+
+[Read the rules](design-rules.md)
 
 ## Troubleshooting
 

@@ -35,7 +35,7 @@ const value = <T>(item: Bindable<T>): T =>
   typeof item === "function" ? (item as () => T)() : item;
 /**
  * A state field given as a function: the command is evaluated in the update
- * passes. Constants and `plugin.when` conditions are not (SDK 1.7.0).
+ * passes. Constants and `plugin.when` conditions are not.
  */
 const tracks = (spec: Spec) =>
   Object.values(spec).some((field) => typeof field === "function");
@@ -301,10 +301,10 @@ class CommandHandle implements Command {
     this.#pump.push(state).catch((error) => this.#scope.report(error));
   }
   /**
-   * This command's state alone (SDK 1.7.0; before, a full update pass): a
-   * bound command is evaluated in the next pass, a command of constants
-   * sends its new state through its own `Latest` in a microtask (several
-   * `set()` calls in one turn send one update). A function field binds it.
+   * This command's state alone (before, a full update pass): a bound command is
+   * evaluated in the next pass, a command of constants sends its new state
+   * through its own `Latest` in a microtask (several `set()` calls in one turn
+   * send one update). A function field binds it.
    */
   set(state: Partial<Spec>) {
     Object.assign(this.#spec, state);
@@ -351,11 +351,10 @@ const KEYS = "commands.keys";
 
 /**
  * One per plugin: the SDK's copy of the key labels of the plugin's own
- * commands (player 0.7.6). Started by the first `keys` read or
- * `onKeysChange`: it subscribes to `commands.keys` (a mirror, unless a
- * listener or a binding holds it), then asks once; the player pushes every
- * later change. Answers and events carry the binding table's revision, and
- * an older one than what the copy has is dropped.
+ * commands. Started by the first `keys` read or `onKeysChange`: it subscribes
+ * to `commands.keys` (a mirror, unless a listener or a binding holds it), then
+ * asks once; the player pushes every later change. Answers and events carry the
+ * binding table's revision, and an older one than what the copy has is dropped.
  */
 class KeysService {
   readonly #runtime: Runtime;

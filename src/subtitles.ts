@@ -187,7 +187,7 @@ export function subtitleClient(transport: Transport) {
       expected: SubtitleStamp;
       inputOrigin?: SubtitleTrack;
       format?: "srt" | "ass";
-      /** Source text is data; a text value is shown translated (player 0.4.3). */
+      /** Source text is data; a text value is shown translated. */
       title?: string | TextJson;
       select?: "primary" | "secondary" | "none";
     }) => transport.request<SubtitleState>("subtitles.commit", options),

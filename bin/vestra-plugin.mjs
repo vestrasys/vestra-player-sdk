@@ -28,7 +28,7 @@
  *           one member's whole documentation; --search <query> lists
  *           matching paths; at most 8 KB per answer, --page N for the rest
  *
- * Translations (docs/how-to/i18n.md). English is the source text; each
+ * Translations (docs/guides/i18n.md). English is the source text; each
  * language is a gettext file locales/<lang>.po:
  *
  *   i18n extract  find the texts to translate (@tr in .slint files, the

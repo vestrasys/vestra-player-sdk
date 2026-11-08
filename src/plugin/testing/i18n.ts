@@ -26,7 +26,7 @@ import type { ListJson, TemplateArgsValue, TextJson } from "../../i18n.ts";
 import type { TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 
-/** Texts only the test host uses, with their Chinese of SDK 1.5.8. */
+/** Texts only the test host uses, with their Chinese. */
 export const TEST_ZH_HANS: Readonly<Record<string, string>> = {
   "this site": "这个网站",
   "External SRT": "外部 SRT",

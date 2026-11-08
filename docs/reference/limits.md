@@ -5,11 +5,11 @@ description: The player's runtime limits in one place, with what happens when a 
 
 # Limits
 
-The player bounds what one request may cost it. The limits are guards against runaway plugins, not sizes to aim for. Since player 0.6.0 a whole list fits (50,000 playlist rows): bind it and draw it with a Slint `ListView` (a long list should use one: a `for` builds every row). The SDK sends row patches, and an array property larger than one request in parts (SDK 1.5.46); only a property's top-level array without Markdown documents is split, so any other value, and each row, must fit in one request (a row of more than 512 KiB is refused with `limit`). The SDK checks the same limits before it sends a request, so a plugin's own tests hit them too ({@link "@vestra-player/sdk/testing"!TestHost | TestHost} enforces them). A name in code style is a constant you can import from `@vestra-player/sdk/testing`.
+The player bounds what one request may cost it: the limits guard against runaway plugins and are not sizes to aim for. A whole list fits (50,000 playlist rows): bind it and draw it with a Slint `ListView`. The SDK sends row patches and splits a top-level array property larger than one request; any other value, and each row, must fit in one request. The SDK checks the same limits before it sends, so {@link "@vestra-player/sdk/testing"!TestHost | TestHost} hits them too. A name in code style is a constant of `@vestra-player/sdk/testing`.
 
 ## Commands
 
-A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects and `onError` hears it; during activation the SDK logs and skips that command and the rest of the plugin activates, SDK 1.5.49, while `startPlugin` fails). Commands already registered are unaffected, and disposing one frees its slot at once. A declaration past the other limits fails with `invalid` the same way (SDK 1.5.48: `TestHost` refuses it too).
+A command added past `perPlugin` or `total` fails with code `limit` (its `ready` rejects and `onError` hears it; during activation the SDK logs and skips it). A declaration past the other limits fails with `invalid`. Disposing a command frees its slot at once.
 
 <!-- generated:limits COMMAND_LIMITS -->
 
@@ -30,7 +30,7 @@ A command added past `perPlugin` or `total` fails with code `limit` (its `ready`
 
 ## Bottom-bar buttons
 
-A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}, player 0.5.10) is never refused for a limit: the command registers and its menu entry stays. Each plugin keeps its first declared button; a later one stays a menu item only. From player 0.7.6 the strip holds the eight lowest by order, plugin id and declaration order, and the rest are in its » menu (before, the player kept the eight highest orders and left the others out). The player's own Command Palette, Adjustments and Effects and Sidebar cells are extra.
+A command's button ({@link "@vestra-player/sdk"!CommandOptions.button | CommandOptions.button}) is never refused for a limit. Each plugin keeps its first declared button; the strip holds the eight lowest by order, and the rest are in its » menu.
 
 <!-- generated:limits BAR_BUTTON_LIMITS -->
 
@@ -105,7 +105,7 @@ Counted on the text as shown, after translation and with its arguments filled in
 | `OSD_LIMITS.panelBytes` | 4096 (4 KiB) | UTF-8 bytes of the information block. |
 | `OSD_LIMITS.minColumns` | 8 | The smallest `OsdPanelOptions.maxColumns`. |
 | `OSD_LIMITS.maxColumns` | 1000 | The largest `OsdPanelOptions.maxColumns`. |
-| `OSD_LIMITS.actions` | 2 | Action buttons of one `osd.show` message (`OsdShowOptions.actions`; player 0.7.6). |
+| `OSD_LIMITS.actions` | 2 | Action buttons of one `osd.show` message (`OsdShowOptions.actions`). |
 | `OSD_LIMITS.actionChars` | 40 | Characters of an action's title, as shown. |
 
 <!-- /generated -->
@@ -119,7 +119,7 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `TIMELINE_LIMITS.marks` | 1000 | Marks in one layer (`TimelineLayer.set`). |
-| `TIMELINE_LIMITS.ranges` | 100 | Ranges in one layer (`TimelineLayer.setRanges`; player 0.7.6). |
+| `TIMELINE_LIMITS.ranges` | 100 | Ranges in one layer (`TimelineLayer.setRanges`). |
 | `TIMELINE_LIMITS.titleChars` | 100 | Characters of a mark's or a range's title, as shown. |
 
 <!-- /generated -->
@@ -140,7 +140,7 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 
 ## Session storage
 
-{@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} (player 0.5.5). A key out of its rule, or a value that is not JSON (or has a string with a lone surrogate), fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing. Each key counts its UTF-8 bytes, its value as compact JSON and `entryBytes`. One `set` is also one message, so a single value must fit in [`MESSAGE_LIMIT`](#messages) with its key and the request around it.
+{@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session}. A key out of its rule, or a value that is not JSON, fails with code `invalid`; a `set` that would take the plugin over `bytes` fails with `limit` and changes nothing. Each key counts its UTF-8 bytes, its value as compact JSON and `entryBytes`; one value must also fit in one [message](#messages).
 
 <!-- generated:limits SESSION_STORAGE_LIMITS -->
 
@@ -154,7 +154,7 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 
 ## Subtitle files
 
-{@link "@vestra-player/sdk"!Subtitles.load | Subtitles.load} uploads a file as a track of the current source. A file over `fileBytes` fails with `invalid`; every other limit fails with `busy` and nothing is loaded. The counts are per source, so another file starts from zero. Removing a track frees its place among the tracks and their bytes, but a load stays counted until the source changes.
+{@link "@vestra-player/sdk"!Subtitles.load | Subtitles.load}: a file over `fileBytes` fails with `invalid`, every other limit with `busy`. The counts are per source; a load stays counted until the source changes.
 
 <!-- generated:limits SUBTITLE_LIMITS -->
 
@@ -197,7 +197,7 @@ Every request a plugin sends travels as one protocol line. The plugin's side ref
 
 ## Video primitives
 
-The `convolution` and `lut3d` {@link "@vestra-player/sdk"!VideoNode | VideoNode}s and the shader channel {@link "@vestra-player/sdk"!VideoShaders | VideoShaders} (player 0.5.20). Values beyond them fail with `invalid`; more shaders than `shaders` across all plugins fail with `limit`.
+The `convolution` and `lut3d` {@link "@vestra-player/sdk"!VideoNode | VideoNode}s and {@link "@vestra-player/sdk"!VideoShaders | VideoShaders}. Values beyond them fail with `invalid`; more shaders than `shaders` across all plugins fail with `limit`.
 
 <!-- generated:limits VIDEO_PROCESSING_LIMITS -->
 
@@ -217,27 +217,20 @@ The `convolution` and `lut3d` {@link "@vestra-player/sdk"!VideoNode | VideoNode}
 
 ## Plugin processes
 
-The player's plugin supervisor (player 0.7.1) bounds what a plugin's process may cost and how long the player waits for it. These are the player's values, not SDK constants, and `TestHost` does not play them. From player 0.7.1 "on-demand start" is on for everyone (before, it was off by default, `VESTRA_LAZY=1`); what each limit means for a plugin is in [How the player runs and talks to plugins](../explanation/host-and-node.md#on-demand-start).
+The player's plugin supervisor bounds what a plugin's process may cost and how long the player waits for it. These are the player's values, not SDK constants; `TestHost` does not play them.
 
-| Limit | Player 0.7.1 | When it is reached |
+| Limit | Value | When it is reached |
 | --- | --- | --- |
-| JavaScript heap of an own process | 512 MB (shared runner: 1024 MB for all built-ins; development load: none) | V8 ends the process: "ran out of memory", handled as a crash. Memory outside the V8 heap (`Buffer` contents, addons) is not counted. |
-| Start timeout, from the process's creation to `runtime.ready` | 60 s (development load: 120 s) | Stopped with `failed`; the start has failed, and a click waiting for it shows "<name> could not start". |
-| Start retries | 3, about 250 ms, 500 ms and 1 s apart (+ up to 10 %), only after a process that cannot be created; a start timeout is not retried | Listed as failed. A plugin that sends `runtime.failed` is not tried again. |
-| Start limit | 5 crashes within 10 minutes (development load: 1; a third-party plugin without an on-demand recording: 1) | Stopped and listed as failed until reloaded or switched back on. The shared runner: 3 restarts within 60 s run its members in their own processes. |
-| Pause before a crashed plugin starts again | built-ins: 3 s, doubling, count reset after 60 s running; other plugins: 1 s, doubling, at most 60 s | Commands shown disabled with the reason during the pause. |
-| Grace of a stop (disable, uninstall, reload, upgrade) | 5 s | The process is killed. |
-| Grace of a stop for standby | 5 s | The process is killed. |
-| Grace after a fault, and of a development load | 300 ms | The process is killed. |
-| Quit / restart after a lost GPU device | 1 s / 300 ms for all plugins together | Every process left is killed. |
-| Wait for the previous process before a new start of the same plugin | 20 s from the new request | The start fails. |
+| JavaScript heap of a plugin's process | 512 MB (shared runner of the built-ins: 1024 MB) | V8 ends the process ("ran out of memory"), handled as a crash. `Buffer` contents and addons are not counted. |
+| Start timeout, until `runtime.ready` | 60 s (development load: 120 s) | Stopped with `failed`; a waiting click shows "<name> could not start". |
+| Start limit | 5 crashes within 10 minutes (development load: 1) | Listed as failed until reloaded or switched back on. |
+| Pause before a crashed plugin starts again | 1 s, doubling, at most 60 s (built-ins: 3 s) | Its commands are disabled with the reason meanwhile. |
+| Grace of a stop | 5 s (after a fault: 300 ms) | The process is killed. |
 | Idle time before standby | 30 s | The plugin goes to standby (stop reason `idle`). |
-| A player request awaiting the plugin's reply (a resolution) | 5 min (development load: no limit) | Stopped with `failed`, handled as a crash. Work the plugin declares (a `busy` command) has no limit. |
-| Third-party starts at the same time | `min(4, max(2, cores / 2))`, plus 2 for clicks (only 1 while memory pressure is critical); built-ins do not count | The start waits for a slot; the start timeout counts only from the process's creation. |
-| Held triggers per plugin while it starts | 64 (events merge by name) | A click shows "<name> is busy", a resolution fails with that text, a drop or view callback is dropped. |
-| Third-party starts waiting for a slot | 256 | Answered as a full backlog. |
-| Third-party processes | `clamp(physical MiB / 2 × 0.30 / 85, 3, 16)`: 3 at 2 GiB, 7 at 4 GiB, 14 at 8 GiB, 16 from about 9 GiB; 8 GiB assumed when the system does not say. Built-ins do not count. | Idle plugins go to standby, used longest ago first (not one used in the last minute before older ones, never a busy or resident one); with none to take, the budget is exceeded. |
-| Memory pressure, read every 5 s | Windows: low below 1000 MiB available, critical below 400 MiB (below 4 GiB installed: 500 and 200 MiB), critical also on the system's low-memory signal; Linux: `/proc/pressure/memory` `some` avg10 ≥ 20 % low, `full` avg10 ≥ 70 % critical; macOS: not read | When the level changes to low or critical (critical back to low too), every idle third-party plugin that is not resident goes to standby; built-ins never do. |
+| A player request awaiting the plugin's reply (a resolution) | 5 min | Stopped with `failed`, handled as a crash. A `busy` command has no limit. |
+| Third-party starts at the same time | `min(4, max(2, cores / 2))`, plus 2 for clicks | The start waits for a slot. |
+| Held triggers per plugin while it starts | 64 | A click shows "<name> is busy"; a drop or view callback is dropped. |
+| Third-party processes | 3 at 2 GiB of memory, 7 at 4 GiB, 14 at 8 GiB, at most 16 | Idle plugins go to standby, used longest ago first; a busy or resident one never does. Under memory pressure every idle third-party plugin goes to standby. |
 
 ## Limits documented at their API
 

@@ -8,7 +8,7 @@
  * docs("/")                            the top level
  * docs("/API/Media")                   a category: its symbols
  * docs("/API/Media/Snapshot/dispose")  a member: its whole documentation
- * docs("/Guides/How-to/Test a plugin") a guide page
+ * docs("/Guides/Guides/Test a plugin") a guide page
  * searchDocs("snapshot export")        matching paths
  * ```
  *
@@ -548,7 +548,7 @@ function notFound(asked: string, segments: string[], page: number | undefined) {
  *
  * `/` lists Overview, Guides and API. `/Guides/<group>/<page title>` is a
  * page of the documentation site (its file name works too:
- * `/Guides/How-to/testing`); `/API/<category>/<symbol>/<member>` is a
+ * `/Guides/Guides/testing`); `/API/<category>/<symbol>/<member>` is a
  * declaration with its signature, parameters, return value, errors,
  * capability, player version and examples. Matching ignores case, spaces
  * and punctuation; a leading `/` and a `.md` suffix are optional; `.`

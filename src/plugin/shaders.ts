@@ -1,10 +1,9 @@
 /**
- * The shader channel `plugin.video.shaders(id)` (SDK 1.5.39, player
- * 0.5.20): this plugin's own mpv user shaders, joined by the player with
- * every other plugin's in a stable order. Unlike `video.render()` any
- * number of plugins hold one at a time; each handle sends its whole list
- * (last write wins) and the player answers `applied`, `waiting` (no ready
- * media), or a failure.
+ * The shader channel `plugin.video.shaders(id)`: this plugin's own mpv user
+ * shaders, joined by the player with every other plugin's in a stable order.
+ * Unlike `video.render()` any number of plugins hold one at a time; each handle
+ * sends its whole list (last write wins) and the player answers `applied`,
+ * `waiting` (no ready media), or a failure.
  */
 import { isAbsolute } from "node:path";
 import { Latest } from "./latest.ts";

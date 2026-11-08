@@ -3,7 +3,7 @@
  * `plugin.wire`, property writes below the SDK's comparison, commands from
  * the player's own declaration. Experimental: the wire protocol is not
  * semver, so this code changes with player versions.
- * Walkthrough: docs/explanation/three-ways.md.
+ * Walkthrough: docs/tutorial/index.md.
  */
 import type { Plugin, Stream } from "@vestra-player/sdk";
 import {

@@ -11,7 +11,7 @@ A window that shows a formatted Markdown document with the player's `MarkdownVie
 
 `plugin.ui.markdown` and `MarkdownView` · images relative to the package · packing a non-code file.
 
-[Add a window](../tutorials/add-a-window.md) teaches tool windows; the Markdown view is explained in [Windows, panels, settings pages, dialogs and the OSD](../explanation/ui.md#theme-and-widgets).
+[Open a tool window and remember its state](../guides/windows.md) teaches tool windows; the Markdown view's properties are in [Theme](../reference/theme.md).
 
 ## What you'll build
 
@@ -37,7 +37,6 @@ examples/markdown/
 {@includeCode ../../examples/markdown/manifest.json}
 
 - `commands` for the menu item, `ui.window` for the window. `plugin.ui.markdown` needs no capability.
-- `minPlayerVersion: "0.2.0"`: `ui.markdown` is new in that version, and older players refuse the plugin with a clear message.
 - `name` to `license` are display fields for the plugin manager. They do not affect how the plugin runs, and any plugin can have them; [Manifest](../reference/manifest.md#fields) lists their rules.
 
 ## The package file
@@ -97,5 +96,5 @@ Start the player with `--plugin <path to examples/markdown>` and choose **Exampl
 1. **Open links.** Add `callback open-link(string);` to the window, forward `link-clicked(url) => { root.open-link(url); }` from `MarkdownView`, and handle it with `documentWindow.on("openLink", (url: string) => plugin.system.openUrl(url))` before the first `show()`.
 2. **Remote images.** Put `![Avatar](https://github.com/vestrasys.png?size=128)` in the document: `ui.markdown` downloads `https:` images first (pass `remoteImages: false` to turn that off).
 3. **Copy code.** Set `code-copy: true` on `MarkdownView`: code blocks get a **Copy** button (labelled in the interface language) that reports `copy-code(code)`. Forward it as a callback and copy the text with {@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}, which needs the `clipboard` capability.
-4. **Selectable text.** Set `selectable: true` on `MarkdownView` (player 0.7.1; set `"minPlayerVersion": "0.7.1"`): the reader can select a paragraph with the mouse and copy it with Ctrl+C or the right-click menu, and a paragraph with links copies with each address after its link text. Code blocks are selectable without it.
+4. **Selectable text.** Set `selectable: true` on `MarkdownView`: the reader can select a paragraph with the mouse and copy it with Ctrl+C or the right-click menu, and a paragraph with links copies with each address after its link text. Code blocks are selectable without it.
 5. **Show the plugin's own README** instead of `sample.md`; the build always packs the README.

@@ -11,8 +11,7 @@ import type { Plugin } from "./base.ts";
 
 /**
  * The manifest of a package, as validated. The display fields and
- * `minPlayerVersion` are optional (player 0.2.0); see the API reference for
- * their rules.
+ * `minPlayerVersion` are optional; see the API reference for their rules.
  *
  * @since 1.0.0
  * @category Packages
@@ -107,24 +106,18 @@ export interface InstallOptions {
    */
   replace?: boolean;
   /**
-   * Whether the plugin runs once installed (SDK 1.5.55). Left out, a first
-   * install runs and an update or reinstall (from any source, `replace`
-   * included) keeps the installed plugin's state: one the user or a store
-   * disabled stays disabled, and only its files are installed (nothing
-   * starts it, so the change commits without an `activating` step). `true`
-   * enables and starts it, for example a version the store disabled that
-   * an update fixes; if it fails to start, the old version is restored,
-   * still disabled. `false` installs it disabled: a running version is
-   * stopped and its session values go, as with {@link Packages.setEnabled}.
-   * Built-in plugins always run (and cannot be installed over). A value
-   * that is not a boolean is `invalid`.
+   * Whether the plugin runs once installed. Left out, a first install runs and
+   * an update or reinstall (from any source, `replace` included) keeps the
+   * installed plugin's state: one the user or a store disabled stays disabled,
+   * and only its files are installed (nothing starts it, so the change commits
+   * without an `activating` step). `true` enables and starts it, for example a
+   * version the store disabled that an update fixes; if it fails to start, the
+   * old version is restored, still disabled. `false` installs it disabled: a
+   * running version is stopped and its session values go, as with
+   * {@link Packages.setEnabled}. Built-in plugins always run (and cannot be
+   * installed over). A value that is not a boolean is `invalid`.
    *
-   * Player 0.6.4 and later: older players ignore it and an install there
-   * always runs the plugin, so after a committed install call
-   * {@link Packages.setEnabled} when the state matters.
-   *
-   * @player 0.6.4; older players ignore it (an install always
-   *   enables the plugin).
+   * @player 0.6.4
    */
   enabled?: boolean;
 }
@@ -167,14 +160,13 @@ export interface PackageCandidate {
   /** The checks the player ran. */
   readonly checks: string[];
   /**
-   * Install it. The same source upgrades the installed plugin (its data
-   * stays); another source fails with `conflict` unless `replace` is set;
-   * a built-in id fails with `unsupported` (built-ins update with the
-   * player). A reserved id (`vestra` or `vestra.*`, which every built-in
-   * uses) fails with `reserved` (player 0.4.1; already when validated), as
-   * only the player installs built-in plugins. An update keeps a disabled
-   * plugin disabled unless `enabled` says otherwise (player 0.6.4; see
-   * {@link InstallOptions.enabled}).
+   * Install it. The same source upgrades the installed plugin (its data stays);
+   * another source fails with `conflict` unless `replace` is set; a built-in id
+   * fails with `unsupported` (built-ins update with the player). A reserved id
+   * (`vestra` or `vestra.*`, which every built-in uses) fails with `reserved`
+   * (already when validated), as only the player installs built-in plugins. An
+   * update keeps a disabled plugin disabled unless `enabled` says otherwise
+   * (see {@link InstallOptions.enabled}).
    *
    * @capability plugins.manage
    * @throws `invalid` (rejects) An option is malformed: a `source` the
@@ -206,10 +198,9 @@ export interface PackageCandidate {
    * ```
    *
    * @example Enable a fixed version of a plugin the store disabled
-   * A store disabled a version it revoked; the update that fixes it
-   * should run again. Without `enabled` the update keeps the plugin
-   * disabled (player 0.6.4); `true` enables it once installed. Older
-   * players ignore the option and enable every install.
+   * A store disabled a version it revoked; the update that fixes it should run
+   * again. Without `enabled` the update keeps the plugin disabled; `true`
+   * enables it once installed.
    * ```ts
    * declare const candidate: PackageCandidate;
    * // ---cut---
@@ -354,9 +345,8 @@ export interface PluginInfo {
    */
   directory: string;
   /**
-   * Shipped with the player: it always runs; it cannot be disabled,
-   * uninstalled or replaced (older players, before SDK 1.5.18, let it be disabled).
-   * `false` from players before 0.2.0.
+   * Shipped with the player: it always runs; it cannot be disabled, uninstalled
+   * or replaced.
    */
   builtin: boolean;
   /** Where an installed plugin came from; `null` for development loads. */
@@ -386,19 +376,17 @@ export interface PluginInfo {
    */
   display?: PluginDisplay;
   /**
-   * For `state: "running"`: `"running"` while its process runs, `"idle"`
-   * while the plugin is switched on but has no process. That is standby
-   * with on-demand start (lazy activation): nothing used it for the idle
-   * time, or the player's limit on third-party processes or low system
-   * memory stopped it early (player 0.7.1); it starts again on its next
-   * use, and its menu items, keys, settings pages, resolvers and drop
-   * targets stay. From player 0.7.1 it is also the pause after a crash: a
-   * built-in or resident plugin waiting to start again by itself, or a
-   * plugin that has run before whose commands are shown disabled with the
-   * reason until the pause ends. Absent in other states and from players
-   * before 0.5.18. A change between the two alone does not fire
-   * {@link Packages.onChange}; a plugin stopped by the start limit (five
-   * crashes within 10 minutes) is `state: "failed"` with that in
+   * For `state: "running"`: `"running"` while its process runs, `"idle"` while
+   * the plugin is switched on but has no process. That is standby with
+   * on-demand start (lazy activation): nothing used it for the idle time, or
+   * the player's limit on third-party processes or low system memory stopped it
+   * early; it starts again on its next use, and its menu items, keys, settings
+   * pages, resolvers and drop targets stay. It is also the pause after a crash:
+   * a built-in or resident plugin waiting to start again by itself, or a plugin
+   * that has run before whose commands are shown disabled with the reason until
+   * the pause ends. Absent in other states. A change between the two alone does
+   * not fire {@link Packages.onChange}; a plugin stopped by the start limit
+   * (five crashes within 10 minutes) is `state: "failed"` with that in
    * {@link PluginInfo.error}.
    *
    * @since 1.5.38
@@ -434,8 +422,8 @@ export interface PluginDisplay {
  */
 export interface PluginWarning {
   /**
-   * `"slot-occupied"`, `"sequence-taken"` or `"resolver-taken"` (player
-   * 0.4.1); a newer player may add codes.
+   * `"slot-occupied"`, `"sequence-taken"` or `"resolver-taken"`; a newer player
+   * may add codes.
    */
   code: string;
   /** The panel position (`"bottom"`, `"backdrop"`; the sidebar and the adjust column hold any number of tabs) for `slot-occupied`. */
@@ -484,11 +472,10 @@ export interface Packages {
   /**
    * Validate a package directory (`plugins.manage`). A package whose id is
    * reserved for the built-in plugins (`vestra` or `vestra.*`) fails with
-   * `reserved` (player 0.4.1).
+   * `reserved`.
    *
-   * The player keeps the 32 most recent candidates of all plugins; an
-   * older one's `install` fails with `stale` (validate again). Before
-   * player 0.4.2 the 33rd validation of a run failed with `busy` instead.
+   * The player keeps the 32 most recent candidates of all plugins; an older
+   * one's `install` fails with `stale` (validate again).
    *
    * @capability plugins.manage
    * @throws `host` (rejects) Not a package directory, or a manifest that
@@ -523,10 +510,10 @@ export interface Packages {
    */
   validate(directory: string): Promise<PackageCandidate>;
   /**
-   * Validate a `.vxp` package file (`plugins.manage`, player 0.2.0): the
-   * same checks as {@link Packages.validate} after unpacking. Check the
-   * file's sha256 yourself before calling when you know it. A reserved id
-   * fails with `reserved`, as in {@link Packages.validate}.
+   * Validate a `.vxp` package file (`plugins.manage`): the same checks as
+   * {@link Packages.validate} after unpacking. Check the file's sha256 yourself
+   * before calling when you know it. A reserved id fails with `reserved`, as in
+   * {@link Packages.validate}.
    *
    * @capability plugins.manage
    * @throws `invalid` (rejects) The path does not end in `.vxp`, or the
@@ -635,8 +622,7 @@ export interface Packages {
    * `invalid` for oneself or a disabled plugin (enable it instead),
    * `missing` unknown, `busy` while it is being installed or reloaded.
    *
-   * @player 0.5.1; older players reject it as an unknown request
-   * (`unsupported`).
+   * @player 0.5.1
    * @since 1.5.19
    *
    * @capability plugins.manage

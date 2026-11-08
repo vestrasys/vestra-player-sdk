@@ -75,7 +75,7 @@ The message table's other columns: parameters and result from the clients' `requ
 - The plugin API types live in `src/plugin/types/*.ts`, one file per `@category` (UI in four: `ui-content`, `ui-layout`, `ui-locale`, `ui-shell`), and `src/plugin/types.ts` re-exports them with `export type *`; the scripts find a declaration by name (`typeFile()` in `scripts/doc-tables/lib/source.mjs`), not by file. TypeDoc orders by file path, then position (`sort: source-order`), so add a declaration to its category's file where the reference should show it; a file split keeps the reference's order only if a category's files sort in reference order and an interface's parent (`extends`) sits in a file that sorts before the child's (hence `base.ts` for the Plugin category, which holds `Disposable`, and `snapshots.ts` after `playback.ts` for `CaptureOptions extends Conditional`). Import every `{@link}` target with `import type` (link-only names go in the block marked `oxlint-disable no-unused-vars`): without the import TypeScript resolves names such as `Window`, `Text` or `Storage` to the DOM's globals. tsc drops those imports from the declarations, so `scripts/build.mjs` copies the block into `dist/plugin/types/*.d.ts`; `test/dist-links.test.ts` checks every link there, and `test/types-layout.test.ts` the file rules above.
 - `npm run docs:check` (`scripts/check-docs.mjs`) extracts every ` ```ts ` block from `README.md` and `docs/**/*.md` and every ` ```ts ` block in an `@example` of `src/` and type checks them against `src/` (a block without imports gets `plugin: Plugin` and the SDK's exported types in scope, and may use `await` and `return`). Markdown blocks must compile, and so must the `@example` blocks of the categories listed in `scripts/doc-standard.mjs`; the other `@example` blocks are reported only, until the reference rewrite reaches them (`--strict` makes them fail). Mark an intentionally incomplete block ` ```ts nocheck `. It also checks for drift: the README Quick start equals `examples/hello`, and the Node.js version in the documents equals `engines.node`.
 - `npm run doc-lint` (`scripts/doc-lint.mjs`) reports, per public declaration and member, a missing summary and the coverage of `@remarks`, `@example`, `@throws`, `@category`, `@since` and `@capability`, and compares the error codes in the `PluginError` table with the codes the SDK throws. That report only warns (`--strict` fails on missing summaries). The categories listed in `scripts/doc-standard.mjs` (so far `UI`) are enforced: a symbol of such a category that misses part of the standard below fails the run, and so does a declaration tagged with such a `@category` that the list does not name.
-- **The documentation tree** (`@vestra-player/sdk/docs`, `vestra-plugin docs`) is the reference for coding agents, such as Vestra Player AI writing a plugin: the site's pages and API as a tree of small nodes read by path (`/API/Media/Snapshot/dispose`, `/Guides/How-to/Test a plugin`), with search, every answer at most 8 KB. `scripts/docs-tree.mjs` builds it from the same TypeDoc conversion as the site (typedoc.json and `scripts/typedoc-plugin.mjs`, so the guides' groups and order and the removed hidden example lines are the site's) and `npm run build` writes it to `dist/docs-tree.json.gz`; `src/docs.ts` reads it. A node's one-line summary is the site's: a page's `description`, a declaration's first paragraph. `test/docs-tree.test.ts` checks that every page and every declaration the site shows is a node. There is no single file with all of it (llms-full.txt was removed in SDK 1.5.50): an agent reads what it needs.
+- **The documentation tree** (`@vestra-player/sdk/docs`, `vestra-plugin docs`) is the reference for coding agents, such as Vestra Player AI writing a plugin: the site's pages and API as a tree of small nodes read by path (`/API/Media/Snapshot/dispose`, `/Guides/Guides/Test a plugin`), with search, every answer at most 8 KB. `scripts/docs-tree.mjs` builds it from the same TypeDoc conversion as the site (typedoc.json and `scripts/typedoc-plugin.mjs`, so the guides' groups and order and the removed hidden example lines are the site's) and `npm run build` writes it to `dist/docs-tree.json.gz`; `src/docs.ts` reads it. A node's one-line summary is the site's: a page's `description`, a declaration's first paragraph. `test/docs-tree.test.ts` checks that every page and every declaration the site shows is a node. There is no single file with all of it (llms-full.txt was removed in SDK 1.5.50): an agent reads what it needs.
 - **llms.txt** ([llmstxt.org](https://llmstxt.org)) is the short entry for language models: what the SDK is, how to read the tree, and the tree's top levels. `scripts/llms.mjs` generates it from the tree; never edit it by hand: run `npm run docs:llms` and commit it. CI (`_static.yml`) runs `npm run docs:llms -- --check`; `pack:check` checks that it names the package version. It is in the package (`files`, the export `./llms.txt`), copied to the site's root by `scripts/typedoc-plugin.mjs`, and stays at most 10 KB, 10,240 bytes.
 - The output directory `docs-site/` is ignored by git and not part of the npm package.
 - `typedoc.json` sets `jsDocCompatibility.exampleTag: false`: the first line of an `@example` is its title and the rest is Markdown, so an example may be a `{@includeCode}` of an example file. Every `@example` therefore needs a code fence or an `{@includeCode}`; plain code without a fence renders as text.
@@ -89,12 +89,10 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
 
 @remarks   What it is, when to use it and when to use something else; its life cycle;
            limits; platform differences (**macOS:** / **Windows:**). Methods: only what
-           the summary and the tags below do not say. Long background goes to an explanation page.
+           the summary and the tags below do not say. Long background goes to a guide or the tutorial.
 @capability  The manifest capability ("None." when there is none).
-@player    The minimum player version, only when above the vestra/1 baseline.
-           Prose "player x.y.z" also counts for Reference: manifest › Player versions;
-           a change in what existing API does that needs no newer player is written
-           "behaviour from player x.y.z" (or "behaviour change in/since") and gets no row.
+@player    The minimum player version, only when above the vestra/1 baseline; no
+           prose about older players (see Documentation structure).
 @param     Meaning, unit, range, default. Inline option objects: one @param for
            `options`, and a summary on each field.
 @returns   When it resolves and what has taken effect by then.
@@ -104,7 +102,7 @@ Summary: one sentence, starting with a verb for methods; it is reused in lists a
            ```ts block that compiles on its own (`plugin` and every SDK type are in
            scope; hidden setup above `// ---cut---`) or {@includeCode ../../examples/…#region};
            see "Examples in reference comments" below.
-@see       Related symbols and the explanation page: [title](../../docs/explanation/<page>.md).
+@see       Related symbols and the guide: [title](../../../docs/guides/<page>.md).
 @since     The SDK version that added it (git tags; CHANGELOG).
 @category  The API category (UI, Playback, …).
 ````
@@ -139,20 +137,19 @@ Do not invent mechanisms: every claim in a lead is checked against the SDK in `s
 
 ## Documentation structure
 
-The site has eight fixed groups, in this order; a new group needs a change to this section first.
+The site has four fixed groups and the API, in this order; a new group needs a change to this section first.
 
 | Group | Folder | Holds | Size limit per page |
 | --- | --- | --- | --- |
-| Tutorials | `docs/tutorials/` | Step-by-step lessons for a newcomer that can be followed to the end. | 350 lines |
-| How-to | `docs/how-to/` | One page answers one "how do I do X?"; assumes Getting started. | 200 lines |
-| Reference | `docs/reference/` | Lookup tables across symbols (capabilities, manifest and versions, limits, menu and binding names, platforms, theme, CLI), generated where possible. A fact about one symbol belongs in its TSDoc, not here. | 150 hand-written lines |
-| Explanation | `docs/explanation/` | What something is, why it works that way and what it relates to, across several modules; no member lists. Named "Concepts" until the Diátaxis restructure; `REDIRECTS` in `scripts/doc-structure.mjs` keeps the old address. | 350 lines, 4500 words |
-| Guidelines | `docs/guidelines/` | Normative rules (should / should not) for interface and menu consistency. They prescribe, so they are not explanation; they are not tasks either. | 200 lines |
+| Tutorial | `docs/tutorial/` | One page, `index.md`: what a plugin is (a process that talks to the player), the three ways to write one with an example each (from `examples/three-ways`), where things live, and running, testing and publishing. It is the group's index and is checked as a tutorial, not as an index. | 400 lines |
+| Guides | `docs/guides/` | One page answers one "how do I do X?"; assumes the Tutorial. Also the design rules (the former guidelines, one page) and troubleshooting, each with a shape of its own. | 220 lines |
+| Reference | `docs/reference/` | Lookup tables across symbols (manifest, capabilities, limits, menu and binding names, platforms, theme, CLI, errors, events, messages, translations, the test host), generated where possible. A fact about one symbol belongs in its TSDoc, not here. Keep the hand-written text short (about 4,000 words across the group): current facts only, no history. | 150 hand-written lines |
 | Examples | `docs/examples/` | Walkthroughs of the complete plugins in `examples/`. | 200 lines |
-| Upgrading | `docs/upgrading/` | What to change in a plugin when a release deprecates, removes or changes something: one checklist per change, linked from the CHANGELOG entry. | 200 lines |
 | API | (TypeDoc entry points) | The per-symbol reference from the TSDoc in `src/`. | — |
 
-Every group's `index.md` comes first and is limited to 120 lines. Error codes, the test host, the player's events and its request methods have reference pages (`reference/errors.md`, `reference/testing.md`, `reference/events.md`, `reference/messages.md`) whose tables are generated from the `PluginError` table, the `TestHost` declaration, `HostEvent` with `EventPayloads`, and the player's capability table with the SDK's clients; the troubleshooting page is in the How-to group with a shape of its own.
+Every group's `index.md` comes first and is limited to 120 lines, except the Tutorial's, which is the tutorial. Error codes, the test host, the player's events and its request methods have reference pages (`reference/errors.md`, `reference/testing.md`, `reference/events.md`, `reference/messages.md`) whose tables are generated from the `PluginError` table, the `TestHost` declaration, `HostEvent` with `EventPayloads`, and the player's capability table with the SDK's clients.
+
+**No version history in the documentation.** The player was never released before SDK 1.7.2, so no page and no doc comment says what older players or earlier SDKs did, what changed in which release, or which player a member needs ("before player x.y", "older players refuse…", "deprecated in", "removed in"). `@since` and `@player` tags stay (machine-readable); `minPlayerVersion` is "set it to the player you tested with". What changed is in the CHANGELOG, and only there.
 
 Rules, all checked by `npm run docs:check`:
 
@@ -163,18 +160,15 @@ Rules, all checked by `npm run docs:check`:
 - **One fact, one place.** Constants, lists, limits and the capability table are generated from the code (below); pages link to each other instead of repeating. The README keeps a summary and links.
 - `typedoc.json` must agree: `groupOrder` is the groups above followed by `API` and `*`, and `projectDocuments` includes every group folder.
 
-**Page shapes (Diátaxis).** Each group holds one kind of content, and `docs:check` checks every page except the index pages against the shape of its kind (`SHAPES` and `shapeProblems` in `scripts/doc-structure.mjs`; a page entry may name another `shape`):
+**Page shapes.** Each group holds one kind of content, and `docs:check` checks every page except the index pages against the shape of its kind (`SHAPES` and `shapeProblems` in `scripts/doc-structure.mjs`; a page entry may name another `shape`, and an index entry with a `shape` is checked too):
 
 | Kind | Shape |
 | --- | --- |
-| tutorial | `## Before you start` first; numbered steps `## 1. …`, `## 2. …` in order (at least two); `## Next` last. Steps only; explanation links to Explanation. |
-| how-to | A first paragraph starting `**Goal:**`; `## Steps` first (one `###` per step, unnumbered so anchors stay stable); a `## Complete example` with code; `## See also` last. Rules and formats go to Reference. |
+| tutorial | Numbered steps `## 1. …`, `## 2. …` in order where it has them; no `**Goal:**`. |
+| guide | A first paragraph starting `**Goal:**`; `## Steps` first (one `###` per step, unnumbered so anchors stay stable); an optional `## Complete example`, which must have code; `## See also` last. Rules and formats go to Reference. |
 | troubleshooting | At least three `##` symptom sections; `## See also` last; no steps section. |
 | reference | Lookup only: no numbered, `Steps`, `Next` or `Before you start` sections, no `**Goal:**`. Generated where possible. |
-| explanation | No numbered sections, no `Steps`, `Next`, `Testing`, `Common pitfalls` or `FAQ` sections, no numbered lists. A closing `## In the reference` paragraph links the API instead of listing members. |
-| guideline | Rules only: no tables, colour values (`#rrggbb`), sizes (`12px`, `41×40`, any number of three or more digits) or generated blocks outside code blocks; values live in the Reference and the rule links them. A small count (`at most 8`), a code point (`U+2026`), a version, a date, a status code (`HTTP 404`), a count with thousands separators (`1,000,000`) and link targets (`](…)`, `{@link …}`) are not values. |
-| example | A `## What it demonstrates` section that links the tutorial or how-to guide teaching it. |
-| upgrading | `## Who must change` first. |
+| example | A `## What it demonstrates` section that links the tutorial or the guide teaching it. |
 
 No page has a `## API on this page` section any more. **Diagrams are Mermaid** (a ` ```mermaid ` block, every edge written out as `A --> B`), not ASCII box art: `scripts/typedoc-plugin.mjs` draws them on the site: its small loader script is on every page and fetches the pinned Mermaid build only when the page has a diagram, and the documentation tree carries the source, which a language model reads as it is. Labels are plain text: `docs:check` rejects a Markdown link, a web address or a backtick inside a Mermaid block (`mermaidProblems`), which Mermaid would show as "Unsupported markdown". Draw a transition that works from every state once, from an `any state` node, not once per state. Plain-text templates stay in ` ```text ` blocks. A title is the page's address on the site (`documents/<title>.html`): renaming a page's title, or a heading that other repositories link (see `git grep "vestra-player-sdk/documents/"` in the player repository), needs an entry in `REDIRECTS` (`scripts/doc-structure.mjs`), which `scripts/typedoc-plugin.mjs` turns into a redirecting page, or a kept heading.
 
@@ -184,7 +178,7 @@ No page has a `## API on this page` section any more. **Diagrams are Mermaid** (
 
 ## Examples
 
-`examples/<name>/` are complete plugins: `manifest.json` (id `examples.<name>`), `main.ts` (and further modules; one main version per example, in the style that suits it, and only where the three plugin styles genuinely differ also `main-b.ts` and `main-c.ts`, today `signal-generator` and `panel-menu`, tested against each entry; `three-ways` has one file per style for the explanation page of that name), `ui/*.slint`, `tests/*.test.ts`, a `package.json` (`"private": true`, `"type": "module"`, `"@vestra-player/sdk": "file:../.."`, scripts `check` / `build` / `test` / `pack`), a short `README.md` and a `screenshot.png`. `examples/tsconfig.json` holds the strict settings `vestra-plugin check` extends (the repository's own `tsconfig.json` is for `src/`). They are not part of the npm package (`files` and `scripts/check-pack.mjs`). `examples/hello` is the README Quick start, character for character.
+`examples/<name>/` are complete plugins: `manifest.json` (id `examples.<name>`), `main.ts` (and further modules; one main version per example, in the style that suits it, and only where the three plugin styles genuinely differ also `main-b.ts` and `main-c.ts`, today `signal-generator` and `panel-menu`, tested against each entry; `three-ways` has one file per style for the Tutorial), `ui/*.slint`, `tests/*.test.ts`, a `package.json` (`"private": true`, `"type": "module"`, `"@vestra-player/sdk": "file:../.."`, scripts `check` / `build` / `test` / `pack`), a short `README.md` and a `screenshot.png`. `examples/tsconfig.json` holds the strict settings `vestra-plugin check` extends (the repository's own `tsconfig.json` is for `src/`). They are not part of the npm package (`files` and `scripts/check-pack.mjs`). `examples/hello` is the README Quick start, character for character.
 
 Rules for pages that show examples (TypeDoc fails the build on its warnings):
 

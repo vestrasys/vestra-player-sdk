@@ -80,7 +80,7 @@ import type { Dialogs, Panels, Settings } from "./ui-shell.ts";
  * });
  * ```
  *
- * @see {@link Windows.create}, {@link View}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md), [Remember a window's state between runs](../../../docs/how-to/window-state.md)
+ * @see {@link Windows.create}, {@link View}, [Open a tool window and remember its state](../../../docs/guides/windows.md), [Remember a window's state between runs](../../../docs/guides/window-state.md)
  * @since 1.0.0
  * @category UI
  */
@@ -236,7 +236,7 @@ export interface Window extends View, Disposable {
    * notesWindow.onClose(() => store.save({ open: false }));
    * ```
    *
-   * @see [Remember a window's state between runs](../../../docs/how-to/window-state.md)
+   * @see [Remember a window's state between runs](../../../docs/guides/window-state.md)
    * @since 1.0.0
    */
   onClose(listener: () => unknown): Disposable;
@@ -263,7 +263,7 @@ export interface Window extends View, Disposable {
  *
  * {@includeCode ../../../examples/bookmark/main.ts#window,command}
  *
- * @see {@link Window}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link Window}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -292,8 +292,7 @@ export interface Windows {
    *   open the same file more than once.
    * @returns A {@link Window} owned by this scope.
    *
-   * @throws `conflict` (throws) This plugin already has a window with this id
-   *   (SDK 1.3.0; before, a plain `Error` without `code`).
+   * @throws `conflict` (throws) This plugin already has a window with this id.
    *
    * @example Open two windows from one Slint file
    * Two compare windows open side by side, one labelled A and one B. A
@@ -333,9 +332,8 @@ export interface SlotState {
    *   out when the pointer reaches the right edge; treat it as "on" for a
    *   toggle button;
    * - `idle`: the bottom bar in fullscreen while the pointer is outside the
-   *   bar's own band at the bottom of the screen (player 0.5.1: keys and
-   *   pointer motion elsewhere do not bring it back; before 0.5.1 it hid after
-   *   3 seconds without activity).
+   *   bar's own band at the bottom of the screen (keys and pointer motion
+   *   elsewhere do not bring it back).
    */
   reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
   /** The sidebar floats in its own window; always `false` for the bottom bar. */
@@ -509,9 +507,9 @@ export interface PanelSlot {
    * @remarks
    * Reads the state from the player first, so it is right even without
    * `events`. It is a switch, the same in every mode: in fullscreen a column
-   * switched on is revealed by the pointer at the right edge, and is not
-   * popped out by the toggle (SDK 1.6.13, player 0.7.6; `setVisible(true)`
-   * pops it out). Switching it off while it is out slides it in at once.
+   * switched on is revealed by the pointer at the right edge, and is not popped
+   * out by the toggle (`setVisible(true)` pops it out). Switching it off while
+   * it is out slides it in at once.
    *
    * @capability ui.mount
    *
@@ -676,7 +674,7 @@ export interface SidebarSlot extends PanelSlot {
  *
  * {@includeCode ../../../examples/panel-menu/ui/panel.slint}
  *
- * @see {@link Panels.mount}, {@link PanelSlot}, [Windows, panels, settings pages, dialogs and the OSD](../../../docs/explanation/ui.md)
+ * @see {@link Panels.mount}, {@link PanelSlot}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -694,25 +692,22 @@ export interface Panel extends View, Disposable {
    * {@link PluginInfo.warnings} and the text in {@link PluginInfo.error}).
    * Later failures also go to {@link Scope.onError}.
    *
-   * A second sidebar panel is not refused: it resolves as another tab
-   * (see {@link Panel.state}). Built-in plugins mount first at start-up,
-   * so the playlist's tab is first and a built-in panel keeps its position.
-   * Behaviour from player 0.7.3: the sidebar takes any number of tabs; the
-   * strip shows the tabs that fit and a `»` menu lists all of them.
-   * Players 0.4.x to 0.7.2 refused a ninth tab with `conflict`. A plugin
-   * whose sidebar tab is in the background, and that holds nothing else
-   * that keeps it running, goes to standby when idle; showing the tab
-   * starts it again (see {@link Panel.state}).
+   * A second sidebar panel is not refused: it resolves as another tab (see
+   * {@link Panel.state}). Built-in plugins mount first at start-up, so the
+   * playlist's tab is first and a built-in panel keeps its position. The
+   * sidebar takes any number of tabs; the strip shows the tabs that fit and a
+   * `»` menu lists all of them. A plugin whose sidebar tab is in the
+   * background, and that holds nothing else that keeps it running, goes to
+   * standby when idle; showing the tab starts it again (see
+   * {@link Panel.state}).
    *
-   * @throws `ui-prepare` (rejects) The Slint file does not compile, or a
-   *   bound property is not declared on the bridge global; `message` has the
-   *   diagnostics. (Players 0.4.0 and older also answer a taken bottom bar
-   *   or sidebar with it.)
-   * @throws `conflict` (rejects) Another plugin's panel holds the bottom bar
-   *   or the backdrop (shown, or being mounted); `message` names the
-   *   position and the holder (「底栏已被 vestra.playback 使用」). Not an
-   *   activation failure. Never for the sidebar (behaviour from player
-   *   0.7.3); players 0.4.x to 0.7.2 also refused a ninth sidebar tab.
+   * @throws `ui-prepare` (rejects) The Slint file does not compile, or a bound
+   * property is not declared on the bridge global; `message` has the
+   * diagnostics.
+   * @throws `conflict` (rejects) Another plugin's panel holds the bottom bar or
+   * the backdrop (shown, or being mounted); `message` names the position and
+   * the holder (「底栏已被 vestra.playback 使用」). Not an activation failure. Never
+   * for the sidebar.
    * @throws `busy` (rejects) The player is still preparing this plugin's
    *   previous mount, or its queue of mounts is full.
    * @throws `invalid` (rejects) `title` is longer than 128 bytes or has
@@ -733,18 +728,16 @@ export interface Panel extends View, Disposable {
    * only this plugin's own changes. A sidebar panel in a background tab
    * has `active: false`, `effective: false` and `reason: "otherTab"`.
    *
-   * Behaviour from player 0.7.3: a background tab does not keep the plugin
-   * running.
-   * If the panel is all that keeps it running, the plugin goes to standby
-   * after the idle time (stop reason `idle`): the player keeps its tab, with
-   * its title, in the strip and the `»` menu. When the user shows the tab,
-   * the player starts the plugin again; `activate` runs and mounts the same
-   * panel (same file and component), which takes the tab over, and
-   * {@link Panel.ready} resolves again. Anything the plugin kept only in
-   * memory is gone: restore the view from storage (session storage
-   * survives standby). While it is in the background, the player may also
-   * drop the panel's component and build it again from the bridge
-   * properties last written, as it does on any rebuild.
+   * A background tab does not keep the plugin running. If the panel is all that
+   * keeps it running, the plugin goes to standby after the idle time (stop
+   * reason `idle`): the player keeps its tab, with its title, in the strip and
+   * the `»` menu. When the user shows the tab, the player starts the plugin
+   * again; `activate` runs and mounts the same panel (same file and component),
+   * which takes the tab over, and {@link Panel.ready} resolves again. Anything
+   * the plugin kept only in memory is gone: restore the view from storage
+   * (session storage survives standby). While it is in the background, the
+   * player may also drop the panel's component and build it again from the
+   * bridge properties last written, as it does on any rebuild.
    *
    * @throws Never; `null` stands for "not mounted".
    *
@@ -820,12 +813,11 @@ export interface Panel extends View, Disposable {
    * position; otherwise it switches the position on at this panel's tab: a
    * panel in a background tab comes to the front instead of the sidebar
    * closing. It is a switch, the same in every mode, like the player's own
-   * Alt+1…4 and Adjustments and Effects: in fullscreen a column switched on is revealed
-   * by the pointer at the right edge, not popped out (SDK 1.6.13, player
-   * 0.7.6; {@link Panel.show} pops it out), and one switched off while out
-   * slides in at once. A "Show list"
-   * command checked by `state.preferred && state.active` matches it. Waits
-   * for {@link Panel.ready} first.
+   * Alt+1…4 and Adjustments and Effects: in fullscreen a column switched on is
+   * revealed by the pointer at the right edge, not popped out
+   * ({@link Panel.show} pops it out), and one switched off while out slides in
+   * at once. A "Show list" command checked by `state.preferred && state.active`
+   * matches it. Waits for {@link Panel.ready} first.
    *
    * @capability ui.mount
    *
@@ -861,13 +853,13 @@ export interface Panel extends View, Disposable {
    * @remarks
    * In fullscreen the bottom bar shows only while the pointer is in the bar's
    * own band at the bottom of the screen: at once when the pointer enters it,
-   * hidden 500 ms after it leaves (player 0.5.1; keys and pointer motion
-   * elsewhere do not reveal it), and the fullscreen sidebar overlay collapses
-   * when the pointer leaves it. A lock keeps the bar shown. Set a
-   * lock while a text field has focus, a drag is in progress or a popup is
-   * open, and clear it afterwards. Locks are merged with the earlier ones;
-   * the last value of each wins. The player already locks a panel while the
-   * pointer is over it. No effect on the backdrop.
+   * hidden 500 ms after it leaves (keys and pointer motion elsewhere do not
+   * reveal it), and the fullscreen sidebar overlay collapses when the pointer
+   * leaves it. A lock keeps the bar shown. Set a lock while a text field has
+   * focus, a drag is in progress or a popup is open, and clear it afterwards.
+   * Locks are merged with the earlier ones; the last value of each wins. The
+   * player already locks a panel while the pointer is over it. No effect on the
+   * backdrop.
    *
    * Never throws: a failed write is reported to {@link Scope.onError}.
    *
