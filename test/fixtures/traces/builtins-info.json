@@ -1,0 +1,405 @@
+{
+  "scenario": "builtins/info",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
+  "command": "info.toggle",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "packages.changed",
+      "why": [
+        "a listener added at about.ts"
+      ]
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 8,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 1,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 8,
+      "parts": 2,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "packages.changed",
+          "why": [
+            "a listener added at about.ts"
+          ]
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "info.toggle",
+          "revision": 1,
+          "declaration": {
+            "title": "Playback Info",
+            "path": [
+              "Playback Info"
+            ],
+            "order": 810,
+            "group": "windows",
+            "radio": false,
+            "bindings": [
+              "Tab"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Info"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "info.brief",
+          "revision": 1,
+          "declaration": {
+            "title": "Brief Info",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Shift+Tab"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Info"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "info.properties",
+          "revision": 1,
+          "declaration": {
+            "title": "Playback Properties…",
+            "path": [
+              "Playback Properties…"
+            ],
+            "order": 811,
+            "group": "windows",
+            "radio": false,
+            "bindings": [
+              "Ctrl+F1"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Info"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "info.about",
+          "revision": 1,
+          "declaration": {
+            "title": "About Vestra Player…",
+            "path": [
+              "About Vestra Player…"
+            ],
+            "order": 880,
+            "group": "windows",
+            "radio": false,
+            "bindings": [
+              "F1"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Help"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "info.update",
+          "revision": 1,
+          "declaration": {
+            "title": "Check for Updates…",
+            "path": [
+              "Check for Updates…"
+            ],
+            "order": 881,
+            "group": "windows",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Help"
+            },
+            "home": "info.about"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "settings.register",
+        "params": {
+          "id": "info.updates",
+          "category": "general",
+          "title": "Updates",
+          "order": 20,
+          "file": "ui/updates.slint",
+          "component": "UpdatesSettingsPage",
+          "global": "UpdatesPage",
+          "properties": {
+            "auto-check": true
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "playback.stats",
+        "params": {}
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "info.toggle",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "osd.panel",
+        "params": {
+          "text": {
+            "$vestraList": [
+              {
+                "$vestraList": [
+                  {
+                    "$vestraText": "File: {}",
+                    "args": [
+                      "movie.mp4"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Time: {} / {}",
+                    "args": [
+                      "00:30",
+                      "--:--"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Video: {} {}",
+                    "args": [
+                      "-",
+                      "-"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Decoder: {}",
+                    "args": [
+                      "-"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Frame rate: {}",
+                    "args": [
+                      "-"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Displayed: {}",
+                    "args": [
+                      "-"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Audio: {} {} {}",
+                    "args": [
+                      "-",
+                      "-",
+                      "-"
+                    ]
+                  },
+                  {
+                    "$vestraText": "Backend: {} (session {})",
+                    "args": [
+                      "test",
+                      0
+                    ]
+                  },
+                  {
+                    "$vestraText": "Frames shown: {}",
+                    "args": [
+                      0
+                    ]
+                  },
+                  {
+                    "$vestraText": "Dropped frames: {}",
+                    "args": [
+                      "0"
+                    ]
+                  }
+                ],
+                "style": "lines"
+              }
+            ],
+            "style": "lines"
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "settings.unregister",
+        "params": {
+          "id": "info.updates"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "info.update"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "info.about"
+        }
+      },
+      {
+        "method": "events.unsubscribe",
+        "params": {
+          "event": "packages.changed"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "info.properties"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "info.brief"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "info.toggle"
+        }
+      },
+      {
+        "method": "osd.panel",
+        "params": {
+          "text": null
+        }
+      }
+    ]
+  }
+}

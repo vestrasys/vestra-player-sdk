@@ -1,0 +1,888 @@
+@vestra-player/sdk InterfaceDeclaration App :: system(): Promise<SystemInfo>;
+@vestra-player/sdk InterfaceDeclaration App extends AppInfo
+@vestra-player/sdk InterfaceDeclaration AppInfo
+@vestra-player/sdk InterfaceDeclaration AppInfo :: readonly build: string | null;
+@vestra-player/sdk InterfaceDeclaration AppInfo :: readonly components: { readonly mpv: string | null; readonly libav: Readonly<Record<string, string>>; readonly slint: string; };
+@vestra-player/sdk InterfaceDeclaration AppInfo :: readonly version: string;
+@vestra-player/sdk InterfaceDeclaration Appearance
+@vestra-player/sdk InterfaceDeclaration Appearance :: onChange(listener: (theme: ThemeId) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Appearance :: readonly language: LanguagePreference;
+@vestra-player/sdk InterfaceDeclaration Appearance :: readonly theme: ThemeId;
+@vestra-player/sdk InterfaceDeclaration Appearance :: set(theme: ThemeId): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Appearance :: setLanguage(language: LanguagePreference): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration AudioDevice
+@vestra-player/sdk InterfaceDeclaration AudioDevice :: id: string;
+@vestra-player/sdk InterfaceDeclaration AudioDevice :: name: string;
+@vestra-player/sdk InterfaceDeclaration AudioTrack
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: codec: string | null;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: exportable: boolean;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: external: boolean;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: id: number;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: language: string | null;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: selected: boolean;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: title: string | null;
+@vestra-player/sdk InterfaceDeclaration BackdropSlot
+@vestra-player/sdk InterfaceDeclaration BackdropSlot :: onChange(listener: (state: { readonly effective: boolean; } | null) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration BackdropSlot :: readonly state: { readonly effective: boolean; } | null;
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: category?: string | null;
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: current: string[];
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: defaults: string[];
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: key?: string[] | null;
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: labels: string[];
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: overridden: boolean;
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: path: string[] | null;
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: scope: "global" | "panel";
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: shadowed: { input: string; by: BindingRef; }[];
+@vestra-player/sdk InterfaceDeclaration BindingInfo :: title: string;
+@vestra-player/sdk InterfaceDeclaration BindingInfo extends BindingRef
+@vestra-player/sdk InterfaceDeclaration BindingRef
+@vestra-player/sdk InterfaceDeclaration BindingRef :: command: string;
+@vestra-player/sdk InterfaceDeclaration BindingRef :: plugin: string;
+@vestra-player/sdk InterfaceDeclaration Bindings
+@vestra-player/sdk InterfaceDeclaration Bindings :: list(): Promise<{ commands: BindingInfo[]; orphans: { ref: BindingRef; inputs: string[]; }[]; }>;
+@vestra-player/sdk InterfaceDeclaration Bindings :: onChange(listener: () => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Bindings :: reset(ref?: BindingRef): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Bindings :: set(ref: BindingRef, inputs: string[]): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration CaptureOptions :: at?: number;
+@vestra-player/sdk InterfaceDeclaration CaptureOptions :: audio?: "selected" | "none" | number;
+@vestra-player/sdk InterfaceDeclaration CaptureOptions :: processed?: boolean;
+@vestra-player/sdk InterfaceDeclaration CaptureOptions :: subtitles?: boolean;
+@vestra-player/sdk InterfaceDeclaration CaptureOptions extends Conditional
+@vestra-player/sdk InterfaceDeclaration Chapter
+@vestra-player/sdk InterfaceDeclaration Chapter :: start: number;
+@vestra-player/sdk InterfaceDeclaration Chapter :: title: string | null;
+@vestra-player/sdk InterfaceDeclaration Clipboard
+@vestra-player/sdk InterfaceDeclaration Clipboard :: readText(): Promise<string | null>;
+@vestra-player/sdk InterfaceDeclaration Clipboard :: writeImage(path: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Clipboard :: writeText(text: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Command :: readonly id: string;
+@vestra-player/sdk InterfaceDeclaration Command :: readonly ready: Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Command :: set(state: Partial<{ [K in "busy" | "reason"]: Bindable<CommandState[K]>; } & { enabled: Bindable<boolean> | Condition; checked: Bindable<boolean | null> | Condition; }>): void;
+@vestra-player/sdk InterfaceDeclaration Command extends Disposable
+@vestra-player/sdk InterfaceDeclaration CommandButton
+@vestra-player/sdk InterfaceDeclaration CommandButton :: icon: BarButtonIcon | ImageRef;
+@vestra-player/sdk InterfaceDeclaration CommandButton :: order: number;
+@vestra-player/sdk InterfaceDeclaration CommandOptions
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: bindings?: string[];
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: busy?: Bindable<boolean>;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: button?: CommandButton;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: category?: string | Text;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: checked?: Bindable<boolean | null> | Condition;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: enabled?: Bindable<boolean> | Condition;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: focus?: "panel";
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: group?: string;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: home?: string;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: id: string;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: order?: number;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: path?: (string | Text)[];
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: radio?: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: reason?: Bindable<TextValue | null>;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: repeat?: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: run(): unknown;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: title?: string | Text;
+@vestra-player/sdk InterfaceDeclaration CommandState
+@vestra-player/sdk InterfaceDeclaration CommandState :: busy: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandState :: checked: boolean | null;
+@vestra-player/sdk InterfaceDeclaration CommandState :: enabled: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandState :: reason: TextValue | null;
+@vestra-player/sdk InterfaceDeclaration Commands
+@vestra-player/sdk InterfaceDeclaration Commands :: add(options: CommandOptions): Command;
+@vestra-player/sdk InterfaceDeclaration Commands :: keys(id: string): readonly string[];
+@vestra-player/sdk InterfaceDeclaration Commands :: onKeysChange(listener: () => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Condition
+@vestra-player/sdk InterfaceDeclaration Condition :: and(...others: Condition[]): Condition;
+@vestra-player/sdk InterfaceDeclaration Condition :: not(): Condition;
+@vestra-player/sdk InterfaceDeclaration Condition :: or(...others: Condition[]): Condition;
+@vestra-player/sdk InterfaceDeclaration Conditional
+@vestra-player/sdk InterfaceDeclaration Conditional :: ifCurrent?: PlayerState;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: args?: TemplateArgs;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: cancel?: TextValue;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: checkbox?: TextValue;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: confirm: TextValue;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: destructive?: boolean;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: detail?: TextValue;
+@vestra-player/sdk InterfaceDeclaration ConfirmOptions :: message: TextValue;
+@vestra-player/sdk InterfaceDeclaration Dialogs
+@vestra-player/sdk InterfaceDeclaration Dialogs :: confirm(options: ConfirmOptions): Promise<{ confirmed: boolean; checked: boolean; }>;
+@vestra-player/sdk InterfaceDeclaration Dialogs :: openDirectory(options?: { title?: TextValue; }): Promise<string | null>;
+@vestra-player/sdk InterfaceDeclaration Dialogs :: openFile(options?: { title?: TextValue; }): Promise<string | null>;
+@vestra-player/sdk InterfaceDeclaration Dialogs :: openFiles(options?: { title?: TextValue; }): Promise<string[]>;
+@vestra-player/sdk InterfaceDeclaration Dialogs :: saveFile(options?: { title?: TextValue; fileName?: TextValue; }): Promise<string | null>;
+@vestra-player/sdk InterfaceDeclaration DisplayInfo
+@vestra-player/sdk InterfaceDeclaration DisplayInfo :: readonly height: number;
+@vestra-player/sdk InterfaceDeclaration DisplayInfo :: readonly name: string | null;
+@vestra-player/sdk InterfaceDeclaration DisplayInfo :: readonly primary: boolean;
+@vestra-player/sdk InterfaceDeclaration DisplayInfo :: readonly refreshRate: number | null;
+@vestra-player/sdk InterfaceDeclaration DisplayInfo :: readonly scale: number;
+@vestra-player/sdk InterfaceDeclaration DisplayInfo :: readonly width: number;
+@vestra-player/sdk InterfaceDeclaration Disposable
+@vestra-player/sdk InterfaceDeclaration Disposable :: dispose(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration DisposeInfo
+@vestra-player/sdk InterfaceDeclaration DisposeInfo :: readonly reason?: StopReason;
+@vestra-player/sdk InterfaceDeclaration DisposeInfo :: readonly stopping: boolean;
+@vestra-player/sdk InterfaceDeclaration DropHandler
+@vestra-player/sdk InterfaceDeclaration DropHandler :: drop(event: { paths: string[]; modifiers: DropModifiers; }): unknown;
+@vestra-player/sdk InterfaceDeclaration DropHandler :: extensions: string[];
+@vestra-player/sdk InterfaceDeclaration DropModifiers
+@vestra-player/sdk InterfaceDeclaration DropModifiers :: readonly alt: boolean;
+@vestra-player/sdk InterfaceDeclaration DropModifiers :: readonly cmd: boolean;
+@vestra-player/sdk InterfaceDeclaration DropModifiers :: readonly shift: boolean;
+@vestra-player/sdk InterfaceDeclaration Drops
+@vestra-player/sdk InterfaceDeclaration Drops :: provide(handler: DropHandler): Disposable;
+@vestra-player/sdk InterfaceDeclaration ExportEncoding
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: audioBitrate?: 128 | 192 | 256;
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: crf?: number;
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: fps?: 60 | 30;
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: maxHeight?: 1080 | 720 | 480;
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: speed?: "faster" | "balanced" | "smaller";
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: threads?: "single" | "auto";
+@vestra-player/sdk InterfaceDeclaration ExportEncoding :: videoBitrate?: "source";
+@vestra-player/sdk InterfaceDeclaration ExportJob :: cancel(): Promise<"requested" | "tooLate" | "terminal">;
+@vestra-player/sdk InterfaceDeclaration ExportJob :: onChange(listener: (state: JobState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration ExportJob :: readonly done: Promise<JobState>;
+@vestra-player/sdk InterfaceDeclaration ExportJob :: readonly state: JobState;
+@vestra-player/sdk InterfaceDeclaration ExportJob :: refresh(): Promise<JobState>;
+@vestra-player/sdk InterfaceDeclaration ExportJob extends Disposable
+@vestra-player/sdk InterfaceDeclaration FileResolverOptions
+@vestra-player/sdk InterfaceDeclaration FileResolverOptions :: extensions: string[];
+@vestra-player/sdk InterfaceDeclaration FileResolverOptions :: id: string;
+@vestra-player/sdk InterfaceDeclaration FileResolverOptions :: resolve(path: string, signal: AbortSignal): Promise<ResolvedStream>;
+@vestra-player/sdk InterfaceDeclaration Host
+@vestra-player/sdk InterfaceDeclaration Host :: run(action: "seek-backward" | "seek-forward", options: { seconds: number; }): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Host :: run(action: HostAction): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration I18n
+@vestra-player/sdk InterfaceDeclaration I18n :: error(source: string, args?: TemplateArgs): TextError;
+@vestra-player/sdk InterfaceDeclaration I18n :: list(items: readonly TextArg[], style?: ListStyle): TextList;
+@vestra-player/sdk InterfaceDeclaration I18n :: readonly locale: Locale;
+@vestra-player/sdk InterfaceDeclaration I18n :: resolve(value: TextValue): string;
+@vestra-player/sdk InterfaceDeclaration I18n :: text(source: string, args?: TemplateArgs): Text;
+@vestra-player/sdk InterfaceDeclaration ImageOptions
+@vestra-player/sdk InterfaceDeclaration ImageOptions :: maxSide?: number;
+@vestra-player/sdk InterfaceDeclaration ImageRef
+@vestra-player/sdk InterfaceDeclaration ImageRef :: readonly __vestraImage: true;
+@vestra-player/sdk InterfaceDeclaration ImageRef :: readonly path: string;
+@vestra-player/sdk InterfaceDeclaration InstallOptions
+@vestra-player/sdk InterfaceDeclaration InstallOptions :: enabled?: boolean;
+@vestra-player/sdk InterfaceDeclaration InstallOptions :: replace?: boolean;
+@vestra-player/sdk InterfaceDeclaration InstallOptions :: source?: PackageSource;
+@vestra-player/sdk InterfaceDeclaration JsonStore :: flush(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration JsonStore :: readonly value: T;
+@vestra-player/sdk InterfaceDeclaration JsonStore :: save(next: T): void;
+@vestra-player/sdk InterfaceDeclaration JsonStore<T> extends Disposable
+@vestra-player/sdk InterfaceDeclaration MainWindow
+@vestra-player/sdk InterfaceDeclaration MainWindow :: onChange(listener: (state: WindowState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: readonly state: WindowState;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setAlwaysOnTop(onTop: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setCursorAutoHide(mode: "fullscreen" | "playing"): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setPictureInPicture(on: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setVideoArea(size: { width: number; height: number; }): Promise<{ width: number; height: number; clamped: boolean; }>;
+@vestra-player/sdk InterfaceDeclaration MarkdownOptions
+@vestra-player/sdk InterfaceDeclaration MarkdownOptions :: base?: string;
+@vestra-player/sdk InterfaceDeclaration MarkdownOptions :: remoteImages?: boolean;
+@vestra-player/sdk InterfaceDeclaration MarkdownRef
+@vestra-player/sdk InterfaceDeclaration MarkdownRef :: readonly __vestraMarkdown: true;
+@vestra-player/sdk InterfaceDeclaration MarkdownRef :: readonly text: string;
+@vestra-player/sdk InterfaceDeclaration Media
+@vestra-player/sdk InterfaceDeclaration Media :: close(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Media :: onEnd(listener: (state: PlayerState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Media :: readonly current: boolean;
+@vestra-player/sdk InterfaceDeclaration Media :: ready(options?: { signal?: AbortSignal; }): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MediaCapture
+@vestra-player/sdk InterfaceDeclaration MediaCapture :: capture(options?: CaptureOptions): Promise<Snapshot>;
+@vestra-player/sdk InterfaceDeclaration Osd
+@vestra-player/sdk InterfaceDeclaration Osd :: panel(): OsdPanel;
+@vestra-player/sdk InterfaceDeclaration Osd :: show(text: TextValue, args?: TemplateArgs | null, options?: OsdShowOptions): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration OsdAction
+@vestra-player/sdk InterfaceDeclaration OsdAction :: command: string;
+@vestra-player/sdk InterfaceDeclaration OsdAction :: title: TextValue;
+@vestra-player/sdk InterfaceDeclaration OsdPanel :: set(text: TextValue | null, args?: TemplateArgs | null, options?: OsdPanelOptions): void;
+@vestra-player/sdk InterfaceDeclaration OsdPanel extends Disposable
+@vestra-player/sdk InterfaceDeclaration OsdPanelOptions
+@vestra-player/sdk InterfaceDeclaration OsdPanelOptions :: maxColumns?: number;
+@vestra-player/sdk InterfaceDeclaration OsdShowOptions
+@vestra-player/sdk InterfaceDeclaration OsdShowOptions :: actions?: readonly OsdAction[];
+@vestra-player/sdk InterfaceDeclaration PackageCandidate
+@vestra-player/sdk InterfaceDeclaration PackageCandidate :: install(options?: InstallOptions): Promise<PackageChange>;
+@vestra-player/sdk InterfaceDeclaration PackageCandidate :: readonly checks: string[];
+@vestra-player/sdk InterfaceDeclaration PackageCandidate :: readonly digest: string;
+@vestra-player/sdk InterfaceDeclaration PackageCandidate :: readonly directory: string;
+@vestra-player/sdk InterfaceDeclaration PackageCandidate :: readonly manifest: PackageManifest;
+@vestra-player/sdk InterfaceDeclaration PackageChange
+@vestra-player/sdk InterfaceDeclaration PackageChange :: cancel(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PackageChange :: onChange(listener: (status: PackageChangeStatus) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration PackageChange :: readonly done: Promise<PackageChangeStatus>;
+@vestra-player/sdk InterfaceDeclaration PackageChange :: readonly message: string | null;
+@vestra-player/sdk InterfaceDeclaration PackageChange :: readonly status: PackageChangeStatus;
+@vestra-player/sdk InterfaceDeclaration PackageManifest
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: apiVersion: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: author?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: capabilities: string[];
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: changelog?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: description?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: entry: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: icon?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: id: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: license?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: minPlayerVersion?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: name?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: punchline?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: readme?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: sourceUrl?: string;
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: tags?: string[];
+@vestra-player/sdk InterfaceDeclaration PackageManifest :: version: string;
+@vestra-player/sdk InterfaceDeclaration Packages
+@vestra-player/sdk InterfaceDeclaration Packages :: list(): Promise<PluginInfo[]>;
+@vestra-player/sdk InterfaceDeclaration Packages :: onChange(listener: (plugins: PluginInfo[]) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Packages :: reload(id: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Packages :: setEnabled(id: string, enabled: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Packages :: uninstall(id: string, options?: { removeData?: boolean; }): Promise<PackageChange>;
+@vestra-player/sdk InterfaceDeclaration Packages :: validate(directory: string): Promise<PackageCandidate>;
+@vestra-player/sdk InterfaceDeclaration Packages :: validateArchive(file: string): Promise<PackageCandidate>;
+@vestra-player/sdk InterfaceDeclaration Panel :: onChange(listener: (state: PanelState | null) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Panel :: onDrop(listener: (event: { paths: string[]; at: { x: number; y: number; }; modifiers: DropModifiers; }) => unknown): Disposable;
+@vestra-player/sdk InterfaceDeclaration Panel :: readonly ready: Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Panel :: readonly state: PanelState | null;
+@vestra-player/sdk InterfaceDeclaration Panel :: setInteraction(locks: Partial<{ focused: boolean; dragging: boolean; popupOpen: boolean; }>): void;
+@vestra-player/sdk InterfaceDeclaration Panel :: show(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Panel :: showMenu(items: (Command | null)[], at: { x: number; y: number; }): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Panel :: toggle(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Panel extends View, Disposable
+@vestra-player/sdk InterfaceDeclaration PanelSlot
+@vestra-player/sdk InterfaceDeclaration PanelSlot :: activate(plugin: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PanelSlot :: onChange(listener: (state: SlotState | null) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration PanelSlot :: readonly panels: readonly SlotPanel[] | null;
+@vestra-player/sdk InterfaceDeclaration PanelSlot :: readonly state: SlotState | null;
+@vestra-player/sdk InterfaceDeclaration PanelSlot :: setVisible(visible: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PanelSlot :: toggle(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PanelState
+@vestra-player/sdk InterfaceDeclaration PanelState :: active: boolean;
+@vestra-player/sdk InterfaceDeclaration PanelState :: detached: boolean;
+@vestra-player/sdk InterfaceDeclaration PanelState :: effective: boolean;
+@vestra-player/sdk InterfaceDeclaration PanelState :: preferred: boolean;
+@vestra-player/sdk InterfaceDeclaration PanelState :: reason: SlotState["reason"] | "otherTab";
+@vestra-player/sdk InterfaceDeclaration Panels
+@vestra-player/sdk InterfaceDeclaration Panels :: mount(slot: "bottom" | "sidebar" | "adjust" | "backdrop", file: string, options?: { component?: string; global?: string; title?: string; }): Panel;
+@vestra-player/sdk InterfaceDeclaration Panels :: readonly adjust: PanelSlot;
+@vestra-player/sdk InterfaceDeclaration Panels :: readonly backdrop: BackdropSlot;
+@vestra-player/sdk InterfaceDeclaration Panels :: readonly bottom: PanelSlot;
+@vestra-player/sdk InterfaceDeclaration Panels :: readonly sidebar: SidebarSlot;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: audio: { codec: string | null; sampleRate: number | null; channels: number | null; decoder: string | null; format: string | null; channelLayout: string | null; bitrate: number | null; } | null;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: avSyncMs: number | null;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: backend: string;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: cacheSeconds: number | null;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: framesDropped: number | null;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: framesShown: number;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: presentedFps: number | null;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: session: number;
+@vestra-player/sdk InterfaceDeclaration PlaybackStats :: video: { codec: string | null; width: number | null; height: number | null; fps: number | null; decoder: string | null; pixelFormat: string | null; colorspace: string | null; displayWidth: number | null; displayHeight: number | null; displayFps: number | null; bitrate: number | null; hwdec: string | null; decoding: "hardware" | "software" | null; transfer: string | null; } | null;
+@vestra-player/sdk InterfaceDeclaration Player
+@vestra-player/sdk InterfaceDeclaration Player :: addAudioTrack(path: string, options?: { select?: boolean; } & Conditional): Promise<AudioTrack>;
+@vestra-player/sdk InterfaceDeclaration Player :: audioDevices(): Promise<AudioDevice[]>;
+@vestra-player/sdk InterfaceDeclaration Player :: chapters(): Promise<{ sourceId: number; chapters: Chapter[]; }>;
+@vestra-player/sdk InterfaceDeclaration Player :: close(options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: isCurrent(state: PlayerState): boolean;
+@vestra-player/sdk InterfaceDeclaration Player :: next(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: onChange(listener: (state: PlayerState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; } & Conditional): Promise<Media>;
+@vestra-player/sdk InterfaceDeclaration Player :: openStream(options: StreamOptions): Promise<Stream>;
+@vestra-player/sdk InterfaceDeclaration Player :: previous(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: provideSequence(provider: SequenceProvider): Disposable;
+@vestra-player/sdk InterfaceDeclaration Player :: readonly state: PlayerState;
+@vestra-player/sdk InterfaceDeclaration Player :: refresh(): Promise<PlayerState>;
+@vestra-player/sdk InterfaceDeclaration Player :: restart(options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: scrub(): Scrub;
+@vestra-player/sdk InterfaceDeclaration Player :: seek(seconds: number, options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: selectAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
+@vestra-player/sdk InterfaceDeclaration Player :: setAudioDevice(id: string | null): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: setLoop(loop: { a: number; b: number; count?: number; } | null, options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: setOutput(output: { volume?: number; muted?: boolean; }): Promise<boolean>;
+@vestra-player/sdk InterfaceDeclaration Player :: setPaused(paused: boolean, options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: setRate(rate: number, options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: setStepSeek(options: { seconds: number; keyframes?: boolean; }): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: stats(): Promise<PlaybackStats>;
+@vestra-player/sdk InterfaceDeclaration Player :: step(unit: "frame" | "keyframe", direction: "backward" | "forward", options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PlayerState
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly audioOutput?: { requested: string | null; active: string | null; };
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly audioTracks: AudioTrack[] | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly can: { pause: boolean; seek: boolean; rate: boolean; restart: boolean; close: boolean; snapshot: boolean; next: boolean; previous: boolean; };
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly duration: number | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly endReason: "natural" | "stopped" | "replaced" | "unknown" | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly error: string | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly kind: "media" | "stream";
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly loop?: { a: number; b: number; count: number | null; } | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly muted: boolean;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly paused: boolean;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly phase: "empty" | "loading" | "ready" | "ended" | "error";
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly position: number | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly rate: number;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly source: string | null;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly sourceId: number;
+@vestra-player/sdk InterfaceDeclaration PlayerState :: readonly volume: number;
+@vestra-player/sdk InterfaceDeclaration Plugin :: readonly dataDirectory: string;
+@vestra-player/sdk InterfaceDeclaration Plugin :: readonly id: string;
+@vestra-player/sdk InterfaceDeclaration Plugin :: readonly stopReason: StopReason | undefined;
+@vestra-player/sdk InterfaceDeclaration Plugin extends Scope
+@vestra-player/sdk InterfaceDeclaration PluginDisplay
+@vestra-player/sdk InterfaceDeclaration PluginDisplay :: readonly description: string | null;
+@vestra-player/sdk InterfaceDeclaration PluginDisplay :: readonly name: string | null;
+@vestra-player/sdk InterfaceDeclaration PluginDisplay :: readonly punchline: string | null;
+@vestra-player/sdk InterfaceDeclaration PluginDisplay :: readonly tags: readonly string[];
+@vestra-player/sdk InterfaceDeclaration PluginInfo
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: builtin: boolean;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: capabilities: string[];
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: dataDirectory: string | null;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: directory: string;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: display?: PluginDisplay;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: error: string | null;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: id: string;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: origin: "installed" | "development";
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: process?: "running" | "idle";
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: source: PackageSource | null;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: state: "starting" | "running" | "disabled" | "failed" | "stopped";
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: version: string | null;
+@vestra-player/sdk InterfaceDeclaration PluginInfo :: warnings?: readonly PluginWarning[];
+@vestra-player/sdk InterfaceDeclaration PluginWarning
+@vestra-player/sdk InterfaceDeclaration PluginWarning :: code: string;
+@vestra-player/sdk InterfaceDeclaration PluginWarning :: owner?: string;
+@vestra-player/sdk InterfaceDeclaration PluginWarning :: slot?: string;
+@vestra-player/sdk InterfaceDeclaration PluginWarning :: target?: string;
+@vestra-player/sdk InterfaceDeclaration Power
+@vestra-player/sdk InterfaceDeclaration Power :: preventSleep(mode: "off" | "playing"): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration RenderOptions :: onStatus(listener: (status: FilterStatus) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration RenderOptions :: readonly status: FilterStatus;
+@vestra-player/sdk InterfaceDeclaration RenderOptions :: set(value: Partial<RenderSettings>): void;
+@vestra-player/sdk InterfaceDeclaration RenderOptions extends Disposable
+@vestra-player/sdk InterfaceDeclaration RenderSettings
+@vestra-player/sdk InterfaceDeclaration RenderSettings :: interpolation: boolean;
+@vestra-player/sdk InterfaceDeclaration RenderSettings :: peakDetect: boolean;
+@vestra-player/sdk InterfaceDeclaration RenderSettings :: shaders: string[];
+@vestra-player/sdk InterfaceDeclaration RenderSettings :: targetPeak: number;
+@vestra-player/sdk InterfaceDeclaration RenderSettings :: toneMapping: "auto" | "off" | "bt.2390" | "hable" | "mobius" | "reinhard" | "clip";
+@vestra-player/sdk InterfaceDeclaration Rendering
+@vestra-player/sdk InterfaceDeclaration Rendering :: restartPlayer(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Rendering :: setPreference(preference: RenderingPreference): Promise<RenderingState>;
+@vestra-player/sdk InterfaceDeclaration Rendering :: state(): Promise<RenderingState>;
+@vestra-player/sdk InterfaceDeclaration RenderingReason
+@vestra-player/sdk InterfaceDeclaration RenderingReason :: readonly code: RenderingReasonCode;
+@vestra-player/sdk InterfaceDeclaration RenderingReason :: readonly message: string;
+@vestra-player/sdk InterfaceDeclaration RenderingState
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly gpu: { readonly available: boolean; readonly reason: RenderingReason | null; };
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly mode: RenderingMode;
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly nextMode: RenderingMode;
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly nextReason: RenderingReason;
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly preference: RenderingPreference;
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly reason: RenderingReason;
+@vestra-player/sdk InterfaceDeclaration RenderingState :: readonly restartPending: boolean;
+@vestra-player/sdk InterfaceDeclaration ResolvedStream
+@vestra-player/sdk InterfaceDeclaration ResolvedStream :: frame(): StreamFrame;
+@vestra-player/sdk InterfaceDeclaration ResolvedStream :: height: number;
+@vestra-player/sdk InterfaceDeclaration ResolvedStream :: kind: "stream";
+@vestra-player/sdk InterfaceDeclaration ResolvedStream :: started?(stream: Stream): void;
+@vestra-player/sdk InterfaceDeclaration ResolvedStream :: width: number;
+@vestra-player/sdk InterfaceDeclaration Resolver :: readonly ready: Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Resolver extends Disposable
+@vestra-player/sdk InterfaceDeclaration Resolvers
+@vestra-player/sdk InterfaceDeclaration Resolvers :: add(options: ResolverOptions): Resolver;
+@vestra-player/sdk InterfaceDeclaration Resolvers :: onFileTypesChange(listener: (types: string[]) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Resolvers :: readonly fileTypes: readonly string[];
+@vestra-player/sdk InterfaceDeclaration Scope :: add<T extends Disposable>(item: T): T;
+@vestra-player/sdk InterfaceDeclaration Scope :: onDispose(cleanup: ((info?: DisposeInfo) => void | Promise<void>) | (() => void | Promise<void>)): Disposable;
+@vestra-player/sdk InterfaceDeclaration Scope :: onError(listener: (error: PluginError) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly app: App;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly appearance: Appearance;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly audio: { filter(id: string): AudioFilter; };
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly bindings: Bindings;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly clipboard: Clipboard;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly commands: Commands;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly dialogs: Dialogs;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly drops: Drops;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly host: Host;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly i18n: I18n;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly media: MediaCapture;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly osd: Osd;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly packages: Packages;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly panels: Panels;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly player: Player;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly power: Power;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly rendering: Rendering;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly resolvers: Resolvers;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly secrets: Secrets;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly settings: Settings;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly storage: Storage;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly subtitles: Subtitles;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly system: System;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly timeline: Timeline;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly tools: Tools;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly ui: Ui;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly video: { filter(id: string): VideoFilter; view(): VideoView; render(): RenderOptions; shaders(id?: string): VideoShaders; readonly upscaling: VideoUpscaling; };
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly when: When;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly window: MainWindow;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly windows: Windows;
+@vestra-player/sdk InterfaceDeclaration Scope :: scope(): Scope;
+@vestra-player/sdk InterfaceDeclaration Scope :: update(): void;
+@vestra-player/sdk InterfaceDeclaration Scope extends Disposable
+@vestra-player/sdk InterfaceDeclaration Scrub
+@vestra-player/sdk InterfaceDeclaration Scrub :: end(): void;
+@vestra-player/sdk InterfaceDeclaration Scrub :: readonly active: boolean;
+@vestra-player/sdk InterfaceDeclaration Scrub :: seek(seconds: number, options?: { keyframes?: boolean; }): Promise<boolean>;
+@vestra-player/sdk InterfaceDeclaration Secrets
+@vestra-player/sdk InterfaceDeclaration Secrets :: delete(name: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Secrets :: get(name: string): Promise<string | null>;
+@vestra-player/sdk InterfaceDeclaration Secrets :: set(name: string, value: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration SequenceProvider
+@vestra-player/sdk InterfaceDeclaration SequenceProvider :: canNext: Bindable<boolean>;
+@vestra-player/sdk InterfaceDeclaration SequenceProvider :: canPrevious: Bindable<boolean>;
+@vestra-player/sdk InterfaceDeclaration SequenceProvider :: next(): unknown;
+@vestra-player/sdk InterfaceDeclaration SequenceProvider :: previous(): unknown;
+@vestra-player/sdk InterfaceDeclaration SessionStorage
+@vestra-player/sdk InterfaceDeclaration SessionStorage :: delete(key: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration SessionStorage :: get<T = unknown>(key: string): Promise<T | undefined>;
+@vestra-player/sdk InterfaceDeclaration SessionStorage :: keys(): Promise<string[]>;
+@vestra-player/sdk InterfaceDeclaration SessionStorage :: set(key: string, value: unknown): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Settings
+@vestra-player/sdk InterfaceDeclaration Settings :: page(file: string, options: { id: string; category: SettingsCategory; title: string; order?: number; }): SettingsPage;
+@vestra-player/sdk InterfaceDeclaration Settings :: show(pageId?: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration SidebarSlot :: setDetached(detached: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration SidebarSlot extends PanelSlot
+@vestra-player/sdk InterfaceDeclaration SlotPanel
+@vestra-player/sdk InterfaceDeclaration SlotPanel :: active: boolean;
+@vestra-player/sdk InterfaceDeclaration SlotPanel :: plugin: string;
+@vestra-player/sdk InterfaceDeclaration SlotPanel :: title: string;
+@vestra-player/sdk InterfaceDeclaration SlotState
+@vestra-player/sdk InterfaceDeclaration SlotState :: detached: boolean;
+@vestra-player/sdk InterfaceDeclaration SlotState :: effective: boolean;
+@vestra-player/sdk InterfaceDeclaration SlotState :: preferred: boolean;
+@vestra-player/sdk InterfaceDeclaration SlotState :: reason: "userHidden" | "space" | "fullscreen" | "idle" | null;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: export(options: ExportOptions): Promise<ExportJob>;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly audioTrack: number | null;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly duration: number;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly kind: "raw" | "processed";
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly presentation: { width: number; height: number; } | null;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly processingRevision: number | null;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly source: string;
+@vestra-player/sdk InterfaceDeclaration Snapshot :: readonly time: number;
+@vestra-player/sdk InterfaceDeclaration Snapshot extends Disposable
+@vestra-player/sdk InterfaceDeclaration Storage
+@vestra-player/sdk InterfaceDeclaration Storage :: json<T>(name: string, options: { defaults: T; validate?: (value: unknown) => value is T; debounceMs?: number; }): JsonStore<T>;
+@vestra-player/sdk InterfaceDeclaration Storage :: readonly session: SessionStorage;
+@vestra-player/sdk InterfaceDeclaration Stream :: onStop(listener: (error: PluginError | null) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Stream :: readonly running: boolean;
+@vestra-player/sdk InterfaceDeclaration Stream :: stop(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Stream extends Disposable
+@vestra-player/sdk InterfaceDeclaration StreamFrame
+@vestra-player/sdk InterfaceDeclaration StreamFrame :: audio: Float32Array;
+@vestra-player/sdk InterfaceDeclaration StreamFrame :: video: Uint8Array;
+@vestra-player/sdk InterfaceDeclaration StreamOptions
+@vestra-player/sdk InterfaceDeclaration StreamOptions :: frame(): StreamFrame;
+@vestra-player/sdk InterfaceDeclaration StreamOptions :: height: number;
+@vestra-player/sdk InterfaceDeclaration StreamOptions :: signal?: AbortSignal;
+@vestra-player/sdk InterfaceDeclaration StreamOptions :: width: number;
+@vestra-player/sdk InterfaceDeclaration SubtitleConditional
+@vestra-player/sdk InterfaceDeclaration SubtitleConditional :: ifCurrent?: SubtitlesState;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: codec: string | null;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: embeddedId?: number;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: id: string;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: kind: "embedded" | "external";
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: language: string | null;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: owned: boolean;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: streamIndex: number | null;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: styleReason: string | null;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: styleSupported: boolean;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: text: boolean;
+@vestra-player/sdk InterfaceDeclaration SubtitleTrack :: title: string;
+@vestra-player/sdk InterfaceDeclaration Subtitles
+@vestra-player/sdk InterfaceDeclaration Subtitles :: load(bytes: Uint8Array, options?: SubtitleConditional & { format?: "srt" | "ass"; title?: string | Text; select?: "primary" | "secondary" | "none"; signal?: AbortSignal; }): Promise<SubtitleTrack>;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: onChange(listener: (state: SubtitlesState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: readonly state: SubtitlesState | null;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: refresh(): Promise<SubtitlesState>;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: remove(track: SubtitleTrack, options?: SubtitleConditional): Promise<SubtitlesState>;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: select(track: SubtitleTrack | null, options?: SubtitleConditional & { role?: "primary" | "secondary"; }): Promise<SubtitlesState>;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: setStyle(style: SubtitleStyle | null, options?: SubtitleConditional): Promise<SubtitlesState>;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly error: string | null;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly fonts: { id: string; family: string; }[];
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly phase: string;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly secondary: SubtitleTrack | null;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly selected: SubtitleTrack | null;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly sourceId: number;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly style: SubtitleStyle | null;
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly styleConfirmation: "waiting" | "applied" | "uncertain";
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly trackConfirmation: "waiting" | "applied" | "uncertain";
+@vestra-player/sdk InterfaceDeclaration SubtitlesState :: readonly tracks: SubtitleTrack[];
+@vestra-player/sdk InterfaceDeclaration System
+@vestra-player/sdk InterfaceDeclaration System :: openPath(path: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration System :: openUrl(url: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration System :: reveal(paths: string | string[]): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration SystemInfo
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly arch: string;
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly build: string | null;
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly displays: readonly DisplayInfo[];
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly model: string | null;
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly name: string;
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly os: "macos" | "windows" | "linux" | "other";
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly rendering?: "gpu" | "software";
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly renderingReason?: RenderingReason;
+@vestra-player/sdk InterfaceDeclaration SystemInfo :: readonly version: string | null;
+@vestra-player/sdk InterfaceDeclaration Text
+@vestra-player/sdk InterfaceDeclaration Text :: readonly $vestraText: string;
+@vestra-player/sdk InterfaceDeclaration Text :: readonly args?: TemplateArgs;
+@vestra-player/sdk InterfaceDeclaration TextError :: readonly text: Text;
+@vestra-player/sdk InterfaceDeclaration TextError extends Error
+@vestra-player/sdk InterfaceDeclaration TextList
+@vestra-player/sdk InterfaceDeclaration TextList :: readonly $vestraList: readonly TextArg[];
+@vestra-player/sdk InterfaceDeclaration TextList :: readonly style?: ListStyle;
+@vestra-player/sdk InterfaceDeclaration Timeline
+@vestra-player/sdk InterfaceDeclaration Timeline :: layer(): TimelineLayer;
+@vestra-player/sdk InterfaceDeclaration Timeline :: onChange(listener: (marks: readonly TimelineMark[]) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Timeline :: readonly marks: readonly TimelineMark[];
+@vestra-player/sdk InterfaceDeclaration Timeline :: readonly ranges: readonly TimelineRange[];
+@vestra-player/sdk InterfaceDeclaration TimelineLayer :: set(marks: { time: number; kind: MarkKind; title?: string | Text; }[], options?: { ifCurrent?: PlayerState; }): void;
+@vestra-player/sdk InterfaceDeclaration TimelineLayer :: setRanges(ranges: { start: number; end: number; style: RangeStyle; title?: string | Text; }[], options?: { ifCurrent?: PlayerState; }): void;
+@vestra-player/sdk InterfaceDeclaration TimelineLayer extends Disposable
+@vestra-player/sdk InterfaceDeclaration TimelineMark
+@vestra-player/sdk InterfaceDeclaration TimelineMark :: readonly kind: MarkKind;
+@vestra-player/sdk InterfaceDeclaration TimelineMark :: readonly plugin: string;
+@vestra-player/sdk InterfaceDeclaration TimelineMark :: readonly time: number;
+@vestra-player/sdk InterfaceDeclaration TimelineMark :: readonly title: string | null;
+@vestra-player/sdk InterfaceDeclaration TimelineRange
+@vestra-player/sdk InterfaceDeclaration TimelineRange :: readonly end: number;
+@vestra-player/sdk InterfaceDeclaration TimelineRange :: readonly plugin: string;
+@vestra-player/sdk InterfaceDeclaration TimelineRange :: readonly start: number;
+@vestra-player/sdk InterfaceDeclaration TimelineRange :: readonly style: RangeStyle;
+@vestra-player/sdk InterfaceDeclaration TimelineRange :: readonly title: string | null;
+@vestra-player/sdk InterfaceDeclaration ToolResult
+@vestra-player/sdk InterfaceDeclaration ToolResult :: stderr: string;
+@vestra-player/sdk InterfaceDeclaration ToolResult :: stdout: Uint8Array;
+@vestra-player/sdk InterfaceDeclaration Tools
+@vestra-player/sdk InterfaceDeclaration Tools :: available(tool: "ffmpeg" | "ffprobe"): Promise<boolean>;
+@vestra-player/sdk InterfaceDeclaration Tools :: run(tool: "ffmpeg" | "ffprobe", args: string[], options: { timeoutMs: number; maxOutput?: number; signal?: AbortSignal; }): Promise<ToolResult>;
+@vestra-player/sdk InterfaceDeclaration Ui
+@vestra-player/sdk InterfaceDeclaration Ui :: image(path: string, options?: ImageOptions): ImageRef;
+@vestra-player/sdk InterfaceDeclaration Ui :: markdown(text: string, options?: MarkdownOptions): Promise<MarkdownRef>;
+@vestra-player/sdk InterfaceDeclaration Ui :: remoteImage(url: string, options?: ImageOptions): Promise<ImageRef>;
+@vestra-player/sdk InterfaceDeclaration UpscalingPlugin
+@vestra-player/sdk InterfaceDeclaration UpscalingPlugin :: readonly id: string;
+@vestra-player/sdk InterfaceDeclaration UpscalingPlugin :: readonly name: string;
+@vestra-player/sdk InterfaceDeclaration UpscalingReason
+@vestra-player/sdk InterfaceDeclaration UpscalingReason :: readonly cause?: UpscalingDecodingCause;
+@vestra-player/sdk InterfaceDeclaration UpscalingReason :: readonly code: UpscalingReasonCode;
+@vestra-player/sdk InterfaceDeclaration UpscalingReason :: readonly message: string;
+@vestra-player/sdk InterfaceDeclaration UpscalingReason :: readonly plugins?: readonly UpscalingPlugin[];
+@vestra-player/sdk InterfaceDeclaration UpscalingState
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly area?: { readonly width: number; readonly height: number; } | null;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly available: boolean;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly enabled: boolean;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly factor: number | null;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly gpu?: string | null;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly hwdecCurrent?: string | null;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly inChain?: boolean;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly reason: UpscalingReason | null;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly requested: boolean;
+@vestra-player/sdk InterfaceDeclaration UpscalingState :: readonly video?: UpscalingVideoSize | null;
+@vestra-player/sdk InterfaceDeclaration UpscalingVideoSize
+@vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly displayHeight: number;
+@vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly displayWidth: number;
+@vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly height: number;
+@vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly width: number;
+@vestra-player/sdk InterfaceDeclaration VideoShaders :: clear(): void;
+@vestra-player/sdk InterfaceDeclaration VideoShaders :: onStatus(listener: (status: FilterStatus) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration VideoShaders :: readonly status: FilterStatus;
+@vestra-player/sdk InterfaceDeclaration VideoShaders :: set(paths: readonly string[]): void;
+@vestra-player/sdk InterfaceDeclaration VideoShaders extends Disposable
+@vestra-player/sdk InterfaceDeclaration VideoUpscaling
+@vestra-player/sdk InterfaceDeclaration VideoUpscaling :: onChange(listener: (state: UpscalingState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration VideoUpscaling :: set(enabled: boolean): Promise<UpscalingState>;
+@vestra-player/sdk InterfaceDeclaration VideoUpscaling :: state(): Promise<UpscalingState>;
+@vestra-player/sdk InterfaceDeclaration VideoView :: onStatus(listener: (status: FilterStatus) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration VideoView :: readonly status: FilterStatus;
+@vestra-player/sdk InterfaceDeclaration VideoView :: set(value: Partial<ViewSettings>): void;
+@vestra-player/sdk InterfaceDeclaration VideoView extends Disposable
+@vestra-player/sdk InterfaceDeclaration View
+@vestra-player/sdk InterfaceDeclaration View :: bind(props: () => Props): Disposable;
+@vestra-player/sdk InterfaceDeclaration View :: on<A extends Json[]>(callback: string, handler: (...args: A) => unknown): Disposable;
+@vestra-player/sdk InterfaceDeclaration View :: set(props: Props): void;
+@vestra-player/sdk InterfaceDeclaration ViewSettings
+@vestra-player/sdk InterfaceDeclaration ViewSettings :: aspect: number | null;
+@vestra-player/sdk InterfaceDeclaration ViewSettings :: fit: "keep" | "stretch" | "fill";
+@vestra-player/sdk InterfaceDeclaration ViewSettings :: panX: number;
+@vestra-player/sdk InterfaceDeclaration ViewSettings :: panY: number;
+@vestra-player/sdk InterfaceDeclaration ViewSettings :: zoom: number;
+@vestra-player/sdk InterfaceDeclaration WebResolverOptions
+@vestra-player/sdk InterfaceDeclaration WebResolverOptions :: hosts: string[];
+@vestra-player/sdk InterfaceDeclaration WebResolverOptions :: id: string;
+@vestra-player/sdk InterfaceDeclaration WebResolverOptions :: resolve(url: string, signal: AbortSignal): Promise<ResolvedMedia>;
+@vestra-player/sdk InterfaceDeclaration WebResolverOptions :: schemes: ("http" | "https")[];
+@vestra-player/sdk InterfaceDeclaration When
+@vestra-player/sdk InterfaceDeclaration When :: can(control: keyof PlayerState["can"]): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: language(language: LanguagePreference): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: phase(...phases: PlayerState["phase"][]): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly fullscreen: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly open: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly paused: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly playing: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly ready: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly stream: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: theme(theme: ThemeId): Condition;
+@vestra-player/sdk InterfaceDeclaration Window :: close(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Window :: hide(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Window :: onClose(listener: () => unknown): Disposable;
+@vestra-player/sdk InterfaceDeclaration Window :: readonly opened: boolean;
+@vestra-player/sdk InterfaceDeclaration Window :: show(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Window extends View, Disposable
+@vestra-player/sdk InterfaceDeclaration WindowState
+@vestra-player/sdk InterfaceDeclaration WindowState :: readonly fullscreen: boolean;
+@vestra-player/sdk InterfaceDeclaration WindowState :: readonly maximized: boolean;
+@vestra-player/sdk InterfaceDeclaration WindowState :: readonly pictureInPicture: { readonly supported: boolean; readonly active: boolean; };
+@vestra-player/sdk InterfaceDeclaration WindowState :: readonly videoArea: { readonly width: number; readonly height: number; };
+@vestra-player/sdk InterfaceDeclaration Windows
+@vestra-player/sdk InterfaceDeclaration Windows :: create(file: string, options?: { id?: string; }): Window;
+@vestra-player/sdk TypeAliasDeclaration AudioFilter = export type AudioFilter = Filter<{ nodes: AudioNode[]; delayMs?: number; }>;
+@vestra-player/sdk TypeAliasDeclaration AudioNode = export type AudioNode = { kind: "volume"; gainDb: number; } | { kind: "equalizer"; frequency: number; q: 1; gainDb: number; } | { kind: "treble"; frequency: 3000; slope: 0.5; gainDb: number; } | { kind: "dynaudnorm"; enabled: boolean; maxGain: number; peak: number; } | { kind: "channels"; mode: "stereo" | "left" | "right" | "mono" | "swap"; };
+@vestra-player/sdk TypeAliasDeclaration BarButtonIcon = export type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai";
+@vestra-player/sdk TypeAliasDeclaration Bindable = export type Bindable<T> = T | (() => T);
+@vestra-player/sdk TypeAliasDeclaration ConvolutionPlane = export type ConvolutionPlane = { mode: "square" | "row" | "column"; matrix: number[]; rdiv: number; bias: number; };
+@vestra-player/sdk TypeAliasDeclaration ExportOptions = export type ExportOptions = { format: "png" | "bmp"; destination: string; sampleTime?: number; } | { format: "jpeg"; destination: string; sampleTime?: number; quality?: number; } | { format: "mp4"; destination: string; end: number; encoding?: ExportEncoding; } | { format: "copy"; destination: string; end: number; container?: "auto" | "mp4" | "mkv"; };
+@vestra-player/sdk TypeAliasDeclaration FilterStatus = export type FilterStatus = { state: "waiting"; } | { state: "applying"; } | { state: "applied"; } | { state: "failed"; error: PluginError; };
+@vestra-player/sdk TypeAliasDeclaration HostAction = export type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute" | "fullscreen";
+@vestra-player/sdk TypeAliasDeclaration JobState = export type JobState = Omit<MediaJob, "jobId">;
+@vestra-player/sdk TypeAliasDeclaration Json = export type Json = null | boolean | number | string | Json[] | { [key: string]: Json; };
+@vestra-player/sdk TypeAliasDeclaration LanguagePreference = export type LanguagePreference = "system" | Locale;
+@vestra-player/sdk TypeAliasDeclaration ListStyle = export type ListStyle = "list" | "clauses" | "semicolons" | "sentences" | "lines";
+@vestra-player/sdk TypeAliasDeclaration Locale = export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
+@vestra-player/sdk TypeAliasDeclaration MarkKind = export type MarkKind = "chapter" | "bookmark" | "marker";
+@vestra-player/sdk TypeAliasDeclaration MenuId = export type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings" | "reset";
+@vestra-player/sdk TypeAliasDeclaration PackageChangeStatus = export type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed" | "cancelled" | "failed" | "failedDegraded" | "tooLate";
+@vestra-player/sdk TypeAliasDeclaration PackageSource = export type PackageSource = { kind: "repository"; url: string; } | { kind: "link"; url: string; } | { kind: "file"; } | { kind: "workshop"; } | { kind: "bundled"; };
+@vestra-player/sdk TypeAliasDeclaration PluginError = export type PluginError = Error & { code: string; };
+@vestra-player/sdk TypeAliasDeclaration PropData = export type PropData = null | boolean | number | string | MarkdownRef | ImageRef | Text | TextList | PropData[] | { [key: string]: PropData; };
+@vestra-player/sdk TypeAliasDeclaration PropValue = export type PropValue = PropData | ImageRef;
+@vestra-player/sdk TypeAliasDeclaration Props = export type Props = Record<string, PropValue>;
+@vestra-player/sdk TypeAliasDeclaration RangeStyle = export type RangeStyle = "selection" | "region";
+@vestra-player/sdk TypeAliasDeclaration RenderingMode = export type RenderingMode = "gpu" | "software";
+@vestra-player/sdk TypeAliasDeclaration RenderingPreference = export type RenderingPreference = "auto" | "gpu" | "software";
+@vestra-player/sdk TypeAliasDeclaration RenderingReasonCode = export type RenderingReasonCode = "default" | "pending" | "headless" | "no-gpu-backend" | "env" | "preference" | "denylist" | "previous-crash" | "init-failed" | "window-fallback" | (string & {});
+@vestra-player/sdk TypeAliasDeclaration ResolvedMedia = export type ResolvedMedia = { kind: "media"; originalUrl: string; title?: string; primary: ResolvedResource; audio?: ResolvedResource; };
+@vestra-player/sdk TypeAliasDeclaration ResolverOptions = export type ResolverOptions = WebResolverOptions | FileResolverOptions;
+@vestra-player/sdk TypeAliasDeclaration SettingsCategory = export type SettingsCategory = "general" | "playback" | "subtitles" | "video" | "audio" | "input" | "appearance" | "plugins" | "other";
+@vestra-player/sdk TypeAliasDeclaration SettingsPage = export type SettingsPage = View & Disposable & { readonly ready: Promise<void>; };
+@vestra-player/sdk TypeAliasDeclaration StopReason = export type StopReason = "quit" | "disable" | "uninstall" | "reload" | "upgrade" | "idle" | "failed" | "host-lost";
+@vestra-player/sdk TypeAliasDeclaration StreamStartError = export type StreamStartError = PluginError & { stage: "prefill" | "activation"; };
+@vestra-player/sdk TypeAliasDeclaration SubtitleStyle = export type SubtitleStyle = { fontId: string; fontSize: number; color: "white" | "yellow" | "cyan"; outline: number; marginPercent: number; offsetMs: number; bold?: boolean; shadow?: number; box?: number | null; assOverride?: "keep" | "force"; secondaryPosition?: "top" | "aboveMain"; };
+@vestra-player/sdk TypeAliasDeclaration TemplateArgs = export type TemplateArgs = readonly TextArg[] | Readonly<Record<string, TextArg>>;
+@vestra-player/sdk TypeAliasDeclaration TextArg = export type TextArg = string | number | Text | TextList;
+@vestra-player/sdk TypeAliasDeclaration TextValue = export type TextValue = string | Text | TextList;
+@vestra-player/sdk TypeAliasDeclaration ThemeId = export type ThemeId = "vestra" | "vestra-light";
+@vestra-player/sdk TypeAliasDeclaration UpscalingDecodingCause = export type UpscalingDecodingCause = "copy-back" | "hwdec-off" | "software" | "other-hwdec" | (string & {});
+@vestra-player/sdk TypeAliasDeclaration UpscalingReasonCode = export type UpscalingReasonCode = "platform" | "no-gpu" | "driver" | "gpu-unsupported" | "rendering" | "adapter" | "decoding" | "unchecked" | (string & {});
+@vestra-player/sdk TypeAliasDeclaration VideoFilter = export type VideoFilter = Filter<VideoNode[]>;
+@vestra-player/sdk TypeAliasDeclaration VideoNode = export type VideoNode = { kind: "eq"; brightness: number; contrast: number; saturation: number; gamma: number; } | { kind: "gblur"; sigma: number; steps: 3; } | { kind: "hue"; degrees: number; } | { kind: "sharpen"; amount: number; size: "small" | "large"; } | { kind: "denoise"; lumaSpatial: number; chromaSpatial: number; lumaTemporal: number; chromaTemporal: number; } | { kind: "deblock"; strength: "weak" | "strong"; } | { kind: "deband"; threshold: number; range: number; } | { kind: "transform"; rotate: 0 | 90 | 180 | 270; flipH: boolean; flipV: boolean; } | { kind: "deinterlace"; when: "interlaced" | "all" | "auto"; output: "frame" | "field"; } | { kind: "reframe"; mode: "crop" | "pad"; aspect: number; x: number; y: number; } | { kind: "frameBlend"; fps: number; } | { kind: "convolution"; planes: (ConvolutionPlane | null)[]; } | { kind: "lut3d"; file: string; interpolation: "nearest" | "trilinear" | "tetrahedral" | "pyramid" | "prism"; };
+@vestra-player/sdk/testing ClassDeclaration HostError :: code: string;
+@vestra-player/sdk/testing ClassDeclaration HostError :: constructor(code: string, message: string);
+@vestra-player/sdk/testing ClassDeclaration HostError extends Error
+@vestra-player/sdk/testing ClassDeclaration TestHost :: app: { version: string; build: string | null; components: { mpv: string | null; libav: Record<string, string>; slint: string; }; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: appearance: ThemeId;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: audioDevices: { id: string; name: string; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: backdrop: { owner: string; effective: boolean; } | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: chapters: { title: string | null; start: number; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: close(): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: command(id: string): FakeCommand;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: constructor();
+@vestra-player/sdk/testing ClassDeclaration TestHost :: coreAction(id: string): FakeCommand;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: drop(paths: string[], options?: { target?: "video" | "panel"; at?: { x: number; y: number; }; modifiers?: Partial<{ alt: boolean; shift: boolean; cmd: boolean; }>; }): Promise<void>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: emit(event: string, data: unknown): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: exportFailure: { code: string; message: string; } | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: failStream(producerId: number, message: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: failVideoRender(code: "failed" | "unsupported" | "previous-crash", message: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: failVideoShaders(id: string, message: string, code?: "failed" | "previous-crash"): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: fileRoots: string[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: fileTypes(): string[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get barButtons(): readonly FakeBarButton[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get conflicts(): string[][];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get keepsRunning(): string[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get locale(): Locale;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get panel(): FakePanel | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: handle(method: string, handler: Handler): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: imagePath(value: Json | undefined): string | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: installKeepsDisabled: boolean;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: keyframes: number[] | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: language: LanguagePreference;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: loadCatalog(directory: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: loseConnection(): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: manifestId: string;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: markdown(value: Json | undefined): MarkdownWire | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: mountOther(slot: "bottom" | "sidebar" | "adjust" | "backdrop", plugin: string, options?: { title?: string; }): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: mounted(slot?: "bottom" | "sidebar" | "adjust" | "backdrop"): FakePanel;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: on(event: string, listener: (data: unknown) => void): () => void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: openElsewhere(source: string, phase?: SourceState["phase"]): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: osdPanel: string | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: packages: { id: string; version: string | null; origin: "installed" | "development"; state: "starting" | "running" | "disabled" | "failed" | "stopped"; error: string | null; capabilities: string[]; directory: string; builtin?: boolean; source?: PackageSource | null; dataDirectory?: string | null; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: panelDrops: boolean;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: popSidebar(popped: boolean): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: power: "off" | "playing";
+@vestra-player/sdk/testing ClassDeclaration TestHost :: press(binding: string, options?: { panel?: boolean; }): Promise<"ran" | "reason" | "passed">;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: pressOsdAction(index: number): Promise<void>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: previousCrash: string | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: producerTransport: "unix" | "tcp";
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly bindings: { overlay: Map<string, string[]>; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly calls: Call[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly candidates: Map<string, PackageManifest>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly clipboard: { text: string | null; images: string[]; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly commands: Map<string, FakeCommand>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly confirmTexts: { message: string; detail?: string; confirm: string; cancel: string; checkbox?: string; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly confirms: Record<string, Json>[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly coreCommands: Map<string, FakeCommand>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly coreRuns: string[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly coreSeeks: { action: string; seconds: number; keyframes: boolean; landed: number; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly dataDirectory: string;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly dialogAnswers: (string[] | null | { confirmed: boolean; checked: boolean; })[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly dropProviders: { id: string; extensions: string[]; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly exports: Record<string, Json>[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly fileDialogs: FileDialogText[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly images: { path: string; ref: number; maxSide?: number; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly jobs: Map<number, MediaJob>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly layout: { bottom: LayoutSlot | null; sidebar: LayoutSlot | null; adjust: LayoutSlot | null; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly listening: Set<string>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly listeningWhy: Map<string, string[]>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly local: LocalServices;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mainWindow: { fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; onTop: boolean; cursorAutoHide: "fullscreen" | "playing"; pictureInPicture: { supported: boolean; active: boolean; }; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly otherResolvers: { owner: string; extensions?: string[]; schemes?: string[]; hosts?: string[]; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly packageCalls: { method: "setEnabled" | "reload" | "uninstall" | "install"; id: string; enabled?: boolean; removeData?: boolean; source?: PackageSource; replace?: boolean; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly panels: Map<string, FakePanel>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly processing: { configurationRevision: number; backendUncertain: Partial<Record<"video" | "audio", string>>; resources: Map<string, { stage: string; revision: number; nodes: Json; offsetMs?: number; }>; book: Map<string, { status: "completed" | "failed"; result?: Json; error?: { code: string; message: string; }; }>; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly producers: Map<number, FakeProducer & { server: Server; path: string; admitted: boolean; epoch: number; pending: Json | null; acknowledged: boolean; active: boolean; }>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly remoteImages: Map<string, string | null>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly rendering: { reason: RenderingReason; preference: RenderingPreference; startedWith: RenderingMode; gpu: { available: boolean; reason: RenderingReason | null; }; restarts: number; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly resolutions: Map<number, { resolverId: string; source: string; paused: boolean; }>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly resolvers: Map<string, Json>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly secrets: Map<string, string>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly seeks: { seconds: number; keyframes: boolean; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sessionStorage: Map<string, Json>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly settings: { pages: Map<string, { category: string; title: string; order: number; file: string; component: string; global: string; props: Record<string, Json>; emit(callback: string, ...args: Json[]): void; }>; shows: (string | null)[]; current: string | null; open: boolean; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly snapshots: Map<number, Json>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly steps: { unit: string; direction: string; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly subscriptions: Set<string>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly subtitleLoads: { format: "srt" | "ass"; title: string | null; select: "primary" | "secondary" | "none"; bytes: Buffer; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly system: { revealed: string[]; opened: string[]; urls: string[]; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly timeline: { layers: Map<string, { time: number; kind: string; title: string | null; }[]>; readonly marks: { plugin: string; time: number; kind: string; title: string | null; }[]; rangeLayers: Map<string, { start: number; end: number; style: string; title: string | null; }[]>; readonly ranges: { plugin: string; start: number; end: number; style: string; title: string | null; }[]; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly tools: { calls: { tool: string; args: string[]; }[]; handlers: Map<string, (args: string[]) => { stdout?: Uint8Array | string; stderr?: string; } | Promise<{ stdout?: Uint8Array | string; stderr?: string; }>>; handle(tool: "ffmpeg" | "ffprobe", handler: (args: string[]) => { stdout?: Uint8Array | string; stderr?: string; } | Promise<{ stdout?: Uint8Array | string; stderr?: string; }>): void; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly uploads: Map<number, { bytes: Buffer[]; expected: number; generation?: number; }>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly upscaling: { reason: UpscalingReason | null; enabled: boolean; factor: number | null; checked: boolean; renderingStarting: boolean; video: UpscalingVideoSize | null; area: { width: number; height: number; } | null; gpu: string | null; hwdecCurrent: string | null; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly videoRender: { owner: string | null; values: RenderSettings; gpu: boolean; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly videoShaders: { handles: Map<string, string[]>; others: number; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly videoView: { owner: string | null; values: ViewSettings; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly windows: Map<string, FakeWindow>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: rebind(command: string, inputs: readonly string[] | null): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: request<T>(method: string, params?: Json): Promise<T>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: reset(method: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: selectTab(plugin: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: sent(method: string): Record<string, Json>[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: sequence: { canNext: boolean; canPrevious: boolean; } | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: set locale(locale: Locale);
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setAppearance(theme: ThemeId): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setBackdropEffective(effective: boolean): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setLanguage(language: LanguagePreference): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setMainWindow(patch: Partial<{ fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; pictureInPicture: { supported: boolean; active: boolean; }; }>): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setPackages(list: TestHost["packages"]): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setSource(patch: Partial<SourceState>): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setTimelineLayer(pluginId: string, marks: { time: number; kind: string; title?: string | null; }[]): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setTimelineRanges(pluginId: string, ranges: { start: number; end: number; style: string; title?: string | null; }[]): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setVideoRenderOwner(pluginId: string | null): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setVideoViewOwner(pluginId: string | null): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: settingsPage(id: string): { category: string; title: string; order: number; file: string; component: string; global: string; props: Record<string, Json>; emit(callback: string, ...args: Json[]): void; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: settle(ms?: number): Promise<void>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: source: SourceState;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: stats: PlaybackStats;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: step(direction: "next" | "previous"): Promise<unknown>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: stepSeek: number;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: stepSeekKeyframes: boolean;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: subtitles: SubtitleState;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: systemInfo: Omit<WireSystemInfo, "rendering" | "renderingReason">;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: translate(text: TextValue, args?: TemplateArgs): string;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: unmountOther(plugin: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: updateFileTypes(): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: upscalingChanged(): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: upscalingDecoding(cause: UpscalingDecodingCause, plugins?: readonly UpscalingPlugin[]): UpscalingReason;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: window(id: string): FakeWindow;
+@vestra-player/sdk/testing ClassDeclaration TestHost implements Transport
+@vestra-player/sdk/testing FunctionDeclaration startPlugin = export declare function startPlugin(activate: (plugin: Plugin) => unknown, options?: { directory?: string | URL; id?: string; capabilities?: string[]; host?: TestHost; dataDirectory?: string; sessionStorage?: ReadonlyMap<string, Json>; locale?: Locale; }): Promise<{ host: TestHost; plugin: Plugin; stop: { (): Promise<void>; (options: { reason?: StopReason; }): Promise<void>; }; disconnect(): Promise<void>; }>;
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly bindings: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly focus: "panel" | null;
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly id: string;
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly owner: string;
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly path: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly title: string;
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinSubmenu
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinSubmenu :: readonly path: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration BuiltinSubmenu :: readonly plugins: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly apis: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly label: string;
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly requires: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly risky: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: click(): Promise<void>;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly checked: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly command: string;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly enabled: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly icon: string;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly image: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly order: number;
+@vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly tooltip: string;
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand :: declaration: CommandDeclaration;
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand :: readonly display: { title: string; path: string[]; reason?: string | null; category?: string | null; };
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand :: revision: number;
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand :: run(): Promise<void>;
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand :: state: { enabled: boolean; checked: boolean | null; busy: boolean; reason: TextValue | null; };
+@vestra-player/sdk/testing InterfaceDeclaration FakeCommand :: when?: { enabled?: Json; checked?: Json; };
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer :: droppedWhileSelected: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer :: id: number;
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer :: receivedFrames: number;
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer :: released: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer :: retired: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FakeProducer :: videoFrames: number;
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow :: callbacks: string[];
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow :: emit(callback: string, ...args: Json[]): void;
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow :: file: string;
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow :: props: Record<string, Json>;
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow :: userClose(): void;
+@vestra-player/sdk/testing InterfaceDeclaration FakeWindow :: visible: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration FileDialogText
+@vestra-player/sdk/testing InterfaceDeclaration FileDialogText :: fileName?: string;
+@vestra-player/sdk/testing InterfaceDeclaration FileDialogText :: kind: "openFile" | "openFiles" | "openDirectory" | "saveFile";
+@vestra-player/sdk/testing InterfaceDeclaration FileDialogText :: title?: string;
+@vestra-player/sdk/testing InterfaceDeclaration MarkdownWire
+@vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: base: string | null;
+@vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: images: Record<string, string>;
+@vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: text: string;
+@vestra-player/sdk/testing TypeAliasDeclaration FakePanel = export type FakePanel = Omit<FakeWindow, "callbacks" | "userClose"> & { slot: string; component: string; locks: Json; };
+@vestra-player/sdk/testing VariableDeclaration BAR_BUTTON_ICONS = BAR_BUTTON_ICONS: readonly [ "play", "pause", "stop", "back", "forward", "open", "volume", "mute", "playlist", "detach", "attach", "close", "failed", "move-top", "move-up", "move-down", "move-bottom", "search", "chapter", "bookmark", "check-task", "check-box", "menu-check", "submenu", "scroll-up", "scroll-down", "caret-down", "sort-asc", "sort-desc", "tag-remove", "preview-play", "add", "remove", "sort", "fullscreen", "exit-fullscreen", "store", "ai", "sliders" ]
+@vestra-player/sdk/testing VariableDeclaration BAR_BUTTON_LIMITS = BAR_BUTTON_LIMITS: { readonly perPlugin: 1; readonly total: 8; readonly maxOrder: 999; }
+@vestra-player/sdk/testing VariableDeclaration BINDING_INPUTS = BINDING_INPUTS: Readonly<{ readonly modifiers: readonly [ "Ctrl", "Alt", "Shift", "Cmd" ]; readonly letters: readonly string[]; readonly digits: readonly string[]; readonly functionKeys: string[]; readonly named: readonly [ "Space", "Enter", "Tab", "Escape", "Backspace", "Delete", "Insert", "Home", "End", "PageUp", "PageDown", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Plus", ...string[], "NumpadPlus", "NumpadMinus", "NumpadMultiply", "NumpadDivide", "NumpadEnter", "NumpadDecimal" ]; readonly mouse: readonly [ "Mouse:LeftClick", "Mouse:LeftDoubleClick", "Mouse:LeftDoubleClick:LeftHalf", "Mouse:LeftDoubleClick:RightHalf", "Mouse:MiddleClick", "Mouse:X1", "Mouse:X2", "Mouse:WheelUp", "Mouse:WheelDown", "Mouse:WheelLeft", "Mouse:WheelRight" ]; }>
+@vestra-player/sdk/testing VariableDeclaration BUILTIN_COMMANDS = BUILTIN_COMMANDS: readonly BuiltinCommand[]
+@vestra-player/sdk/testing VariableDeclaration BUILTIN_SUBMENUS = BUILTIN_SUBMENUS: readonly BuiltinSubmenu[]
+@vestra-player/sdk/testing VariableDeclaration CAPABILITY_INFO = CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>>
+@vestra-player/sdk/testing VariableDeclaration COMMAND_LIMITS = COMMAND_LIMITS: { readonly perPlugin: 160; readonly total: 1024; readonly depth: 8; readonly idBytes: 128; readonly titleBytes: 128; readonly segmentBytes: 80; readonly groupBytes: 80; readonly categoryBytes: 80; readonly reasonBytes: 512; readonly order: 1000000; }
+@vestra-player/sdk/testing VariableDeclaration IMAGE_LIMITS = IMAGE_LIMITS: Readonly<{ fileBytes: number; side: 4096; pluginBytes: number; viewBytes: number; }>
+@vestra-player/sdk/testing VariableDeclaration LIST_SEPARATORS = LIST_SEPARATORS: Readonly<Record<Locale, Readonly<Record<ListStyle, string>>>>
+@vestra-player/sdk/testing VariableDeclaration LOCALES = LOCALES: readonly [ "en", "zh-Hans", "ja", "ko", "de", "fr", "es" ]
+@vestra-player/sdk/testing VariableDeclaration MENU_IDS = MENU_IDS: readonly [ "open", "playback", "subtitles", "video", "audio", "screen", "settings", "reset" ]
+@vestra-player/sdk/testing VariableDeclaration MESSAGE_LIMIT = MESSAGE_LIMIT: number
+@vestra-player/sdk/testing VariableDeclaration OSD_LIMITS = OSD_LIMITS: Readonly<{ readonly messageChars: 200; readonly panelLines: 32; readonly panelBytes: 4096; readonly minColumns: 8; readonly maxColumns: 1000; readonly actions: 2; readonly actionChars: 40; }>
+@vestra-player/sdk/testing VariableDeclaration SECRET_LIMITS = SECRET_LIMITS: Readonly<{ readonly nameChars: 64; readonly valueBytes: 1024; readonly names: 256; }>
+@vestra-player/sdk/testing VariableDeclaration SESSION_STORAGE_LIMITS = SESSION_STORAGE_LIMITS: Readonly<{ readonly keyBytes: 1024; readonly bytes: number; readonly entryBytes: 128; }>
+@vestra-player/sdk/testing VariableDeclaration SUBTITLE_LIMITS = SUBTITLE_LIMITS: Readonly<{ readonly fileBytes: number; readonly tracksPerPlugin: 4; readonly tracks: 16; readonly totalBytes: number; readonly loadsPerPlugin: 16; readonly loads: 128; readonly uploadsPerPlugin: 2; readonly uploads: 8; }>
+@vestra-player/sdk/testing VariableDeclaration TEXT_LIMITS = TEXT_LIMITS: { readonly depth: 8; readonly nodes: 1024; readonly args: 16; readonly items: 256; readonly stringBytes: 4096; }
+@vestra-player/sdk/testing VariableDeclaration THEME_PALETTES = THEME_PALETTES: Readonly<Record<"vestra" | "vestra-light", Readonly<Record<string, string>>>>
+@vestra-player/sdk/testing VariableDeclaration TIMELINE_LIMITS = TIMELINE_LIMITS: Readonly<{ readonly marks: 1000; readonly ranges: 100; readonly titleChars: 100; }>
+@vestra-player/sdk/testing VariableDeclaration UI_VALUE_LIMITS = UI_VALUE_LIMITS: { readonly depth: 8; readonly values: number; readonly arrayRows: 100000; readonly stringBytes: number; readonly textBytes: number; }
+@vestra-player/sdk/testing VariableDeclaration VIDEO_PROCESSING_LIMITS = VIDEO_PROCESSING_LIMITS: Readonly<{ shaders: 16; shaderBytes: number; shaderIdBytes: 128; lutBytes: number; lutSize: 65; lutPathBytes: 4096; matrixValue: 1024; rdiv: 256; bias: 65535; }>

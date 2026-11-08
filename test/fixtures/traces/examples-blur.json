@@ -1,0 +1,169 @@
+{
+  "scenario": "examples/blur",
+  "command": "blur",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 2,
+      "fullPasses": 1,
+      "evaluations": 2,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 4,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "blur",
+          "revision": 1,
+          "declaration": {
+            "title": "Blur…",
+            "path": [
+              "@video",
+              "Blur…"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "processing.state",
+        "params": {}
+      },
+      {
+        "method": "processing.state",
+        "params": {}
+      }
+    ],
+    "changes": [],
+    "command": [
+      {
+        "method": "ui.open",
+        "params": {
+          "id": "blur",
+          "file": "ui/blur.slint",
+          "properties": {
+            "strength": 0,
+            "problem": ""
+          },
+          "callbacks": [
+            "strength-changed"
+          ]
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "blur"
+        }
+      },
+      {
+        "method": "ui.close",
+        "params": {
+          "id": "blur"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

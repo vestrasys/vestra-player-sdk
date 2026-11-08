@@ -1,0 +1,3568 @@
+{
+  "scenario": "builtins/video",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
+  "command": "video.reset",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 6,
+      "fullPasses": 5,
+      "evaluations": 343,
+      "parts": 12,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 6,
+      "fullPasses": 6,
+      "evaluations": 516,
+      "parts": 18,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 86,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "video.view.set",
+        "params": {
+          "values": {
+            "aspect": null,
+            "fit": "keep",
+            "zoom": 1,
+            "panX": 0,
+            "panY": 0
+          }
+        }
+      },
+      {
+        "method": "video.render.set",
+        "params": {
+          "values": {
+            "toneMapping": "auto",
+            "targetPeak": 203,
+            "peakDetect": true,
+            "shaders": [],
+            "interpolation": false
+          }
+        }
+      },
+      {
+        "method": "processing.state",
+        "params": {}
+      },
+      {
+        "method": "rendering.state",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.shader.use",
+          "revision": 1,
+          "declaration": {
+            "title": "Use Shaders",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "Use Shaders"
+            ],
+            "order": 402,
+            "group": "video-source",
+            "radio": false,
+            "bindings": [
+              "Shift+P"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Pixel Shaders"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.shader.list",
+          "revision": 1,
+          "declaration": {
+            "title": "Shader List…",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "Shader List…"
+            ],
+            "order": 402,
+            "group": "video-source",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Pixel Shaders"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.shader.folder",
+          "revision": 1,
+          "declaration": {
+            "title": "Open Shader Folder",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "Open Shader Folder"
+            ],
+            "order": 402,
+            "group": "video-source",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Pixel Shaders"
+            },
+            "home": "video.shader.list"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.shader.reload",
+          "revision": 1,
+          "declaration": {
+            "title": "Reload Shaders",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "Reload Shaders"
+            ],
+            "order": 402,
+            "group": "video-source",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Pixel Shaders"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.auto",
+          "revision": 1,
+          "declaration": {
+            "title": "Auto",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Auto"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.off",
+          "revision": 1,
+          "declaration": {
+            "title": "Off",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Off"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.bt.2390",
+          "revision": 1,
+          "declaration": {
+            "title": "BT.2390",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "BT.2390"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.hable",
+          "revision": 1,
+          "declaration": {
+            "title": "Hable",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Hable"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.mobius",
+          "revision": 1,
+          "declaration": {
+            "title": "Mobius",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Mobius"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.reinhard",
+          "revision": 1,
+          "declaration": {
+            "title": "Reinhard",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Reinhard"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.clip",
+          "revision": 1,
+          "declaration": {
+            "title": "Clip",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Clip"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            },
+            "home": "video.hdr.settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.peak",
+          "revision": 1,
+          "declaration": {
+            "title": "Dynamic Peak Detection",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Tone Mapping",
+              "Dynamic Peak Detection"
+            ],
+            "order": 402,
+            "group": "video-hdr-peak",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "HDR Tone Mapping"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hdr.settings",
+          "revision": 1,
+          "declaration": {
+            "title": "HDR Settings…",
+            "path": [
+              "@video",
+              "Pixel Shaders",
+              "HDR Settings…"
+            ],
+            "order": 402,
+            "group": "video-hdr",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Pixel Shaders"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deinterlace.cycle",
+          "revision": 1,
+          "declaration": {
+            "title": "Cycle",
+            "path": [
+              "@video",
+              "Deinterlace",
+              "Cycle"
+            ],
+            "order": 403,
+            "group": "video-source",
+            "radio": false,
+            "bindings": [
+              "Ctrl+I"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Deinterlace"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deinterlace.auto",
+          "revision": 1,
+          "declaration": {
+            "title": "Auto",
+            "path": [
+              "@video",
+              "Deinterlace",
+              "Auto"
+            ],
+            "order": 403,
+            "group": "video-source",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Deinterlace"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deinterlace.on",
+          "revision": 1,
+          "declaration": {
+            "title": "Always",
+            "path": [
+              "@video",
+              "Deinterlace",
+              "Always"
+            ],
+            "order": 403,
+            "group": "video-source",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Deinterlace"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deinterlace.off",
+          "revision": 1,
+          "declaration": {
+            "title": "Never",
+            "path": [
+              "@video",
+              "Deinterlace",
+              "Never"
+            ],
+            "order": 403,
+            "group": "video-source",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Deinterlace"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deinterlace.output.frame",
+          "revision": 1,
+          "declaration": {
+            "title": "By Frame",
+            "path": [
+              "@video",
+              "Deinterlace",
+              "Output",
+              "By Frame"
+            ],
+            "order": 403,
+            "group": "video-deinterlace-output",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Deinterlace"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": false,
+            "checked": true,
+            "busy": false,
+            "reason": "Auto outputs by field (double rate); this setting applies to Always"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deinterlace.output.field",
+          "revision": 1,
+          "declaration": {
+            "title": "By Field (Double Rate)",
+            "path": [
+              "@video",
+              "Deinterlace",
+              "Output",
+              "By Field (Double Rate)"
+            ],
+            "order": 403,
+            "group": "video-deinterlace-output",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Deinterlace"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": "Auto outputs by field (double rate); this setting applies to Always"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.fit.keep",
+          "revision": 1,
+          "declaration": {
+            "title": "Keep Aspect Ratio",
+            "path": [
+              "@video",
+              "Aspect",
+              "Keep Aspect Ratio"
+            ],
+            "order": 404,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.fit.stretch",
+          "revision": 1,
+          "declaration": {
+            "title": "Ignore Aspect Ratio",
+            "path": [
+              "@video",
+              "Aspect",
+              "Ignore Aspect Ratio"
+            ],
+            "order": 404,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.fit.fill",
+          "revision": 1,
+          "declaration": {
+            "title": "Fill Window (Crop Excess)",
+            "path": [
+              "@video",
+              "Aspect",
+              "Fill Window (Crop Excess)"
+            ],
+            "order": 404,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.cycle",
+          "revision": 1,
+          "declaration": {
+            "title": "Cycle Aspect Ratio",
+            "path": [
+              "@video",
+              "Aspect",
+              "Cycle Aspect Ratio"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": false,
+            "bindings": [
+              "Shift+F6"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.default",
+          "revision": 1,
+          "declaration": {
+            "title": "Default (Source)",
+            "path": [
+              "@video",
+              "Aspect",
+              "Default (Source)"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.0",
+          "revision": 1,
+          "declaration": {
+            "title": "4:3",
+            "path": [
+              "@video",
+              "Aspect",
+              "4:3"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.1",
+          "revision": 1,
+          "declaration": {
+            "title": "16:9",
+            "path": [
+              "@video",
+              "Aspect",
+              "16:9"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.2",
+          "revision": 1,
+          "declaration": {
+            "title": "16:10",
+            "path": [
+              "@video",
+              "Aspect",
+              "16:10"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.3",
+          "revision": 1,
+          "declaration": {
+            "title": "1.85:1",
+            "path": [
+              "@video",
+              "Aspect",
+              "1.85:1"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.4",
+          "revision": 1,
+          "declaration": {
+            "title": "2.35:1",
+            "path": [
+              "@video",
+              "Aspect",
+              "2.35:1"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.custom",
+          "revision": 1,
+          "declaration": {
+            "title": "Custom (x:y)",
+            "path": [
+              "@video",
+              "Aspect",
+              "Custom (x:y)"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": "Enter one with Custom Aspect Ratio… first"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.aspect.edit",
+          "revision": 1,
+          "declaration": {
+            "title": "Custom Aspect Ratio…",
+            "path": [
+              "@video",
+              "Aspect",
+              "Custom Aspect Ratio…"
+            ],
+            "order": 404,
+            "group": "video-aspect",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Aspect"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.none",
+          "revision": 1,
+          "declaration": {
+            "title": "None",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "None"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.pad.0",
+          "revision": 1,
+          "declaration": {
+            "title": "Stretch to 4:3",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Stretch to 4:3"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.pad.1",
+          "revision": 1,
+          "declaration": {
+            "title": "Stretch to 16:9",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Stretch to 16:9"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.pad.2",
+          "revision": 1,
+          "declaration": {
+            "title": "Stretch to 16:10",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Stretch to 16:10"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.pad.3",
+          "revision": 1,
+          "declaration": {
+            "title": "Stretch to 1.85:1",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Stretch to 1.85:1"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.pad.4",
+          "revision": 1,
+          "declaration": {
+            "title": "Stretch to 2.35:1",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Stretch to 2.35:1"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.crop.0",
+          "revision": 1,
+          "declaration": {
+            "title": "Crop to 4:3",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Crop to 4:3"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.crop.1",
+          "revision": 1,
+          "declaration": {
+            "title": "Crop to 16:9",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Crop to 16:9"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.crop.2",
+          "revision": 1,
+          "declaration": {
+            "title": "Crop to 16:10",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Crop to 16:10"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.crop.3",
+          "revision": 1,
+          "declaration": {
+            "title": "Crop to 1.85:1",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Crop to 1.85:1"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.crop.4",
+          "revision": 1,
+          "declaration": {
+            "title": "Crop to 2.35:1",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Crop to 2.35:1"
+            ],
+            "order": 405,
+            "group": "video-display",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.left",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Left",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Move Left"
+            ],
+            "order": 405,
+            "group": "video-reframe-position",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.right",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Right",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Move Right"
+            ],
+            "order": 405,
+            "group": "video-reframe-position",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Up",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Move Up"
+            ],
+            "order": 405,
+            "group": "video-reframe-position",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Down",
+            "path": [
+              "@video",
+              "Crop/Stretch",
+              "Move Down"
+            ],
+            "order": 405,
+            "group": "video-reframe-position",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Crop/Stretch"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reframe.reset",
+          "revision": 1,
+          "declaration": {
+            "title": "Crop Position",
+            "path": [
+              "@reset",
+              "Crop Position"
+            ],
+            "order": 442,
+            "group": "reset-video",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Reset"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.zoom-in",
+          "revision": 1,
+          "declaration": {
+            "title": "Zoom In",
+            "path": [
+              "@video",
+              "Framing",
+              "Zoom In"
+            ],
+            "order": 406,
+            "group": "video-display",
+            "radio": false,
+            "bindings": [
+              "Numpad9",
+              "Alt+Plus"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Framing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.zoom-out",
+          "revision": 1,
+          "declaration": {
+            "title": "Zoom Out",
+            "path": [
+              "@video",
+              "Framing",
+              "Zoom Out"
+            ],
+            "order": 406,
+            "group": "video-display",
+            "radio": false,
+            "bindings": [
+              "Numpad1",
+              "Alt+-"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Framing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.right",
+          "revision": 1,
+          "declaration": {
+            "title": "Pan →",
+            "path": [
+              "@video",
+              "Framing",
+              "Pan →"
+            ],
+            "order": 406,
+            "group": "video-frame-pan",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Numpad6",
+              "Alt+ArrowRight"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Framing"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.left",
+          "revision": 1,
+          "declaration": {
+            "title": "Pan ←",
+            "path": [
+              "@video",
+              "Framing",
+              "Pan ←"
+            ],
+            "order": 406,
+            "group": "video-frame-pan",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Numpad4",
+              "Alt+ArrowLeft"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Framing"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Pan ↑",
+            "path": [
+              "@video",
+              "Framing",
+              "Pan ↑"
+            ],
+            "order": 406,
+            "group": "video-frame-pan",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Numpad8",
+              "Alt+ArrowUp"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Framing"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Pan ↓",
+            "path": [
+              "@video",
+              "Framing",
+              "Pan ↓"
+            ],
+            "order": 406,
+            "group": "video-frame-pan",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Numpad2",
+              "Alt+ArrowDown"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Framing"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.centre",
+          "revision": 1,
+          "declaration": {
+            "title": "Center Frame",
+            "path": [
+              "@video",
+              "Framing",
+              "Center Frame"
+            ],
+            "order": 406,
+            "group": "video-frame-pan",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Numpad5"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Framing"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame.reset",
+          "revision": 1,
+          "declaration": {
+            "title": "Framing",
+            "path": [
+              "@reset",
+              "Framing"
+            ],
+            "order": 441,
+            "group": "reset-video",
+            "radio": false,
+            "bindings": [
+              "Numpad5",
+              "Alt+Backspace"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Reset"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.flip.vertical",
+          "revision": 1,
+          "declaration": {
+            "title": "Flip Vertically",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Flip Vertically"
+            ],
+            "order": 408,
+            "group": "video-effects",
+            "radio": false,
+            "bindings": [
+              "Ctrl+P"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.flip.horizontal",
+          "revision": 1,
+          "declaration": {
+            "title": "Flip Horizontally",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Flip Horizontally"
+            ],
+            "order": 408,
+            "group": "video-effects",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Z"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.gaussian",
+          "revision": 1,
+          "declaration": {
+            "title": "Gaussian Blur",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Gaussian Blur"
+            ],
+            "order": 408,
+            "group": "video-sharpness",
+            "radio": false,
+            "bindings": [
+              "Ctrl+B"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.sharpen",
+          "revision": 1,
+          "declaration": {
+            "title": "Sharpen",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Sharpen"
+            ],
+            "order": 408,
+            "group": "video-sharpness",
+            "radio": false,
+            "bindings": [
+              "Ctrl+R"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.edge",
+          "revision": 1,
+          "declaration": {
+            "title": "Edge Sharpen",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Edge Sharpen"
+            ],
+            "order": 408,
+            "group": "video-sharpness",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deblock",
+          "revision": 1,
+          "declaration": {
+            "title": "Deblock",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Deblock"
+            ],
+            "order": 408,
+            "group": "video-cleanup",
+            "radio": false,
+            "bindings": [
+              "Ctrl+H"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.deband",
+          "revision": 1,
+          "declaration": {
+            "title": "Deband",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Deband"
+            ],
+            "order": 408,
+            "group": "video-cleanup",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.denoise.d3",
+          "revision": 1,
+          "declaration": {
+            "title": "3D Denoise",
+            "path": [
+              "@video",
+              "Image Processing",
+              "3D Denoise"
+            ],
+            "order": 408,
+            "group": "video-cleanup",
+            "radio": false,
+            "bindings": [
+              "Ctrl+N"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.denoise.gradual",
+          "revision": 1,
+          "declaration": {
+            "title": "Gradual Denoise",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Gradual Denoise"
+            ],
+            "order": 408,
+            "group": "video-cleanup",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.denoise.temporal",
+          "revision": 1,
+          "declaration": {
+            "title": "Temporal Denoise",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Temporal Denoise"
+            ],
+            "order": 408,
+            "group": "video-cleanup",
+            "radio": false,
+            "bindings": [
+              "Ctrl+M"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.frame-blend",
+          "revision": 1,
+          "declaration": {
+            "title": "Frame Doubling",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Frame Doubling"
+            ],
+            "order": 408,
+            "group": "video-frames",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.interpolation",
+          "revision": 1,
+          "declaration": {
+            "title": "Motion Interpolation",
+            "path": [
+              "@video",
+              "Image Processing",
+              "Motion Interpolation"
+            ],
+            "order": 408,
+            "group": "video-frames",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Image Processing"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.rotate.cycle",
+          "revision": 1,
+          "declaration": {
+            "title": "Cycle",
+            "path": [
+              "@video",
+              "Rotation",
+              "Cycle"
+            ],
+            "order": 409,
+            "group": "video-effects",
+            "radio": false,
+            "bindings": [
+              "Alt+K"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Rotation"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.rotate.0",
+          "revision": 1,
+          "declaration": {
+            "title": "No Rotation",
+            "path": [
+              "@video",
+              "Rotation",
+              "No Rotation"
+            ],
+            "order": 409,
+            "group": "video-effects",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Rotation"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.rotate.90",
+          "revision": 1,
+          "declaration": {
+            "title": "90°",
+            "path": [
+              "@video",
+              "Rotation",
+              "90°"
+            ],
+            "order": 409,
+            "group": "video-effects",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Rotation"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.rotate.180",
+          "revision": 1,
+          "declaration": {
+            "title": "180°",
+            "path": [
+              "@video",
+              "Rotation",
+              "180°"
+            ],
+            "order": 409,
+            "group": "video-effects",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Rotation"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.rotate.270",
+          "revision": 1,
+          "declaration": {
+            "title": "270°",
+            "path": [
+              "@video",
+              "Rotation",
+              "270°"
+            ],
+            "order": 409,
+            "group": "video-effects",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Rotation"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.picture",
+          "revision": 1,
+          "declaration": {
+            "title": "Picture Adjustments…",
+            "path": [
+              "@video",
+              "Picture Adjustments…"
+            ],
+            "order": 440,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Picture"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.reset",
+          "revision": 1,
+          "declaration": {
+            "title": "Picture",
+            "path": [
+              "@reset",
+              "Picture"
+            ],
+            "order": 440,
+            "group": "reset-video",
+            "radio": false,
+            "bindings": [
+              "Q"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Reset"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.brightness.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Brightness -1%",
+            "path": [
+              "@video",
+              "Brightness -1%"
+            ],
+            "order": 442,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "W"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.brightness.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Brightness +1%",
+            "path": [
+              "@video",
+              "Brightness +1%"
+            ],
+            "order": 443,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "E"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.contrast.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Contrast -1%",
+            "path": [
+              "@video",
+              "Contrast -1%"
+            ],
+            "order": 444,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "R"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.contrast.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Contrast +1%",
+            "path": [
+              "@video",
+              "Contrast +1%"
+            ],
+            "order": 445,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "T"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.saturation.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Saturation -1%",
+            "path": [
+              "@video",
+              "Saturation -1%"
+            ],
+            "order": 446,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "Y"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.saturation.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Saturation +1%",
+            "path": [
+              "@video",
+              "Saturation +1%"
+            ],
+            "order": 447,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "U"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hue.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Hue -1%",
+            "path": [
+              "@video",
+              "Hue -1%"
+            ],
+            "order": 448,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "I"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.hue.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Hue +1%",
+            "path": [
+              "@video",
+              "Hue +1%"
+            ],
+            "order": 449,
+            "group": "video-color",
+            "radio": false,
+            "bindings": [
+              "O"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Picture"
+            },
+            "home": "video.picture"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "video.view.set",
+        "params": {
+          "values": {
+            "aspect": null,
+            "fit": "keep",
+            "zoom": 1,
+            "panX": 0,
+            "panY": 0
+          }
+        }
+      },
+      {
+        "method": "video.render.set",
+        "params": {
+          "values": {
+            "toneMapping": "auto",
+            "targetPeak": 203,
+            "peakDetect": true,
+            "shaders": [],
+            "interpolation": false
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "video.gpu-rendering",
+          "revision": 1,
+          "declaration": {
+            "title": "GPU Rendering (Experimental)",
+            "path": [
+              "@video",
+              "GPU Rendering (Experimental)"
+            ],
+            "order": 460,
+            "group": "video-rendering",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Picture"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "processing.state",
+        "params": {}
+      },
+      {
+        "method": "rendering.state",
+        "params": {}
+      },
+      {
+        "method": "video.view.set",
+        "params": {
+          "values": {
+            "aspect": null,
+            "fit": "keep",
+            "zoom": 1,
+            "panX": 0,
+            "panY": 0
+          }
+        }
+      },
+      {
+        "method": "video.render.set",
+        "params": {
+          "values": {
+            "toneMapping": "auto",
+            "targetPeak": 203,
+            "peakDetect": true,
+            "shaders": [],
+            "interpolation": false
+          }
+        }
+      },
+      {
+        "method": "playback.stats",
+        "params": {}
+      },
+      {
+        "method": "processing.replace",
+        "params": {
+          "stage": "video",
+          "resourceId": "picture",
+          "revision": 1,
+          "expectedGeneration": 1,
+          "nodes": [
+            {
+              "kind": "deinterlace",
+              "when": "auto",
+              "output": "field"
+            }
+          ]
+        }
+      },
+      {
+        "method": "processing.state",
+        "params": {}
+      }
+    ],
+    "changes": [],
+    "command": [
+      {
+        "method": "osd.show",
+        "params": {
+          "text": "Picture reset"
+        }
+      },
+      {
+        "method": "playback.stats",
+        "params": {}
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.gpu-rendering"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hue.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hue.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.saturation.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.saturation.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.contrast.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.contrast.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.brightness.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.brightness.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reset"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.picture"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.rotate.270"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.rotate.180"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.rotate.90"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.rotate.0"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.rotate.cycle"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.interpolation"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame-blend"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.denoise.temporal"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.denoise.gradual"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.denoise.d3"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deband"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deblock"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.edge"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.sharpen"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.gaussian"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.flip.horizontal"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.flip.vertical"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.reset"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.centre"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.left"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.right"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.zoom-out"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.frame.zoom-in"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.reset"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.right"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.left"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.crop.4"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.crop.3"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.crop.2"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.crop.1"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.crop.0"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.pad.4"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.pad.3"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.pad.2"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.pad.1"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.pad.0"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.reframe.none"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.edit"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.custom"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.4"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.3"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.2"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.1"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.0"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.default"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.aspect.cycle"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.fit.fill"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.fit.stretch"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.fit.keep"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deinterlace.output.field"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deinterlace.output.frame"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deinterlace.off"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deinterlace.on"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deinterlace.auto"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.deinterlace.cycle"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.settings"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.peak"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.clip"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.reinhard"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.mobius"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.hable"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.bt.2390"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.off"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.hdr.auto"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.shader.reload"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.shader.folder"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.shader.list"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "video.shader.use"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "video.render.release",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "video.view.release",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "processing.state",
+        "params": {}
+      },
+      {
+        "method": "processing.replace",
+        "params": {
+          "stage": "video",
+          "resourceId": "picture",
+          "revision": 2,
+          "expectedGeneration": 1,
+          "nodes": []
+        }
+      }
+    ]
+  }
+}

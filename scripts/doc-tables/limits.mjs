@@ -65,7 +65,7 @@ export default async function limits({ root, args, table }) {
   const module = await import(pathToFileURL(join(root, source.file)));
   const value = module[name];
   if (value === undefined) throw new Error(`${source.file} exports no ${name}`);
-  const exported = exportedNames("src/plugin/testing.ts").has(name);
+  const exported = exportedNames("src/plugin/testing/index.ts").has(name);
   const label = (field) =>
     exported ? `\`${field ? `${name}.${field}` : name}\`` : (field ?? name);
   if (source.value) {

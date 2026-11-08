@@ -1,0 +1,113 @@
+{
+  "scenario": "examples/i18n",
+  "command": "counter",
+  "subscriptions": [],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 4,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "counter",
+          "revision": 1,
+          "declaration": {
+            "title": "Counter…",
+            "path": [
+              "Tools",
+              "Counter…"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "ui.open",
+        "params": {
+          "id": "counter",
+          "file": "ui/counter.slint",
+          "properties": {
+            "count": 0
+          },
+          "callbacks": [
+            "add"
+          ]
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "counter"
+        }
+      },
+      {
+        "method": "ui.close",
+        "params": {
+          "id": "counter"
+        }
+      }
+    ]
+  }
+}

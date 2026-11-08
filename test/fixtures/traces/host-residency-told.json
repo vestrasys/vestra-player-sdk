@@ -1,0 +1,31 @@
+{
+  "printed": [
+    "-- residency on",
+    "# test.residency keeps running while idle (lazy activation): listens to source.state: a listener added at test/golden-traces.test.ts",
+    "# test.residency keeps running while idle (lazy activation): listens to source.state: a listener added at test/golden-traces.test.ts; listens to window.state: a listener added at test/golden-traces.test.ts",
+    "# test.residency.other keeps running while idle (lazy activation): listens to source.state: a listener added at test/golden-traces.test.ts"
+  ],
+  "runs": [
+    [
+      "listens to source.state: a listener added at test/golden-traces.test.ts"
+    ],
+    [
+      "listens to source.state: a listener added at test/golden-traces.test.ts"
+    ],
+    [
+      "listens to source.state: a listener added at test/golden-traces.test.ts"
+    ],
+    [
+      "listens to source.state: a listener added at test/golden-traces.test.ts",
+      "listens to window.state: a listener added at test/golden-traces.test.ts"
+    ],
+    [
+      "listens to source.state: a listener added at test/golden-traces.test.ts",
+      "listens to window.state: a listener added at test/golden-traces.test.ts"
+    ],
+    [
+      "listens to source.state: a listener added at test/golden-traces.test.ts"
+    ],
+    []
+  ]
+}

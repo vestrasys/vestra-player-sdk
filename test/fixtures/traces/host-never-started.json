@@ -1,0 +1,33 @@
+{
+  "constructed": {
+    "made": [
+      "vestra-test-host-"
+    ],
+    "dataDirectoryIn": "data",
+    "scratchExists": true,
+    "entries": [],
+    "dataDirectoryExists": false,
+    "manifestId": "test.plugin",
+    "calls": 0
+  },
+  "afterSecond": {
+    "made": 2
+  },
+  "closed": {
+    "scratchExists": false,
+    "removed": [
+      {
+        "options": {
+          "recursive": true,
+          "force": true,
+          "maxRetries": 5,
+          "retryDelay": 100
+        }
+      }
+    ]
+  },
+  "closedTwice": {
+    "removed": 3
+  },
+  "secondLeft": false
+}

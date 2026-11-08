@@ -1,0 +1,128 @@
+{
+  "seen": [
+    {
+      "refused": {
+        "code": "failed",
+        "message": "denied"
+      }
+    },
+    {
+      "value": null
+    },
+    {
+      "value": "two"
+    },
+    {
+      "refused": {
+        "message": "lost"
+      }
+    },
+    {
+      "value": "two"
+    },
+    {
+      "refused": {
+        "code": "unsupported",
+        "message": "test host has no no.such"
+      }
+    },
+    {
+      "value": {
+        "echoed": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "refused": {
+        "code": "unsupported",
+        "message": "test host has no no.such"
+      }
+    }
+  ],
+  "timeline": [
+    [
+      "request",
+      "clipboard.writeText"
+    ],
+    [
+      "refused",
+      "clipboard.writeText",
+      {
+        "code": "failed",
+        "message": "denied"
+      }
+    ],
+    [
+      "request",
+      "clipboard.writeText"
+    ],
+    [
+      "answer",
+      "clipboard.writeText"
+    ],
+    [
+      "request",
+      "clipboard.readText"
+    ],
+    [
+      "answer",
+      "clipboard.readText"
+    ],
+    [
+      "request",
+      "clipboard.readText"
+    ],
+    [
+      "refused",
+      "clipboard.readText",
+      {
+        "message": "lost"
+      }
+    ],
+    [
+      "request",
+      "clipboard.readText"
+    ],
+    [
+      "answer",
+      "clipboard.readText"
+    ],
+    [
+      "request",
+      "no.such"
+    ],
+    [
+      "refused",
+      "no.such",
+      {
+        "code": "unsupported",
+        "message": "test host has no no.such"
+      }
+    ],
+    [
+      "request",
+      "no.such"
+    ],
+    [
+      "answer",
+      "no.such"
+    ],
+    [
+      "request",
+      "no.such"
+    ],
+    [
+      "refused",
+      "no.such",
+      {
+        "code": "unsupported",
+        "message": "test host has no no.such"
+      }
+    ]
+  ],
+  "clipboard": {
+    "text": "two",
+    "images": []
+  }
+}

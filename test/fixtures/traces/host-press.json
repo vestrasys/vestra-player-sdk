@@ -1,0 +1,170 @@
+{
+  "timeline": [
+    [
+      "mark",
+      "press G"
+    ],
+    [
+      "event",
+      "commands.execute",
+      {
+        "id": "go",
+        "revision": 1
+      }
+    ],
+    [
+      "plugin",
+      "run go"
+    ],
+    [
+      "request",
+      "osd.show"
+    ],
+    [
+      "answer",
+      "osd.show"
+    ],
+    [
+      "plugin",
+      "ran go"
+    ],
+    [
+      "mark",
+      "pressed",
+      {
+        "value": "ran"
+      }
+    ],
+    [
+      "mark",
+      "press O"
+    ],
+    [
+      "mark",
+      "pressed",
+      {
+        "value": "reason"
+      }
+    ],
+    [
+      "mark",
+      "press Q"
+    ],
+    [
+      "mark",
+      "pressed",
+      {
+        "value": "passed"
+      }
+    ],
+    [
+      "mark",
+      "press M"
+    ],
+    [
+      "request",
+      "host.run"
+    ],
+    [
+      "event",
+      "source.state",
+      {
+        "kind": "media",
+        "container": null,
+        "audioTracks": null,
+        "stamp": {
+          "generation": 0,
+          "intentVersion": 0
+        },
+        "cycle": 0,
+        "eventSequence": 1,
+        "phase": "empty",
+        "source": null,
+        "loadingOwner": null,
+        "terminalReason": null,
+        "paused": false,
+        "position": null,
+        "duration": null,
+        "capabilities": {
+          "pause": false,
+          "seek": false,
+          "rate": false,
+          "restart": false,
+          "close": false,
+          "snapshotSource": false
+        },
+        "output": {
+          "volume": 100,
+          "muted": true
+        },
+        "rate": 1
+      }
+    ],
+    [
+      "answer",
+      "host.run"
+    ],
+    [
+      "mark",
+      "pressed",
+      {
+        "value": "ran"
+      }
+    ],
+    [
+      "mark",
+      "press X"
+    ],
+    [
+      "mark",
+      "pressed",
+      {
+        "value": "reason"
+      }
+    ],
+    [
+      "mark",
+      "press Ctrl+Alt+K"
+    ],
+    [
+      "mark",
+      "pressed",
+      {
+        "refused": {
+          "message": "test host: nothing is bound to Ctrl+Alt+K"
+        }
+      }
+    ],
+    [
+      "request",
+      "commands.unregister"
+    ],
+    [
+      "answer",
+      "commands.unregister"
+    ],
+    [
+      "request",
+      "commands.unregister"
+    ],
+    [
+      "answer",
+      "commands.unregister"
+    ],
+    [
+      "request",
+      "commands.unregister"
+    ],
+    [
+      "answer",
+      "commands.unregister"
+    ]
+  ],
+  "osd": [
+    "went",
+    "Not now",
+    "静音: 开",
+    "当前来源不支持此操作"
+  ],
+  "muted": true
+}

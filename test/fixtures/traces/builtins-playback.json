@@ -1,0 +1,2977 @@
+{
+  "scenario": "builtins/playback",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
+  "command": "rate-15",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "bindings.changed",
+      "why": [
+        "a listener added at tips.ts"
+      ]
+    },
+    {
+      "event": "timeline.changed",
+      "mirror": true
+    },
+    {
+      "event": "window.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "timeline.changed",
+      "why": [
+        "a view's bind reads plugin.timeline.marks (bar.ts)"
+      ]
+    },
+    {
+      "event": "window.state",
+      "why": [
+        "a view's bind reads plugin.window.state (bar.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+        "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)",
+        "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (bar.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "timeline.changed",
+      "mirror": true
+    },
+    {
+      "event": "window.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 5,
+      "fullPasses": 4,
+      "evaluations": 87,
+      "parts": 16,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 4,
+      "fullPasses": 4,
+      "evaluations": 116,
+      "parts": 20,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 6,
+      "fullPasses": 6,
+      "evaluations": 174,
+      "parts": 30,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 4,
+      "fullPasses": 4,
+      "evaluations": 116,
+      "parts": 20,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "bindings.changed",
+          "why": [
+            "a listener added at tips.ts"
+          ]
+        }
+      },
+      {
+        "method": "bindings.list",
+        "params": {}
+      },
+      {
+        "method": "power.preventSleep",
+        "params": {
+          "mode": "playing"
+        }
+      },
+      {
+        "method": "player.setStepSeek",
+        "params": {
+          "seconds": 5,
+          "keyframes": true
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "timeline.changed",
+          "mirror": true
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "window.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "ui.mount",
+        "params": {
+          "slot": "bottom",
+          "file": "ui/bar.slint",
+          "component": "PlaybackBar",
+          "global": "PlaybackBridge",
+          "properties": {
+            "elapsed-label": "--:--",
+            "total-label": "--:--",
+            "progress": 0,
+            "can-seek": false,
+            "duration": 0,
+            "hover-time": false,
+            "hover-thumbnail": false,
+            "preview-count": 0,
+            "preview-map": [],
+            "marks": [],
+            "chapter-ticks": "",
+            "bookmark-ticks": "",
+            "marker-ticks": "",
+            "tick-span": 0,
+            "selection-ranges": "",
+            "region-ranges": "",
+            "has-loop": false,
+            "loop-a": 0,
+            "loop-b": 0,
+            "can-pause": false,
+            "playing": false,
+            "can-stop": false,
+            "can-previous": false,
+            "can-next": false,
+            "can-open": true,
+            "muted": false,
+            "volume": 100,
+            "can-mute": true,
+            "can-volume": true,
+            "fullscreen": false,
+            "remaining-time": false,
+            "key-play-pause": "Space",
+            "key-stop": "F4",
+            "key-previous": "PgUp",
+            "key-next": "PgDn",
+            "key-open": "Ctrl+O",
+            "key-mute": "M",
+            "key-fullscreen": "Escape",
+            "volume-percent": 100
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "open",
+          "revision": 1,
+          "declaration": {
+            "title": "Open File…",
+            "path": [
+              "Open File…"
+            ],
+            "order": 100,
+            "group": "open",
+            "radio": false,
+            "bindings": [
+              "Ctrl+O",
+              "F3"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "File"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "open-url",
+          "revision": 1,
+          "declaration": {
+            "title": "Open URL…",
+            "path": [
+              "@open",
+              "Open URL…"
+            ],
+            "order": 110,
+            "group": "open",
+            "radio": false,
+            "bindings": [
+              "Ctrl+U"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "File"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "reopen",
+          "revision": 1,
+          "declaration": {
+            "title": "Reopen Current/Last File",
+            "path": [
+              "Reopen Current/Last File"
+            ],
+            "order": 121,
+            "group": "open",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Y"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "File"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No file to reopen"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "copy-name",
+          "revision": 1,
+          "declaration": {
+            "title": "File Name",
+            "path": [
+              "Copy to Clipboard",
+              "File Name"
+            ],
+            "order": 125,
+            "group": "open",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Copy to Clipboard"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No open file"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "copy-folder",
+          "revision": 1,
+          "declaration": {
+            "title": "Folder Path",
+            "path": [
+              "Copy to Clipboard",
+              "Folder Path"
+            ],
+            "order": 126,
+            "group": "open",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Copy to Clipboard"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No open file"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "copy-path",
+          "revision": 1,
+          "declaration": {
+            "title": "Full Path",
+            "path": [
+              "Copy to Clipboard",
+              "Full Path"
+            ],
+            "order": 127,
+            "group": "open",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Copy to Clipboard"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No open file"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "keyframe-back",
+          "revision": 1,
+          "declaration": {
+            "title": "Previous Keyframe",
+            "path": [
+              "@playback",
+              "Seek",
+              "Previous Keyframe"
+            ],
+            "order": 206,
+            "group": "frame",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Shift+ArrowLeft"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "keyframe-forward",
+          "revision": 1,
+          "declaration": {
+            "title": "Next Keyframe",
+            "path": [
+              "@playback",
+              "Seek",
+              "Next Keyframe"
+            ],
+            "order": 207,
+            "group": "frame",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Shift+ArrowRight"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "jump",
+          "revision": 1,
+          "declaration": {
+            "title": "Jump to Time…",
+            "path": [
+              "@playback",
+              "Jump to Time…"
+            ],
+            "order": 218,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "G"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "jump-start",
+          "revision": 1,
+          "declaration": {
+            "title": "Jump to Start",
+            "path": [
+              "@playback",
+              "Seek",
+              "Jump to Start"
+            ],
+            "order": 219,
+            "group": "points",
+            "radio": false,
+            "bindings": [
+              "Backspace"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "time-jump",
+          "revision": 1,
+          "declaration": {
+            "title": "Seek Steps…",
+            "path": [
+              "@playback",
+              "Seek",
+              "Seek Steps…"
+            ],
+            "order": 223,
+            "group": "jump-settings",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-05",
+          "revision": 1,
+          "declaration": {
+            "title": "0.5×",
+            "path": [
+              "@playback",
+              "Speed",
+              "0.5×"
+            ],
+            "order": 223,
+            "group": "domain",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-15",
+          "revision": 1,
+          "declaration": {
+            "title": "1.5×",
+            "path": [
+              "@playback",
+              "Speed",
+              "1.5×"
+            ],
+            "order": 224,
+            "group": "domain",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-20",
+          "revision": 1,
+          "declaration": {
+            "title": "2×",
+            "path": [
+              "@playback",
+              "Speed",
+              "2×"
+            ],
+            "order": 225,
+            "group": "domain",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-custom",
+          "revision": 1,
+          "declaration": {
+            "title": "Custom…",
+            "path": [
+              "@playback",
+              "Speed",
+              "Custom…"
+            ],
+            "order": 226,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "prevent-sleep",
+          "revision": 1,
+          "declaration": {
+            "title": "Disable Screen Saver While Playing",
+            "path": [
+              "@playback",
+              "Disable Screen Saver While Playing"
+            ],
+            "order": 240,
+            "group": "playback-options",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playback"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "hover-time",
+          "revision": 1,
+          "declaration": {
+            "title": "Show Time on Seek Bar Hover",
+            "path": [
+              "@playback",
+              "Show Time on Seek Bar Hover"
+            ],
+            "order": 242,
+            "group": "playback-options",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playback"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "hover-thumbnail",
+          "revision": 1,
+          "declaration": {
+            "title": "Show Thumbnail on Seek Bar Hover",
+            "path": [
+              "@playback",
+              "Show Thumbnail on Seek Bar Hover"
+            ],
+            "order": 243,
+            "group": "playback-options",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playback"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "backward-2",
+          "revision": 1,
+          "declaration": {
+            "title": {
+              "$vestraText": "Back {} s",
+              "args": [
+                "30"
+              ]
+            },
+            "path": [
+              "@playback",
+              "Seek",
+              {
+                "$vestraText": "Back {} s",
+                "args": [
+                  "30"
+                ]
+              }
+            ],
+            "order": 212,
+            "group": "step",
+            "radio": false,
+            "bindings": [
+              "Ctrl+ArrowLeft"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "forward-2",
+          "revision": 1,
+          "declaration": {
+            "title": {
+              "$vestraText": "Forward {} s",
+              "args": [
+                "30"
+              ]
+            },
+            "path": [
+              "@playback",
+              "Seek",
+              {
+                "$vestraText": "Forward {} s",
+                "args": [
+                  "30"
+                ]
+              }
+            ],
+            "order": 213,
+            "group": "step",
+            "radio": false,
+            "bindings": [
+              "Ctrl+ArrowRight"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "backward-3",
+          "revision": 1,
+          "declaration": {
+            "title": {
+              "$vestraText": "Back {} s",
+              "args": [
+                "60"
+              ]
+            },
+            "path": [
+              "@playback",
+              "Seek",
+              {
+                "$vestraText": "Back {} s",
+                "args": [
+                  "60"
+                ]
+              }
+            ],
+            "order": 214,
+            "group": "step",
+            "radio": false,
+            "bindings": [
+              "Shift+ArrowLeft"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "forward-3",
+          "revision": 1,
+          "declaration": {
+            "title": {
+              "$vestraText": "Forward {} s",
+              "args": [
+                "60"
+              ]
+            },
+            "path": [
+              "@playback",
+              "Seek",
+              {
+                "$vestraText": "Forward {} s",
+                "args": [
+                  "60"
+                ]
+              }
+            ],
+            "order": 215,
+            "group": "step",
+            "radio": false,
+            "bindings": [
+              "Shift+ArrowRight"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "backward-4",
+          "revision": 1,
+          "declaration": {
+            "title": {
+              "$vestraText": "Back {} s",
+              "args": [
+                "300"
+              ]
+            },
+            "path": [
+              "@playback",
+              "Seek",
+              {
+                "$vestraText": "Back {} s",
+                "args": [
+                  "300"
+                ]
+              }
+            ],
+            "order": 216,
+            "group": "step",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Alt+ArrowLeft"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "forward-4",
+          "revision": 1,
+          "declaration": {
+            "title": {
+              "$vestraText": "Forward {} s",
+              "args": [
+                "300"
+              ]
+            },
+            "path": [
+              "@playback",
+              "Seek",
+              {
+                "$vestraText": "Forward {} s",
+                "args": [
+                  "300"
+                ]
+              }
+            ],
+            "order": 217,
+            "group": "step",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Alt+ArrowRight"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Not supported by the current source"
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "timeline.changed",
+          "why": [
+            "a view's bind reads plugin.timeline.marks (bar.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "window.state",
+          "why": [
+            "a view's bind reads plugin.window.state (bar.ts)"
+          ]
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "key-previous",
+          "value": "PageUp",
+          "seq": 1
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "hover-thumbnail",
+          "revision": 2,
+          "state": {
+            "enabled": false,
+            "checked": true,
+            "busy": false,
+            "reason": "Needs ffmpeg"
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "key-next",
+          "value": "PageDown",
+          "seq": 2
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "key-open",
+          "value": "",
+          "seq": 3
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "key-fullscreen",
+          "value": "",
+          "seq": 4
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "playback.stats",
+        "params": {}
+      },
+      {
+        "method": "ui.interaction",
+        "params": {
+          "focused": false,
+          "dragging": false,
+          "popupOpen": false
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "can-pause",
+          "value": true,
+          "seq": 5
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "reopen",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "copy-name",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "copy-folder",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "copy-path",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "jump-start",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-05",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-15",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-20",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-custom",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "playing",
+          "value": true,
+          "seq": 6
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "can-stop",
+          "value": true,
+          "seq": 7
+        }
+      }
+    ],
+    "changes": [
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-15",
+          "revision": 3,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "playing",
+          "value": false,
+          "seq": 8
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "elapsed-label",
+          "value": "00:30",
+          "seq": 9
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "keyframe-back",
+          "revision": 2,
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No video"
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "keyframe-forward",
+          "revision": 2,
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No video"
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "backward-2",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "forward-2",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "backward-3",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "forward-3",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "backward-4",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "forward-4",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "command": [
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 1,
+          "intent": {
+            "kind": "control",
+            "control": {
+              "kind": "rate",
+              "rate": 1.5
+            },
+            "expected": {
+              "generation": 1,
+              "intentVersion": 1
+            }
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-05",
+          "revision": 3,
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": true,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-15",
+          "revision": 4,
+          "state": {
+            "enabled": false,
+            "checked": true,
+            "busy": true,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-20",
+          "revision": 3,
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": true,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-custom",
+          "revision": 3,
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": true,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "osd.show",
+        "params": {
+          "text": "Speed: {}x",
+          "args": [
+            "1.5"
+          ]
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-05",
+          "revision": 4,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-15",
+          "revision": 5,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-20",
+          "revision": 4,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-custom",
+          "revision": 4,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.unsubscribe",
+        "params": {
+          "event": "bindings.changed"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-4\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "forward-4"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "backward-4"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-3\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "forward-3"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"forward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "backward-3"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"backward-2\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "forward-2"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Custom…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "backward-2"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "hover-thumbnail"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "hover-time"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "prevent-sleep"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-custom"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-20"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-15"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Start\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-05"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "time-jump"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Jump to Time…\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "jump-start"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Next Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "jump"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Previous Keyframe\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "keyframe-forward"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Full Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "keyframe-back"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"Folder Path\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "copy-path"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when",
+            "command \"File Name\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "copy-folder"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)",
+            "command \"Reopen Current/Last File\" enabled is a function that reads plugin.player.state (commands.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "copy-name"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (bar.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "reopen"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "open-url"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "open"
+        }
+      },
+      {
+        "method": "ui.unmount",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "timeline.changed",
+          "mirror": true
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "window.state",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

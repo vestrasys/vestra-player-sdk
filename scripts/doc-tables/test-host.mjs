@@ -1,6 +1,6 @@
 /**
  * `<!-- generated:test-host -->`: the public members of `TestHost`
- * (src/plugin/testing.ts) with the first sentence of their doc comment,
+ * (src/plugin/testing/index.ts) with the first sentence of their doc comment,
  * in source order. Private, `#private` and `@internal` members are left
  * out.
  */
@@ -8,11 +8,11 @@ import ts from "typescript";
 import { docText, sourceFile, summary } from "./lib/source.mjs";
 
 export default function testHost({ table }) {
-  const file = sourceFile("src/plugin/testing.ts");
+  const file = sourceFile("src/plugin/testing/index.ts");
   const host = file.statements.find(
     (node) => ts.isClassDeclaration(node) && node.name?.text === "TestHost",
   );
-  if (!host) throw new Error("src/plugin/testing.ts: no class TestHost");
+  if (!host) throw new Error("src/plugin/testing/index.ts: no class TestHost");
   const rows = [];
   const seen = new Set();
   for (const member of host.members) {

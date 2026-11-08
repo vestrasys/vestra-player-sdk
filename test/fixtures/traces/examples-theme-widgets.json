@@ -1,0 +1,197 @@
+{
+  "scenario": "examples/theme-widgets",
+  "command": "level.up",
+  "subscriptions": [
+    {
+      "event": "commands.keys",
+      "mirror": true
+    },
+    {
+      "event": "commands.keys",
+      "why": [
+        "a view's bind reads plugin.commands.keys (main.ts)"
+      ]
+    },
+    {
+      "event": "commands.keys",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 5,
+      "fullPasses": 2,
+      "evaluations": 6,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 4,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 2,
+      "fullPasses": 0,
+      "evaluations": 2,
+      "parts": 2,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "commands.keys",
+          "mirror": true
+        }
+      },
+      {
+        "method": "commands.keys",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "open",
+          "revision": 1,
+          "declaration": {
+            "title": "Theme widgets…",
+            "path": [
+              "Examples",
+              "Theme widgets…"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "level.down",
+          "revision": 1,
+          "declaration": {
+            "title": "Level −",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "F7"
+            ],
+            "focus": null,
+            "repeat": true
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "level.up",
+          "revision": 1,
+          "declaration": {
+            "title": "Level +",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "F8"
+            ],
+            "focus": null,
+            "repeat": true
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "commands.keys",
+          "why": [
+            "a view's bind reads plugin.commands.keys (main.ts)"
+          ]
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "level.up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "level.down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "open"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "commands.keys",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

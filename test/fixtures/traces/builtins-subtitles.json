@@ -1,0 +1,3067 @@
+{
+  "scenario": "builtins/subtitles",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
+  "command": "size-up",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "playback.backend",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Current Subtitle Start\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Current Subtitle Start\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Current Subtitle Start\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Current Subtitle Start\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Current Subtitle Start\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+        "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)",
+        "a view's bind reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "playback.backend",
+      "why": [
+        "a view's bind reads plugin.subtitles.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "playback.backend",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 5,
+      "fullPasses": 4,
+      "evaluations": 91,
+      "parts": 9,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 62,
+      "parts": 6,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 3,
+      "evaluations": 93,
+      "parts": 9,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 31,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "mirror": true
+        }
+      },
+      {
+        "method": "subtitles.state",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "load",
+          "revision": 1,
+          "declaration": {
+            "title": "Open Subtitle…",
+            "path": [
+              "@open",
+              "Open Subtitle…"
+            ],
+            "order": 113,
+            "group": "open",
+            "radio": false,
+            "bindings": [
+              "Alt+O"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "load-secondary",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Secondary Subtitle…",
+            "path": [
+              "@open",
+              "Add Secondary Subtitle…"
+            ],
+            "order": 114,
+            "group": "open",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No media to play"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "show",
+          "revision": 1,
+          "declaration": {
+            "title": "Show Subtitles",
+            "path": [
+              "@subtitles",
+              "Show Subtitles"
+            ],
+            "order": 301,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Alt+H"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "track-off",
+          "revision": 1,
+          "declaration": {
+            "title": "Off",
+            "path": [
+              "@subtitles",
+              "Subtitle Track",
+              "Off"
+            ],
+            "order": 302,
+            "group": "subtitle-track",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Tracks"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "second-off",
+          "revision": 1,
+          "declaration": {
+            "title": "Off",
+            "path": [
+              "@subtitles",
+              "Secondary Subtitle",
+              "Off"
+            ],
+            "order": 312,
+            "group": "subtitle-second",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Secondary Subtitle"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "second-position-top",
+          "revision": 1,
+          "declaration": {
+            "title": "Top",
+            "path": [
+              "@subtitles",
+              "Secondary Subtitle",
+              "Position",
+              "Top"
+            ],
+            "order": 321,
+            "group": "subtitle-second-pos",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Secondary Subtitle Position"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "second-position-aboveMain",
+          "revision": 1,
+          "declaration": {
+            "title": "Above Main Subtitle",
+            "path": [
+              "@subtitles",
+              "Secondary Subtitle",
+              "Position",
+              "Above Main Subtitle"
+            ],
+            "order": 321,
+            "group": "subtitle-second-pos",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Secondary Subtitle Position"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "track-cycle",
+          "revision": 1,
+          "declaration": {
+            "title": "Cycle",
+            "path": [
+              "@subtitles",
+              "Subtitle Track",
+              "Cycle"
+            ],
+            "order": 311,
+            "group": "subtitle-cycle",
+            "radio": false,
+            "bindings": [
+              "Alt+L"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Tracks"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No subtitle tracks"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "size-up",
+          "revision": 1,
+          "declaration": {
+            "title": "Size +",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Size +"
+            ],
+            "order": 325,
+            "group": "style-font",
+            "radio": false,
+            "bindings": [
+              "Alt+PageUp"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "size-down",
+          "revision": 1,
+          "declaration": {
+            "title": "Size −",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Size −"
+            ],
+            "order": 326,
+            "group": "style-font",
+            "radio": false,
+            "bindings": [
+              "Alt+PageDown"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "move-up",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Up",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Move Up"
+            ],
+            "order": 330,
+            "group": "style-move",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "move-down",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Down",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Move Down"
+            ],
+            "order": 331,
+            "group": "style-move",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "move-reset",
+          "revision": 1,
+          "declaration": {
+            "title": "Subtitle Position",
+            "path": [
+              "@reset",
+              "Subtitle Position"
+            ],
+            "order": 330,
+            "group": "reset-subtitles",
+            "radio": false,
+            "bindings": [
+              "Alt+Home"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Reset"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "bold",
+          "revision": 1,
+          "declaration": {
+            "title": "Bold",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Bold"
+            ],
+            "order": 324,
+            "group": "style-font",
+            "radio": false,
+            "bindings": [
+              "Alt+B"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "shadow",
+          "revision": 1,
+          "declaration": {
+            "title": "Shadow",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Shadow"
+            ],
+            "order": 335,
+            "group": "style-box",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "box",
+          "revision": 1,
+          "declaration": {
+            "title": "Opaque Box",
+            "path": [
+              "@subtitles",
+              "Subtitle Style",
+              "Opaque Box"
+            ],
+            "order": 336,
+            "group": "style-box",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "ass-original",
+          "revision": 1,
+          "declaration": {
+            "title": "Original ASS/SSA Styles",
+            "path": [
+              "@subtitles",
+              "Original ASS/SSA Styles"
+            ],
+            "order": 337,
+            "group": "subtitle-render",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            },
+            "home": "settings"
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "dialogue-previous",
+          "revision": 1,
+          "declaration": {
+            "title": "Previous Dialogue",
+            "path": [
+              "@playback",
+              "Seek",
+              "Previous Dialogue"
+            ],
+            "order": 217,
+            "group": "jump-subtitle",
+            "radio": false,
+            "bindings": [
+              "Home"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "The current media cannot seek"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "dialogue-next",
+          "revision": 1,
+          "declaration": {
+            "title": "Next Dialogue",
+            "path": [
+              "@playback",
+              "Seek",
+              "Next Dialogue"
+            ],
+            "order": 217,
+            "group": "jump-subtitle",
+            "radio": false,
+            "bindings": [
+              "End"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "The current media cannot seek"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "dialogue-current",
+          "revision": 1,
+          "declaration": {
+            "title": "Current Subtitle Start",
+            "path": [
+              "@playback",
+              "Seek",
+              "Current Subtitle Start"
+            ],
+            "order": 217,
+            "group": "jump-subtitle",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Home"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "The current media cannot seek"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "sync-reset",
+          "revision": 1,
+          "declaration": {
+            "title": "Subtitle Sync",
+            "path": [
+              "@reset",
+              "Subtitle Sync"
+            ],
+            "order": 331,
+            "group": "reset-subtitles",
+            "radio": false,
+            "bindings": [
+              "/"
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Reset"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "sync-input",
+          "revision": 1,
+          "declaration": {
+            "title": "Adjust Sync…",
+            "path": [
+              "@subtitles",
+              "Sync",
+              "Adjust Sync…"
+            ],
+            "order": 342,
+            "group": "subtitle-sync-input",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Sync"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "reload",
+          "revision": 1,
+          "declaration": {
+            "title": "Reload Subtitles",
+            "path": [
+              "@subtitles",
+              "Reload Subtitles"
+            ],
+            "order": 370,
+            "group": "subtitle-tools",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Alt+Y"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "refresh",
+          "revision": 1,
+          "declaration": {
+            "title": "Refresh Subtitle Tracks",
+            "path": [
+              "@subtitles",
+              "Refresh Subtitle Tracks"
+            ],
+            "order": 371,
+            "group": "subtitle-tools",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "tune",
+          "revision": 1,
+          "declaration": {
+            "title": "Subtitle Tuning…",
+            "path": [
+              "@subtitles",
+              "Subtitle Tuning…"
+            ],
+            "order": 372,
+            "group": "subtitle-tools",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "settings",
+          "revision": 1,
+          "declaration": {
+            "title": "Subtitle Settings…",
+            "path": [
+              "@subtitles",
+              "Subtitle Settings…"
+            ],
+            "order": 373,
+            "group": "subtitle-tools",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Current Subtitle Start\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "sync-earlier",
+          "revision": 1,
+          "declaration": {
+            "title": "Earlier 0.5 s",
+            "path": [
+              "@subtitles",
+              "Sync",
+              "Earlier 0.5 s"
+            ],
+            "order": 339,
+            "group": "subtitle-sync",
+            "radio": false,
+            "bindings": [
+              "."
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Sync"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "sync-later",
+          "revision": 1,
+          "declaration": {
+            "title": "Later 0.5 s",
+            "path": [
+              "@subtitles",
+              "Sync",
+              "Later 0.5 s"
+            ],
+            "order": 340,
+            "group": "subtitle-sync",
+            "radio": false,
+            "bindings": [
+              ","
+            ],
+            "focus": null,
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Sync"
+            },
+            "home": "tune"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "subtitles.state",
+        "params": {}
+      },
+      {
+        "method": "subtitles.state",
+        "params": {}
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "load-secondary",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "dialogue-previous",
+          "revision": 2,
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No text subtitles available"
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "dialogue-next",
+          "revision": 2,
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No text subtitles available"
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "dialogue-current",
+          "revision": 2,
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "No text subtitles available"
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Current Subtitle Start\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      }
+    ],
+    "changes": [],
+    "command": [
+      {
+        "method": "osd.show",
+        "params": {
+          "text": {
+            "$vestraText": "Select a subtitle track first.",
+            "args": []
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "sync-later"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "sync-earlier"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Current Subtitle Start\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Current Subtitle Start\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Current Subtitle Start\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "settings"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "tune"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "refresh"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "reload"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "sync-input"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "sync-reset"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Next Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "dialogue-current"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Previous Dialogue\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "dialogue-next"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Original ASS/SSA Styles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "dialogue-previous"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Opaque Box\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Opaque Box\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "ass-original"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Shadow\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Shadow\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "box"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Bold\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Bold\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "shadow"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Cycle\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Cycle\" enabled is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "bold"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "move-reset"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "move-down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "move-up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "size-down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "size-up"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "track-cycle"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "second-position-aboveMain"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "second-position-top"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Off\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)",
+            "command \"Off\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "second-off"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"Show Subtitles\" checked is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "command \"Show Subtitles\" checked is a function that reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "track-off"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Add Secondary Subtitle…\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "show"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "load-secondary"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "load"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)",
+            "a view's bind reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "why": [
+            "a view's bind reads plugin.subtitles.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "playback.backend",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

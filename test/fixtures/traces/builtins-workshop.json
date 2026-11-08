@@ -1,0 +1,308 @@
+{
+  "scenario": "builtins/workshop",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
+  "command": "workshop.open",
+  "subscriptions": [],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 3,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 3,
+      "fullPasses": 3,
+      "evaluations": 9,
+      "parts": 7,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "settings.register",
+        "params": {
+          "id": "byok",
+          "category": "plugins",
+          "title": "Vestra Player AI",
+          "file": "settings.slint",
+          "component": "AiSettingsPage",
+          "global": "AiSettings",
+          "properties": {
+            "providers": [
+              "Ant Ling",
+              "Anthropic",
+              "Baseten",
+              "Cerebras",
+              "DeepSeek",
+              "Fireworks",
+              "Google",
+              "Groq",
+              "Hugging Face",
+              "Meta",
+              "MiniMax",
+              "MiniMax CN",
+              "Mistral",
+              "Moonshot AI",
+              "Moonshot AI CN",
+              "NVIDIA",
+              "OpenAI",
+              "OpenCode Zen",
+              "OpenRouter",
+              "Together",
+              "Vercel AI Gateway",
+              "xAI",
+              "Xiaomi",
+              {
+                "$vestraText": "Custom · OpenAI format"
+              },
+              {
+                "$vestraText": "Custom · Anthropic format"
+              }
+            ],
+            "provider-index": 1,
+            "custom": false,
+            "can-list": true,
+            "base-url": "",
+            "key-text": "",
+            "key-state": {
+              "code": "not-read",
+              "args": [],
+              "n": 0
+            },
+            "has-key": false,
+            "models": [
+              "claude-fable-5",
+              "claude-fable-5-1",
+              "claude-haiku-4-5",
+              "claude-haiku-4-5-20251001",
+              "claude-haiku-5-5",
+              "claude-opus-4-5",
+              "claude-opus-4-5-20251101",
+              "claude-opus-4-6",
+              "claude-opus-4-7",
+              "claude-opus-4-8",
+              "claude-opus-5",
+              "claude-opus-5-5",
+              "claude-sonnet-4-5",
+              "claude-sonnet-4-5-20250929",
+              "claude-sonnet-4-6",
+              "claude-sonnet-5",
+              "claude-sonnet-5-5"
+            ],
+            "model-index": 12,
+            "model-text": "claude-sonnet-4-5",
+            "listing": false,
+            "gone": "",
+            "message": {
+              "code": "",
+              "args": [],
+              "n": 0
+            },
+            "message-warn": false,
+            "owner-text": "",
+            "thinking-index": 1,
+            "reasons": false,
+            "owner-hint": {
+              "code": "owner-none",
+              "args": [],
+              "n": 0
+            }
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "workshop.open",
+          "revision": 1,
+          "declaration": {
+            "title": "Vestra Player AI…",
+            "path": [
+              "Vestra Player AI…"
+            ],
+            "order": 820,
+            "group": "windows",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "button": {
+              "icon": "ai",
+              "order": 100
+            },
+            "category": {
+              "$vestraText": "Plugins"
+            }
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "secrets.get",
+        "params": {
+          "name": "key.anthropic"
+        }
+      },
+      {
+        "method": "settings.set",
+        "params": {
+          "id": "byok",
+          "property": "key-state",
+          "value": {
+            "code": "reading",
+            "args": [],
+            "n": 0
+          },
+          "seq": 1
+        }
+      },
+      {
+        "method": "ui.open",
+        "params": {
+          "id": "ai",
+          "file": "ai.slint",
+          "properties": {
+            "has-project": false,
+            "projects": [],
+            "project-index": 0,
+            "project-title": "",
+            "card-status": {
+              "code": "",
+              "args": []
+            },
+            "card-keys": [],
+            "card-busy": false,
+            "sessions": [],
+            "rows": [],
+            "configured": false,
+            "banner": {
+              "code": "reading",
+              "args": [],
+              "n": 0
+            },
+            "busy": false,
+            "blocked": false,
+            "session-title": "",
+            "provider-id": "anthropic",
+            "provider-name": "Anthropic",
+            "model-text": "",
+            "has-folder": false,
+            "can-retry": false,
+            "draft": ""
+          },
+          "callbacks": [
+            "send",
+            "draft-changed",
+            "stop",
+            "retry",
+            "new-chat",
+            "select-session",
+            "delete-session",
+            "delete-chat",
+            "toggle",
+            "copy",
+            "copy-code",
+            "open-link",
+            "open-settings",
+            "open-folder",
+            "choose-project",
+            "install",
+            "export-vxp",
+            "export-source",
+            "open-project",
+            "open-pi"
+          ]
+        }
+      },
+      {
+        "method": "settings.set",
+        "params": {
+          "id": "byok",
+          "property": "key-state",
+          "value": {
+            "code": "not-saved",
+            "args": [],
+            "n": 0
+          },
+          "seq": 2
+        }
+      },
+      {
+        "method": "ui.set",
+        "params": {
+          "id": "ai",
+          "property": "banner",
+          "value": {
+            "code": "not-configured",
+            "args": [],
+            "n": 0
+          },
+          "seq": 1
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "workshop.open"
+        }
+      },
+      {
+        "method": "settings.unregister",
+        "params": {
+          "id": "byok"
+        }
+      },
+      {
+        "method": "ui.close",
+        "params": {
+          "id": "ai"
+        }
+      }
+    ]
+  }
+}

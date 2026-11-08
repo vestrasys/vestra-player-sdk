@@ -1,0 +1,28 @@
+{
+  "scratchPrefix": "vestra-test-host-*",
+  "scratchExists": true,
+  "producers": 1,
+  "id": 1,
+  "socketInScratch": true,
+  "socketName": "producer-1",
+  "listening": true,
+  "sourceKind": "producer",
+  "entries": [
+    "data"
+  ],
+  "releasedAfterStreamStop": true,
+  "listeningAfterStreamStop": false,
+  "phase": "empty",
+  "listeningAfterClose": false,
+  "scratchExistsAfterClose": false,
+  "methods": [
+    "events.subscribe",
+    "producer.ack",
+    "producer.prepare",
+    "producer.release",
+    "source.state",
+    "source.submit",
+    "timeline.marks",
+    "window.state"
+  ]
+}
