@@ -1,17 +1,17 @@
 /**
  * `<!-- generated:core-actions -->`: the player's core actions, the ids of
- * `HostAction` (src/plugin/types.ts), with the menu item and default
+ * `HostAction` (src/plugin/types/*.ts), with the menu item and default
  * bindings the player registers for each (`BUILTIN_COMMANDS`).
  */
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
-import { unionLiterals } from "./lib/source.mjs";
+import { typeFile, unionLiterals } from "./lib/source.mjs";
 
 export default async function coreActions({ root, table }) {
   const { BUILTIN_COMMANDS } = await import(
     pathToFileURL(join(root, "src/commands.ts"))
   );
-  const actions = unionLiterals("src/plugin/types.ts", "HostAction");
+  const actions = unionLiterals(typeFile("HostAction"), "HostAction");
   const host = BUILTIN_COMMANDS.filter((c) => c.owner === "host");
   const rows = host
     .filter((command) => actions.includes(command.id))

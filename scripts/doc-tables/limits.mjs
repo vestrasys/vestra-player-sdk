@@ -12,6 +12,7 @@ import {
   memberDoc,
   properties,
   summary,
+  typeFile,
 } from "./lib/source.mjs";
 
 const SOURCES = {
@@ -31,7 +32,8 @@ const SOURCES = {
   MAX_SHADERS: {
     file: "src/plugin/view.ts",
     value: true,
-    doc: ["src/plugin/types.ts", "RenderSettings", "shaders"],
+    // The member doc of a plugin API type (src/plugin/types/*.ts), by name.
+    doc: ["RenderSettings", "shaders"],
     title: "Entries of `RenderSettings.shaders`",
   },
 };
@@ -70,7 +72,7 @@ export default async function limits({ root, args, table }) {
     exported ? `\`${field ? `${name}.${field}` : name}\`` : (field ?? name);
   if (source.value) {
     const doc = source.doc
-      ? summary(memberDoc(...source.doc))
+      ? summary(memberDoc(typeFile(source.doc[0]), ...source.doc))
       : summary(constantDoc(source.file, name));
     return table(
       ["Limit", "Value", "Meaning"],

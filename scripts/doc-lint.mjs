@@ -54,6 +54,7 @@ import {
   splitCut,
   strictDeclarations,
 } from "./doc-standard.mjs";
+import { typeFile } from "./doc-tables/lib/source.mjs";
 import { CAPABILITY_INFO } from "../src/capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -471,7 +472,7 @@ stats.explained = { applies: 0, missing: unexplained };
 stats["stale-refs"] = { applies: 0, missing: exampleReport.stale };
 
 // Error codes: the PluginError table against the codes the SDK throws.
-const types = readFileSync(join(root, "src/plugin/types.ts"), "utf8");
+const types = readFileSync(join(root, typeFile("PluginError")), "utf8");
 const table = types.slice(
   types.indexOf("Every API failure is an ordinary `Error`"),
   types.indexOf("export type PluginError"),

@@ -151,6 +151,42 @@ export function unionLiterals(path, name) {
   return node.type.types.map((type) => type.literal.text);
 }
 
+/**
+ * The files of the plugin API types: the modules `src/plugin/types.ts`
+ * re-exports with `export type * from "./types/…"`, in that order.
+ */
+export function typeFiles() {
+  return sourceFile("src/plugin/types.ts")
+    .statements.filter(
+      (statement) =>
+        ts.isExportDeclaration(statement) &&
+        !statement.exportClause &&
+        statement.moduleSpecifier,
+    )
+    .map(
+      (statement) =>
+        `src/plugin/${statement.moduleSpecifier.text.replace(/^\.\//, "")}`,
+    );
+}
+
+/**
+ * The file of `typeFiles()` that declares the interface or type alias
+ * `name`, so the generators find a declaration by name, not by file.
+ */
+export function typeFile(name) {
+  for (const path of typeFiles())
+    if (
+      sourceFile(path).statements.some(
+        (statement) =>
+          (ts.isInterfaceDeclaration(statement) ||
+            ts.isTypeAliasDeclaration(statement)) &&
+          statement.name.text === name,
+      )
+    )
+      return path;
+  throw new Error(`src/plugin/types/*.ts: no declaration ${name}`);
+}
+
 /** The names a module re-exports or declares as exported (`export { A }`). */
 export function exportedNames(path) {
   const names = new Set();

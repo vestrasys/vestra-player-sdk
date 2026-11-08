@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+**Who must change: nobody.** Step 1 of the SDK refactor, batch G (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/types.ts` is split by domain; no API, behaviour or wire change, `apiVersion` stays `vestra/1`.
+
+- **The plugin API types are in `src/plugin/types/*.ts`**, one file per documentation category: `base` (Plugin: `Disposable`, `Scope`, `Plugin`, errors, stop reasons, the app and main window), `commands` (with host actions and key bindings), `ui-content`, `ui-layout`, `ui-locale` and `ui-shell` (UI in four parts), `playback` (timeline and player), `processing`, `subtitles`, `snapshots` (Media), `sources`, `packages` and `services`, each below 2,000 lines (the 11,400-line file was one). `src/plugin/types.ts` keeps its re-exports of the wire types and re-exports every file with `export type *`, so `@vestra-player/sdk` exports the same names with the same declarations and doc comments; the only change inside a comment is one more `../` in its relative links (`../../../docs/…`, `{@includeCode ../../../examples/…}`). The files are named so that the reference keeps its order: every category, and the inherited members of every interface, appear as before.
+- **The layer check knows the type files** (`scripts/check-layers.mjs`, rule 5): `types.ts` and `types/*.ts` hold interfaces and type aliases only and import only with `import type`, so the cycles among them are type-only and allowed.
+- **The documentation scripts find a declaration by name**, not by file (`typeFile()` in `scripts/doc-tables/lib/source.mjs`, used by `doc-lint` and the error-code, core-action, limit and player-version tables). The player-version table in [Reference: manifest](docs/reference/manifest.md) lists the same API per player version, grouped by file now.
+- **`vestra-plugin i18n`** recognises the SDK's call sites (`text`, `commands.add`…) in the new declaration files (`dist/plugin/types/*.d.ts`) as it did in `dist/plugin/types.d.ts`.
+- The public declarations (`dist/index.d.ts`, `dist/plugin/testing/index.d.ts`, `dist/player-runtime.d.ts`, and every declaration they export with its doc comment) are unchanged apart from relative paths; the API surface snapshot, golden wire traces, pass counts, `docs:check`, `doc-lint` output and `llms.txt` are identical, and the documentation site has the same pages.
+
 ## 1.6.20
 
 **Who must change: nobody.** Tables follow the A-B Loop's move to the Playback panel: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. A plugin whose tests compare an owner against the table sees the player's current one.

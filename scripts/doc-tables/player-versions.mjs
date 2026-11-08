@@ -15,10 +15,12 @@ import {
   sourceFile,
   tags,
   ts,
+  typeFiles,
 } from "./lib/source.mjs";
 
 const SOURCES = [
-  { file: "src/plugin/types.ts", module: "@vestra-player/sdk" },
+  // The plugin API types (src/plugin/types/*.ts, re-exported by types.ts).
+  ...typeFiles().map((file) => ({ file, module: "@vestra-player/sdk" })),
   { file: "src/commands.ts", module: "@vestra-player/sdk/testing" },
   { file: "src/capabilities.ts", module: "@vestra-player/sdk/testing" },
 ];
