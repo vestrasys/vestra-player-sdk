@@ -7,8 +7,9 @@
  *
  *   1. No file of `LOWER` imports a file of `FRAMEWORK`, by value or as a
  *      type (`import`, `import type`, `export … from`, `import()`).
- *   2. No file of `LOWER` reaches `src/plugin/passes.ts` through a chain of
- *      value imports, whatever files lie between.
+ *   2. No file of `LOWER` reaches a file of `FRAMEWORK` through a chain of
+ *      value imports, whatever files lie between (an L1 file that loads
+ *      `view/base.ts` loads `view/binder.ts` and the passes with it).
  *   3. No value-import cycle among the files under `src/` (the one between
  *      `player.ts` and `stream.ts` is gone), except the cycles named in
  *      `KNOWN_CYCLES`; a known cycle that no longer exists fails too.
@@ -73,7 +74,6 @@ const FRAMEWORK = [
   "src/plugin/runtime.ts",
   "src/plugin/view/binder.ts",
 ];
-const PASSES = "src/plugin/passes.ts";
 /**
  * Value-import cycles allowed by rule 3, each as its set of files:
  * `TestHost`'s area modules (batch A) call each other's functions.
@@ -184,7 +184,7 @@ for (const file of LOWER)
         `${file}:${line} imports ${target}${type ? " (type)" : ""}: L0/L1 must not import the framework (L2)`,
       );
 
-// 2. Value-import chains to the pass scheduler.
+// 2. Value-import chains to the framework.
 const values = (file) =>
   (graph.get(file) ?? [])
     .filter((each) => !each.type)
@@ -194,12 +194,12 @@ for (const file of LOWER) {
   const queue = [file];
   while (queue.length) {
     const at = queue.shift();
-    if (at === PASSES) {
+    if (FRAMEWORK.includes(at) && at !== file) {
       const chain = [];
       for (let step = at; step !== null; step = from.get(step))
         chain.unshift(step);
       problems.push(
-        `${file} loads ${PASSES} through value imports: ${chain.join(" → ")}`,
+        `${file} loads ${at} through value imports: ${chain.join(" → ")}`,
       );
       break;
     }
