@@ -30,6 +30,19 @@ test("Alt+5 opens the column at this tab, and closes it again", async () => {
   await stop();
 });
 
+test("activated before a file is open, the panel follows the file opened later", async () => {
+  const { host, stop } = await startPlugin(activate, { directory });
+  const panel = host.mounted();
+  await host.settle();
+  assert.equal(panel.props.enabled, false, "nothing to change the speed of");
+  host.openElsewhere("/movie.mp4");
+  host.setSource({ duration: 600, position: 10, rate: 1.25 });
+  await host.settle();
+  assert.equal(panel.props.enabled, true);
+  assert.equal(panel.props.rate, 1.25);
+  await stop();
+});
+
 test("the slider and the reset change the speed", async () => {
   const host = new TestHost();
   host.openElsewhere("/movie.mp4");

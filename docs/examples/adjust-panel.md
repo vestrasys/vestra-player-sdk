@@ -15,7 +15,7 @@ The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} 
 
 ## What you'll build
 
-- A **Speed** tab in the adjust column: the speed, a slider from 0.25× to 4×, five presets and **Normal Speed**.
+- A **Speed** tab in the adjust column: the speed, a slider from 0.25× to 4×, four presets and **Normal Speed**.
 - **Alt+5** opens the adjust column at this tab; pressing it again while the tab is shown closes the column. The player shows `Alt+5` under the tab's title.
 - **Normal Speed** is also a command (in the command palette and Keyboard Shortcuts) that lives in this panel.
 
@@ -38,13 +38,13 @@ examples/adjust-panel/
 
 {@includeCode ../../examples/adjust-panel/manifest.json}
 
-`minPlayerVersion` is `0.7.6`: older players have no adjust column and refuse `ui.mount("adjust")` with `invalid`, so the store does not offer the plugin to them. `playback.read` and `playback.control` read and set the speed.
+`minPlayerVersion` is `0.7.6`: older players have no adjust column and refuse `ui.mount("adjust")` with `invalid`, so the store does not offer the plugin to them. `playback.read` and `playback.control` read and set the speed; `events` keeps `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without it, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
 
 ## The panel in Slint
 
 {@includeCode ../../examples/adjust-panel/ui/speed.slint}
 
-- The column is about 317 px wide (280 at least): one column of rows, top to bottom.
+- The column is about 317 px wide (280 at least): one column of rows, top to bottom, and four presets in a row, which fit 280 px. A panel wider than its column is clipped to it.
 - `rate` is `in-out` so the slider can bind to it two-way (`<=>`) and still follow the speed the plugin writes.
 - The player draws the tab strip above the panel and the column's ground; the panel draws its own background in `Theme.bg-list` like the player's panels.
 

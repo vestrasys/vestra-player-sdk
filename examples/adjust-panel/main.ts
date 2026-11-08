@@ -8,7 +8,7 @@ export default async function activate(plugin: Plugin) {
   const panel = plugin.panels.mount("adjust", "ui/speed.slint", {
     title: "Speed",
   });
-  // Sent when the panel mounts, then whenever the playback state changes.
+  // Sent when the panel mounts, then whenever the playback state changes:
   panel.bind(() => ({
     rate: plugin.player.state.rate,
     enabled: plugin.player.state.can.rate,

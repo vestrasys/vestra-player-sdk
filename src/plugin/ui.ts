@@ -1058,7 +1058,9 @@ class PanelHandle extends ViewBase implements Panel {
       throw failure("invalid", "the player shows the backdrop by itself");
     await layoutOf(this.scope.runtime).read();
     const state = this.state;
-    if (state?.preferred && state.active)
+    // Collapsed at the edge of fullscreen (wanted shown, not on screen):
+    // slide it out rather than turn it off (player 0.7.6 pops it out).
+    if (state?.preferred && state.active && state.reason !== "fullscreen")
       await layoutOf(this.scope.runtime).set(this.#slot, { visible: false });
     else await this.show();
   }
@@ -1292,7 +1294,11 @@ function slot(scope: ScopeImpl, name: LayoutName): SidebarSlot {
     async toggle() {
       await service().read();
       const current = service().state[name];
-      await service().set(name, { visible: !(current?.preferred ?? true) });
+      // Collapsed at the edge of fullscreen: slide it out (see Panel.toggle).
+      const collapsed = current?.reason === "fullscreen";
+      await service().set(name, {
+        visible: collapsed || !(current?.preferred ?? true),
+      });
     },
     setDetached: (detached) => service().set(name, { detached }),
     activate: (plugin) => service().set(name, { active: plugin }),
