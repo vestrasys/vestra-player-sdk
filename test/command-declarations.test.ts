@@ -238,12 +238,18 @@ test("raw registrations get the player's answers", async () => {
   }
 });
 
-test("the player's own Toggle Fullscreen and Quit take part in conflicts", async () => {
+test("the player's own Toggle Fullscreen, Quit, Adjustments and Effects and Sidebar take part in conflicts", async () => {
   const conflict =
     "command conflict: menu path duplicates a command or collides with a leaf/group";
   await refused({ id: "a", path: ["Quit"] }, "conflict", conflict);
   await refused(
     { id: "a", path: ["Toggle Fullscreen", "X"] },
+    "conflict",
+    conflict,
+  );
+  await refused({ id: "a", path: ["Sidebar"] }, "conflict", conflict);
+  await refused(
+    { id: "a", path: ["Adjustments and Effects", "X"] },
     "conflict",
     conflict,
   );

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.22
+
+**Who must change: nobody.** Tables follow the menu's Adjustments and Effects and Sidebar items: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. A plugin whose tests compare a title or path against the table sees the player's current one.
+
+- **`BUILTIN_COMMANDS`**: the player's `host/adjust` is titled **Adjustments and Effects** (was Adjust) and `host/sidebar` **Sidebar** (was Toggle Sidebar), both now top-level menu items in the `windows` group (orders 791 and 800, no default key), named like their bottom-bar buttons (user ruling 2026-11-08). The items they replace, Picture… (`vestra.video/video.picture`, Alt+1), Audio… (`vestra.audio/audio.workbench`, Alt+2), Subtitles… (`vestra.subtitles/tune`, Alt+3), Playback… (`vestra.playback/panel`, Alt+4) and Playlist (`vestra.playlist/playlist.visibility`, F6), are now outside the menu (command palette), with their ids, titles, keys and categories unchanged. `BUILTIN_SUBMENUS` is unchanged. The tables and the top-level tree in [Reference: commands](docs/reference/commands.md) follow.
+- **`TestHost`** refuses a plugin item on or under the player's new Adjustments and Effects and Sidebar items with `conflict`, as the player does (it reads the player's own items from `BUILTIN_COMMANDS`).
+- The guides that named the bottom bar's Adjust and Toggle Sidebar buttons use the new names.
+
 ## 1.6.21
 
 **Who must change: nobody.** Step 1 of the SDK refactor, batch G (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/types.ts` is split by domain; no API, behaviour or wire change, `apiVersion` stays `vestra/1`. A tool that reads `dist/plugin/types.d.ts` by path must now read `dist/plugin/types/*.d.ts` as well, since that file only re-exports them (the player's host-agreement test and the Workshop prompt follow with the player's upgrade).

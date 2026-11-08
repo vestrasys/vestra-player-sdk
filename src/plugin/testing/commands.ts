@@ -377,9 +377,9 @@ export function commandsHandlers(
       if (host.commands.has(id))
         throw commandConflict("owner/localId already registered");
       // The player's own commands beside the core actions (host/actions.rs
-      // `host_declarations`: Toggle Fullscreen, Command Palette…, Quit and
-      // four outside the menu), which take part in conflicts and the total
-      // like any other.
+      // `host_declarations`: Adjustments and Effects, Sidebar, Toggle
+      // Fullscreen, Command Palette…, Quit and two outside the menu), which
+      // take part in conflicts and the total like any other.
       const hostOnly = BUILTIN_COMMANDS.filter(
         (row) =>
           row.owner === "host" && !host.coreCommands.has(`host/${row.id}`),

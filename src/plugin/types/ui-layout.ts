@@ -820,7 +820,7 @@ export interface Panel extends View, Disposable {
    * position; otherwise it switches the position on at this panel's tab: a
    * panel in a background tab comes to the front instead of the sidebar
    * closing. It is a switch, the same in every mode, like the player's own
-   * Alt+1…4 and Adjust button: in fullscreen a column switched on is revealed
+   * Alt+1…4 and Adjustments and Effects: in fullscreen a column switched on is revealed
    * by the pointer at the right edge, not popped out (SDK 1.6.13, player
    * 0.7.6; {@link Panel.show} pops it out), and one switched off while out
    * slides in at once. A "Show list"

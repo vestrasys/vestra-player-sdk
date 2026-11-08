@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.6.22](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1622) | **Nobody.** Tables follow the menu's Adjustments and Effects and Sidebar items: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. | — |
 | [1.6.21](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1621) | **Nobody.** Step 1 of the SDK refactor, batch G (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/types.ts` is split by domain; no API, behaviour or wire change, `apiVersion` stays `vestra/1`. | — |
 | [1.6.20](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1620) | **Nobody.** Tables follow the A-B Loop's move to the Playback panel: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. | — |
 | [1.6.19](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1619) | **Nobody.** Step 1 of the SDK refactor, batches B and C (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/runtime.ts` and `src/plugin/ui.ts` are split by layer; no API, behaviour or wire change, `apiVersion` stays `vestra/1`. | — |
