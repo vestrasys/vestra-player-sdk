@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.19
 
 **Who must change: nobody.** Step 1 of the SDK refactor, batches B and C (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/runtime.ts` and `src/plugin/ui.ts` are split by layer; no API, behaviour or wire change, `apiVersion` stays `vestra/1`.
 
