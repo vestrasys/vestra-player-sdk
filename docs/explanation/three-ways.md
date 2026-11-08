@@ -186,7 +186,7 @@ What each style needs from the documentation:
 | --- | --- | --- | --- |
 | which state exists | the state types in the API reference, `plugin.state` | [Events](../reference/events.md): names and payloads | [Events](../reference/events.md) and [Messages](../reference/messages.md) |
 | when the player is told | [the update pass](plugins.md#the-update-pass) | when you call `set`; one write in flight, [limits](../reference/limits.md) | when you call `write` or `request`; nothing in between for `request` |
-| staying stoppable while idle | automatic, `plugin.when` for menu items | automatic: listeners name their call site | `plugin.wire.on` names it; a raw `events.subscribe` must say why, or it is refused |
+| staying stoppable while idle | automatic, `plugin.when` for menu items | automatic: listeners name their call site | `plugin.wire.on` names it; a raw `events.subscribe` of a `HostEvent` is refused (use `plugin.wire.on`), of another event it must say `why` or `mirror: true`, or it is refused |
 | capabilities | each member's capability | the same | the Capability column of [Messages](../reference/messages.md); `vestra-plugin check` reads literal method names |
 | errors | [error codes](../reference/errors.md) | the same | the same, plus whatever the player answers |
 | stability | semver | semver | changes with versions |

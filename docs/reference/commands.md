@@ -50,11 +50,8 @@ Audio Track ▸
 Subtitle Track ▸
 Snapshot ▸
 ────────────────────────────────────────
-Picture…                      Alt+1         group windows
-Audio…                        Alt+2
-Subtitles…                    Alt+3
-Playback…                     Alt+4
-Playlist  ✓                   F6
+Adjustments and Effects  ✓                  group windows
+Sidebar  ✓
 Chapter and Bookmark List…    H
 ────────────────────────────────────────
 Toggle Fullscreen             Escape        group screen
@@ -75,7 +72,7 @@ The groups of the top level and their `order` ranges ([Guidelines: menus](../gui
 | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `open`                 | 100–199          | Opening and closing sources                                                                                                                                         |
 | `domain` (the default) | 200–699          | Play/Pause (201), the Audio Track, Subtitle Track and Snapshot submenus, the built-in domain menus while a plugin fills them, and a new domain of your own          |
-| `windows`              | 790–809, 820–828 | Items that show a window or a panel (a check mark when it toggles one): the four panels (791–794), Playlist (800) and the chapter list, then Vestra Player AI… (820) and Plugin Store… (822) |
+| `windows`              | 790–809, 820–828 | Items that show a window or a panel (a check mark when it toggles one): Adjustments and Effects (791), Sidebar (800) and the chapter list, then Vestra Player AI… (820) and Plugin Store… (822) |
 | `screen`               | 810–819          | Toggle Fullscreen (810), alone between two separators; a plugin's window size and placement items go into Screen ▸ (`@screen`, 710)                                 |
 | `settings-main`        | 829–899          | Command Palette… (829), Options… (830), About Vestra Player… (880), and Settings ▸ and Reset ▸ while a plugin fills them                                            |
 | `exit`                 | 900–999          | Quit                                                                                                                                                                |
@@ -129,11 +126,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Snapshot ▸ Burst… | `Ctrl+G` | `vestra.capture/capture.burst` |
 | Snapshot ▸ Export Clip… |  | `vestra.capture/capture.clip` |
 | Snapshot ▸ Capture… | `Alt+S` | `vestra.capture/capture.panel` |
-| Picture… | `Alt+1` | `vestra.video/video.picture` |
-| Audio… | `Alt+2` | `vestra.audio/audio.workbench` |
-| Subtitles… | `Alt+3` | `vestra.subtitles/tune` |
-| Playback… | `Alt+4` | `vestra.playback/panel` |
-| Playlist | `F6` | `vestra.playlist/playlist.visibility` |
+| Adjustments and Effects |  | `host/adjust` |
+| Sidebar |  | `host/sidebar` |
 | Chapter and Bookmark List… | `H` | `vestra.marks/marks.list` |
 | Toggle Fullscreen | `Escape` | `host/fullscreen` |
 | Vestra Player AI… |  | `vestra.workshop/workshop.open` |
@@ -146,8 +140,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Next (not in the menu) | `PageDown`, `Mouse:X1` | `host/next` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
-| Toggle Sidebar (not in the menu) |  | `host/sidebar` |
-| Adjust (not in the menu) |  | `host/adjust` |
 | Volume + (not in the menu) | `ArrowUp`, `Mouse:WheelUp` | `host/volume-up` |
 | Volume − (not in the menu) | `ArrowDown`, `Mouse:WheelDown` | `host/volume-down` |
 | Mute (not in the menu) | `M` | `host/mute` |
@@ -158,6 +150,11 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Normal (not in the menu) | `Z` | `host/rate-normal` |
 | Slower 0.1 (not in the menu) | `X` | `host/rate-down` |
 | Faster 0.1 (not in the menu) | `C` | `host/rate-up` |
+| Picture… (not in the menu) | `Alt+1` | `vestra.video/video.picture` |
+| Audio… (not in the menu) | `Alt+2` | `vestra.audio/audio.workbench` |
+| Subtitles… (not in the menu) | `Alt+3` | `vestra.subtitles/tune` |
+| Playback… (not in the menu) | `Alt+4` | `vestra.playback/panel` |
+| Playlist (not in the menu) | `F6` | `vestra.playlist/playlist.visibility` |
 | Reopen Current/Last File (not in the menu) | `Ctrl+Y` | `vestra.playback/reopen` |
 | File Name (not in the menu) |  | `vestra.playback/copy-name` |
 | Folder Path (not in the menu) |  | `vestra.playback/copy-folder` |
@@ -461,7 +458,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 - **Shown**: the icon; the tooltip is the command's shown title without a trailing "…" and its first active key ("Plugin Store (F9)"), plus the reason on a second line while the command is disabled or busy. The icon is drawn in the accent colour (player 0.5.22; the text colour before), darker while pressed. Disabled or busy: drawn disabled, a click runs nothing. `checked: true`: a small dot in the icon's colour under the icon (before player 0.5.22: the icon in the accent colour, the others in the text colour). Accessibility: a button named by the title, with its enabled and checked state and a default action.
 - **Click**: runs the command exactly as a click on its menu item does.
-- **Order and room** (player 0.7.6): left to right by `order`, then plugin id, then declaration order; lower `order` comes first and stays in the strip longest. The buttons that do not fit, and those past eight, are in the strip's » menu, in the same order, with their icon, title, key and check state; » shows only while something is in it. The player's **Command Palette** and **Toggle Sidebar** sit right of », always shown. Before player 0.7.6 a narrow strip lost its lowest orders first.
+- **Order and room** (player 0.7.6): left to right by `order`, then plugin id, then declaration order; lower `order` comes first and stays in the strip longest. The buttons that do not fit, and those past eight, are in the strip's » menu, in the same order, with their icon, title, key and check state; » shows only while something is in it. The player's **Command Palette**, **Adjustments and Effects** and **Sidebar** sit right of », always shown. Before player 0.7.6 a narrow strip lost its lowest orders first.
 - **Limits** ([Limits](limits.md#bottom-bar-buttons)): one button per plugin (its first declared; a later one stays a menu item only), eight in the strip, the rest in its » menu. No button is left out for the total (before player 0.7.6 the player kept the eight highest orders and logged the others with `limit`).
 - **Life cycle**: the button belongs to its command. Disposing the command, or disabling, stopping or uninstalling the plugin, removes it.
 - **Older players** (before 0.5.10) build the declaration with their own copy of the SDK, which does not send `button`: the command and its menu entry work, without a button. Declare `"minPlayerVersion": "0.5.10"` when the button matters.
@@ -524,7 +521,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), **Toggle Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, outside the menu, no default key) and **Command Palette** (`host/palette`, player 0.7.6: `Ctrl+Shift+P`, ⌘⇧P on macOS, outside the menu; see [The command palette and categories](../explanation/commands.md#the-command-palette-and-categories)); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape` from player 0.6.0; up to 0.5.x `Enter`, `Alt+Enter` and `F11`), **Enter Fullscreen** (`host/enter-fullscreen`, player 0.6.0: no default key, outside the menu, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key from player 0.6.0, up to 0.5.x `Escape`; outside the menu, enabled only in fullscreen) and **Quit** (`host/quit`), **Sidebar** (`host/sidebar`, player 0.5.10: the bottom bar's sidebar button, no default key; a top-level menu item at order 800, group `windows`; earlier players title it Toggle Sidebar and keep it outside the menu), **Adjustments and Effects** (`host/adjust`, player 0.7.6: the bottom bar's sliders button, no default key; a top-level menu item at order 791, group `windows`; earlier players title it Adjust and keep it outside the menu) and **Command Palette** (`host/palette`, player 0.7.6: `Ctrl+Shift+P`, ⌘⇧P on macOS, outside the menu; see [The command palette and categories](../explanation/commands.md#the-command-palette-and-categories)); their keys are in [Built-in commands](#built-in-commands).
 
 ## Keys the system takes first
 

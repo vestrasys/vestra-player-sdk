@@ -436,9 +436,9 @@ export interface Panels {
    * rightmost), 317 wide by default, 280 to half the window, with text tabs
    * and the key that opens each tab under its title (the key of the command
    * your other commands name as their {@link CommandOptions.home | home}). It
-   * has no close or detach button: the bottom bar's Adjust button, your
-   * panel's own command ({@link Panel.toggle}) and the menus open and close
-   * it. It starts closed. In a window too narrow to dock it beside a video at
+   * has no close or detach button: Adjustments and Effects (`host/adjust`,
+   * a menu item and the bottom bar's sliders button), your panel's own
+   * command ({@link Panel.toggle}) and the menus open and close it. It starts closed. In a window too narrow to dock it beside a video at
    * least 480 wide, it floats over the right of the video, 300 wide; in
    * fullscreen it slides out from the right edge, left of the sidebar. Its
    * width, open state, current tab and tab order are remembered across
