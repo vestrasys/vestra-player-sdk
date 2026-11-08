@@ -10,8 +10,18 @@
  *   2. No file of `LOWER` reaches `src/plugin/passes.ts` through a chain of
  *      value imports, whatever files lie between.
  *   3. No value-import cycle among the files under `src/` (the one between
- *      `player.ts` and `stream.ts` is gone), the test host's area modules
- *      (`src/plugin/testing/`, one class split into files) left out.
+ *      `player.ts` and `stream.ts` is gone), except the cycles named in
+ *      `KNOWN_CYCLES`; a known cycle that no longer exists fails too.
+ *   4. Every relative import names a `.ts` file under `src/`: one the
+ *      check cannot resolve (`./passes.js`, a typo) fails instead of being
+ *      skipped, so no import escapes rules 1–3.
+ *
+ * Not checked yet: spec §2.1's second rule, that `src/plugin/**` reaches
+ * the wire only through `connection.ts`, waits until `src/wire/` exists
+ * (batches C/G). Edges from L1 into L2 that the lists cannot see while
+ * `player.ts` holds both the player's primitives and its state mirror are
+ * named in `PENDING` and printed as a note on every run; the `player.ts`
+ * split must empty that list.
  *
  * The lists name files as they are now; a later batch that moves or splits
  * one (views, commands, services, types) updates them. A listed file that
@@ -54,8 +64,41 @@ const LOWER = [
 /** L2 modules no lower file may import: the passes, and `Runtime` over them. */
 const FRAMEWORK = ["src/plugin/passes.ts", "src/plugin/runtime.ts"];
 const PASSES = "src/plugin/passes.ts";
-/** Left out of rule 3: `TestHost`'s area modules call each other's functions. */
-const CYCLES_EXEMPT = "src/plugin/testing/";
+/**
+ * Value-import cycles allowed by rule 3, each as its set of files:
+ * `TestHost`'s area modules (batch A) call each other's functions.
+ */
+const KNOWN_CYCLES = [
+  [
+    "src/plugin/testing/core-actions.ts",
+    "src/plugin/testing/media.ts",
+    "src/plugin/testing/layout.ts",
+  ],
+];
+/**
+ * L1 → L2 edges the rules above cannot see yet, because `player.ts` is
+ * both a primitive (actions, `openStream`) and the framework's state
+ * mirror (`PlayerService`). Printed as a note, not a failure; `text` must
+ * still be in `file` (else the entry is stale and fails). The `player.ts`
+ * split (Step 1 later batch, Step 2) must empty this list.
+ */
+const PENDING = [
+  {
+    file: "src/plugin/services.ts",
+    text: 'import { playerOf, validStep } from "./player.ts";',
+    what: "value import of player.ts; an action refreshes the state mirror (playerOf(...).refresh())",
+  },
+  {
+    file: "src/plugin/stream.ts",
+    text: 'import type { PlayerService } from "./player.ts";',
+    what: "openStream reads the state mirror (PlayerService raw/state, refresh)",
+  },
+  {
+    file: "src/plugin/packages.ts",
+    text: "this.#scope.update();",
+    what: "an operation's end runs a full update pass (scope.update())",
+  },
+];
 
 /** Every `.ts` file under `src/`, as a path relative to the root with `/`. */
 function sources(directory = join(root, "src")) {
@@ -70,7 +113,7 @@ function sources(directory = join(root, "src")) {
 }
 const name = (path) => relative(root, path).replaceAll("\\", "/");
 
-/** A file's relative imports: `{ target, type, line }`. */
+/** A file's relative imports: `{ specifier, target, type, line }`. */
 function importsOf(file) {
   const text = readFileSync(join(root, file), "utf8");
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
@@ -80,6 +123,7 @@ function importsOf(file) {
     const path = specifier.text;
     if (!path.startsWith(".")) return;
     found.push({
+      specifier: path,
       target: name(resolve(root, dirname(file), path)),
       type,
       line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
@@ -113,6 +157,14 @@ const problems = [];
 for (const file of [...LOWER, ...FRAMEWORK])
   if (!existsSync(join(root, file)))
     problems.push(`${file} is listed in scripts/check-layers.mjs but missing`);
+
+// 4. Relative imports the check cannot follow.
+for (const [file, imports] of graph)
+  for (const { specifier, target, line } of imports)
+    if (!graph.has(target))
+      problems.push(
+        `${file}:${line} imports "${specifier}", which is not a .ts file under src/: the layer check cannot follow it`,
+      );
 
 // 1. Direct imports of the framework.
 for (const file of LOWER)
@@ -150,6 +202,8 @@ for (const file of LOWER) {
 }
 
 // 3. Value-import cycles (one report per cycle, from its first file).
+const cycleKey = (cycle) => [...cycle].sort().join("|");
+const known = new Set(KNOWN_CYCLES.map(cycleKey));
 const state = new Map();
 const stack = [];
 const cycles = new Set();
@@ -159,23 +213,36 @@ function walk(file) {
   for (const next of values(file)) {
     if (state.get(next) === "open") {
       const cycle = stack.slice(stack.indexOf(next));
-      const key = [...cycle].sort().join("|");
+      const key = cycleKey(cycle);
       if (!cycles.has(key)) {
         cycles.add(key);
-        problems.push(`value-import cycle: ${[...cycle, next].join(" → ")}`);
+        if (!known.has(key))
+          problems.push(`value-import cycle: ${[...cycle, next].join(" → ")}`);
       }
-    } else if (
-      !state.has(next) &&
-      graph.has(next) &&
-      !next.startsWith(CYCLES_EXEMPT)
-    )
-      walk(next);
+    } else if (!state.has(next) && graph.has(next)) walk(next);
   }
   stack.pop();
   state.set(file, "done");
 }
-for (const file of files)
-  if (!file.startsWith(CYCLES_EXEMPT) && !state.has(file)) walk(file);
+for (const file of files) if (!state.has(file)) walk(file);
+for (const cycle of KNOWN_CYCLES)
+  if (!cycles.has(cycleKey(cycle)))
+    problems.push(
+      `KNOWN_CYCLES lists ${cycle.join(", ")}, which no longer form a cycle: remove the entry`,
+    );
+
+// Pending edges: a note each run; a stale entry fails.
+for (const { file, text } of PENDING) {
+  const path = join(root, file);
+  if (!existsSync(path) || !readFileSync(path, "utf8").includes(text))
+    problems.push(
+      `PENDING entry for ${file} is stale (${JSON.stringify(text)} not found): remove it`,
+    );
+}
+const pending = PENDING.map(({ file, what }) => `${file}: ${what}`);
+console.log(
+  `check-layers note: ${PENDING.length} pending L1→L2 edge(s) until player.ts is split: ${pending.join("; ")}`,
+);
 
 if (problems.length) {
   for (const problem of problems) console.error(problem);
@@ -185,5 +252,5 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `check-layers: ${LOWER.length} L0/L1 files, none imports ${FRAMEWORK.join(" or ")}; no value-import cycle in src/ (testing/ aside)`,
+  `check-layers: ${LOWER.length} L0/L1 files, none imports ${FRAMEWORK.join(" or ")}; no value-import cycle in src/ beyond KNOWN_CYCLES; every relative import resolved`,
 );

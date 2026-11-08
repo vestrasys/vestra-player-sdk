@@ -97,9 +97,6 @@ export function stopReason(value: unknown): StopReason | undefined {
     : undefined;
 }
 
-export const same = (a: Json | undefined, b: Json | undefined) =>
-  JSON.stringify(a) === JSON.stringify(b);
-
 type Listener = (data: unknown) => void;
 
 /**
