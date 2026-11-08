@@ -32,7 +32,7 @@ const prefs = plugin.storage.json<Prefs>("prefs", {
 prefs.save({ ...prefs.value, step: 10 }); // never change prefs.value in place
 ```
 
-Stopping the plugin writes a pending save first, but only within the short time the player gives a stopping plugin (5 s; at quit 1 s for all plugins together), and a crash or running out of memory loses it; call `await prefs.flush()` after a save that must not be lost. Also flush before you read or copy the file yourself. See [Remember a window's state between runs](window-state.md) for a complete window built on a store.
+Stopping the plugin writes a pending save first, but only within the short time the player gives a stopping plugin (5 s; at quit 1 s for all plugins together), and a crash or running out of memory loses it; call `await prefs.flush()` after a save that must not be lost. Also flush before you read or copy the file yourself. See [Open a tool window and remember its state](windows.md) for a complete window built on a store.
 
 ### Work in progress: session values
 

@@ -7,7 +7,7 @@ description: Open a tool window from a menu item, wire its controls to the plugi
 
 **Goal:** a menu item opens a tool window whose controls act on the player, and the window comes back the way the user left it: its controls hold the last values, and if it was open when the player quit, it opens again at the next start.
 
-A tool window keeps nothing by itself: closing it destroys the window instance, and the plugin process ends with the player. The plugin holds the state, stores it with {@link "@vestra-player/sdk"!Storage.json | plugin.storage.json}, shows it with `bind`, and reopens the window during activation.
+A tool window keeps nothing by itself: closing it destroys the window instance, and the plugin process ends with the player. The plugin holds the state, stores it with {@link "@vestra-player/sdk"!Storage.json | plugin.storage.json} and reopens the window during activation.
 
 ## Steps
 
@@ -17,61 +17,23 @@ Add `ui.window` to the manifest's `capabilities`, plus whatever the window's con
 
 ### Write the window in Slint
 
-Create a `.slint` file under `ui/` whose exported component inherits `Window`. Declare an `in` property for each value the plugin writes, an `in-out` property for a value both the plugin and a control change (a slider), and a `callback` for each thing the user does. Take colours, sizes and widgets from the player:
-
-```slint
-// ui/hello.slint
-import { Button } from "@vestra/widgets.slint";
-import { Theme } from "@vestra/theme.slint";
-
-export component Hello inherits Window {
-    title: "Hello";
-    in property <string> message;
-    in property <bool> can-seek;
-    callback jump(float);
-    background: Theme.bg-panel;
-    VerticalLayout {
-        Text { text: root.message; color: Theme.text; }
-        Button { text: "Back 10 s"; enabled: root.can-seek; clicked => { root.jump(-10); } }
-    }
-}
-```
-
-For your editor, point the Slint language server's library path `vestra` at `node_modules/@vestra-player/sdk/slint/vestra`.
+Create a `.slint` file under `ui/` whose exported component inherits `Window` (`ui/brightness.slint` in the complete example). Declare an `in` property for each value the plugin writes, an `in-out` property for a value both the plugin and a control change (a slider), and a `callback` for each thing the user does. Take colours, sizes and widgets from `@vestra/theme.slint` and `@vestra/widgets.slint`. For your editor, point the Slint language server's library path `vestra` at `node_modules/@vestra-player/sdk/slint/vestra`.
 
 ### Create, bind and open it
 
-Create the window once in `activate`, bind its properties, handle its callbacks, and show it from a command:
-
-```ts
-const helloWindow = plugin.windows.create("ui/hello.slint");
-helloWindow.bind(() => ({
-  message: plugin.player.state.source ?? "Nothing is playing",
-  canSeek: plugin.player.state.can.seek,
-}));
-helloWindow.on("jump", (delta: number) =>
-  plugin.player.seek(Math.max(0, (plugin.player.state.position ?? 0) + delta)),
-);
-plugin.commands.add({
-  id: "hello",
-  path: ["Tools", "Hello…"],
-  run: () => helloWindow.show(),
-});
-```
-
-`canSeek` reaches the Slint property `can-seek`. Bind callbacks with `on` before the window is first shown. Because the window is bound before it opens, it shows current values at once, without flashing defaults.
+Create the window once in `activate` with `plugin.windows.create("ui/brightness.slint")`, write its properties with `bind`, handle its callbacks with `on` before it is first shown, and show it from a command's `run`. A property name in camel case (`canSeek`) reaches the Slint property in kebab case (`can-seek`). Because the window is bound before it opens, it shows current values at once, without flashing defaults.
 
 ### Load the stored state
 
-At the start of `activate`, create the store with `plugin.storage.json(name, { defaults, validate })`, holding the window's values and an `open` flag. Always pass `validate`: the file is outside your control, and a file that fails it is set aside and `defaults` is used.
+At the start of `activate`, create the store with `plugin.storage.json(name, { defaults, validate })`, holding the window's values and an `open` flag. Always pass `validate`: a file that cannot be parsed or fails it is renamed to `<name>.json.bad-<timestamp>` and `defaults` is used.
 
 ### Bind to the stored value and save every change
 
-Bind the window to `store.value`, not a copy of it. In each callback that changes a value, call `store.save({ ...store.value, … })`. Do not debounce it yourself (the file is written 300 ms after the last call, and flushed when the plugin stops), and do not change `store.value` in place.
+Bind the window to `store.value`, not a copy of it, so whatever changes the state (a callback, Reset, a command) updates the window. In each callback that changes a value, call `store.save({ ...store.value, … })`: it replaces `store.value` at once and writes the file 300 ms after the last call (a temporary file, then a rename), so a drag writes once; the store is flushed when the plugin stops. Do not debounce it yourself, and do not change `store.value` in place.
 
 ### Record whether the window is open, and reopen it
 
-Save `open: true` when your command shows the window, and `open: false` in `onClose`, which runs only when the user closes the window. When the player quits, the window closes without `onClose`, so `open` stays `true`. At the end of `activate`, after creating and binding the window, show it if `store.value.open` is true; if that fails, save `open: false` instead of failing activation.
+Save `open: true` when your command shows the window, and `open: false` in `onClose`, which runs only when the user closes the window (the title-bar button or the [standard close keys](../reference/commands.md#keys-the-system-takes-first)). When the player quits, the window closes without `onClose`, so `open` stays `true`. At the end of `activate`, after creating and binding the window, show it if `store.value.open` is true; if that fails, save `open: false` instead of failing activation.
 
 ## Complete example
 
@@ -203,4 +165,4 @@ export default async function activate(plugin: Plugin) {
 - [Add settings and translations](./i18n.md): preferences belong on a settings page.
 - [Design rules](./design-rules.md): how a tool window should look.
 - [Theme](../reference/theme.md): every token, icon and widget.
-- {@link "@vestra-player/sdk"!Window | Window}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!Window.onClose | Window.onClose}
+- {@link "@vestra-player/sdk"!Window | Window}, {@link "@vestra-player/sdk"!Storage | Storage}, {@link "@vestra-player/sdk"!JsonStore | JsonStore}, {@link "@vestra-player/sdk"!Window.onClose | Window.onClose}

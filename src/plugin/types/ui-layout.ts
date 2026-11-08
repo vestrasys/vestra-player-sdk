@@ -80,7 +80,7 @@ import type { Dialogs, Panels, Settings } from "./ui-shell.ts";
  * });
  * ```
  *
- * @see {@link Windows.create}, {@link View}, [Open a tool window and remember its state](../../../docs/guides/windows.md), [Remember a window's state between runs](../../../docs/guides/window-state.md)
+ * @see {@link Windows.create}, {@link View}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category UI
  */
@@ -236,7 +236,7 @@ export interface Window extends View, Disposable {
    * notesWindow.onClose(() => store.save({ open: false }));
    * ```
    *
-   * @see [Remember a window's state between runs](../../../docs/guides/window-state.md)
+   * @see [Open a tool window and remember its state](../../../docs/guides/windows.md)
    * @since 1.0.0
    */
   onClose(listener: () => unknown): Disposable;

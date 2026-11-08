@@ -389,7 +389,7 @@ export interface JsonStore<T> extends Disposable {
  * void queue;
  * ```
  *
- * @see [Store a plugin's data](../../../docs/guides/store-data.md), [Remember a window's state between runs](../../../docs/guides/window-state.md)
+ * @see [Store a plugin's data](../../../docs/guides/store-data.md), [Open a tool window and remember its state](../../../docs/guides/windows.md)
  * @since 1.0.0
  * @category Services
  */

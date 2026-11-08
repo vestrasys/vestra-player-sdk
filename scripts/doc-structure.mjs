@@ -78,7 +78,7 @@ export const GROUPS = [
       { file: "index.md", why: "Group index." },
       {
         file: "windows.md",
-        why: "One task: open a tool window from a menu item, wire its controls and bring back its state at the next start.",
+        why: "One task: open a tool window from a menu item, wire its controls and bring back its values and whether it was open at the next start (the former Remember a window's state between runs).",
       },
       {
         file: "i18n.md",
@@ -91,10 +91,6 @@ export const GROUPS = [
       {
         file: "store-data.md",
         why: "One task: choose between settings files, session values and secrets, and use each.",
-      },
-      {
-        file: "window-state.md",
-        why: "One task: remember a window's state between runs.",
       },
       {
         file: "slider.md",
@@ -281,7 +277,9 @@ export const REDIRECTS = Object.fromEntries(
     GPU_and_software_rendering: "Offer_a_GPU_rendering_switch",
     The_player_s_Rust_core: "Tutorial",
     How_the_player_runs_and_talks_to_plugins: "Tutorial",
-    // The translation guide, merged into the settings and translations guide.
+    // Guides merged into another guide.
+    Remember_a_window_s_state_between_runs:
+      "Open_a_tool_window_and_remember_its_state",
     Translate_a_plugin: "Add_settings_and_translations",
     // The guidelines.
     Plugin_rules: "Design_rules",

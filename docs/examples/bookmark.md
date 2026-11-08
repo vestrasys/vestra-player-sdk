@@ -108,6 +108,6 @@ Start the player with `--plugin <path to examples/bookmark>`, open a video, choo
 
 ## Try next
 
-1. **Keep the bookmark after a restart** with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage}`.json("bookmark", { defaults: { mark: null } })`. See [Remember a window's state between runs](../guides/window-state.md).
+1. **Keep the bookmark after a restart** with {@link "@vestra-player/sdk"!Scope.storage | plugin.storage}`.json("bookmark", { defaults: { mark: null } })`. See [Open a tool window and remember its state](../guides/windows.md).
 2. **Show it on the seek bar** with a mark of kind `"bookmark"` from `plugin.timeline.layer()` (capability `timeline.marks`).
 3. **A shortcut to jump**: a command with `title: "Jump to bookmark"`, `bindings: ["Ctrl+Alt+J"]` and `enabled: () => mark !== null`.

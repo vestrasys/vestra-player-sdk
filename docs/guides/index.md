@@ -31,12 +31,6 @@ A plugin has three places to keep data, all private to it: settings files (`stor
 
 [Read the guide](store-data.md)
 
-## Remember a window's state between runs
-
-A tool window keeps nothing by itself: closing it destroys it, and the plugin process ends with the player. The guide keeps the window's values in `plugin.storage.json` (validated, debounced, flushed when the plugin stops), binds the window to the stored state, records whether the window is open (only the user's close counts as closed, so a window open at quit comes back), and reopens it during activation. It also says what cannot be restored: the operating system places tool windows, and the API has no position or size.
-
-[Read the guide](window-state.md)
-
 ## Keep a slider responsive while dragging
 
 A slider reports every pointer move, often more than 60 times a second, so a slider that drives a video filter, the volume or a preview can lag or queue up requests. The guide builds a Brightness window and shows the four habits that keep it smooth: the callback records the newest value and never awaits; the expensive part is a call that keeps only the latest value (`filter.set`, `player.setOutput`, `Scrub.seek`); the slider's value is bound with `bind`, not `set`, so the plugin never fights the pointer; and one-off work waits for the release. It ends with a small helper that gives your own slow work latest-value behaviour, and with when to call `plugin.update()`.

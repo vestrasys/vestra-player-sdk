@@ -65,7 +65,7 @@ assert.equal(importWindow.props["status-text"], expected);
 
 ### Test a restart
 
-Copy `host.dataDirectory` after the first run and pass it as `dataDirectory` to the second, to check what the plugin stored and restores ([Remember a window's state between runs](window-state.md) is a plugin that needs it). A restart within one player session (a reload, an upgrade, a crash) keeps {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} too: pass the first run's `host.sessionStorage` as `sessionStorage`; leave it out to test a fresh player session.
+Copy `host.dataDirectory` after the first run and pass it as `dataDirectory` to the second, to check what the plugin stored and restores ([Open a tool window and remember its state](windows.md) is a plugin that needs it). A restart within one player session (a reload, an upgrade, a crash) keeps {@link "@vestra-player/sdk"!SessionStorage | plugin.storage.session} too: pass the first run's `host.sessionStorage` as `sessionStorage`; leave it out to test a fresh player session.
 
 ```ts
 import assert from "node:assert/strict";
