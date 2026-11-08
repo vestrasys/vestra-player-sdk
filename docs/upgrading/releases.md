@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.6.14](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1614) | **Nobody.** A data refresh: `BUILTIN_COMMANDS` lists the built-in capture plugin's commands as the player registers them since its capture tab; no API change, `apiVersion` stays `vestra/1`. | — |
 | [1.6.13](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1613) | **Plugin tests that toggle a column in fullscreen.** In fullscreen `toggle()` now only switches the column on or off (user ruling 2026-11-08); a test that asserted `effective: true` after toggling a column on in fullscreen now sees `effective: false`, `reason: "fullscreen"` (on, revealed by the right edge). | — |
 | [1.6.12](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1612) | **Nobody.** Superseded by 1.6.13 for `toggle` in fullscreen: this release's rule is withdrawn, and no released player shipped it. | — |
 | [1.6.11](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1611) | **Nobody.** Additions only: a mount slot, a panel position, a button icon and `TestHost` support; `apiVersion` stays `vestra/1`, no new capability. | — |

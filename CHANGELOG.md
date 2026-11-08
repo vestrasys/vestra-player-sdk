@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.14
+
+**Who must change: nobody.** A data refresh: `BUILTIN_COMMANDS` lists the built-in capture plugin's commands as the player registers them since its capture tab; no API change, `apiVersion` stays `vestra/1`.
+
+- **`BUILTIN_COMMANDS`**: `vestra.capture` has **Video ▸ Snapshot ▸ Capture…** (Alt+S), which opens its sidebar tab; Save/Copy Rendered Frame, Save Current Frame As…, Export Tasks…, the capture formats, Snapshot Settings…, Snapshot Folder… and Open Snapshot Folder left the menu for the command palette, and new palette commands came: Export Clip Range (Ctrl+Shift+E), Save and Copy Video Frame Only, Show Last Capture in Folder, Copy Last Snapshot, Set Clip Start, Set Clip End and Export Last 30 Seconds (Ctrl+Shift+R). A plugin that checks a key or menu path against the table (`vestra-plugin check`, `TestHost`) sees the player's current ones.
 ## 1.6.13
 
 **Who must change: plugin tests that toggle a column in fullscreen.** In fullscreen `toggle()` now only switches the column on or off (user ruling 2026-11-08); a test that asserted `effective: true` after toggling a column on in fullscreen now sees `effective: false`, `reason: "fullscreen"` (on, revealed by the right edge). Plugin code needs no change; `apiVersion` stays `vestra/1`, and the wire gains one optional field.
