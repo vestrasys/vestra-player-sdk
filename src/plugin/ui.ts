@@ -1058,11 +1058,18 @@ class PanelHandle extends ViewBase implements Panel {
       throw failure("invalid", "the player shows the backdrop by itself");
     await layoutOf(this.scope.runtime).read();
     const state = this.state;
-    // Collapsed at the edge of fullscreen (wanted shown, not on screen):
-    // slide it out rather than turn it off (player 0.7.6 pops it out).
-    if (state?.preferred && state.active && state.reason !== "fullscreen")
+    // A switch, the same in every mode (user ruling 2026-11-08): off when
+    // on and current, else on at this tab. `reveal: false`: in fullscreen
+    // nothing pops out, the right edge reveals it (player 0.7.6; older
+    // players ignore it and pop it out).
+    if (state?.preferred && state.active)
       await layoutOf(this.scope.runtime).set(this.#slot, { visible: false });
-    else await this.show();
+    else
+      await layoutOf(this.scope.runtime).set(this.#slot, {
+        active: this.scope.runtime.manifest.id,
+        visible: true,
+        reveal: false,
+      });
   }
   async showMenu(items: (Command | null)[], at: { x: number; y: number }) {
     await this.ready;
@@ -1249,7 +1256,12 @@ class LayoutService {
   }
   async set(
     slot: LayoutName,
-    change: { visible?: boolean; detached?: boolean; active?: string },
+    change: {
+      visible?: boolean;
+      detached?: boolean;
+      active?: string;
+      reveal?: boolean;
+    },
   ) {
     this.start();
     await this.#runtime.host.layout.set({ slot, ...change });
@@ -1294,10 +1306,10 @@ function slot(scope: ScopeImpl, name: LayoutName): SidebarSlot {
     async toggle() {
       await service().read();
       const current = service().state[name];
-      // Collapsed at the edge of fullscreen: slide it out (see Panel.toggle).
-      const collapsed = current?.reason === "fullscreen";
+      // A switch (see Panel.toggle): nothing pops out in fullscreen.
       await service().set(name, {
-        visible: collapsed || !(current?.preferred ?? true),
+        visible: !(current?.preferred ?? true),
+        reveal: false,
       });
     },
     setDetached: (detached) => service().set(name, { detached }),

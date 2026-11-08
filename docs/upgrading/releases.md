@@ -15,7 +15,8 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
-| [1.6.12](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1612) | **Nobody.** A behaviour fix of `toggle` in fullscreen, an example fix and a development warning; no new API, `apiVersion` stays `vestra/1`. | — |
+| [1.6.13](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1613) | **Plugin tests that toggle a column in fullscreen.** In fullscreen `toggle()` now only switches the column on or off (user ruling 2026-11-08); a test that asserted `effective: true` after toggling a column on in fullscreen now sees `effective: false`, `reason: "fullscreen"` (on, revealed by the right edge). | — |
+| [1.6.12](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1612) | **Nobody.** Superseded by 1.6.13 for `toggle` in fullscreen: this release's rule is withdrawn, and no released player shipped it. | — |
 | [1.6.11](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1611) | **Nobody.** Additions only: a mount slot, a panel position, a button icon and `TestHost` support; `apiVersion` stays `vestra/1`, no new capability. | — |
 | [1.6.10](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1610) | **Nobody.** Additions only: a clip format, optional export fields, two optional `JobState` fields, an error code and a `TestHost` field. | — |
 | [1.6.9](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#169) | **Nobody.** Additions only: timeline ranges, OSD messages with action buttons, a limits constant, a wire method and `TestHost` support, and documentation of a bottom bar's `content-full-width`. | — |

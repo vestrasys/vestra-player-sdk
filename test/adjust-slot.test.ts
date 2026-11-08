@@ -134,7 +134,7 @@ test("a player that refuses the slot fails the activation; a layout without adju
   await stop();
 });
 
-test("in fullscreen a collapsed column slides out on toggle instead of closing", async () => {
+test("in fullscreen toggle switches a column as in a window; only show() pops it out", async () => {
   const host = new TestHost();
   host.mountOther("sidebar", "vestra.playlist");
   let wheels!: Panel;
@@ -145,35 +145,44 @@ test("in fullscreen a collapsed column slides out on toggle instead of closing",
     { host, directory: packageWith() },
   );
   await wheels.show();
-  // Fullscreen: both columns wanted shown, collapsed at the right edge.
-  const collapse = () => {
-    for (const slot of [host.layout.adjust!, host.layout.sidebar!]) {
-      slot.effective = false;
-      slot.reason = "fullscreen";
-    }
-    host.emit("window.state", {});
-  };
-  collapse();
+  // Fullscreen: both columns on, collapsed at the right edge.
+  host.setMainWindow({ fullscreen: true });
   await host.settle();
   assert.equal(wheels.state?.reason, "fullscreen");
-  // Panel.toggle (its key): slides out, not off.
+  // Toggle (its key, Alt+n): on, so off; nothing popped out.
+  await wheels.toggle();
+  assert.deepEqual(
+    [host.layout.adjust?.preferred, host.layout.adjust?.reason],
+    [false, "userHidden"],
+  );
+  assert.deepEqual(host.sent("layout.set").at(-1), {
+    slot: "adjust",
+    visible: false,
+  });
+  // Toggle again: on, still collapsed; the right edge reveals it.
   await wheels.toggle();
   assert.deepEqual(
     [host.layout.adjust?.preferred, host.layout.adjust?.effective],
-    [true, true],
+    [true, false],
   );
-  // Shown: the next toggle turns it off.
-  await wheels.toggle();
-  assert.equal(host.layout.adjust?.preferred, false);
-  // PanelSlot.toggle (a "Show sidebar" command) alike.
-  collapse();
+  assert.equal(host.sent("layout.set").at(-1)?.reveal, false);
+  host.popSidebar(true);
   await host.settle();
+  assert.equal(wheels.state?.effective, true);
+  // Popped out and toggled off: in at once.
+  await wheels.toggle();
+  assert.equal(host.layout.adjust?.effective, false);
+  // show() still pops it out, as documented.
+  host.popSidebar(false);
+  await wheels.show();
+  assert.equal(host.layout.adjust?.effective, true);
+  // PanelSlot.toggle alike: off, then on without popping out.
+  await plugin.panels.sidebar.toggle();
+  assert.equal(host.layout.sidebar?.preferred, false);
   await plugin.panels.sidebar.toggle();
   assert.deepEqual(
     [host.layout.sidebar?.preferred, host.layout.sidebar?.effective],
-    [true, true],
+    [true, false],
   );
-  await plugin.panels.sidebar.toggle();
-  assert.equal(host.layout.sidebar?.preferred, false);
   await stop();
 });
