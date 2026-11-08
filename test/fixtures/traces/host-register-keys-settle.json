@@ -1,0 +1,406 @@
+{
+  "timeline": [
+    [
+      "request",
+      "window.state"
+    ],
+    [
+      "answer",
+      "window.state"
+    ],
+    [
+      "request",
+      "events.subscribe"
+    ],
+    [
+      "request",
+      "commands.keys"
+    ],
+    [
+      "request",
+      "commands.register"
+    ],
+    [
+      "answer",
+      "events.subscribe"
+    ],
+    [
+      "request",
+      "events.subscribe"
+    ],
+    [
+      "answer",
+      "commands.keys"
+    ],
+    [
+      "plugin",
+      "onKeysChange"
+    ],
+    [
+      "event",
+      "commands.keys",
+      {
+        "keys": {
+          "first": [],
+          "host/stop": [
+            "F4"
+          ],
+          "host/play-pause": [
+            "Space"
+          ],
+          "host/previous": [
+            "PgUp"
+          ],
+          "host/next": [
+            "PgDn"
+          ],
+          "host/frame-back": [
+            "D"
+          ],
+          "host/frame-forward": [
+            "F"
+          ],
+          "host/seek-backward": [
+            "←"
+          ],
+          "host/seek-forward": [
+            "→"
+          ],
+          "host/rate-normal": [
+            "Z"
+          ],
+          "host/rate-down": [
+            "X"
+          ],
+          "host/rate-up": [
+            "C"
+          ],
+          "host/volume-up": [
+            "↑"
+          ],
+          "host/volume-down": [
+            "↓"
+          ],
+          "host/mute": [
+            "M"
+          ]
+        },
+        "revision": 1
+      }
+    ],
+    [
+      "answer",
+      "commands.register"
+    ],
+    [
+      "answer",
+      "events.subscribe"
+    ],
+    [
+      "mark",
+      "started",
+      []
+    ],
+    [
+      "mark",
+      "added late",
+      []
+    ],
+    [
+      "request",
+      "commands.register"
+    ],
+    [
+      "event",
+      "commands.keys",
+      {
+        "keys": {
+          "first": [],
+          "late": [
+            "L"
+          ],
+          "host/stop": [
+            "F4"
+          ],
+          "host/play-pause": [
+            "Space"
+          ],
+          "host/previous": [
+            "PgUp"
+          ],
+          "host/next": [
+            "PgDn"
+          ],
+          "host/frame-back": [
+            "D"
+          ],
+          "host/frame-forward": [
+            "F"
+          ],
+          "host/seek-backward": [
+            "←"
+          ],
+          "host/seek-forward": [
+            "→"
+          ],
+          "host/rate-normal": [
+            "Z"
+          ],
+          "host/rate-down": [
+            "X"
+          ],
+          "host/rate-up": [
+            "C"
+          ],
+          "host/volume-up": [
+            "↑"
+          ],
+          "host/volume-down": [
+            "↓"
+          ],
+          "host/mute": [
+            "M"
+          ]
+        },
+        "revision": 2
+      }
+    ],
+    [
+      "plugin",
+      "onKeysChange"
+    ],
+    [
+      "answer",
+      "commands.register"
+    ],
+    [
+      "mark",
+      "settled"
+    ],
+    [
+      "mark",
+      "keys",
+      [
+        "L"
+      ]
+    ],
+    [
+      "event",
+      "bindings.changed",
+      null
+    ],
+    [
+      "event",
+      "commands.keys",
+      {
+        "keys": {
+          "first": [
+            "G"
+          ],
+          "late": [
+            "L"
+          ],
+          "host/stop": [
+            "F4"
+          ],
+          "host/play-pause": [
+            "Space"
+          ],
+          "host/previous": [
+            "PgUp"
+          ],
+          "host/next": [
+            "PgDn"
+          ],
+          "host/frame-back": [
+            "D"
+          ],
+          "host/frame-forward": [
+            "F"
+          ],
+          "host/seek-backward": [
+            "←"
+          ],
+          "host/seek-forward": [
+            "→"
+          ],
+          "host/rate-normal": [
+            "Z"
+          ],
+          "host/rate-down": [
+            "X"
+          ],
+          "host/rate-up": [
+            "C"
+          ],
+          "host/volume-up": [
+            "↑"
+          ],
+          "host/volume-down": [
+            "↓"
+          ],
+          "host/mute": [
+            "M"
+          ]
+        },
+        "revision": 3
+      }
+    ],
+    [
+      "plugin",
+      "onKeysChange"
+    ],
+    [
+      "mark",
+      "rebound"
+    ],
+    [
+      "mark",
+      "keys",
+      [
+        "G"
+      ]
+    ],
+    [
+      "request",
+      "commands.unregister"
+    ],
+    [
+      "event",
+      "commands.keys",
+      {
+        "keys": {
+          "first": [
+            "G"
+          ],
+          "host/stop": [
+            "F4"
+          ],
+          "host/play-pause": [
+            "Space"
+          ],
+          "host/previous": [
+            "PgUp"
+          ],
+          "host/next": [
+            "PgDn"
+          ],
+          "host/frame-back": [
+            "D"
+          ],
+          "host/frame-forward": [
+            "F"
+          ],
+          "host/seek-backward": [
+            "←"
+          ],
+          "host/seek-forward": [
+            "→"
+          ],
+          "host/rate-normal": [
+            "Z"
+          ],
+          "host/rate-down": [
+            "X"
+          ],
+          "host/rate-up": [
+            "C"
+          ],
+          "host/volume-up": [
+            "↑"
+          ],
+          "host/volume-down": [
+            "↓"
+          ],
+          "host/mute": [
+            "M"
+          ]
+        },
+        "revision": 4
+      }
+    ],
+    [
+      "plugin",
+      "onKeysChange"
+    ],
+    [
+      "answer",
+      "commands.unregister"
+    ],
+    [
+      "mark",
+      "disposed late"
+    ],
+    [
+      "mark",
+      "settled"
+    ],
+    [
+      "request",
+      "events.subscribe"
+    ],
+    [
+      "request",
+      "commands.unregister"
+    ],
+    [
+      "answer",
+      "events.subscribe"
+    ],
+    [
+      "event",
+      "commands.keys",
+      {
+        "keys": {
+          "host/stop": [
+            "F4"
+          ],
+          "host/play-pause": [
+            "Space"
+          ],
+          "host/previous": [
+            "PgUp"
+          ],
+          "host/next": [
+            "PgDn"
+          ],
+          "host/frame-back": [
+            "D"
+          ],
+          "host/frame-forward": [
+            "F"
+          ],
+          "host/seek-backward": [
+            "←"
+          ],
+          "host/seek-forward": [
+            "→"
+          ],
+          "host/rate-normal": [
+            "Z"
+          ],
+          "host/rate-down": [
+            "X"
+          ],
+          "host/rate-up": [
+            "C"
+          ],
+          "host/volume-up": [
+            "↑"
+          ],
+          "host/volume-down": [
+            "↓"
+          ],
+          "host/mute": [
+            "M"
+          ]
+        },
+        "revision": 5
+      }
+    ],
+    [
+      "answer",
+      "commands.unregister"
+    ]
+  ]
+}

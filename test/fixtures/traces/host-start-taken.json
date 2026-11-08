@@ -1,0 +1,43 @@
+{
+  "taken": {
+    "started": {
+      "value": "started"
+    },
+    "ready": {
+      "refused": {
+        "code": "conflict",
+        "message": "文件类型 .nes 已由 other.plugin 解析"
+      }
+    },
+    "resolvers": 0,
+    "commands": [],
+    "methods": [
+      "events.subscribe",
+      "source.state",
+      "window.state",
+      "timeline.marks",
+      "sourceResolvers.register",
+      "commands.register",
+      "commands.unregister"
+    ]
+  },
+  "conflict": {
+    "started": {
+      "refused": {
+        "code": "conflict",
+        "message": "already registered by this plugin"
+      }
+    },
+    "resolvers": [
+      "a"
+    ],
+    "methods": [
+      "events.subscribe",
+      "source.state",
+      "window.state",
+      "timeline.marks",
+      "sourceResolvers.register",
+      "sourceResolvers.register"
+    ]
+  }
+}

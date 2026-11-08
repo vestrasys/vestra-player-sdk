@@ -1,0 +1,111 @@
+{
+  "timeline": [
+    [
+      "request",
+      "osd.show"
+    ],
+    [
+      "request",
+      "osd.show"
+    ],
+    [
+      "mark",
+      "disconnect"
+    ],
+    [
+      "dispose",
+      {
+        "stopping": true,
+        "reason": "host-lost"
+      }
+    ],
+    [
+      "request",
+      "osd.show"
+    ],
+    [
+      "refused",
+      "osd.show",
+      {
+        "code": "disabled",
+        "message": "plugin is stopping"
+      }
+    ],
+    [
+      "refused",
+      "osd.show",
+      {
+        "code": "disabled",
+        "message": "plugin stopped"
+      }
+    ],
+    [
+      "refused",
+      "osd.show",
+      {
+        "code": "disabled",
+        "message": "plugin stopped"
+      }
+    ],
+    [
+      "mark",
+      "disconnected"
+    ],
+    [
+      "request",
+      "osd.show"
+    ],
+    [
+      "refused",
+      "osd.show",
+      {
+        "code": "disabled",
+        "message": "plugin is stopping"
+      }
+    ]
+  ],
+  "slow": {
+    "refused": {
+      "code": "disabled",
+      "message": "plugin stopped"
+    }
+  },
+  "queued": {
+    "refused": {
+      "code": "disabled",
+      "message": "plugin stopped"
+    }
+  },
+  "after": {
+    "refused": {
+      "code": "disabled",
+      "message": "plugin is stopping"
+    }
+  },
+  "bye": {
+    "refused": {
+      "code": "disabled",
+      "message": "plugin is stopping"
+    }
+  },
+  "stopReason": "host-lost",
+  "calls": [
+    {
+      "method": "window.state",
+      "params": {}
+    },
+    {
+      "method": "osd.show",
+      "params": {
+        "text": "slow"
+      }
+    },
+    {
+      "method": "osd.show",
+      "params": {
+        "text": "queued"
+      }
+    }
+  ],
+  "osd": []
+}

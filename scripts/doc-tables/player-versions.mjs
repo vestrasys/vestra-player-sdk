@@ -59,7 +59,7 @@ export default function playerVersions({ table }) {
     const exported =
       module === "@vestra-player/sdk"
         ? null
-        : exportedNames("src/plugin/testing.ts");
+        : exportedNames("src/plugin/testing/index.ts");
     for (const statement of sourceFile(file).statements) {
       const names = ts.isVariableStatement(statement)
         ? statement.declarationList.declarations.map((d) => d.name.getText())

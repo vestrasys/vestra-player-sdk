@@ -486,7 +486,10 @@ const walk = (directory) => {
   for (const item of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, item.name);
     if (item.isDirectory()) walk(path);
-    else if (path.endsWith(".ts") && !path.endsWith("testing.ts"))
+    else if (
+      path.endsWith(".ts") &&
+      !/[\\/]plugin[\\/]testing(\.ts$|[\\/])/.test(path)
+    )
       for (const match of readFileSync(path, "utf8").matchAll(
         /\bfailure\(\s*"([\w-]+)"/g,
       ))

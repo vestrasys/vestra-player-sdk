@@ -1,7 +1,8 @@
 // API surface snapshot (characterisation test, doc/specs/sdk-refactor.md
 // §4.0 in the player repository): every exported declaration of the two
-// public entries, `dist/index.d.ts` and `dist/plugin/testing.d.ts`, with
-// its members and signatures, must equal `test/fixtures/api-surface.txt`.
+// public entries (`.` and `./testing`, the declaration files package.json
+// `exports` names), with its members and signatures, must equal
+// `test/fixtures/api-surface.txt`.
 // A file split that changes nothing public leaves the snapshot identical;
 // an additive release rewrites it on purpose:
 // `node scripts/api-surface.mjs --update`. Needs `npm run build` (dist/).

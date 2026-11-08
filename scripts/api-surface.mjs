@@ -7,10 +7,11 @@
  *   node scripts/api-surface.mjs --update   # write test/fixtures/api-surface.txt
  *   node scripts/api-surface.mjs --check    # exit 1 when the file differs
  *
- * Reads the built declaration files of the two public entries,
- * `dist/index.d.ts` (`@vestra-player/sdk`, which re-exports
- * `dist/plugin/types.d.ts`) and `dist/plugin/testing.d.ts`
- * (`@vestra-player/sdk/testing`), with the TypeScript compiler API, and
+ * Reads the built declaration files of the two public entries, found
+ * through the `types` of their `exports` in package.json as a consumer's
+ * compiler finds them: `@vestra-player/sdk` (`dist/index.d.ts`, which
+ * re-exports `dist/plugin/types.d.ts`) and `@vestra-player/sdk/testing`,
+ * with the TypeScript compiler API, and
  * lists every exported declaration with its signature: for an interface
  * or class each member on its own line, for a type alias, function,
  * variable or enum the whole declaration. Comments are dropped, whitespace
@@ -28,9 +29,17 @@ const require = createRequire(join(root, "package.json"));
 /** @type {import("typescript")} */
 const ts = require("typescript");
 
+const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+/** An entry's declaration file, as package.json `exports` names it. */
+function types(subpath) {
+  const target = manifest.exports?.[subpath]?.types;
+  if (typeof target !== "string")
+    throw new Error(`package.json exports["${subpath}"] has no types`);
+  return join(root, target);
+}
 const ENTRIES = {
-  "@vestra-player/sdk": join(root, "dist/index.d.ts"),
-  "@vestra-player/sdk/testing": join(root, "dist/plugin/testing.d.ts"),
+  "@vestra-player/sdk": types("."),
+  "@vestra-player/sdk/testing": types("./testing"),
 };
 const FIXTURE = join(root, "test/fixtures/api-surface.txt");
 

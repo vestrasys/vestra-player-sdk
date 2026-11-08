@@ -170,7 +170,7 @@ for (const path of walk("src", (p) => p.endsWith(".ts"))) {
 // ── Write and type check them ───────────────────────────────────────────
 
 const sdkEntry = join(root, "src/index.ts");
-const testingEntry = join(root, "src/plugin/testing.ts");
+const testingEntry = join(root, "src/plugin/testing/index.ts");
 const docsEntry = join(root, "src/docs.ts");
 
 /** Every name the public entry points export (types and values). */

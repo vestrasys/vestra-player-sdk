@@ -17,8 +17,8 @@
       "default": "./dist/index.js"
     },
     "./testing": {
-      "types": "./dist/plugin/testing.d.ts",
-      "default": "./dist/plugin/testing.js"
+      "types": "./dist/plugin/testing/index.d.ts",
+      "default": "./dist/plugin/testing/index.js"
     },
     "./runtime": {
       "types": "./dist/player-runtime.d.ts",
