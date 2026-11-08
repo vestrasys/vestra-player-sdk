@@ -1556,8 +1556,11 @@ export interface Commands {
    * player, and until its answer arrives (a few milliseconds) every
    * command reads `[]`; a binding that read it runs again then.
    *
-   * Only the plugin's own commands: an id the plugin has not added (or
-   * another plugin's) reads `[]`. Needs nothing beyond `commands`, not
+   * The plugin's own commands, and the player's own as `host/<id>` (SDK
+   * 1.6.16; `host/volume-up`, `host/mute`: the ids of
+   * {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS} rows owned by `host`), for a panel that
+   * shows the player's keys beside its own controls; an id the plugin has
+   * not added (or another plugin's) reads `[]`. Needs nothing beyond `commands`, not
    * `bindings.manage` (the whole binding table, every plugin's, is
    * {@link Bindings.list}). Without the `commands` capability every
    * command reads `[]`. Players before 0.7.6 have no `keys` (the player

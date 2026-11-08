@@ -85,7 +85,6 @@ test("keys follow rebinding, clearing and Ignore Default Shortcuts; a view bound
     assert.deepEqual(plugin.commands.keys("mute-too"), []);
     // Not a command of this plugin: nothing, never another plugin's keys.
     assert.deepEqual(plugin.commands.keys("mute"), []);
-    assert.deepEqual(plugin.commands.keys("host/mute"), []);
     assert.throws(() => plugin.commands.keys(7 as never), { code: "invalid" });
     const props = () => host.window("picture").props;
     assert.equal(props()["brightness-down"], "W");
@@ -225,6 +224,38 @@ test("an answer older than an event it crossed is dropped", async () => {
     void plugin.commands.keys("a");
     await host.settle();
     assert.deepEqual(plugin.commands.keys("a"), ["B"]);
+  } finally {
+    await stop();
+  }
+});
+
+test("the player's own commands' keys read as host/<id> and follow their rebinding (SDK 1.6.16)", async () => {
+  const host = new TestHost();
+  host.systemInfo.os = "windows";
+  const { plugin, stop } = await startPlugin(activate, {
+    directory: picturePackage(),
+    host,
+  });
+  try {
+    await host.settle();
+    // Mute holds M; Volume + has a mouse binding too, left out as in menus.
+    assert.deepEqual(plugin.commands.keys("host/mute"), ["M"]);
+    const volumeUp = host.coreCommands.get("host/volume-up")!;
+    const shown = (volumeUp.declaration.bindings ?? [])
+      .map((input) => keyLabel(input, false))
+      .filter((label) => label !== null);
+    assert.ok(shown.length);
+    assert.deepEqual(plugin.commands.keys("host/volume-up"), shown);
+    assert.deepEqual(plugin.commands.keys("host/no-such"), []);
+    let heard = 0;
+    plugin.commands.onKeysChange(() => heard++);
+    await host.settle();
+    host.rebind("host/mute", ["Ctrl+M"]);
+    await host.settle();
+    assert.deepEqual(plugin.commands.keys("host/mute"), ["Ctrl+M"]);
+    assert.equal(heard, 1);
+    // The player's key freed, the plugin's own command that wanted M has it.
+    assert.deepEqual(plugin.commands.keys("mute-too"), ["M"]);
   } finally {
     await stop();
   }

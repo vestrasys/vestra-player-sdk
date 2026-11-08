@@ -37,7 +37,9 @@ export type Why = () => string;
 export const WAKE_EVENTS: readonly string[] = [
   "packages.changed",
   "bindings.changed",
-  // Player 0.7.6: sent only to the plugin whose own keys changed.
+  // Player 0.7.6: sent to a plugin whose own keys changed and, from SDK
+  // 1.6.16, to every listener when a player command (`host/<id>`) is
+  // rebound, which wakes each parked listener.
   "commands.keys",
   "appearance.changed",
   "resolvers.fileTypes",

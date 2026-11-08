@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.16
+
+**Who must change: nobody.** A data refresh for the player's four built-in panels (player 0.7.6) and one additive read; no API is removed, `apiVersion` stays `vestra/1`.
+
+- **`BUILTIN_COMMANDS`**: the Picture, Audio, Subtitles and Playback panels open from four top-level items, **Picture…** (`vestra.video`, `video.picture`, Alt+1), **Audio…** (`audio.workbench`, Alt+2), **Subtitles…** (`tune`, Alt+3) and **Playback…** (`vestra.playback`, `panel`, Alt+4), next to Playlist. The commands their panels hold left the menus for the command palette, with their keys and categories: Video's Pixel Shaders, Deinterlace, Aspect, Crop/Stretch, Framing, Image Processing and Rotation, the picture steps and GPU Rendering; Audio's track, channel, equalizer, preset, sync and processing items; Subtitles' show, style, secondary subtitle, sync and reload items; the playback plugin's seek steps, keyframes, Jump to Time… and speeds; the Reset items of the video, audio and subtitles plugins (the visualizer's Reset ▸ Idle Logo stays). **Subtitle Track ▸ Off** and **Audio Track ▸ No Audio Tracks** are now top-level submenus. New palette commands: Remove External Subtitle (`vestra.subtitles`, `remove`) and Picture Panel (`video.resetPanel`, a reset of the panel's values). Audio ▸ Output Device ▸ No Output Devices (`audio.device.none`) is gone.
+- **`BUILTIN_SUBMENUS`**: the Video, Audio and Subtitles submenus of these plugins are gone; **Subtitle Track** (`vestra.subtitles`) and **Audio Track** (`vestra.audio`) are new, at the top level. Online Subtitles and Snapshot stay.
+- **`plugin.commands.keys("host/<id>")`** reads the keys of the player's own commands (`host/volume-up`, `host/mute`, the ids of the `host` rows of `BUILTIN_COMMANDS`), read-only and current like a plugin's own, so a panel can show the player's key caps beside its controls; `onKeysChange` fires for their changes too. The `commands.keys` answer and event carry them as `host/<id>` entries (a local id has no `/`); player 0.7.6, like `keys` itself. A side effect: rebinding one of the player's own commands now sends `commands.keys` to every plugin listening for it, and a listener in standby is started for it (as for a change to its own keys); `onKeysChange` still fires only when a label the plugin can read changed.
+- **`TestHost`**: `commands.keys` answers the core commands as `host/<id>` too, and `rebind` takes a core command's `host/<id>`.
+
 ## 1.6.15
 
 **Who must change: nobody.** A plugin may now mount one panel per slot (player 0.7.6) instead of one panel in all; plugins with one panel work as before, and `apiVersion` stays `vestra/1`.
