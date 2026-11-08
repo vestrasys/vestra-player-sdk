@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.13
+
+**Who must change: nobody.** A behaviour change of `toggle` in fullscreen (user ruling 2026-11-08) and an optional wire field; `apiVersion` stays `vestra/1`. A plugin test that expected 1.6.12's toggle to pop a collapsed column out sees it switched off instead.
+
+- **`Panel.toggle` and `PanelSlot.toggle` are a switch, the same in every mode**, replacing 1.6.12's fullscreen rule. On a column that is on, the toggle turns it off; on one that is off, it turns it on. In fullscreen "on" means the pointer at the right edge reveals the column; the toggle never pops it out (player 0.7.6), and a column switched off while it is out slides in at once. The player's own Adjust and Sidebar buttons, Toggle Sidebar and Alt+1…4 behave the same. `Panel.show` and `PanelSlot.setVisible(true)` still pop a column out in fullscreen, as documented.
+- **Wire**: `layout.set` takes an optional `reveal` (with `visible: true`, `false` switches on without popping out; absent, it reveals as before). `toggle` sends `reveal: false`; older players ignore it and pop the column out as before.
+- **`TestHost`**: `setMainWindow({ fullscreen: true })` collapses the adjust column too, `popSidebar` pops out or collapses both columns (those switched on), and `layout.set` with `reveal: false` in fullscreen leaves a column switched on but collapsed.
 ## 1.6.12
 
 **Who must change: nobody.** A behaviour fix of `toggle` in fullscreen, an example fix and a development warning; no new API, `apiVersion` stays `vestra/1`.

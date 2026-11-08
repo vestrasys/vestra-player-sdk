@@ -4003,19 +4003,22 @@ export class TestHost implements Transport {
       patch.fullscreen !== undefined &&
       patch.fullscreen !== this.mainWindow.fullscreen;
     Object.assign(this.mainWindow, patch);
-    // Like the player (reference §6.3): in fullscreen the attached sidebar
-    // starts collapsed at the right edge; leaving fullscreen docks it again.
-    const sidebar = this.layout.sidebar;
-    if (entering && sidebar && sidebar.preferred && !sidebar.detached) {
-      sidebar.effective = !this.mainWindow.fullscreen;
-      sidebar.reason = this.mainWindow.fullscreen ? "fullscreen" : null;
+    // Like the player (reference §6.3): in fullscreen the attached columns
+    // (the sidebar, the adjust column) start collapsed at the right edge;
+    // leaving fullscreen docks them again.
+    for (const column of [this.layout.sidebar, this.layout.adjust]) {
+      if (entering && column && column.preferred && !column.detached) {
+        column.effective = !this.mainWindow.fullscreen;
+        column.reason = this.mainWindow.fullscreen ? "fullscreen" : null;
+      }
     }
     this.emit("window.state", this.#windowFacts());
   }
   /**
    * The pointer reached the right edge in fullscreen (`true`) or left the
-   * popped-out sidebar (`false`): the attached sidebar pops out or collapses
-   * (reference §6.3). No effect outside fullscreen, when hidden or floating.
+   * popped-out columns (`false`): the attached sidebar and the adjust column
+   * (SDK 1.6.13), those switched on, pop out or collapse (reference §6.3). No
+   * effect outside fullscreen, or on a column switched off or floating.
    *
    * @capability None.
    *
@@ -4034,11 +4037,12 @@ export class TestHost implements Transport {
    * @since 1.0.0
    */
   popSidebar(popped: boolean) {
-    const sidebar = this.layout.sidebar;
-    if (!this.mainWindow.fullscreen || !sidebar?.preferred || sidebar.detached)
-      return;
-    sidebar.effective = popped;
-    sidebar.reason = popped ? null : "fullscreen";
+    if (!this.mainWindow.fullscreen) return;
+    for (const column of [this.layout.sidebar, this.layout.adjust]) {
+      if (!column?.preferred || column.detached) continue;
+      column.effective = popped;
+      column.reason = popped ? null : "fullscreen";
+    }
     this.emit("window.state", this.#windowFacts());
   }
   #windowFacts() {
@@ -5725,9 +5729,23 @@ export class TestHost implements Transport {
         state.owner = panel.owner;
       }
       if (typeof p.visible === "boolean") {
+        const out = state.preferred && state.effective;
         state.preferred = p.visible;
-        state.effective = p.visible;
-        state.reason = p.visible ? null : "userHidden";
+        // In fullscreen a column switched on by a toggle (`reveal: false`)
+        // stays collapsed at the edge; `show()` and `setVisible` pop it out.
+        const collapsed =
+          p.visible &&
+          p.reveal === false &&
+          slot !== "bottom" &&
+          this.mainWindow.fullscreen &&
+          !state.detached &&
+          !out;
+        state.effective = p.visible && !collapsed;
+        state.reason = !p.visible
+          ? "userHidden"
+          : collapsed
+            ? "fullscreen"
+            : null;
         if (this.panel?.slot === slot) this.panel.visible = p.visible;
       }
       if (typeof p.detached === "boolean") state.detached = p.detached;

@@ -2817,9 +2817,10 @@ export interface PanelSlot {
    *
    * @remarks
    * Reads the state from the player first, so it is right even without
-   * `events`. A sidebar or adjust column wanted shown but collapsed at the
-   * right edge of fullscreen (`reason: "fullscreen"`) slides out instead of
-   * being turned off (SDK 1.6.12; player 0.7.6 pops it out).
+   * `events`. It is a switch, the same in every mode: in fullscreen a column
+   * switched on is revealed by the pointer at the right edge, and is not
+   * popped out by the toggle (SDK 1.6.13, player 0.7.6; `setVisible(true)`
+   * pops it out). Switching it off while it is out slides it in at once.
    *
    * @capability ui.mount
    *
@@ -3125,11 +3126,13 @@ export interface Panel extends View, Disposable {
    * @remarks
    * Reads the state from the player first. When the position is shown
    * (`preferred`) and this panel's tab is the current one, it hides the
-   * position; otherwise it does {@link Panel.show}: a panel in a background
-   * tab comes to the front instead of the sidebar closing, and a column
-   * collapsed at the right edge of fullscreen (`reason: "fullscreen"`) slides
-   * out instead of being turned off (SDK 1.6.12; player 0.7.6 pops it out),
-   * like the player's own Alt+1…4 and Adjust button. A "Show list"
+   * position; otherwise it switches the position on at this panel's tab: a
+   * panel in a background tab comes to the front instead of the sidebar
+   * closing. It is a switch, the same in every mode, like the player's own
+   * Alt+1…4 and Adjust button: in fullscreen a column switched on is revealed
+   * by the pointer at the right edge, not popped out (SDK 1.6.13, player
+   * 0.7.6; {@link Panel.show} pops it out), and one switched off while out
+   * slides in at once. A "Show list"
    * command checked by `state.preferred && state.active` matches it. Waits
    * for {@link Panel.ready} first.
    *

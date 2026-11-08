@@ -767,6 +767,13 @@ export function createWire(transport: Transport) {
         detached?: boolean;
         /** The plugin id of the panel whose tab becomes the current one. */
         active?: string;
+        /**
+         * With `visible: true`: `false` switches the position on without
+         * popping a column out in fullscreen (`toggle()`, SDK 1.6.13; player
+         * 0.7.6). Absent: reveal, as `show()` and `setVisible` do. Older
+         * players ignore it.
+         */
+        reveal?: boolean;
       }) => transport.request<void>("layout.set", options),
     },
     events: {
