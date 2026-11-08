@@ -322,21 +322,10 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Video ▸ Rotation ▸ 180° |  | `vestra.video/video.rotate.180` |
 | Video ▸ Rotation ▸ 270° |  | `vestra.video/video.rotate.270` |
 | Video ▸ Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
-| Video ▸ Snapshot ▸ Save Current Frame As… |  | `vestra.capture/capture.saveAs` |
+| Video ▸ Snapshot ▸ Capture… | `Alt+S` | `vestra.capture/capture.panel` |
 | Video ▸ Snapshot ▸ Copy Current Frame | `Ctrl+C` | `vestra.capture/capture.copy` |
-| Video ▸ Snapshot ▸ Save Rendered Frame | `Ctrl+Alt+E` | `vestra.capture/capture.saveScreen` |
-| Video ▸ Snapshot ▸ Save Rendered Frame As… |  | `vestra.capture/capture.saveScreenAs` |
-| Video ▸ Snapshot ▸ Copy Rendered Frame | `Ctrl+Alt+C` | `vestra.capture/capture.copyScreen` |
 | Video ▸ Snapshot ▸ Burst… | `Ctrl+G` | `vestra.capture/capture.burst` |
 | Video ▸ Snapshot ▸ Export Clip… |  | `vestra.capture/capture.clip` |
-| Video ▸ Snapshot ▸ Export Tasks… |  | `vestra.capture/capture.tasks` |
-| Video ▸ Snapshot ▸ Capture as PNG |  | `vestra.capture/capture.format.png` |
-| Video ▸ Snapshot ▸ Capture as JPEG |  | `vestra.capture/capture.format.jpeg` |
-| Video ▸ Snapshot ▸ Capture as BMP |  | `vestra.capture/capture.format.bmp` |
-| Video ▸ Snapshot ▸ Include Subtitles in Rendered Frame |  | `vestra.capture/capture.screenSubtitles` |
-| Video ▸ Snapshot ▸ Snapshot Settings… |  | `vestra.capture/capture.settings` |
-| Video ▸ Snapshot ▸ Snapshot Folder… |  | `vestra.capture/capture.folder` |
-| Video ▸ Snapshot ▸ Open Snapshot Folder |  | `vestra.capture/capture.openFolder` |
 | Video ▸ Picture Adjustments… |  | `vestra.video/video.picture` |
 | Video ▸ Brightness -1% | `W` | `vestra.video/video.brightness.down` |
 | Video ▸ Brightness +1% | `E` | `vestra.video/video.brightness.up` |
@@ -429,6 +418,26 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Command Palette (not in the menu) | `Ctrl+Shift+P` | `host/palette` |
 | Adjust (not in the menu) |  | `host/adjust` |
+| Export Clip Range (not in the menu) | `Ctrl+Shift+E` | `vestra.capture/capture.clipExport` |
+| Save Current Frame As… (not in the menu) |  | `vestra.capture/capture.saveAs` |
+| Save Rendered Frame (not in the menu) | `Ctrl+Alt+E` | `vestra.capture/capture.saveScreen` |
+| Save Rendered Frame As… (not in the menu) |  | `vestra.capture/capture.saveScreenAs` |
+| Copy Rendered Frame (not in the menu) | `Ctrl+Alt+C` | `vestra.capture/capture.copyScreen` |
+| Save Video Frame Only (not in the menu) |  | `vestra.capture/capture.saveVideo` |
+| Copy Video Frame Only (not in the menu) |  | `vestra.capture/capture.copyVideo` |
+| Export Tasks… (not in the menu) |  | `vestra.capture/capture.tasks` |
+| Capture as PNG (not in the menu) |  | `vestra.capture/capture.format.png` |
+| Capture as JPEG (not in the menu) |  | `vestra.capture/capture.format.jpeg` |
+| Capture as BMP (not in the menu) |  | `vestra.capture/capture.format.bmp` |
+| Include Subtitles in Rendered Frame (not in the menu) |  | `vestra.capture/capture.screenSubtitles` |
+| Snapshot Settings… (not in the menu) |  | `vestra.capture/capture.settings` |
+| Snapshot Folder… (not in the menu) |  | `vestra.capture/capture.folder` |
+| Open Snapshot Folder (not in the menu) |  | `vestra.capture/capture.openFolder` |
+| Show Last Capture in Folder (not in the menu) |  | `vestra.capture/capture.revealLast` |
+| Copy Last Snapshot (not in the menu) |  | `vestra.capture/capture.copyLast` |
+| Set Clip Start (not in the menu) |  | `vestra.capture/capture.clipStart` |
+| Set Clip End (not in the menu) |  | `vestra.capture/capture.clipEnd` |
+| Export Last 30 Seconds (not in the menu) | `Ctrl+Shift+R` | `vestra.capture/capture.last30` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Play (not in the menu) | `Enter`, `P` (panel focus) | `vestra.playlist/playlist.play` |
 | Add Files… (not in the menu) | `Ctrl+I` (panel focus) | `vestra.playlist/playlist.list-add` |

@@ -553,21 +553,10 @@ vestra.video | video.rotate.90 | Video ▸ Rotation ▸ 90°
 vestra.video | video.rotate.180 | Video ▸ Rotation ▸ 180°
 vestra.video | video.rotate.270 | Video ▸ Rotation ▸ 270°
 vestra.capture | capture.save | Video ▸ Snapshot ▸ Save Current Frame | Ctrl+E
-vestra.capture | capture.saveAs | Video ▸ Snapshot ▸ Save Current Frame As…
+vestra.capture | capture.panel | Video ▸ Snapshot ▸ Capture… | Alt+S
 vestra.capture | capture.copy | Video ▸ Snapshot ▸ Copy Current Frame | Ctrl+C
-vestra.capture | capture.saveScreen | Video ▸ Snapshot ▸ Save Rendered Frame | Ctrl+Alt+E
-vestra.capture | capture.saveScreenAs | Video ▸ Snapshot ▸ Save Rendered Frame As…
-vestra.capture | capture.copyScreen | Video ▸ Snapshot ▸ Copy Rendered Frame | Ctrl+Alt+C
 vestra.capture | capture.burst | Video ▸ Snapshot ▸ Burst… | Ctrl+G
 vestra.capture | capture.clip | Video ▸ Snapshot ▸ Export Clip…
-vestra.capture | capture.tasks | Video ▸ Snapshot ▸ Export Tasks…
-vestra.capture | capture.format.png | Video ▸ Snapshot ▸ Capture as PNG
-vestra.capture | capture.format.jpeg | Video ▸ Snapshot ▸ Capture as JPEG
-vestra.capture | capture.format.bmp | Video ▸ Snapshot ▸ Capture as BMP
-vestra.capture | capture.screenSubtitles | Video ▸ Snapshot ▸ Include Subtitles in Rendered Frame
-vestra.capture | capture.settings | Video ▸ Snapshot ▸ Snapshot Settings…
-vestra.capture | capture.folder | Video ▸ Snapshot ▸ Snapshot Folder…
-vestra.capture | capture.openFolder | Video ▸ Snapshot ▸ Open Snapshot Folder
 vestra.video | video.picture | Video ▸ Picture Adjustments…
 vestra.video | video.brightness.down | Video ▸ Brightness -1% | W
 vestra.video | video.brightness.up | Video ▸ Brightness +1% | E
@@ -660,6 +649,26 @@ host | exit-fullscreen | (Leave Fullscreen)
 host | sidebar | (Toggle Sidebar)
 host | palette | (Command Palette) | Ctrl+Shift+P
 host | adjust | (Adjust)
+vestra.capture | capture.clipExport | (Export Clip Range) | Ctrl+Shift+E
+vestra.capture | capture.saveAs | (Save Current Frame As…)
+vestra.capture | capture.saveScreen | (Save Rendered Frame) | Ctrl+Alt+E
+vestra.capture | capture.saveScreenAs | (Save Rendered Frame As…)
+vestra.capture | capture.copyScreen | (Copy Rendered Frame) | Ctrl+Alt+C
+vestra.capture | capture.saveVideo | (Save Video Frame Only)
+vestra.capture | capture.copyVideo | (Copy Video Frame Only)
+vestra.capture | capture.tasks | (Export Tasks…)
+vestra.capture | capture.format.png | (Capture as PNG)
+vestra.capture | capture.format.jpeg | (Capture as JPEG)
+vestra.capture | capture.format.bmp | (Capture as BMP)
+vestra.capture | capture.screenSubtitles | (Include Subtitles in Rendered Frame)
+vestra.capture | capture.settings | (Snapshot Settings…)
+vestra.capture | capture.folder | (Snapshot Folder…)
+vestra.capture | capture.openFolder | (Open Snapshot Folder)
+vestra.capture | capture.revealLast | (Show Last Capture in Folder)
+vestra.capture | capture.copyLast | (Copy Last Snapshot)
+vestra.capture | capture.clipStart | (Set Clip Start)
+vestra.capture | capture.clipEnd | (Set Clip End)
+vestra.capture | capture.last30 | (Export Last 30 Seconds) | Ctrl+Shift+R
 vestra.info | info.brief | (Brief Info) | Shift+Tab
 vestra.playlist | playlist.play | (Play) | Enter, P | panel
 vestra.playlist | playlist.list-add | (Add Files…) | Ctrl+I | panel
