@@ -7,7 +7,7 @@ description: How the Rust host starts and stops plugin Node.js processes, the JS
 
 [How a plugin runs](plugins.md) describes a plugin's life as the plugin sees it. This page describes the same life from the player's side: which process a plugin runs in, how the Rust host starts it, what travels over the pipe, how each request is checked, and what happens when a plugin stops, crashes or sits idle. The rest of the host is mapped in [The player's Rust core](architecture.md).
 
-Nothing here is API. The protocol is internal to the player and the SDK version it ships, and it changes with them; a plugin talks to handles, never to the pipe.
+Little here is API: a plugin talks to handles, and the protocol changes with the player and the SDK it ships. Only `plugin.wire` reaches it directly ([Layers and stability](#layers-and-stability)).
 
 ## Two ways to run a plugin
 
@@ -35,77 +35,19 @@ Both runners hand the plugin's life to one module, `src/runtime/boot.ts`: it loa
 
 ### Finding Node.js
 
-`process/runtime_paths.rs` resolves, once per process, where Node.js and the runners are. A packaged player uses `$VESTRA_NODE` or its bundled Node.js and **never** looks on `PATH`; a development build uses `$VESTRA_NODE` or `node` on `PATH` and runs the runners' `.ts` sources directly. Every Node.js process the host starts comes from one function:
-
-```rust
-pub fn node_command(&self) -> Command {
-    let mut command = Command::new(&self.node);
-    command.arg(NO_WEB_STORAGE);
-    platform::hide_console(&mut command);
-    if self.packaged {
-        command.env_remove("NODE_OPTIONS").env_remove("NODE_PATH");
-        // … VESTRA_FFMPEG / VESTRA_FFPROBE: the bundled FFmpeg
-    }
-    command
-}
-```
-
-Source: src/host/src/process/runtime_paths.rs
-
-`NO_WEB_STORAGE` is `--no-experimental-webstorage`, which is why `localStorage` does not exist in a plugin. In a packaged player, removing `NODE_OPTIONS` and `NODE_PATH` keeps a user's `--require` and module paths out of every plugin; a development build passes the environment on as it is.
+`process/runtime_paths.rs` resolves where Node.js and the runners are, once. A packaged player uses `$VESTRA_NODE` or its bundled Node.js and **never** looks on `PATH`; a development build uses `$VESTRA_NODE` or `node` on `PATH` and runs the runners' `.ts` sources directly. Every Node.js process the host starts comes from one function, `node_command`: it adds `--no-experimental-webstorage` (which is why `localStorage` does not exist in a plugin) and hides the console window. In a packaged player it also points `VESTRA_FFMPEG` and `VESTRA_FFPROBE` at the bundled FFmpeg and removes `NODE_OPTIONS` and `NODE_PATH`, which keeps a user's `--require` and module paths out of every plugin; a development build passes the environment on as it is.
 
 ### An own process
 
-The host starts `node runner.js <plugin directory>` and passes the rest in the environment:
-
-```rust
-let mut command = paths.node_command();
-if let Some(mib) = heap_mib {
-    command.arg(heap_flag(mib)); // --max-old-space-size=512 (player 0.7.1)
-}
-if let Some(dir) = data_directory {
-    command.env("VESTRA_PLUGIN_DATA_DIR", dir);
-}
-if let Some(info) = APP_INFO.get() {
-    command.env("VESTRA_APP_INFO", info.to_string());
-}
-// `plugin.i18n.locale`: fixed for the run.
-command.env("VESTRA_LOCALE", crate::i18n::locale());
-let mut child = command
-    .arg(&paths.runner)
-    .arg(directory)
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-```
-
-Source: src/host/src/process/mod.rs
+The host starts `node runner.js <plugin directory>` (from player 0.7.1 with `--max-old-space-size=512`, see [Memory](#memory)) with stdin, stdout and stderr as pipes, and passes the rest in the environment: `VESTRA_PLUGIN_DATA_DIR`, `VESTRA_APP_INFO` (what `plugin.app` reports) and `VESTRA_LOCALE`, the interface language for the run (`src/host/src/process/mod.rs`).
 
 stdin and stdout are the protocol. A plugin's `console.log` (which `runner.ts` redirects to stderr) ends up in the player's log: from player 0.7.1 the host reads the process's stderr and copies it to its own line by line, which is how it sees V8's "JavaScript heap out of memory" line (before, the process wrote to the player's stderr directly). For each process the host starts a writer thread fed by a bounded queue of 1024 messages and a reader thread that turns each line into `Event::Request(generation, message)` for the UI thread.
 
 ### A member of the shared runner
 
-The host runs a plugin in the shared runner only when it trusts it by **provenance**, never because of anything in its manifest. `Host::trust` asks, in order:
+The host runs a plugin in the shared runner only when it trusts it by **provenance**, never by its manifest. `Host::trust` (`src/host/src/packages/package_manager.rs`) gives it an own process when it is not the installation's built-in (its directory and the catalog), when `VESTRA_SHARED=0`, when the shared runner failed repeatedly in this run, when a fault in the runner was attributed to it, or when `builtin.json` has no digest for it.
 
-```rust
-if builtin.directory != directory || !catalog_builtin {
-    return own("not the installation's built-in");
-}
-if !enabled {
-    return own("VESTRA_SHARED=0");
-}
-if policy.failed_open {
-    return own("the shared runner failed repeatedly in this run");
-}
-if policy.quarantined.contains(id) {
-    return own("a fault was attributed to it in the shared runner");
-}
-// … no digest in builtin.json: own process
-```
-
-Source: src/host/src/packages/package_manager.rs
-
-The last check is the **package digest**: packaging records each built-in's digest in `builtin.json` (schema 3), and at start a `builtin-verify` thread hashes the installed directory the way the install store does. Only a match admits the plugin; a mismatch, or a check still running after 3 seconds, starts it in its own process instead. Third-party packages are never listed in `builtin.json`, so they always get their own process.
+The digest is the last check: packaging records each built-in's digest in `builtin.json` (schema 3), and at start a `builtin-verify` thread hashes the installed directory the way the install store does. Only a match admits the plugin; a mismatch, or a check still running after 3 seconds, starts it in its own process instead. Third-party packages are never listed in `builtin.json`, so they always get their own process.
 
 Admitting a member is a control message on the runner's pipe (`g` 0) carrying what an own process gets from its arguments and environment (wrapped here; one line on the pipe):
 
@@ -127,7 +69,7 @@ From player 0.7.1 every start and stop of a plugin goes through one **supervisor
 | Installed plugin | 60 s (Chrome's service worker start) |
 | Development load (`--plugin`) | 120 s |
 
-`boot.ts` sends `runtime.ready` only after `activate` returned and every registration started during activation succeeded (a slot, sequence or resolver another plugin holds does not count as a failure, and the SDK skips a command declaration the player refuses with `invalid`, `conflict` or `limit`: it logs it and reports it to `onError`, SDK 1.5.49). Otherwise it sends `runtime.failed` with a `code`. A plugin that sent `runtime.failed` said it cannot start: it is stopped and listed as failed with the message, and never tried again by itself. A start whose process cannot be created is tried up to three more times, about 250 ms, 500 ms and 1 s apart (plus up to 10 %). A start not ready in time is stopped with `failed` and not tried again. Then: a process that could not be created, and a third-party plugin without an on-demand recording, are listed as failed; a built-in starts again as after a crash (this counts toward the start limit of 5 in 10 minutes, [below](#crashes-and-restarts)); a plugin that has run before (it has a recording) keeps its entries and starts on its next use after the pause. A development load is not tried again.
+`boot.ts` sends `runtime.ready` only after `activate` returned and every registration started during activation succeeded (a slot, sequence or resolver another plugin holds is not a failure, and a refused command declaration is logged and skipped, SDK 1.5.49). Otherwise it sends `runtime.failed` with a `code`. A plugin that sent `runtime.failed` said it cannot start: it is stopped and listed as failed with the message, and never tried again by itself. A start whose process cannot be created is tried up to three more times, about 250 ms, 500 ms and 1 s apart (plus up to 10 %). A start not ready in time is stopped with `failed` and not tried again. Then: a process that could not be created, and a third-party plugin without an on-demand recording, are listed as failed; a built-in starts again as after a crash (this counts toward the start limit of 5 in 10 minutes, [below](#crashes-and-restarts)); a plugin that has run before (it has a recording) keeps its entries and starts on its next use after the pause. A development load is not tried again.
 
 At start-up the built-ins start first. Installed plugins are started from a queue, about 25 ms of process spawning per UI tick, so the window stays responsive while they come up. With on-demand start (below), at most `min(4, max(2, cores / 2))` third-party plugins start at the same time, clicks before events before background starts; a click may take one or two places beyond that, and built-ins do not count ([Reference: limits](../reference/limits.md#plugin-processes)).
 
@@ -169,16 +111,9 @@ A **reply** carries the request's `id` and either `result` or `error`:
 
 Shape from src/host/src/host/dispatch.rs and src/host/src/capabilities/commands.rs
 
-The `revision` in this result is not an echo of the command's own revision in the request: `commands.register` and `commands.update` answer with the revision of the player's whole command table (`host.commands.revision()`), which grows with every change any plugin makes to its commands.
+The `revision` in this result is not the command's own: `commands.register` and `commands.update` answer with the revision of the player's whole command table, which grows with every change any plugin makes.
 
-An error always has a stable `code` and a `message`; some carry more fields, like this refusal of a taken slot:
-
-```json
-{"code":"conflict","message":"The sidebar is used by vestra.playlist",
-  "reason":"slot-occupied","slot":"sidebar","owner":"vestra.playlist"}
-```
-
-Source: src/host/src/host/rpc.rs (a test's expected value)
+An error always has a stable `code` and a `message`; some carry more fields (a refused panel slot adds `reason`, `slot` and its `owner`). The codes are in [Error codes](../reference/errors.md).
 
 An **event** has `event` and `data` and no `id`. The host sends events the plugin subscribed to and events addressed to it alone, such as a menu click:
 
@@ -210,45 +145,23 @@ Because `g` is always first, the host can blame an oversized line on its member 
 
 ### No client-side timeouts
 
-The pipe is ordered and the host replies to every request or stops the plugin. The runner therefore waits for the real reply and only logs a slow one:
-
-```ts nocheck
-const timer =
-  method === "dialogs.open"
-    ? undefined
-    : setTimeout(
-        () => log(`rpc ${method} still waiting after 10 seconds`),
-        10_000,
-      );
-```
-
-Source: src/runtime/boot.ts
-
-A deadline on the plugin's side could not know whether the host had carried out the request; it would only turn definite outcomes into "maybe".
+The pipe is ordered and the host replies to every request or stops the plugin. The runner (`src/runtime/boot.ts`) therefore waits for the real reply and only logs one still missing after 10 seconds (a file dialog excepted). A deadline on the plugin's side could not know whether the host had carried out the request; it would only turn definite outcomes into "maybe".
 
 ## The SDK side
 
-`boot.ts` implements the SDK's `Transport` (a `request` function and an `on` function for events) and passes it to `createPlugin`. Inside the SDK, `createWire` turns the transport into one typed client per area (`commands`, `settings`, `window`, `dialogs`…), and the handles in `src/plugin/` call those clients. Plugin code never sees a method name.
+`boot.ts` implements the SDK's `Transport` (a `request` function and an `on` function for events) and passes it to `createPlugin`. Inside the SDK, `createWire` turns the transport into one typed client per area (`commands`, `settings`, `window`, `dialogs`…), and the handles in `src/plugin/` call those clients. Plugin code in styles A and B ([Three ways to write a plugin](three-ways.md)) never sees a method name. Style C does: {@link "@vestra-player/sdk"!Wire | plugin.wire} sends requests and hears events by the names listed in [Messages](../reference/messages.md) and [Events](../reference/events.md).
 
-Two mechanisms keep the traffic small. Event subscriptions are counted per event name in `createWire`, so any number of listeners cost one `events.subscribe` and, when the last goes, one `events.unsubscribe`. And bound values travel through the **update pass**: a binding is re-evaluated at most once per microtask, and each target has one write in flight, with only the newest value waiting behind it (the `Latest` class in SDK `src/plugin/latest.ts`):
+Two mechanisms keep the traffic small. Subscriptions are counted per event name: any number of listeners cost one `events.subscribe` and, when the last goes, one `events.unsubscribe`. And each target has one write in flight, with only the newest value waiting behind it (the `Latest` class in `src/plugin/latest.ts`): a command sends `commands.register` with revision 1 and later states as `commands.update` with increasing revisions. Bound values add [the update pass](plugins.md#the-update-pass), which sends only what changed.
 
-```ts nocheck
-/** Coalesce: one evaluation pass per microtask turn, however many changes. */
-invalidate() {
-  if (this.#scheduled) return;
-  this.#scheduled = true;
-  queueMicrotask(() => {
-    this.#scheduled = false;
-    for (const evaluate of this.#bindings) {
-      // … evaluate(), logging a binding that throws
-    }
-  });
-}
-```
+## Layers and stability
 
-Source: SDK src/plugin/passes.ts
+The SDK is built in three layers, and each one promises something different:
 
-A command handle, for example, sends `commands.register` with revision 1 through its `Latest` queue and later states as `commands.update` with increasing revisions, only when the evaluated state differs from the last one sent.
+- **Framework** (L2): update passes, bindings, command state functions, the copies of the player's state, `plugin.state`, `plugin.update()`.
+- **Primitives** (L1): members that do one thing each: a view's `set`, a command's registration, `plugin.player.on`, `openStream`, storage, dialogs.
+- **Protocol** (L0): the messages above, reached only through `plugin.wire`.
+
+The framework works only through the primitives, never the other way round, so a plugin that writes its own values pays for no update pass. Framework and primitive members are semver: each names the version that added it (`@since`), and a change that asks plugins to change goes through a deprecation in the CHANGELOG. `plugin.wire` and the two generated tables, [Events](../reference/events.md) and [Messages](../reference/messages.md), **change with versions**: the wire protocol is not semver, a method or event can change or disappear with a player version, and a `plugin.wire` member may change in any SDK release without a deprecation period. The tables' only promise is their player version column, filled in once the player records a version per method. Which layer to write a plugin in is the subject of [Three ways to write a plugin](three-ways.md).
 
 ## How the host checks a request
 
@@ -270,22 +183,15 @@ route.handle(self, reply, method, params)
 
 Source: src/host/src/host/dispatch.rs
 
-The routes are built from `capabilities::ALL`, the list of `Capability` implementations; each declares its methods and what each needs: its own capability, none, or one chosen by a parameter. The generated `src/host/capabilities.json` publishes the same table, and the player's `src/tests/sdk/host-agreement.test.ts` compares it with the SDK's own capability list. `events.subscribe`, for example, needs a different capability per event:
+The routes are built from `capabilities::ALL`, the list of `Capability` implementations; each declares its methods and what each needs: its own capability, none, or one chosen by a parameter. The generated `src/host/capabilities.json` publishes the same table, and the player's `src/tests/sdk/host-agreement.test.ts` compares it with the SDK's own capability list. `events.subscribe`, for example, needs a different capability per event. [Messages](../reference/messages.md) is generated from that table: every method with the capability it needs.
 
-```json
-{"name":"events.subscribe","needs":{"cases":{"bindings.changed":"bindings.manage",
-  "packages.changed":null},"otherwise":"events","param":"event"}}
-```
-
-Source: src/host/capabilities.json (reformatted)
-
-The check is a contract, not a sandbox: the plugin process has the user's file and network access. The capabilities and their methods are listed in [Reference: capabilities](../reference/capabilities.md).
+The check is a contract, not a sandbox: the plugin process has the user's file and network access. The capabilities and the members they open are listed in [Reference: capabilities](../reference/capabilities.md).
 
 ## Stopping a plugin
 
 The host stops a plugin when the user disables, uninstalls, reloads or upgrades it, when it fails, when it goes to standby ([On-demand start](#on-demand-start)), and when the player quits. It first revokes everything the plugin owns on the player's side (menus and keys, windows, panels, settings pages, filter chains, subtitle layers, jobs, resolvers, streams; a plugin going to standby keeps its recorded entries), then sends `runtime.stop` with the reason (`{"event":"runtime.stop","data":{"reason":"disable"}}`, player 0.6.4) and hands the process to one reaper thread, which waits for every stopping process together and kills each one whose grace has run out.
 
-In the runner, `boot.ts` rejects pending requests with `code: "disabled"`, passes the reason to the SDK's `dispose` and disposes the root scope; the plugin reads it as {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} and in its `onDispose` cleanups (SDK 1.5.54). A runner whose stdin closes (or whose stdout breaks) without a `runtime.stop` passes `host-lost`. Players up to 0.6.3 send `"data":null` and their runner calls `dispose()` without a reason. Player 0.6.4 and later send `quit` on a normal exit, before the pipes close; an older player could close them first when its window closed, so `host-lost` means the player is gone, not necessarily that it crashed. Which reason comes when is listed at {@link "@vestra-player/sdk"!StopReason | StopReason}.
+In the runner, `boot.ts` rejects pending requests with `code: "disabled"`, passes the reason to the SDK's `dispose` and disposes the root scope; the plugin reads it as {@link "@vestra-player/sdk"!Plugin.stopReason | plugin.stopReason} and in its `onDispose` cleanups (SDK 1.5.54). A runner whose stdin closes (or whose stdout breaks) without a `runtime.stop` passes `host-lost`. Players up to 0.6.3 send no reason, and could close the pipes before a normal quit, so `host-lost` means the player is gone, not necessarily that it crashed. Which reason comes when is listed at {@link "@vestra-player/sdk"!StopReason | StopReason}.
 
 A `runtime.stop` is sent only where it can still reach the plugin: an own process whose input queue is full or whose stdin write failed is killed without one, an own process whose activation failed exits without running its cleanups, a process that ended by itself (it exited or ran out of memory) gets none (exactly none from player 0.7.1; before, one was written into its closed pipe), and a restart of the shared runner kills it with every member, so none of them gets a stop and their cleanups do not run. The grace a stopping own process gets before it is killed (player 0.7.1):
 
@@ -340,7 +246,7 @@ What a plugin sees of this, what stays while it is stopped and what keeps it run
 
 - **First run.** A plugin without a recording starts normally. When it is ready, the host asks the playback worker what it holds (`owner.resources`). A plugin that holds anything live (a panel, a window, an event listener, a filter chain, a stream) is **resident** for this run; the host asks again at every later start. From SDK 1.5.38 (read by player 0.5.18) the SDK marks the subscriptions it makes only to keep its own state mirrors current as `events.subscribe { event, mirror: true }`, and subscribes plainly only while the plugin has a listener or a binding that reads that state; mirrors do not make a plugin resident. Otherwise each capability records the calls that recreate its registrations; only four capabilities are recordable: `commands`, `ui.settings`, `source.resolve` and `ui.drop`. From player 0.7.3 `ui.mount` is a fifth: a sidebar panel is never live, and its mount is recorded. The current tab is busy work; a background tab is a placeholder while its plugin stands by.
 - **Standby.** After the idle time without use, with nothing in flight and nothing live held, the host writes the recording to `<package store>/activation/<instance GUID>.json` and stops the process with the reason `idle`, but keeps its menu items, keys, settings pages, drop targets and resolvers, marked as recorded. A plugin that is busy then (a command in its `busy` state, an open dialog, a settings page shown, a package request or a resolution in flight) keeps running, and its idle time starts again when that work ends (player 0.7.1).
-- **Wake.** A click on one of its commands (`commands.execute`), a file or link to resolve (`source.resolveRequest`), a drop (`drops.drop`) or a callback of its settings page (`ui.callback`) starts the plugin under a new owner generation, as does showing its sidebar tab (`panel_shown`, player 0.7.3), and so do the events it may listen to in standby (`packages.changed`, `bindings.changed`, `appearance.changed`, `resolvers.fileTypes`, and from player 0.7.6 `commands.keys`, which the player sends to a plugin when its own command keys change and, from SDK 1.6.16, to every plugin listening for it when one of the player's own commands (`host/<id>`) is rebound, so such a rebind wakes each parked listener). The recorded entries move to the new generation. The triggers wait until `runtime.ready` and are then delivered in order, each checked again against what the plugin registered. A start slower than 400 ms shows "Starting <name>…" on the OSD. From player 0.7.1 `appearance.changed` also says what changed (`"changed":["theme"]` or `["language"]`); SDK 1.6.0 does not read it yet.
+- **Wake.** A click on one of its commands (`commands.execute`), a file or link to resolve (`source.resolveRequest`), a drop (`drops.drop`) or a callback of its settings page (`ui.callback`) starts the plugin under a new owner generation, as does showing its sidebar tab (`panel_shown`, player 0.7.3), and so do the events marked as waking a plugin in [Events](../reference/events.md) (`commands.keys` from player 0.7.6, sent too when one of the player's own commands, `host/<id>`, is rebound). The recorded entries move to the new generation. The triggers wait until `runtime.ready` and are then delivered in order, each checked again against what the plugin registered. A start slower than 400 ms shows "Starting <name>…" on the OSD. From player 0.7.1 `appearance.changed` also says what changed (`"changed":["theme"]` or `["language"]`); SDK 1.6.0 does not read it yet.
 - **Replay.** At the next player start, a recording that matches the package digest and version, the player version and build, and the format version is registered without starting the plugin; the plugin starts on first use as above.
 
 Bounds with on-demand start (player 0.7.1), each answered rather than dropped in silence; the numbers are in [Reference: limits](../reference/limits.md#plugin-processes):

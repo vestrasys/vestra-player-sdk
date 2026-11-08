@@ -1,0 +1,23 @@
+{
+  "id": "examples.three-ways",
+  "version": "1.0.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.6.0",
+  "capabilities": [
+    "commands",
+    "events",
+    "playback.read",
+    "playback.control",
+    "producer.av",
+    "ui.mount",
+    "ui.window"
+  ],
+  "name": "Three Ways",
+  "author": "Vestra Player SDK examples",
+  "punchline": "One plugin written three ways: bind(), player.on with set(), plugin.wire",
+  "description": "A speed display, an emulator's status line pushed every frame, a list of 20,000 entries and a command that waits for an answer, each written in the three plugin styles of the SDK documentation.\nSDK example: View.bind, Player.on, Scope.state, plugin.wire.",
+  "tags": ["example"],
+  "sourceUrl": "https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways",
+  "license": "Apache-2.0"
+}

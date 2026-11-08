@@ -27,7 +27,8 @@ Several plugins can have a panel in the sidebar: each is a tab. Next to the play
 ```text
 examples/panel-menu/
   manifest.json                identity and capabilities
-  main.ts                      the code
+  main.ts                      the code (style A)
+  main-b.ts, main-c.ts         the same plugin in styles B and C
   ui/panel.slint               the list
   tests/panel-menu.test.ts     tests against the SDK's in-memory player
   package.json                 the SDK as a dev dependency, and the scripts
@@ -79,6 +80,20 @@ The list's titles and the selected index. Everything below reads and changes the
 
 - {@link "@vestra-player/sdk"!View.on | panel.on} handles the global's callbacks. `contextMenu` is TypeScript's spelling of `context-menu`.
 - {@link "@vestra-player/sdk"!Panel.showMenu | panel.showMenu} opens a menu of this plugin's commands at the point; `null` is a separator. Picking an item runs the command. Because the items are commands, they get disabled states and shortcut text for free.
+
+## In style B and C
+
+`main.ts` is the main version, in style A ([Three ways to write a plugin](../explanation/three-ways.md)): `bind` keeps the panel equal to the state and the SDK compares the list with what it sent. Two more entry files hold the same plugin in the other styles; point the manifest's `entry` at one to run it.
+
+**Style B** (`main-b.ts`): no binding and no `enabled` function. After each change the plugin sends the state itself: the list whole (the SDK neither compares it nor makes a row patch of it) and `enabled` as a value.
+
+{@includeCode ../../examples/panel-menu/main-b.ts#show}
+
+**Style C** (`main-c.ts`): the list is written directly with {@link "@vestra-player/sdk"!Wire.view | plugin.wire.view(panel)}, once whole when the panel shows, and a removal is the plugin's own row operation ({@link "@vestra-player/sdk"!WireView.writeRows | writeRows}): only `{ op: "remove", at, count: 1 }` crosses to the player. The commands stay `commands.add` ones, because `showMenu` takes those. Experimental: the protocol's row operations change with player versions.
+
+{@includeCode ../../examples/panel-menu/main-c.ts#direct,commands}
+
+The tests run both tests against each entry file.
 
 ## The tests
 

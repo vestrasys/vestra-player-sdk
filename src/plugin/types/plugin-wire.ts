@@ -42,9 +42,11 @@ import type { SettingsPage } from "./ui-shell.ts";
  * name and says which one; a method name it cannot read is reported as
  * unchecked).
  *
- * Three ways to write the same plugin, from bound values to these direct
- * messages, are compared in the plan this member comes from: `bind()`
- * (the default), {@link Player.on} with {@link View.set}, and `plugin.wire`.
+ * [Three ways to write a plugin](../../../docs/explanation/three-ways.md)
+ * compares `bind()` (the default), {@link Player.on} with
+ * {@link View.set}, and `plugin.wire` on four scenarios; the method and
+ * event names are in [Messages](../../../docs/reference/messages.md) and
+ * [Events](../../../docs/reference/events.md).
  *
  * @example Show the speed with direct messages
  * A bottom panel shows the playback speed, written by the plugin itself

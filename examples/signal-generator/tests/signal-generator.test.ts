@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { startPlugin, TestHost } from "@vestra-player/sdk/testing";
 import activate, { FPS, HEIGHT, WIDTH, frame } from "../main.ts";
+import activateB from "../main-b.ts";
+import activateC from "../main-c.ts";
 
 test("a frame is RGBA colour bars and 1601 or 1602 stereo samples", () => {
   const { video } = frame();
@@ -43,33 +45,39 @@ async function until(predicate: () => boolean) {
   }
 }
 
-test("Open ▸ Signal generator starts the stream; choosing it again stops it", async () => {
-  const host = new TestHost();
-  // Windows has no Unix sockets: the frames travel over loopback TCP there.
-  if (process.platform === "win32") host.producerTransport = "tcp";
-  const { stop } = await startPlugin(activate, {
-    directory: new URL("..", import.meta.url), // reads manifest.json
-    host,
+// The same behaviour from each entry file: style A (main.ts), B and C.
+for (const [style, entry] of [
+  ["A", activate],
+  ["B", activateB],
+  ["C", activateC],
+] as const)
+  test(`Open ▸ Signal generator starts the stream; choosing it again stops it (style ${style})`, async () => {
+    const host = new TestHost();
+    // Windows has no Unix sockets: the frames travel over loopback TCP there.
+    if (process.platform === "win32") host.producerTransport = "tcp";
+    const { stop } = await startPlugin(entry, {
+      directory: new URL("..", import.meta.url), // reads manifest.json
+      host,
+    });
+    const command = () => host.command("signal-generator");
+    try {
+      const { declaration } = command();
+      assert.deepEqual("path" in declaration && declaration.path, [
+        "@open",
+        "Signal generator",
+      ]);
+
+      await command().run();
+      await until(() => command().state.checked === true);
+      assert.equal(host.source.kind, "producer");
+
+      await command().run();
+      const producer = host.producers.get(1)!;
+      await until(() => producer.released);
+      assert.equal(producer.droppedWhileSelected, false, "source closed first");
+      assert.equal(host.source.phase, "empty");
+      assert.equal(command().state.checked, false);
+    } finally {
+      await stop();
+    }
   });
-  const command = () => host.command("signal-generator");
-  try {
-    const { declaration } = command();
-    assert.deepEqual("path" in declaration && declaration.path, [
-      "@open",
-      "Signal generator",
-    ]);
-
-    await command().run();
-    await until(() => command().state.checked === true);
-    assert.equal(host.source.kind, "producer");
-
-    await command().run();
-    const producer = host.producers.get(1)!;
-    await until(() => producer.released);
-    assert.equal(producer.droppedWhileSelected, false, "source closed first");
-    assert.equal(host.source.phase, "empty");
-    assert.equal(command().state.checked, false);
-  } finally {
-    await stop();
-  }
-});

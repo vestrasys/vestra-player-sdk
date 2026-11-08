@@ -1024,8 +1024,10 @@ export interface Player {
    * {@link EventPayload} (`source.state`: the player's source state, with
    * `rate`, `paused`, `position`, `stamp`…). Each subscription counts as a
    * listener of the plugin: the player keeps the plugin running while one
-   * exists, and its log names where the plugin added it
-   * (`a listener added at main.ts:12`).
+   * exists (unless the event is one the player wakes a stopped plugin for),
+   * and its log names where the plugin added it
+   * (`a listener added at main.ts:12`). Every name, its payload and its
+   * capability: [Events](../../../docs/reference/events.md).
    *
    * Unlike {@link Player.onChange} it does not start the SDK's copy of the
    * state: `plugin.player.state` is not kept current by it, and the
@@ -1064,6 +1066,7 @@ export interface Player {
    * plugin.player.on("source.state", (s) => bar.set({ rate: `${s.rate.toFixed(2)}×` }));
    * ```
    *
+   * @see [Three ways to write a plugin](../../../docs/explanation/three-ways.md)
    * @since 1.7.0
    */
   on<E extends HostEvent>(

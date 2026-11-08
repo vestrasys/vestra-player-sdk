@@ -5,7 +5,7 @@ description: "What is on the other side of the API: the host's modules, its UI t
 
 # The player's Rust core
 
-A plugin only ever sees handles and promises. Behind them is the **host**: one Rust program (`vestra-host`, in `src/host/` of the [player repository](https://github.com/vestrasys/vestra-player)) that draws the windows with Slint, plays media with libmpv, and runs every plugin in a Node.js process it starts and stops. This page is a map of that program for plugin authors who want to know why the API behaves as it does, and for maintainers who are about to change it.
+A plugin sees handles and promises (and, through `plugin.wire`, the protocol's messages). Behind them is the **host**: one Rust program (`vestra-host`, in `src/host/` of the [player repository](https://github.com/vestrasys/vestra-player)) that draws the windows with Slint, plays media with libmpv, and runs every plugin in a Node.js process it starts and stops. This page is a map of that program for plugin authors who want to know why the API behaves as it does, and for maintainers who are about to change it.
 
 It assumes [How a plugin runs](plugins.md). How the host starts Node.js and what travels over the pipe is in [How the player runs and talks to plugins](host-and-node.md).
 
@@ -121,7 +121,7 @@ pub(crate) enum Event {
 
 Source: src/host/src/host/events.rs
 
-A plugin's reader thread sends `Request` for each line it reads; the playback worker sends `Reply` when it has answered a request and `Broadcast` for state everyone may see (`source.state` above all). The `u64` is the plugin's **owner generation**: a number the host gives each run of a plugin, so a late message from a stopped process never reaches the next run of the same plugin.
+A plugin's reader thread sends `Request` for each line it reads; the playback worker sends `Reply` when it has answered a request and `Broadcast` for state everyone may see (`source.state` above all). In the plugin, the SDK's framework layer (L2) turns such an event into a precise update pass for the bindings that read what changed, and a `plugin.player.on` listener (L1) gets it as it comes ([Three ways to write a plugin](three-ways.md)). The `u64` is the plugin's **owner generation**: a number the host gives each run of a plugin, so a late message from a stopped process never reaches the next run of the same plugin.
 
 ### The UI thread's loop
 

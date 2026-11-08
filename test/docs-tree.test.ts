@@ -472,3 +472,41 @@ test("every page and declaration of the documentation site is in the tree", asyn
   assert.ok(nodes > 1000, `${nodes} declarations are nodes`);
   assert.ok(described < nodes / 2, `${described} described in place`);
 });
+
+test("the three plugin styles: the chapter, the event and the message tables", () => {
+  // The chapter's code comes from examples/three-ways, one file per style.
+  const chapter = pages((page) =>
+    docs("/Guides/Explanation/Three ways to write a plugin", { page }),
+  ).join("\n");
+  for (const code of [
+    "bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));",
+    'plugin.player.on("source.state", (s) => {',
+    "const view = plugin.wire.view(bar);",
+    "plugin.update(); // a full pass",
+  ])
+    assert.ok(chapter.includes(code), code);
+  // Every event a plugin can listen to by name has a row.
+  const events = pages((page) =>
+    docs("/Guides/Reference/Events", { page }),
+  ).join("\n");
+  for (const name of [
+    "source.state",
+    "playback.backend",
+    "window.state",
+    "packages.changed",
+    "bindings.changed",
+    "commands.keys",
+    "timeline.changed",
+    "appearance.changed",
+    "resolvers.fileTypes",
+    "video.upscaling.changed",
+  ])
+    assert.ok(events.includes(`\n| \`${name}\` |`), name);
+  // Messages: a method sent by an SDK member and its capability rule.
+  const messages = pages((page) =>
+    docs("/Guides/Reference/Messages", { page }),
+  ).join("\n");
+  assert.match(messages, /^\| `ui\.setMount` \| `ui\.mount` \|/m);
+  assert.match(messages, /SDK member: \[`Panel\.set`\]/);
+  assert.match(messages, /`plugin\.wire` only/);
+});

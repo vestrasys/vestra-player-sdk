@@ -1,0 +1,9 @@
+export global SpeedBridge {
+    // Shown until the plugin writes the first value.
+    in property <string> rate: "1.00×";
+}
+
+export component SpeedBar inherits Text {
+    text: SpeedBridge.rate;
+    vertical-alignment: center;
+}
