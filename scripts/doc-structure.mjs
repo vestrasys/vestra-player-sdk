@@ -55,13 +55,17 @@ export const PLACEHOLDERS = [
  * `kind` selects the size limit and the shape of its pages (index pages use
  * the `index` limit and have no shape, unless the entry names a `shape`:
  * the Tutorial group's index is the tutorial itself). The API group (the
- * TypeDoc entry points) follows the last group.
+ * TypeDoc entry points) follows the last group. `aliases` (on a group or a
+ * page) are old folder or file names that stay names of it in the
+ * documentation tree (scripts/docs-tree.mjs), so `/Guides/How-to/testing`
+ * still opens Test a plugin; old titles are in {@link REDIRECTS}.
  */
 export const GROUPS = [
   {
     title: "Tutorial",
     folder: "tutorial",
     kind: "tutorial",
+    aliases: ["tutorials", "explanation"],
     pages: [
       {
         file: "index.md",
@@ -74,10 +78,12 @@ export const GROUPS = [
     title: "Guides",
     folder: "guides",
     kind: "guide",
+    aliases: ["How-to", "guidelines"],
     pages: [
       { file: "index.md", why: "Group index." },
       {
         file: "windows.md",
+        aliases: ["window-state", "add-a-window"],
         why: "One task: open a tool window from a menu item, wire its controls and bring back its values and whether it was open at the next start (the former Remember a window's state between runs).",
       },
       {
@@ -102,6 +108,7 @@ export const GROUPS = [
       },
       {
         file: "filters.md",
+        aliases: ["blur-kernel"],
         why: "One task: process video or audio with filters, a GPU shader or a convolution node.",
       },
       {
@@ -118,6 +125,7 @@ export const GROUPS = [
       },
       {
         file: "publish.md",
+        aliases: ["test-and-publish"],
         why: "One task: pack a plugin and submit it to the plugin store.",
       },
       {
@@ -130,6 +138,7 @@ export const GROUPS = [
       },
       {
         file: "design-rules.md",
+        aliases: ["plugins", "interface", "menus"],
         why: "The rules every plugin, its interface and its menus follow, on one page (the former guidelines), written as a guide to applying them.",
       },
       {

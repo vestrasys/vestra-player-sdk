@@ -1,6 +1,6 @@
-// Command buttons of the bottom bar (player 0.5.10, SDK 1.5.29): the buttons
+// Command buttons of the bottom bar: the buttons
 // that plugins' commands contribute (`commands.add({ button })`) and the
-// player's own. Since SDK 1.6.8 (menu redesign step 3a) the player draws
+// player's own. The player draws
 // the strip itself, at the right end of the bottom slot, its 40px cells on
 // the slot's bottom edge (a bar's 40px button row), and also when no plugin
 // mounts a bottom bar: `[plugin buttons…][»][Command Palette][Adjust]
@@ -19,16 +19,14 @@
 // menu, in the same order: the lowest order stays longest. `»` shows only
 // while something is in it; the player's own cells always show.
 //
-// `BarButtons` (below) is deprecated: the strip a bar placed itself before
-// SDK 1.6.8. While a bar still places it, the player draws no second strip.
+// `BarButtons` (below) is deprecated: the strip a bar placed itself. While a bar still places it, the player draws no second strip.
 //
 // The cells look like the bar's own icon buttons: a 32×32 plate on hover
 // and press, the bar's tooltip (ToolTipArea). Every enabled cell draws its
 // icon in the accent (accent-press while pressed; icon-disabled when
 // disabled), so the strip reads as one group. A toggle that is on shows a
 // small dot in the icon's colour centred under the icon, like a running app
-// in the macOS Dock (player 0.5.22, SDK 1.5.41; before, icons were in the
-// text colour and only an on toggle in the accent). They are persistent
+// in the macOS Dock. They are persistent
 // elements shown with `visible:`; nothing is created on hover or resize.
 import { Theme } from "theme.slint";
 import { Icon } from "icons.slint";
@@ -65,7 +63,7 @@ export global BarButtonsHost {
     in property <BarButtonItem> toggle;
     // The command palette (`host/palette`; `token` "" while there is none).
     in property <BarButtonItem> palette;
-    // The adjust column's toggle (`host/adjust`, player 0.7.6; `token` ""
+    // The adjust column's toggle (`host/adjust`; `token` ""
     // while there is none).
     in property <BarButtonItem> adjust;
     // Set when a (deprecated) `BarButtons` exists in this window.

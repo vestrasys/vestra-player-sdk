@@ -627,7 +627,10 @@ export interface Scope extends Disposable {
  * fails. A command declaration the player refuses is the exception: the SDK
  * logs and skips it, its `ready` rejects and {@link Scope.onError} hears it,
  * the rest of the plugin activates (`startPlugin` still fails on it). The entry
- * module must **default-export** `activate`.
+ * module must **default-export** `activate`. Do not await a run of your own
+ * command or a callback of your own view inside `activate`: the player holds
+ * them until the plugin is ready, so `activate` waits until the start timeout
+ * (60 s) and the plugin stops with `failed`.
  *
  * Stopping: the player first revokes everything the plugin owns on its side
  * (menus, windows, panels, filters, subtitle layers, snapshots, jobs,
@@ -709,8 +712,7 @@ export interface Plugin extends Scope {
  * - `idle`: the plugin goes to standby and its next use starts it again; its
  *   menu items, keys, settings pages, resolvers and drop targets stay, and so
  *   does its session storage ([Keep a command's state without keeping the
- *   plugin running](../../../docs/guides/command-state.md)). Only with
- *   on-demand start (lazy activation). It comes after the idle
+ *   plugin running](../../../docs/guides/command-state.md)). It comes after the idle
  *   time without use (30 s), right after a first run that holds nothing live,
  *   and when the player's limit on third-party processes or low system memory
  *   puts an idle plugin in standby early. A busy plugin never gets it, nor

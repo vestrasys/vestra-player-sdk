@@ -26,8 +26,7 @@ class PanelHandle extends ViewBase implements Panel {
     file: string,
     options: { component?: string; global?: string; title?: string },
   ) {
-    // One panel per slot (SDK 1.6.15, player 0.7.6; a player before 0.7.6
-    // refuses a second panel with `conflict`).
+    // One panel per slot.
     if (scope.runtime.views.has(`panel:${slot}`))
       throw new Error(`this plugin already has a panel in the ${slot}`);
     super(scope);
@@ -127,8 +126,7 @@ class PanelHandle extends ViewBase implements Panel {
     const state = this.state;
     // A switch, the same in every mode (user ruling 2026-11-08): off when
     // on and current, else on at this tab. `reveal: false`: in fullscreen
-    // nothing pops out, the right edge reveals it (player 0.7.6; older
-    // players ignore it and pop it out).
+    // nothing pops out, the right edge reveals it.
     if (state?.preferred && state.active)
       await layoutOf(this.scope.runtime).set(this.#slot, { visible: false });
     else

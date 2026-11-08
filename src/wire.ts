@@ -456,7 +456,7 @@ export interface WireRange {
 export interface WireTimeline {
   /** The marks, in time order. */
   marks: WireMark[];
-  /** The ranges (from player 0.7.6). */
+  /** The ranges. */
   ranges?: WireRange[];
 }
 /** A panel position (`ui.mount`'s `slot`). */
@@ -493,7 +493,7 @@ export interface PlaybackStats {
   session: number;
   framesShown: number;
   framesDropped: number | null;
-  /** Player 0.5.1 and newer; the SDK fills in `null`. */
+  /** Frames presented per second; the SDK fills in `null` when absent. */
   presentedFps?: number | null;
   video: {
     codec: string | null;
@@ -563,7 +563,7 @@ export interface WireSystemInfo {
     refreshRate: number | null;
     primary: boolean;
   }[];
-  /** Player 0.5.12. */
+  /** The renderer drawing now. */
   rendering?: "gpu" | "software";
   /** Why `rendering` is what it is. */
   renderingReason?: WireRenderingReason;
@@ -619,8 +619,7 @@ export interface WireUpscalingReason extends WireRenderingReason {
 }
 /**
  * The GPU video upscaler's state as `video.upscaling.state` and
- * `video.upscaling.set` answer it (the monitoring fields from player 0.5.25,
- * which also sends it without `enabled` as the event
+ * `video.upscaling.set` answer it (also sent without `enabled` as the event
  * `video.upscaling.changed`): what `UpscalingState` is made from.
  *
  * @remarks
@@ -857,7 +856,7 @@ export function createWire(transport: Transport) {
           marks,
           ...(sourceId === undefined ? {} : { sourceId }),
         }),
-      /** Player 0.7.6. */
+      /** Replace this layer's ranges. */
       setRanges: (
         ranges: {
           start: number;
@@ -1003,7 +1002,7 @@ export function createWire(transport: Transport) {
         transport.request<void>("osd.show", {
           text,
           ...(args === undefined ? {} : { args }),
-          // Player 0.7.6; older players ignore it.
+          // Sent only when given.
           ...(actions === undefined ? {} : { actions }),
         }),
       panel: (
@@ -1022,12 +1021,12 @@ export function createWire(transport: Transport) {
         transport.request<{
           bottom: LayoutSlot | null;
           sidebar: LayoutSlot | null;
-          /** Player 0.7.6. */
+          /** The adjust column. */
           adjust?: LayoutSlot | null;
           backdrop?: LayoutBackdrop | null;
         }>("layout.state"),
       set: (options: {
-        /** `"adjust"`: player 0.7.6. */
+        /** The panel's position. */
         slot: "bottom" | "sidebar" | "adjust";
         visible?: boolean;
         detached?: boolean;
@@ -1050,7 +1049,7 @@ export function createWire(transport: Transport) {
         event: HostEvent,
         listener: (data: unknown) => void,
         mirror = false,
-        /** What listens (player 0.5.21 logs it). */
+        /** What listens (the player logs it). */
         why?: string[],
       ) {
         const off = transport.on(event, listener);
@@ -1111,7 +1110,7 @@ export function createWire(transport: Transport) {
           base,
         }),
       mount: (options: {
-        /** `"adjust"`: player 0.7.6. */
+        /** The panel's position. */
         slot: "bottom" | "sidebar" | "backdrop" | "adjust";
         file: string;
         component: string;
@@ -1124,8 +1123,7 @@ export function createWire(transport: Transport) {
           prepareMs: number;
           shellGeneration: number;
         }>("ui.mount", options),
-      // `slot`: which of the plugin's panels (player 0.7.6: one per slot;
-      // older players have one and ignore it).
+      // `slot`: which of the plugin's panels (one per slot).
       setMount: (property: string, write: PropertyWrite, slot?: MountSlot) =>
         transport.request<void>("ui.setMount", {
           property,

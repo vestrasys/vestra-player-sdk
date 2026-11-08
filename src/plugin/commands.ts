@@ -375,7 +375,7 @@ class KeysService {
     // Subscribed first: a change after this answer comes as an event.
     runtime.host.commands.keys().then(
       (answer) => this.#accept(answer),
-      // An older player (`unsupported`): no keys, as without a binding.
+      // `unsupported`: no keys, as without a binding.
       () => {},
     );
   }

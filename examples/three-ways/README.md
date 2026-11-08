@@ -1,6 +1,6 @@
 # Three ways
 
-One plugin written in the three styles of the SDK: four scenarios side by side, compared in the [Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html).
+One plugin written in the three styles of the SDK: four scenarios side by side. The [Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html) shows the first one, the speed panel, in each style; the other three are in the files below, marked `#region frames`, `#region list` and `#region keyframes`.
 
 | File         | Style                                                        |
 | ------------ | ------------------------------------------------------------ |

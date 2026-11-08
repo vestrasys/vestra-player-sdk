@@ -448,16 +448,17 @@ export interface Storage {
 /**
  * `plugin.storage.session`: JSON values that live as long as the **player**,
  * not as long as the plugin's process (like `chrome.storage.session`). No
- * capability; needs player 0.5.5.
+ * capability.
  *
  * `activate` can run more than once in one player session: the player stops
  * and starts a plugin's process again when the plugin is reloaded (also a
  * development load with `--plugin`) or upgraded, and after a crash or a
- * failed start. A later player may also restart plugins that share a
- * process, or stop an idle plugin and start it on its next use. Variables do
- * not survive that; keep state that must survive a restart here (or in
- * {@link Storage.json | storage.json} when it must also survive the player
- * quitting).
+ * failed start; the player also restarts plugins that share a process, and
+ * stops an idle plugin after 30 s and starts it on its next use. Variables,
+ * timers, `fetch` calls, sockets and pending promises do not survive that
+ * (nor do they keep the plugin running): keep state that must survive a
+ * restart here (or in {@link Storage.json | storage.json} when it must also
+ * survive the player quitting) and pick it up again in `activate`.
  *
  * | | Values |
  * | --- | --- |

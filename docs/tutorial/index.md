@@ -72,7 +72,7 @@ Add a `tsconfig.json` for your editor. Its `plugins` entry marks a call whose ca
 }
 ```
 
-In VS Code, open a `.ts` file, run **TypeScript: Select TypeScript Version** and pick **Use Workspace Version**.
+In VS Code, open a `.ts` file, run **TypeScript: Select TypeScript Version** and pick **Use Workspace Version**. For the Slint files of windows and panels, the `@vestra/…` imports come from the player; point the Slint language server's `libraryPaths` at the SDK's copy: `{ "vestra": "node_modules/@vestra-player/sdk/slint/vestra" }`.
 
 ## 2. Write the manifest
 
@@ -88,7 +88,7 @@ Create `manifest.json`. Replace `me` with your GitHub user name:
 }
 ```
 
-The capabilities let the plugin add menu items (`commands`), show on-screen messages (`ui.osd`), read the playback state (`playback.read`) and follow its changes (`events`). A call whose capability is missing fails. Every field is in [Manifest](../reference/manifest.md), every capability in [Capabilities](../reference/capabilities.md).
+The capabilities let the plugin add menu items (`commands`), show on-screen messages (`ui.osd`), read the playback state (`playback.read`) and keep it current (`events`: without it, `plugin.player.state` is read only at start and after the plugin's own calls). A call whose capability is missing fails. Every field is in [Manifest](../reference/manifest.md), every capability in [Capabilities](../reference/capabilities.md).
 
 ## 3. Add a menu item
 
@@ -103,7 +103,7 @@ export default async function activate(plugin: Plugin) {
     id: "where",
     path: ["Tools", "Where am I?"],
     bindings: ["Ctrl+Alt+W"],
-    enabled: () => plugin.player.state.phase === "ready",
+    enabled: plugin.when.ready, // the player evaluates it
     run: () => {
       const { position, duration } = plugin.player.state;
       return plugin.osd.show("{} s of {} s", [
@@ -117,7 +117,8 @@ export default async function activate(plugin: Plugin) {
 
 - The player calls the default export, `activate`, when it starts the plugin.
 - `path` is the menu path in English; the player translates it. To put the item into one of the player's own menus, start the path with that menu's id, such as `["@video", "Where am I?"]` ([Built-in menus](../reference/commands.md#built-in-menus)).
-- `enabled` greys the item out while nothing plays; `run` shows the message, a template with its arguments.
+- `enabled` greys the item out while nothing plays. `plugin.when.ready` is a condition the player evaluates itself, so the plugin need not run to keep the item current and the player can stop it while idle ([Keep a command's state without keeping the plugin running](../guides/command-state.md)). `run` shows the message, a template with its arguments.
+- Do not `await` a click on your own command or a callback of your own window inside `activate`: the player holds them until activation is done, so `activate` would wait until the start timeout (60 s) and the plugin would stop with `failed`.
 - The SDK is imported with `import type` only; a runtime import fails `vestra-plugin build`.
 
 Check it:
@@ -162,13 +163,36 @@ The styles mix freely in one plugin, with one rule: a property is either bound o
 
 ## 6. Test and publish
 
+Create `tests/main.test.ts`. `startPlugin` runs the plugin against an in-memory player that reads your `manifest.json`:
+
+```ts
+// tests/main.test.ts
+import assert from "node:assert/strict";
+import test from "node:test";
+import { startPlugin } from "@vestra-player/sdk/testing";
+import activate from "../main.ts";
+
+test("shows the position", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: new URL("..", import.meta.url), // reads manifest.json
+  });
+  host.setSource({ phase: "ready", position: 12, duration: 60 });
+  await host.settle();
+  await host.command("where").run(); // as if the user chose the item
+  assert.deepEqual(host.osd, ["12.0 s of 60.0 s"]);
+  await stop();
+});
+```
+
+Then run the tests and the checks, and pack:
+
 ```sh
 npm test                     # tests/*.test.ts against an in-memory player
 npm run check                # the manifest, then a strict type check
 npm run pack                 # dist/, then me.hello-0.1.0.vxp
 ```
 
-- Tests use `startPlugin` from `@vestra-player/sdk/testing` and need no player: [Test a plugin](../guides/testing.md).
+- The tests need no player; simulating sources, failures and restarts is in [Test a plugin](../guides/testing.md).
 - Install the `.vxp` in the player to try what users will get.
 - To publish, push the plugin to a public GitHub repository and register it with a pull request to the plugin repository: [Publish a plugin](../guides/publish.md).
 

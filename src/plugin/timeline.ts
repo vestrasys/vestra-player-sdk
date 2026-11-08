@@ -259,7 +259,7 @@ class Layer implements TimelineLayer {
     this.#latestRanges.stop();
     timelineOf(this.#scope.runtime).layer = false;
     await this.#scope.runtime.host.timeline.set([]).catch(() => {});
-    // Only a layer that sent ranges: an older player refuses the method.
+    // Only a layer that sent ranges.
     if (this.#ranged)
       await this.#scope.runtime.host.timeline.setRanges([]).catch(() => {});
   }

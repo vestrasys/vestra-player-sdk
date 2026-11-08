@@ -76,7 +76,7 @@ export async function createPlugin(
   // Failures the plugin did not ask about: a property the player could not
   // show when it rebuilt a panel or the Options window (an image removed
   // since), a callback whose arguments it could not convert, a detached
-  // sidebar that could not be prepared. Older players send no code.
+  // sidebar that could not be prepared. A warning may come without a code.
   root.add(
     runtime.raw("ui.error", (data) => {
       const { code, message } = (data ?? {}) as {

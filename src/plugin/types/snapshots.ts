@@ -160,9 +160,6 @@ export interface Snapshot extends Disposable {
  * clip's end in source seconds. On Windows the export worker needs FFmpeg
  * 6.1 or newer.
  *
- * **Which players have `copy`, `encoding` and the progress and range of a
- * job**: player 0.7.6 and later.
- *
  * @since 1.0.0
  * @category Media
  */
@@ -298,7 +295,7 @@ export interface ExportEncoding {
  * `{ destination }`, `{ error: { code, message } }` or `{ cancelled: true }`.
  * `facts` describes what the worker produced (versions, range, streams).
  *
- * From player 0.7.6:
+ * In addition:
  * - a finished clip's `outcome` also has `start` and `end`, the source
  *   times of its first frame and of the end of its last frame as written: a
  *   copy's earliest written frame (its keyframe, or the leading frames of

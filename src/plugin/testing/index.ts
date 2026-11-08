@@ -3008,7 +3008,7 @@ export class TestHost implements Transport {
    * when `panel` is true, then global ones; within a scope the earliest
    * registration first (the player's own commands before the plugin's), as the
    * conflict rule orders them. A disabled command lets the key pass to the next
-   * command bound to it (as player 0.4.3): the one it shadowed, then the global
+   * command bound to it: the one it shadowed, then the global
    * scope. The first enabled one runs; `press` resolves after it ran (`"ran"`).
    * When only disabled commands hold the key, the first of them decides, as in
    * the player: with a `reason` it shows the reason on the OSD and eats the key

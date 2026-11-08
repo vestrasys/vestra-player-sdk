@@ -442,8 +442,7 @@ export interface CommandButton {
  * (the player's items in menu order are in [Built-in
  * commands](../../../docs/reference/commands.md#built-in-commands)), or a
  * negative one to come first. Deeper levels (a plugin's own submenu) have no
- * such rule. To avoid that, give it an order in the menu's range (Video:
- * 400–499).
+ * such rule.
  *
  * {@link Commands.add} throws `invalid` synchronously for a bad path,
  * order or binding; the player refuses an empty or overlong text, a control
@@ -473,8 +472,7 @@ export interface CommandOptions {
    * also be named by its id, `@` plus a {@link MenuId}: `@open`, `@playback`,
    * `@subtitles`, `@video`, `@audio`, `@screen`, `@settings` or `@reset`. Only
    * the first segment is read as an id; an unknown id, or an id with nothing
-   * after it, fails with `invalid`. Player 0.4.3 still accepts the old Chinese
-   * titles of its own menus.
+   * after it, fails with `invalid`.
    *
    * A segment that mixes words with data (a track number, a count) is a
    * {@link Text}: `plugin.i18n.text("Track {} ({})", [n, codec])`. The menu
@@ -605,7 +603,7 @@ export interface CommandOptions {
    * `NumpadDivide`, `NumpadEnter`, `NumpadDecimal`, the video-area mouse
    * inputs `Mouse:LeftClick`, `Mouse:LeftDoubleClick[:LeftHalf|:RightHalf]`,
    * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
-   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), from 0.6.0 on anywhere
+   * buttons `Mouse:X1` (back), `Mouse:X2` (forward), anywhere
    * in the main window or the floating sidebar window, except while a menu
    * is open.
    *
@@ -820,8 +818,9 @@ export interface Commands {
    * @throws `invalid` synchronously for a malformed path (including an
    *   unknown `@` menu id), order or binding; `conflict` for an id this
    *   plugin has already declared and not disposed.
-   * @throws `invalid` (`ready` rejects; during activation, activation fails)
-   * for a text the player refuses: an id, title, path segment, group or reason
+   * @throws `invalid` (`ready` rejects; during activation the SDK logs and
+   * skips the command and the plugin activates, see {@link Command.ready};
+   * `startPlugin` fails) for a text the player refuses: an id, title, path segment, group or reason
    * that is empty, longer than its `COMMAND_LIMITS` bytes (a text value counted
    * by its English rendering), has a control character or whitespace at either
    * end, or an id with other characters than ASCII letters, digits, `.`, `_`
@@ -933,7 +932,7 @@ export interface Commands {
  * | --- | --- | --- |
  * | `stop` | F4 | close the source |
  * | `play-pause` | Space, a left click on the video | pause / resume, replay after the end |
- * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 (from 0.6.0; up to 0.5.x X1 was previous and X2 next) | ask the sequence provider |
+ * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
  * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
@@ -1243,8 +1242,8 @@ export interface Bindings {
   reset(ref?: BindingRef): Promise<void>;
   /**
    * The binding list changed (read `list()` again): a declaration or an
-   * override. At most every 200 ms; since player 0.5.21 only when the list
-   * itself changed, not when a plugin starts again with the same commands.
+   * override. At most every 200 ms, and only when the list itself changed,
+   * not when a plugin starts again with the same commands.
    *
    * @capability bindings.manage
    *

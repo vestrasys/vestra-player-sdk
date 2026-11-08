@@ -33,7 +33,7 @@ npx vestra-plugin pack    # dist/ and <id>-<version>.vxp
 
 Next to `manifest.json` the store needs:
 
-- the display fields in the manifest: `name`, `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl`, optionally `icon`, and `minPlayerVersion` when the plugin needs a newer player than the first one ([Manifest](../reference/manifest.md) has the rules and the version table);
+- the display fields in the manifest: `name`, `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl`, optionally `icon`, and `minPlayerVersion`, the player you tested with ([Manifest](../reference/manifest.md) has the rules);
 - `README.md` (what the plugin does, how to use it, what it needs, its limits) and `CHANGELOG.md`, at most 256 KiB each: the store shows both;
 - tests under `tests/` that pass ([Test a plugin](testing.md));
 - only the [capabilities](../reference/capabilities.md) the plugin uses: the store lists them on the plugin's page.

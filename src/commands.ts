@@ -103,7 +103,7 @@ export const COMMAND_LIMITS = {
  * The player's built-in top-level menus, by id. Write `@<id>` as the first
  * segment of a command path (`["@video", "Blur"]`, see `CommandOptions.path`)
  * to put a command into that menu whatever language the player's menus are in.
- * The player stores the menu's title (视频 today); later segments are titles.
+ * Later segments are titles.
  * `reset`: the Reset menu, directly below Settings, gathers every command that
  * puts something back to its default. The player's tests check that this list
  * agrees with the player's.

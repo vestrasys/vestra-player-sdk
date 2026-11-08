@@ -446,7 +446,7 @@ export interface VideoShaders extends Disposable {
    *
    * @remarks
    * Never throws: a refused list shows in `status` (`invalid`, `missing`,
-   * `limit`, `unsupported`, and `previous-crash` from player 0.6.3: see
+   * `limit`, `unsupported`, and `previous-crash`: see
    * the interface's remarks) and goes to {@link Scope.onError}, and what the
    * player held stays.
    *

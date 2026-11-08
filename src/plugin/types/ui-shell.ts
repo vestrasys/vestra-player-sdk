@@ -115,7 +115,7 @@ export type SettingsCategory =
  * }
  * ```
  *
- * @see {@link Settings.page}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link Settings.page}, [Add settings and translations](../../../docs/guides/i18n.md)
  * @since 1.0.0
  * @category UI
  */
@@ -178,7 +178,7 @@ export type SettingsPage = View &
  * page.on("resumeToggled", (on: boolean) => store.save({ ...store.value, resume: on }));
  * ```
  *
- * @see {@link SettingsPage}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link SettingsPage}, [Add settings and translations](../../../docs/guides/i18n.md)
  * @since 1.0.0
  * @category UI
  */
@@ -380,7 +380,7 @@ export interface BackdropSlot {
  *
  * {@includeCode ../../../examples/panel-menu/ui/panel.slint}
  *
- * @see {@link Panel}, {@link PanelSlot}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link Panel}, {@link PanelSlot}, [Example: Adjust panel](../../../docs/examples/adjust-panel.md), [Example: Panel menu](../../../docs/examples/panel-menu.md)
  * @since 1.0.0
  * @category UI
  */
@@ -401,8 +401,7 @@ export interface Panels {
    *   {@link Panel.setInteraction} locks keep it).
    * - `"sidebar"`: right of the video, the window's full height, as wide as the
    *   user drags it (at least 317). The user can detach it into a floating
-   *   window titled `title`. Several plugins may mount here (player 0.4.x after
-   *   0.4.0): each panel is a tab, labelled `title` (else the plugin's name),
+   *   window titled `title`. Several plugins may mount here: each panel is a tab, labelled `title` (else the plugin's name),
    *   and the player draws a 31px tab strip above the current one while there
    *   are two or more (with one panel, nothing changes). Showing, hiding and
    *   detaching apply to the whole sidebar. If the bridge global declares
@@ -458,7 +457,7 @@ export interface Panels {
    *   for the result.
    *
    * @throws `Error` without a code (throws) This plugin already has a panel in
-   * this slot (a panel in another slot is fine from player 0.7.6), or the file
+   * this slot (a panel in another slot is fine), or the file
    * exports no component or global, or several and `options` does not name one.
    * A file that cannot be read throws Node's file system error (`code` `ENOENT`
    * and so on).
@@ -631,7 +630,7 @@ export interface ConfirmOptions {
  * }
  * ```
  *
- * @see [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see [Platforms](../../../docs/reference/platforms.md)
  * @since 1.0.0
  * @category UI
  */
@@ -946,7 +945,7 @@ export interface OsdPanelOptions {
  * say("Blur on");
  * ```
  *
- * @see {@link OsdPanel}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link OsdPanel}, [Limits: on-screen display](../../../docs/reference/limits.md#on-screen-display)
  * @since 1.0.0
  * @category UI
  */

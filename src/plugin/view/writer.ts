@@ -1024,7 +1024,7 @@ export class ViewWriter {
         if (largest > CHUNK_BYTES) throw rowTooLarge(key, largest);
         // Every part but the last carries `more`: the player holds them
         // and writes the whole value at the last, so a list it shows is
-        // written once (player 0.6.0).
+        // written once.
         await this.#target.write(key, {
           value: wireValue(rows.slice(0, count) as PropValue),
           seq,

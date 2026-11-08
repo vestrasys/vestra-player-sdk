@@ -216,11 +216,11 @@ export function mediaClients(transport: Transport) {
           | {
               kind: "rawMp4" | "processedMp4";
               end: number;
-              /** Player 0.7.6. */
+              /** The encoder settings used. */
               encoding?: WireEncoding;
             }
           | {
-              /** Stream copy, player 0.7.6. */
+              /** Stream copy. */
               kind: "rawCopy";
               end: number;
               container?: "auto" | "mp4" | "mkv";

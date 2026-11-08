@@ -81,7 +81,7 @@ npm run check && npm test
 npm run pack              # examples.adjust-panel-0.1.0.vxp
 ```
 
-Start the player (0.7.6 or newer) with `--plugin <path to examples/adjust-panel>` and press Alt+5, or click the bottom bar's Adjustments and Effects button (the sliders).
+Start the player with `--plugin <path to examples/adjust-panel>` and press Alt+5, or click the bottom bar's Adjustments and Effects button (the sliders).
 
 ## Try next
 

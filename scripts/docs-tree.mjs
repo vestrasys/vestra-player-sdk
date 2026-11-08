@@ -492,7 +492,7 @@ export function buildTree(project) {
         reflection: index,
         render: () => parts(index.content, `docs/${group.folder}`).trim(),
         id: `doc:${group.folder}/index.md`,
-        aliases: [group.folder],
+        aliases: [group.folder, ...(group.aliases ?? [])],
       }),
     );
     byReflection.set(index.id, groupNode);
@@ -508,7 +508,7 @@ export function buildTree(project) {
           reflection: doc,
           render: () => parts(doc.content, `docs/${group.folder}`).trim(),
           id: `doc:${group.folder}/${page.file}`,
-          aliases: [basename(page.file, ".md")],
+          aliases: [basename(page.file, ".md"), ...(page.aliases ?? [])],
         }),
       );
       byReflection.set(doc.id, pageNode);

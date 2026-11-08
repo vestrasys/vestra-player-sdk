@@ -66,7 +66,7 @@ import type { WireView } from "./plugin-wire.ts";
  * }));
  * ```
  *
- * @see {@link Ui.image}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link Ui.image}, [Example: Markdown](../../../docs/examples/markdown.md)
  * @since 1.0.0
  * @category UI
  */
@@ -287,7 +287,7 @@ export type Props = Record<string, PropValue>;
  *
  * {@includeCode ../../../examples/markdown/ui/document.slint}
  *
- * @see {@link ImageRef}, {@link MarkdownRef}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link ImageRef}, {@link MarkdownRef}, [Example: Markdown](../../../docs/examples/markdown.md), [Theme](../../../docs/reference/theme.md)
  * @since 1.0.0
  * @category UI
  */
@@ -356,8 +356,6 @@ export interface Ui {
    * shows the same thumbnails again reads them from disk.
    *
    * @capability None (the plugin process has network access).
-   * @player Any (the reference is an ordinary {@link ImageRef}); nested in a
-   *   value, player 0.5.1.
    *
    * @param url - The image's `https:` address.
    * @param options - As for {@link Ui.image}.
@@ -695,6 +693,14 @@ export interface View {
    * throws is reported to {@link Scope.onError} and the other bindings still
    * run. A view can have several bindings; when two return the same name,
    * the one bound later wins.
+   *
+   * A bound array is sent as row patches: only the rows whose value changed in
+   * the plugin. So Slint code must not write into its rows
+   * (`rows[i].selected = true`): that row keeps the Slint-side value until the
+   * plugin's value for it changes. Send a callback and change the row in the
+   * plugin instead. In a long list, return each unchanged row as the same
+   * deep-frozen object (`Object.freeze` on it and on every object and array in
+   * it): such a row is encoded once, not in every pass.
    *
    * Never throws. Writes that fail are not repeated until the value changes,
    * and are reported to {@link Scope.onError} like a failed {@link View.set} (a

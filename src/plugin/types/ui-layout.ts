@@ -674,7 +674,7 @@ export interface SidebarSlot extends PanelSlot {
  *
  * {@includeCode ../../../examples/panel-menu/ui/panel.slint}
  *
- * @see {@link Panels.mount}, {@link PanelSlot}, [Open a tool window and remember its state](../../../docs/guides/windows.md)
+ * @see {@link Panels.mount}, {@link PanelSlot}, [Example: Panel menu](../../../docs/examples/panel-menu.md), [Example: Adjust panel](../../../docs/examples/adjust-panel.md)
  * @since 1.0.0
  * @category UI
  */
@@ -686,7 +686,7 @@ export interface Panel extends View, Disposable {
    * @remarks
    * Mounts made while `activate` runs must succeed before the plugin is
    * ready: a rejection fails activation, except `conflict` for a taken
-   * position (below), which the player (0.4.x after 0.4.0) and `TestHost`
+   * position (below), which the player and `TestHost`
    * do not count: the plugin runs without its panel, its commands and keys
    * work, and the player shows the refusal (an OSD message,
    * {@link PluginInfo.warnings} and the text in {@link PluginInfo.error}).

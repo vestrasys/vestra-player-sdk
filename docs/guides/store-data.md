@@ -38,6 +38,8 @@ Stopping the plugin writes a pending save first, but only within the short time 
 
 `storage.session` keeps JSON values in the player for this run: a reload of the plugin (an upgrade, a crash, the user's Reload) finds them again; the next player start does not.
 
+Timers, `fetch` calls, sockets and pending promises do not keep a plugin running: an idle plugin is stopped after 30 s and they are lost. Keep what such work needs here and pick it up again in `activate`. There is no `localStorage` or `sessionStorage` in the plugin's process; use these stores instead.
+
 ```ts
 const session = plugin.storage.session;
 const queue = (await session.get<string[]>("queue")) ?? []; // undefined: nothing stored

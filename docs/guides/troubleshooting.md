@@ -65,7 +65,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** The SDK sends bound values in an update pass after a handler returns and again when its promise settles; a value changed after an `await` inside a longer task appears only when that task ends.
 
-**Fix:** Call `plugin.update()` when such a task has something new to show ([Tutorial](../tutorial/index.md), [Keep a slider responsive while dragging](slider.md)).
+**Fix:** Keep such a value in a {@link "@vestra-player/sdk"!Scope.state | plugin.state} object: writing one of its fields runs the bindings that read it, wherever the write happens. For a plain variable, call `plugin.update()` when the task has something new to show ({@link "@vestra-player/sdk"!View.bind | View.bind}, [Keep a slider responsive while dragging](slider.md)).
 
 ## A call fails with `stale`
 
@@ -100,5 +100,5 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 ## See also
 
 - [Reference: error codes](../reference/errors.md)
-- [Tutorial](../tutorial/index.md): how a plugin runs.
+- {@link "@vestra-player/sdk"!Plugin | Plugin}: how a plugin starts, stops and restarts.
 - [Test a plugin](testing.md)
