@@ -303,7 +303,7 @@ test("L3 (P2): a direct write in parts across a close and reopen is unavailable,
   }
 });
 
-test("L3 (P3): a whole direct write answered after a reopen is no base for rows", async () => {
+test("L3 (P3): a whole direct write answered after a reopen is unavailable and no base for rows", async () => {
   let window!: Window;
   let plugin!: Plugin;
   const { host, stop } = await startPlugin(
@@ -325,7 +325,52 @@ test("L3 (P3): a whole direct write answered after a reopen is no base for rows"
     await window.close();
     await window.show();
     release();
-    await write;
+    // The player took it for the window that closed, as the doc says.
+    await assert.rejects(write, {
+      code: "unavailable",
+      message: /closed or showed its initial properties again/,
+    });
+    const mark = host.calls.length;
+    await assert.rejects(
+      view.writeRows("rows", [{ op: "insert", at: 0, rows: [row("z")] }]),
+      { code: "stale" },
+    );
+    assert.equal(host.calls.length, mark, "nothing sent");
+  } finally {
+    await stop();
+  }
+});
+
+test("L3: a direct patch answered after a reopen is unavailable and no base for rows", async () => {
+  let window!: Window;
+  let plugin!: Plugin;
+  const { host, stop } = await startPlugin(
+    (p: Plugin) => {
+      plugin = p;
+      window = p.windows.create("list.slint", { id: "list" });
+    },
+    { directory: pkg() },
+  );
+  try {
+    await window.show();
+    const view = plugin.wire.view(window);
+    await view.write("rows", { value: [row("a")], seq: 1 });
+    const release = hold(
+      host,
+      (method, params) => method === "ui.set" && params.property === "rows",
+    );
+    const write = view.write("rows", {
+      patch: {
+        base: 1,
+        seq: 2,
+        ops: [{ op: "insert", at: 1, rows: [row("b")] }],
+      },
+    });
+    await host.settle(10);
+    await window.close();
+    await window.show();
+    release();
+    await assert.rejects(write, { code: "unavailable" });
     const mark = host.calls.length;
     await assert.rejects(
       view.writeRows("rows", [{ op: "insert", at: 0, rows: [row("z")] }]),

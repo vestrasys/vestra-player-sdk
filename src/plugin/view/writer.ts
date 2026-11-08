@@ -703,17 +703,25 @@ export class ViewWriter {
     }
     return this.#target.live() && this.#generation === generation;
   }
-  /** A direct `PropertyWrite`: as given, with a `seq` and in parts where it applies. */
+  /**
+   * A direct `PropertyWrite`: as given, with a `seq` and in parts where it
+   * applies. A part the player answers after the view closed or showed its
+   * initial properties again was not taken for the view shown now
+   * ({@link Abandoned}, so `unavailable`, as for row operations).
+   */
   async #sendDirect(key: string, track: DirectTrack, write: PropertyWrite) {
     const generation = this.#generation;
+    const send = async (part: PropertyWrite) => {
+      if (!(await this.#writeNow(key, part, generation))) throw new Abandoned();
+    };
     if ("patch" in write) {
-      const current = await this.#writeNow(key, write, generation);
+      await send(write);
       const seq = (write.patch as { seq?: unknown } | null)?.seq;
-      if (current && typeof seq === "number") track.base = seq;
+      if (typeof seq === "number") track.base = seq;
       return;
     }
     if (!this.#patches) {
-      await this.#writeNow(key, write, generation);
+      await send(write);
       return;
     }
     const seq = typeof write.seq === "number" ? write.seq : ++this.#seq;
@@ -732,11 +740,7 @@ export class ViewWriter {
         count < value.length &&
         sizes.every((size) => size <= CHUNK_BYTES)
       ) {
-        await this.#writeNow(
-          key,
-          { value: value.slice(0, count), seq, more: true },
-          generation,
-        );
+        await send({ value: value.slice(0, count), seq, more: true });
         let last = seq;
         const insert: RowOp = {
           op: "insert",
@@ -746,24 +750,20 @@ export class ViewWriter {
         const groups = chunkOps([insert]);
         for (const [i, ops] of groups.entries()) {
           const next = ++this.#seq;
-          await this.#writeNow(
-            key,
-            {
-              patch: { base: last, seq: next, ops },
-              ...(i < groups.length - 1 ? { more: true } : {}),
-            },
-            generation,
-          );
+          await send({
+            patch: { base: last, seq: next, ops },
+            ...(i < groups.length - 1 ? { more: true } : {}),
+          });
           last = next;
         }
-        if (this.#generation === generation) track.base = last;
+        track.base = last;
         return;
       }
     }
     // A base only for the view that is shown now: after a reopen the
     // player shows the property's default, not this write.
-    if (await this.#writeNow(key, { ...write, seq }, generation))
-      track.base = seq;
+    await send({ ...write, seq });
+    track.base = seq;
   }
   /**
    * Direct row operations: patches on the property's last direct write

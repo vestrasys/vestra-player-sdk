@@ -385,6 +385,7 @@ export interface Scope extends Disposable {
    * with versions. See {@link Wire}.
    *
    * @experimental
+   * @since 1.7.0
    */
   readonly wire: Wire;
   /**

@@ -49,7 +49,12 @@ export function hostEvents() {
     if (!doc) throw new Error(`EventPayloads["${name}"] has no summary`);
     return {
       name,
-      type: member.type.getText().replace(/\s+/g, " "),
+      // The fields' own doc comments (shown by the API pages) are left out.
+      type: member.type
+        .getText()
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\s+/g, " ")
+        .replace(/;\s*}/g, " }"),
       doc,
     };
   });
