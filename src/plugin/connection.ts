@@ -168,6 +168,12 @@ export class Connection {
   #warnedEvents = false;
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
+  /**
+   * Command unregistrations in flight, by id: a command registered again
+   * with the id (`commands.add` or `plugin.wire.commands.register`) waits
+   * for its removal, or the player would refuse it with `conflict`.
+   */
+  readonly removals = new Map<string, Promise<void>>();
   readonly services = new Map<string, unknown>();
   /**
    * How to read a state copy again, by the event that keeps it current: a

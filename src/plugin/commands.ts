@@ -163,14 +163,6 @@ function button(
   return { icon, order };
 }
 
-/** Unregistrations in flight per plugin: re-adding an id waits for its removal. */
-const removals = new WeakMap<object, Map<string, Promise<void>>>();
-const removing = (runtime: object) => {
-  let map = removals.get(runtime);
-  if (!map) removals.set(runtime, (map = new Map()));
-  return map;
-};
-
 class CommandHandle implements Command {
   readonly id: string;
   readonly ready: Promise<void>;
@@ -214,7 +206,7 @@ class CommandHandle implements Command {
     const declaration = declare(options);
     // The host requires a strictly increasing revision per update; the
     // registration itself is revision 1, so every later state follows it.
-    const previous = removing(runtime).get(this.id);
+    const previous = runtime.removals.get(this.id);
     this.#pump = new Latest(async ({ state, when }) => {
       if (this.#refused) return;
       const revision = ++this.#revision;
@@ -341,7 +333,7 @@ class CommandHandle implements Command {
     this.#pump.stop();
     // Removed from the menu once registered. Recorded before any await, so an
     // immediate re-add of the same id registers after this removal.
-    const pending = removing(runtime);
+    const pending = runtime.removals;
     const removal = (async () => {
       await this.#binding?.dispose();
       await this.ready.catch(() => {});

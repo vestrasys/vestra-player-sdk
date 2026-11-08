@@ -84,25 +84,26 @@ export interface Wire {
    * revision, no retry after a lost reply, no wait during activation. A
    * request that changes something the SDK keeps (a window the SDK opened,
    * a command added with {@link Commands.add}) leaves the SDK's copy out of
-   * date. Two methods are guarded. `events.subscribe` must say why the
-   * plugin listens, `why` (a list of reasons for the player's log) or
-   * `mirror: true` (only a copy of the state), so the player's decision to
-   * keep the plugin running is never fooled; a marked one goes as given,
-   * but the SDK does not count it: the player keeps one subscription per
-   * event name, so it replaces the mark of the SDK's own subscription to
-   * that event, and the SDK's next change of that mark replaces it again.
-   * `events.unsubscribe` is refused, since it would end the SDK's own
-   * subscription too: stop listening by disposing what {@link Wire.on}
-   * returned. Use `Wire.on` for the events the SDK knows; it marks and
-   * counts them and delivers them.
+   * date. The subscriptions are guarded. For the events the SDK knows
+   * ({@link HostEvent}) `events.subscribe` and `events.unsubscribe` are
+   * refused: the player keeps one subscription per event name, with one
+   * mark, and the SDK owns those (its copies of the state,
+   * {@link Player.on}); listen with {@link Wire.on} and stop by disposing
+   * what it returned. For any other event (a newer player's)
+   * `events.subscribe` must say why the plugin listens, `why` (a list of
+   * reasons for the player's log) or `mirror: true` (only a copy of the
+   * state), so the player's decision to keep the plugin running is never
+   * fooled; the SDK does not count such a subscription, the plugin
+   * unsubscribes it itself.
    *
    * @param method - The player's method name (`"ui.setMount"`).
    * @param params - Its parameters, a JSON object (omitted: none).
    * @returns The player's result, once the player answered.
    *
    * @throws `invalid` (throws) `method` is not a non-empty string, it is
-   *   `events.subscribe` without `why` (a non-empty list of strings) or
-   *   `mirror: true`, or it is `events.unsubscribe`.
+   *   `events.subscribe` or `events.unsubscribe` of a {@link HostEvent},
+   *   or `events.subscribe` of another event without `why` (a non-empty
+   *   list of strings) or `mirror: true`.
    * @throws `capability` (rejects) The manifest does not declare the
    *   capability the method needs.
    * @throws `unsupported` (rejects) The player does not know the method.
@@ -242,9 +243,12 @@ export interface Wire {
  *
  * While the view does not show (a window before `show()`, a panel or
  * settings page before `ready`, a closed one) a write is refused with
- * `unavailable`. When a window shows its initial properties again (shown
- * after a close), a property written here shows its Slint default: write
- * it again.
+ * `unavailable`, and so is one the player answers after the view closed
+ * or showed its initial properties again. When a window shows its initial
+ * properties again (shown after a close), a property written here shows
+ * its Slint default: write its whole value again before any
+ * {@link WireView.writeRows}. Disposing the view resolves the writes still
+ * waiting with `false`.
  *
  * @example Push a status line from a timer
  * A window shows a status line that the plugin's own timer refreshes once
@@ -286,8 +290,8 @@ export interface WireView {
    *
    * @throws `invalid` (throws) `property` is empty or set or bound already
    *   on this view, or `write` has neither `value` nor `patch`.
-   * @throws `unavailable` (rejects) The view does not show, or closed
-   *   during a write sent in parts.
+   * @throws `unavailable` (rejects) The view does not show, or it closed
+   *   or showed its initial properties again before the player answered.
    * @throws `limit` (rejects) The player refused a value over its limits.
    * @throws `stale` (rejects) A patch's `base` is not what the player
    *   shows.
@@ -317,12 +321,15 @@ export interface WireView {
    * @remarks
    * Experimental: the wire protocol is not semver; this member changes
    * with versions. The operations apply, in order, on what the player shows
-   * for the property after this view's last direct write of it (or on its
-   * initial value when there was none since the view showed): `set` one
-   * row, `insert` rows, `remove` or `move` a run of rows, by index. They go
-   * as one patch, or several applying on each other when they exceed one
-   * request (1024 operations or 512 KB of rows). Needs a player that takes
-   * row patches (player 0.6.0).
+   * for the property after this view's last direct write of it since the
+   * view showed its initial properties: `set` one row, `insert` rows,
+   * `remove` or `move` a run of rows, by index. Without such a write (the
+   * property was never written directly, or the window was shown again
+   * since) the player has no rows of the plugin's for it: write the whole
+   * value with {@link WireView.write} first. They go as one patch, or
+   * several applying on each other when they exceed one request (1024
+   * operations or 512 KB of rows). Needs a player that takes row patches
+   * (player 0.6.0).
    *
    * @param property - The Slint property's name.
    * @param ops - The operations, applied in order.
@@ -332,8 +339,10 @@ export interface WireView {
    * @throws `invalid` (throws) `property` is empty or set or bound already
    *   on this view, or `ops` is not an array.
    * @throws `unsupported` (rejects) The player takes no row patches.
-   * @throws `stale` (rejects) The player shows something else than the
-   *   operations apply on: write the whole value.
+   * @throws `stale` (rejects) No whole value was written directly since
+   *   the view showed its initial properties (refused before sending), or
+   *   the player shows something else than the operations apply on: write
+   *   the whole value.
    * @throws `unavailable` (rejects) The view does not show.
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
@@ -564,7 +573,7 @@ export interface WireCommand extends Disposable {
    * Experimental: the wire protocol is not semver; this member changes
    * with versions. One `commands.update` with the next revision, after the
    * registration; several calls are sent in order, the newest last. `when`
-   * replaces the conditions (omitted: none).
+   * replaces the conditions (omitted: the last ones sent stay).
    *
    * @param state - The fields to change.
    * @param when - The player's conditions, in wire form.

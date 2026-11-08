@@ -18,8 +18,9 @@
  * Members whose capability depends on an argument (SDK 1.7.0:
  * `plugin.player.on` and `plugin.wire.on` by event name,
  * `plugin.wire.request` by method name, `ARGUMENT_APIS`) are checked by
- * that argument when its type fixes it (a literal, a constant, a union of
- * literals); otherwise the call is reported as unchecked
+ * that argument when its type fixes it to one string (a literal, a
+ * constant); otherwise (a computed name, a union of several, the member
+ * taken by destructuring or as a value) the call is reported as unchecked
  * ({@link checkCapabilities}), and the player still checks it.
  *
  * The TypeScript module is passed in, never imported: the CLI uses the
@@ -194,7 +195,8 @@ export interface UncheckedCall {
 
 /**
  * The strings an expression's type fixes: a string literal, a constant of
- * one, or a union of them; `undefined` when the type allows any other.
+ * one, or a union of them (the caller takes one only); `undefined` when
+ * the type allows any other.
  */
 function literalStrings(
   ts: typeof TS,
@@ -338,11 +340,13 @@ export function checkCapabilities(
       if (!api) return;
       const kind = ARGUMENT_APIS[api]!;
       const values = literalStrings(ts, checker, node.arguments[0]);
-      if (!values) {
+      // One name, or not checked: a union could be any of its names at run
+      // time, and none of them is known to be used.
+      if (values?.length !== 1) {
         unchecked.push({
           ...position(name),
           api,
-          message: `${api} with ${kind === "event" ? "an event" : "a method"} name that is not a literal: its capability is not checked here (the player checks it)`,
+          message: `${api} with ${kind === "event" ? "an event" : "a method"} name that is not one literal: its capability is not checked here (the player checks it)`,
         });
         return;
       }
@@ -369,19 +373,45 @@ export function checkCapabilities(
         );
       }
     };
+    /**
+     * A member of `ARGUMENT_APIS` taken other than by a direct call (`const
+     * { request } = plugin.wire`, `const on = plugin.player.on`): its calls
+     * cannot be followed, so it is unchecked where it is taken.
+     */
+    const taken = (name: TS.Node, symbol: TS.Symbol | undefined) => {
+      const api = apiOf(calls, symbol);
+      if (!api) return;
+      const access = name.parent;
+      const parent = access?.parent;
+      if (
+        access &&
+        (ts.isPropertyAccessExpression(access) ||
+          ts.isElementAccessExpression(access)) &&
+        parent &&
+        ts.isCallExpression(parent) &&
+        parent.expression === access
+      )
+        return; // a direct call: `call` checks it
+      unchecked.push({
+        ...position(name),
+        api,
+        message: `${api} taken other than by a direct call: the calls of it are not checked here (the player checks them)`,
+      });
+    };
     const visit = (node: TS.Node): void => {
       if (ts.isCallExpression(node)) call(node);
-      if (ts.isPropertyAccessExpression(node))
-        report(node.name, checker.getSymbolAtLocation(node.name));
-      else if (
+      if (ts.isPropertyAccessExpression(node)) {
+        const symbol = checker.getSymbolAtLocation(node.name);
+        report(node.name, symbol);
+        taken(node.name, symbol);
+      } else if (
         ts.isElementAccessExpression(node) &&
         ts.isStringLiteralLike(node.argumentExpression)
-      )
-        report(
-          node.argumentExpression,
-          checker.getSymbolAtLocation(node.argumentExpression),
-        );
-      else if (
+      ) {
+        const symbol = checker.getSymbolAtLocation(node.argumentExpression);
+        report(node.argumentExpression, symbol);
+        taken(node.argumentExpression, symbol);
+      } else if (
         ts.isBindingElement(node) &&
         ts.isObjectBindingPattern(node.parent)
       ) {
@@ -390,11 +420,13 @@ export function checkCapabilities(
           ts.isIdentifier(name) || ts.isStringLiteralLike(name)
             ? name.text
             : undefined;
-        if (text !== undefined)
-          report(
-            name,
-            checker.getTypeAtLocation(node.parent).getProperty(text),
-          );
+        if (text !== undefined) {
+          const symbol = checker
+            .getTypeAtLocation(node.parent)
+            .getProperty(text);
+          report(name, symbol);
+          taken(name, symbol);
+        }
       }
       ts.forEachChild(node, visit);
     };

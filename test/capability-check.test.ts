@@ -391,23 +391,46 @@ test("checker: plugin.wire.request by a literal method name (SDK 1.7.0)", () => 
   );
 });
 
-test("checker: a method name it cannot read, or the player does not know, is unchecked", () => {
+test("checker: a method name it cannot read, one of several, or the player does not know, is unchecked", () => {
   const source = lines(
     "const pick = (name: string) => plugin.wire.request(name);",
     'void pick("ui.setMount");',
     'await plugin.wire.request("no.such.method");',
     'const either = Math.random() > 0.5 ? "osd.show" : "clipboard.readText";',
     "await plugin.wire.request(either);",
+    'const kind = Math.random() > 0.5 ? "bindings.changed" : "source.state";',
+    "plugin.player.on(kind, () => {});",
   );
   const result = checkAll(source);
+  // A union could be any of its names: unchecked, not an error (review L5).
   assert.deepEqual(result.unchecked, [
     "3:46 Wire.request",
     "5:21 Wire.request",
+    "7:21 Wire.request",
+    "9:17 Player.on",
   ]);
-  // A union of literals: each one's capability.
+  assert.deepEqual(result.findings, []);
+});
+
+test("checker: a member taken other than by a direct call is unchecked", () => {
+  const source = lines(
+    "const { request } = plugin.wire;",
+    'await request("clipboard.readText");',
+    "const on = plugin.player.on;",
+    'on("bindings.changed", () => {});',
+    "const { on: listen } = plugin.wire;",
+    'listen("source.state", () => {});',
+    'await plugin.wire["request"]("clipboard.readText");',
+  );
+  const result = checkAll(source);
+  assert.deepEqual(result.unchecked, [
+    "3:11 Wire.request",
+    "5:28 Player.on",
+    "7:11 Wire.on",
+  ]);
+  // A direct call by element access is checked as one.
   assert.deepEqual(result.findings, [
-    "7:21 Wire.request osd.show ui.osd",
-    "7:21 Wire.request clipboard.readText clipboard",
+    "9:21 Wire.request clipboard.readText clipboard",
   ]);
 });
 
@@ -463,7 +486,7 @@ test("vestra-plugin check lists unchecked calls without failing", () => {
   assert.equal(plain.status, 0, plain.stdout + plain.stderr);
   assert.match(
     plain.stdout,
-    /main\.ts:3:46: unchecked: Wire\.request with a method name that is not a literal/,
+    /main\.ts:3:46: unchecked: Wire\.request with a method name that is not one literal/,
   );
   const json = run("--json");
   assert.equal(json.status, 0, json.stderr);

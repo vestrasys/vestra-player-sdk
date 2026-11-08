@@ -8,12 +8,12 @@
  * (`scripts/check-layers.mjs`, rule 7).
  *
  * - `request`: `Connection.request`, the transport as is; the player
- *   checks capabilities. Two methods are guarded, refused with `invalid`:
- *   `events.subscribe` without `why` or `mirror` would make the player
- *   misjudge whether the plugin listens (lazy activation), and
- *   `events.unsubscribe` would end the SDK's own subscription to the
- *   event. A marked `events.subscribe` goes as given; the SDK does not
- *   count it (its own subscriptions and marks know nothing of it).
+ *   checks capabilities. The subscriptions are guarded, refused with
+ *   `invalid`: `events.subscribe` and `events.unsubscribe` of a
+ *   `HostEvent` (the SDK owns those subscriptions and their marks; `on`
+ *   covers them), and `events.subscribe` of any other event without
+ *   `why` or `mirror` (the player would misjudge whether the plugin
+ *   listens: lazy activation).
  * - `on`: a {@link HostEvent} through `Connection.on`, always a listener
  *   with its `why`, never a mirror (as `player.on`); any other name through
  *   `Connection.raw`, no subscription.
@@ -60,14 +60,13 @@ function marked(params: Json | undefined): boolean {
   );
 }
 
-/** Unregistrations in flight per plugin: re-registering an id waits for its removal. */
-const removals = new WeakMap<object, Map<string, Promise<void>>>();
-
 class RawCommand implements WireCommand {
   readonly id: string;
   readonly ready: Promise<void>;
   readonly #scope: ScopeImpl;
   #state: CommandState;
+  /** The conditions last sent: kept by an `update` without `when`. */
+  #when: Json | undefined;
   #revision = 1;
   #registered = false;
   #disposed = false;
@@ -102,9 +101,10 @@ class RawCommand implements WireCommand {
       ...(state as Partial<CommandState> | undefined),
     };
     this.#state = initial;
-    let pending = removals.get(runtime);
-    if (!pending) removals.set(runtime, (pending = new Map()));
-    const previous = pending.get(id);
+    this.#when = when;
+    // Shared with `commands.add`: re-registering an id waits for any
+    // removal of it in flight, whichever made it.
+    const previous = runtime.removals.get(id);
     const registration = (async () => {
       await previous;
       await runtime.host.commands.register(
@@ -146,10 +146,11 @@ class RawCommand implements WireCommand {
     if (this.#disposed)
       throw failure("missing", `command ${this.id} was disposed`);
     this.#state = { ...this.#state, ...(state as Partial<CommandState>) };
+    if (when !== undefined) this.#when = when;
     await this.#updates.push(
-      when === undefined
+      this.#when === undefined
         ? { state: this.#state }
-        : { state: this.#state, when },
+        : { state: this.#state, when: this.#when },
     );
   }
   async dispose() {
@@ -160,7 +161,7 @@ class RawCommand implements WireCommand {
     if (runtime.commands.get(this.id) === this.#run)
       runtime.commands.delete(this.id);
     this.#updates.stop();
-    const pending = removals.get(runtime)!;
+    const pending = runtime.removals;
     const removal = (async () => {
       await this.ready.catch(() => {});
       if (this.#registered)
@@ -177,18 +178,26 @@ export const wire = (scope: ScopeImpl): Wire => ({
   request<T = unknown>(method: string, params?: Json): Promise<T> {
     if (typeof method !== "string" || method === "")
       throw failure("invalid", "request takes a method name");
-    if (method === "events.subscribe" && !marked(params))
-      throw failure(
-        "invalid",
-        "events.subscribe needs why (a list of reasons) or mirror: true, or the player misjudges whether the plugin listens; use plugin.wire.on, which sends why",
-      );
-    // The player keeps one subscription per event name: a raw unsubscribe
-    // would end the SDK's own (state copies, `player.on`, `wire.on`).
-    if (method === "events.unsubscribe")
-      throw failure(
-        "invalid",
-        "events.unsubscribe would end the SDK's own subscription to the event too; use the Disposable from plugin.wire.on",
-      );
+    if (method === "events.subscribe" || method === "events.unsubscribe") {
+      const event =
+        params !== null && typeof params === "object" && !Array.isArray(params)
+          ? params.event
+          : undefined;
+      // The player keeps one subscription per event name, with one mark:
+      // the SDK's own (state copies, `player.on`, `wire.on`) for these.
+      if (typeof event === "string" && Object.hasOwn(EVENT_NEEDS, event))
+        throw failure(
+          "invalid",
+          method === "events.subscribe"
+            ? `${event} is one of the SDK's events: listen with plugin.wire.on, which subscribes and marks it`
+            : `${event} is one of the SDK's events: use the Disposable from plugin.wire.on`,
+        );
+      if (method === "events.subscribe" && !marked(params))
+        throw failure(
+          "invalid",
+          "events.subscribe needs why (a list of reasons) or mirror: true, or the player misjudges whether the plugin listens",
+        );
+    }
     return scope.runtime.request<T>(method, params);
   },
   on(event: HostEvent | (string & {}), listener: (data: unknown) => void) {

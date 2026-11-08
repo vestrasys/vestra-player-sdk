@@ -123,21 +123,6 @@ const isPrimitive = (
   typeof value === "boolean" ||
   (typeof value === "number" && Number.isFinite(value));
 
-/**
- * The first `count` rows of `value`, as sent, are `shown` (an initial
- * array cut to one request's size); a released image is no match.
- */
-function sameStart(shown: Json[], value: PropValue[], count: number) {
-  try {
-    return (
-      JSON.stringify(shown) ===
-      JSON.stringify(value.slice(0, count).map((row) => wireValue(row ?? null)))
-    );
-  } catch {
-    return false;
-  }
-}
-
 /** A row as `JSON.stringify` writes it inside an array. */
 const encodeRow = (row: unknown) => JSON.stringify(row) ?? "null";
 
@@ -483,7 +468,7 @@ export class ViewWriter {
    * Not bound: initial arrays the view shows the first rows of, by key,
    * whose next write inserts only the rest (SDK 1.7.0).
    */
-  readonly #rest = new Map<string, number>();
+  readonly #rest = new Map<string, { count: number; enc: string[] }>();
   /** Properties written directly (`plugin.wire.view(v)`, SDK 1.7.0). */
   readonly #direct = new Map<string, DirectTrack>();
   /** Direct properties a binding produced: reported once each. */
@@ -498,6 +483,8 @@ export class ViewWriter {
    */
   track() {
     this.#tracked = true;
+    // Bound values go the bound way, compared with what was sent.
+    this.#rest.clear();
   }
   /** Row patches apply: the player takes them and the view is bound. */
   get #patching() {
@@ -693,16 +680,40 @@ export class ViewWriter {
       track.running = false;
     }
   }
+  /**
+   * One direct write, sent while the view shows what it showed when the
+   * job started (`generation`): a failure after the view closed or showed
+   * its initial properties again is not the write's ({@link Abandoned}, so
+   * `unavailable`), and `true` says the player took it for the view that
+   * is shown now, so its `seq` may serve as a base.
+   */
+  async #writeNow(
+    key: string,
+    write: PropertyWrite,
+    generation: number,
+  ): Promise<boolean> {
+    if (!this.#target.live() || this.#generation !== generation)
+      throw new Abandoned();
+    try {
+      await this.#target.write(key, write);
+    } catch (error) {
+      if (!this.#target.live() || this.#generation !== generation)
+        throw new Abandoned();
+      throw error;
+    }
+    return this.#target.live() && this.#generation === generation;
+  }
   /** A direct `PropertyWrite`: as given, with a `seq` and in parts where it applies. */
   async #sendDirect(key: string, track: DirectTrack, write: PropertyWrite) {
+    const generation = this.#generation;
     if ("patch" in write) {
-      await this.#target.write(key, write);
+      const current = await this.#writeNow(key, write, generation);
       const seq = (write.patch as { seq?: unknown } | null)?.seq;
-      if (typeof seq === "number") track.base = seq;
+      if (current && typeof seq === "number") track.base = seq;
       return;
     }
     if (!this.#patches) {
-      await this.#target.write(key, write);
+      await this.#writeNow(key, write, generation);
       return;
     }
     const seq = typeof write.seq === "number" ? write.seq : ++this.#seq;
@@ -721,13 +732,12 @@ export class ViewWriter {
         count < value.length &&
         sizes.every((size) => size <= CHUNK_BYTES)
       ) {
-        const generation = this.#generation;
-        await this.#target.write(key, {
-          value: value.slice(0, count),
-          seq,
-          more: true,
-        });
-        track.base = seq;
+        await this.#writeNow(
+          key,
+          { value: value.slice(0, count), seq, more: true },
+          generation,
+        );
+        let last = seq;
         const insert: RowOp = {
           op: "insert",
           at: count,
@@ -735,38 +745,55 @@ export class ViewWriter {
         };
         const groups = chunkOps([insert]);
         for (const [i, ops] of groups.entries()) {
-          if (!this.#target.live() || this.#generation !== generation)
-            throw new Abandoned();
           const next = ++this.#seq;
-          await this.#target.write(key, {
-            patch: { base: track.base, seq: next, ops },
-            ...(i < groups.length - 1 ? { more: true } : {}),
-          });
-          track.base = next;
+          await this.#writeNow(
+            key,
+            {
+              patch: { base: last, seq: next, ops },
+              ...(i < groups.length - 1 ? { more: true } : {}),
+            },
+            generation,
+          );
+          last = next;
         }
+        if (this.#generation === generation) track.base = last;
         return;
       }
     }
-    await this.#target.write(key, { ...write, seq });
-    track.base = seq;
+    // A base only for the view that is shown now: after a reopen the
+    // player shows the property's default, not this write.
+    if (await this.#writeNow(key, { ...write, seq }, generation))
+      track.base = seq;
   }
-  /** Direct row operations: patches on the property's last direct write. */
+  /**
+   * Direct row operations: patches on the property's last direct write
+   * since the view showed its initial properties. Without one the player
+   * has no rows of the property's own to apply them on (a direct property
+   * is never an initial property): refused with `stale` before anything is
+   * sent, as the player would refuse it.
+   */
   async #sendRows(key: string, track: DirectTrack, ops: readonly RowOp[]) {
     if (!this.#patches)
       throw failure(
         "unsupported",
         `${key}: row operations need a player that takes row patches (player 0.6.0)`,
       );
+    if (track.base === undefined)
+      throw failure(
+        "stale",
+        `${key}: no whole value was written directly since the view showed its initial properties; write the whole value first`,
+      );
     const generation = this.#generation;
     // Malformed operations go in one patch, for the player to refuse.
     const groups = wellFormed(ops) ? chunkOps(ops) : [[...ops]];
     for (const group of groups) {
-      if (!this.#target.live() || this.#generation !== generation)
-        throw new Abandoned();
       const seq = ++this.#seq;
-      await this.#target.write(key, {
-        patch: { base: track.base ?? 0, seq, ops: group },
-      });
+      const current = await this.#writeNow(
+        key,
+        { patch: { base: track.base, seq, ops: group } },
+        generation,
+      );
+      if (!current) throw new Abandoned();
       track.base = seq;
     }
   }
@@ -811,10 +838,11 @@ export class ViewWriter {
           Array.isArray(value) &&
           Array.isArray(shown) &&
           shown.length === count &&
-          count < value.length &&
-          sameStart(shown, value, count)
+          count < value.length
         )
-          this.#rest.set(key, count);
+          // The rows shown, as encoded: the value is compared with them
+          // when it is sent (`#send`), not now; it may change before.
+          this.#rest.set(key, { count, enc: shown.map(encodeRow) });
       }
   }
   /** `value` encoded, and whether it differs from what was sent. */
@@ -899,19 +927,43 @@ export class ViewWriter {
     // An initial list cut to one request's size, not bound: the player shows
     // its first `rest` rows (the initial properties, base 0); only the
     // others go, as insert patches each applying on the one before.
+    // Only while the value still begins with those rows, as encoded now
+    // (a later `set()`, a deferred flush); a `stale` refusal of the first
+    // patch falls back to the whole value below.
     const rest = this.#rest.get(key);
     this.#rest.delete(key);
-    if (rest !== undefined && Array.isArray(value)) {
+    if (
+      rest !== undefined &&
+      Array.isArray(value) &&
+      pending.rows &&
+      !pending.rows.markdown &&
+      rest.count < value.length &&
+      sameRows(pending.rows.enc.slice(0, rest.count), rest.enc)
+    ) {
       const insert: RowOp = {
         op: "insert",
-        at: rest,
+        at: rest.count,
         rows: (value as PropValue[])
-          .slice(rest)
+          .slice(rest.count)
           .map((row) => wireValue(row ?? null)),
       };
       tooLarge(key, [insert]);
-      await this.#parts(key, 0, chunkOps([insert]), false, generation);
-      return pending.sent();
+      const [first, ...others] = chunkOps([insert]);
+      const seq = ++this.#seq;
+      let applied = false;
+      try {
+        await this.#target.write(key, {
+          patch: { base: 0, seq, ops: first! },
+        });
+        applied = true;
+      } catch (error) {
+        if (!(error instanceof HostError && error.code === "stale"))
+          throw error;
+      }
+      if (applied) {
+        await this.#parts(key, seq, others, false, generation);
+        return pending.sent();
+      }
     }
     const base = this.#bases.get(key);
     this.#bases.delete(key);

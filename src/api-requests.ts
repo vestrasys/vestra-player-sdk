@@ -197,8 +197,9 @@ export const SUBSCRIBED_EVENTS: readonly string[] = Object.freeze([
  * subscribed event's `events.subscribe`, nothing for the others) or the
  * method name of a request (`method`: that method, with the string
  * fields of the second argument as its parameters). The capability check
- * reads the argument when its type is one string (a literal, a constant)
- * or a union of them, and reports the call as unchecked otherwise.
+ * reads the argument when its type is one string (a literal, a constant),
+ * and reports the call as unchecked otherwise (a computed name, a union of
+ * several, the member taken by destructuring or as a value).
  *
  * @internal
  */

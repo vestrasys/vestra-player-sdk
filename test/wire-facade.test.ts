@@ -93,46 +93,56 @@ test("wire.request: TestHost takes a raw request as the player does", async () =
   }
 });
 
-test("wire.request: events.subscribe without why or mirror, and events.unsubscribe, are refused with invalid", async () => {
+test("wire.request: the SDK's events are not subscribed raw; another event needs why or mirror", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
     capabilities: ["events"],
   });
   try {
     const before = host.sent("events.subscribe").length;
+    // The ten HostEvents belong to the SDK (one subscription and one mark
+    // per name at the player): refused whatever the marks (review L2).
+    for (const params of [
+      { event: "window.state" },
+      { event: "window.state", why: ["a raw listener"] },
+      { event: "source.state", mirror: true },
+    ] as Json[])
+      assert.throws(() => plugin.wire.request("events.subscribe", params), {
+        code: "invalid",
+        message: /listen with plugin.wire.on/,
+      });
+    assert.throws(
+      () =>
+        plugin.wire.request("events.unsubscribe", { event: "source.state" }),
+      { code: "invalid", message: /use the Disposable from plugin.wire.on/ },
+    );
+    // Another event: why or mirror needed.
     for (const params of [
       undefined,
-      { event: "window.state" },
-      { event: "window.state", why: [] },
-      { event: "window.state", why: [1] },
-      { event: "window.state", mirror: false },
+      { event: "player.future" },
+      { event: "player.future", why: [] },
+      { event: "player.future", why: [1] },
+      { event: "player.future", mirror: false },
     ] as (Json | undefined)[])
       assert.throws(() => plugin.wire.request("events.subscribe", params), {
         code: "invalid",
         message: /needs why .* or mirror: true/,
       });
     assert.equal(host.sent("events.subscribe").length, before, "nothing sent");
-    // A raw unsubscribe would end the SDK's own subscription: refused.
-    assert.throws(
-      () =>
-        plugin.wire.request("events.unsubscribe", { event: "source.state" }),
-      { code: "invalid", message: /use the Disposable from plugin.wire.on/ },
-    );
     assert.equal(host.sent("events.unsubscribe").length, 0);
-    // Marked, it goes as given.
+    // Marked, it goes as given, and the plugin unsubscribes it itself.
     await plugin.wire.request("events.subscribe", {
-      event: "window.state",
+      event: "player.future",
       why: ["a raw listener"],
     });
     assert.deepEqual(host.sent("events.subscribe").at(-1), {
-      event: "window.state",
+      event: "player.future",
       why: ["a raw listener"],
     });
-    assert.deepEqual(host.listeningWhy.get("window.state"), ["a raw listener"]);
-    await plugin.wire.request("events.subscribe", {
-      event: "timeline.changed",
-      mirror: true,
-    });
-    assert.ok(host.subscriptions.has("timeline.changed"));
+    assert.deepEqual(host.listeningWhy.get("player.future"), [
+      "a raw listener",
+    ]);
+    await plugin.wire.request("events.unsubscribe", { event: "player.future" });
+    assert.ok(!host.subscriptions.has("player.future"));
   } finally {
     await stop();
   }
