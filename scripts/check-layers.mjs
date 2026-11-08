@@ -258,26 +258,23 @@ for (const entry of TYPE_ONLY)
   if (!existsSync(join(root, entry)))
     problems.push(`${entry} is listed in TYPE_ONLY but missing`);
 for (const file of files.filter(typeOnly)) {
-  for (const { specifier, type, line } of graph.get(file))
-    if (!type)
-      problems.push(
-        `${file}:${line} imports "${specifier}" by value: the API types use \`import type\` only`,
-      );
   const text = readFileSync(join(root, file), "utf8");
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
-  for (const statement of source.statements)
-    if (
-      !ts.isInterfaceDeclaration(statement) &&
-      !ts.isTypeAliasDeclaration(statement) &&
-      !ts.isImportDeclaration(statement) &&
-      !ts.isExportDeclaration(statement)
-    ) {
-      const at = source.getLineAndCharacterOfPosition(statement.getStart());
-      const first = statement.getText(source).split("\n")[0];
-      problems.push(
-        `${file}:${at.line + 1}: "${first}": the API types declare interfaces and type aliases only`,
-      );
-    }
+  for (const statement of source.statements) {
+    // Every import and re-export, relative or not (`node:util` too).
+    const allowed = ts.isImportDeclaration(statement)
+      ? statement.importClause?.isTypeOnly === true
+      : ts.isExportDeclaration(statement)
+        ? statement.isTypeOnly
+        : ts.isInterfaceDeclaration(statement) ||
+          ts.isTypeAliasDeclaration(statement);
+    if (allowed) continue;
+    const at = source.getLineAndCharacterOfPosition(statement.getStart());
+    const first = statement.getText(source).split("\n")[0];
+    problems.push(
+      `${file}:${at.line + 1}: "${first}": the API types hold interfaces and type aliases only, with \`import type\` / \`export type\``,
+    );
+  }
 }
 
 // Pending edges: a note each run; a stale entry fails.
