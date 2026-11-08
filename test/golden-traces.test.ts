@@ -41,6 +41,10 @@
 //    every plugin in the process (`src/plugin/ui.ts`), so a repeated run
 //    gets other numbers: they are renumbered from 1 in order of first
 //    appearance within the scenario.
+// 9. A command that keeps working between host calls after `run()` (the
+//    signal generator's stream start) ends its phase only once it is done
+//    (`COMMAND_DONE`, bounded at `COMMAND_DONE_MS`, failing with the calls
+//    seen so far), not when `quiet()` sees a lull.
 //
 // Built-ins: set `VESTRA_PLAYER=<player repository>` to run the six the plan
 // names (playback, playlist, info, subtitles, video, workshop) from
@@ -110,6 +114,34 @@ interface Scenario {
   /** The command to run in the `command` phase. */
   command: string | null;
 }
+
+/**
+ * Rule 9. A command whose work goes on after `run()` returned and between
+ * host calls, where `quiet()` cannot see it: the `command` phase ends only
+ * once this holds (bounded, `COMMAND_DONE_MS`). Signal generator: `run()`
+ * only delivers `commands.execute`; the stream start then writes its
+ * preroll to the producer socket and polls `producer.state` (left out,
+ * rule 3) until the host has received 1,024 frames, before
+ * `source.submit`. Where the socket is slow (GitHub's macOS runners) only
+ * polls come for longer than `quiet()` waits, the phase ended early and
+ * `dispose` aborted the start (`AbortError`; `source.submit`,
+ * `producer.ack` and `commands.update` missing from the trace).
+ * Done when the player acknowledged the stream and the command shows it
+ * running (`commands.update` with `checked: true`).
+ */
+const COMMAND_DONE: Record<string, (host: TestHost) => boolean> = {
+  "examples/signal-generator": (host) =>
+    host.sent("producer.ack").length > 0 &&
+    host
+      .sent("commands.update")
+      .some(
+        (params) =>
+          params.id === "signal-generator" &&
+          (params.state as { checked?: unknown } | undefined)?.checked === true,
+      ),
+};
+/** Longer than the SDK's own 10 s stream start timeouts (`stream.ts`). */
+const COMMAND_DONE_MS = 15_000;
 
 /** The example that runs under each name, and the command the script runs. */
 const EXAMPLES: Record<string, string | null> = {
@@ -327,6 +359,20 @@ async function record(
   if (scenario.command) {
     await host.command(scenario.command).run();
     await host.settle();
+    const done = COMMAND_DONE[scenario.name];
+    if (done) {
+      const deadline = Date.now() + COMMAND_DONE_MS;
+      while (!done(host)) {
+        if (Date.now() >= deadline)
+          throw new Error(
+            `${scenario.name}: command ${scenario.command} did not finish within ${COMMAND_DONE_MS} ms (rule 9); calls so far: ${host.calls
+              .slice(mark)
+              .map((call) => call.method)
+              .join(", ")}`,
+          );
+        await host.settle(10);
+      }
+    }
   }
   await cut("command");
 
