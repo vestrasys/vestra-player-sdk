@@ -160,7 +160,7 @@ From player 0.7.6 the user finds any command by name in the player's command pal
 
 Two optional fields of {@link "@vestra-player/sdk"!CommandOptions | CommandOptions} feed it:
 
-- **`category`**: what the command is about, in a word or two, translated like the title (`"Subtitle Sync"`). Without it the player takes the menu path above the item (`Video ▸ Snapshot`), then the plugin's name. Give one to every command whose title alone is ambiguous outside its menu ("Earlier 0.5 s", "Off", "90°"), and to commands without a `path`.
+- **`category`**: what the command is about, in a word or two, translated like the title (`"Subtitle Sync"`). Without it the player takes the menu path above the item (`Open ▸ Recently Played`), then the plugin's name. Give one to every command whose title alone is ambiguous outside its menu ("Earlier 0.5 s", "Off", "90°"), and to commands without a `path`.
 - **`home`**: the local id of the plugin's own command that opens the window or panel where this command's control lives. The palette shows that command's title as the place.
 
 Both are sent only when set; players before 0.7.6 refuse a declaration that has them with `invalid`, so a plugin that sets them declares `"minPlayerVersion": "0.7.6"`. {@link "@vestra-player/sdk"!BindingInfo | BindingInfo} carries the shown category (`category`) for a keyboard shortcuts page that names commands the same way.
@@ -216,11 +216,11 @@ pictureWindow.bind(() => ({
 }));
 ```
 
-A control whose command has no key shows no cap; let the user set one in **Settings ▸ Keyboard Shortcuts**. In tests, {@link "@vestra-player/sdk/testing"!TestHost.rebind | TestHost.rebind} changes a key as the user does, and the test host writes labels as macOS does unless `host.systemInfo.os` says otherwise. The [theme-widgets example](../examples/theme-widgets.md) shows a slider with its keys.
+A control whose command has no key shows no cap; let the user set one in **Keyboard Shortcuts…** (from the command palette). In tests, {@link "@vestra-player/sdk/testing"!TestHost.rebind | TestHost.rebind} changes a key as the user does, and the test host writes labels as macOS does unless `host.systemInfo.os` says otherwise. The [theme-widgets example](../examples/theme-widgets.md) shows a slider with its keys.
 
 ## The player's own commands
 
-The player registers some commands itself, with the owner `host`: **Toggle Fullscreen** (`Escape` from player 0.6.0), **Enter Fullscreen** and **Leave Fullscreen** (player 0.6.0: no default key, each enabled only where it acts), **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10), **Command Palette** (`Ctrl+Shift+P`, player 0.7.6) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). They exist whether or not any plugin runs, and the user rebinds them like any other command.
+The player registers some commands itself, with the owner `host`: **Toggle Fullscreen** (`Escape` from player 0.6.0), **Enter Fullscreen** and **Leave Fullscreen** (player 0.6.0: no default key, each enabled only where it acts), **Quit**, **Toggle Sidebar** (the bottom bar's sidebar button, player 0.5.10), **Command Palette…** (`Ctrl+Shift+P`, player 0.7.6; a top-level menu item above Options… since the slim menu), **Adjust** (the bottom bar's adjust button) and the core playback actions (play/pause, stop, previous/next, frame step, relative seek, speed, volume, mute). Of the core actions only **Close** and **Play/Pause** are menu items (the slim menu, player 0.7.6); the others are in the command palette and on their keys, their controls in the Playback and Audio panels. They exist whether or not any plugin runs, and the user rebinds them like any other command.
 
 A plugin button that does what a core action does should run that action with {@link "@vestra-player/sdk"!Host.run | plugin.host.run} (capability `commands`): it applies the same checks and shows the same on-screen text as the menu item and the key, so a bottom bar's play button and the Space key behave identically. The action ids, their menu places and default keys are in [Reference: commands](../reference/commands.md#core-actions); what they do to playback is in [Playback](playback.md#core-actions).
 

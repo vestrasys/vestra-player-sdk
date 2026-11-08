@@ -13,7 +13,7 @@ How paths merge, how `order` and `group` sort items and how a key finds its comm
 
 - **Put a command where its subject is, not under your plugin's name.** A video filter goes into Video, a subtitle tool into Subtitles, an open-something command into Open. A plugin that brings a domain of its own gets a submenu named after the domain, not after the plugin (Games for an emulator, not the emulator's name).
 - **Before adding an item, look for an existing one.** Every command the player and its built-in plugins add, with its menu path and default key, is listed in [Built-in commands](../reference/commands.md#built-in-commands). Do not add a second entry for something the player already does, and do not scatter one feature over several menus.
-- **Top level is for frequent, direct commands**: opening files, closing, fullscreen and the entries that show a window or panel. Everything else goes into a submenu of its domain.
+- **Top level is for frequent, direct commands**: opening files, closing, play/pause, fullscreen and the entries that show a window or panel. Everything else goes into a submenu of its domain, or into the command palette alone (no `path`) when it is a control a panel already has.
 - **No "File" or "View" menu.** Commands that open something go into Open ▸; commands that show a window or panel sit directly at the top level.
 
 ## The top level
@@ -41,7 +41,7 @@ Every command that puts something back to its default lives in one place, the **
 
 ## Shared submenus
 
-- **Write a shared submenu exactly as the menu keys list does.** Menus merge by the English words of the path: `["@playback", "Chapters and Bookmarks", …]` joins the existing submenu, `["@playback", "Bookmarks", …]` makes a second one. The keys are in [Commands](../reference/commands.md#submenu-keys-in-use).
+- **Write a shared submenu exactly as the menu keys list does.** Menus merge by the English words of the path: `["@open", "Recently Played", …]` joins the existing submenu, `["@open", "Recent Files", …]` makes a second one. The keys are in [Commands](../reference/commands.md#submenu-keys-in-use).
 - **A new submenu that other plugins should use is a new menu key**: ask the player's maintainers to register it instead of inventing it in one plugin, so it appears in the list.
 - **A submenu's title is translated by the catalog of the plugin that declares its first command**; your own submenu therefore needs its words in your catalog.
 - **Menu paths are written with `▸`** (U+25B8) in documentation and messages, never `▶`, which many systems draw as an emoji.
@@ -63,7 +63,7 @@ Every command that puts something back to its default lives in one place, the **
 
 ## Default bindings
 
-A default binding is optional. Users rebind every command (Settings ▸ Keyboard Shortcuts…) and can turn all defaults off (Settings ▸ Ignore Default Shortcuts), so give one only to a command people repeat often.
+A default binding is optional. Users rebind every command (Keyboard Shortcuts…, from the command palette) and can turn all defaults off (Ignore Default Shortcuts, there too), so give one only to a command people repeat often.
 
 - **Pick an unused key.** Check [Built-in commands](../reference/commands.md#built-in-commands), which lists every default binding of the player and its built-in plugins. Two commands with the same key are not an error, but only one of them runs (the user's choice, then the player's own commands, then the plugin loaded first), so a colliding default simply does nothing for the user.
 - **Write `Ctrl`, not `Cmd`**, for a binding that works on both systems: on macOS `Ctrl+X` fires for both ⌃X and ⌘X.

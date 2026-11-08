@@ -1,7 +1,8 @@
 /**
  * `<!-- generated:locales -->`: the player's interface languages,
- * `LOCALES` (src/i18n.ts), with the English name and the name the player's
- * Language menu shows (`BUILTIN_COMMANDS`, `vestra.preferences`).
+ * `LOCALES` (src/i18n.ts), with the English name and the title of the
+ * player's Language command for it (`BUILTIN_COMMANDS`, `vestra.preferences`;
+ * in the command palette since the slim menu, player 0.7.6).
  */
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
@@ -14,7 +15,7 @@ export default async function locales({ root, table }) {
     pathToFileURL(join(root, "src/commands.ts"))
   );
   return table(
-    ["Code", "Language", "Shown in the menu as"],
+    ["Code", "Language", "The Language command's title"],
     LOCALES.map((code, index) => {
       const item = BUILTIN_COMMANDS.find(
         (c) => c.owner === "vestra.preferences" && c.id === `language.${code}`,

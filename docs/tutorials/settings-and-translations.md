@@ -155,7 +155,7 @@ npx vestra-plugin i18n check
 
 ## 7. Try it
 
-Start the player with `--plugin ./my-plugin`. Open the Options window, choose **Plugins ▸ Hello** in its tree, turn the switch off and use **Where am I?**: only the position shows. Start the player again: the switch is still off. Set **Settings ▸ Language** to 简体中文 and start the player again: the menu item, the window and the message are in Chinese.
+Start the player with `--plugin ./my-plugin`. Open the Options window, choose **Plugins ▸ Hello** in its tree, turn the switch off and use **Where am I?**: only the position shows. Start the player again: the switch is still off. Set the language to 简体中文 (the Language commands of the command palette, `Ctrl+Shift+P`) and start the player again: the menu item, the window and the message are in Chinese.
 
 ## Next
 

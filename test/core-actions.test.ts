@@ -191,17 +191,20 @@ test("core actions: the core table with its bindings, states and conflicts", asy
     },
   );
   // Keys are English like the player's (1.5.9); without a locale the menu
-  // shows the player's Chinese, as before.
-  assert.deepEqual(host.coreAction("seek-forward").declaration.path, [
-    "Playback",
-    "Seek",
+  // shows the player's Chinese, as before. The seek actions are outside the
+  // menu (player 0.7.6, the playback plugin's panel); Play/Pause is a
+  // top-level item (the slim menu).
+  assert.deepEqual(host.coreAction("seek-forward").declaration.path, []);
+  assert.equal(
+    host.coreAction("seek-forward").declaration.title,
     "Forward 5 s",
+  );
+  assert.deepEqual(host.coreAction("seek-forward").display.path, []);
+  assert.equal(host.coreAction("seek-forward").display.title, "前进5秒");
+  assert.deepEqual(host.coreAction("play-pause").declaration.path, [
+    "Play/Pause",
   ]);
-  assert.deepEqual(host.coreAction("seek-forward").display.path, [
-    "播放",
-    "跳转",
-    "前进5秒",
-  ]);
+  assert.deepEqual(host.coreAction("play-pause").display.path, ["播放/暂停"]);
   assert.equal(host.coreAction("stop").declaration.bindings[0], "F4");
   assert.equal(host.coreAction("play-pause").state.checked, false);
   assert.equal(host.coreAction("previous").state.reason, "没有上一个");
