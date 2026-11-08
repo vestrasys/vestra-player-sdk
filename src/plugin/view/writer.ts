@@ -7,6 +7,18 @@
  * the back-off after a failed write. It knows nothing of update passes or
  * bindings: the binder (`binder.ts`, L2) puts values in, the view
  * (`base.ts`) says where a write goes.
+ *
+ * Two modes (SDK 1.7.0, refactor Step 2). Until the view's first `bind()`
+ * (`track()`), the writer serves `set()` alone: each value is sent whole
+ * (limits checked, large arrays in parts with `more`, one write in
+ * flight per view), only the properties `set()` named are looked at, and
+ * no row-patch base is kept, so nothing is diffed. Once tracked it is the
+ * binder's: every value is compared with what was sent and arrays become
+ * row patches where one applies; a `set()` then takes the same path, so
+ * mixed use stays consistent. Patch planning stays here, used only in the
+ * tracked mode: it needs what was sent and the player's base, which are
+ * this writer's, and moving it above would split one property's write
+ * state across two layers.
  */
 import { HostError } from "../../wire.ts";
 import type { Json, PropertyWrite, RowOp } from "../../wire.ts";
@@ -382,8 +394,26 @@ export class ViewWriter {
   #broken = false;
   #retry: ReturnType<typeof setTimeout> | undefined;
   #flushing = false;
+  /**
+   * The view was bound (`track()`): every value is compared with what was
+   * sent and arrays are patched. Before, only `set()` values are sent,
+   * whole, and no patch base is kept.
+   */
+  #tracked = false;
   constructor(target: WriterTarget) {
     this.#target = target;
+  }
+  /**
+   * The view's first `bind()`: compare and patch from now on. What was
+   * sent before is known as whole values, so the first patchable write of
+   * an array goes whole and patches follow it.
+   */
+  track() {
+    this.#tracked = true;
+  }
+  /** Row patches apply: the player takes them and the view is bound. */
+  get #patching() {
+    return this.#tracked && this.#patches;
   }
   /** The player takes row patches (and `seq` on whole writes). */
   get #patches() {
@@ -458,7 +488,7 @@ export class ViewWriter {
   /** The host already shows these values (e.g. sent as initial properties). */
   shown(values: Record<string, Json>) {
     this.#generation++;
-    const patches = this.#patches;
+    const patches = this.#patching;
     this.#sent = new Map(
       Object.entries(values).map(([k, v]) => [k, sentOf(v, patches)]),
     );
@@ -500,21 +530,27 @@ export class ViewWriter {
       // Keys only for a write: an unchanged array costs its encoding alone.
       let keys: ReturnType<typeof keyOf> | undefined;
       const keyed = () => (keys === undefined ? (keys = keyOf(value)) : keys);
+      // Not bound: remembered as its JSON, for a later bind() to compare
+      // with; no rows or keys are kept until patches can follow.
+      const tracked = this.#tracked;
       return {
         key,
         value,
         changed,
         signature,
         rows: { ...encoded, keyed },
-        sent: (counts = []) => ({
-          kind: "rows",
-          rows: {
-            enc,
-            field: keyed()?.field ?? null,
-            keys: keyed()?.keys ?? null,
-            counts,
-          },
-        }),
+        sent: (counts = []) =>
+          tracked
+            ? {
+                kind: "rows",
+                rows: {
+                  enc,
+                  field: keyed()?.field ?? null,
+                  keys: keyed()?.keys ?? null,
+                  counts,
+                },
+              }
+            : { kind: "json", enc: signature() },
       };
     }
     const enc = JSON.stringify(value);
@@ -619,7 +655,8 @@ export class ViewWriter {
       }
     }
     await this.#target.write(key, { value: wireValue(value), seq });
-    this.#bases.set(key, seq);
+    // A base for the next patch, once the view is bound.
+    if (this.#tracked) this.#bases.set(key, seq);
     return pending.sent();
   }
   /**
@@ -655,7 +692,7 @@ export class ViewWriter {
       }
       last = seq;
     }
-    this.#bases.set(key, last);
+    if (this.#tracked) this.#bases.set(key, last);
   }
   /**
    * Send what changed. A bound value is sent when it differs from the last one
@@ -677,7 +714,12 @@ export class ViewWriter {
         let pending: Pending[];
         do {
           pending = [];
-          for (const [key, value] of this.#values) {
+          // Not bound: only what `set()` named is sent (whole), nothing is
+          // compared. Bound: every value against what was sent.
+          const keys = this.#tracked ? this.#values.keys() : [...this.#forced];
+          for (const key of keys) {
+            if (!this.#values.has(key)) continue;
+            const value = this.#values.get(key) as PropValue;
             const encoded = this.#encode(key, value);
             const failedAs = this.#failed.get(key);
             if (failedAs !== undefined && failedAs === encoded.signature())

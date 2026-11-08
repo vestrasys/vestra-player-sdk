@@ -1,0 +1,242 @@
+{
+  "scenario": "styles/speed-a",
+  "command": "rate.cycle",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Cycle Speed\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 2,
+      "parts": 2,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 1,
+      "fullPasses": 0,
+      "evaluations": 1,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 1,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 5,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "ui.mount",
+        "params": {
+          "slot": "bottom",
+          "file": "ui/bar.slint",
+          "component": "Bar",
+          "global": "BarBridge",
+          "properties": {
+            "rate": "1.00×"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate.cycle",
+          "revision": 1,
+          "declaration": {
+            "title": "Cycle Speed",
+            "path": [
+              "Playback",
+              "Cycle Speed"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "C"
+            ],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Cycle Speed\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate.cycle",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "changes": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "1.50×",
+          "seq": 1
+        }
+      }
+    ],
+    "command": [
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 1,
+          "intent": {
+            "kind": "control",
+            "control": {
+              "kind": "rate",
+              "rate": 2
+            },
+            "expected": {
+              "generation": 1,
+              "intentVersion": 1
+            }
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": "2.00×",
+          "seq": 2
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      }
+    ],
+    "dispose": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate.cycle"
+        }
+      },
+      {
+        "method": "ui.unmount",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

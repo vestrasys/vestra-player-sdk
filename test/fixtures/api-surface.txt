@@ -130,6 +130,17 @@
 @vestra-player/sdk InterfaceDeclaration DropModifiers :: readonly shift: boolean;
 @vestra-player/sdk InterfaceDeclaration Drops
 @vestra-player/sdk InterfaceDeclaration Drops :: provide(handler: DropHandler): Disposable;
+@vestra-player/sdk InterfaceDeclaration EventPayloads
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "appearance.changed": { theme: string; language?: string; };
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "bindings.changed": null;
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "commands.keys": CommandKeys;
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "packages.changed": PackageInfo[];
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "playback.backend": { currentSession: number; event: string; };
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "resolvers.fileTypes": { fileTypes: string[]; };
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "source.state": SourceState;
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "timeline.changed": WireTimeline;
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "video.upscaling.changed": Omit<WireUpscalingState, "enabled">;
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "window.state": WindowFacts;
 @vestra-player/sdk InterfaceDeclaration ExportEncoding
 @vestra-player/sdk InterfaceDeclaration ExportEncoding :: audioBitrate?: 128 | 192 | 256;
 @vestra-player/sdk InterfaceDeclaration ExportEncoding :: crf?: number;
@@ -284,6 +295,7 @@
 @vestra-player/sdk InterfaceDeclaration Player :: close(options?: Conditional): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: isCurrent(state: PlayerState): boolean;
 @vestra-player/sdk InterfaceDeclaration Player :: next(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: on<E extends HostEvent>(event: E, listener: (data: EventPayload<E>) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: onChange(listener: (state: PlayerState) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; } & Conditional): Promise<Media>;
 @vestra-player/sdk InterfaceDeclaration Player :: openStream(options: StreamOptions): Promise<Stream>;
@@ -421,6 +433,7 @@
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly window: MainWindow;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly windows: Windows;
 @vestra-player/sdk InterfaceDeclaration Scope :: scope(): Scope;
+@vestra-player/sdk InterfaceDeclaration Scope :: state<T extends object>(initial: T): T;
 @vestra-player/sdk InterfaceDeclaration Scope :: update(): void;
 @vestra-player/sdk InterfaceDeclaration Scope extends Disposable
 @vestra-player/sdk InterfaceDeclaration Scrub
@@ -644,9 +657,11 @@
 @vestra-player/sdk TypeAliasDeclaration BarButtonIcon = export type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai";
 @vestra-player/sdk TypeAliasDeclaration Bindable = export type Bindable<T> = T | (() => T);
 @vestra-player/sdk TypeAliasDeclaration ConvolutionPlane = export type ConvolutionPlane = { mode: "square" | "row" | "column"; matrix: number[]; rdiv: number; bias: number; };
+@vestra-player/sdk TypeAliasDeclaration EventPayload = export type EventPayload<E extends HostEvent> = EventPayloads[E];
 @vestra-player/sdk TypeAliasDeclaration ExportOptions = export type ExportOptions = { format: "png" | "bmp"; destination: string; sampleTime?: number; } | { format: "jpeg"; destination: string; sampleTime?: number; quality?: number; } | { format: "mp4"; destination: string; end: number; encoding?: ExportEncoding; } | { format: "copy"; destination: string; end: number; container?: "auto" | "mp4" | "mkv"; };
 @vestra-player/sdk TypeAliasDeclaration FilterStatus = export type FilterStatus = { state: "waiting"; } | { state: "applying"; } | { state: "applied"; } | { state: "failed"; error: PluginError; };
 @vestra-player/sdk TypeAliasDeclaration HostAction = export type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute" | "fullscreen";
+@vestra-player/sdk TypeAliasDeclaration HostEvent = export type HostEvent = "source.state" | "playback.backend" | "window.state" | "packages.changed" | "bindings.changed" | "commands.keys" | "timeline.changed" | "appearance.changed" | "resolvers.fileTypes" | "video.upscaling.changed";
 @vestra-player/sdk TypeAliasDeclaration JobState = export type JobState = Omit<MediaJob, "jobId">;
 @vestra-player/sdk TypeAliasDeclaration Json = export type Json = null | boolean | number | string | Json[] | { [key: string]: Json; };
 @vestra-player/sdk TypeAliasDeclaration LanguagePreference = export type LanguagePreference = "system" | Locale;

@@ -63,9 +63,9 @@
   "polled": [],
   "counts": {
     "start": {
-      "passes": 5,
-      "fullPasses": 3,
-      "evaluations": 104,
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 102,
       "parts": 8,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -73,7 +73,7 @@
     "open": {
       "passes": 4,
       "fullPasses": 4,
-      "evaluations": 208,
+      "evaluations": 204,
       "parts": 12,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -81,7 +81,7 @@
     "changes": {
       "passes": 3,
       "fullPasses": 1,
-      "evaluations": 52,
+      "evaluations": 51,
       "parts": 3,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -89,7 +89,7 @@
     "command": {
       "passes": 2,
       "fullPasses": 1,
-      "evaluations": 52,
+      "evaluations": 51,
       "parts": 3,
       "skippedParts": 0,
       "safetyPasses": 0

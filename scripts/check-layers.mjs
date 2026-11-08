@@ -21,13 +21,20 @@
  *      interfaces and type aliases and import and re-export only with
  *      `import type` / `export type`, so they load nothing at run time and
  *      the cycles among them are type-only (rule 3 ignores those).
+ *   6. No file of `LOWER` calls the passes by name through an object it
+ *      holds, which rules 1–2 cannot see: a scope's `update()`, or the
+ *      runtime's `invalidate`, `changed`, `depends`, `reading`, `bind`,
+ *      `part`, `observe`, `reader`, `needsFull` (`CALLS`). A primitive
+ *      tells the framework through the connection's `signals` and
+ *      `rereads` instead (SDK 1.7.0). Running plugin code (`scope.run`)
+ *      is not such a call: it is how a primitive hands control to plugin
+ *      code, and the scope decides what follows.
  *
  * Not checked yet: spec §2.1's second rule, that `src/plugin/**` reaches
  * the wire only through `connection.ts`, waits until `src/wire/` exists
- * (batches C/G). Edges from L1 into L2 that the lists cannot see while
- * `player.ts` holds both the player's primitives and its state mirror are
- * named in `PENDING` and printed as a note on every run; the `player.ts`
- * split must empty that list.
+ * (batches C/G). `PENDING` names L1 → L2 edges the rules cannot see yet;
+ * each is printed as a note on every run and fails once its code is gone.
+ * It is empty since Step 2 (SDK 1.7.0) routed the last three through L1.
  *
  * The lists name files as they are now; a later batch that moves or splits
  * one (views, commands, services, types) updates them. A listed file that
@@ -69,15 +76,25 @@ const LOWER = [
   "src/plugin/services/dialogs.ts",
   "src/plugin/view/image.ts",
   "src/plugin/view/writer.ts",
+  "src/plugin/player/events.ts",
+  "src/plugin/player/rules.ts",
 ];
 /**
- * L2 modules no lower file may import: the passes, `Runtime` over them, and
- * the view binder (`bind`/`snapshot`/`evaluate` over the view writer).
+ * L2 modules no lower file may import: the passes, `Runtime` over them, the
+ * view binder (`bind`/`snapshot`/`evaluate` over the view writer), the
+ * player's state copy (`PlayerService` in `player.ts`) and `plugin.state`.
  */
 const FRAMEWORK = [
   "src/plugin/passes.ts",
   "src/plugin/runtime.ts",
   "src/plugin/view/binder.ts",
+  "src/plugin/player.ts",
+  "src/plugin/state.ts",
+];
+/** Rule 6: calls of the passes by name, as they read in source. */
+const CALLS = [
+  /\b(?:scope|#scope|plugin)\.update\(\)/,
+  /\bruntime\.(?:invalidate|changed|depends|reading|bind|part|observe|reader|needsFull)\(/,
 ];
 /** Rule 5: files of types only (an entry ending in `/` is a directory). */
 const TYPE_ONLY = ["src/plugin/types.ts", "src/plugin/types/"];
@@ -98,29 +115,16 @@ const KNOWN_CYCLES = [
   ],
 ];
 /**
- * L1 → L2 edges the rules above cannot see yet, because `player.ts` is
- * both a primitive (actions, `openStream`) and the framework's state
- * mirror (`PlayerService`). Printed as a note, not a failure; `text` must
- * still be in `file` (else the entry is stale and fails). The `player.ts`
- * split (Step 1 later batch, Step 2) must empty this list.
+ * L1 → L2 edges the rules above cannot see yet: `{ file, text, what }`,
+ * printed as a note, not a failure; `text` must still be in `file` (else
+ * the entry is stale and fails). Empty since SDK 1.7.0 (refactor Step 2):
+ * `services.ts` asks the connection to read the player's state again
+ * (`rereads`), `stream.ts` uses its own `StreamSource` shape that the
+ * player's state copy fills, and `packages.ts` tells the passes through the
+ * connection's `signals`; rule 6 and `player.ts` in `FRAMEWORK` keep it so.
  */
-const PENDING = [
-  {
-    file: "src/plugin/services.ts",
-    text: 'import { playerOf, validStep } from "./player.ts";',
-    what: "value import of player.ts; an action refreshes the state mirror (playerOf(...).refresh())",
-  },
-  {
-    file: "src/plugin/stream.ts",
-    text: 'import type { PlayerService } from "./player.ts";',
-    what: "openStream reads the state mirror (PlayerService raw/state, refresh)",
-  },
-  {
-    file: "src/plugin/packages.ts",
-    text: "this.#scope.update();",
-    what: "an operation's end runs a full update pass (scope.update())",
-  },
-];
+/** @type {{ file: string, text: string, what: string }[]} */
+const PENDING = [];
 
 /** Every `.ts` file under `src/`, as a path relative to the root with `/`. */
 function sources(directory = join(root, "src")) {
@@ -277,6 +281,22 @@ for (const file of files.filter(typeOnly)) {
   }
 }
 
+// 6. Calls of the passes by name from L0/L1 (comments left out).
+for (const file of LOWER) {
+  const path = join(root, file);
+  if (!existsSync(path)) continue;
+  const lines = readFileSync(path, "utf8").split("\n");
+  lines.forEach((line, at) => {
+    const code = line.replace(/\/\/.*$/, "");
+    if (/^\s*(\/\*\*?|\*)/.test(code)) return;
+    for (const call of CALLS)
+      if (call.test(code))
+        problems.push(
+          `${file}:${at + 1}: calls the update passes (${code.trim()}); tell them through the connection's signals`,
+        );
+  });
+}
+
 // Pending edges: a note each run; a stale entry fails.
 for (const { file, text } of PENDING) {
   const path = join(root, file);
@@ -285,10 +305,12 @@ for (const { file, text } of PENDING) {
       `PENDING entry for ${file} is stale (${JSON.stringify(text)} not found): remove it`,
     );
 }
-const pending = PENDING.map(({ file, what }) => `${file}: ${what}`);
-console.log(
-  `check-layers note: ${PENDING.length} pending L1→L2 edge(s) until player.ts is split: ${pending.join("; ")}`,
-);
+if (PENDING.length) {
+  const pending = PENDING.map(({ file, what }) => `${file}: ${what}`);
+  console.log(
+    `check-layers note: ${PENDING.length} pending L1→L2 edge(s): ${pending.join("; ")}`,
+  );
+}
 
 if (problems.length) {
   for (const problem of problems) console.error(problem);

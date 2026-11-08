@@ -1,6 +1,7 @@
 // Golden wire traces (characterisation tests, doc/specs/sdk-refactor.md §4.0
-// in the player repository): every example plugin, and the player's built-in
-// plugins when the player repository is at hand, runs the same fixed script
+// in the player repository): every example plugin, the plan's speed display
+// in style A and style B (`test/plugins/speed-*`, SDK 1.7.0), and the
+// player's built-in plugins when the player repository is at hand, runs the same fixed script
 // against `TestHost`, and the `(method, params)` sequence it sends, its
 // `events.subscribe` lines and its update-pass counts are compared with
 // `test/fixtures/traces/<name>.json`. A refactor that moves code must leave
@@ -167,13 +168,29 @@ const BUILTINS: Record<string, string | null> = {
   workshop: "workshop.open",
 };
 
-const scenarios: Scenario[] = Object.entries(EXAMPLES).map(
-  ([name, command]) => ({
+/**
+ * The speed display of the refactor plan (§3: a bottom panel shows the
+ * speed, a command cycles it) in style A (`bind`, function fields) and
+ * style B (`player.on` + `set`, no function fields), from
+ * `test/plugins/speed-<style>` (SDK 1.7.0). Style B runs no update pass.
+ */
+const STYLES: Record<string, string> = {
+  "speed-a": "rate.cycle",
+  "speed-b": "rate.cycle",
+};
+
+const scenarios: Scenario[] = [
+  ...Object.entries(EXAMPLES).map(([name, command]) => ({
     name: `examples/${name}`,
     directory: join(ROOT, "examples", name),
     command,
-  }),
-);
+  })),
+  ...Object.entries(STYLES).map(([name, command]) => ({
+    name: `styles/${name}`,
+    directory: join(ROOT, "test", "plugins", name),
+    command,
+  })),
+];
 
 const player = process.env.VESTRA_PLAYER;
 const builtins: Scenario[] = Object.entries(BUILTINS).map(
@@ -455,6 +472,27 @@ for (const scenario of scenarios)
   test(`golden trace: ${scenario.name}`, async () => {
     await check(scenario);
   });
+
+test("golden trace: the style-B speed display runs no update pass", () => {
+  const trace = JSON.parse(
+    readFileSync(join(FIXTURES, "styles-speed-b.json"), "utf8"),
+  ) as Trace;
+  for (const phase of PHASES) {
+    assert.equal(trace.counts[phase].passes, 0, phase);
+    assert.equal(trace.counts[phase].evaluations, 0, phase);
+  }
+  // The state copy's mirror (the plugin declares `playback.read` and
+  // `events`), the listener's mark, named, and the mirror again once the
+  // listener is disposed.
+  assert.deepEqual(
+    trace.subscriptions.map((s) => [s.event, s.mirror ?? false, !!s.why]),
+    [
+      ["source.state", true, false],
+      ["source.state", false, true],
+      ["source.state", true, false],
+    ],
+  );
+});
 
 /** `VESTRA_PLAYER`'s checked-out commit (full hash). */
 function playerHead(directory: string) {

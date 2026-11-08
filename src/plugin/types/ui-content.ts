@@ -642,6 +642,13 @@ export interface View {
    * Do not `set` a property that a {@link View.bind} function also returns:
    * the next update pass replaces the set value with the bound one.
    *
+   * On a view nothing was bound to, `set` alone writes (SDK 1.7.0): each
+   * value is sent whole, a large list in parts, one write in flight per
+   * view; the SDK neither compares nor turns lists into row patches, and
+   * the view takes no part in update passes. From the view's first
+   * {@link View.bind} on, `set` values go the bound way: a list that
+   * differs from the one sent is sent as a row patch where one applies.
+   *
    * Never throws. A write that fails is retried with back-off and reported
    * to {@link Scope.onError} (the first failure of a run of failures; the
    * message names the property). A value over the limits of
@@ -677,9 +684,11 @@ export interface View {
    *
    * @remarks
    * The SDK calls `props` in every update pass (and right after `bind`) and
-   * sends the values that differ from the ones it sent last. After a change
-   * of the player state alone it calls `props` only if it read a field of
-   * `plugin.player.state` that changed (SDK 1.5.45); a full pass follows
+   * sends the values that differ from the ones it sent last; a view takes
+   * part in the update passes from its first `bind` on (SDK 1.7.0). After a
+   * change of the player state alone it calls `props` only if it read a
+   * field of `plugin.player.state` (or of a {@link Scope.state} object) that
+   * changed (SDK 1.5.45); a full pass follows
    * after each handler, on {@link Scope.update} and at least once a second
    * while the player state keeps changing. Because an
    * unchanged value is not sent again, text the user typed into an `in-out`

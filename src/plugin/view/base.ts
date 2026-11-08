@@ -1,15 +1,18 @@
 /**
  * `ViewBase`: what windows, panels and settings pages share — callbacks, and
- * a {@link ViewWriter} (L1) with a {@link ViewBinder} (L2) over it. Every
- * view joins the update passes when made (doc/specs/sdk-refactor.md §1.2 in
- * the player repository; Step 2 moves that to the first `bind()`).
+ * a {@link ViewWriter} (L1) with a {@link ViewBinder} (L2) over it. A view
+ * joins the update passes on its first `bind()` (SDK 1.7.0,
+ * doc/specs/sdk-refactor.md §4 Step 2 in the player repository); until
+ * then `set()` goes straight to the writer, which sends whole values and
+ * keeps no row-patch bases for it.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Json, PropertyWrite } from "../../wire.ts";
 import { PATCH_FEATURE } from "../patch.ts";
 import type { ScopeImpl } from "../scope.ts";
-import type { Disposable, PropValue, Props, View } from "../types.ts";
+import type { BindingHandle } from "../passes.ts";
+import type { PropValue, Props, View } from "../types.ts";
 import { ViewBinder } from "./binder.ts";
 import { kebab, ViewWriter } from "./writer.ts";
 
@@ -19,7 +22,10 @@ export abstract class ViewBase implements View {
   protected readonly handlers = new Map<string, (...args: Json[]) => unknown>();
   readonly #writer: ViewWriter;
   readonly #binder: ViewBinder;
-  #binding: Disposable;
+  /** Its place in the update passes, from the first `bind()` on. */
+  #binding: BindingHandle | undefined;
+  /** Its place in the order of evaluation, kept from when it was made. */
+  readonly #slot: number;
   protected closed = false;
   constructor(scope: ScopeImpl) {
     this.scope = scope;
@@ -30,7 +36,7 @@ export abstract class ViewBase implements View {
       patches: () => this.scope.runtime.features.has(PATCH_FEATURE),
     });
     this.#binder = new ViewBinder(scope, this.#writer, () => this.closed);
-    this.#binding = scope.runtime.bind(() => this.evaluate());
+    this.#slot = scope.runtime.passes.slot();
   }
   protected abstract live(): boolean;
   protected abstract write(
@@ -55,6 +61,15 @@ export abstract class ViewBase implements View {
     this.#writer.set(props);
   }
   bind(props: () => Props) {
+    if (!this.#binding && !this.closed) {
+      // The first bind: the view takes part in the update passes, and its
+      // writer compares and patches from now on.
+      this.#writer.track();
+      this.#binding = this.scope.runtime.bind(
+        () => this.evaluate(),
+        this.#slot,
+      );
+    }
     return this.#binder.bind(props);
   }
   /** {@link ViewBinder.snapshot}: current desired properties. */
@@ -81,7 +96,7 @@ export abstract class ViewBase implements View {
   protected async release() {
     this.closed = true;
     this.#writer.stop();
-    await this.#binding.dispose();
+    await this.#binding?.dispose();
   }
 }
 

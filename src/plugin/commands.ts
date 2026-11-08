@@ -12,6 +12,7 @@ import type {
   CommandState as WireState,
   CommandWhen,
 } from "../commands.ts";
+import type { BindingHandle } from "./passes.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
@@ -32,6 +33,12 @@ type Spec = {
 };
 const value = <T>(item: Bindable<T>): T =>
   typeof item === "function" ? (item as () => T)() : item;
+/**
+ * A state field given as a function: the command is evaluated in the update
+ * passes. Constants and `plugin.when` conditions are not (SDK 1.7.0).
+ */
+const tracks = (spec: Spec) =>
+  Object.values(spec).some((field) => typeof field === "function");
 /** What a command sends: its state, and its conditions (`plugin.when`). */
 type Sent = { state: CommandState; when?: CommandWhen };
 /** A field's value, or `fallback` (and its condition noted) for a condition. */
@@ -181,7 +188,15 @@ class CommandHandle implements Command {
   readonly #label: string;
   /** Where the plugin added it, for the player's log. */
   readonly #where: () => string | undefined;
-  readonly #binding;
+  /**
+   * Its place in the update passes: only while a state field is a function
+   * (`tracks`); a command of constants is registered and left alone.
+   */
+  #binding: BindingHandle | undefined;
+  /** A `set()` of a command outside the passes is sent in a microtask. */
+  #queued = false;
+  /** Its place in the order of evaluation, should it bind later. */
+  readonly #slot: number;
   constructor(scope: ScopeImpl, options: CommandOptions) {
     const runtime = scope.runtime;
     this.#where = runtime.callSite();
@@ -240,7 +255,9 @@ class CommandHandle implements Command {
       if (!this.#disposed) scope.run(options.run);
     };
     runtime.commands.set(this.id, this.#run);
-    this.#binding = runtime.bind(() => this.#sync());
+    this.#slot = runtime.passes.slot();
+    if (tracks(this.#spec))
+      this.#binding = runtime.bind(() => this.#sync(), this.#slot);
     scope.add(this);
   }
   /**
@@ -291,9 +308,28 @@ class CommandHandle implements Command {
     this.#last = encoded;
     this.#pump.push(state).catch((error) => this.#scope.report(error));
   }
+  /**
+   * This command's state alone (SDK 1.7.0; before, a full update pass): a
+   * bound command is evaluated in the next pass, a command of constants
+   * sends its new state through its own `Latest` in a microtask (several
+   * `set()` calls in one turn send one update). A function field binds it.
+   */
   set(state: Partial<Spec>) {
     Object.assign(this.#spec, state);
-    this.#scope.update();
+    if (this.#disposed) return;
+    if (!this.#binding && tracks(this.#spec))
+      this.#binding = this.#scope.runtime.bind(() => this.#sync(), this.#slot);
+    if (this.#binding) return this.#binding.invalidate();
+    if (this.#queued) return;
+    this.#queued = true;
+    queueMicrotask(() => {
+      this.#queued = false;
+      try {
+        this.#sync();
+      } catch (error) {
+        this.#scope.report(error);
+      }
+    });
   }
   async dispose() {
     if (this.#disposed) return;
@@ -307,7 +343,7 @@ class CommandHandle implements Command {
     // immediate re-add of the same id registers after this removal.
     const pending = removing(runtime);
     const removal = (async () => {
-      await this.#binding.dispose();
+      await this.#binding?.dispose();
       await this.ready.catch(() => {});
       if (this.#registered)
         await runtime.host.commands.unregister(this.id).catch(() => {});

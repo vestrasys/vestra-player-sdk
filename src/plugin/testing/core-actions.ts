@@ -7,7 +7,7 @@
  * Internal to the SDK; not exported from `@vestra-player/sdk/testing`.
  */
 import { HostError } from "../../wire.ts";
-import { validStep } from "../player.ts";
+import { validStep } from "../player/rules.ts";
 import type { CommandDeclaration } from "../../commands.ts";
 import type { FakeCommand, TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";

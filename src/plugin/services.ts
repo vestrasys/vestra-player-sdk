@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { failure } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { systemServices } from "./local.ts";
-import { playerOf, validStep } from "./player.ts";
+import { validStep } from "./player/rules.ts";
 import type {
   Clipboard,
   Host,
@@ -69,11 +69,10 @@ export const host = (scope: ScopeImpl): Host => ({
         throw failure("invalid", "seconds must be 0.1–3600 in tenths");
     }
     await scope.runtime.host.host.run(action, seconds);
-    // Like the player's own controls: `player.state` shows the result.
+    // Like the player's own controls: `player.state` shows the result (the
+    // player's state copy registered how to read it again).
     if (scope.runtime.can("playback.read"))
-      await playerOf(scope.runtime)
-        .refresh()
-        .catch(() => {});
+      await scope.runtime.reread("source.state");
   },
 });
 

@@ -847,17 +847,17 @@
   "polled": [],
   "counts": {
     "start": {
-      "passes": 5,
-      "fullPasses": 4,
-      "evaluations": 91,
-      "parts": 9,
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 38,
+      "parts": 6,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "open": {
       "passes": 2,
       "fullPasses": 2,
-      "evaluations": 62,
+      "evaluations": 38,
       "parts": 6,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -865,7 +865,7 @@
     "changes": {
       "passes": 3,
       "fullPasses": 3,
-      "evaluations": 93,
+      "evaluations": 57,
       "parts": 9,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -873,7 +873,7 @@
     "command": {
       "passes": 1,
       "fullPasses": 1,
-      "evaluations": 31,
+      "evaluations": 19,
       "parts": 3,
       "skippedParts": 0,
       "safetyPasses": 0

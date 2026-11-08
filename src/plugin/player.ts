@@ -15,7 +15,10 @@ import { Latest } from "./latest.ts";
 import { abortError, failure, quiet, sleep, uncertain } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
-import { openStream } from "./stream.ts";
+import { openStream, resolvedStream } from "./stream.ts";
+import type { StreamSource } from "./stream.ts";
+import { playerOn } from "./player/events.ts";
+import { validStep } from "./player/rules.ts";
 import type {
   AudioTrack,
   Conditional,
@@ -184,13 +187,6 @@ function decoding(hwdec: string | null | undefined) {
 }
 
 export const rawOf = (state: PlayerState) => raws.get(state);
-/** A step-seek length the player accepts: 0.1–3600 seconds in tenths. */
-export const validStep = (seconds: unknown): seconds is number =>
-  typeof seconds === "number" &&
-  Number.isFinite(seconds) &&
-  seconds >= 0.1 &&
-  seconds <= 3600 &&
-  Math.abs(Math.round(seconds * 10) - seconds * 10) <= 1e-9;
 export const sameStamp = (a: SourceStamp, b: SourceStamp) =>
   a.generation === b.generation && a.intentVersion === b.intentVersion;
 
@@ -202,8 +198,20 @@ function sourceFailure(
     : failure("backend", error.backend);
 }
 
-/** One per plugin: the state store and the operation book client. */
-export class PlayerService {
+/**
+ * One per plugin: the state store and the operation book client.
+ *
+ * The state copy (a mirror of `source.state`) follows the player's events
+ * from the plugin's start when the manifest declares `playback.read` and
+ * `events` (`createPlugin` subscribes before the start-up read, so a read
+ * in any later handler is current). Without `playback.read` it follows
+ * them from the first time something needs it (SDK 1.7.0; before, from the
+ * start): a read of `plugin.player.state`, `onChange`, `isCurrent`, a
+ * media handle's `current`/`ready`/`onEnd`, a scrub, a stream, a
+ * filter, a shader or view request, a capture; such a plugin that never
+ * reads it receives no `source.state`.
+ */
+export class PlayerService implements StreamSource {
   readonly runtime: Runtime;
   raw: SourceState = empty;
   state: PlayerState;
@@ -214,18 +222,17 @@ export class PlayerService {
   change: ReadonlyMap<string, ReadonlySet<string>> = new Map();
   readonly #watchers = new Set<(raw: SourceState) => void>();
   #operation = 0;
+  /** The mirror subscribed (`start`). */
+  #started = false;
+  /** The read that followed the subscription (resolved: none was needed). */
+  #fresh: Promise<void> = Promise.resolve();
   readonly output: Latest<{ volume?: number; muted?: boolean }>;
   constructor(runtime: Runtime) {
     this.runtime = runtime;
     this.state = view(empty, runtime);
-    // The SDK's copy of the state (a mirror): a plugin listens through
-    // `watch` and the bindings that read `state`.
-    runtime.on(
-      "source.state",
-      (data) => this.accept(data as SourceState),
-      "events",
-      true,
-    );
+    // An action outside this file that changed the source (`plugin.host.run`)
+    // asks for the state again through the connection.
+    runtime.rereads.set("source.state", () => this.refresh());
     this.output = new Latest(async ({ volume, muted }) => {
       if (volume !== undefined)
         await runtime.host.playback.set("volume", volume);
@@ -235,6 +242,44 @@ export class PlayerService {
   }
   async init() {
     if (this.runtime.can("playback.read")) await this.refresh();
+  }
+  /** Whether the mirror follows the player's events yet. */
+  get started() {
+    return this.#started;
+  }
+  /**
+   * Follow `source.state` from now on: the SDK's copy of the state (a
+   * mirror; a plugin listens through `watch` and the bindings that read
+   * `state`). Then read the state once more (with `playback.read` and
+   * `events`): a change between the start-up read and the subscription
+   * sent no event to this plugin. Resolves when that read is in.
+   * `reread: false`: subscribed before the start-up read
+   * (`createPlugin`), which then is that read.
+   */
+  start(reread = true): Promise<void> {
+    if (this.#started) return this.#fresh;
+    this.#started = true;
+    this.runtime.on(
+      "source.state",
+      (data) => this.accept(data as SourceState),
+      "events",
+      true,
+    );
+    if (
+      reread &&
+      this.runtime.can("playback.read") &&
+      this.runtime.can("events")
+    )
+      this.#fresh = this.refresh().then(
+        () => {},
+        () => {},
+      );
+    return this.#fresh;
+  }
+  /** The state as the player has it now, for a call that needs a source. */
+  async current(): Promise<PlayerState> {
+    await this.start();
+    return this.state;
   }
   /** Drop anything older than what was already delivered. */
   accept(raw: SourceState) {
@@ -251,6 +296,7 @@ export class PlayerService {
     this.runtime.changed(PLAYER, changed);
   }
   watch(watcher: (raw: SourceState) => void): Disposable {
+    void this.start();
     this.#watchers.add(watcher);
     const held = this.runtime.hold("source.state");
     return {
@@ -354,6 +400,7 @@ class MediaHandle implements Media {
     this.#ticket = ticket;
   }
   get current() {
+    void this.#service.start();
     this.#service.runtime.depends(PLAYER, "stamp");
     return this.#service.raw.stamp.generation === this.#ticket.stamp.generation;
   }
@@ -426,8 +473,21 @@ class ScrubHandle implements Scrub {
   readonly #service: PlayerService;
   constructor(service: PlayerService) {
     this.#service = service;
+    // A scrub follows the source. When it is the first thing to need the
+    // state (the mirror starts now), the gesture starts from the state read
+    // right after subscribing, not from the copy of start-up.
+    const late = !service.started;
+    const fresh = service.start();
+    let ready = !late;
     this.#allowed = { ...service.raw.stamp };
+    if (late)
+      void fresh.then(() => {
+        ready = true;
+        if (this.#active && !this.#pending)
+          this.#allowed = { ...service.raw.stamp };
+      });
     this.#watch = service.watch((raw) => {
+      if (!ready) return;
       if (
         !sameStamp(raw.stamp, this.#allowed) &&
         !(this.#pending && sameStamp(raw.stamp, this.#pending))
@@ -435,6 +495,7 @@ class ScrubHandle implements Scrub {
         this.end();
     });
     this.#queue = new Latest(async ({ seconds, keyframes }) => {
+      if (late) await fresh;
       if (!this.#active) throw superseded;
       const started = Date.now();
       const expected = { ...this.#allowed };
@@ -547,10 +608,28 @@ function provideSequence(
 export const playerOf = (runtime: Runtime) =>
   runtime.service("player", () => new PlayerService(runtime));
 
+/**
+ * The player's source as a stream needs it (`stream.ts`, L1): a stream
+ * follows the source, so its state copy starts following the events.
+ */
+export function streamSource(runtime: Runtime): StreamSource {
+  const service = playerOf(runtime);
+  void service.start();
+  return service;
+}
+
+/** A file resolver's stream (`resolvers.ts`), over {@link streamSource}. */
+export const resolvedPlayerStream = (
+  scope: ScopeImpl,
+  stream: Parameters<typeof resolvedStream>[2],
+  signal: AbortSignal,
+) => resolvedStream(scope, streamSource(scope.runtime), stream, signal);
+
 export function player(scope: ScopeImpl): Player {
   const service = () => playerOf(scope.runtime);
   return {
     get state() {
+      void service().start();
       scope.runtime.reading("source.state");
       scope.runtime.depends(PLAYER);
       return service().state;
@@ -567,7 +646,9 @@ export function player(scope: ScopeImpl): Player {
       });
     },
     refresh: () => service().refresh(),
+    on: (event, listener) => playerOn(scope, event, listener),
     isCurrent(state) {
+      void service().start();
       const raw = raws.get(state);
       scope.runtime.depends(PLAYER, "stamp");
       return !!raw && sameStamp(raw.stamp, service().raw.stamp);
@@ -601,7 +682,8 @@ export function player(scope: ScopeImpl): Player {
       }
       return media;
     },
-    openStream: (options) => openStream(scope, service(), options),
+    openStream: (options) =>
+      openStream(scope, streamSource(scope.runtime), options),
     setPaused: (paused, options) =>
       service().control(
         { kind: "control", control: { kind: "pause", paused } },

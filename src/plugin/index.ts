@@ -57,9 +57,17 @@ export async function createPlugin(
     app,
     options,
   );
-  // Player, window and timeline state are synchronous for plugins: read them first.
+  // Player, window and timeline state are synchronous for plugins: read them
+  // first. A plugin that declares reading the player's state (`playback.read`
+  // with `events`) has its copy follow the events from the start,
+  // subscribed before the read, so a read in any later handler is current;
+  // any other state copy subscribes on its first use (the player's from SDK
+  // 1.7.0, window and timeline before).
+  const player = playerOf(runtime);
+  if (runtime.can("playback.read") && runtime.can("events"))
+    void player.start(false);
   await Promise.all([
-    playerOf(runtime).init(),
+    player.init(),
     windowOf(runtime).init(),
     timelineOf(runtime).init(),
   ]);

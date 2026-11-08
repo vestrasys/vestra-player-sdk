@@ -425,8 +425,12 @@ export interface Transport {
   locale?: string;
 }
 
-/** The events a plugin subscribes to (`events.subscribe`). */
-type HostEvent =
+/**
+ * The events a plugin subscribes to (`events.subscribe`). The plugin API
+ * names the same list `HostEvent` (`plugin.player.on`, SDK 1.7.0); a test
+ * keeps the two equal.
+ */
+export type HostEvent =
   | "source.state"
   | "playback.backend"
   | "window.state"

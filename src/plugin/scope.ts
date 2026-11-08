@@ -32,6 +32,7 @@ import { packages } from "./packages.ts";
 import { osd } from "./osd.ts";
 import { mainWindow } from "./window.ts";
 import { bindingsApi } from "./bindings.ts";
+import { trackedState } from "./state.ts";
 import {
   clipboard,
   host,
@@ -205,6 +206,9 @@ export class ScopeImpl implements Plugin {
   }
   update() {
     this.runtime.invalidate();
+  }
+  state<T extends object>(initial: T): T {
+    return trackedState(this, initial);
   }
   async dispose() {
     if (this.#disposed) return;

@@ -7,9 +7,8 @@
 import { Connection } from "./connection.ts";
 import type { PluginManifest, RuntimeOptions } from "./connection.ts";
 import { Passes } from "./passes.ts";
-import type { Change, Deps, PassCounts } from "./passes.ts";
+import type { BindingHandle, Change, Deps, PassCounts } from "./passes.ts";
 import type { Transport } from "../wire.ts";
-import type { Disposable } from "./types.ts";
 
 // Internal, kept where it was before 1.6.19: the player's host-agreement test
 // reads WAKE_EVENTS from dist/plugin/runtime.js.
@@ -32,10 +31,16 @@ export class Runtime extends Connection {
     super(transport, manifest, directory, dataDirectory, app, options);
     this.passes = new Passes(this);
     this.counts = this.passes.counts;
+    const passes = this.passes;
+    this.signals = {
+      read: (key, field) => passes.depends(key, field),
+      changed: (key, fields) => passes.changed(key, fields),
+      invalidate: () => passes.invalidate(),
+    };
   }
   /** {@link Passes.bind} */
-  bind(evaluate: () => void): Disposable {
-    return this.passes.bind(evaluate);
+  bind(evaluate: () => void, slot?: number): BindingHandle {
+    return this.passes.bind(evaluate, slot);
   }
   /** {@link Passes.reading} */
   reading(event: string) {

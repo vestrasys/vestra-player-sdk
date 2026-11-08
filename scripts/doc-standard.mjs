@@ -153,6 +153,9 @@ export const STRICT_CATEGORIES = {
       "TimelineMark",
       "RangeStyle",
       "TimelineRange",
+      "HostEvent",
+      "EventPayloads",
+      "EventPayload",
     ],
   },
   Services: {
