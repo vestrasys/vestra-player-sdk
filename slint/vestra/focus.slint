@@ -20,9 +20,13 @@
 // their fullscreen overlays); in the detached sidebar window, which has no
 // video, the window's own key scope takes it, so unaccepted keys reach the
 // player's shortcuts there. Elsewhere (the Options window, tool windows) it
-// does nothing. A click on an empty part of a panel never takes the focus
-// from the video, so a panel only needs this after giving the focus to
-// one of its own controls.
+// does nothing.
+//
+// A click on an empty part of a panel (one that none of its controls
+// takes) gives the panel the focus, so its `focus: "panel"` key bindings
+// apply; a click on a button or a row's TouchArea leaves the focus where
+// it was. A panel that wants a click on its empty parts to leave the focus
+// with the video puts a `TouchArea {}` under its content to take them.
 export global VestraFocus {
     // Give the keyboard focus back to the video. Filled by the player.
     callback release();

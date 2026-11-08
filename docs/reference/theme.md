@@ -386,7 +386,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 | --- | --- | --- |
 | `release` | callback `()` | Gives the keyboard focus back to the video, at once, inside the handler: the video area in the main window (from the sidebar, the adjust column, the bottom bar or their fullscreen overlays); the window's own key scope in the floating sidebar window, so unaccepted keys reach the player's shortcuts; nothing elsewhere (the Options window, tool windows). |
 
-Call it after the user played or opened an item from the keyboard or by double click, and on Esc in a list, so the arrows control the player again. A click on an empty part of a panel never takes the focus from the video, so a panel needs it only after giving the focus to one of its own controls. See [Focus and keyboard](../explanation/ui.md#focus-and-keyboard).
+Call it after the user played or opened an item from the keyboard or by double click, and on Esc in a list, so the arrows control the player again. A click on an empty part of a panel gives the panel the focus, so its `focus: "panel"` bindings apply and other keys bubble up to the player's shortcuts; a click on a button or a row's `TouchArea` leaves the focus where it was. A panel needs `release()` when one of its own controls took the focus (a list with its own `FocusScope`, a text field) and accepts the keys the player would use. A panel whose empty parts should leave the focus with the video puts a `TouchArea {}` under its content. See [Focus and keyboard](../explanation/ui.md#focus-and-keyboard).
 
 ## Bar buttons
 
