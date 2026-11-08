@@ -166,17 +166,17 @@ test("a reason over 512 bytes is refused, at registration and update", async () 
 test("a path that repeats or nests in another command's conflicts", async () => {
   const conflict =
     "command conflict: menu path duplicates a command or collides with a leaf/group";
-  // The player's own Playback ▸ Speed submenu, by id and by key.
+  // The player's own Play/Pause and Close are leaves (the slim menu, player
+  // 0.7.6): an item below one or at its path conflicts, by id and by key.
   await refused(
-    { id: "a", path: ["@playback", "Speed"] },
+    { id: "a", path: ["Play/Pause", "Twice"] },
     "conflict",
     conflict,
   );
-  await refused(
-    { id: "a", path: ["Audio", "Mute", "Twice"] },
-    "conflict",
-    conflict,
-  );
+  await refused({ id: "a", path: ["Close"] }, "conflict", conflict);
+  // Playback ▸ Speed holds no player item any more (the speed actions are
+  // in the command palette since player 0.7.6): a plugin may use the path.
+  await accepted({ id: "a", path: ["@playback", "Speed"] });
   await assert.rejects(
     startPlugin(
       (plugin: Plugin) => {
@@ -263,20 +263,23 @@ test("the seek items follow setStepSeek, as the player registers them again", as
     } as never);
   try {
     await host.request("player.setStepSeek", { seconds: 2.5 });
-    assert.deepEqual(host.coreAction("seek-backward").declaration.path, [
-      "Playback",
-      "Seek",
+    assert.equal(
+      host.coreAction("seek-backward").declaration.title,
       "Back 2.5 s",
-    ]);
+    );
     assert.equal(
       host.coreAction("seek-forward").declaration.title,
       "Forward 2.5 s",
     );
     assert.equal(host.coreAction("seek-forward").display.title, "前进2.5秒");
-    await assert.rejects(register("a", ["Playback", "Seek", "Back 2.5 s"]), {
-      code: "conflict",
-    });
+    // Outside the menu since player 0.7.6 (the playback plugin's panel): a
+    // plugin's item in Playback ▸ Seek no longer collides with them.
+    assert.deepEqual(host.coreAction("seek-backward").declaration.path, []);
+    assert.deepEqual(host.coreAction("seek-forward").display.path, []);
+    await register("a", ["Playback", "Seek", "Back 2.5 s"]);
     await register("b", ["Playback", "Seek", "Back 5 s"]);
+    // The player's menu items still take part in conflicts.
+    await assert.rejects(register("c", ["Play/Pause"]), { code: "conflict" });
   } finally {
     await stop();
   }

@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.6.17](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1617) | **Nobody.** Tables follow the slim context menu (B5): a data refresh of `BUILTIN_COMMANDS`, `BUILTIN_SUBMENUS` and the test host's core commands for the player's right-click menu (player 0.7.6); no API change, `apiVersion` stays `vestra/1`. | — |
 | [1.6.16](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1616) | **Nobody.** A data refresh for the player's four built-in panels (player 0.7.6) and one additive read; no API is removed, `apiVersion` stays `vestra/1`. | — |
 | [1.6.15](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1615) | **Nobody.** A plugin may now mount one panel per slot (player 0.7.6) instead of one panel in all; plugins with one panel work as before, and `apiVersion` stays `vestra/1`. | — |
 | [1.6.14](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1614) | **Nobody.** A data refresh: `BUILTIN_COMMANDS` lists the built-in capture plugin's commands as the player registers them since its capture tab; no API change, `apiVersion` stays `vestra/1`. | — |

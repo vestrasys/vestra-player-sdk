@@ -3492,7 +3492,14 @@ export class TestHost implements Transport {
     return { enabled, checked, busy: false, reason: enabled ? null : reason };
   }
   #registerCoreActions() {
+    // As the player declares them (host/src/core_actions.rs `declarations`,
+    // player 0.7.6): title, menu path (empty: the command palette only), order,
+    // group, default bindings, repeat, radio. Close and Play/Pause are in the
+    // menu; the rest left it for the panels and the command palette (seek,
+    // frame and speed with the playback plugin's panel, volume and mute with
+    // the audio plugin's, Previous and Next with the slim menu).
     const table: [
+      string,
       string,
       string[],
       number,
@@ -3501,108 +3508,56 @@ export class TestHost implements Transport {
       boolean,
       boolean?,
     ][] = [
-      ["stop", ["Close"], 120, "open", ["F4"], false],
+      ["stop", "Close", ["Close"], 120, "open", ["F4"], false],
       [
         "play-pause",
-        ["Playback", "Play/Pause"],
+        "Play/Pause",
+        ["Play/Pause"],
         201,
         "domain",
         ["Space", "Mouse:LeftClick"],
         false,
       ],
-      [
-        "previous",
-        ["Playback", "Previous"],
-        202,
-        "domain",
-        ["PageUp", "Mouse:X2"],
-        false,
-      ],
-      [
-        "next",
-        ["Playback", "Next"],
-        203,
-        "domain",
-        ["PageDown", "Mouse:X1"],
-        false,
-      ],
-      [
-        "frame-back",
-        ["Playback", "Seek", "Previous Frame"],
-        204,
-        "frame",
-        ["D"],
-        true,
-      ],
-      [
-        "frame-forward",
-        ["Playback", "Seek", "Next Frame"],
-        205,
-        "frame",
-        ["F"],
-        true,
-      ],
-      [
-        "seek-backward",
-        ["Playback", "Seek", "Back 5 s"],
-        210,
-        "step",
-        ["ArrowLeft"],
-        true,
-      ],
-      [
-        "seek-forward",
-        ["Playback", "Seek", "Forward 5 s"],
-        211,
-        "step",
-        ["ArrowRight"],
-        true,
-      ],
-      [
-        "rate-normal",
-        ["Playback", "Speed", "Normal"],
-        220,
-        "domain",
-        ["Z"],
-        false,
-        true,
-      ],
-      [
-        "rate-down",
-        ["Playback", "Speed", "Slower 0.1"],
-        221,
-        "domain",
-        ["X"],
-        false,
-      ],
-      [
-        "rate-up",
-        ["Playback", "Speed", "Faster 0.1"],
-        222,
-        "domain",
-        ["C"],
-        false,
-      ],
+      ["previous", "Previous", [], 0, "domain", ["PageUp", "Mouse:X2"], false],
+      ["next", "Next", [], 0, "domain", ["PageDown", "Mouse:X1"], false],
+      ["frame-back", "Previous Frame", [], 0, "domain", ["D"], true],
+      ["frame-forward", "Next Frame", [], 0, "domain", ["F"], true],
+      ["seek-backward", "Back 5 s", [], 0, "domain", ["ArrowLeft"], true],
+      ["seek-forward", "Forward 5 s", [], 0, "domain", ["ArrowRight"], true],
+      ["rate-normal", "Normal", [], 0, "domain", ["Z"], false, true],
+      ["rate-down", "Slower 0.1", [], 0, "domain", ["X"], false],
+      ["rate-up", "Faster 0.1", [], 0, "domain", ["C"], false],
       [
         "volume-up",
-        ["Audio", "Volume +"],
-        501,
+        "Volume +",
+        [],
+        0,
         "domain",
         ["ArrowUp", "Mouse:WheelUp"],
         true,
       ],
       [
         "volume-down",
-        ["Audio", "Volume −"],
-        502,
+        "Volume −",
+        [],
+        0,
         "domain",
         ["ArrowDown", "Mouse:WheelDown"],
         true,
       ],
-      ["mute", ["Audio", "Mute"], 503, "domain", ["M"], false],
+      ["mute", "Mute", [], 0, "domain", ["M"], false],
     ];
     const host = this;
-    for (const [id, fixed, order, group, bindings, repeat, radio] of table) {
+    for (const [
+      id,
+      fixed,
+      path,
+      order,
+      group,
+      bindings,
+      repeat,
+      radio,
+    ] of table) {
       // The seek items carry the step (`setStepSeek`): the player
       // registers them again when it changes (core_actions.rs `seek_title`).
       const seek =
@@ -3611,14 +3566,12 @@ export class TestHost implements Transport {
           : id === "seek-backward"
             ? "Back"
             : null;
-      const pathOf = () =>
+      const titleOf = () =>
         seek === null
           ? fixed
-          : [
-              ...fixed.slice(0, -1),
-              `${seek} ${String(Math.round(host.stepSeek * 1000) / 1000)} s`,
-            ];
+          : `${seek} ${String(Math.round(host.stepSeek * 1000) / 1000)} s`;
       const declaration = {
+        path,
         order,
         group,
         radio: radio ?? false,
@@ -3626,22 +3579,22 @@ export class TestHost implements Transport {
         repeat,
       } as unknown as CommandDeclaration;
       Object.defineProperties(declaration, {
-        title: { get: () => pathOf().at(-1)!, enumerable: true },
-        path: { get: pathOf, enumerable: true },
+        title: { get: titleOf, enumerable: true },
       });
       const command: FakeCommand = {
         declaration,
         // The player's own words in the player's language.
         get display() {
-          const path = pathOf();
-          const leaf = path.at(-1)!;
+          const leaf = titleOf();
           const step = /^(Back|Forward) (\S+) s$/.exec(leaf);
           const title = step
             ? host.#hostText(`${step[1]} {} s`, [step[2]!])
             : host.#hostText(leaf);
           return {
             title,
-            path: [...path.slice(0, -1).map((s) => host.#hostText(s)), title],
+            path: path.length
+              ? [...path.slice(0, -1).map((s) => host.#hostText(s)), title]
+              : [],
           };
         },
         get state() {
@@ -5523,8 +5476,9 @@ export class TestHost implements Transport {
       if (this.commands.has(id))
         throw commandConflict("owner/localId already registered");
       // The player's own commands beside the core actions (host/actions.rs
-      // `host_declarations`: Toggle Fullscreen, Quit and three outside the
-      // menu), which take part in conflicts and the total like any other.
+      // `host_declarations`: Toggle Fullscreen, Command Palette…, Quit and
+      // four outside the menu), which take part in conflicts and the total
+      // like any other.
       const hostOnly = BUILTIN_COMMANDS.filter(
         (row) =>
           row.owner === "host" && !this.coreCommands.has(`host/${row.id}`),

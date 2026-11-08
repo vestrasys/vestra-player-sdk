@@ -34,48 +34,51 @@ A command's `path` is a list of 1 to 8 segments in English source text, the last
 
 `@reset` needs player 0.6.3; older players refuse it with `invalid`. Players before 0.3.0 show `@video` as a menu of its own; players up to 0.4.2 titled these menus in Chinese, where only the id form reaches them. The fixed orders of the built-in menus and of the player's own items are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}.
 
+Since the slim menu (player 0.7.6) the built-in menus hold no item of the player's own: each shows only while a plugin has a command in it, at its fixed order (Playback 200, Subtitles 300, Video 400, Audio 500 and Screen 710 among the domain items, Settings 830 and Reset 840 in the settings group). The controls that used to fill them are in the Picture, Audio, Subtitles and Playback panels and in the command palette.
+
 ## The top level
 
 The top level as the player ships it (shortcuts in the Windows notation; the menu shows each system's own):
 
 ```text
-Open File…                    Ctrl+O, F3   group open
+Open File…                    Ctrl+O, F3    group open
 Open ▸
 Close                         F4
-Reopen Current/Last File      Ctrl+Y
-Copy to Clipboard ▸
 ────────────────────────────────────────
-Playback ▸                                 group domain
-Subtitles ▸
-Video ▸
-Audio ▸
+Play/Pause                    Space         group domain
+Audio Track ▸
+Subtitle Track ▸
+Snapshot ▸
 ────────────────────────────────────────
-Toggle Fullscreen             Enter        group screen
-Screen ▸
+Picture…                      Alt+1         group windows
+Audio…                        Alt+2
+Subtitles…                    Alt+3
+Playback…                     Alt+4
+Playlist  ✓                   F6
+Chapter and Bookmark List…    H
 ────────────────────────────────────────
-Playlist  ✓                   F6           group windows
-Playback Info  ✓              Tab
-Playback Properties…          Ctrl+F1
-Vestra Player AI…
+Toggle Fullscreen             Escape        group screen
+────────────────────────────────────────
+Vestra Player AI…                           group windows
 Plugin Store…
 ────────────────────────────────────────
-Settings ▸
-Reset ▸                                    (only when a command is in it)
-────────────────────────────────────────
+Command Palette…              Ctrl+Shift+P  group settings-main
+Options…                      F5
 About Vestra Player…          F1
 ────────────────────────────────────────
-Quit                          Cmd+Q        group exit
+Quit                          Cmd+Q         group exit
 ```
 
 The groups of the top level and their `order` ranges ([Guidelines: menus](../guidelines/menus.md#the-top-level) says which to use):
 
-| Group                  | `order` | For                                                                              |
-| ---------------------- | ------- | -------------------------------------------------------------------------------- |
-| `open`                 | 100–199 | Opening and closing sources                                                      |
-| `domain` (the default) | 200–699 | Domain submenus: Playback, Subtitles, Video, Audio, and a new domain of your own |
-| `screen`               | 700–799 | Fullscreen and the window's size and placement                                   |
-| `windows`              | 800–899 | Items that show a window or a panel (a check mark when it toggles one)           |
-| `exit`                 | 900–999 | Quit                                                                             |
+| Group                  | `order`          | For                                                                                                                                                                 |
+| ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open`                 | 100–199          | Opening and closing sources                                                                                                                                         |
+| `domain` (the default) | 200–699          | Play/Pause (201), the Audio Track, Subtitle Track and Snapshot submenus, the built-in domain menus while a plugin fills them, and a new domain of your own          |
+| `windows`              | 790–809, 820–828 | Items that show a window or a panel (a check mark when it toggles one): the four panels (791–794), Playlist (800) and the chapter list, then Vestra Player AI… (820) and Plugin Store… (822) |
+| `screen`               | 810–819          | Toggle Fullscreen (810), alone between two separators; a plugin's window size and placement items go into Screen ▸ (`@screen`, 710)                                 |
+| `settings-main`        | 829–899          | Command Palette… (829), Options… (830), About Vestra Player… (880), and Settings ▸ and Reset ▸ while a plugin fills them                                            |
+| `exit`                 | 900–999          | Quit                                                                                                                                                                |
 
 ## The Reset menu
 
@@ -92,22 +95,9 @@ The submenus that exist already, by key path. Write the same keys to add a comma
 | Playback ▸ Speed | the player |
 | Playback ▸ Seek | the player |
 | Open ▸ Recently Played | `vestra.history` |
-| Playback ▸ A-B Loop | `vestra.marks` |
-| Playback ▸ A-B Loop ▸ Loop Count | `vestra.marks` |
-| Playback ▸ Chapters and Bookmarks | `vestra.marks` |
-| Playback ▸ Playlist | `vestra.playlist` |
-| Playback ▸ Playlist ▸ Repeat | `vestra.playlist` |
-| Playback ▸ Playlist ▸ When Opening a File | `vestra.playlist` |
-| Playback ▸ Resume Playback | `vestra.history` |
-| Subtitles ▸ Online Subtitles | `vestra.subtitle-online` |
-| Video ▸ Snapshot | `vestra.capture` |
-| Screen ▸ Always on Top | `vestra.window` |
-| Screen ▸ When Playback Starts | `vestra.window` |
-| Settings ▸ Appearance | `vestra.preferences`, `vestra.visualizer` |
-| Settings ▸ Language | `vestra.preferences` |
-| Copy to Clipboard | `vestra.playback` |
-| Subtitle Track | `vestra.subtitles` |
 | Audio Track | `vestra.audio` |
+| Subtitle Track | `vestra.subtitles` |
+| Snapshot | `vestra.capture` |
 
 <!-- /generated -->
 
@@ -123,136 +113,44 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Open ▸ Open URL… | `Ctrl+U` | `vestra.playback/open-url` |
 | Open ▸ Open Folder… | `F2` | `vestra.playlist/playlist.open-folder` |
 | Open ▸ Open Subtitle… | `Alt+O` | `vestra.subtitles/load` |
+| Open ▸ Add Secondary Subtitle… |  | `vestra.subtitles/load-secondary` |
 | Open ▸ Load External Audio… |  | `vestra.audio/audio.load` |
+| Open ▸ Search and Download Subtitles… |  | `vestra.subtitle-online/search` |
 | Open ▸ Recently Played ▸ (No Entries) |  | `vestra.history/recent.empty` |
 | Open ▸ Recently Played ▸ Remove Invalid Entries |  | `vestra.history/recent.prune` |
 | Open ▸ Recently Played ▸ Clear Entries |  | `vestra.history/recent.clear` |
 | Open ▸ Recently Played ▸ Record Playback History |  | `vestra.history/recent.enabled` |
-| Open ▸ Add Secondary Subtitle… |  | `vestra.subtitles/load-secondary` |
 | Close | `F4` | `host/stop` |
-| Reopen Current/Last File | `Ctrl+Y` | `vestra.playback/reopen` |
-| Copy to Clipboard ▸ File Name |  | `vestra.playback/copy-name` |
-| Copy to Clipboard ▸ Folder Path |  | `vestra.playback/copy-folder` |
-| Copy to Clipboard ▸ Full Path |  | `vestra.playback/copy-path` |
-| Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
-| Playback ▸ Previous | `PageUp`, `Mouse:X2` | `host/previous` |
-| Playback ▸ Next | `PageDown`, `Mouse:X1` | `host/next` |
-| Playback ▸ Playlist ▸ Add Files… |  | `vestra.playlist/playlist.add` |
-| Playback ▸ Playlist ▸ Add Link… |  | `vestra.playlist/playlist.link` |
-| Playback ▸ Playlist ▸ Add Folder… |  | `vestra.playlist/playlist.add-folder` |
-| Playback ▸ Playlist ▸ Repeat ▸ Off |  | `vestra.playlist/playlist.repeat-none` |
-| Playback ▸ Playlist ▸ Repeat ▸ All |  | `vestra.playlist/playlist.repeat-all` |
-| Playback ▸ Playlist ▸ Repeat ▸ One |  | `vestra.playlist/playlist.repeat-one` |
-| Playback ▸ Playlist ▸ Shuffle |  | `vestra.playlist/playlist.shuffle` |
-| Playback ▸ Playlist ▸ Open List File… |  | `vestra.playlist/playlist.open-list` |
-| Playback ▸ Playlist ▸ Save List… |  | `vestra.playlist/playlist.save-list` |
-| Playback ▸ Playlist ▸ When Opening a File ▸ Open Only That File |  | `vestra.playlist/playlist.open-mode-only` |
-| Playback ▸ Playlist ▸ When Opening a File ▸ Add Similar Files |  | `vestra.playlist/playlist.open-mode-similar` |
-| Playback ▸ Playlist ▸ When Opening a File ▸ Add All Files in the Folder |  | `vestra.playlist/playlist.open-mode-folder` |
-| Playback ▸ Playlist ▸ Fast Advance to Next |  | `vestra.playlist/playlist.fast-advance` |
-| Playback ▸ Playlist ▸ Remember List |  | `vestra.playlist/playlist.remember` |
-| Playback ▸ Playlist ▸ Confirm Before Removing All |  | `vestra.playlist/playlist.confirm-clear` |
-| Playback ▸ Disable Screen Saver While Playing |  | `vestra.playback/prevent-sleep` |
-| Playback ▸ Hide Pointer While Playing |  | `vestra.window/hide-cursor` |
-| Playback ▸ Show Time on Seek Bar Hover |  | `vestra.playback/hover-time` |
-| Playback ▸ Show Thumbnail on Seek Bar Hover |  | `vestra.playback/hover-thumbnail` |
-| Playback ▸ Resume Playback ▸ Don't Resume |  | `vestra.history/resume.off` |
-| Playback ▸ Resume Playback ▸ Resume Automatically |  | `vestra.history/resume.auto` |
-| Playback ▸ Resume Playback ▸ Ask Every Time |  | `vestra.history/resume.ask` |
-| Playback ▸ Resume Playback ▸ Also Remember Audio Files |  | `vestra.history/resume.audio` |
-| Playback ▸ Resume Playback ▸ Clear All Saved Positions |  | `vestra.history/resume.clear` |
-| Playback ▸ Chapters and Bookmarks ▸ Chapter and Bookmark List… | `H` | `vestra.marks/marks.list` |
-| Playback ▸ Chapters and Bookmarks ▸ Add Bookmark | `P` | `vestra.marks/marks.add` |
-| Playback ▸ Chapters and Bookmarks ▸ Previous Bookmark or Chapter | `Shift+PageUp` | `vestra.marks/marks.previous` |
-| Playback ▸ Chapters and Bookmarks ▸ Next Bookmark or Chapter | `Shift+PageDown` | `vestra.marks/marks.next` |
-| Playback ▸ Chapters and Bookmarks ▸ Previous Chapter | `Ctrl+PageUp` | `vestra.marks/marks.previous-chapter` |
-| Playback ▸ Chapters and Bookmarks ▸ Next Chapter | `Ctrl+PageDown` | `vestra.marks/marks.next-chapter` |
-| Playback ▸ Chapters and Bookmarks ▸ Show Marks on Seek Bar |  | `vestra.marks/marks.seekbar` |
-| Playback ▸ A-B Loop ▸ Set Start Point | `[` | `vestra.marks/ab.set-a` |
-| Playback ▸ A-B Loop ▸ Clear Start Point | `{` | `vestra.marks/ab.clear-a` |
-| Playback ▸ A-B Loop ▸ Start Point Back 0.1 s | `Ctrl+[` | `vestra.marks/ab.a-back` |
-| Playback ▸ A-B Loop ▸ Start Point Forward 0.1 s | `Alt+[` | `vestra.marks/ab.a-forward` |
-| Playback ▸ A-B Loop ▸ Set End Point | `]` | `vestra.marks/ab.set-b` |
-| Playback ▸ A-B Loop ▸ Clear End Point | `}` | `vestra.marks/ab.clear-b` |
-| Playback ▸ A-B Loop ▸ End Point Back 0.1 s | `Ctrl+]` | `vestra.marks/ab.b-back` |
-| Playback ▸ A-B Loop ▸ End Point Forward 0.1 s | `Alt+]` | `vestra.marks/ab.b-forward` |
-| Playback ▸ A-B Loop ▸ Move Range Back 0.1 s | `Ctrl+Alt+[` | `vestra.marks/ab.back` |
-| Playback ▸ A-B Loop ▸ Move Range Forward 0.1 s | `Ctrl+Alt+]` | `vestra.marks/ab.forward` |
-| Playback ▸ A-B Loop ▸ Loop Current Chapter or Bookmark Range | `Alt+\` | `vestra.marks/ab.segment` |
-| Playback ▸ A-B Loop ▸ A-B Loop On/Off | `\` | `vestra.marks/ab.toggle` |
-| Playback ▸ A-B Loop ▸ Loop Count ▸ Endless |  | `vestra.marks/ab.count.endless` |
-| Playback ▸ A-B Loop ▸ Loop Count ▸ Once |  | `vestra.marks/ab.count.1` |
-| Playback ▸ A-B Loop ▸ Loop Count ▸ 2 Times |  | `vestra.marks/ab.count.2` |
-| Playback ▸ A-B Loop ▸ Loop Count ▸ 3 Times |  | `vestra.marks/ab.count.3` |
-| Playback ▸ A-B Loop ▸ Loop Count ▸ 5 Times |  | `vestra.marks/ab.count.5` |
-| Playback ▸ A-B Loop ▸ Loop Count ▸ 10 Times |  | `vestra.marks/ab.count.10` |
-| Subtitles ▸ Online Subtitles ▸ Search and Download Subtitles… |  | `vestra.subtitle-online/search` |
-| Subtitles ▸ Online Subtitles ▸ Online Subtitle Settings… |  | `vestra.subtitle-online/settings` |
-| Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
-| Video ▸ Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
-| Video ▸ Snapshot ▸ Capture… | `Alt+S` | `vestra.capture/capture.panel` |
-| Video ▸ Snapshot ▸ Copy Current Frame | `Ctrl+C` | `vestra.capture/capture.copy` |
-| Video ▸ Snapshot ▸ Burst… | `Ctrl+G` | `vestra.capture/capture.burst` |
-| Video ▸ Snapshot ▸ Export Clip… |  | `vestra.capture/capture.clip` |
-| Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` | `host/volume-up` |
-| Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` | `host/volume-down` |
-| Audio ▸ Mute | `M` | `host/mute` |
-| Audio ▸ Show Album Cover for Audio Only |  | `vestra.visualizer/audio-cover` |
+| Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
 | Audio Track ▸ No Audio Tracks |  | `vestra.audio/audio.track.none` |
-| Toggle Fullscreen | `Escape` | `host/fullscreen` |
-| Screen ▸ Picture-in-Picture |  | `vestra.window/pip` |
-| Screen ▸ Mini Size | ``` | `vestra.window/mini` |
-| Screen ▸ 0.5× | `1` | `vestra.window/size.0.5` |
-| Screen ▸ 1× | `2` | `vestra.window/size.1` |
-| Screen ▸ 1.5× | `3` | `vestra.window/size.1.5` |
-| Screen ▸ 2× | `4` | `vestra.window/size.2` |
-| Screen ▸ Fit to Video Aspect Ratio | `8` | `vestra.window/fit` |
-| Screen ▸ When Playback Starts ▸ Don't Resize |  | `vestra.window/auto.off` |
-| Screen ▸ When Playback Starts ▸ 0.5× |  | `vestra.window/auto.0.5` |
-| Screen ▸ When Playback Starts ▸ 1× |  | `vestra.window/auto.1` |
-| Screen ▸ When Playback Starts ▸ 1.5× |  | `vestra.window/auto.1.5` |
-| Screen ▸ When Playback Starts ▸ 2× |  | `vestra.window/auto.2` |
-| Screen ▸ When Playback Starts ▸ Fit to Video Aspect Ratio |  | `vestra.window/auto.fit` |
-| Screen ▸ When Playback Starts ▸ Only Once |  | `vestra.window/auto.once` |
-| Screen ▸ Always on Top ▸ Cycle Mode | `Ctrl+T` | `vestra.window/top.cycle` |
-| Screen ▸ Always on Top ▸ Never |  | `vestra.window/top.never` |
-| Screen ▸ Always on Top ▸ Always |  | `vestra.window/top.always` |
-| Screen ▸ Always on Top ▸ While Playing |  | `vestra.window/top.playing` |
-| Screen ▸ Always on Top ▸ While Playing in Fullscreen |  | `vestra.window/top.fullscreen` |
+| Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
+| Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
+| Snapshot ▸ Copy Current Frame | `Ctrl+C` | `vestra.capture/capture.copy` |
+| Snapshot ▸ Burst… | `Ctrl+G` | `vestra.capture/capture.burst` |
+| Snapshot ▸ Export Clip… |  | `vestra.capture/capture.clip` |
+| Snapshot ▸ Capture… | `Alt+S` | `vestra.capture/capture.panel` |
 | Picture… | `Alt+1` | `vestra.video/video.picture` |
 | Audio… | `Alt+2` | `vestra.audio/audio.workbench` |
 | Subtitles… | `Alt+3` | `vestra.subtitles/tune` |
 | Playback… | `Alt+4` | `vestra.playback/panel` |
 | Playlist | `F6` | `vestra.playlist/playlist.visibility` |
-| Playback Info | `Tab` | `vestra.info/info.toggle` |
-| Playback Properties… | `Ctrl+F1` | `vestra.info/info.properties` |
+| Chapter and Bookmark List… | `H` | `vestra.marks/marks.list` |
+| Toggle Fullscreen | `Escape` | `host/fullscreen` |
 | Vestra Player AI… |  | `vestra.workshop/workshop.open` |
 | Plugin Store… |  | `vestra.store/open` |
-| Settings ▸ Options… | `F5` | `vestra.preferences/options` |
-| Settings ▸ Keyboard Shortcuts… |  | `vestra.hotkeys/keys` |
-| Settings ▸ Mouse… |  | `vestra.hotkeys/mouse` |
-| Settings ▸ Ignore Default Shortcuts |  | `vestra.hotkeys/ignore-defaults` |
-| Settings ▸ Appearance ▸ Vestra Dark |  | `vestra.preferences/theme.vestra` |
-| Settings ▸ Appearance ▸ Vestra Light |  | `vestra.preferences/theme.vestra-light` |
-| Settings ▸ Appearance ▸ Show Logo When Idle |  | `vestra.visualizer/idle-logo` |
-| Settings ▸ Appearance ▸ Choose Logo Image… |  | `vestra.visualizer/choose-logo` |
-| Settings ▸ Language ▸ Follow System |  | `vestra.preferences/language.system` |
-| Settings ▸ Language ▸ English |  | `vestra.preferences/language.en` |
-| Settings ▸ Language ▸ 简体中文 |  | `vestra.preferences/language.zh-Hans` |
-| Settings ▸ Language ▸ 日本語 |  | `vestra.preferences/language.ja` |
-| Settings ▸ Language ▸ 한국어 |  | `vestra.preferences/language.ko` |
-| Settings ▸ Language ▸ Deutsch |  | `vestra.preferences/language.de` |
-| Settings ▸ Language ▸ Français |  | `vestra.preferences/language.fr` |
-| Settings ▸ Language ▸ Español |  | `vestra.preferences/language.es` |
-| Reset ▸ Idle Logo |  | `vestra.visualizer/reset-logo` |
+| Command Palette… | `Ctrl+Shift+P` | `host/palette` |
+| Options… | `F5` | `vestra.preferences/options` |
 | About Vestra Player… | `F1` | `vestra.info/info.about` |
-| Check for Updates… |  | `vestra.info/info.update` |
 | Quit | `Cmd+Q` | `host/quit` |
+| Previous (not in the menu) | `PageUp`, `Mouse:X2` | `host/previous` |
+| Next (not in the menu) | `PageDown`, `Mouse:X1` | `host/next` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
-| Command Palette (not in the menu) | `Ctrl+Shift+P` | `host/palette` |
 | Adjust (not in the menu) |  | `host/adjust` |
+| Volume + (not in the menu) | `ArrowUp`, `Mouse:WheelUp` | `host/volume-up` |
+| Volume − (not in the menu) | `ArrowDown`, `Mouse:WheelDown` | `host/volume-down` |
+| Mute (not in the menu) | `M` | `host/mute` |
 | Previous Frame (not in the menu) | `D` | `host/frame-back` |
 | Next Frame (not in the menu) | `F` | `host/frame-forward` |
 | Back 5 s (not in the menu) | `ArrowLeft` | `host/seek-backward` |
@@ -260,6 +158,98 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Normal (not in the menu) | `Z` | `host/rate-normal` |
 | Slower 0.1 (not in the menu) | `X` | `host/rate-down` |
 | Faster 0.1 (not in the menu) | `C` | `host/rate-up` |
+| Reopen Current/Last File (not in the menu) | `Ctrl+Y` | `vestra.playback/reopen` |
+| File Name (not in the menu) |  | `vestra.playback/copy-name` |
+| Folder Path (not in the menu) |  | `vestra.playback/copy-folder` |
+| Full Path (not in the menu) |  | `vestra.playback/copy-path` |
+| Disable Screen Saver While Playing (not in the menu) |  | `vestra.playback/prevent-sleep` |
+| Show Time on Seek Bar Hover (not in the menu) |  | `vestra.playback/hover-time` |
+| Show Thumbnail on Seek Bar Hover (not in the menu) |  | `vestra.playback/hover-thumbnail` |
+| Hide Pointer While Playing (not in the menu) |  | `vestra.window/hide-cursor` |
+| Picture-in-Picture (not in the menu) |  | `vestra.window/pip` |
+| Mini Size (not in the menu) | ``` | `vestra.window/mini` |
+| 0.5× (not in the menu) | `1` | `vestra.window/size.0.5` |
+| 1× (not in the menu) | `2` | `vestra.window/size.1` |
+| 1.5× (not in the menu) | `3` | `vestra.window/size.1.5` |
+| 2× (not in the menu) | `4` | `vestra.window/size.2` |
+| Fit to Video Aspect Ratio (not in the menu) | `8` | `vestra.window/fit` |
+| Don't Resize (not in the menu) |  | `vestra.window/auto.off` |
+| 0.5× (not in the menu) |  | `vestra.window/auto.0.5` |
+| 1× (not in the menu) |  | `vestra.window/auto.1` |
+| 1.5× (not in the menu) |  | `vestra.window/auto.1.5` |
+| 2× (not in the menu) |  | `vestra.window/auto.2` |
+| Fit to Video Aspect Ratio (not in the menu) |  | `vestra.window/auto.fit` |
+| Only Once (not in the menu) |  | `vestra.window/auto.once` |
+| Cycle Mode (not in the menu) | `Ctrl+T` | `vestra.window/top.cycle` |
+| Never (not in the menu) |  | `vestra.window/top.never` |
+| Always (not in the menu) |  | `vestra.window/top.always` |
+| While Playing (not in the menu) |  | `vestra.window/top.playing` |
+| While Playing in Fullscreen (not in the menu) |  | `vestra.window/top.fullscreen` |
+| Add Files… (not in the menu) |  | `vestra.playlist/playlist.add` |
+| Add Link… (not in the menu) |  | `vestra.playlist/playlist.link` |
+| Add Folder… (not in the menu) |  | `vestra.playlist/playlist.add-folder` |
+| Off (not in the menu) |  | `vestra.playlist/playlist.repeat-none` |
+| All (not in the menu) |  | `vestra.playlist/playlist.repeat-all` |
+| One (not in the menu) |  | `vestra.playlist/playlist.repeat-one` |
+| Shuffle (not in the menu) |  | `vestra.playlist/playlist.shuffle` |
+| Open List File… (not in the menu) |  | `vestra.playlist/playlist.open-list` |
+| Save List… (not in the menu) |  | `vestra.playlist/playlist.save-list` |
+| Open Only That File (not in the menu) |  | `vestra.playlist/playlist.open-mode-only` |
+| Add Similar Files (not in the menu) |  | `vestra.playlist/playlist.open-mode-similar` |
+| Add All Files in the Folder (not in the menu) |  | `vestra.playlist/playlist.open-mode-folder` |
+| Fast Advance to Next (not in the menu) |  | `vestra.playlist/playlist.fast-advance` |
+| Remember List (not in the menu) |  | `vestra.playlist/playlist.remember` |
+| Confirm Before Removing All (not in the menu) |  | `vestra.playlist/playlist.confirm-clear` |
+| Don't Resume (not in the menu) |  | `vestra.history/resume.off` |
+| Resume Automatically (not in the menu) |  | `vestra.history/resume.auto` |
+| Ask Every Time (not in the menu) |  | `vestra.history/resume.ask` |
+| Also Remember Audio Files (not in the menu) |  | `vestra.history/resume.audio` |
+| Clear All Saved Positions (not in the menu) |  | `vestra.history/resume.clear` |
+| Add Bookmark (not in the menu) | `P` | `vestra.marks/marks.add` |
+| Previous Bookmark or Chapter (not in the menu) | `Shift+PageUp` | `vestra.marks/marks.previous` |
+| Next Bookmark or Chapter (not in the menu) | `Shift+PageDown` | `vestra.marks/marks.next` |
+| Previous Chapter (not in the menu) | `Ctrl+PageUp` | `vestra.marks/marks.previous-chapter` |
+| Next Chapter (not in the menu) | `Ctrl+PageDown` | `vestra.marks/marks.next-chapter` |
+| Show Marks on Seek Bar (not in the menu) |  | `vestra.marks/marks.seekbar` |
+| Set Start Point (not in the menu) | `[` | `vestra.marks/ab.set-a` |
+| Clear Start Point (not in the menu) | `{` | `vestra.marks/ab.clear-a` |
+| Start Point Back 0.1 s (not in the menu) | `Ctrl+[` | `vestra.marks/ab.a-back` |
+| Start Point Forward 0.1 s (not in the menu) | `Alt+[` | `vestra.marks/ab.a-forward` |
+| Set End Point (not in the menu) | `]` | `vestra.marks/ab.set-b` |
+| Clear End Point (not in the menu) | `}` | `vestra.marks/ab.clear-b` |
+| End Point Back 0.1 s (not in the menu) | `Ctrl+]` | `vestra.marks/ab.b-back` |
+| End Point Forward 0.1 s (not in the menu) | `Alt+]` | `vestra.marks/ab.b-forward` |
+| Move Range Back 0.1 s (not in the menu) | `Ctrl+Alt+[` | `vestra.marks/ab.back` |
+| Move Range Forward 0.1 s (not in the menu) | `Ctrl+Alt+]` | `vestra.marks/ab.forward` |
+| Loop Current Chapter or Bookmark Range (not in the menu) | `Alt+\` | `vestra.marks/ab.segment` |
+| A-B Loop On/Off (not in the menu) | `\` | `vestra.marks/ab.toggle` |
+| Endless (not in the menu) |  | `vestra.marks/ab.count.endless` |
+| Once (not in the menu) |  | `vestra.marks/ab.count.1` |
+| 2 Times (not in the menu) |  | `vestra.marks/ab.count.2` |
+| 3 Times (not in the menu) |  | `vestra.marks/ab.count.3` |
+| 5 Times (not in the menu) |  | `vestra.marks/ab.count.5` |
+| 10 Times (not in the menu) |  | `vestra.marks/ab.count.10` |
+| Online Subtitle Settings… (not in the menu) |  | `vestra.subtitle-online/settings` |
+| Show Album Cover for Audio Only (not in the menu) |  | `vestra.visualizer/audio-cover` |
+| Show Logo When Idle (not in the menu) |  | `vestra.visualizer/idle-logo` |
+| Choose Logo Image… (not in the menu) |  | `vestra.visualizer/choose-logo` |
+| Idle Logo (not in the menu) |  | `vestra.visualizer/reset-logo` |
+| Keyboard Shortcuts… (not in the menu) |  | `vestra.hotkeys/keys` |
+| Mouse… (not in the menu) |  | `vestra.hotkeys/mouse` |
+| Ignore Default Shortcuts (not in the menu) |  | `vestra.hotkeys/ignore-defaults` |
+| Vestra Dark (not in the menu) |  | `vestra.preferences/theme.vestra` |
+| Vestra Light (not in the menu) |  | `vestra.preferences/theme.vestra-light` |
+| Follow System (not in the menu) |  | `vestra.preferences/language.system` |
+| English (not in the menu) |  | `vestra.preferences/language.en` |
+| 简体中文 (not in the menu) |  | `vestra.preferences/language.zh-Hans` |
+| 日本語 (not in the menu) |  | `vestra.preferences/language.ja` |
+| 한국어 (not in the menu) |  | `vestra.preferences/language.ko` |
+| Deutsch (not in the menu) |  | `vestra.preferences/language.de` |
+| Français (not in the menu) |  | `vestra.preferences/language.fr` |
+| Español (not in the menu) |  | `vestra.preferences/language.es` |
+| Playback Info (not in the menu) | `Tab` | `vestra.info/info.toggle` |
+| Playback Properties… (not in the menu) | `Ctrl+F1` | `vestra.info/info.properties` |
+| Check for Updates… (not in the menu) |  | `vestra.info/info.update` |
 | Cycle Tracks (not in the menu) | `Alt+A` | `vestra.audio/audio.track.cycle` |
 | Stereo (not in the menu) |  | `vestra.audio/audio.channels.stereo` |
 | Left Channel (not in the menu) |  | `vestra.audio/audio.channels.left` |
@@ -516,13 +506,13 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | Action | Menu item | Default bindings |
 | --- | --- | --- |
 | `stop` | Close | `F4` |
-| `play-pause` | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` |
-| `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X2` |
-| `next` | Playback ▸ Next | `PageDown`, `Mouse:X1` |
-| `volume-up` | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` |
-| `volume-down` | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` |
-| `mute` | Audio ▸ Mute | `M` |
+| `play-pause` | Play/Pause | `Space`, `Mouse:LeftClick` |
 | `fullscreen` | Toggle Fullscreen | `Escape` |
+| `previous` |  | `PageUp`, `Mouse:X2` |
+| `next` |  | `PageDown`, `Mouse:X1` |
+| `volume-up` |  | `ArrowUp`, `Mouse:WheelUp` |
+| `volume-down` |  | `ArrowDown`, `Mouse:WheelDown` |
+| `mute` |  | `M` |
 | `frame-back` |  | `D` |
 | `frame-forward` |  | `F` |
 | `seek-backward` |  | `ArrowLeft` |

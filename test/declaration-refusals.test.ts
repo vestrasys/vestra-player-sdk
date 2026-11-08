@@ -44,10 +44,10 @@ test("a refused command declaration is skipped: the plugin activates, the others
       path: ["Tools", "Before"],
       run() {},
     });
-    // The player's own Audio ▸ Mute is a leaf: nesting under it conflicts.
+    // The player's own Play/Pause is a leaf: nesting under it conflicts.
     const nested = plugin.commands.add({
       id: "nested",
-      path: ["Audio", "Mute", "Twice"],
+      path: ["Play/Pause", "Twice"],
       run() {},
     });
     const wordy = plugin.commands.add({
@@ -162,7 +162,7 @@ test("a refusal after activation goes to onError as before", async () => {
   await instance.activated();
   const late = instance.plugin.commands.add({
     id: "late",
-    path: ["Audio", "Mute", "Twice"],
+    path: ["Play/Pause", "Twice"],
     run() {},
   });
   await assert.rejects(late.ready, { code: "conflict" });
@@ -182,7 +182,7 @@ test("TestHost's startPlugin stays strict: a refused declaration fails it", asyn
         plugin.commands.add({ id: "ok", path: ["Tools", "Ok"], run() {} });
         plugin.commands.add({
           id: "nested",
-          path: ["Audio", "Mute", "Twice"],
+          path: ["Play/Pause", "Twice"],
           run() {},
         });
       },

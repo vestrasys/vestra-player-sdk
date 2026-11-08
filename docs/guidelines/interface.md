@@ -126,6 +126,6 @@ export component MyBar inherits Rectangle {
 
 ## Check your plugin
 
-- Switch the palette (Settings ▸ Appearance) with your windows open: everything should follow at once.
-- Switch the interface language (Settings ▸ Language, used from the next start) to German and to Japanese, and look for clipped or overlapping text.
+- Switch the palette (the Appearance commands of the command palette, `Ctrl+Shift+P`) with your windows open: everything should follow at once.
+- Switch the interface language (the Language commands of the command palette, used from the next start) to German and to Japanese, and look for clipped or overlapping text.
 - Compare your tool window with the player's Picture Adjustments window: same row heights, same buttons, same slider.

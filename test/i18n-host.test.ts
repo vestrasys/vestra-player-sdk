@@ -151,7 +151,8 @@ test("the player's own texts follow the locale; without one they stay Chinese", 
     await host.coreAction("mute").run();
     const shown = {
       osd: [...host.osd],
-      menu: host.coreAction("seek-forward").display.path,
+      menu: host.coreAction("play-pause").display.path,
+      title: host.coreAction("seek-forward").display.title,
       reason: host.coreAction("previous").state.reason,
     };
     await stop();
@@ -159,14 +160,16 @@ test("the player's own texts follow the locale; without one they stay Chinese", 
   };
   assert.deepEqual(await run(new TestHost()), {
     osd: ["已暂停", "静音: 开"],
-    menu: ["播放", "跳转", "前进5秒"],
+    menu: ["播放/暂停"],
+    title: "前进5秒",
     reason: "没有上一个",
   });
   const english = new TestHost();
   english.locale = "en";
   assert.deepEqual(await run(english), {
     osd: ["Paused", "Mute: On"],
-    menu: ["Playback", "Seek", "Forward 5 s"],
+    menu: ["Play/Pause"],
+    title: "Forward 5 s",
     reason: "No previous item",
   });
   const german = new TestHost();

@@ -72,7 +72,7 @@ From top to bottom:
 {@includeCode ../../examples/theme-widgets/main.ts#keys}
 
 - Two commands outside the menu (no `path`): the command palette and their keys F7 and F8 run them; `repeat` keeps stepping while a key is held.
-- In the window's `bind`, {@link "@vestra-player/sdk"!Commands.keys | plugin.commands.keys} gives each command's keys as the menus write them. They are always the current ones: when the user changes or clears a key in **Settings ▸ Keyboard Shortcuts**, the player sends the new labels and `bind` runs again. `[0]` is the key the menus show; `?? ""` hides the cap when there is none.
+- In the window's `bind`, {@link "@vestra-player/sdk"!Commands.keys | plugin.commands.keys} gives each command's keys as the menus write them. They are always the current ones: when the user changes or clears a key in **Keyboard Shortcuts…** (from the command palette), the player sends the new labels and `bind` runs again. `[0]` is the key the menus show; `?? ""` hides the cap when there is none.
 
 ### The menu command
 
