@@ -1,0 +1,509 @@
+{
+  "scenario": "examples/menus",
+  "command": "rate-1.5",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"2×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 4,
+      "fullPasses": 3,
+      "evaluations": 6,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 1,
+      "fullPasses": 0,
+      "evaluations": 4,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 4,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 4,
+      "fullPasses": 3,
+      "evaluations": 15,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "speed",
+          "revision": 1,
+          "declaration": {
+            "title": "Speed: 1×",
+            "path": [
+              "Examples",
+              "Speed: 1×"
+            ],
+            "order": 860,
+            "group": "status",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-0.5",
+          "revision": 1,
+          "declaration": {
+            "title": "0.5×",
+            "path": [
+              "Examples",
+              "0.5×"
+            ],
+            "order": 850,
+            "group": "speeds",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-1",
+          "revision": 1,
+          "declaration": {
+            "title": "1×",
+            "path": [
+              "Examples",
+              "1×"
+            ],
+            "order": 851,
+            "group": "speeds",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-1.5",
+          "revision": 1,
+          "declaration": {
+            "title": "1.5×",
+            "path": [
+              "Examples",
+              "1.5×"
+            ],
+            "order": 852,
+            "group": "speeds",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "rate-2",
+          "revision": 1,
+          "declaration": {
+            "title": "2×",
+            "path": [
+              "Examples",
+              "2×"
+            ],
+            "order": 853,
+            "group": "speeds",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"2×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-0.5",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-1",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-1.5",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-2",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "changes": [
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-1",
+          "revision": 3,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "rate-1.5",
+          "revision": 3,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "command": [
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 1,
+          "intent": {
+            "kind": "control",
+            "control": {
+              "kind": "rate",
+              "rate": 1.5
+            },
+            "expected": {
+              "generation": 1,
+              "intentVersion": 1
+            }
+          }
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "speed"
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "speed",
+          "revision": 1,
+          "declaration": {
+            "title": "Speed: 1.5×",
+            "path": [
+              "Examples",
+              "Speed: 1.5×"
+            ],
+            "order": 860,
+            "group": "status",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "speed"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-2"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
+            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-1.5"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-1"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "rate-0.5"
+        }
+      }
+    ]
+  }
+}

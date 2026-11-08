@@ -1,0 +1,162 @@
+{
+  "scenario": "examples/bookmark",
+  "command": "bookmark.open",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 1,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 1,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 4,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "bookmark.open",
+          "revision": 1,
+          "declaration": {
+            "title": "Bookmark…",
+            "path": [
+              "@playback",
+              "Bookmark…"
+            ],
+            "order": 270,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "ui.open",
+        "params": {
+          "id": "bookmark",
+          "file": "ui/bookmark.slint",
+          "properties": {
+            "label": "No bookmark",
+            "can-mark": true,
+            "can-jump": false
+          },
+          "callbacks": [
+            "mark",
+            "jump"
+          ]
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "bookmark.open"
+        }
+      },
+      {
+        "method": "ui.close",
+        "params": {
+          "id": "bookmark"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

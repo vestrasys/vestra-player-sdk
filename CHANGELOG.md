@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+**Who must change: nobody.** Characterisation tests for the SDK refactor (step 0 of the plan, `doc/specs/sdk-refactor.md` §4.0 in the player repository); no API change, no wire change, `apiVersion` stays `vestra/1`.
+
+- **Golden wire traces** (`test/golden-traces.test.ts`): the ten examples, and the six built-ins named by the plan when `VESTRA_PLAYER` points at a player checkout, run one fixed script against `TestHost` (start, open a source, three state changes, one command, dispose); the `(method, params)` sequence, every `events.subscribe` line with its `mirror`/`why` marks (line numbers stripped) and the update-pass counts per phase are compared with `test/fixtures/traces/*.json`. `UPDATE_TRACES=1` rewrites them.
+- **API surface snapshot** (`scripts/api-surface.mjs`, `npm run api-surface -- --check|--update`, `test/api-surface.test.ts`): every exported declaration and member of `dist/index.d.ts` and `dist/plugin/testing.d.ts`, sorted, in `test/fixtures/api-surface.txt`.
+- **Pass counters**: `Runtime.counts` (internal, read-only: passes, full passes, safety passes, binding evaluations, view bind functions evaluated and skipped) for the SDK's own tests and benchmark; no behaviour change, nothing new on `Plugin` or `TestHost`.
+- **Benchmark** (`npm run bench`, `scripts/bench.mjs`): a 20,000-row keyed list with 1 % and 10 % row changes through the diff engine, 1,000 passes over 50 bound views and 100 commands, and the state-change-to-send latency; medians of five runs, baseline in `docs/maintaining.md`.
+
 ## 1.6.17
 
 **Who must change: nobody.** Tables follow the slim context menu (B5): a data refresh of `BUILTIN_COMMANDS`, `BUILTIN_SUBMENUS` and the test host's core commands for the player's right-click menu (player 0.7.6); no API change, `apiVersion` stays `vestra/1`. A plugin whose tests compare a path or a key against the tables sees the player's current ones.

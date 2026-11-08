@@ -1,0 +1,100 @@
+{
+  "scenario": "examples/hello",
+  "command": "hello",
+  "subscriptions": [],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 1,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "hello",
+          "revision": 1,
+          "declaration": {
+            "title": "Hello",
+            "path": [
+              "Tools",
+              "Hello"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "osd.show",
+        "params": {
+          "text": "Hello"
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "hello"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "scenario": "examples/signal-generator",
+  "command": "signal-generator",
+  "subscriptions": [],
+  "polled": [
+    "producer.state"
+  ],
+  "counts": {
+    "start": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 1,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 1,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "signal-generator",
+          "revision": 1,
+          "declaration": {
+            "title": "Signal generator",
+            "path": [
+              "@open",
+              "Signal generator"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "producer.prepare",
+        "params": {
+          "width": 640,
+          "height": 360
+        }
+      },
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 1,
+          "intent": {
+            "kind": "openProvider",
+            "producerId": 1,
+            "startPaused": false
+          }
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "producer.ack",
+        "params": {
+          "control": {
+            "producerId": 1,
+            "epoch": 2,
+            "baseSample": "<samples>",
+            "paused": false
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "signal-generator",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 2,
+          "intent": {
+            "kind": "close",
+            "expected": {
+              "generation": 2,
+              "intentVersion": 2
+            }
+          }
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "producer.release",
+        "params": {
+          "producerId": 1
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "signal-generator"
+        }
+      }
+    ]
+  }
+}

@@ -146,6 +146,31 @@ const DECLARATION_REFUSALS: ReadonlySet<string> = new Set([
   "limit",
 ]);
 
+/**
+ * Read-only counters of the update passes, for the SDK's own
+ * characterisation tests and benchmark (`test/golden-traces.test.ts`,
+ * `scripts/bench.mjs`): how many passes ran, how many were full, how many
+ * bindings and view bind functions (parts) were evaluated or skipped. Not
+ * part of the plugin API; counting changes no behaviour.
+ */
+export interface PassCounts {
+  /** Passes run (`Runtime.#run`), precise and full. */
+  passes: number;
+  /** Of them, full passes (every binding evaluated). */
+  fullPasses: number;
+  /** Bindings evaluated (`Runtime.#evaluate`). */
+  evaluations: number;
+  /** View bind functions evaluated inside a binding (`Runtime.part`). */
+  parts: number;
+  /** View bind functions a precise pass skipped (`Runtime.part`). */
+  skippedParts: number;
+  /**
+   * Full passes the safety timer requested (`SAFETY_PASS_MS` after a
+   * precise pass skipped something), counted when the timer fires.
+   */
+  safetyPasses: number;
+}
+
 /** How the plugin is run: the player's runner, or `TestHost`. */
 export interface RuntimeOptions {
   /**
@@ -291,6 +316,15 @@ export class Runtime {
   #skipped = false;
   /** The plugin was disposed: no safety pass is armed any more. */
   #stopped = false;
+  /** Pass counters, read by the SDK's own tests and benchmark ({@link PassCounts}). */
+  readonly counts: PassCounts = {
+    passes: 0,
+    fullPasses: 0,
+    evaluations: 0,
+    parts: 0,
+    skippedParts: 0,
+    safetyPasses: 0,
+  };
   readonly #events = new Map<string, EventGroup>();
   /** The missing `events` warning was given (once per plugin). */
   #warnedEvents = false;
@@ -479,12 +513,14 @@ export class Runtime {
     const outerDeps = this.#deps;
     if (last && this.#pass && !affected(last.deps, this.#pass)) {
       this.#skipped = true;
+      this.counts.skippedParts++;
       if (outerReads)
         for (const [event, why] of last.reads)
           if (!outerReads.has(event)) outerReads.set(event, why);
       if (outerDeps) merge(outerDeps, last.deps);
       return undefined;
     }
+    this.counts.parts++;
     const reads = new Map<string, Why>();
     const deps: Deps = new Map();
     this.#reads = outerReads && reads;
@@ -597,6 +633,7 @@ export class Runtime {
     this.#reads = reads;
     this.#deps = deps;
     this.#reader = undefined;
+    this.counts.evaluations++;
     try {
       evaluate();
     } finally {
@@ -650,6 +687,8 @@ export class Runtime {
     const change: Change = this.#pending;
     this.#full = false;
     this.#pending = new Map();
+    this.counts.passes++;
+    if (full) this.counts.fullPasses++;
     if (full) {
       clearTimeout(this.#safety);
       this.#safety = undefined;
@@ -673,6 +712,7 @@ export class Runtime {
     if (this.#skipped && !this.#safety && !this.#stopped) {
       this.#safety = setTimeout(() => {
         this.#safety = undefined;
+        this.counts.safetyPasses++;
         this.invalidate();
       }, SAFETY_PASS_MS);
       this.#safety.unref?.();

@@ -16,6 +16,8 @@ npm run docs:check  # type check the ts code blocks in README.md, docs/ and @exa
 npm run docs:tables # rewrite the generated tables in docs/ (scripts/doc-tables.mjs)
 npm run doc-lint    # documentation coverage report; fails when an enforced category is incomplete
 npm run docs:llms   # regenerate llms.txt (`-- --check`: fail when it is stale)
+npm run api-surface -- --check   # dist/ declarations against test/fixtures/api-surface.txt (`--update` rewrites it; see Characterisation tests)
+npm run bench       # framework benchmark, medians of 5 runs (see Characterisation tests)
 npm run examples    # every examples/<name>: npm install, vestra-plugin check, test, pack (needs dist/)
 npm pack --dry-run  # package contents: README.md, CHANGELOG.md, LICENSE, llms.txt, package.json, bin/, dist/ (with docs-tree.json.gz), slint/, ts-plugin/
 npm pack && npm run pack:check -- vestra-player-sdk-<version>.tgz   # allow list, exports, bin
@@ -23,6 +25,28 @@ npm run pack:smoke -- vestra-player-sdk-<version>.tgz               # install in
 ```
 
 The package publishes compiled `.js` and `.d.ts` files, not `.ts` sources: Node does not strip types inside `node_modules`, and bundlers, older TypeScript versions and editors read `.js` + `.d.ts` directly.
+
+### Characterisation tests
+
+Added before the SDK refactor (the player repository's `doc/specs/sdk-refactor.md` §4.0): a step that only moves code must leave all three unchanged; a release that changes one of them on purpose rewrites the fixture and says why in the CHANGELOG.
+
+- **Golden wire traces** (`test/golden-traces.test.ts`, fixtures `test/fixtures/traces/<group>-<name>.json`). Each of the ten examples runs one fixed script against `TestHost`: start → `openElsewhere("/movie.mp4")` → `setSource` `rate` 1.5, `paused`, `position` 30 → one command (`EXAMPLES` in the test names it) → dispose. The fixture holds, per phase, the `(method, params)` sequence and the update-pass counts (`Runtime.counts`: passes, full passes, binding evaluations, view bind functions evaluated/skipped), plus every `events.subscribe` line in order (with `mirror`/`why`). Normalisation rules are listed at the top of the test (paths become `<plugin>`/`<data>`/`<tmp>`, `why` loses line numbers, `producer.state` polls are left out and listed under `polled`, `producer.ack`'s `baseSample` becomes `<samples>`, a drive root becomes `/`; image `ref` numbers are renumbered per scenario; a run in which the once-a-second safety pass fired (`counts.safetyPasses`) is repeated instead of compared). The six built-ins the plan names (playback, playlist, info, subtitles, video, workshop) run from `VESTRA_PLAYER=<player checkout>/src/plugins/<name>` and are skipped without that variable (CI has no player checkout; run them locally before a refactor release). `UPDATE_TRACES=1 npm test -- test/golden-traces.test.ts` rewrites the fixtures.
+- **API surface snapshot** (`scripts/api-surface.mjs`, `test/api-surface.test.ts`, fixture `test/fixtures/api-surface.txt`): every exported declaration of `dist/index.d.ts` and `dist/plugin/testing.d.ts` with each member's signature, comments dropped, sorted; re-exports are followed, so moving a type between files leaves the file unchanged. Needs `npm run build`; the test skips when `dist/` is missing.
+- **Benchmark** (`scripts/bench.mjs`, `npm run bench`): (a) a 20,000-row keyed list through the diff engine alone and end to end through a window bind in `TestHost`, with 1 % and 10 % of the rows changed; (b) 1,000 full passes over 50 bound windows and 100 commands with an `enabled()` function; (c) the latency from `host.setSource({ position })` to the `ui.set` request leaving the SDK. Medians of 5 runs. The numbers decide the inventory's batch H (move planning, field-level dependencies) and show whether a step slowed anything down.
+
+Baseline, 2026-11-08, SDK 1.6.16 sources (`fb5bfdb` plus the counters), Node v26.12.1, Windows 11 x64 (the user's development machine, see the player repository's `C:\vestra\env.ps1` notes; other machines differ, compare only against runs on the same one):
+
+| Measurement                                                                          |   Median |
+| ------------------------------------------------------------------------------------ | -------: |
+| (a) diff engine, 20,000 keyed rows, 1 % changed (200 `set` ops)                      |  1.02 ms |
+| (a) diff engine, 20,000 keyed rows, 10 % changed (2,000 `set` ops)                   |  0.83 ms |
+| (a) end to end, initial write of 20,000 rows (`ui.open` and its parts)               |   201 ms |
+| (a) end to end, 1 % changed: `update()` → pass → encode + diff → `ui.set` applied    |    75 ms |
+| (a) end to end, 10 % changed: same                                                   |    75 ms |
+| (b) 1,000 full passes, 50 bound windows, 100 commands with `enabled()`               |   609 ms |
+| (c) `player.state` change → precise pass → `ui.set` handed to the transport          |  0.03 ms |
+
+Reading: the diff itself is negligible; the end-to-end cost of a changed list is encoding 20,000 rows to JSON and the host applying the patch, the same for 1 % and 10 %. A full pass over 150 bound things costs about 0.6 ms.
 
 ## API documentation
 

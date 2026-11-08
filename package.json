@@ -49,6 +49,8 @@
     "llms.txt"
   ],
   "scripts": {
+    "api-surface": "node scripts/api-surface.mjs",
+    "bench": "node scripts/bench.mjs",
     "build": "node scripts/build.mjs",
     "capabilities:sync": "node scripts/capabilities-sync.mjs",
     "check": "tsc -p tsconfig.check.json",

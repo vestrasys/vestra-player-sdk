@@ -1,0 +1,2091 @@
+{
+  "scenario": "builtins/playlist",
+  "command": "playlist.repeat-all",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "window.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at playback.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at playback.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at playback.ts",
+        "a listener added at main.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "window.state",
+      "why": [
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at playback.ts",
+        "a listener added at main.ts"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a listener added at playback.ts"
+      ]
+    },
+    {
+      "event": "window.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 5,
+      "fullPasses": 3,
+      "evaluations": 104,
+      "parts": 8,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 4,
+      "fullPasses": 4,
+      "evaluations": 208,
+      "parts": 12,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 1,
+      "evaluations": 52,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 2,
+      "fullPasses": 1,
+      "evaluations": 52,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 2,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "window.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "layout.state",
+        "params": {}
+      },
+      {
+        "method": "drops.provide",
+        "params": {
+          "id": "d1",
+          "extensions": [
+            "mp4",
+            "m4v",
+            "mkv",
+            "webm",
+            "mov",
+            "avi",
+            "wmv",
+            "asf",
+            "flv",
+            "f4v",
+            "ts",
+            "m2ts",
+            "mts",
+            "mpg",
+            "mpeg",
+            "vob",
+            "ogv",
+            "3gp",
+            "rm",
+            "rmvb",
+            "mp3",
+            "m4a",
+            "aac",
+            "flac",
+            "wav",
+            "ogg",
+            "oga",
+            "opus",
+            "wma",
+            "ape",
+            "alac",
+            "aif",
+            "aiff",
+            "dsf",
+            "dff",
+            "mka",
+            "wv",
+            "tta",
+            "ac3",
+            "dts",
+            "m3u",
+            "m3u8",
+            "pls",
+            "dpl",
+            "webloc",
+            "folder"
+          ]
+        }
+      },
+      {
+        "method": "drops.listen",
+        "params": {
+          "listen": true
+        }
+      },
+      {
+        "method": "sequence.set",
+        "params": {
+          "flags": {
+            "canNext": false,
+            "canPrevious": false
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at playback.ts"
+          ]
+        }
+      },
+      {
+        "method": "ui.mount",
+        "params": {
+          "slot": "sidebar",
+          "file": "ui/sidebar.slint",
+          "component": "PlaylistSidebar",
+          "global": "PlaylistBridge",
+          "title": "Playlist",
+          "properties": {
+            "row-count": 0,
+            "first-row": 0,
+            "rows": [],
+            "thumbs": [],
+            "thumbnails": true,
+            "total": "",
+            "filtering": false,
+            "focus-search": 0,
+            "detached": false,
+            "can-add": true,
+            "can-remove": false,
+            "can-sort": false,
+            "can-drag": true,
+            "can-top": false,
+            "can-up": false,
+            "can-down": false,
+            "can-bottom": false,
+            "scroll-to-y": 0,
+            "scroll-request": 0,
+            "show-y": 0
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.visibility",
+          "revision": 1,
+          "declaration": {
+            "title": "Playlist",
+            "path": [
+              "Playlist"
+            ],
+            "order": 800,
+            "group": "windows",
+            "radio": false,
+            "bindings": [
+              "F6"
+            ],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.open-folder",
+          "revision": 1,
+          "declaration": {
+            "title": "Open Folder…",
+            "path": [
+              "@open",
+              "Open Folder…"
+            ],
+            "order": 110,
+            "group": "open",
+            "radio": false,
+            "bindings": [
+              "F2"
+            ],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.add",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Files…",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Add Files…"
+            ],
+            "order": 230,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.link",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Link…",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Add Link…"
+            ],
+            "order": 231,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.add-folder",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Folder…",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Add Folder…"
+            ],
+            "order": 232,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.repeat-none",
+          "revision": 1,
+          "declaration": {
+            "title": "Off",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Repeat",
+              "Off"
+            ],
+            "order": 233,
+            "group": "domain",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.repeat-all",
+          "revision": 1,
+          "declaration": {
+            "title": "All",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Repeat",
+              "All"
+            ],
+            "order": 234,
+            "group": "domain",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.repeat-one",
+          "revision": 1,
+          "declaration": {
+            "title": "One",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Repeat",
+              "One"
+            ],
+            "order": 235,
+            "group": "domain",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.shuffle",
+          "revision": 1,
+          "declaration": {
+            "title": "Shuffle",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Shuffle"
+            ],
+            "order": 236,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.open-list",
+          "revision": 1,
+          "declaration": {
+            "title": "Open List File…",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Open List File…"
+            ],
+            "order": 237,
+            "group": "list",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.save-list",
+          "revision": 1,
+          "declaration": {
+            "title": "Save List…",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Save List…"
+            ],
+            "order": 238,
+            "group": "list",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.open-mode-only",
+          "revision": 1,
+          "declaration": {
+            "title": "Open Only That File",
+            "path": [
+              "@playback",
+              "Playlist",
+              "When Opening a File",
+              "Open Only That File"
+            ],
+            "order": 239,
+            "group": "open-mode",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.open-mode-similar",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Similar Files",
+            "path": [
+              "@playback",
+              "Playlist",
+              "When Opening a File",
+              "Add Similar Files"
+            ],
+            "order": 240,
+            "group": "open-mode",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.open-mode-folder",
+          "revision": 1,
+          "declaration": {
+            "title": "Add All Files in the Folder",
+            "path": [
+              "@playback",
+              "Playlist",
+              "When Opening a File",
+              "Add All Files in the Folder"
+            ],
+            "order": 241,
+            "group": "open-mode",
+            "radio": true,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.fast-advance",
+          "revision": 1,
+          "declaration": {
+            "title": "Fast Advance to Next",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Fast Advance to Next"
+            ],
+            "order": 242,
+            "group": "options",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.remember",
+          "revision": 1,
+          "declaration": {
+            "title": "Remember List",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Remember List"
+            ],
+            "order": 243,
+            "group": "options",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.confirm-clear",
+          "revision": 1,
+          "declaration": {
+            "title": "Confirm Before Removing All",
+            "path": [
+              "@playback",
+              "Playlist",
+              "Confirm Before Removing All"
+            ],
+            "order": 244,
+            "group": "options",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.play",
+          "revision": 1,
+          "declaration": {
+            "title": "Play",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Enter",
+              "P"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.list-add",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Files…",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+I"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.list-add-folder",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Folder…",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+O"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.list-link",
+          "revision": 1,
+          "declaration": {
+            "title": "Add Link…",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+U"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.remove",
+          "revision": 1,
+          "declaration": {
+            "title": "Remove Selected",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Delete",
+              "Backspace"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.remove-unselected",
+          "revision": 1,
+          "declaration": {
+            "title": "Remove Unselected",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Delete"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.remove-invalid",
+          "revision": 1,
+          "declaration": {
+            "title": "Remove Invalid Items",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+T"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.clear",
+          "revision": 1,
+          "declaration": {
+            "title": "Remove All",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Alt+Delete"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.reveal",
+          "revision": 1,
+          "declaration": {
+            "title": "Show in Finder",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+F"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.move-top",
+          "revision": 1,
+          "declaration": {
+            "title": "Move to Top",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+Home"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.move-up",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Up",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+ArrowUp"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.move-down",
+          "revision": 1,
+          "declaration": {
+            "title": "Move Down",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+ArrowDown"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.move-bottom",
+          "revision": 1,
+          "declaration": {
+            "title": "Move to Bottom",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+End"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-ascending",
+          "revision": 1,
+          "declaration": {
+            "title": "Ascending",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": true,
+            "bindings": [
+              "Ctrl+1"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-descending",
+          "revision": 1,
+          "declaration": {
+            "title": "Descending",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": true,
+            "bindings": [
+              "Ctrl+2"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-title",
+          "revision": 1,
+          "declaration": {
+            "title": "By Title",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+3"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-filename",
+          "revision": 1,
+          "declaration": {
+            "title": "By File Name",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+4"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-extension",
+          "revision": 1,
+          "declaration": {
+            "title": "By Extension",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+5"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-size",
+          "revision": 1,
+          "declaration": {
+            "title": "By Size",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+6"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-duration",
+          "revision": 1,
+          "declaration": {
+            "title": "By Duration",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+7"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-date",
+          "revision": 1,
+          "declaration": {
+            "title": "By Date",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+8"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-shuffle",
+          "revision": 1,
+          "declaration": {
+            "title": "Random Order",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+9"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-folder",
+          "revision": 1,
+          "declaration": {
+            "title": "By Folder",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+0"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-path",
+          "revision": 1,
+          "declaration": {
+            "title": "Sort by Path",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.sort-reverse",
+          "revision": 1,
+          "declaration": {
+            "title": "Reverse Current Order",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.select-all",
+          "revision": 1,
+          "declaration": {
+            "title": "Select All",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+A"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.search",
+          "revision": 1,
+          "declaration": {
+            "title": "Search",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Ctrl+S"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.list-open-list",
+          "revision": 1,
+          "declaration": {
+            "title": "Open List File…",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "F3"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.list-save-list",
+          "revision": 1,
+          "declaration": {
+            "title": "Save List…",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "F2"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": "Nothing to act on"
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.close",
+          "revision": 1,
+          "declaration": {
+            "title": "Close List",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "F6"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "playlist.settings",
+          "revision": 1,
+          "declaration": {
+            "title": "Playlist Settings…",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "F5"
+            ],
+            "focus": "panel",
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "settings.register",
+        "params": {
+          "id": "playlist",
+          "category": "playback",
+          "title": "Playlist",
+          "order": 30,
+          "file": "ui/settings.slint",
+          "component": "PlaylistSettingsPage",
+          "global": "PlaylistSettings",
+          "properties": {
+            "open-mode": 1,
+            "append-on-open": false,
+            "drop-at-pointer": false,
+            "repeat": 0,
+            "shuffle": false,
+            "fast-advance": false,
+            "remember": true,
+            "confirm-clear": true
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at playback.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at playback.ts",
+            "a listener added at main.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "window.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "layout.state",
+        "params": {}
+      }
+    ],
+    "open": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "row-count",
+          "value": 1,
+          "seq": 1
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.save-list",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.remove-invalid",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.clear",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.select-all",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.list-save-list",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rows",
+          "value": [
+            {
+              "rowId": "row-1",
+              "label": "1. movie.mp4",
+              "duration": "",
+              "tooltip": "/movie.mp4",
+              "problem": "",
+              "selected": false,
+              "current": true,
+              "played": true,
+              "failed": false,
+              "media": "video",
+              "detail": ""
+            }
+          ],
+          "seq": 2
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "thumbs",
+          "value": [
+            {
+              "$vestraImage": "<plugin>/placeholder.png",
+              "ref": 1
+            }
+          ],
+          "seq": 3
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rows",
+          "patch": {
+            "base": 2,
+            "seq": 4,
+            "ops": [
+              {
+                "op": "set",
+                "at": 0,
+                "row": {
+                  "rowId": "row-1",
+                  "label": "1. movie.mp4",
+                  "duration": "--:--",
+                  "tooltip": "/movie.mp4",
+                  "problem": "",
+                  "selected": false,
+                  "current": true,
+                  "played": true,
+                  "failed": false,
+                  "media": "video",
+                  "detail": ""
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "changes": [],
+    "command": [
+      {
+        "method": "osd.show",
+        "params": {
+          "text": "Repeat: All"
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.repeat-none",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": false,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "playlist.repeat-all",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": true,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "settings.set",
+        "params": {
+          "id": "playlist",
+          "property": "repeat",
+          "value": 1,
+          "seq": 1
+        }
+      },
+      {
+        "method": "sequence.set",
+        "params": {
+          "flags": {
+            "canNext": true,
+            "canPrevious": true
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at playback.ts",
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at playback.ts"
+          ]
+        }
+      },
+      {
+        "method": "sequence.set",
+        "params": {
+          "flags": null
+        }
+      },
+      {
+        "method": "drops.listen",
+        "params": {
+          "listen": false
+        }
+      },
+      {
+        "method": "drops.withdraw",
+        "params": {
+          "id": "d1"
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "window.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "settings.unregister",
+        "params": {
+          "id": "playlist"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.settings"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.close"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.list-save-list"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.list-open-list"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.search"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.select-all"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-reverse"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-path"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-folder"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-shuffle"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-date"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-duration"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-size"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-extension"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-filename"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-title"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-descending"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.sort-ascending"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.move-bottom"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.move-down"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.move-up"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.move-top"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.reveal"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.clear"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.remove-invalid"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.remove-unselected"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.remove"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.list-link"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.list-add-folder"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.list-add"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.play"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.confirm-clear"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.remember"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.fast-advance"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.open-mode-folder"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.open-mode-similar"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.open-mode-only"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.save-list"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.open-list"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.shuffle"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.repeat-one"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.repeat-all"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.repeat-none"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.add-folder"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.link"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.add"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.open-folder"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "playlist.visibility"
+        }
+      },
+      {
+        "method": "ui.unmount",
+        "params": {}
+      },
+      {
+        "method": "layout.state",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

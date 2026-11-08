@@ -1,0 +1,281 @@
+{
+  "scenario": "examples/adjust-panel",
+  "command": "speed-reset",
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)",
+        "command \"Normal Speed\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+      ]
+    },
+    {
+      "event": "source.state",
+      "why": [
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
+    },
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 3,
+      "parts": 2,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 1,
+      "fullPasses": 0,
+      "evaluations": 2,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 3,
+      "fullPasses": 0,
+      "evaluations": 1,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 3,
+      "fullPasses": 2,
+      "evaluations": 7,
+      "parts": 3,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "ui.mount",
+        "params": {
+          "slot": "adjust",
+          "file": "ui/speed.slint",
+          "component": "SpeedPanel",
+          "global": "SpeedBridge",
+          "title": "Speed",
+          "properties": {
+            "rate": 1,
+            "enabled": false
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "speed",
+          "revision": 1,
+          "declaration": {
+            "title": "Speed Panel",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [
+              "Alt+5"
+            ],
+            "focus": null,
+            "repeat": false,
+            "category": "Playback"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "speed-reset",
+          "revision": 1,
+          "declaration": {
+            "title": "Normal Speed",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": "Playback",
+            "home": "speed"
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "command \"Normal Speed\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+          ]
+        }
+      }
+    ],
+    "open": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "enabled",
+          "value": true,
+          "seq": 1
+        }
+      },
+      {
+        "method": "commands.update",
+        "params": {
+          "id": "speed-reset",
+          "revision": 2,
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "changes": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": 1.5,
+          "seq": 2
+        }
+      }
+    ],
+    "command": [
+      {
+        "method": "source.submit",
+        "params": {
+          "operationId": 1,
+          "intent": {
+            "kind": "control",
+            "control": {
+              "kind": "rate",
+              "rate": 1
+            },
+            "expected": {
+              "generation": 1,
+              "intentVersion": 1
+            }
+          }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": 1,
+          "seq": 3
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      }
+    ],
+    "dispose": [
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)"
+          ]
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "speed-reset"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "speed"
+        }
+      },
+      {
+        "method": "ui.unmount",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      }
+    ]
+  }
+}

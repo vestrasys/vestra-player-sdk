@@ -1,0 +1,125 @@
+{
+  "scenario": "examples/markdown",
+  "command": "show",
+  "subscriptions": [],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 4,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "show",
+          "revision": 1,
+          "declaration": {
+            "title": "Markdown example…",
+            "path": [
+              "Examples",
+              "Markdown example…"
+            ],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "ui.markdownScan",
+        "params": {
+          "text": "# Markdown example\n\nThis window shows the **core Markdown component**: *italic*, ~~strikethrough~~ and `inline code`.\n\n## Lists\n\n- A bulleted list\n- A second item, with **bold** text\n  1. A nested numbered list\n  2. Its second item\n- [x] A finished task\n- [ ] An open task\n\n## Code and quotes\n\n```ts\nconst doc = await plugin.ui.markdown(text, { base });\ndocumentWindow.set({ doc });\n```\n\n> The player parses and draws the Markdown; the plugin only passes the text.\n\n## Tables\n\n| Element | Supported |\n| --- | --- |\n| Headings, paragraphs, lists | Yes |\n| Code blocks, quotes, tables | Yes |\n| Inline HTML | No (not shown) |\n\n## Images\n\nA local image, `assets/icon.png` in the package, found through `base`:\n\n![Icon](assets/icon.png)\n",
+          "base": "<plugin>/"
+        }
+      },
+      {
+        "method": "ui.open",
+        "params": {
+          "id": "document",
+          "file": "ui/document.slint",
+          "properties": {
+            "doc": {
+              "$vestraMarkdown": {
+                "text": "# Markdown example\n\nThis window shows the **core Markdown component**: *italic*, ~~strikethrough~~ and `inline code`.\n\n## Lists\n\n- A bulleted list\n- A second item, with **bold** text\n  1. A nested numbered list\n  2. Its second item\n- [x] A finished task\n- [ ] An open task\n\n## Code and quotes\n\n```ts\nconst doc = await plugin.ui.markdown(text, { base });\ndocumentWindow.set({ doc });\n```\n\n> The player parses and draws the Markdown; the plugin only passes the text.\n\n## Tables\n\n| Element | Supported |\n| --- | --- |\n| Headings, paragraphs, lists | Yes |\n| Code blocks, quotes, tables | Yes |\n| Inline HTML | No (not shown) |\n\n## Images\n\nA local image, `assets/icon.png` in the package, found through `base`:\n\n![Icon](assets/icon.png)\n",
+                "base": "<plugin>/",
+                "images": {}
+              },
+              "ref": 1
+            }
+          },
+          "callbacks": []
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "show"
+        }
+      },
+      {
+        "method": "ui.close",
+        "params": {
+          "id": "document"
+        }
+      }
+    ]
+  }
+}

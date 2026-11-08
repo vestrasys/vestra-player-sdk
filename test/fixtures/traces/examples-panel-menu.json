@@ -1,0 +1,159 @@
+{
+  "scenario": "examples/panel-menu",
+  "command": "remove",
+  "subscriptions": [],
+  "polled": [],
+  "counts": {
+    "start": {
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 3,
+      "parts": 2,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "open": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "changes": {
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "command": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 3,
+      "parts": 1,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    },
+    "dispose": {
+      "passes": 1,
+      "fullPasses": 1,
+      "evaluations": 0,
+      "parts": 0,
+      "skippedParts": 0,
+      "safetyPasses": 0
+    }
+  },
+  "calls": {
+    "start": [
+      {
+        "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "ui.mount",
+        "params": {
+          "slot": "sidebar",
+          "file": "ui/panel.slint",
+          "component": "ListPanel",
+          "global": "ListBridge",
+          "title": "Example list",
+          "properties": {
+            "rows": [
+              "First item",
+              "Second item",
+              "Third item"
+            ],
+            "selected": 0
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "first",
+          "revision": 1,
+          "declaration": {
+            "title": "Select the first item",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "remove",
+          "revision": 1,
+          "declaration": {
+            "title": "Remove the selected item",
+            "path": [],
+            "order": 0,
+            "group": "domain",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      }
+    ],
+    "open": [],
+    "changes": [],
+    "command": [
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rows",
+          "patch": {
+            "base": 0,
+            "seq": 1,
+            "ops": [
+              {
+                "op": "remove",
+                "at": 0,
+                "count": 1
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "dispose": [
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "remove"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "first"
+        }
+      },
+      {
+        "method": "ui.unmount",
+        "params": {}
+      }
+    ]
+  }
+}
