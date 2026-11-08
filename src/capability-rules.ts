@@ -8,7 +8,7 @@
  *
  * @internal
  */
-import { API_REQUESTS } from "./api-requests.ts";
+import { API_REQUESTS, SUBSCRIBED_EVENTS } from "./api-requests.ts";
 import type { ApiRequest } from "./api-requests.ts";
 import { HOST_CAPABILITIES } from "./host-capabilities.ts";
 
@@ -153,6 +153,47 @@ export function memberNeeds(
 ): MemberNeed[] | undefined {
   const requests = rules.apis[api];
   if (!requests) return undefined;
+  return requestsNeed(requests, capabilities, rules);
+}
+
+/**
+ * The requests of a call to a member of `ARGUMENT_APIS` (SDK 1.7.0), given
+ * the value of its first argument and the string fields of its second:
+ * a subscribed event's `events.subscribe`, nothing for an event that
+ * arrives unasked, or the named method. `undefined`: a method the player's
+ * table does not know (not checked).
+ *
+ * @param kind - What the argument names (`ARGUMENT_APIS`).
+ * @param name - The event or method name.
+ * @param params - String fields of the second argument (`method` only).
+ *
+ * @internal
+ */
+export function argumentRequests(
+  kind: "event" | "method",
+  name: string,
+  params?: Readonly<Record<string, string>>,
+  rules: CapabilityRules = RULES,
+): ApiRequest[] | undefined {
+  if (kind === "event")
+    return SUBSCRIBED_EVENTS.includes(name)
+      ? [{ method: "events.subscribe", params: { event: name } }]
+      : [];
+  if (!hostMethod(name, rules.host)) return undefined;
+  return [params ? { method: name, params } : { method: name }];
+}
+
+/**
+ * Every capability a list of requests needs with the given manifest (see
+ * {@link memberNeeds}).
+ *
+ * @internal
+ */
+export function requestsNeed(
+  requests: readonly ApiRequest[],
+  capabilities: readonly string[],
+  rules: CapabilityRules = RULES,
+): MemberNeed[] {
   // An `ifDeclared` rule is decided last, as if the plugin had declared what
   // the member's other requests need: `Player.seek` needs `playback.control`
   // for `source.submit`, and with it `source.operation` needs nothing more.

@@ -1,6 +1,6 @@
 // Golden wire traces (characterisation tests, doc/specs/sdk-refactor.md §4.0
 // in the player repository): every example plugin, the plan's speed display
-// in style A and style B (`test/plugins/speed-*`, SDK 1.7.0), and the
+// in styles A, B and C (`test/plugins/speed-*`, SDK 1.7.0), and the
 // player's built-in plugins when the player repository is at hand, runs the same fixed script
 // against `TestHost`, and the `(method, params)` sequence it sends, its
 // `events.subscribe` lines and its update-pass counts are compared with
@@ -170,13 +170,16 @@ const BUILTINS: Record<string, string | null> = {
 
 /**
  * The speed display of the refactor plan (§3: a bottom panel shows the
- * speed, a command cycles it) in style A (`bind`, function fields) and
- * style B (`player.on` + `set`, no function fields), from
- * `test/plugins/speed-<style>` (SDK 1.7.0). Style B runs no update pass.
+ * speed, a command cycles it) in style A (`bind`, function fields),
+ * style B (`player.on` + `set`, no function fields) and style C
+ * (`plugin.wire`: raw event, direct write, bare registration), from
+ * `test/plugins/speed-<style>` (SDK 1.7.0). Styles B and C run no update
+ * pass, and C sends what B sends.
  */
 const STYLES: Record<string, string> = {
   "speed-a": "rate.cycle",
   "speed-b": "rate.cycle",
+  "speed-c": "rate.cycle",
 };
 
 const scenarios: Scenario[] = [
@@ -492,6 +495,20 @@ test("golden trace: the style-B speed display runs no update pass", () => {
       ["source.state", true, false],
     ],
   );
+});
+
+test("golden trace: the style-C speed display sends what style B sends", () => {
+  const read = (name: string) =>
+    JSON.parse(readFileSync(join(FIXTURES, `${name}.json`), "utf8")) as Trace;
+  const { scenario: b, ...styleB } = read("styles-speed-b");
+  const { scenario: c, ...styleC } = read("styles-speed-c");
+  assert.notEqual(b, c);
+  // The plan (§3.4) expects the traces to differ at most in the
+  // subscription line, and only between A (a mirror) and B/C (a listener
+  // with its `why`): B and C send the same lines, `why` included.
+  assert.deepEqual(styleC, styleB);
+  const { subscriptions: a } = read("styles-speed-a");
+  assert.notDeepEqual(a, styleC.subscriptions);
 });
 
 /** `VESTRA_PLAYER`'s checked-out commit (full hash). */

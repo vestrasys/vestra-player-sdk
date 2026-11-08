@@ -15,7 +15,9 @@
  *   check   strict type check of the plugin's .ts files and tests/*.ts
  *           (then every use of an API member whose capability manifest.json
  *           does not declare: file:line, member, capability; fails on any;
- *           --json prints the findings as JSON)
+ *           a plugin.wire.request or event listener whose name the check
+ *           cannot read is listed as unchecked, without failing; --json
+ *           prints the findings and the unchecked calls as JSON)
  *   build   check, then write dist/: .ts → .js with types stripped, other
  *           package files copied, dist/manifest.json with `version`
  *   test    node --test on tests/*.test.{ts,mjs}
@@ -328,12 +330,13 @@ async function check(target, report = null) {
   );
   if (!sources.length) {
     say(`${target.name}: no TypeScript to check`);
-    report?.push({ plugin: target.name, findings: [] });
+    report?.push({ plugin: target.name, findings: [], unchecked: [] });
     return;
   }
   const tsc = compiler("typescript/lib/tsc.js");
   const scratch = await mkdtemp(join(tmpdir(), "vestra-plugin-check-"));
   let findings;
+  let unchecked;
   try {
     const config = join(scratch, "tsconfig.json");
     await writeFile(config, JSON.stringify(checkConfig(target, sources)));
@@ -344,16 +347,23 @@ async function check(target, report = null) {
     )
       fail(`${target.name}: type check failed`);
     say(`${target.name}: type check passed (${sources.length} files)`);
-    findings = await capabilityFindings(target, config);
+    ({ findings, unchecked } = await capabilityFindings(target, config));
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }
-  if (report) report.push({ plugin: target.name, findings });
-  else
+  if (report) report.push({ plugin: target.name, findings, unchecked });
+  else {
     for (const finding of findings)
       console.error(
         `${relative(process.cwd(), finding.file) || finding.file}:${finding.line}:${finding.column}: ${finding.message} (request ${finding.method})`,
       );
+    // Calls whose capability depends on a name the check cannot read
+    // (plugin.wire.request with a computed method): a note, never a failure.
+    for (const call of unchecked)
+      console.log(
+        `${relative(process.cwd(), call.file) || call.file}:${call.line}:${call.column}: unchecked: ${call.message}`,
+      );
+  }
   if (findings.length) {
     const missing = [...new Set(findings.map((each) => each.capability))];
     fail(
@@ -377,8 +387,10 @@ async function check(target, report = null) {
 }
 
 /**
- * Uses of API members whose capability the manifest does not declare, in
- * the plugin's production files (not tests/), with the type check's
+ * Uses of API members whose capability the manifest does not declare
+ * (`findings`), and calls whose capability depends on a name the check
+ * cannot read (`unchecked`: `plugin.wire.request` with a computed method),
+ * in the plugin's production files (not tests/), with the type check's
  * compiler options (src/capability-check.ts).
  */
 async function capabilityFindings(target, config) {
@@ -397,14 +409,23 @@ async function capabilityFindings(target, config) {
   const files = (await sourceFiles(target)).typescript.map((file) =>
     join(target.directory, file),
   );
-  if (!parsed || !files.length) return [];
+  if (!parsed || !files.length) return { findings: [], unchecked: [] };
   const program = ts.createProgram(parsed.fileNames, parsed.options);
   const capabilities = Array.isArray(target.manifest.capabilities)
     ? target.manifest.capabilities
     : [];
-  return capabilityCheck
-    .findUndeclaredCapabilities(ts, program, { files, capabilities })
-    .map((finding) => ({ ...finding, file: resolve(finding.file) }));
+  const { findings, unchecked } = capabilityCheck.checkCapabilities(
+    ts,
+    program,
+    { files, capabilities },
+  );
+  return {
+    findings: findings.map((finding) => ({
+      ...finding,
+      file: resolve(finding.file),
+    })),
+    unchecked: unchecked.map((call) => ({ ...call, file: resolve(call.file) })),
+  };
 }
 
 /** Slint source without its comments (string literals kept as they are). */
@@ -957,7 +978,8 @@ async function main() {
       console.error(`✖ ${error.message}`);
       failed.push(directory);
       if (report) {
-        if (report.length === reported) report.push({ findings: [] });
+        if (report.length === reported)
+          report.push({ findings: [], unchecked: [] });
         report[reported].error = error.message;
       }
     }

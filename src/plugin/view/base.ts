@@ -9,12 +9,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Json, PropertyWrite } from "../../wire.ts";
+import { failure } from "../errors.ts";
 import { PATCH_FEATURE } from "../patch.ts";
 import type { ScopeImpl } from "../scope.ts";
 import type { BindingHandle } from "../passes.ts";
 import type { PropValue, Props, View } from "../types.ts";
 import { ViewBinder } from "./binder.ts";
-import { kebab, ViewWriter } from "./writer.ts";
+import { DIRECT, kebab, ViewWriter } from "./writer.ts";
+import type { DirectWrites } from "./writer.ts";
 
 /** Property and callback plumbing shared by windows, panels and settings pages. */
 export abstract class ViewBase implements View {
@@ -71,6 +73,21 @@ export abstract class ViewBase implements View {
       );
     }
     return this.#binder.bind(props);
+  }
+  /**
+   * `plugin.wire.view(v)` (SDK 1.7.0): the writer's direct writes, for a
+   * scope of the plugin that made this view.
+   */
+  [DIRECT](scope: ScopeImpl): DirectWrites {
+    if (scope.runtime !== this.scope.runtime)
+      throw failure(
+        "invalid",
+        "view takes a window, panel or settings page of this plugin",
+      );
+    return {
+      write: (property, write) => this.#writer.direct(property, write),
+      writeRows: (property, ops) => this.#writer.directRows(property, ops),
+    };
   }
   /** {@link ViewBinder.snapshot}: current desired properties. */
   protected snapshot(): Record<string, PropValue> {

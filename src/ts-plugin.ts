@@ -3,6 +3,9 @@
  * capability checker of `vestra-plugin check` in the editor. A use of an API
  * member whose capability `manifest.json` does not declare is an error at
  * the member, with the quick fix "Add '<capability>' to manifest.json".
+ * A call whose capability depends on a name the checker cannot read
+ * (`plugin.wire.request(method)` with a computed method, SDK 1.7.0) is a
+ * warning (`CAPABILITY_UNCHECKED`).
  *
  * A project enables it in its tsconfig.json:
  *
@@ -20,10 +23,11 @@ import type TS from "typescript";
 import {
   addCapabilityEdit,
   CAPABILITY_DIAGNOSTIC,
-  findUndeclaredCapabilities,
+  CAPABILITY_UNCHECKED,
+  checkCapabilities,
   isPluginSource,
 } from "./capability-check.ts";
-import type { CapabilityFinding } from "./capability-check.ts";
+import type { CapabilityFinding, UncheckedCall } from "./capability-check.ts";
 
 const FIX_NAME = "vestraAddCapability";
 
@@ -95,21 +99,25 @@ export default function init(modules: {
         info.project?.projectService?.logger?.info(
           `[@vestra-player/sdk/ts-plugin] ${message}`,
         );
-      const findings = (file: string): CapabilityFinding[] => {
+      const none = { findings: [], unchecked: [] };
+      const results = (
+        file: string,
+      ): { findings: CapabilityFinding[]; unchecked: UncheckedCall[] } => {
         const manifest = manifestFor(ts, file);
         const program = service.getProgram();
         if (!manifest || !program || !isPluginSource(manifest.directory, file))
-          return [];
+          return none;
         try {
-          return findUndeclaredCapabilities(ts, program, {
+          return checkCapabilities(ts, program, {
             files: [file],
             capabilities: manifest.capabilities,
           });
         } catch (error) {
           log(`check failed: ${(error as Error).stack ?? String(error)}`);
-          return [];
+          return none;
         }
       };
+      const findings = (file: string) => results(file).findings;
       const proxy = Object.create(null) as TS.LanguageService;
       for (const key of Object.keys(service) as (keyof TS.LanguageService)[]) {
         const member = service[key];
@@ -119,15 +127,25 @@ export default function init(modules: {
       proxy.getSemanticDiagnostics = (file) => {
         const prior = service.getSemanticDiagnostics(file);
         const source = service.getProgram()?.getSourceFile(file);
+        const { findings: missing, unchecked } = results(file);
         return [
           ...prior,
-          ...findings(file).map((finding): TS.Diagnostic => ({
+          ...missing.map((finding): TS.Diagnostic => ({
             file: source,
             start: finding.start,
             length: finding.length,
             messageText: finding.message,
             category: ts.DiagnosticCategory.Error,
             code: CAPABILITY_DIAGNOSTIC,
+            source: "vestra",
+          })),
+          ...unchecked.map((call): TS.Diagnostic => ({
+            file: source,
+            start: call.start,
+            length: call.length,
+            messageText: call.message,
+            category: ts.DiagnosticCategory.Warning,
+            code: CAPABILITY_UNCHECKED,
             source: "vestra",
           })),
         ];

@@ -167,4 +167,44 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "VideoUpscaling.state": [{ method: "video.upscaling.state" }],
     "VideoUpscaling.set": [{ method: "video.upscaling.set" }],
     "VideoUpscaling.onChange": [listen("video.upscaling.changed")],
+    "WireCommands.register": [{ method: "commands.register" }],
+  });
+
+/**
+ * The events whose listener subscribes (`events.subscribe` with the event
+ * name): the plugin API's `HostEvent`. Other names a plugin listens to
+ * (`commands.execute`, `ui.callback`) arrive unasked and need nothing.
+ * test/wire-facade.test.ts keeps it equal to `HostEvent`.
+ *
+ * @internal
+ */
+export const SUBSCRIBED_EVENTS: readonly string[] = Object.freeze([
+  "source.state",
+  "playback.backend",
+  "window.state",
+  "packages.changed",
+  "bindings.changed",
+  "commands.keys",
+  "timeline.changed",
+  "appearance.changed",
+  "resolvers.fileTypes",
+  "video.upscaling.changed",
+]);
+
+/**
+ * Members whose requests depend on an argument (SDK 1.7.0), which
+ * `API_REQUESTS` cannot list: the event name of a listener (`event`: a
+ * subscribed event's `events.subscribe`, nothing for the others) or the
+ * method name of a request (`method`: that method, with the string
+ * fields of the second argument as its parameters). The capability check
+ * reads the argument when its type is one string (a literal, a constant)
+ * or a union of them, and reports the call as unchecked otherwise.
+ *
+ * @internal
+ */
+export const ARGUMENT_APIS: Readonly<Record<string, "event" | "method">> =
+  Object.freeze({
+    "Player.on": "event",
+    "Wire.on": "event",
+    "Wire.request": "method",
   });

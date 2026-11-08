@@ -33,6 +33,7 @@ import { osd } from "./osd.ts";
 import { mainWindow } from "./window.ts";
 import { bindingsApi } from "./bindings.ts";
 import { trackedState } from "./state.ts";
+import { wire } from "./wire-facade.ts";
 import {
   clipboard,
   host,
@@ -105,6 +106,7 @@ export class ScopeImpl implements Plugin {
   readonly appearance = appearance(this);
   readonly settings = settings(this);
   readonly i18n = i18n(this);
+  readonly wire = wire(this);
   get app() {
     return this.runtime.app;
   }

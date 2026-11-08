@@ -474,6 +474,15 @@ export class Connection {
       if (group.active > 0) result.set(event, allWhys(group));
     return result;
   }
+  /**
+   * One request by its method name, as given (`plugin.wire.request`, SDK
+   * 1.7.0): nothing added, nothing checked here, the player checks the
+   * capability. Every other part of the SDK uses the typed clients
+   * (`host`); `scripts/check-layers.mjs` keeps it so.
+   */
+  request<T>(method: string, params?: Json): Promise<T> {
+    return this.#transport.request<T>(method, params);
+  }
   /** Raw transport events the host pushes without a subscription. */
   raw(event: string, listener: Listener): Disposable {
     const off = this.#transport.on(event, listener);

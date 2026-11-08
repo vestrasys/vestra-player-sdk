@@ -20,7 +20,17 @@
  */
 export const STRICT_CATEGORIES = {
   Plugin: {
-    full: ["Plugin", "Scope", "Disposable", "MainWindow", "App"],
+    full: [
+      "Plugin",
+      "Scope",
+      "Disposable",
+      "MainWindow",
+      "App",
+      "Wire",
+      "WireView",
+      "WireCommands",
+      "WireCommand",
+    ],
     data: [
       "PluginError",
       "WindowState",
@@ -30,6 +40,10 @@ export const STRICT_CATEGORIES = {
       "Json",
       "StopReason",
       "DisposeInfo",
+      "PropertyWrite",
+      "RowOp",
+      "WireCommandOptions",
+      "WireCommandState",
     ],
   },
   Testing: {

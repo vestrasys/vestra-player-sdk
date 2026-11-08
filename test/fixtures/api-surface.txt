@@ -432,6 +432,7 @@
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly when: When;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly window: MainWindow;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly windows: Windows;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly wire: Wire;
 @vestra-player/sdk InterfaceDeclaration Scope :: scope(): Scope;
 @vestra-player/sdk InterfaceDeclaration Scope :: state<T extends object>(initial: T): T;
 @vestra-player/sdk InterfaceDeclaration Scope :: update(): void;
@@ -652,6 +653,31 @@
 @vestra-player/sdk InterfaceDeclaration WindowState :: readonly videoArea: { readonly width: number; readonly height: number; };
 @vestra-player/sdk InterfaceDeclaration Windows
 @vestra-player/sdk InterfaceDeclaration Windows :: create(file: string, options?: { id?: string; }): Window;
+@vestra-player/sdk InterfaceDeclaration Wire
+@vestra-player/sdk InterfaceDeclaration Wire :: on(event: HostEvent | (string & {}), listener: (data: unknown) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Wire :: readonly commands: WireCommands;
+@vestra-player/sdk InterfaceDeclaration Wire :: request<T = unknown>(method: string, params?: Json): Promise<T>;
+@vestra-player/sdk InterfaceDeclaration Wire :: view(view: View): WireView;
+@vestra-player/sdk InterfaceDeclaration WireCommand :: readonly id: string;
+@vestra-player/sdk InterfaceDeclaration WireCommand :: readonly ready: Promise<void>;
+@vestra-player/sdk InterfaceDeclaration WireCommand :: update(state: WireCommandState, when?: Json): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration WireCommand extends Disposable
+@vestra-player/sdk InterfaceDeclaration WireCommandOptions
+@vestra-player/sdk InterfaceDeclaration WireCommandOptions :: readonly declaration: { readonly [field: string]: Json; };
+@vestra-player/sdk InterfaceDeclaration WireCommandOptions :: readonly id: string;
+@vestra-player/sdk InterfaceDeclaration WireCommandOptions :: readonly run?: () => unknown;
+@vestra-player/sdk InterfaceDeclaration WireCommandOptions :: readonly state?: WireCommandState;
+@vestra-player/sdk InterfaceDeclaration WireCommandOptions :: readonly when?: Json;
+@vestra-player/sdk InterfaceDeclaration WireCommandState
+@vestra-player/sdk InterfaceDeclaration WireCommandState :: readonly busy?: boolean;
+@vestra-player/sdk InterfaceDeclaration WireCommandState :: readonly checked?: boolean | null;
+@vestra-player/sdk InterfaceDeclaration WireCommandState :: readonly enabled?: boolean;
+@vestra-player/sdk InterfaceDeclaration WireCommandState :: readonly reason?: Json;
+@vestra-player/sdk InterfaceDeclaration WireCommands
+@vestra-player/sdk InterfaceDeclaration WireCommands :: register(options: WireCommandOptions): WireCommand;
+@vestra-player/sdk InterfaceDeclaration WireView
+@vestra-player/sdk InterfaceDeclaration WireView :: write(property: string, write: PropertyWrite): Promise<boolean>;
+@vestra-player/sdk InterfaceDeclaration WireView :: writeRows(property: string, ops: readonly RowOp[]): Promise<boolean>;
 @vestra-player/sdk TypeAliasDeclaration AudioFilter = export type AudioFilter = Filter<{ nodes: AudioNode[]; delayMs?: number; }>;
 @vestra-player/sdk TypeAliasDeclaration AudioNode = export type AudioNode = { kind: "volume"; gainDb: number; } | { kind: "equalizer"; frequency: number; q: 1; gainDb: number; } | { kind: "treble"; frequency: 3000; slope: 0.5; gainDb: number; } | { kind: "dynaudnorm"; enabled: boolean; maxGain: number; peak: number; } | { kind: "channels"; mode: "stereo" | "left" | "right" | "mono" | "swap"; };
 @vestra-player/sdk TypeAliasDeclaration BarButtonIcon = export type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai";
@@ -674,6 +700,7 @@
 @vestra-player/sdk TypeAliasDeclaration PluginError = export type PluginError = Error & { code: string; };
 @vestra-player/sdk TypeAliasDeclaration PropData = export type PropData = null | boolean | number | string | MarkdownRef | ImageRef | Text | TextList | PropData[] | { [key: string]: PropData; };
 @vestra-player/sdk TypeAliasDeclaration PropValue = export type PropValue = PropData | ImageRef;
+@vestra-player/sdk TypeAliasDeclaration PropertyWrite = export type PropertyWrite = { value: Json; seq?: number; more?: boolean; } | { patch: { base: number; seq: number; ops: RowOp[]; }; more?: boolean; };
 @vestra-player/sdk TypeAliasDeclaration Props = export type Props = Record<string, PropValue>;
 @vestra-player/sdk TypeAliasDeclaration RangeStyle = export type RangeStyle = "selection" | "region";
 @vestra-player/sdk TypeAliasDeclaration RenderingMode = export type RenderingMode = "gpu" | "software";
@@ -681,6 +708,7 @@
 @vestra-player/sdk TypeAliasDeclaration RenderingReasonCode = export type RenderingReasonCode = "default" | "pending" | "headless" | "no-gpu-backend" | "env" | "preference" | "denylist" | "previous-crash" | "init-failed" | "window-fallback" | (string & {});
 @vestra-player/sdk TypeAliasDeclaration ResolvedMedia = export type ResolvedMedia = { kind: "media"; originalUrl: string; title?: string; primary: ResolvedResource; audio?: ResolvedResource; };
 @vestra-player/sdk TypeAliasDeclaration ResolverOptions = export type ResolverOptions = WebResolverOptions | FileResolverOptions;
+@vestra-player/sdk TypeAliasDeclaration RowOp = export type RowOp = { op: "set"; at: number; row: Json; } | { op: "insert"; at: number; rows: Json[]; } | { op: "remove"; at: number; count: number; } | { op: "move"; from: number; count: number; to: number; };
 @vestra-player/sdk TypeAliasDeclaration SettingsCategory = export type SettingsCategory = "general" | "playback" | "subtitles" | "video" | "audio" | "input" | "appearance" | "plugins" | "other";
 @vestra-player/sdk TypeAliasDeclaration SettingsPage = export type SettingsPage = View & Disposable & { readonly ready: Promise<void>; };
 @vestra-player/sdk TypeAliasDeclaration StopReason = export type StopReason = "quit" | "disable" | "uninstall" | "reload" | "upgrade" | "idle" | "failed" | "host-lost";

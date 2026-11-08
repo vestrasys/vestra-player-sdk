@@ -85,13 +85,17 @@ export function summaryOf(text) {
 
 /** The comment that documents a declaration (methods: their signature's). */
 function commentOf(reflection) {
-  return (
-    reflection.comment ??
+  const signature =
     reflection.signatures?.find((s) => s.comment)?.comment ??
     reflection.getSignature?.comment ??
     reflection.setSignature?.comment ??
-    reflection.type?.declaration?.signatures?.find((s) => s.comment)?.comment
-  );
+    reflection.type?.declaration?.signatures?.find((s) => s.comment)?.comment;
+  const own = reflection.comment;
+  // A modifier tag on a method (`@experimental`, `plugin.wire`) gives the
+  // method a comment of its own that holds only the modifier.
+  if (own && signature && !own.summary.length && !own.blockTags.length)
+    return signature;
+  return own ?? signature;
 }
 
 /** Builds the tree from a converted project. */

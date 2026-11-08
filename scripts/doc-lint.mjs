@@ -91,11 +91,19 @@ const check = (rule, name, ok) => {
   if (!ok) stats[rule].missing.push(name);
 };
 
-const commentOf = (reflection) =>
-  reflection.comment ??
-  reflection.signatures?.[0]?.comment ??
-  reflection.getSignature?.comment ??
-  reflection.type?.declaration?.signatures?.[0]?.comment;
+const commentOf = (reflection) => {
+  const signature =
+    reflection.signatures?.[0]?.comment ??
+    reflection.getSignature?.comment ??
+    reflection.type?.declaration?.signatures?.[0]?.comment;
+  const own = reflection.comment;
+  // A modifier tag on a method (`@experimental`, `plugin.wire`) gives the
+  // method a comment of its own that holds only the modifier: the text
+  // is the signature's.
+  if (own && signature && !own.summary.length && !own.blockTags.length)
+    return signature;
+  return own ?? signature;
+};
 const hasSummary = (comment) =>
   !!comment && comment.summary.some((part) => part.text.trim() !== "");
 const hasTag = (comment, tag) =>

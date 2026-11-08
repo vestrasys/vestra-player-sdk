@@ -22,6 +22,7 @@ import { CAPABILITY_INFO } from "../src/capabilities.ts";
 import {
   addCapabilityEdit,
   CAPABILITY_DIAGNOSTIC,
+  checkCapabilities,
   findUndeclaredCapabilities,
   isPluginSource,
 } from "../src/capability-check.ts";
@@ -331,6 +332,150 @@ test("checker: members of returned objects, getters and what is not detected", (
     "4:9 Panel.onChange events",
     "5:22 Player.state playback.read",
   ]);
+});
+
+/** `checkCapabilities` on one file: findings and unchecked calls, as lines. */
+function checkAll(source: string, capabilities: string[] = []) {
+  const directory = project({ "main.ts": source }, capabilities);
+  const file = join(directory, "main.ts");
+  const program = ts.createProgram([file], OPTIONS);
+  const errors = ts
+    .getPreEmitDiagnostics(program)
+    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+  assert.deepEqual(errors, [], "the fixture type-checks");
+  const { findings, unchecked } = checkCapabilities(ts, program, {
+    files: [file],
+    capabilities,
+  });
+  return {
+    findings: findings.map(
+      (f) =>
+        `${f.line}:${f.column} ${f.api} ${f.method} ${f.capability}${f.requiredBy ? `<${f.requiredBy}` : ""}`,
+    ),
+    messages: findings.map((f) => f.message),
+    unchecked: unchecked.map((u) => `${u.line}:${u.column} ${u.api}`),
+  };
+}
+
+test("checker: plugin.wire.request by a literal method name (SDK 1.7.0)", () => {
+  const source = lines(
+    'await plugin.wire.request("ui.setMount", { property: "rate", value: "1.00×" });',
+    'const method = "clipboard.readText";',
+    "await plugin.wire.request(method);",
+    'await plugin.wire.request("events.subscribe", { event: "bindings.changed", why: ["x"] });',
+    'await plugin.wire.request("producer.prepare", {});',
+    'await plugin.wire.request("packages.list");',
+  );
+  const result = checkAll(source);
+  assert.deepEqual(result.findings, [
+    "3:21 Wire.request ui.setMount ui.mount",
+    "5:21 Wire.request clipboard.readText clipboard",
+    "6:21 Wire.request events.subscribe bindings.manage",
+    "7:21 Wire.request producer.prepare producer.av",
+    "7:21 Wire.request producer.prepare playback.control<producer.av",
+  ]);
+  assert.match(
+    result.messages[0]!,
+    /^Wire\.request\("ui\.setMount"\) needs the capability "ui\.mount", which manifest\.json does not declare$/,
+  );
+  assert.deepEqual(result.unchecked, []);
+  assert.deepEqual(
+    checkAll(source, [
+      "ui.mount",
+      "clipboard",
+      "bindings.manage",
+      "producer.av",
+      "playback.control",
+    ]).findings,
+    [],
+  );
+});
+
+test("checker: a method name it cannot read, or the player does not know, is unchecked", () => {
+  const source = lines(
+    "const pick = (name: string) => plugin.wire.request(name);",
+    'void pick("ui.setMount");',
+    'await plugin.wire.request("no.such.method");',
+    'const either = Math.random() > 0.5 ? "osd.show" : "clipboard.readText";',
+    "await plugin.wire.request(either);",
+  );
+  const result = checkAll(source);
+  assert.deepEqual(result.unchecked, [
+    "3:46 Wire.request",
+    "5:21 Wire.request",
+  ]);
+  // A union of literals: each one's capability.
+  assert.deepEqual(result.findings, [
+    "7:21 Wire.request osd.show ui.osd",
+    "7:21 Wire.request clipboard.readText clipboard",
+  ]);
+});
+
+test("checker: player.on and wire.on by a literal event name (SDK 1.7.0)", () => {
+  const source = lines(
+    'plugin.player.on("source.state", () => {});',
+    'plugin.player.on("bindings.changed", () => {});',
+    'plugin.player.on("packages.changed", () => {});',
+    'plugin.wire.on("video.upscaling.changed", () => {});',
+    'plugin.wire.on("commands.execute", () => {});',
+    "const name: string = String(Date.now());",
+    "plugin.wire.on(name, () => {});",
+  );
+  const result = checkAll(source);
+  assert.deepEqual(result.findings, [
+    "3:17 Player.on events.subscribe events",
+    "4:17 Player.on events.subscribe bindings.manage",
+    "6:15 Wire.on events.subscribe video.upscaling",
+  ]);
+  // `commands.execute` arrives unasked: nothing to declare.
+  assert.deepEqual(result.unchecked, ["9:15 Wire.on"]);
+  assert.deepEqual(
+    checkAll(source, ["events", "bindings.manage", "video.upscaling"]).findings,
+    [],
+  );
+});
+
+test("checker: wire.commands.register needs commands", () => {
+  const source = lines(
+    'plugin.wire.commands.register({ id: "a", declaration: { title: "A" } });',
+  );
+  assert.deepEqual(checkAll(source).findings, [
+    "3:24 WireCommands.register commands.register commands",
+  ]);
+});
+
+test("vestra-plugin check lists unchecked calls without failing", () => {
+  const directory = project(
+    {
+      "main.ts": lines(
+        "const pick = (name: string) => plugin.wire.request(name);",
+        'void pick("clipboard.readText");',
+      ),
+    },
+    [],
+  );
+  const run = (...args: string[]) =>
+    spawnSync(process.execPath, [cli, "check", ...args], {
+      cwd: directory,
+      encoding: "utf8",
+    });
+  const plain = run();
+  assert.equal(plain.status, 0, plain.stdout + plain.stderr);
+  assert.match(
+    plain.stdout,
+    /main\.ts:3:46: unchecked: Wire\.request with a method name that is not a literal/,
+  );
+  const json = run("--json");
+  assert.equal(json.status, 0, json.stderr);
+  const [entry] = JSON.parse(json.stdout) as {
+    findings: unknown[];
+    unchecked: { api: string; line: number }[];
+  }[];
+  assert.deepEqual(entry!.findings, []);
+  assert.deepEqual(
+    entry!.unchecked.map((u) => [u.api, u.line]),
+    [["Wire.request", 3]],
+  );
 });
 
 test("isPluginSource leaves out tests, dependencies and declarations", () => {

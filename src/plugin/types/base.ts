@@ -28,6 +28,7 @@ import type { Ui } from "./ui-content.ts";
 import type { Drops, Windows } from "./ui-layout.ts";
 import type { Appearance, I18n } from "./ui-locale.ts";
 import type { Dialogs, Osd, Panels, Settings } from "./ui-shell.ts";
+import type { Wire } from "./plugin-wire.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
@@ -377,6 +378,15 @@ export interface Scope extends Disposable {
   readonly i18n: I18n;
   /** Pages in the player's options window (`ui.settings`). */
   readonly settings: Settings;
+  /**
+   * Direct messages to the player: requests by method name, raw events,
+   * direct property writes, bare command registrations (SDK 1.7.0).
+   * Experimental: the wire protocol is not semver; this member changes
+   * with versions. See {@link Wire}.
+   *
+   * @experimental
+   */
+  readonly wire: Wire;
   /**
    * A child scope; disposing it releases only what was created through it.
    * The child is itself owned by this scope.

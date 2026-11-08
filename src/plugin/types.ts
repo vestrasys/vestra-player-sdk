@@ -13,13 +13,15 @@
  * and are re-exported here with `export type *`: this module exports the
  * same names as before the split.
  */
-import type { Json } from "../wire.ts";
+import type { Json, PropertyWrite, RowOp } from "../wire.ts";
 import type { AudioNode, ConvolutionPlane, VideoNode } from "../processing.ts";
 import type { SubtitleStyle } from "../subtitles.ts";
 import type { ResolvedMedia } from "../source-resolvers.ts";
 
 export type {
   Json,
+  PropertyWrite,
+  RowOp,
   AudioNode,
   ConvolutionPlane,
   VideoNode,
@@ -40,3 +42,4 @@ export type * from "./types/snapshots.ts";
 export type * from "./types/sources.ts";
 export type * from "./types/packages.ts";
 export type * from "./types/services.ts";
+export type * from "./types/plugin-wire.ts";

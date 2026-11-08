@@ -32,6 +32,17 @@
  *      `rereads` instead (SDK 1.7.0). Running plugin code (`scope.run`)
  *      is not such a call: it is how a primitive hands control to plugin
  *      code, and the scope decides what follows.
+ *   7. Only `WIRE_FACADE` (`src/plugin/wire-facade.ts`, `plugin.wire`, SDK
+ *      1.7.0) hands the protocol to plugin code: no other file under
+ *      `src/plugin/` (the test host, and `connection.ts`, which defines
+ *      it, aside) sends a request by a method name it was given, i.e.
+ *      calls a `request(` method (`Connection.request`, the transport's).
+ *      Every other primitive uses the typed clients
+ *      (`runtime.host.ui.set(…)`), whose methods are fixed in L0. A textual
+ *      check, like rule 6. The facade itself is L1 (in `LOWER`): it may not
+ *      load the framework, so it reaches a view's writer through the
+ *      `DIRECT` key of `view/writer.ts` instead of importing the view
+ *      classes.
  *
  * Not checked yet: spec §2.1's second rule, that `src/plugin/**` reaches
  * the wire only through `connection.ts`, waits until `src/wire/` exists
@@ -81,7 +92,17 @@ const LOWER = [
   "src/plugin/view/writer.ts",
   "src/plugin/player/events.ts",
   "src/plugin/player/rules.ts",
+  // The facade behind `plugin.wire` (L0/L1 handed to plugin code).
+  "src/plugin/wire-facade.ts",
 ];
+/** Rule 7: the one file under src/plugin/ that sends requests by a given name. */
+const WIRE_FACADE = "src/plugin/wire-facade.ts";
+/** Rule 7: files that may call `request(` besides the facade. */
+const REQUEST_ALLOWED = (file) =>
+  file === WIRE_FACADE ||
+  file === "src/plugin/connection.ts" ||
+  file === "src/plugin/testing.ts" ||
+  file.startsWith("src/plugin/testing/");
 /**
  * L2 modules no lower file may import: the passes, `Runtime` over them, the
  * view binder (`bind`/`snapshot`/`evaluate` over the view writer), the
@@ -307,6 +328,22 @@ for (const file of LOWER) {
   });
 }
 
+// 7. Requests by a given method name only from the facade.
+if (!existsSync(join(root, WIRE_FACADE)))
+  problems.push(`${WIRE_FACADE} is named by rule 7 but missing`);
+for (const file of files) {
+  if (!file.startsWith("src/plugin/") || REQUEST_ALLOWED(file)) continue;
+  const lines = readFileSync(join(root, file), "utf8").split("\n");
+  lines.forEach((line, at) => {
+    const code = line.replace(/\/\/.*$/, "");
+    if (/^\s*(\/\*\*?|\*)/.test(code)) return;
+    if (/\.request\s*(?:<[^>]*>)?\s*\(/.test(code))
+      problems.push(
+        `${file}:${at + 1}: sends a request by method name (${code.trim()}); only ${WIRE_FACADE} (plugin.wire) does, the rest of the SDK uses the typed clients (rule 7)`,
+      );
+  });
+}
+
 // Pending edges: a note each run; a stale entry fails.
 for (const { file, text } of PENDING) {
   const path = join(root, file);
@@ -330,5 +367,5 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `check-layers: ${LOWER.length} L0/L1 files, none imports ${FRAMEWORK.join(" or ")}; no value-import cycle in src/ beyond KNOWN_CYCLES; every relative import resolved; ${files.filter(typeOnly).length} files of types only`,
+  `check-layers: ${LOWER.length} L0/L1 files, none imports ${FRAMEWORK.join(" or ")}; no value-import cycle in src/ beyond KNOWN_CYCLES; every relative import resolved; ${files.filter(typeOnly).length} files of types only; requests by method name only from ${WIRE_FACADE}`,
 );

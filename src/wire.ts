@@ -77,25 +77,110 @@ export interface UiCallback {
   args: Json[];
 }
 /**
- * One row operation of a patch, by index, applied to the result of the
- * ones before (player 0.6.0, feature `ui.patch`). `move` takes `count` rows
- * out at `from` and puts them back at `to`, an index of the list without
- * them.
+ * One row operation of a list property's patch, by index, applied to the
+ * result of the ones before (player 0.6.0, feature `ui.patch`).
+ *
+ * @remarks
+ * Part of the wire protocol, which is not semver: this type changes with
+ * versions. `set` replaces the row at `at`; `insert` puts `rows` before
+ * index `at` (the list's length: at the end); `remove` takes `count` rows
+ * out at `at`; `move` takes `count` rows out at `from` and puts them back
+ * at `to`, an index of the list without them. The SDK sends them for
+ * bound lists by itself; a plugin writes them with
+ * {@link WireView.writeRows}.
+ *
+ * @example Move the first row to the end
+ * A three-row list becomes rows 2, 3, 1: the first row is taken out and
+ * put back at index 2 of the two rows left.
+ * ```ts
+ * const op: RowOp = { op: "move", from: 0, count: 1, to: 2 };
+ * ```
+ *
+ * @experimental
+ * @since 1.7.0
+ * @category Plugin
  */
 export type RowOp =
-  | { op: "set"; at: number; row: Json }
-  | { op: "insert"; at: number; rows: Json[] }
-  | { op: "remove"; at: number; count: number }
-  | { op: "move"; from: number; count: number; to: number };
+  | {
+      /** Replace one row. */
+      op: "set";
+      /** The row's index. */
+      at: number;
+      /** The new row. */
+      row: Json;
+    }
+  | {
+      /** Insert rows. */
+      op: "insert";
+      /** The index the first new row gets (the list's length: at the end). */
+      at: number;
+      /** The new rows, in order. */
+      rows: Json[];
+    }
+  | {
+      /** Remove a run of rows. */
+      op: "remove";
+      /** The index of the first row removed. */
+      at: number;
+      /** How many rows. */
+      count: number;
+    }
+  | {
+      /** Move a run of rows. */
+      op: "move";
+      /** The index of the first row moved. */
+      from: number;
+      /** How many rows. */
+      count: number;
+      /** Where they go, an index of the list without them. */
+      to: number;
+    };
 /**
- * A property write: a whole value (with its `seq` to players that take
- * patches), or a row patch of an array applying on the write numbered
- * `base` (0: the initial properties).
+ * One write of a view property as the player takes it: a whole value, or
+ * a row patch of a list.
+ *
+ * @remarks
+ * Part of the wire protocol, which is not semver: this type changes with
+ * versions. `{ value }` replaces the property; to a player that takes row
+ * patches (player 0.6.0) it carries a `seq` that later patches apply on.
+ * `{ patch: { base, seq, ops } }` applies `ops` on the write numbered
+ * `base` (0: the view's initial properties) and is numbered `seq` itself;
+ * the player refuses it with `stale` when the property changed since
+ * `base`. `more` marks a part of a whole value sent in several, not the
+ * last: the player shows the value at the last part. The SDK writes these
+ * for `set()` and `bind()`; a plugin writes them with
+ * {@link WireView.write}.
+ *
+ * @example Write a whole list, numbered
+ * The property `items` becomes a list of two rows; a later patch with
+ * `base: 7` applies on it.
+ * ```ts
+ * const write: PropertyWrite = { value: [{ id: "a" }, { id: "b" }], seq: 7 };
+ * ```
+ *
+ * @experimental
+ * @since 1.7.0
+ * @category Plugin
  */
 export type PropertyWrite =
-  | { value: Json; seq?: number; more?: boolean }
   | {
-      patch: { base: number; seq: number; ops: RowOp[] };
+      /** The property's new value. */
+      value: Json;
+      /** This write's number, which later patches name as their `base`. */
+      seq?: number;
+      /** A part of a whole value sent in parts, not the last (player 0.6.0). */
+      more?: boolean;
+    }
+  | {
+      /** Row operations on a list property. */
+      patch: {
+        /** The `seq` of the write they apply on (0: the initial properties). */
+        base: number;
+        /** This patch's own number (1 or more). */
+        seq: number;
+        /** The operations, applied in order. */
+        ops: RowOp[];
+      };
       /** A part of a whole value sent in parts, not the last (player 0.6.0). */
       more?: boolean;
     };

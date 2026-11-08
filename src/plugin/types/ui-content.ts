@@ -10,6 +10,7 @@ import type { Plugin, Scope } from "./base.ts";
 import type { System } from "./services.ts";
 import type { Panel, Window } from "./ui-layout.ts";
 import type { SettingsPage } from "./ui-shell.ts";
+import type { WireView } from "./plugin-wire.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- windows and panels
@@ -649,7 +650,9 @@ export interface View {
    * {@link View.bind} on, `set` values go the bound way: a list that
    * differs from the one sent is sent as a row patch where one applies.
    *
-   * Never throws. A write that fails is retried with back-off and reported
+   * A property the plugin writes directly ({@link WireView.write}, SDK
+   * 1.7.0) cannot be `set`: one track per property. Otherwise it never
+   * throws. A write that fails is retried with back-off and reported
    * to {@link Scope.onError} (the first failure of a run of failures; the
    * message names the property). A value over the limits of
    * {@link PropValue} fails with `limit`. As an initial property (written
@@ -661,6 +664,10 @@ export interface View {
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
    * @param props - Properties by name; see {@link Props}.
+   *
+   * @throws `invalid` (throws) A property of `props` is written directly
+   *   with {@link WireView.write} ("property `rows` is written directly;
+   *   bind it or write it, not both"); nothing of `props` is kept.
    *
    * @example Put a drop-down back when the user picks an entry the plugin refuses
    * Choosing "Custom" snaps the drop-down back to the last real preset.
@@ -702,6 +709,9 @@ export interface View {
    * Never throws. Writes that fail are not repeated until the value
    * changes, and are reported to {@link Scope.onError} like a failed
    * {@link View.set} (a value over the limits of {@link PropValue}: `limit`).
+   * A property the plugin writes directly ({@link WireView.write}, SDK
+   * 1.7.0) is left out of what the function returns, reported once to
+   * `onError` with `invalid`: one track per property.
    *
    * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
