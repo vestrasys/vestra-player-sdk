@@ -35,11 +35,13 @@
 - **Wire** (additive): `ui.setMount`, `ui.interaction`, `ui.menu` and `ui.unmount` take an optional `slot` naming the panel (without it: the plugin's only panel; `ui.unmount` without it removes every panel); `ui.callback` and `ui.preparing` carry the panel's `slot`, and `ui.callback` keeps `view: "$mount"`. Older players ignore `slot`.
 - **`BUILTIN_COMMANDS`**: the player's seek, frame and speed actions (`host/seek-backward`, `seek-forward`, `frame-back`, `frame-forward`, `rate-down`, `rate-up`, `rate-normal`) leave Playback ▸ Seek and Speed for the command palette (player 0.7.6, with the playback plugin's panel); their keys and categories stay.
 - **`TestHost`**: `panels` (by slot, in mount order) and `mounted(slot?)`; without a slot `mounted()` returns the only panel and throws when there are several. `panel` stays, as the last panel mounted. The handlers take `slot` as the player does; `ui.interaction` stores the locks without it.
+
 ## 1.6.14
 
 **Who must change: nobody.** A data refresh: `BUILTIN_COMMANDS` lists the built-in capture plugin's commands as the player registers them since its capture tab; no API change, `apiVersion` stays `vestra/1`.
 
 - **`BUILTIN_COMMANDS`**: `vestra.capture` has **Video ▸ Snapshot ▸ Capture…** (Alt+S), which opens its sidebar tab; Save/Copy Rendered Frame, Save Current Frame As…, Export Tasks…, the capture formats, Snapshot Settings…, Snapshot Folder… and Open Snapshot Folder left the menu for the command palette, and new palette commands came: Export Clip Range (Ctrl+Shift+E), Save and Copy Video Frame Only, Show Last Capture in Folder, Copy Last Snapshot, Set Clip Start, Set Clip End and Export Last 30 Seconds (Ctrl+Shift+R). A plugin that checks a key or menu path against the table (`vestra-plugin check`, `TestHost`) sees the player's current ones.
+
 ## 1.6.13
 
 **Who must change: plugin tests that toggle a column in fullscreen.** In fullscreen `toggle()` now only switches the column on or off (user ruling 2026-11-08); a test that asserted `effective: true` after toggling a column on in fullscreen now sees `effective: false`, `reason: "fullscreen"` (on, revealed by the right edge). Plugin code needs no change; `apiVersion` stays `vestra/1`, and the wire gains one optional field.
@@ -55,6 +57,7 @@
 - **`Panel.toggle` and `PanelSlot.toggle` slide a collapsed column out.** In fullscreen a sidebar or adjust column the user wants shown is collapsed at the right edge (`reason: "fullscreen"`). Toggling it then turned it off; it now shows it, which player 0.7.6 answers by sliding the column out, as its own Adjust button and Alt+1…4 do. Toggling a column that is on screen still turns it off. With players before 0.7.6 a show of a collapsed column changes nothing on screen, as before.
 - **[adjust-panel](docs/examples/adjust-panel.md)** declares `events`: without it `plugin.player.state` changes only after the plugin's own calls, so a panel activated before a file was opened stayed disabled at 1×. A new test opens the file after activation. Its presets are four (0.5×, 1×, 1.5×, 2×), which fit the adjust column at its least width. No other example reads `player.state` without `events`.
 - **A development warning for state followed without `events`.** A plugin that registers an `onChange` or a `bind` whose function reads changing state (`player.state`, a panel position, and the like) without the `events` capability gets one line in its log, once per plugin: changes made elsewhere never reach it. Only a warning; behaviour is unchanged. `TestHost` already behaved like the player here (it delivers `source.state` and the other state events only to a plugin that subscribed, which needs `events`): a new test pins that down. The example's old tests passed because they opened the file before starting the plugin or did not check `enabled`. No SDK example or test relied on the opposite, so nobody must change.
+
 ## 1.6.11
 
 **Who must change: nobody.** Additions only: a mount slot, a panel position, a button icon and `TestHost` support; `apiVersion` stays `vestra/1`, no new capability. A plugin that mounts `"adjust"` sets `minPlayerVersion` to `0.7.6`: older players refuse the slot (`invalid`), which fails the activation like any refused mount.
