@@ -1,0 +1,10 @@
+import { VerticalBox } from "std-widgets.slint";
+
+export component StatusWindow inherits Window {
+    title: "Demo emulator";
+    preferred-width: 320px;
+    in property <string> status: "Stopped";
+    VerticalBox {
+        Text { text: root.status; }
+    }
+}

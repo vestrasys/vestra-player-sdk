@@ -55,6 +55,18 @@ Every `error.code` the API fails with and what it means, from the `PluginError` 
 
 [Read the error codes](errors.md)
 
+## Events
+
+Every player event a plugin can listen to by name, with its payload, the SDK members that listen to it, whether it wakes a stopped plugin and the capability it needs.
+
+[Read the events reference](events.md)
+
+## Messages
+
+Every request method of the player's protocol, by capability: its parameters and result, the errors documented for it and the SDK member that sends it. Changes with player versions.
+
+[Read the messages reference](messages.md)
+
 ## Translations
 
 The interface languages, the gettext files, template and plural rules, where text values are accepted, what `i18n extract` and `i18n check` do, the review markers and the limits.

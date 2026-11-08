@@ -1,0 +1,30 @@
+import { ListView } from "std-widgets.slint";
+import { Theme } from "@vestra/theme.slint";
+
+export global ListBridge {
+    in property <[{ id: string, label: string, played: bool }]> rows;
+    callback play(int);
+}
+
+export component EntryList inherits Rectangle {
+    background: Theme.bg-list;
+    min-width: 200px;
+    // A ListView builds only the rows in view: 20,000 rows cost what 30 do.
+    ListView {
+        for row[index] in ListBridge.rows: Rectangle {
+            height: 20px;
+            Text {
+                x: 6px;
+                text: (row.played ? "✓ " : "") + row.label;
+                color: row.played ? Theme.text-list : Theme.text;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+            TouchArea {
+                double-clicked => {
+                    ListBridge.play(index);
+                }
+            }
+        }
+    }
+}

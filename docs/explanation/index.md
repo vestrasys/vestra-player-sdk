@@ -13,6 +13,12 @@ Each third-party plugin runs in a Node.js process of its own (the built-in plugi
 
 [Read the page](plugins.md)
 
+## Three ways to write a plugin
+
+The same plugin can declare what it shows (`bind()`, the update passes decide when to send), subscribe to events and write values itself (`player.on` and `set()`), or send the player's messages directly (`plugin.wire`). The page writes four jobs (a speed display, a status line pushed every frame, a list of 20,000 rows, state that arrives asynchronously) in all three styles side by side, says what each one sends and when to choose which.
+
+[Read the page](three-ways.md)
+
 ## Commands, menus and key bindings
 
 A command is one action with one state, reachable from the menu, a key, a panel's context menu and tests. The page explains declared state, how menu paths from every plugin merge into the player's one menu by their English keys and how they are ordered, how a key press finds its command (focus, scopes, conflicts, disabled commands that let their key go, what a key name matches), the user's own bindings and the player's own commands.
@@ -51,6 +57,6 @@ What is on the other side of the API: the host's modules and their responsibilit
 
 ## How the player runs and talks to plugins
 
-How the host starts a plugin (its own Node.js process or the shared runner for the built-ins), checks its package, and exchanges requests, replies and events with it; how it checks capabilities, stops plugins, restarts them after crashes, caps their memory, and starts them on demand.
+How the host starts a plugin (its own Node.js process or the shared runner for the built-ins), checks its package, and exchanges requests, replies and events with it; how it checks capabilities, stops plugins, restarts them after crashes, caps their memory, and starts them on demand; and the SDK's layers and what each one promises about stability.
 
 [Read the page](host-and-node.md)
