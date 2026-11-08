@@ -127,8 +127,9 @@ test("a never-bound window: set() while ui.open is answered is sent", async () =
   }
 });
 
-test("a never-bound panel: an initial list over one request's size arrives whole", async () => {
+test("a never-bound panel: an initial list over one request's size arrives whole, its first part sent once", async () => {
   const host = new TestHost();
+  const writes = recorded(host);
   let panel!: Panel;
   const big = Array.from({ length: 6000 }, (_, i) =>
     row(String(i), "x".repeat(100)),
@@ -144,6 +145,24 @@ test("a never-bound panel: an initial list over one request's size arrives whole
     await panel.ready;
     await host.settle(100);
     assert.deepEqual(host.mounted().props.rows, big);
+    // The mount carried the first rows; after it only the rest went, as
+    // inserts on them (the first applying on the initial properties, 0),
+    // never a whole value again.
+    const initial = (host.sent("ui.mount")[0]!.properties as { rows: Json[] })
+      .rows;
+    assert.ok(initial.length > 0 && initial.length < big.length);
+    const rows = writes.filter((w) => w.params.property === "rows");
+    assert.ok(rows.length > 0);
+    assert.ok(rows.every((w) => "patch" in w.params && !("value" in w.params)));
+    const first = rows[0]!.params.patch as {
+      base: number;
+      ops: { op: string; at: number }[];
+    };
+    assert.equal(first.base, 0);
+    assert.deepEqual(
+      [first.ops[0]!.op, first.ops[0]!.at],
+      ["insert", initial.length],
+    );
   } finally {
     await stop();
   }

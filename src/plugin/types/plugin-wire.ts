@@ -84,20 +84,25 @@ export interface Wire {
    * revision, no retry after a lost reply, no wait during activation. A
    * request that changes something the SDK keeps (a window the SDK opened,
    * a command added with {@link Commands.add}) leaves the SDK's copy out of
-   * date. One method is guarded: `events.subscribe` must say why the
+   * date. Two methods are guarded. `events.subscribe` must say why the
    * plugin listens, `why` (a list of reasons for the player's log) or
    * `mirror: true` (only a copy of the state), so the player's decision to
-   * keep the plugin running is never fooled; use {@link Wire.on} for
-   * events, which does that and delivers them. `events.unsubscribe` ends
-   * the SDK's own subscription to that event too.
+   * keep the plugin running is never fooled; a marked one goes as given,
+   * but the SDK does not count it: the player keeps one subscription per
+   * event name, so it replaces the mark of the SDK's own subscription to
+   * that event, and the SDK's next change of that mark replaces it again.
+   * `events.unsubscribe` is refused, since it would end the SDK's own
+   * subscription too: stop listening by disposing what {@link Wire.on}
+   * returned. Use `Wire.on` for the events the SDK knows; it marks and
+   * counts them and delivers them.
    *
    * @param method - The player's method name (`"ui.setMount"`).
    * @param params - Its parameters, a JSON object (omitted: none).
    * @returns The player's result, once the player answered.
    *
-   * @throws `invalid` (throws) `method` is not a non-empty string, or it is
+   * @throws `invalid` (throws) `method` is not a non-empty string, it is
    *   `events.subscribe` without `why` (a non-empty list of strings) or
-   *   `mirror: true`.
+   *   `mirror: true`, or it is `events.unsubscribe`.
    * @throws `capability` (rejects) The manifest does not declare the
    *   capability the method needs.
    * @throws `unsupported` (rejects) The player does not know the method.

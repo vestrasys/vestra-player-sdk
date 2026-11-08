@@ -575,7 +575,12 @@ export interface Scope extends Disposable {
    * Replace the object instead (`st.list = [...st.list, item]`). Do not
    * write a field from a `bind` function that reads it: each write runs the
    * function again; the SDK stops such a loop after 100 passes in a row and
-   * reports it to {@link Scope.onError} once (`limit`).
+   * reports it to {@link Scope.onError} once (`limit`). The limit counts
+   * passes, not loops: a chain of bindings that is not a loop but deeper
+   * than 100 (each writing a field the next one reads) is cut the same
+   * way: what the dropped pass would have evaluated waits for the next full
+   * pass (after a handler, or {@link Scope.update}). Keep derived values in
+   * one function instead of chaining fields.
    *
    * The object is a `Proxy`: spread, `Object.keys` and `JSON.stringify` give
    * its values; `structuredClone` does not take it (clone `{ ...st }`). It

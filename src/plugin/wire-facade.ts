@@ -8,9 +8,12 @@
  * (`scripts/check-layers.mjs`, rule 7).
  *
  * - `request`: `Connection.request`, the transport as is; the player
- *   checks capabilities. Only `events.subscribe` is guarded: without
- *   `why` or `mirror` it would make the player misjudge whether the plugin
- *   listens (lazy activation), so it is refused with `invalid`.
+ *   checks capabilities. Two methods are guarded, refused with `invalid`:
+ *   `events.subscribe` without `why` or `mirror` would make the player
+ *   misjudge whether the plugin listens (lazy activation), and
+ *   `events.unsubscribe` would end the SDK's own subscription to the
+ *   event. A marked `events.subscribe` goes as given; the SDK does not
+ *   count it (its own subscriptions and marks know nothing of it).
  * - `on`: a {@link HostEvent} through `Connection.on`, always a listener
  *   with its `why`, never a mirror (as `player.on`); any other name through
  *   `Connection.raw`, no subscription.
@@ -178,6 +181,13 @@ export const wire = (scope: ScopeImpl): Wire => ({
       throw failure(
         "invalid",
         "events.subscribe needs why (a list of reasons) or mirror: true, or the player misjudges whether the plugin listens; use plugin.wire.on, which sends why",
+      );
+    // The player keeps one subscription per event name: a raw unsubscribe
+    // would end the SDK's own (state copies, `player.on`, `wire.on`).
+    if (method === "events.unsubscribe")
+      throw failure(
+        "invalid",
+        "events.unsubscribe would end the SDK's own subscription to the event too; use the Disposable from plugin.wire.on",
       );
     return scope.runtime.request<T>(method, params);
   },

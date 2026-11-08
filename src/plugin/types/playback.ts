@@ -1801,7 +1801,12 @@ export interface EventPayloads {
   /** The player's source: phase, position, rate, volume, its stamp (what {@link PlayerState} is made from). */
   "source.state": SourceState;
   /** A playback backend event: the backend's name for it (`event`) and the source generation it belongs to. */
-  "playback.backend": { currentSession: number; event: string };
+  "playback.backend": {
+    /** The source generation it belongs to. */
+    currentSession: number;
+    /** The backend's name for the event. */
+    event: string;
+  };
   /** The main window: fullscreen, maximized, video area, picture-in-picture (what {@link WindowState} is made from). */
   "window.state": WindowFacts;
   /** Every installed plugin, after an install, an uninstall or a change of one (needs no capability). */
@@ -1813,9 +1818,17 @@ export interface EventPayloads {
   /** Every timeline mark and range, after any plugin or the player changed one. */
   "timeline.changed": WireTimeline;
   /** The palette changed (`theme`), or the interface language the user saved (`language`; the oldest players send no language). */
-  "appearance.changed": { theme: string; language?: string };
+  "appearance.changed": {
+    /** The palette now (`ThemeId`; a newer player may name one this SDK does not list). */
+    theme: string;
+    /** The interface language the user saved, `"system"` or a locale (absent from the oldest players). */
+    language?: string;
+  };
   /** The file extensions the plugins' file resolvers claim now. */
-  "resolvers.fileTypes": { fileTypes: string[] };
+  "resolvers.fileTypes": {
+    /** The extensions, lower case without the dot. */
+    fileTypes: string[];
+  };
   /** The AI upscaling state, without this plugin's own `enabled`. */
   "video.upscaling.changed": Omit<WireUpscalingState, "enabled">;
 }

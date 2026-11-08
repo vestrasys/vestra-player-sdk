@@ -13,7 +13,21 @@
  * and are re-exported here with `export type *`: this module exports the
  * same names as before the split.
  */
-import type { Json, PropertyWrite, RowOp } from "../wire.ts";
+import type {
+  Json,
+  PackageInfo,
+  PropertyWrite,
+  RowOp,
+  WindowFacts,
+  WireMark,
+  WireRange,
+  WireRenderingReason,
+  WireSource,
+  WireTimeline,
+  WireUpscalingReason,
+  WireUpscalingState,
+} from "../wire.ts";
+import type { CommandKeys } from "../commands.ts";
 import type { AudioNode, ConvolutionPlane, VideoNode } from "../processing.ts";
 import type { SubtitleStyle } from "../subtitles.ts";
 import type { ResolvedMedia } from "../source-resolvers.ts";
@@ -27,6 +41,17 @@ export type {
   VideoNode,
   SubtitleStyle,
   ResolvedMedia,
+  // The wire shapes of the events `EventPayloads` lists (SDK 1.7.0).
+  CommandKeys,
+  PackageInfo,
+  WindowFacts,
+  WireMark,
+  WireRange,
+  WireRenderingReason,
+  WireSource,
+  WireTimeline,
+  WireUpscalingReason,
+  WireUpscalingState,
 };
 
 export type * from "./types/base.ts";

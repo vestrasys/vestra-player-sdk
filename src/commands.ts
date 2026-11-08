@@ -766,8 +766,16 @@ export type CommandDeclaration = {
  * local id, and (SDK 1.6.16) each of the player's own as `host/<id>`, with
  * the labels of its current keys; the answer to the request and the data of
  * the event of that name.
+ *
+ * @remarks
+ * The player's wire shape (`commands.keys`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.0
+ * @category Playback
  */
 export type CommandKeys = {
+  /** The key labels of each command, by local id (the player's own: `host/<id>`). */
   keys: Record<string, string[]>;
   /** The player's binding table revision: a larger one is newer. */
   revision: number;

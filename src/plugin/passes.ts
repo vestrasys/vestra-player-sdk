@@ -68,7 +68,11 @@ export const SAFETY_PASS_MS = 1000;
  * The most passes in a row that a pass itself asks for (something it
  * evaluated changed what it reads, `plugin.state` written in a `bind`
  * function). The next one is dropped and reported once: without it such a
- * plugin would spin in microtasks and never yield.
+ * plugin would spin in microtasks and never yield. It counts passes, not
+ * loops: a legitimate chain deeper than this (101 bindings, each writing a
+ * `plugin.state` field the next one reads) is cut the same way: the
+ * readers of the dropped pass's changes run again only in the next full
+ * pass (after a handler, `update()`).
  */
 export const MAX_CHAINED_PASSES = 100;
 

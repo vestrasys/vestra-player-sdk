@@ -123,6 +123,21 @@ const isPrimitive = (
   typeof value === "boolean" ||
   (typeof value === "number" && Number.isFinite(value));
 
+/**
+ * The first `count` rows of `value`, as sent, are `shown` (an initial
+ * array cut to one request's size); a released image is no match.
+ */
+function sameStart(shown: Json[], value: PropValue[], count: number) {
+  try {
+    return (
+      JSON.stringify(shown) ===
+      JSON.stringify(value.slice(0, count).map((row) => wireValue(row ?? null)))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** A row as `JSON.stringify` writes it inside an array. */
 const encodeRow = (row: unknown) => JSON.stringify(row) ?? "null";
 
@@ -459,6 +474,16 @@ export class ViewWriter {
    * whole, and no patch base is kept.
    */
   #tracked = false;
+  /**
+   * Initial arrays `wired` cut to one request's size, by key: how many
+   * rows went (until `shown`).
+   */
+  readonly #cut = new Map<string, number>();
+  /**
+   * Not bound: initial arrays the view shows the first rows of, by key,
+   * whose next write inserts only the rest (SDK 1.7.0).
+   */
+  readonly #rest = new Map<string, number>();
   /** Properties written directly (`plugin.wire.view(v)`, SDK 1.7.0). */
   readonly #direct = new Map<string, DirectTrack>();
   /** Direct properties a binding produced: reported once each. */
@@ -524,6 +549,7 @@ export class ViewWriter {
           }
           const count = room > 0 ? prefixWithin(sizes, room) : 0;
           wire = wire.slice(0, count);
+          this.#cut.set(key, count);
           room -= sizes.slice(0, count).reduce((a, b) => a + b, 0);
         } else room -= total;
       }
@@ -545,6 +571,7 @@ export class ViewWriter {
       this.#values.set(key, value);
       this.#forced.add(key);
       this.#failed.delete(key); // an explicit write is tried again (after any back-off)
+      this.#rest.delete(key); // a new value: no longer the initial rows' rest
     }
     this.flush();
   }
@@ -766,10 +793,29 @@ export class ViewWriter {
     // Not bound, a flush sends only what is marked: mark every value the
     // view does not show as it is now, such as a `set()` made while the view
     // was opening (after its initial properties were taken) or an initial
-    // array cut to one request's size (`wired`), whose rest goes now.
+    // array cut to one request's size (`wired`), whose rest goes now:
+    // only the rest, inserted on the initial rows (base 0), when the value
+    // still begins with them (`#rest`).
+    const cut = new Map(this.#cut);
+    this.#cut.clear();
+    this.#rest.clear();
     if (!this.#tracked)
-      for (const [key, value] of this.#values)
-        if (this.#encode(key, value).changed) this.#forced.add(key);
+      for (const [key, value] of this.#values) {
+        if (!this.#encode(key, value).changed) continue;
+        this.#forced.add(key);
+        const count = cut.get(key);
+        const shown = values[key];
+        if (
+          count !== undefined &&
+          this.#patches &&
+          Array.isArray(value) &&
+          Array.isArray(shown) &&
+          shown.length === count &&
+          count < value.length &&
+          sameStart(shown, value, count)
+        )
+          this.#rest.set(key, count);
+      }
   }
   /** `value` encoded, and whether it differs from what was sent. */
   #encode(key: string, value: PropValue): Pending {
@@ -850,6 +896,23 @@ export class ViewWriter {
       return pending.sent();
     }
     const generation = this.#generation;
+    // An initial list cut to one request's size, not bound: the player shows
+    // its first `rest` rows (the initial properties, base 0); only the
+    // others go, as insert patches each applying on the one before.
+    const rest = this.#rest.get(key);
+    this.#rest.delete(key);
+    if (rest !== undefined && Array.isArray(value)) {
+      const insert: RowOp = {
+        op: "insert",
+        at: rest,
+        rows: (value as PropValue[])
+          .slice(rest)
+          .map((row) => wireValue(row ?? null)),
+      };
+      tooLarge(key, [insert]);
+      await this.#parts(key, 0, chunkOps([insert]), false, generation);
+      return pending.sent();
+    }
     const base = this.#bases.get(key);
     this.#bases.delete(key);
     const sent = this.#sent.get(key);

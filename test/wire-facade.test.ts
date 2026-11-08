@@ -93,7 +93,7 @@ test("wire.request: TestHost takes a raw request as the player does", async () =
   }
 });
 
-test("wire.request: events.subscribe without why or mirror is refused with invalid", async () => {
+test("wire.request: events.subscribe without why or mirror, and events.unsubscribe, are refused with invalid", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
     capabilities: ["events"],
   });
@@ -111,6 +111,13 @@ test("wire.request: events.subscribe without why or mirror is refused with inval
         message: /needs why .* or mirror: true/,
       });
     assert.equal(host.sent("events.subscribe").length, before, "nothing sent");
+    // A raw unsubscribe would end the SDK's own subscription: refused.
+    assert.throws(
+      () =>
+        plugin.wire.request("events.unsubscribe", { event: "source.state" }),
+      { code: "invalid", message: /use the Disposable from plugin.wire.on/ },
+    );
+    assert.equal(host.sent("events.unsubscribe").length, 0);
     // Marked, it goes as given.
     await plugin.wire.request("events.subscribe", {
       event: "window.state",

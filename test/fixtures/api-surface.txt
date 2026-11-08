@@ -225,6 +225,20 @@
 @vestra-player/sdk InterfaceDeclaration PackageChange :: readonly done: Promise<PackageChangeStatus>;
 @vestra-player/sdk InterfaceDeclaration PackageChange :: readonly message: string | null;
 @vestra-player/sdk InterfaceDeclaration PackageChange :: readonly status: PackageChangeStatus;
+@vestra-player/sdk InterfaceDeclaration PackageInfo
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: builtin?: boolean;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: capabilities: string[];
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: dataDirectory?: string | null;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: directory: string;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: display?: { name: string | null; punchline: string | null; description: string | null; tags: string[]; };
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: error: string | null;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: id: string;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: origin: "installed" | "development";
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: process?: "running" | "idle";
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: source?: WireSource | null;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: state: "starting" | "running" | "disabled" | "failed" | "stopped";
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: version: string | null;
+@vestra-player/sdk InterfaceDeclaration PackageInfo :: warnings?: { code: string; slot?: string; owner?: string; }[];
 @vestra-player/sdk InterfaceDeclaration PackageManifest
 @vestra-player/sdk InterfaceDeclaration PackageManifest :: apiVersion: string;
 @vestra-player/sdk InterfaceDeclaration PackageManifest :: author?: string;
@@ -646,6 +660,15 @@
 @vestra-player/sdk InterfaceDeclaration Window :: readonly opened: boolean;
 @vestra-player/sdk InterfaceDeclaration Window :: show(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Window extends View, Disposable
+@vestra-player/sdk InterfaceDeclaration WindowFacts
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: appearance?: string;
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: fileTypes?: string[];
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: fullscreen: boolean;
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: language?: string;
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: locale?: string;
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: maximized?: boolean;
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: pictureInPicture?: { supported: boolean; active: boolean; };
+@vestra-player/sdk InterfaceDeclaration WindowFacts :: videoArea: { width: number; height: number; };
 @vestra-player/sdk InterfaceDeclaration WindowState
 @vestra-player/sdk InterfaceDeclaration WindowState :: readonly fullscreen: boolean;
 @vestra-player/sdk InterfaceDeclaration WindowState :: readonly maximized: boolean;
@@ -675,6 +698,37 @@
 @vestra-player/sdk InterfaceDeclaration WireCommandState :: readonly reason?: Json;
 @vestra-player/sdk InterfaceDeclaration WireCommands
 @vestra-player/sdk InterfaceDeclaration WireCommands :: register(options: WireCommandOptions): WireCommand;
+@vestra-player/sdk InterfaceDeclaration WireMark
+@vestra-player/sdk InterfaceDeclaration WireMark :: kind: "chapter" | "bookmark" | "marker";
+@vestra-player/sdk InterfaceDeclaration WireMark :: plugin: string;
+@vestra-player/sdk InterfaceDeclaration WireMark :: time: number;
+@vestra-player/sdk InterfaceDeclaration WireMark :: title: string | null;
+@vestra-player/sdk InterfaceDeclaration WireRange
+@vestra-player/sdk InterfaceDeclaration WireRange :: end: number;
+@vestra-player/sdk InterfaceDeclaration WireRange :: plugin: string;
+@vestra-player/sdk InterfaceDeclaration WireRange :: start: number;
+@vestra-player/sdk InterfaceDeclaration WireRange :: style: "selection" | "region";
+@vestra-player/sdk InterfaceDeclaration WireRange :: title: string | null;
+@vestra-player/sdk InterfaceDeclaration WireRenderingReason
+@vestra-player/sdk InterfaceDeclaration WireRenderingReason :: code: string;
+@vestra-player/sdk InterfaceDeclaration WireRenderingReason :: message: string;
+@vestra-player/sdk InterfaceDeclaration WireTimeline
+@vestra-player/sdk InterfaceDeclaration WireTimeline :: marks: WireMark[];
+@vestra-player/sdk InterfaceDeclaration WireTimeline :: ranges?: WireRange[];
+@vestra-player/sdk InterfaceDeclaration WireUpscalingReason :: cause?: string;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingReason :: plugins?: { id: string; name: string; }[];
+@vestra-player/sdk InterfaceDeclaration WireUpscalingReason extends WireRenderingReason
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: area?: { width: number; height: number; } | null;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: available: boolean;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: enabled: boolean;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: factor: number | null;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: gpu?: string | null;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: hwdecCurrent?: string | null;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: inChain?: boolean;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: reason: WireUpscalingReason | null;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: requested: boolean;
+@vestra-player/sdk InterfaceDeclaration WireUpscalingState :: video?: { width: number; height: number; displayWidth: number; displayHeight: number; } | null;
 @vestra-player/sdk InterfaceDeclaration WireView
 @vestra-player/sdk InterfaceDeclaration WireView :: write(property: string, write: PropertyWrite): Promise<boolean>;
 @vestra-player/sdk InterfaceDeclaration WireView :: writeRows(property: string, ops: readonly RowOp[]): Promise<boolean>;
@@ -682,6 +736,7 @@
 @vestra-player/sdk TypeAliasDeclaration AudioNode = export type AudioNode = { kind: "volume"; gainDb: number; } | { kind: "equalizer"; frequency: number; q: 1; gainDb: number; } | { kind: "treble"; frequency: 3000; slope: 0.5; gainDb: number; } | { kind: "dynaudnorm"; enabled: boolean; maxGain: number; peak: number; } | { kind: "channels"; mode: "stereo" | "left" | "right" | "mono" | "swap"; };
 @vestra-player/sdk TypeAliasDeclaration BarButtonIcon = export type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai";
 @vestra-player/sdk TypeAliasDeclaration Bindable = export type Bindable<T> = T | (() => T);
+@vestra-player/sdk TypeAliasDeclaration CommandKeys = export type CommandKeys = { keys: Record<string, string[]>; revision: number; };
 @vestra-player/sdk TypeAliasDeclaration ConvolutionPlane = export type ConvolutionPlane = { mode: "square" | "row" | "column"; matrix: number[]; rdiv: number; bias: number; };
 @vestra-player/sdk TypeAliasDeclaration EventPayload = export type EventPayload<E extends HostEvent> = EventPayloads[E];
 @vestra-player/sdk TypeAliasDeclaration ExportOptions = export type ExportOptions = { format: "png" | "bmp"; destination: string; sampleTime?: number; } | { format: "jpeg"; destination: string; sampleTime?: number; quality?: number; } | { format: "mp4"; destination: string; end: number; encoding?: ExportEncoding; } | { format: "copy"; destination: string; end: number; container?: "auto" | "mp4" | "mkv"; };
@@ -722,6 +777,7 @@
 @vestra-player/sdk TypeAliasDeclaration UpscalingReasonCode = export type UpscalingReasonCode = "platform" | "no-gpu" | "driver" | "gpu-unsupported" | "rendering" | "adapter" | "decoding" | "unchecked" | (string & {});
 @vestra-player/sdk TypeAliasDeclaration VideoFilter = export type VideoFilter = Filter<VideoNode[]>;
 @vestra-player/sdk TypeAliasDeclaration VideoNode = export type VideoNode = { kind: "eq"; brightness: number; contrast: number; saturation: number; gamma: number; } | { kind: "gblur"; sigma: number; steps: 3; } | { kind: "hue"; degrees: number; } | { kind: "sharpen"; amount: number; size: "small" | "large"; } | { kind: "denoise"; lumaSpatial: number; chromaSpatial: number; lumaTemporal: number; chromaTemporal: number; } | { kind: "deblock"; strength: "weak" | "strong"; } | { kind: "deband"; threshold: number; range: number; } | { kind: "transform"; rotate: 0 | 90 | 180 | 270; flipH: boolean; flipV: boolean; } | { kind: "deinterlace"; when: "interlaced" | "all" | "auto"; output: "frame" | "field"; } | { kind: "reframe"; mode: "crop" | "pad"; aspect: number; x: number; y: number; } | { kind: "frameBlend"; fps: number; } | { kind: "convolution"; planes: (ConvolutionPlane | null)[]; } | { kind: "lut3d"; file: string; interpolation: "nearest" | "trilinear" | "tetrahedral" | "pyramid" | "prism"; };
+@vestra-player/sdk TypeAliasDeclaration WireSource = export type WireSource = { kind: "repository"; url: string; } | { kind: "link"; url: string; } | { kind: "file"; } | { kind: "workshop"; } | { kind: "bundled"; };
 @vestra-player/sdk/testing ClassDeclaration HostError :: code: string;
 @vestra-player/sdk/testing ClassDeclaration HostError :: constructor(code: string, message: string);
 @vestra-player/sdk/testing ClassDeclaration HostError extends Error
