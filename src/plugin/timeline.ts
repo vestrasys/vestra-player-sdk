@@ -1,5 +1,6 @@
 /** Seek-bar marks (`plugin.timeline`): one layer per plugin, merged by the player. */
-import { failure, Latest, quiet } from "./runtime.ts";
+import { Latest } from "./latest.ts";
+import { failure, quiet } from "./errors.ts";
 import type { TextJson } from "../i18n.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";

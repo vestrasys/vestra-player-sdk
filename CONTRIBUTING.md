@@ -21,7 +21,7 @@ You need Node.js 26 or newer.
 
 ```sh
 npm ci                 # install and build dist/
-npm run check          # type check src/ and test/
+npm run check          # type check src/ and test/, and the layer rule (scripts/check-layers.mjs)
 npm run lint           # oxlint
 npm run format:check   # Prettier (npm run format fixes it)
 npm test               # unit tests

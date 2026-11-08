@@ -1,6 +1,7 @@
 /** Scopes own handles. Disposal runs newest first and never throws. */
-import { failure, toError } from "./runtime.ts";
-import type { Change, Runtime } from "./runtime.ts";
+import { failure, toError } from "./errors.ts";
+import type { Change } from "./passes.ts";
+import type { Runtime } from "./runtime.ts";
 import type {
   Disposable,
   DisposeInfo,
@@ -11,7 +12,10 @@ import type {
 } from "./types.ts";
 import { commands } from "./commands.ts";
 import { WHEN } from "./when.ts";
-import { dialogs, panels, ui, windows } from "./ui.ts";
+import { dialogs } from "./services/dialogs.ts";
+import { ui } from "./view/image.ts";
+import { panels } from "./view/panel.ts";
+import { windows } from "./view/window.ts";
 import { timeline } from "./timeline.ts";
 import { drops } from "./drops.ts";
 import { appearance } from "./appearance.ts";

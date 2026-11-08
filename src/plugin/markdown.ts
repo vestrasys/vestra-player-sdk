@@ -16,8 +16,8 @@ import {
 } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import type { Json } from "../wire.ts";
-import { failure } from "./runtime.ts";
-import type { Runtime } from "./runtime.ts";
+import { failure } from "./errors.ts";
+import type { Connection } from "./connection.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { MarkdownOptions, MarkdownRef } from "./types.ts";
 
@@ -137,7 +137,7 @@ export async function httpsDownload(
 
 /** Download (or reuse) the images; address → local file for each success. */
 async function fetchImages(
-  runtime: Runtime,
+  runtime: Connection,
   urls: string[],
 ): Promise<Record<string, string>> {
   const data = runtime.dataDirectory;
@@ -167,7 +167,7 @@ async function fetchImages(
  * a day; throws why it could not be had. `fresh`: it was downloaded now.
  */
 async function cached(
-  runtime: Runtime,
+  runtime: Connection,
   cache: string,
   url: string,
 ): Promise<{ file: string; fresh: boolean }> {
@@ -196,7 +196,7 @@ async function cached(
 
 /** `ui.remoteImage` downloads in flight and waiting, per plugin. */
 const slots = new WeakMap<
-  Runtime,
+  Connection,
   { active: number; waiting: (() => void)[] }
 >();
 
@@ -206,7 +206,7 @@ const slots = new WeakMap<
  * 4 at a time per plugin, 32 MB of cache, a day). Rejects `unavailable`.
  */
 export async function remoteImageFile(
-  runtime: Runtime,
+  runtime: Connection,
   url: string,
 ): Promise<string> {
   const data = runtime.dataDirectory;

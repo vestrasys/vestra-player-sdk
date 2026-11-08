@@ -7,8 +7,8 @@ import type {
 } from "../subtitles.ts";
 import { isTextValue, textProblem } from "../i18n.ts";
 import type { SourceState } from "../source.ts";
-import { Latest, failure, sleep, uncertain } from "./runtime.ts";
-import { abortError } from "./player.ts";
+import { Latest } from "./latest.ts";
+import { abortError, failure, sleep, uncertain } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {

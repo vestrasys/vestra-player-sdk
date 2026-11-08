@@ -5,7 +5,7 @@ import type {
   RawCapture,
   Snapshot as Frozen,
 } from "../media.ts";
-import { failure, sleep, uncertain } from "./runtime.ts";
+import { failure, sleep, uncertain } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import { playerOf } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";

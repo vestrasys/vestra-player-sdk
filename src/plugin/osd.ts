@@ -1,7 +1,7 @@
 /** On-screen display: a transient line and a persistent information block. */
-import { Latest } from "./runtime.ts";
+import { Latest } from "./latest.ts";
 import type { ScopeImpl } from "./scope.ts";
-import { failure } from "./runtime.ts";
+import { failure } from "./errors.ts";
 import type {
   Osd,
   OsdPanel,

@@ -6,7 +6,7 @@
  *   binding  = { modifier "+" } input        modifiers in order Ctrl, Alt, Shift, Cmd
  *   input    = key | "Mouse:" mouse
  */
-import { failure } from "./runtime.ts";
+import { failure } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { BindingRef, Bindings } from "./types.ts";
 

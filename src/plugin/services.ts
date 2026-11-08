@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { failure } from "./runtime.ts";
+import { failure } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { systemServices } from "./local.ts";
 import { playerOf, validStep } from "./player.ts";

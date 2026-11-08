@@ -1,5 +1,5 @@
 /** The player's palette (`plugin.appearance`; `ui.theme` to change it). */
-import { failure } from "./runtime.ts";
+import { failure } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Appearance, LanguagePreference, ThemeId } from "./types.ts";

@@ -7,7 +7,8 @@
  * media), or a failure.
  */
 import { isAbsolute } from "node:path";
-import { failure, Latest, quiet } from "./runtime.ts";
+import { Latest } from "./latest.ts";
+import { failure, quiet } from "./errors.ts";
 import { playerOf } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {

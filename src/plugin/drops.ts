@@ -1,6 +1,6 @@
 /** File drops (`plugin.drops`, `Panel.onDrop`; capability `ui.drop`). */
-import { failure } from "./runtime.ts";
-import type { Runtime } from "./runtime.ts";
+import { failure } from "./errors.ts";
+import type { Connection } from "./connection.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { Disposable, DropModifiers, Drops } from "./types.ts";
 
@@ -23,14 +23,14 @@ type PanelDrop = {
  * in `drops.drop`) and the panel's `onDrop` listeners (`drops.panel`).
  */
 class DropService {
-  readonly #runtime: Runtime;
+  readonly #runtime: Connection;
   readonly handlers = new Map<
     string,
     (paths: string[], modifiers: DropModifiers) => void
   >();
   readonly #panel = new Set<(drop: PanelDrop) => void>();
   #next = 0;
-  constructor(runtime: Runtime) {
+  constructor(runtime: Connection) {
     this.#runtime = runtime;
     runtime.raw("drops.drop", (data) => {
       const drop = data as {
@@ -81,7 +81,7 @@ class DropService {
   }
 }
 
-export const dropsOf = (runtime: Runtime) =>
+export const dropsOf = (runtime: Connection) =>
   runtime.service("drops", () => new DropService(runtime));
 
 const EXTENSION = /^[a-z0-9]{1,16}$/;

@@ -10,8 +10,7 @@ import { spawn } from "node:child_process";
 import { access, constants, stat } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import type { LocalServices } from "../wire.ts";
-import { failure } from "./runtime.ts";
-import { abortError } from "./player.ts";
+import { abortError, failure } from "./errors.ts";
 
 /** SIGTERM first, SIGKILL if the process is still there after this long. */
 const KILL_AFTER_MS = 300;

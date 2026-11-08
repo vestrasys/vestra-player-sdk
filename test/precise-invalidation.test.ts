@@ -11,7 +11,7 @@ import { inspect } from "node:util";
 import test, { mock } from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Panel, Plugin, PlayerState } from "../src/plugin/types.ts";
-import { SAFETY_PASS_MS } from "../src/plugin/runtime.ts";
+import { SAFETY_PASS_MS } from "../src/plugin/passes.ts";
 
 function packageWith() {
   const directory = mkdtempSync(join(tmpdir(), "precise-"));

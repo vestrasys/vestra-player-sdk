@@ -9,7 +9,7 @@ import {
   textProblem,
 } from "../i18n.ts";
 import type { ListJson, TextJson } from "../i18n.ts";
-import { failure } from "./runtime.ts";
+import { failure } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   I18n,
