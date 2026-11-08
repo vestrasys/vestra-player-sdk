@@ -37,6 +37,7 @@ export const STRICT_CATEGORIES = {
       "TestHost",
       "startPlugin",
       "FakeWindow",
+      "FakePanel",
       "FakeCommand",
       "FakeBarButton",
       "FakeProducer",

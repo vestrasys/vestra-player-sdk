@@ -4245,9 +4245,14 @@ export interface BackdropSlot {
  * or the sidebar moves to or from its floating window, while the global is
  * one stable address.
  *
- * Each plugin mounts at most one panel, and each position holds one panel
- * for all plugins. {@link Panels.bottom} and {@link Panels.sidebar} describe
- * the positions, whoever mounted there.
+ * A plugin mounts at most one panel per slot (SDK 1.6.15, player 0.7.6;
+ * before, one panel in all): a playback plugin can have its control bar in
+ * `"bottom"` and its controls in `"adjust"`. Each {@link Panel} has its own
+ * bridge, state, `toggle()` and `setInteraction()`; disposing one leaves
+ * the others, and stopping the plugin unmounts them all. The bottom bar and
+ * the backdrop hold one panel for all plugins; the sidebar and the adjust
+ * column one tab per plugin. {@link Panels.bottom}, {@link Panels.sidebar}
+ * and {@link Panels.adjust} describe the positions, whoever mounted there.
  *
  * @capability ui.mount
  *
@@ -4344,8 +4349,11 @@ export interface Panels {
    * @returns A {@link Panel} owned by this scope; await {@link Panel.ready}
    *   for the result.
    *
-   * @throws `Error` without a code (throws) This plugin already has a panel,
-   *   or the file exports no component or global, or several and `options`
+   * @throws `Error` without a code (throws) This plugin already has a panel
+   *   in this slot (a panel in another slot is fine from player 0.7.6;
+   *   players before 0.7.6 refuse a second panel with `conflict`, so a
+   *   plugin that mounts two declares `minPlayerVersion` 0.7.6), or the file
+   *   exports no component or global, or several and `options`
    *   does not name one. A file that cannot be read throws Node's file system
    *   error (`code` `ENOENT` and so on).
    * @throws The errors of {@link Panel.ready} (rejects `ready`) The player

@@ -251,6 +251,8 @@ export interface WireTimeline {
   marks: WireMark[];
   ranges?: WireRange[];
 }
+/** A panel position (`ui.mount`'s `slot`). */
+export type MountSlot = "bottom" | "sidebar" | "backdrop" | "adjust";
 /** The backdrop as `layout.state` reports it; `null` without one. */
 export interface LayoutBackdrop {
   owner: number;
@@ -861,16 +863,40 @@ export function createWire(transport: Transport) {
           prepareMs: number;
           shellGeneration: number;
         }>("ui.mount", options),
-      setMount: (property: string, write: PropertyWrite) =>
-        transport.request<void>("ui.setMount", { property, ...write }),
-      interaction: (locks: {
-        focused: boolean;
-        dragging: boolean;
-        popupOpen: boolean;
-      }) => transport.request<void>("ui.interaction", locks),
-      unmount: () => transport.request<void>("ui.unmount"),
-      menu: (items: (string | null)[], x: number, y: number) =>
-        transport.request<void>("ui.menu", { items, x, y }),
+      // `slot`: which of the plugin's panels (player 0.7.6: one per slot;
+      // older players have one and ignore it).
+      setMount: (property: string, write: PropertyWrite, slot?: MountSlot) =>
+        transport.request<void>("ui.setMount", {
+          property,
+          ...write,
+          ...(slot ? { slot } : {}),
+        }),
+      interaction: (
+        locks: {
+          focused: boolean;
+          dragging: boolean;
+          popupOpen: boolean;
+        },
+        slot?: MountSlot,
+      ) =>
+        transport.request<void>("ui.interaction", {
+          ...locks,
+          ...(slot ? { slot } : {}),
+        }),
+      unmount: (slot?: MountSlot) =>
+        transport.request<void>("ui.unmount", slot ? { slot } : undefined),
+      menu: (
+        items: (string | null)[],
+        x: number,
+        y: number,
+        slot?: MountSlot,
+      ) =>
+        transport.request<void>("ui.menu", {
+          items,
+          x,
+          y,
+          ...(slot ? { slot } : {}),
+        }),
       open: (
         id: string,
         file: string,

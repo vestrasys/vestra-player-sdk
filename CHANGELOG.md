@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.15
+
+**Who must change: nobody.** A plugin may now mount one panel per slot (player 0.7.6) instead of one panel in all; plugins with one panel work as before, and `apiVersion` stays `vestra/1`.
+
+- **One panel per slot.** `plugin.panels.mount` takes a second call for another slot: a playback plugin can have its control bar in `"bottom"` and its controls in `"adjust"`. Each `Panel` has its own bridge global, properties, callbacks, `state`, `show()`, `toggle()`, `setInteraction()` and menu; disposing one leaves the others, and stopping the plugin unmounts them all. A failed mount affects only that panel. A second panel in the same slot still throws (an `Error`, before anything is sent); the bottom bar and the backdrop still hold one panel for all plugins. Players before 0.7.6 refuse a second panel with `conflict` (they keep one panel per plugin); a plugin that mounts two declares `minPlayerVersion` 0.7.6.
+- **Wire** (additive): `ui.setMount`, `ui.interaction`, `ui.menu` and `ui.unmount` take an optional `slot` naming the panel (without it: the plugin's only panel; `ui.unmount` without it removes every panel); `ui.callback` and `ui.preparing` carry the panel's `slot`, and `ui.callback` keeps `view: "$mount"`. Older players ignore `slot`.
+- **`BUILTIN_COMMANDS`**: the player's seek, frame and speed actions (`host/seek-backward`, `seek-forward`, `frame-back`, `frame-forward`, `rate-down`, `rate-up`, `rate-normal`) leave Playback ▸ Seek and Speed for the command palette (player 0.7.6, with the playback plugin's panel); their keys and categories stay.
+- **`TestHost`**: `panels` (by slot, in mount order) and `mounted(slot?)`; without a slot `mounted()` returns the only panel and throws when there are several. `panel` stays, as the last panel mounted. The handlers take `slot` as the player does; `ui.interaction` stores the locks without it.
 ## 1.6.14
 
 **Who must change: nobody.** A data refresh: `BUILTIN_COMMANDS` lists the built-in capture plugin's commands as the player registers them since its capture tab; no API change, `apiVersion` stays `vestra/1`.

@@ -154,12 +154,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
 | Playback ▸ Previous | `PageUp`, `Mouse:X2` | `host/previous` |
 | Playback ▸ Next | `PageDown`, `Mouse:X1` | `host/next` |
-| Playback ▸ Seek ▸ Previous Frame | `D` | `host/frame-back` |
-| Playback ▸ Seek ▸ Next Frame | `F` | `host/frame-forward` |
 | Playback ▸ Seek ▸ Previous Keyframe | `Ctrl+Shift+ArrowLeft` | `vestra.playback/keyframe-back` |
 | Playback ▸ Seek ▸ Next Keyframe | `Ctrl+Shift+ArrowRight` | `vestra.playback/keyframe-forward` |
-| Playback ▸ Seek ▸ Back 5 s | `ArrowLeft` | `host/seek-backward` |
-| Playback ▸ Seek ▸ Forward 5 s | `ArrowRight` | `host/seek-forward` |
 | Playback ▸ Seek ▸ Back 30 s | `Ctrl+ArrowLeft` | `vestra.playback/backward-2` |
 | Playback ▸ Seek ▸ Forward 30 s | `Ctrl+ArrowRight` | `vestra.playback/forward-2` |
 | Playback ▸ Seek ▸ Back 60 s | `Shift+ArrowLeft` | `vestra.playback/backward-3` |
@@ -172,9 +168,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Playback ▸ Seek ▸ Jump to Start | `Backspace` | `vestra.playback/jump-start` |
 | Playback ▸ Seek ▸ Seek Steps… |  | `vestra.playback/time-jump` |
 | Playback ▸ Jump to Time… | `G` | `vestra.playback/jump` |
-| Playback ▸ Speed ▸ Normal | `Z` | `host/rate-normal` |
-| Playback ▸ Speed ▸ Slower 0.1 | `X` | `host/rate-down` |
-| Playback ▸ Speed ▸ Faster 0.1 | `C` | `host/rate-up` |
 | Playback ▸ Speed ▸ 0.5× |  | `vestra.playback/rate-05` |
 | Playback ▸ Speed ▸ 1.5× |  | `vestra.playback/rate-15` |
 | Playback ▸ Speed ▸ 2× |  | `vestra.playback/rate-20` |
@@ -418,6 +411,13 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Toggle Sidebar (not in the menu) |  | `host/sidebar` |
 | Command Palette (not in the menu) | `Ctrl+Shift+P` | `host/palette` |
 | Adjust (not in the menu) |  | `host/adjust` |
+| Previous Frame (not in the menu) | `D` | `host/frame-back` |
+| Next Frame (not in the menu) | `F` | `host/frame-forward` |
+| Back 5 s (not in the menu) | `ArrowLeft` | `host/seek-backward` |
+| Forward 5 s (not in the menu) | `ArrowRight` | `host/seek-forward` |
+| Normal (not in the menu) | `Z` | `host/rate-normal` |
+| Slower 0.1 (not in the menu) | `X` | `host/rate-down` |
+| Faster 0.1 (not in the menu) | `C` | `host/rate-up` |
 | Export Clip Range (not in the menu) | `Ctrl+Shift+E` | `vestra.capture/capture.clipExport` |
 | Save Current Frame As… (not in the menu) |  | `vestra.capture/capture.saveAs` |
 | Save Rendered Frame (not in the menu) | `Ctrl+Alt+E` | `vestra.capture/capture.saveScreen` |
@@ -534,17 +534,17 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | `play-pause` | Playback ▸ Play/Pause | `Space`, `Mouse:LeftClick` |
 | `previous` | Playback ▸ Previous | `PageUp`, `Mouse:X2` |
 | `next` | Playback ▸ Next | `PageDown`, `Mouse:X1` |
-| `frame-back` | Playback ▸ Seek ▸ Previous Frame | `D` |
-| `frame-forward` | Playback ▸ Seek ▸ Next Frame | `F` |
-| `seek-backward` | Playback ▸ Seek ▸ Back 5 s | `ArrowLeft` |
-| `seek-forward` | Playback ▸ Seek ▸ Forward 5 s | `ArrowRight` |
-| `rate-normal` | Playback ▸ Speed ▸ Normal | `Z` |
-| `rate-down` | Playback ▸ Speed ▸ Slower 0.1 | `X` |
-| `rate-up` | Playback ▸ Speed ▸ Faster 0.1 | `C` |
 | `volume-up` | Audio ▸ Volume + | `ArrowUp`, `Mouse:WheelUp` |
 | `volume-down` | Audio ▸ Volume − | `ArrowDown`, `Mouse:WheelDown` |
 | `mute` | Audio ▸ Mute | `M` |
 | `fullscreen` | Toggle Fullscreen | `Escape` |
+| `frame-back` |  | `D` |
+| `frame-forward` |  | `F` |
+| `seek-backward` |  | `ArrowLeft` |
+| `seek-forward` |  | `ArrowRight` |
+| `rate-normal` |  | `Z` |
+| `rate-down` |  | `X` |
+| `rate-up` |  | `C` |
 
 <!-- /generated -->
 

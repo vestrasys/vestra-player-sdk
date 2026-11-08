@@ -972,16 +972,18 @@ class PanelHandle extends ViewBase implements Panel {
     file: string,
     options: { component?: string; global?: string; title?: string },
   ) {
-    if (scope.runtime.views.has("$mount"))
-      throw new Error("a plugin can mount only one panel");
+    // One panel per slot (SDK 1.6.15, player 0.7.6; a player before 0.7.6
+    // refuses a second panel with `conflict`).
+    if (scope.runtime.views.has(`panel:${slot}`))
+      throw new Error(`this plugin already has a panel in the ${slot}`);
     super(scope);
     this.#slot = slot;
     const runtime = scope.runtime;
-    runtime.views.set("$mount", (callback, args) =>
+    runtime.views.set(`panel:${slot}`, (callback, args) =>
       this.dispatch(callback, args),
     );
     this.#interaction = new Latest((locks) =>
-      runtime.host.ui.interaction(locks),
+      runtime.host.ui.interaction(locks, this.#named()),
     );
     const component =
       options.component ?? exported(runtime.directory, file, "component");
@@ -1016,8 +1018,19 @@ class PanelHandle extends ViewBase implements Panel {
   protected live() {
     return this.#mounted && !this.closed;
   }
+  /**
+   * The slot to name in a request about this panel: only while the plugin
+   * has panels in more than one slot (the player then needs it); a plugin
+   * with one panel sends what it always sent.
+   */
+  #named(): MountSlot | undefined {
+    const panels = [...this.scope.runtime.views.keys()].filter((key) =>
+      key.startsWith("panel:"),
+    );
+    return panels.length > 1 ? this.#slot : undefined;
+  }
   protected write(property: string, write: PropertyWrite) {
-    return this.scope.runtime.host.ui.setMount(property, write);
+    return this.scope.runtime.host.ui.setMount(property, write, this.#named());
   }
   get state(): PanelState | null {
     const service = layoutOf(this.scope.runtime);
@@ -1077,6 +1090,7 @@ class PanelHandle extends ViewBase implements Panel {
       items.map((item) => item?.id ?? null),
       at.x,
       at.y,
+      this.#named(),
     );
   }
   onDrop(listener: Parameters<Panel["onDrop"]>[0]) {
@@ -1096,10 +1110,10 @@ class PanelHandle extends ViewBase implements Panel {
     this.scope.forget(this);
     this.#interaction.stop();
     if (this.#mounted)
-      await this.scope.runtime.host.ui.unmount().catch(() => {});
+      await this.scope.runtime.host.ui.unmount(this.#named()).catch(() => {});
     this.#mounted = false;
     await this.release();
-    this.scope.runtime.views.delete("$mount");
+    this.scope.runtime.views.delete(`panel:${this.#slot}`);
     // Listeners of `onChange` hear `null`.
     this.scope.runtime.invalidate();
     await layoutOf(this.scope.runtime).refresh();
