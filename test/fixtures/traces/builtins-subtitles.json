@@ -1,5 +1,6 @@
 {
   "scenario": "builtins/subtitles",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
   "command": "size-up",
   "subscriptions": [
     {
@@ -936,7 +937,11 @@
               "Alt+O"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -962,7 +967,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
           },
           "state": {
             "enabled": false,
@@ -990,7 +998,10 @@
               "Alt+H"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
           },
           "state": {
             "enabled": true,
@@ -1017,7 +1028,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Tracks"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1044,7 +1059,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Secondary Subtitle"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1072,7 +1091,10 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Secondary Subtitle Position"
+            }
           },
           "state": {
             "enabled": true,
@@ -1100,7 +1122,10 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Secondary Subtitle Position"
+            }
           },
           "state": {
             "enabled": true,
@@ -1129,7 +1154,10 @@
               "Alt+L"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Tracks"
+            }
           },
           "state": {
             "enabled": false,
@@ -1158,7 +1186,11 @@
               "Alt+PageUp"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1187,7 +1219,11 @@
               "Alt+PageDown"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1214,7 +1250,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1241,7 +1281,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1257,20 +1301,23 @@
           "id": "move-reset",
           "revision": 1,
           "declaration": {
-            "title": "Reset Position",
+            "title": "Subtitle Position",
             "path": [
-              "@subtitles",
-              "Subtitle Style",
-              "Reset Position"
+              "@reset",
+              "Subtitle Position"
             ],
-            "order": 334,
-            "group": "style-move",
+            "order": 330,
+            "group": "reset-subtitles",
             "radio": false,
             "bindings": [
               "Alt+Home"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Reset"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1299,7 +1346,11 @@
               "Alt+B"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "settings"
           },
           "state": {
             "enabled": true,
@@ -1326,7 +1377,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "settings"
           },
           "state": {
             "enabled": true,
@@ -1353,7 +1408,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Style"
+            },
+            "home": "settings"
           },
           "state": {
             "enabled": true,
@@ -1379,7 +1438,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            },
+            "home": "settings"
           },
           "state": {
             "enabled": true,
@@ -1408,7 +1471,10 @@
               "Home"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1437,7 +1503,10 @@
               "End"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1466,7 +1535,10 @@
               "Ctrl+Home"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1482,20 +1554,23 @@
           "id": "sync-reset",
           "revision": 1,
           "declaration": {
-            "title": "Reset",
+            "title": "Subtitle Sync",
             "path": [
-              "@subtitles",
-              "Sync",
-              "Reset"
+              "@reset",
+              "Subtitle Sync"
             ],
-            "order": 341,
-            "group": "subtitle-sync",
+            "order": 331,
+            "group": "reset-subtitles",
             "radio": false,
             "bindings": [
               "/"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Reset"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1522,7 +1597,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitle Sync"
+            }
           },
           "state": {
             "enabled": true,
@@ -1550,7 +1628,10 @@
               "Ctrl+Alt+Y"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
           },
           "state": {
             "enabled": true,
@@ -1576,7 +1657,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
           },
           "state": {
             "enabled": true,
@@ -1602,7 +1686,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
           },
           "state": {
             "enabled": true,
@@ -1628,7 +1715,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Subtitles"
+            }
           },
           "state": {
             "enabled": true,
@@ -1946,7 +2036,11 @@
               "."
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Sync"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,
@@ -1975,7 +2069,11 @@
               ","
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Subtitle Sync"
+            },
+            "home": "tune"
           },
           "state": {
             "enabled": true,

@@ -1,5 +1,6 @@
 {
   "scenario": "builtins/workshop",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
   "command": "workshop.open",
   "subscriptions": [],
   "polled": [],
@@ -133,6 +134,8 @@
             },
             "message-warn": false,
             "owner-text": "",
+            "thinking-index": 1,
+            "reasons": false,
             "owner-hint": {
               "code": "owner-none",
               "args": [],
@@ -160,6 +163,9 @@
             "button": {
               "icon": "ai",
               "order": 100
+            },
+            "category": {
+              "$vestraText": "Plugins"
             }
           },
           "state": {
@@ -234,6 +240,8 @@
             "retry",
             "new-chat",
             "select-session",
+            "delete-session",
+            "delete-chat",
             "toggle",
             "copy",
             "copy-code",

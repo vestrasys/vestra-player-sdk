@@ -1,5 +1,6 @@
 {
   "scenario": "builtins/playback",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
   "command": "rate-15",
   "subscriptions": [
     {
@@ -766,13 +767,18 @@
             "preview-count": 0,
             "preview-map": [],
             "marks": [],
+            "chapter-ticks": "",
+            "bookmark-ticks": "",
+            "marker-ticks": "",
+            "tick-span": 0,
+            "selection-ranges": "",
+            "region-ranges": "",
             "has-loop": false,
             "loop-a": 0,
             "loop-b": 0,
             "can-pause": false,
             "playing": false,
             "can-stop": false,
-            "can-step": false,
             "can-previous": false,
             "can-next": false,
             "can-open": true,
@@ -784,14 +790,11 @@
             "remaining-time": false,
             "key-play-pause": "Space",
             "key-stop": "F4",
-            "key-back": "←",
-            "key-forward": "→",
             "key-previous": "PgUp",
             "key-next": "PgDn",
             "key-open": "Ctrl+O",
             "key-mute": "M",
-            "key-fullscreen": "Enter",
-            "step-text": "5",
+            "key-fullscreen": "Escape",
             "volume-percent": 100
           }
         }
@@ -814,7 +817,10 @@
               "F3"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "File"
+            }
           },
           "state": {
             "enabled": true,
@@ -842,7 +848,10 @@
               "Ctrl+U"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "File"
+            }
           },
           "state": {
             "enabled": true,
@@ -869,7 +878,10 @@
               "Ctrl+Y"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "File"
+            }
           },
           "state": {
             "enabled": false,
@@ -895,7 +907,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Copy to Clipboard"
+            }
           },
           "state": {
             "enabled": false,
@@ -921,7 +936,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Copy to Clipboard"
+            }
           },
           "state": {
             "enabled": false,
@@ -947,7 +965,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Copy to Clipboard"
+            }
           },
           "state": {
             "enabled": false,
@@ -976,7 +997,10 @@
               "Ctrl+Shift+ArrowLeft"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1005,7 +1029,10 @@
               "Ctrl+Shift+ArrowRight"
             ],
             "focus": null,
-            "repeat": true
+            "repeat": true,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1033,7 +1060,10 @@
               "G"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1062,7 +1092,10 @@
               "Backspace"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1089,7 +1122,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": true,
@@ -1116,7 +1152,10 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
           },
           "state": {
             "enabled": false,
@@ -1143,7 +1182,10 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
           },
           "state": {
             "enabled": false,
@@ -1170,7 +1212,10 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
           },
           "state": {
             "enabled": false,
@@ -1197,7 +1242,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Speed"
+            }
           },
           "state": {
             "enabled": false,
@@ -1223,7 +1271,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playback"
+            }
           },
           "state": {
             "enabled": true,
@@ -1249,7 +1300,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playback"
+            }
           },
           "state": {
             "enabled": true,
@@ -1275,7 +1329,10 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playback"
+            }
           },
           "state": {
             "enabled": true,
@@ -1314,7 +1371,10 @@
               "Ctrl+ArrowLeft"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1353,7 +1413,10 @@
               "Ctrl+ArrowRight"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1392,7 +1455,10 @@
               "Shift+ArrowLeft"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1431,7 +1497,10 @@
               "Shift+ArrowRight"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1470,7 +1539,10 @@
               "Ctrl+Alt+ArrowLeft"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1509,7 +1581,10 @@
               "Ctrl+Alt+ArrowRight"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Seek"
+            }
           },
           "state": {
             "enabled": false,
@@ -1910,8 +1985,8 @@
       {
         "method": "ui.setMount",
         "params": {
-          "property": "key-back",
-          "value": "ArrowLeft",
+          "property": "key-previous",
+          "value": "PageUp",
           "seq": 1
         }
       },
@@ -1931,25 +2006,9 @@
       {
         "method": "ui.setMount",
         "params": {
-          "property": "key-forward",
-          "value": "ArrowRight",
-          "seq": 2
-        }
-      },
-      {
-        "method": "ui.setMount",
-        "params": {
-          "property": "key-previous",
-          "value": "PageUp",
-          "seq": 3
-        }
-      },
-      {
-        "method": "ui.setMount",
-        "params": {
           "property": "key-next",
           "value": "PageDown",
-          "seq": 4
+          "seq": 2
         }
       },
       {
@@ -1957,7 +2016,7 @@
         "params": {
           "property": "key-open",
           "value": "",
-          "seq": 5
+          "seq": 3
         }
       },
       {
@@ -1965,7 +2024,7 @@
         "params": {
           "property": "key-fullscreen",
           "value": "",
-          "seq": 6
+          "seq": 4
         }
       }
     ],
@@ -1987,7 +2046,7 @@
         "params": {
           "property": "can-pause",
           "value": true,
-          "seq": 7
+          "seq": 5
         }
       },
       {
@@ -2112,7 +2171,7 @@
         "params": {
           "property": "playing",
           "value": true,
-          "seq": 8
+          "seq": 6
         }
       },
       {
@@ -2120,7 +2179,7 @@
         "params": {
           "property": "can-stop",
           "value": true,
-          "seq": 9
+          "seq": 7
         }
       }
     ],
@@ -2143,7 +2202,7 @@
         "params": {
           "property": "playing",
           "value": false,
-          "seq": 10
+          "seq": 8
         }
       },
       {
@@ -2151,7 +2210,7 @@
         "params": {
           "property": "elapsed-label",
           "value": "00:30",
-          "seq": 11
+          "seq": 9
         }
       },
       {
@@ -2256,14 +2315,6 @@
             "busy": false,
             "reason": null
           }
-        }
-      },
-      {
-        "method": "ui.setMount",
-        "params": {
-          "property": "can-step",
-          "value": true,
-          "seq": 12
         }
       }
     ],

@@ -45,8 +45,13 @@
 // Built-ins: set `VESTRA_PLAYER=<player repository>` to run the six the plan
 // names (playback, playlist, info, subtitles, video, workshop) from
 // `src/plugins/<name>` of that checkout; without it they are skipped (the
-// SDK's CI has no player checkout). Their fixtures are kept here too.
+// SDK's CI has no player checkout). Their fixtures are kept here too, each
+// pinned to the player commit it was recorded from (`playerCommit`): when
+// `VESTRA_PLAYER`'s HEAD is another commit the test skips with a message,
+// so a player change does not pass for an SDK regression. `UPDATE_TRACES=1`
+// re-records and re-pins to the current HEAD.
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -83,6 +88,8 @@ const PHASES: readonly Phase[] = [
 
 interface Trace {
   scenario: string;
+  /** Built-ins only: the player commit the fixture was recorded from. */
+  playerCommit?: string;
   /** The command the script runs, `null` when the plugin has none to run. */
   command: string | null;
   /** Every `events.subscribe` line in order (also in `calls`). */
@@ -351,11 +358,20 @@ async function record(
  * phase's counts. A run in which it fired is not compared but repeated,
  * up to three times; the third is compared whatever happened.
  */
-async function check(scenario: Scenario) {
+async function check(scenario: Scenario, playerCommit?: string) {
   for (let attempt = 1; ; attempt++) {
     const { trace, safetyPasses } = await record(scenario);
     if (safetyPasses === 0 || attempt === 3) {
-      compare(scenario, trace);
+      compare(
+        scenario,
+        playerCommit === undefined
+          ? trace
+          : (({ scenario: name, ...rest }) => ({
+              scenario: name,
+              playerCommit,
+              ...rest,
+            }))(trace),
+      );
       return;
     }
   }
@@ -392,14 +408,44 @@ for (const scenario of scenarios)
     await check(scenario);
   });
 
-for (const scenario of builtins)
-  test(`golden trace: ${scenario.name}`, { skip: !player }, async () => {
-    assert.ok(
-      existsSync(join(scenario.directory, "manifest.json")),
-      `${scenario.directory} has no manifest.json (VESTRA_PLAYER=${player})`,
-    );
-    await check(scenario);
+/** `VESTRA_PLAYER`'s checked-out commit (full hash). */
+function playerHead(directory: string) {
+  const result = spawnSync("git", ["-C", directory, "rev-parse", "HEAD"], {
+    encoding: "utf8",
   });
+  if (result.status !== 0)
+    throw new Error(
+      `VESTRA_PLAYER=${directory} is not a git checkout: ${result.stderr}`,
+    );
+  return result.stdout.trim();
+}
+
+for (const scenario of builtins)
+  test(
+    `golden trace: ${scenario.name}`,
+    { skip: !player && "VESTRA_PLAYER is not set" },
+    async (t) => {
+      assert.ok(
+        existsSync(join(scenario.directory, "manifest.json")),
+        `${scenario.directory} has no manifest.json (VESTRA_PLAYER=${player})`,
+      );
+      const head = playerHead(player!);
+      const file = fixturePath(scenario);
+      if (!UPDATE && existsSync(file)) {
+        const pinned = (JSON.parse(readFileSync(file, "utf8")) as Trace)
+          .playerCommit;
+        // A player change is not an SDK regression: compare only against
+        // the player commit the fixture was recorded from.
+        if (pinned !== head) {
+          t.skip(
+            `VESTRA_PLAYER is at ${head.slice(0, 10)}, the fixture was recorded at ${pinned?.slice(0, 10) ?? "an unknown commit"}; check out that commit, or re-pin with UPDATE_TRACES=1`,
+          );
+          return;
+        }
+      }
+      await check(scenario, head);
+    },
+  );
 
 test("every trace fixture belongs to a scenario", () => {
   if (!existsSync(FIXTURES)) return;

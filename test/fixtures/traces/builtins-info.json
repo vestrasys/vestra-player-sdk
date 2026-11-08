@@ -1,5 +1,6 @@
 {
   "scenario": "builtins/info",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
   "command": "info.toggle",
   "subscriptions": [
     {
@@ -11,29 +12,6 @@
       "why": [
         "a listener added at about.ts"
       ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a listener added at dialog.ts"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a listener added at dialog.ts",
-        "a view's bind reads plugin.player.state (dialog.ts)"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a view's bind reads plugin.player.state (dialog.ts)"
-      ]
-    },
-    {
-      "event": "source.state",
-      "mirror": true
     }
   ],
   "polled": [],
@@ -41,16 +19,16 @@
     "start": {
       "passes": 3,
       "fullPasses": 2,
-      "evaluations": 6,
-      "parts": 2,
+      "evaluations": 8,
+      "parts": 3,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "open": {
       "passes": 1,
-      "fullPasses": 1,
-      "evaluations": 6,
-      "parts": 2,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
@@ -65,7 +43,7 @@
     "command": {
       "passes": 1,
       "fullPasses": 1,
-      "evaluations": 6,
+      "evaluations": 8,
       "parts": 2,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -126,7 +104,10 @@
               "Tab"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Info"
+            }
           },
           "state": {
             "enabled": true,
@@ -151,7 +132,10 @@
               "Shift+Tab"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Info"
+            }
           },
           "state": {
             "enabled": true,
@@ -159,15 +143,6 @@
             "busy": false,
             "reason": null
           }
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a listener added at dialog.ts"
-          ]
         }
       },
       {
@@ -187,7 +162,10 @@
               "Ctrl+F1"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Info"
+            }
           },
           "state": {
             "enabled": true,
@@ -214,7 +192,10 @@
               "F1"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Help"
+            }
           },
           "state": {
             "enabled": true,
@@ -225,13 +206,47 @@
         }
       },
       {
-        "method": "events.subscribe",
+        "method": "commands.register",
         "params": {
-          "event": "source.state",
-          "why": [
-            "a listener added at dialog.ts",
-            "a view's bind reads plugin.player.state (dialog.ts)"
-          ]
+          "id": "info.update",
+          "revision": 1,
+          "declaration": {
+            "title": "Check for Updates…",
+            "path": [
+              "Check for Updates…"
+            ],
+            "order": 881,
+            "group": "windows",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false,
+            "category": {
+              "$vestraText": "Help"
+            },
+            "home": "info.about"
+          },
+          "state": {
+            "enabled": true,
+            "checked": null,
+            "busy": false,
+            "reason": null
+          }
+        }
+      },
+      {
+        "method": "settings.register",
+        "params": {
+          "id": "info.updates",
+          "category": "general",
+          "title": "Updates",
+          "order": 20,
+          "file": "ui/updates.slint",
+          "component": "UpdatesSettingsPage",
+          "global": "UpdatesPage",
+          "properties": {
+            "auto-check": true
+          }
         }
       }
     ],
@@ -338,6 +353,18 @@
     ],
     "dispose": [
       {
+        "method": "settings.unregister",
+        "params": {
+          "id": "info.updates"
+        }
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "info.update"
+        }
+      },
+      {
         "method": "commands.unregister",
         "params": {
           "id": "info.about"
@@ -353,22 +380,6 @@
         "method": "commands.unregister",
         "params": {
           "id": "info.properties"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a view's bind reads plugin.player.state (dialog.ts)"
-          ]
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "mirror": true
         }
       },
       {

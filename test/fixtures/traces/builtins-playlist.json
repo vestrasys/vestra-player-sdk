@@ -1,5 +1,6 @@
 {
   "scenario": "builtins/playlist",
+  "playerCommit": "74b024a73efe50f75803b135de4fad8b2200342f",
   "command": "playlist.repeat-all",
   "subscriptions": [
     {
@@ -221,10 +222,7 @@
           "global": "PlaylistBridge",
           "title": "Playlist",
           "properties": {
-            "row-count": 0,
-            "first-row": 0,
             "rows": [],
-            "thumbs": [],
             "thumbnails": true,
             "total": "",
             "filtering": false,
@@ -261,7 +259,10 @@
               "F6"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            }
           },
           "state": {
             "enabled": true,
@@ -289,7 +290,10 @@
               "F2"
             ],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            }
           },
           "state": {
             "enabled": true,
@@ -316,7 +320,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -343,7 +351,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -370,7 +382,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -398,7 +414,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Repeat"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -426,7 +446,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Repeat"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -454,7 +478,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Repeat"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -481,7 +509,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -508,7 +540,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -535,7 +571,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -563,7 +603,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "When Opening a File"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -591,7 +635,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "When Opening a File"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -619,7 +667,11 @@
             "radio": true,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "When Opening a File"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -646,7 +698,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -673,7 +729,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -700,7 +760,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.settings"
           },
           "state": {
             "enabled": true,
@@ -726,7 +790,11 @@
               "P"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -751,7 +819,11 @@
               "Ctrl+I"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -776,7 +848,11 @@
               "Ctrl+O"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -801,7 +877,11 @@
               "Ctrl+U"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -827,7 +907,11 @@
               "Backspace"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -852,7 +936,11 @@
               "Ctrl+Delete"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -877,7 +965,11 @@
               "Ctrl+T"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -902,7 +994,11 @@
               "Alt+Delete"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -927,7 +1023,11 @@
               "Ctrl+F"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -952,7 +1052,11 @@
               "Ctrl+Home"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -977,7 +1081,11 @@
               "Ctrl+ArrowUp"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1002,7 +1110,11 @@
               "Ctrl+ArrowDown"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1027,7 +1139,11 @@
               "Ctrl+End"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1052,7 +1168,11 @@
               "Ctrl+1"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -1077,7 +1197,11 @@
               "Ctrl+2"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -1102,7 +1226,11 @@
               "Ctrl+3"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1127,7 +1255,11 @@
               "Ctrl+4"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1152,7 +1284,11 @@
               "Ctrl+5"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1177,7 +1313,11 @@
               "Ctrl+6"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1202,7 +1342,11 @@
               "Ctrl+7"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1227,7 +1371,11 @@
               "Ctrl+8"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1252,7 +1400,11 @@
               "Ctrl+9"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1277,7 +1429,11 @@
               "Ctrl+0"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1300,7 +1456,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1323,7 +1483,11 @@
             "radio": false,
             "bindings": [],
             "focus": null,
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Sort"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1348,7 +1512,11 @@
               "Ctrl+A"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1373,7 +1541,11 @@
               "Ctrl+S"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -1398,7 +1570,11 @@
               "F3"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -1423,7 +1599,11 @@
               "F2"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": false,
@@ -1448,7 +1628,11 @@
               "F6"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -1473,7 +1657,11 @@
               "F5"
             ],
             "focus": "panel",
-            "repeat": false
+            "repeat": false,
+            "category": {
+              "$vestraText": "Playlist"
+            },
+            "home": "playlist.visibility"
           },
           "state": {
             "enabled": true,
@@ -1544,8 +1732,24 @@
       {
         "method": "ui.setMount",
         "params": {
-          "property": "row-count",
-          "value": 1,
+          "property": "rows",
+          "value": [
+            {
+              "id": "row-1",
+              "number": 0,
+              "label": "movie.mp4",
+              "duration": "",
+              "tooltip": "/movie.mp4",
+              "problem": "",
+              "selected": false,
+              "current": true,
+              "played": true,
+              "failed": false,
+              "media": "video",
+              "detail": "",
+              "thumb": null
+            }
+          ],
           "seq": 1
         }
       },
@@ -1618,51 +1822,17 @@
         "method": "ui.setMount",
         "params": {
           "property": "rows",
-          "value": [
-            {
-              "rowId": "row-1",
-              "label": "1. movie.mp4",
-              "duration": "",
-              "tooltip": "/movie.mp4",
-              "problem": "",
-              "selected": false,
-              "current": true,
-              "played": true,
-              "failed": false,
-              "media": "video",
-              "detail": ""
-            }
-          ],
-          "seq": 2
-        }
-      },
-      {
-        "method": "ui.setMount",
-        "params": {
-          "property": "thumbs",
-          "value": [
-            {
-              "$vestraImage": "<plugin>/placeholder.png",
-              "ref": 1
-            }
-          ],
-          "seq": 3
-        }
-      },
-      {
-        "method": "ui.setMount",
-        "params": {
-          "property": "rows",
           "patch": {
-            "base": 2,
-            "seq": 4,
+            "base": 1,
+            "seq": 2,
             "ops": [
               {
                 "op": "set",
                 "at": 0,
                 "row": {
-                  "rowId": "row-1",
-                  "label": "1. movie.mp4",
+                  "id": "row-1",
+                  "number": 0,
+                  "label": "movie.mp4",
                   "duration": "--:--",
                   "tooltip": "/movie.mp4",
                   "problem": "",
@@ -1671,7 +1841,8 @@
                   "played": true,
                   "failed": false,
                   "media": "video",
-                  "detail": ""
+                  "detail": "",
+                  "thumb": null
                 }
               }
             ]
