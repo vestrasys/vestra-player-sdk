@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.20
+
+**Who must change: nobody.** Tables follow the A-B Loop's move to the Playback panel: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. A plugin whose tests compare an owner against the table sees the player's current one.
+
+- **`BUILTIN_COMMANDS`**: the 18 A-B Loop commands (`ab.set-a` … `ab.count.10`) are now owned by the playback plugin (`vestra.playback/ab.*`, formerly `vestra.marks/ab.*`), with their ids, titles, keys and categories unchanged and still outside the menu (command palette). The marks plugin, now named "Chapters and Bookmarks", keeps Chapter and Bookmark List… and its chapter and bookmark commands. `BUILTIN_SUBMENUS` is unchanged. The table in [Reference: commands](docs/reference/commands.md) follows.
+- **`BUILTIN_COMMANDS`** also lists the Picture Adjustments plugin's palette command **AI Upscaling** (`vestra.video/video.upscaling`, no default key, next to GPU Rendering), which the player registers since its Picture panel gained the AI Upscaling switch.
+- `WAKE_EVENTS` (internal) is exported from `dist/plugin/runtime.js` again, as before the 1.6.19 split moved it to `connection.ts`; the player's host-agreement test reads it there.
+
 ## 1.6.19
 
 **Who must change: nobody.** Step 1 of the SDK refactor, batches B and C (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/runtime.ts` and `src/plugin/ui.ts` are split by layer; no API, behaviour or wire change, `apiVersion` stays `vestra/1`.

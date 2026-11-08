@@ -378,6 +378,24 @@ vestra.playback | copy-path | (Full Path)
 vestra.playback | prevent-sleep | (Disable Screen Saver While Playing)
 vestra.playback | hover-time | (Show Time on Seek Bar Hover)
 vestra.playback | hover-thumbnail | (Show Thumbnail on Seek Bar Hover)
+vestra.playback | ab.set-a | (Set Start Point) | [
+vestra.playback | ab.clear-a | (Clear Start Point) | {
+vestra.playback | ab.a-back | (Start Point Back 0.1 s) | Ctrl+[
+vestra.playback | ab.a-forward | (Start Point Forward 0.1 s) | Alt+[
+vestra.playback | ab.set-b | (Set End Point) | ]
+vestra.playback | ab.clear-b | (Clear End Point) | }
+vestra.playback | ab.b-back | (End Point Back 0.1 s) | Ctrl+]
+vestra.playback | ab.b-forward | (End Point Forward 0.1 s) | Alt+]
+vestra.playback | ab.back | (Move Range Back 0.1 s) | Ctrl+Alt+[
+vestra.playback | ab.forward | (Move Range Forward 0.1 s) | Ctrl+Alt+]
+vestra.playback | ab.segment | (Loop Current Chapter or Bookmark Range) | Alt+\\
+vestra.playback | ab.toggle | (A-B Loop On/Off) | \\
+vestra.playback | ab.count.endless | (Endless)
+vestra.playback | ab.count.1 | (Once)
+vestra.playback | ab.count.2 | (2 Times)
+vestra.playback | ab.count.3 | (3 Times)
+vestra.playback | ab.count.5 | (5 Times)
+vestra.playback | ab.count.10 | (10 Times)
 vestra.window | hide-cursor | (Hide Pointer While Playing)
 vestra.window | pip | (Picture-in-Picture)
 vestra.window | mini | (Mini Size) | \`
@@ -424,24 +442,6 @@ vestra.marks | marks.next | (Next Bookmark or Chapter) | Shift+PageDown
 vestra.marks | marks.previous-chapter | (Previous Chapter) | Ctrl+PageUp
 vestra.marks | marks.next-chapter | (Next Chapter) | Ctrl+PageDown
 vestra.marks | marks.seekbar | (Show Marks on Seek Bar)
-vestra.marks | ab.set-a | (Set Start Point) | [
-vestra.marks | ab.clear-a | (Clear Start Point) | {
-vestra.marks | ab.a-back | (Start Point Back 0.1 s) | Ctrl+[
-vestra.marks | ab.a-forward | (Start Point Forward 0.1 s) | Alt+[
-vestra.marks | ab.set-b | (Set End Point) | ]
-vestra.marks | ab.clear-b | (Clear End Point) | }
-vestra.marks | ab.b-back | (End Point Back 0.1 s) | Ctrl+]
-vestra.marks | ab.b-forward | (End Point Forward 0.1 s) | Alt+]
-vestra.marks | ab.back | (Move Range Back 0.1 s) | Ctrl+Alt+[
-vestra.marks | ab.forward | (Move Range Forward 0.1 s) | Ctrl+Alt+]
-vestra.marks | ab.segment | (Loop Current Chapter or Bookmark Range) | Alt+\\
-vestra.marks | ab.toggle | (A-B Loop On/Off) | \\
-vestra.marks | ab.count.endless | (Endless)
-vestra.marks | ab.count.1 | (Once)
-vestra.marks | ab.count.2 | (2 Times)
-vestra.marks | ab.count.3 | (3 Times)
-vestra.marks | ab.count.5 | (5 Times)
-vestra.marks | ab.count.10 | (10 Times)
 vestra.subtitle-online | settings | (Online Subtitle Settings…)
 vestra.visualizer | audio-cover | (Show Album Cover for Audio Only)
 vestra.visualizer | idle-logo | (Show Logo When Idle)
@@ -658,6 +658,7 @@ vestra.video | video.saturation.up | (Saturation +1%) | U
 vestra.video | video.hue.down | (Hue -1%) | I
 vestra.video | video.hue.up | (Hue +1%) | O
 vestra.video | video.gpu-rendering | (GPU Rendering (Experimental))
+vestra.video | video.upscaling | (AI Upscaling)
 `;
 
 /**

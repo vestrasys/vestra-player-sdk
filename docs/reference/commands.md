@@ -165,6 +165,24 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Disable Screen Saver While Playing (not in the menu) |  | `vestra.playback/prevent-sleep` |
 | Show Time on Seek Bar Hover (not in the menu) |  | `vestra.playback/hover-time` |
 | Show Thumbnail on Seek Bar Hover (not in the menu) |  | `vestra.playback/hover-thumbnail` |
+| Set Start Point (not in the menu) | `[` | `vestra.playback/ab.set-a` |
+| Clear Start Point (not in the menu) | `{` | `vestra.playback/ab.clear-a` |
+| Start Point Back 0.1 s (not in the menu) | `Ctrl+[` | `vestra.playback/ab.a-back` |
+| Start Point Forward 0.1 s (not in the menu) | `Alt+[` | `vestra.playback/ab.a-forward` |
+| Set End Point (not in the menu) | `]` | `vestra.playback/ab.set-b` |
+| Clear End Point (not in the menu) | `}` | `vestra.playback/ab.clear-b` |
+| End Point Back 0.1 s (not in the menu) | `Ctrl+]` | `vestra.playback/ab.b-back` |
+| End Point Forward 0.1 s (not in the menu) | `Alt+]` | `vestra.playback/ab.b-forward` |
+| Move Range Back 0.1 s (not in the menu) | `Ctrl+Alt+[` | `vestra.playback/ab.back` |
+| Move Range Forward 0.1 s (not in the menu) | `Ctrl+Alt+]` | `vestra.playback/ab.forward` |
+| Loop Current Chapter or Bookmark Range (not in the menu) | `Alt+\` | `vestra.playback/ab.segment` |
+| A-B Loop On/Off (not in the menu) | `\` | `vestra.playback/ab.toggle` |
+| Endless (not in the menu) |  | `vestra.playback/ab.count.endless` |
+| Once (not in the menu) |  | `vestra.playback/ab.count.1` |
+| 2 Times (not in the menu) |  | `vestra.playback/ab.count.2` |
+| 3 Times (not in the menu) |  | `vestra.playback/ab.count.3` |
+| 5 Times (not in the menu) |  | `vestra.playback/ab.count.5` |
+| 10 Times (not in the menu) |  | `vestra.playback/ab.count.10` |
 | Hide Pointer While Playing (not in the menu) |  | `vestra.window/hide-cursor` |
 | Picture-in-Picture (not in the menu) |  | `vestra.window/pip` |
 | Mini Size (not in the menu) | ``` | `vestra.window/mini` |
@@ -211,24 +229,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Previous Chapter (not in the menu) | `Ctrl+PageUp` | `vestra.marks/marks.previous-chapter` |
 | Next Chapter (not in the menu) | `Ctrl+PageDown` | `vestra.marks/marks.next-chapter` |
 | Show Marks on Seek Bar (not in the menu) |  | `vestra.marks/marks.seekbar` |
-| Set Start Point (not in the menu) | `[` | `vestra.marks/ab.set-a` |
-| Clear Start Point (not in the menu) | `{` | `vestra.marks/ab.clear-a` |
-| Start Point Back 0.1 s (not in the menu) | `Ctrl+[` | `vestra.marks/ab.a-back` |
-| Start Point Forward 0.1 s (not in the menu) | `Alt+[` | `vestra.marks/ab.a-forward` |
-| Set End Point (not in the menu) | `]` | `vestra.marks/ab.set-b` |
-| Clear End Point (not in the menu) | `}` | `vestra.marks/ab.clear-b` |
-| End Point Back 0.1 s (not in the menu) | `Ctrl+]` | `vestra.marks/ab.b-back` |
-| End Point Forward 0.1 s (not in the menu) | `Alt+]` | `vestra.marks/ab.b-forward` |
-| Move Range Back 0.1 s (not in the menu) | `Ctrl+Alt+[` | `vestra.marks/ab.back` |
-| Move Range Forward 0.1 s (not in the menu) | `Ctrl+Alt+]` | `vestra.marks/ab.forward` |
-| Loop Current Chapter or Bookmark Range (not in the menu) | `Alt+\` | `vestra.marks/ab.segment` |
-| A-B Loop On/Off (not in the menu) | `\` | `vestra.marks/ab.toggle` |
-| Endless (not in the menu) |  | `vestra.marks/ab.count.endless` |
-| Once (not in the menu) |  | `vestra.marks/ab.count.1` |
-| 2 Times (not in the menu) |  | `vestra.marks/ab.count.2` |
-| 3 Times (not in the menu) |  | `vestra.marks/ab.count.3` |
-| 5 Times (not in the menu) |  | `vestra.marks/ab.count.5` |
-| 10 Times (not in the menu) |  | `vestra.marks/ab.count.10` |
 | Online Subtitle Settings… (not in the menu) |  | `vestra.subtitle-online/settings` |
 | Show Album Cover for Audio Only (not in the menu) |  | `vestra.visualizer/audio-cover` |
 | Show Logo When Idle (not in the menu) |  | `vestra.visualizer/idle-logo` |
@@ -445,6 +445,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Hue -1% (not in the menu) | `I` | `vestra.video/video.hue.down` |
 | Hue +1% (not in the menu) | `O` | `vestra.video/video.hue.up` |
 | GPU Rendering (Experimental) (not in the menu) |  | `vestra.video/video.gpu-rendering` |
+| AI Upscaling (not in the menu) |  | `vestra.video/video.upscaling` |
 
 <!-- /generated -->
 

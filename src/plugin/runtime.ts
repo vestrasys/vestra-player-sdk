@@ -11,6 +11,10 @@ import type { Change, Deps, PassCounts } from "./passes.ts";
 import type { Transport } from "../wire.ts";
 import type { Disposable } from "./types.ts";
 
+// Internal, kept where it was before 1.6.19: the player's host-agreement test
+// reads WAKE_EVENTS from dist/plugin/runtime.js.
+export { WAKE_EVENTS } from "./connection.ts";
+
 /** Per-plugin services: the connection, and the update passes over it. */
 export class Runtime extends Connection {
   /** The update pass scheduler. */
