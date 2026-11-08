@@ -972,7 +972,7 @@ class PanelHandle extends ViewBase implements Panel {
     file: string,
     options: { component?: string; global?: string; title?: string },
   ) {
-    // One panel per slot (SDK 1.6.14, player 0.7.6; a player before 0.7.6
+    // One panel per slot (SDK 1.6.15, player 0.7.6; a player before 0.7.6
     // refuses a second panel with `conflict`).
     if (scope.runtime.views.has(`panel:${slot}`))
       throw new Error(`this plugin already has a panel in the ${slot}`);

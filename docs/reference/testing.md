@@ -84,7 +84,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | {@link "@vestra-player/sdk/testing"!TestHost.windows} | Tool windows by id (see `TestHost.window`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.panels} | The plugin's mounted panels by slot, in mount order (SDK 1.6.14: one panel per slot). |
+| {@link "@vestra-player/sdk/testing"!TestHost.panels} | The plugin's mounted panels by slot, in mount order (SDK 1.6.15: one panel per slot). |
 | {@link "@vestra-player/sdk/testing"!TestHost.panel} | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop), the last mounted when it has several, or `null`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.commands} | The plugin's commands by local id (see `TestHost.command`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreCommands} | The player's 14 core actions (`host/<id>`), kept apart from the plugin's `commands`. |
@@ -194,7 +194,7 @@ It rejects when nothing is bound to the key or the command it would run is busy.
 | {@link "@vestra-player/sdk/testing"!TestHost.command}() | The plugin's command with this local id. |
 | {@link "@vestra-player/sdk/testing"!TestHost.barButtons} | The plugin's bottom-bar buttons (`CommandOptions.button`) as the player shows them: at most one, the first declared (`BAR_BUTTON_LIMITS`; a later one stays a menu item only). |
 | {@link "@vestra-player/sdk/testing"!TestHost.window}() | The plugin's tool window with this id (by default the file name without extension: `ui/picture.slint` → `picture`). |
-| {@link "@vestra-player/sdk/testing"!TestHost.mounted}() | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop): the one in `slot`, or without it the only one (SDK 1.6.14: a plugin mounts one panel per slot; with several, name the slot). |
+| {@link "@vestra-player/sdk/testing"!TestHost.mounted}() | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop): the one in `slot`, or without it the only one (SDK 1.6.15: a plugin mounts one panel per slot; with several, name the slot). |
 | {@link "@vestra-player/sdk/testing"!TestHost.sent}() | The parameters of every request of one wire method, oldest first. |
 | {@link "@vestra-player/sdk/testing"!TestHost.settle}() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
 | {@link "@vestra-player/sdk/testing"!TestHost.close}() | Close the fake stream servers and delete the host's temporary directories. |

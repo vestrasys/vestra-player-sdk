@@ -4245,7 +4245,7 @@ export interface BackdropSlot {
  * or the sidebar moves to or from its floating window, while the global is
  * one stable address.
  *
- * A plugin mounts at most one panel per slot (SDK 1.6.14, player 0.7.6;
+ * A plugin mounts at most one panel per slot (SDK 1.6.15, player 0.7.6;
  * before, one panel in all): a playback plugin can have its control bar in
  * `"bottom"` and its controls in `"adjust"`. Each {@link Panel} has its own
  * bridge, state, `toggle()` and `setInteraction()`; disposing one leaves

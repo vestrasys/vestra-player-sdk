@@ -823,7 +823,7 @@ const SLOT_LABELS: Record<string, string> = {
  * component and interaction locks.
  *
  * @remarks
- * One per slot the plugin mounted (SDK 1.6.14), kept in
+ * One per slot the plugin mounted (SDK 1.6.15), kept in
  * {@link TestHost.panels}; disposing a panel removes only its own.
  *
  * @example Check the adjust panel's locks
@@ -837,7 +837,7 @@ const SLOT_LABELS: Record<string, string> = {
  * assert.deepEqual(panel.locks, { focused: false, dragging: true, popupOpen: false });
  * ```n *
  * @capability None.
- * @since 1.6.14
+ * @since 1.6.15
  * @category Testing
  */
 export type FakePanel = Omit<FakeWindow, "callbacks" | "userClose"> & {
@@ -1074,7 +1074,7 @@ export class TestHost implements Transport {
   /** Tool windows by id (see {@link TestHost.window}). */
   readonly windows = new Map<string, FakeWindow>();
   /**
-   * The plugin's mounted panels by slot, in mount order (SDK 1.6.14: one
+   * The plugin's mounted panels by slot, in mount order (SDK 1.6.15: one
    * panel per slot). See {@link TestHost.mounted}.
    */
   readonly panels = new Map<string, FakePanel>();
@@ -4698,7 +4698,7 @@ export class TestHost implements Transport {
   }
   /**
    * The plugin's mounted panel (bottom bar, sidebar, adjust column or
-   * backdrop): the one in `slot`, or without it the only one (SDK 1.6.14: a
+   * backdrop): the one in `slot`, or without it the only one (SDK 1.6.15: a
    * plugin mounts one panel per slot; with several, name the slot). Throws
    * when there is none. Its `props` use Slint (kebab-case) names; `emit`
    * fires a callback on the panel's global.
