@@ -3,7 +3,7 @@ import { failure, quiet } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { PropertyWrite } from "../wire.ts";
 import type { Settings, SettingsCategory, SettingsPage } from "./types.ts";
-import { exported, ViewBase } from "./ui.ts";
+import { exported, ViewBase } from "./view/base.ts";
 
 const CATEGORIES: readonly SettingsCategory[] = [
   "general",

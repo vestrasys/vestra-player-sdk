@@ -12,7 +12,10 @@ import type {
 } from "./types.ts";
 import { commands } from "./commands.ts";
 import { WHEN } from "./when.ts";
-import { dialogs, panels, ui, windows } from "./ui.ts";
+import { dialogs } from "./services/dialogs.ts";
+import { ui } from "./view/image.ts";
+import { panels } from "./view/panel.ts";
+import { windows } from "./view/window.ts";
 import { timeline } from "./timeline.ts";
 import { drops } from "./drops.ts";
 import { appearance } from "./appearance.ts";

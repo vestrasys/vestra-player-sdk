@@ -3,7 +3,7 @@ import { Latest } from "./latest.ts";
 import { failure, quiet, uncertain } from "./errors.ts";
 import { checkBindings } from "./bindings.ts";
 import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, MENU_IDS } from "../commands.ts";
-import { ImageHandle } from "./ui.ts";
+import { ImageHandle } from "./view/image.ts";
 import { isTextValue, textProblem } from "../i18n.ts";
 import { conditionJson, isCondition } from "./when.ts";
 import type {

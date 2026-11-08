@@ -60,9 +60,19 @@ const LOWER = [
   "src/plugin/packages.ts",
   "src/plugin/markdown.ts",
   "src/plugin/drops.ts",
+  "src/plugin/services/dialogs.ts",
+  "src/plugin/view/image.ts",
+  "src/plugin/view/writer.ts",
 ];
-/** L2 modules no lower file may import: the passes, and `Runtime` over them. */
-const FRAMEWORK = ["src/plugin/passes.ts", "src/plugin/runtime.ts"];
+/**
+ * L2 modules no lower file may import: the passes, `Runtime` over them, and
+ * the view binder (`bind`/`snapshot`/`evaluate` over the view writer).
+ */
+const FRAMEWORK = [
+  "src/plugin/passes.ts",
+  "src/plugin/runtime.ts",
+  "src/plugin/view/binder.ts",
+];
 const PASSES = "src/plugin/passes.ts";
 /**
  * Value-import cycles allowed by rule 3, each as its set of files:

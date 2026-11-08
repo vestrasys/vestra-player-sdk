@@ -38,7 +38,7 @@
 //    counts on a loaded machine; `counts.safetyPasses`) is repeated
 //    instead of compared, up to three times (`check`).
 // 8. Image `ref` numbers (`$vestraImage`) come from a counter shared by
-//    every plugin in the process (`src/plugin/ui.ts`), so a repeated run
+//    every plugin in the process (`src/plugin/view/image.ts`), so a repeated run
 //    gets other numbers: they are renumbered from 1 in order of first
 //    appearance within the scenario.
 // 9. A command that keeps working between host calls after `run()` (the
