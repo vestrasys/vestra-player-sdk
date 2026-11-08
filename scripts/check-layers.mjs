@@ -16,6 +16,11 @@
  *   4. Every relative import names a `.ts` file under `src/`: one the
  *      check cannot resolve (`./passes.js`, a typo) fails instead of being
  *      skipped, so no import escapes rules 1–3.
+ *   5. The plugin API types (`TYPE_ONLY`: `src/plugin/types.ts` and
+ *      `src/plugin/types/*.ts`) are neither L1 nor L2: they declare only
+ *      interfaces and type aliases and import and re-export only with
+ *      `import type` / `export type`, so they load nothing at run time and
+ *      the cycles among them are type-only (rule 3 ignores those).
  *
  * Not checked yet: spec §2.1's second rule, that `src/plugin/**` reaches
  * the wire only through `connection.ts`, waits until `src/wire/` exists
@@ -74,6 +79,13 @@ const FRAMEWORK = [
   "src/plugin/runtime.ts",
   "src/plugin/view/binder.ts",
 ];
+/** Rule 5: files of types only (an entry ending in `/` is a directory). */
+const TYPE_ONLY = ["src/plugin/types.ts", "src/plugin/types/"];
+const typeOnly = (file) =>
+  TYPE_ONLY.some((entry) =>
+    entry.endsWith("/") ? file.startsWith(entry) : file === entry,
+  );
+
 /**
  * Value-import cycles allowed by rule 3, each as its set of files:
  * `TestHost`'s area modules (batch A) call each other's functions.
@@ -241,6 +253,30 @@ for (const cycle of KNOWN_CYCLES)
       `KNOWN_CYCLES lists ${cycle.join(", ")}, which no longer form a cycle: remove the entry`,
     );
 
+// 5. Type-only files: no value import, no runtime statement.
+for (const entry of TYPE_ONLY)
+  if (!existsSync(join(root, entry)))
+    problems.push(`${entry} is listed in TYPE_ONLY but missing`);
+for (const file of files.filter(typeOnly)) {
+  const text = readFileSync(join(root, file), "utf8");
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  for (const statement of source.statements) {
+    // Every import and re-export, relative or not (`node:util` too).
+    const allowed = ts.isImportDeclaration(statement)
+      ? statement.importClause?.isTypeOnly === true
+      : ts.isExportDeclaration(statement)
+        ? statement.isTypeOnly
+        : ts.isInterfaceDeclaration(statement) ||
+          ts.isTypeAliasDeclaration(statement);
+    if (allowed) continue;
+    const at = source.getLineAndCharacterOfPosition(statement.getStart());
+    const first = statement.getText(source).split("\n")[0];
+    problems.push(
+      `${file}:${at.line + 1}: "${first}": the API types hold interfaces and type aliases only, with \`import type\` / \`export type\``,
+    );
+  }
+}
+
 // Pending edges: a note each run; a stale entry fails.
 for (const { file, text } of PENDING) {
   const path = join(root, file);
@@ -262,5 +298,5 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `check-layers: ${LOWER.length} L0/L1 files, none imports ${FRAMEWORK.join(" or ")}; no value-import cycle in src/ beyond KNOWN_CYCLES; every relative import resolved`,
+  `check-layers: ${LOWER.length} L0/L1 files, none imports ${FRAMEWORK.join(" or ")}; no value-import cycle in src/ beyond KNOWN_CYCLES; every relative import resolved; ${files.filter(typeOnly).length} files of types only`,
 );

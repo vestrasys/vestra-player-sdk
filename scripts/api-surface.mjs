@@ -10,7 +10,7 @@
  * Reads the built declaration files of the two public entries, found
  * through the `types` of their `exports` in package.json as a consumer's
  * compiler finds them: `@vestra-player/sdk` (`dist/index.d.ts`, which
- * re-exports `dist/plugin/types.d.ts`) and `@vestra-player/sdk/testing`,
+ * re-exports `dist/plugin/types.d.ts` and its `types/*.d.ts`) and `@vestra-player/sdk/testing`,
  * with the TypeScript compiler API, and
  * lists every exported declaration with its signature: for an interface
  * or class each member on its own line, for a type alias, function,

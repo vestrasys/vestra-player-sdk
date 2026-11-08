@@ -12,7 +12,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
@@ -29,6 +29,29 @@ const result = spawnSync(
   { stdio: "inherit" },
 );
 if (result.status !== 0) process.exit(result.status ?? 1);
+// tsc drops the imports the API types use only in `{@link}` (the block
+// marked `oxlint-disable no-unused-vars` in src/plugin/types/*.ts) from the
+// declarations; put them back so that editors resolve those links to the
+// SDK's declarations, not to nothing or to DOM globals (`Window`, `Text`).
+// test/dist-links.test.ts checks every link of the result.
+const BLOCK =
+  /\/\* oxlint-disable no-unused-vars \*\/\n([\s\S]*?)\/\* oxlint-enable no-unused-vars \*\//;
+const types = join(root, "src", "plugin", "types");
+for (const file of await readdir(types)) {
+  const block = BLOCK.exec(await readFile(join(types, file), "utf8"));
+  if (!block) continue;
+  const declaration = join(
+    root,
+    "dist",
+    "plugin",
+    "types",
+    file.replace(/\.ts$/, ".d.ts"),
+  );
+  await writeFile(
+    declaration,
+    block[1] + (await readFile(declaration, "utf8")),
+  );
+}
 const tree = spawnSync(
   process.execPath,
   [join(root, "scripts", "docs-tree.mjs")],

@@ -1,6 +1,6 @@
 /**
  * `<!-- generated:player-versions -->`: the public API that needs a newer
- * player than 0.1.0, by player version. A symbol counts when its doc
+ * player than 0.1.0, by player version, each row sorted by name. A symbol counts when its doc
  * comment has an `@player x.y.z` tag or names "player x.y.z" (not "before"
  * or "older than" it); the tags are being completed with the API
  * reference, the prose covers the rest until then. A behaviour note, a
@@ -15,10 +15,12 @@ import {
   sourceFile,
   tags,
   ts,
+  typeFiles,
 } from "./lib/source.mjs";
 
 const SOURCES = [
-  { file: "src/plugin/types.ts", module: "@vestra-player/sdk" },
+  // The plugin API types (src/plugin/types/*.ts, re-exported by types.ts).
+  ...typeFiles().map((file) => ({ file, module: "@vestra-player/sdk" })),
   { file: "src/commands.ts", module: "@vestra-player/sdk/testing" },
   { file: "src/capabilities.ts", module: "@vestra-player/sdk/testing" },
 ];
@@ -85,8 +87,15 @@ export default function playerVersions({ table }) {
   }
   return table(
     ["Player", "API that needs it or changed with it"],
-    [...byVersion.keys()]
-      .sort(compare)
-      .map((version) => [`${version}`, byVersion.get(version).join(", ")]),
+    [...byVersion.keys()].sort(compare).map((version) => [
+      `${version}`,
+      // By name, so the table does not depend on which file declares what.
+      byVersion
+        .get(version)
+        .map((link) => [/ ([\w.]+)\}$/.exec(link)[1], link])
+        .sort(([a], [b]) => a.localeCompare(b, "en"))
+        .map(([, link]) => link)
+        .join(", "),
+    ]),
   );
 }
