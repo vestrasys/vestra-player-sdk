@@ -3,8 +3,7 @@
  * activation, pause/epoch acknowledgements, input acknowledgements and pacing;
  * the plugin only renders frames.
  */
-import { failure, sleep, toError } from "./runtime.ts";
-import { abortError } from "./player.ts";
+import { abortError, failure, sleep, toError } from "./errors.ts";
 import type { PlayerService } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { ResolvedProducer } from "../source-resolvers.ts";

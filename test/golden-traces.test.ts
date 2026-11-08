@@ -70,7 +70,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
-import type { PassCounts } from "../src/plugin/runtime.ts";
+import type { PassCounts } from "../src/plugin/passes.ts";
 import type { ScopeImpl } from "../src/plugin/scope.ts";
 import type { Plugin } from "../src/plugin/types.ts";
 
@@ -400,7 +400,7 @@ async function record(
 
 /**
  * Rule 7. A precise pass that skipped a binding arms a full pass
- * `SAFETY_PASS_MS` later (`Runtime.#run`); a scenario normally takes about
+ * `SAFETY_PASS_MS` later (`Passes.#run`); a scenario normally takes about
  * a third of that, but on a loaded machine (the whole suite in parallel)
  * it can take longer, and the safety pass then adds a full pass to some
  * phase's counts. A run in which it fired is not compared but repeated,

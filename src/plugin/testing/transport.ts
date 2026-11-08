@@ -8,7 +8,7 @@
  */
 import { rmSync } from "node:fs";
 import { HostError } from "../../wire.ts";
-import { WAKE_EVENTS } from "../runtime.ts";
+import { WAKE_EVENTS } from "../connection.ts";
 import type { TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 

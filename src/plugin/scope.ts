@@ -1,6 +1,7 @@
 /** Scopes own handles. Disposal runs newest first and never throws. */
-import { failure, toError } from "./runtime.ts";
-import type { Change, Runtime } from "./runtime.ts";
+import { failure, toError } from "./errors.ts";
+import type { Change } from "./passes.ts";
+import type { Runtime } from "./runtime.ts";
 import type {
   Disposable,
   DisposeInfo,

@@ -3,7 +3,7 @@
  * recovery and backend faults are handled here; plugins set a desired chain.
  */
 import type { AudioNode, ProcessingChange, VideoNode } from "../processing.ts";
-import { failure, sleep, uncertain } from "./runtime.ts";
+import { failure, sleep, uncertain } from "./errors.ts";
 import { playerOf } from "./player.ts";
 import type { PlayerService } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";

@@ -6,8 +6,10 @@
  * @internal
  */
 import type { Transport } from "../wire.ts";
-import { failure, Runtime, stopReason } from "./runtime.ts";
-import type { PluginManifest, RuntimeOptions } from "./runtime.ts";
+import { Runtime } from "./runtime.ts";
+import { stopReason } from "./connection.ts";
+import { failure } from "./errors.ts";
+import type { PluginManifest, RuntimeOptions } from "./connection.ts";
 import { ScopeImpl } from "./scope.ts";
 import { playerOf } from "./player.ts";
 import { windowOf } from "./window.ts";

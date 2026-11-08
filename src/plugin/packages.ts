@@ -7,7 +7,7 @@ import type {
   PackageValidation,
   WireSource,
 } from "../wire.ts";
-import { failure, sleep, uncertain } from "./runtime.ts";
+import { failure, sleep, uncertain } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   InstallOptions,

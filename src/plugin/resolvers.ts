@@ -2,7 +2,7 @@
  * Source resolvers: page URLs to stream URLs, or local files to a stream
  * this plugin generates, for `player.open`.
  */
-import { failure, quiet } from "./runtime.ts";
+import { failure, quiet } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import { playerOf } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";

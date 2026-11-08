@@ -230,7 +230,7 @@ A deadline on the plugin's side could not know whether the host had carried out 
 
 `boot.ts` implements the SDK's `Transport` (a `request` function and an `on` function for events) and passes it to `createPlugin`. Inside the SDK, `createWire` turns the transport into one typed client per area (`commands`, `settings`, `window`, `dialogs`…), and the handles in `src/plugin/` call those clients. Plugin code never sees a method name.
 
-Two mechanisms keep the traffic small. Event subscriptions are counted per event name in `createWire`, so any number of listeners cost one `events.subscribe` and, when the last goes, one `events.unsubscribe`. And bound values travel through the **update pass**: a binding is re-evaluated at most once per microtask, and each target has one write in flight, with only the newest value waiting behind it (the `Latest` class in SDK `src/plugin/runtime.ts`):
+Two mechanisms keep the traffic small. Event subscriptions are counted per event name in `createWire`, so any number of listeners cost one `events.subscribe` and, when the last goes, one `events.unsubscribe`. And bound values travel through the **update pass**: a binding is re-evaluated at most once per microtask, and each target has one write in flight, with only the newest value waiting behind it (the `Latest` class in SDK `src/plugin/latest.ts`):
 
 ```ts nocheck
 /** Coalesce: one evaluation pass per microtask turn, however many changes. */
@@ -246,7 +246,7 @@ invalidate() {
 }
 ```
 
-Source: SDK src/plugin/runtime.ts
+Source: SDK src/plugin/passes.ts
 
 A command handle, for example, sends `commands.register` with revision 1 through its `Latest` queue and later states as `commands.update` with increasing revisions, only when the evaluated state differs from the last one sent.
 

@@ -6,7 +6,7 @@ The maintainers' handbook: building, documentation, CI, releases and keeping the
 
 ```sh
 npm ci              # install; `prepare` builds dist/
-npm run check       # type check src/ and test/
+npm run check       # type check src/ and test/, then the layer rule (scripts/check-layers.mjs, see Layers)
 npm run format:check
 npm run lint        # oxlint (.oxlintrc.json)
 npm run build       # rebuild dist/ (compiled .js + .d.ts; comments are kept for editors) and dist/docs-tree.json.gz
@@ -47,6 +47,10 @@ Baseline, 2026-11-08, SDK 1.6.16 sources (`fb5bfdb` plus the counters), Node v26
 | (c) `player.state` change → precise pass → `ui.set` handed to the transport          |  0.03 ms |
 
 Reading: the diff itself is negligible; the end-to-end cost of a changed list is encoding 20,000 rows to JSON and the host applying the patch, the same for 1 % and 10 %. A full pass over 150 bound things costs about 0.6 ms.
+
+### Layers
+
+The SDK is built in three layers (the player repository's `doc/specs/sdk-refactor.md` §2.1): the protocol (L0: `src/wire.ts` and the per-domain clients), the primitives (L1: `src/plugin/connection.ts` with the transport, subscriptions and activation, the helpers `errors.ts` and `latest.ts`, the services) and the framework (L2: the update passes in `src/plugin/passes.ts`, `Runtime` in `runtime.ts` that adds them to the connection, bindings and state copies). `scripts/check-layers.mjs`, run by `npm run check`, fails when an L0/L1 file imports `passes.ts` or `runtime.ts` (even as a type), loads `passes.ts` through any chain of value imports, or when value imports under `src/` form a cycle (`src/plugin/testing/` aside). Its file lists name the files as they are; a change that moves or splits one updates them.
 
 ## API documentation
 

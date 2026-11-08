@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+**Who must change: nobody.** Step 1 of the SDK refactor, batch B (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/runtime.ts` is split by layer; no API, behaviour or wire change, `apiVersion` stays `vestra/1`.
+
+- **`runtime.ts` is split into four modules.** `connection.ts` (L1) owns the transport and its typed client, the event subscriptions with their `why`/`mirror` marks (`on`, `hold`, `raw`), the call site of a listener, the activation state (`starting`, `declaring`, `activated`) and the handshake facts (`app`, `locale`, `features`); `passes.ts` (L2) holds the update passes (`bind`, `reading`, `depends`, `part`, `observe`, `needsFull`, `reader`, `invalidate`, `changed`, the safety pass) and the pass counters; `errors.ts` holds `failure`, `quiet`, `uncertain`, `toError`, `sleep` and `abortError` (from `player.ts`); `latest.ts` holds the `Latest` single-flight queue. `Runtime` stays, as the connection plus the pass methods delegated to its `Passes`, so `runtime.host`, `runtime.on`, `runtime.bind` and the rest are unchanged for every caller, `TestHost` and the player's runner.
+- **No module imports the pass scheduler for a helper any more**: the SDK's modules take the helpers from `errors.ts` and `latest.ts`, and `player.ts` and `stream.ts` no longer import each other.
+- **A layer check in `npm run check`** (`scripts/check-layers.mjs`): the wire and its clients (L0) and the primitives (L1: `connection`, `errors`, `latest`, `values`, `stream`, `services`, `local`, `osd`, `bindings`, `language`, `packages`, `markdown`, `drops`) must not import `passes.ts` or `runtime.ts`, nor load `passes.ts` through other modules, and value imports under `src/` must not form a cycle.
+- Golden wire traces, host scenarios, pass counts and the API surface snapshot are identical; the public declarations (`dist/index.d.ts`, `dist/plugin/testing/index.d.ts`, `dist/player-runtime.d.ts`) are unchanged.
+
 ## 1.6.18
 
 **Who must change: nobody.** Characterisation tests for the SDK refactor (step 0 of the plan, `doc/specs/sdk-refactor.md` §4.0 in the player repository); no API change, no wire change, `apiVersion` stays `vestra/1`.

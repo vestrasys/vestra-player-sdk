@@ -11,7 +11,8 @@ import type {
   SourceState,
   SourceTicket,
 } from "../source.ts";
-import { Latest, failure, quiet, sleep, uncertain } from "./runtime.ts";
+import { Latest } from "./latest.ts";
+import { abortError, failure, quiet, sleep, uncertain } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { openStream } from "./stream.ts";
@@ -199,13 +200,6 @@ function sourceFailure(
   return typeof error === "string"
     ? failure(error)
     : failure("backend", error.backend);
-}
-
-export function abortError(): PluginError {
-  const error = new Error("aborted") as PluginError;
-  error.name = "AbortError";
-  error.code = "aborted";
-  return error;
 }
 
 /** One per plugin: the state store and the operation book client. */

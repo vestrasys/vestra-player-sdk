@@ -1,5 +1,5 @@
 /** The main window (`plugin.window`) and the player's own facts (`plugin.app`). */
-import { failure } from "./runtime.ts";
+import { failure } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { WindowFacts } from "../wire.ts";
