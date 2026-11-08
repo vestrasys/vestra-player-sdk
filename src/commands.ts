@@ -519,16 +519,16 @@ vestra.playback | backward-3 | (Back 60 s) | Shift+ArrowLeft
 vestra.playback | forward-3 | (Forward 60 s) | Shift+ArrowRight
 vestra.playback | backward-4 | (Back 300 s) | Ctrl+Alt+ArrowLeft
 vestra.playback | forward-4 | (Forward 300 s) | Ctrl+Alt+ArrowRight
-vestra.playlist | playlist.play | (Play) | Enter, P | panel
-vestra.playlist | playlist.list-add | (Add Files…) | Ctrl+I | panel
-vestra.playlist | playlist.list-add-folder | (Add Folder…) | Ctrl+O | panel
-vestra.playlist | playlist.list-link | (Add Link…) | Ctrl+U | panel
-vestra.playlist | playlist.remove | (Remove Selected) | Delete, Backspace | panel
+vestra.playlist | playlist.play | (Play) | Enter | panel
+vestra.playlist | playlist.list-add | (Add Files…)
+vestra.playlist | playlist.list-add-folder | (Add Folder…)
+vestra.playlist | playlist.list-link | (Add Link…)
+vestra.playlist | playlist.remove | (Remove Selected) | Delete | panel
 vestra.playlist | playlist.remove-unselected | (Remove Unselected) | Ctrl+Delete | panel
-vestra.playlist | playlist.remove-invalid | (Remove Invalid Items) | Ctrl+T | panel
+vestra.playlist | playlist.remove-invalid | (Remove Invalid Items)
 vestra.playlist | playlist.clear | (Remove All) | Alt+Delete | panel
 vestra.playlist | playlist.reveal | (Show in Finder) | Ctrl+F | panel
-vestra.playlist | playlist.move-top | (Move to Top) | Ctrl+Home | panel
+vestra.playlist | playlist.move-top | (Move to Top)
 vestra.playlist | playlist.move-up | (Move Up) | Ctrl+ArrowUp | panel
 vestra.playlist | playlist.move-down | (Move Down) | Ctrl+ArrowDown | panel
 vestra.playlist | playlist.move-bottom | (Move to Bottom) | Ctrl+End | panel
@@ -546,10 +546,10 @@ vestra.playlist | playlist.sort-path | (Sort by Path)
 vestra.playlist | playlist.sort-reverse | (Reverse Current Order)
 vestra.playlist | playlist.select-all | (Select All) | Ctrl+A | panel
 vestra.playlist | playlist.search | (Search) | Ctrl+S | panel
-vestra.playlist | playlist.list-open-list | (Open List File…) | F3 | panel
-vestra.playlist | playlist.list-save-list | (Save List…) | F2 | panel
-vestra.playlist | playlist.close | (Close List) | F6 | panel
-vestra.playlist | playlist.settings | (Playlist Settings…) | F5 | panel
+vestra.playlist | playlist.list-open-list | (Open List File…)
+vestra.playlist | playlist.list-save-list | (Save List…)
+vestra.playlist | playlist.close | (Close List)
+vestra.playlist | playlist.settings | (Playlist Settings…)
 vestra.subtitles | show | (Show Subtitles) | Alt+H
 vestra.subtitles | second-off | (Off)
 vestra.subtitles | second-position-top | (Top)

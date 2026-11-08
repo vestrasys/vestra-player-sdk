@@ -15,6 +15,7 @@ Every SDK release's CHANGELOG entry opens with who must change and what happens 
 
 | Release | Who must change | Guide |
 | --- | --- | --- |
+| [1.7.1](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#171) | **Nobody.** Tables follow the playlist's trimmed list keys: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. | — |
 | [1.7.0](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#170) | **Nobody.** The one change a plugin can observe is `Command.set`, which now re-evaluates only its own command instead of running a full update pass: a binding that reads a variable changed together with `cmd.set(…)` outside a handler the SDK runs (a timer, a socket) needs `plugin.update()` after the change, or the variable in `plugin.state` (details under Step 2). | — |
 | [1.6.22](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1622) | **Nobody.** Tables follow the menu's Adjustments and Effects and Sidebar items: a data refresh of `BUILTIN_COMMANDS`; no API change, `apiVersion` stays `vestra/1`. | — |
 | [1.6.21](https://github.com/vestrasys/vestra-player-sdk/blob/main/CHANGELOG.md#1621) | **Nobody.** Step 1 of the SDK refactor, batch G (`doc/specs/sdk-refactor.md` §4 in the player repository): `src/plugin/types.ts` is split by domain; no API, behaviour or wire change, `apiVersion` stays `vestra/1`. | — |
