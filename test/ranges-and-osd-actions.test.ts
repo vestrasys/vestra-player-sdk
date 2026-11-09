@@ -33,8 +33,12 @@ test("timeline ranges: their own list of the layer, merged, cleared by a new sou
     seen.map((r) => r.start),
     [0],
   );
-  const markChanges: number[] = [];
-  plugin.timeline.onChange((marks) => markChanges.push(marks.length));
+  // What a listener reads: the copy took each event first.
+  const heard: [number, number][] = [];
+  plugin.player.on("timeline.changed", (lists) => {
+    assert.equal(plugin.timeline.marks.length, lists.marks.length);
+    heard.push([plugin.timeline.marks.length, plugin.timeline.ranges.length]);
+  });
   host.openElsewhere("/a.mkv");
   host.setSource({ duration: 60 });
   await host.settle();
@@ -57,12 +61,12 @@ test("timeline ranges: their own list of the layer, merged, cleared by a new sou
       plugin: "test.plugin",
     },
   ]);
-  // Marks and ranges are replaced on their own; onChange follows the marks.
+  // Marks and ranges are replaced on their own.
   assert.equal(plugin.timeline.marks.length, 1);
-  const changes = markChanges.length;
+  assert.deepEqual(heard.at(-1), [1, 2]);
   layer.setRanges([{ start: 1, end: 2, style: "region" }]);
   await host.settle();
-  assert.equal(markChanges.length, changes, "ranges do not run onChange");
+  assert.deepEqual(heard.at(-1), [1, 1], "the listener reads the new ranges");
   assert.equal(plugin.timeline.marks.length, 1);
   layer.set([]);
   await host.settle();

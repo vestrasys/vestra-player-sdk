@@ -646,7 +646,11 @@ export function player(scope: ScopeImpl): Player {
       });
     },
     refresh: () => service().refresh(),
-    on: (event, listener) => playerOn(scope, event, listener),
+    on(event, listener) {
+      // The copy first: it hears each event before this listener.
+      if (typeof event === "string") scope.followCopy(event);
+      return playerOn(scope, event, listener);
+    },
     isCurrent(state) {
       void service().start();
       const raw = raws.get(state);

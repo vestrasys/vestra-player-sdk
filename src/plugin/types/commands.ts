@@ -863,7 +863,8 @@ export interface Commands {
    * For key hints beside a panel's controls (`KeyHint` and the `keys` of
    * `ToolTipArea` in `@vestra/widgets.slint`). Read it in a
    * {@link View.bind} function and the view follows every change; or
-   * listen with {@link Commands.onKeysChange}. The first read asks the
+   * listen with `plugin.player.on("commands.keys", …)` and read it there
+   * (the SDK's copy already has the event's keys). The first read asks the
    * player, and until its answer arrives (a few milliseconds) every
    * command reads `[]`; a binding that read it runs again then.
    *
@@ -897,31 +898,6 @@ export interface Commands {
    * @since 1.6.6
    */
   keys(id: string): readonly string[];
-  /**
-   * Run `listener` after the keys of any of this plugin's commands changed
-   * (read them again with {@link Commands.keys}): the user changed or
-   * cleared a key, turned Ignore Default Shortcuts on or off, a command with
-   * keys was added or removed, or the player's first answer arrived. At most every
-   * 200 ms. A plugin in standby that listens is started for it, as for a
-   * key change in {@link Bindings.onChange}.
-   *
-   * @capability commands
-   *
-   * @example Name the current key in a status line
-   * The OSD tells the user the new key after they change it. The listener
-   * carries no data; it reads the labels with `keys`.
-   * ```ts
-   * plugin.commands.onKeysChange(() => {
-   *   const [key] = plugin.commands.keys("toggle-blur");
-   *   if (key) void plugin.osd.show("Blur: {}", [key]);
-   *   else void plugin.osd.show("Blur has no key");
-   * });
-   * ```
-   *
-   * @player 0.7.6
-   * @since 1.6.6
-   */
-  onKeysChange(listener: () => void): Disposable;
 }
 
 /**

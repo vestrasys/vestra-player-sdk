@@ -129,6 +129,11 @@ const SILENT: StateSignals = {
  */
 interface EventGroup {
   listeners: Set<Listener>;
+  /**
+   * The SDK's own state copies among `listeners`: they hear each event
+   * first, so a plugin listener that reads the copy sees the event's data.
+   */
+  mirrors: Set<Listener>;
   active: number;
   /** Why each active holder listens, in the order they came. */
   whys: Map<object, Why>;
@@ -365,11 +370,17 @@ export class Connection {
     let entry = this.#events.get(event);
     const created = !entry;
     if (!entry) {
-      entry = { listeners: new Set(), active: 0, whys: new Map() };
+      entry = {
+        listeners: new Set(),
+        mirrors: new Set(),
+        active: 0,
+        whys: new Map(),
+      };
       this.#events.set(event, entry);
     }
     const group = entry;
     group.listeners.add(listener);
+    if (mirror) group.mirrors.add(listener);
     const token = {};
     if (!mirror) {
       group.active++;
@@ -384,7 +395,11 @@ export class Connection {
       group.off = this.host.events.subscribe(
         event as never,
         (data) => {
-          for (const each of [...group.listeners]) each(data);
+          // The state copies first, then the plugin's listeners in order.
+          const listeners = [...group.listeners];
+          for (const each of listeners) if (group.mirrors.has(each)) each(data);
+          for (const each of listeners)
+            if (!group.mirrors.has(each)) each(data);
         },
         !group.told,
         whys,
@@ -399,6 +414,7 @@ export class Connection {
         if (!listening) return;
         listening = false;
         group.listeners.delete(listener);
+        group.mirrors.delete(listener);
         if (!mirror) group.active--;
         group.whys.delete(token);
         if (this.#events.get(event) !== group) return;

@@ -10,15 +10,15 @@ import type {
   Scope,
   StopReason,
 } from "./types.ts";
-import { commands } from "./commands.ts";
+import { commands, keysOf } from "./commands.ts";
 import { WHEN } from "./when.ts";
 import { dialogs } from "./services/dialogs.ts";
 import { ui } from "./view/image.ts";
 import { panels } from "./view/panel.ts";
 import { windows } from "./view/window.ts";
-import { timeline } from "./timeline.ts";
+import { timeline, timelineOf } from "./timeline.ts";
 import { drops } from "./drops.ts";
-import { appearance } from "./appearance.ts";
+import { appearance, appearanceOf } from "./appearance.ts";
 import { settings } from "./settings.ts";
 import { i18n } from "./language.ts";
 import { player } from "./player.ts";
@@ -46,6 +46,17 @@ import {
   videoUpscaling,
 } from "./services.ts";
 
+/**
+ * The SDK's state copies that a player event keeps current, by event: a
+ * `player.on` listener of the event starts its copy first, so the copy
+ * already holds the event's data when the listener runs.
+ */
+const COPIES: Readonly<Record<string, (runtime: Runtime) => void>> = {
+  "commands.keys": (runtime) => keysOf(runtime).start(),
+  "timeline.changed": (runtime) => timelineOf(runtime).start(),
+  "appearance.changed": (runtime) => appearanceOf(runtime).start(),
+};
+
 export class ScopeImpl implements Plugin {
   readonly runtime: Runtime;
   readonly #parent: ScopeImpl | undefined;
@@ -70,6 +81,14 @@ export class ScopeImpl implements Plugin {
   }
   get disposed(): boolean {
     return this.#disposed || (this.#parent?.disposed ?? false);
+  }
+  /**
+   * Start the SDK's copy that `event` keeps current (`plugin.commands.keys`,
+   * `plugin.timeline`, `plugin.appearance`), for `player.on`; nothing for
+   * an event without one.
+   */
+  followCopy(event: string) {
+    if (Object.hasOwn(COPIES, event)) COPIES[event]!(this.runtime);
   }
   readonly commands = commands(this);
   readonly when = WHEN;

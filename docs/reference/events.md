@@ -21,10 +21,10 @@ The player sends an event as one JSON line `{"event": name, "data": …}`, only 
 | `window.state` | `WindowFacts`: The main window: fullscreen, maximized, video area, picture-in-picture (what `WindowState` is made from). | {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} | no | `events` |
 | `packages.changed` | `PackageInfo[]`: Every installed plugin, after an install, an uninstall or a change of one (needs no capability). | {@linkcode "@vestra-player/sdk"!Packages.onChange Packages.onChange} | yes | none |
 | `bindings.changed` | `null`: A key binding changed somewhere; read them again with `plugin.bindings.list()`. | {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange} | yes | `bindings.manage` |
-| `commands.keys` | `CommandKeys`: The key labels of this plugin's own commands, with the binding table's revision. | {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Commands.onKeysChange Commands.onKeysChange} | yes | `commands` |
-| `timeline.changed` | `WireTimeline`: Every timeline mark and range, after any plugin or the player changed one. | {@linkcode "@vestra-player/sdk"!Timeline.onChange Timeline.onChange} | no | `events` |
-| `appearance.changed` | `{ theme: string; language?: string }`: The palette changed (`theme`), or the interface language the user saved (`language`; the oldest players send no language). | {@linkcode "@vestra-player/sdk"!Appearance.onChange Appearance.onChange} | yes | `events` |
-| `resolvers.fileTypes` | `{ fileTypes: string[] }`: The file extensions the plugins' file resolvers claim now. | {@linkcode "@vestra-player/sdk"!Resolvers.onFileTypesChange Resolvers.onFileTypesChange} | yes | `events` |
+| `commands.keys` | `CommandKeys`: The key labels of this plugin's own commands, with the binding table's revision. | {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys} | yes | `commands` |
+| `timeline.changed` | `WireTimeline`: Every timeline mark and range, after any plugin or the player changed one. | none: `Player.on` only | no | `events` |
+| `appearance.changed` | `{ theme: string; language?: string }`: The palette changed (`theme`), or the interface language the user saved (`language`; the oldest players send no language). | none: `Player.on` only | yes | `events` |
+| `resolvers.fileTypes` | `{ fileTypes: string[] }`: The file extensions the plugins' file resolvers claim now. | none: `Player.on` only | yes | `events` |
 | `video.upscaling.changed` | `Omit<WireUpscalingState, "enabled">`: The AI upscaling state, without this plugin's own `enabled`. | {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | no | `video.upscaling` |
 
 <!-- /generated -->

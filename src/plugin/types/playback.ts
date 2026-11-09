@@ -191,7 +191,9 @@ export interface TimelineLayer extends Disposable {
  * plugin publishes one layer with {@link Timeline.layer}; the player merges
  * the layers by time and shows them. A new source clears every layer, so a
  * plugin publishes again for each file. `marks` is the merged list, which
- * any plugin can read.
+ * any plugin can read. To run code when they change, listen with
+ * `plugin.player.on("timeline.changed", …)` (needs `events`): `marks` and
+ * `ranges` already hold the event's lists when the listener runs.
  *
  * @capability `timeline.marks` to publish; `playback.read` to read;
  * `events` to follow changes.
@@ -214,8 +216,7 @@ export interface Timeline {
   /**
    * Every layer's ranges merged, by start (`playback.read`). Empty on a new
    * source. Kept current like `marks` (with `events`): read it in a
-   * {@link View.bind} function and the view follows it. `onChange` runs only
-   * when the marks change.
+   * {@link View.bind} function and the view follows it.
    *
    * @example Draw the published ranges in a seek bar of your own
    * A bottom bar draws a band for every range on the seek bar, whoever
@@ -242,24 +243,6 @@ export interface Timeline {
    * @since 1.6.9
    */
   readonly ranges: readonly TimelineRange[];
-  /**
-   * The merged list changed (needs `events`; at most every 100 ms).
-   *
-   * @capability events and playback.read
-   *
-   * @example Follow the marks as they change
-   * A panel lists the seek bar's marks and updates when any plugin publishes
-   * or a new file clears them. The listener gets the merged list, at most
-   * every 100 ms.
-   * ```ts
-   * plugin.timeline.onChange((marks) => {
-   *   console.log(marks.map((mark) => `${mark.time}s ${mark.title ?? mark.kind}`));
-   * });
-   * ```
-   *
-   * @since 1.0.0
-   */
-  onChange(listener: (marks: readonly TimelineMark[]) => void): Disposable;
   /**
    * This plugin's layer (`timeline.marks`); a second call throws.
    *
@@ -1023,7 +1006,13 @@ export interface Player {
    *
    * Unlike {@link Player.onChange} it does not start the SDK's copy of the
    * state: `plugin.player.state` is not kept current by it, and the
-   * listener runs for every event, changed or not. It suits pushing
+   * listener runs for every event, changed or not. Three events are the
+   * exception: `commands.keys`, `timeline.changed` and `appearance.changed`
+   * start the copy they keep current (`plugin.commands.keys`,
+   * `plugin.timeline.marks` and `ranges`, `plugin.appearance.theme` and
+   * `language`), which stays for the plugin's life as a copy (not a
+   * listener: it keeps no plugin running), and the copy takes each event
+   * before the listener runs, so the listener reads the new values there. It suits pushing
    * values yourself (`view.set` from the listener) or reading a field the
    * SDK does not expose. Errors go to {@link Scope.onError}, as for every
    * handler; unlike the others, no full update pass follows it, so bound

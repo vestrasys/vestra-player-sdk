@@ -704,7 +704,7 @@ hostScenario("disconnect-in-flight", async () => {
 
 // `commands.register` answers, then the host pushes `commands.keys` from a
 // queued microtask: where that lands against the answer, the plugin's
-// `onKeysChange` and a `settle()` started at once; then a rebinding and an
+// `commands.keys` listener and a `settle()` started at once; then a rebinding and an
 // unregistration.
 hostScenario("register-keys-settle", async () => {
   const host = new TestHost();
@@ -717,7 +717,9 @@ hostScenario("register-keys-settle", async () => {
         bindings: ["F"],
         run() {},
       });
-      p.commands.onKeysChange(() => log.push(["plugin", "onKeysChange"]));
+      p.player.on("commands.keys", () =>
+        log.push(["plugin", "commands.keys", toJson(p.commands.keys("first"))]),
+      );
     },
     { capabilities: ["commands"], host },
   );

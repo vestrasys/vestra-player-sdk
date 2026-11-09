@@ -130,7 +130,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.producers} | Generated streams (`player.openStream`) by producer id: the fake player end of each frame connection. |
 | {@link "@vestra-player/sdk/testing"!TestHost.resolvers} | Registered source resolvers (`resolvers.add`) by id: their declarations. |
 | {@link "@vestra-player/sdk/testing"!TestHost.otherResolvers} | Resolvers other plugins hold, as `resolvers.add` declares them plus the holder's id: a registration of this plugin that claims one of their extensions (or scheme + host pairs) is refused with `conflict`, which does not fail activation, like the player. |
-| {@link "@vestra-player/sdk/testing"!TestHost.fileTypes}() | What `plugin.resolvers.fileTypes` reports: the extensions of this plugin's file resolvers and of `TestHost.otherResolvers`, sorted, each once. |
+| {@link "@vestra-player/sdk/testing"!TestHost.fileTypes}() | The list `resolvers.fileTypes` carries: the extensions of this plugin's file resolvers and of `TestHost.otherResolvers`, sorted, each once. |
 | {@link "@vestra-player/sdk/testing"!TestHost.updateFileTypes}() | Push `resolvers.fileTypes` when `TestHost.fileTypes` changed: called after this plugin's resolvers come and go; call it yourself after changing `TestHost.otherResolvers` (another plugin started or stopped). |
 | {@link "@vestra-player/sdk/testing"!TestHost.resolutions} | File opens waiting for this plugin's file resolver (`extensions`), by request id: the path and how it was opened. |
 | {@link "@vestra-player/sdk/testing"!TestHost.dialogAnswers} | Answers for `dialogs.open` (paths, `null` = cancelled) and `dialogs.confirm` (`{ confirmed, checked }`), consumed in order. |

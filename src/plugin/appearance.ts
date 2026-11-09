@@ -17,103 +17,50 @@ export const THEMES: readonly ThemeId[] = ["vestra", "vestra-light"];
 /**
  * One per plugin: the value comes with the `window.state` read before
  * activation; with `events`, `appearance.changed` keeps it current once
- * the plugin uses it.
+ * the plugin uses it (or listens to that event with `player.on`).
  */
 class AppearanceService {
   readonly #runtime: Runtime;
   theme: ThemeId;
   /** The saved interface language (the next start's). */
   language: LanguagePreference;
-  readonly #listeners = new Set<(theme: ThemeId) => void>();
-  /**
-   * The theme listeners last heard (or the last event's), not the one read
-   * at start: a plugin woken from standby reads the new theme from
-   * `window.state`, then gets the `appearance.changed` the player held for
-   * it, and its listeners still hear that change. Left unset until the
-   * first event on purpose: set from the start-up read, it would hide that
-   * held change again.
-   */
-  #notified: ThemeId | undefined;
-  /**
-   * The language as the start-up read and later events carried it (not
-   * `language`, which the plugin's own `setLanguage` changes before its
-   * echo arrives). The player sends `appearance.changed` once per change
-   * of the theme or of the language, each with both values: an event whose
-   * language differs from this one is a language change, and its theme is
-   * compared with `theme` as before. Only a newest event that repeats the
-   * start-up language is taken for a theme change; a plugin woken for a
-   * language change gets that too, so its listeners may hear the unchanged
-   * theme once (the event does not say what changed).
-   */
-  #eventLanguage: LanguagePreference;
   #started = false;
   constructor(runtime: Runtime) {
     this.#runtime = runtime;
     this.theme =
       (windowOf(runtime).appearance as ThemeId | undefined) ?? "vestra";
     this.language = preference(windowOf(runtime).language) ?? "system";
-    this.#eventLanguage = this.language;
   }
   start() {
     if (this.#started) return;
     this.#started = true;
-    // A mirror: a plugin listens through `watch` and bindings.
+    // A mirror: bindings read it; it hears each event before the plugin's
+    // own listeners (`player.on`).
     this.#runtime.on(
       "appearance.changed",
       (data) => {
         const event = data as { theme?: ThemeId; language?: string } | null;
         const language = preference(event?.language);
-        // An event without a language is a theme change.
-        const languageChanged =
-          language !== undefined && language !== this.#eventLanguage;
-        if (language) this.#eventLanguage = language;
         if (language && language !== this.language) {
           this.language = language;
           this.#runtime.invalidate();
         }
         const theme = event?.theme;
-        if (!theme || !THEMES.includes(theme)) return;
-        if (languageChanged) {
-          // The theme came along unchanged (or this plugin set it already).
-          this.accept(theme);
-          this.#notified = theme;
-        } else this.changed(theme);
+        if (theme && THEMES.includes(theme)) this.accept(theme);
       },
       "events",
       true,
     );
   }
-  /** A theme change event: listeners hear it unless they already did. */
-  changed(theme: ThemeId) {
-    const changed = theme !== this.theme;
-    this.theme = theme;
-    if (theme !== this.#notified) this.#notify(theme);
-    if (changed) this.#runtime.invalidate();
-  }
-  /** After this plugin's own `set`: only a change from the current theme. */
+  /** An event's theme, or this plugin's own `set`: only a change counts. */
   accept(theme: ThemeId) {
     if (theme === this.theme) return;
     this.theme = theme;
-    this.#notify(theme);
     this.#runtime.invalidate();
-  }
-  #notify(theme: ThemeId) {
-    this.#notified = theme;
-    for (const listener of [...this.#listeners]) listener(theme);
-  }
-  watch(listener: (theme: ThemeId) => void) {
-    this.#listeners.add(listener);
-    const held = this.#runtime.hold("appearance.changed");
-    return {
-      dispose: async () => {
-        this.#listeners.delete(listener);
-        await held.dispose();
-      },
-    };
   }
 }
 
-const appearanceOf = (runtime: Runtime) =>
+export const appearanceOf = (runtime: Runtime) =>
   runtime.service("appearance", () => new AppearanceService(runtime));
 
 export function appearance(scope: ScopeImpl): Appearance {
@@ -123,16 +70,6 @@ export function appearance(scope: ScopeImpl): Appearance {
       service().start();
       scope.runtime.reading("appearance.changed");
       return service().theme;
-    },
-    onChange(listener) {
-      service().start();
-      const watch = service().watch((theme) => scope.run(listener, theme));
-      return scope.add({
-        dispose: async () => {
-          scope.forget(watch);
-          await watch.dispose();
-        },
-      });
     },
     async set(theme) {
       if (!THEMES.includes(theme))
