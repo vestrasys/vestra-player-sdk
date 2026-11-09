@@ -333,9 +333,7 @@ vestra.audio | audio.track.none | Audio Track ▸ No Audio Tracks
 vestra.subtitles | track-off | Subtitle Track ▸ Off
 vestra.capture | capture.save | Snapshot ▸ Save Current Frame | Ctrl+E
 vestra.capture | capture.copy | Snapshot ▸ Copy Current Frame | Ctrl+C
-vestra.capture | capture.burst | Snapshot ▸ Burst… | Ctrl+G
-vestra.capture | capture.clip | Snapshot ▸ Export Clip…
-vestra.capture | capture.panel | Snapshot ▸ Capture… | Alt+S
+vestra.capture | capture.burst | Snapshot ▸ Burst | Ctrl+G
 host | adjust | Adjustments and Effects
 host | sidebar | Sidebar
 vestra.marks | marks.list | Chapter and Bookmark List… | H
@@ -478,14 +476,12 @@ vestra.audio | audio.sync.keep.always | (Always Keep)
 vestra.audio | audio.normalize | (Normalize) | Shift+N
 vestra.audio | audio.clarity | (Crystalizer) | Shift+C
 vestra.audio | audio.reset | (Reset)
-vestra.capture | capture.clipExport | (Export Clip Range) | Ctrl+Shift+E
 vestra.capture | capture.saveAs | (Save Current Frame As…)
 vestra.capture | capture.saveScreen | (Save Rendered Frame) | Ctrl+Alt+E
 vestra.capture | capture.saveScreenAs | (Save Rendered Frame As…)
 vestra.capture | capture.copyScreen | (Copy Rendered Frame) | Ctrl+Alt+C
 vestra.capture | capture.saveVideo | (Save Video Frame Only)
 vestra.capture | capture.copyVideo | (Copy Video Frame Only)
-vestra.capture | capture.tasks | (Export Tasks…)
 vestra.capture | capture.format.png | (Capture as PNG)
 vestra.capture | capture.format.jpeg | (Capture as JPEG)
 vestra.capture | capture.format.bmp | (Capture as BMP)
@@ -495,9 +491,6 @@ vestra.capture | capture.folder | (Snapshot Folder…)
 vestra.capture | capture.openFolder | (Open Snapshot Folder)
 vestra.capture | capture.revealLast | (Show Last Capture in Folder)
 vestra.capture | capture.copyLast | (Copy Last Snapshot)
-vestra.capture | capture.clipStart | (Set Clip Start)
-vestra.capture | capture.clipEnd | (Set Clip End)
-vestra.capture | capture.last30 | (Export Last 30 Seconds) | Ctrl+Shift+R
 vestra.info | info.brief | (Brief Info) | Shift+Tab
 vestra.playback | keyframe-back | (Previous Keyframe) | Ctrl+Shift+ArrowLeft
 vestra.playback | keyframe-forward | (Next Keyframe) | Ctrl+Shift+ArrowRight
