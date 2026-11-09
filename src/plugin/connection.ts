@@ -185,6 +185,13 @@ export class Connection {
    * changed that state elsewhere asks for it (`reread`).
    */
   readonly rereads = new Map<string, () => Promise<unknown>>();
+  /**
+   * Where a state copy (mirror) that threw on an event is reported: the
+   * plugin's error handlers once the root scope exists (`onError`, as for
+   * a listener), the log before.
+   */
+  reportMirror: (error: unknown) => void = (error) =>
+    console.error(`[${this.manifest.id}]`, error);
   /** The framework's ears ({@link StateSignals}); silent until `Runtime` sets them. */
   signals: StateSignals = SILENT;
   /**
@@ -395,11 +402,20 @@ export class Connection {
       group.off = this.host.events.subscribe(
         event as never,
         (data) => {
-          // The state copies first, then the plugin's listeners in order.
-          const listeners = [...group.listeners];
-          for (const each of listeners) if (group.mirrors.has(each)) each(data);
-          for (const each of listeners)
-            if (!group.mirrors.has(each)) each(data);
+          // Split once: the state copies first, each on its own (one that
+          // throws stops neither the others nor the plugin's listeners),
+          // then the plugin's listeners in order.
+          const mirrors: Listener[] = [];
+          const others: Listener[] = [];
+          for (const each of group.listeners)
+            (group.mirrors.has(each) ? mirrors : others).push(each);
+          for (const each of mirrors)
+            try {
+              each(data);
+            } catch (error) {
+              this.reportMirror(error);
+            }
+          for (const each of others) each(data);
         },
         !group.told,
         whys,

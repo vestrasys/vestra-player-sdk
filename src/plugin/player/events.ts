@@ -26,12 +26,11 @@ export const EVENT_NEEDS: Readonly<Record<HostEvent, string | null>> = {
   "video.upscaling.changed": "video.upscaling",
 };
 
-/** `Player.on`: `listener` hears each `event`, with a copy of its data. */
-export function playerOn<E extends HostEvent>(
-  scope: ScopeImpl,
-  event: E,
-  listener: (data: EventPayload<E>) => void,
-): Disposable {
+/** `Player.on`'s arguments: a {@link HostEvent} name and a function. */
+export function checkOn(
+  event: unknown,
+  listener: unknown,
+): asserts event is HostEvent {
   if (typeof event !== "string" || !Object.hasOwn(EVENT_NEEDS, event))
     throw failure(
       "invalid",
@@ -39,6 +38,15 @@ export function playerOn<E extends HostEvent>(
     );
   if (typeof listener !== "function")
     throw failure("invalid", "on takes an event name and a listener");
+}
+
+/** `Player.on`: `listener` hears each `event`, with a copy of its data. */
+export function playerOn<E extends HostEvent>(
+  scope: ScopeImpl,
+  event: E,
+  listener: (data: EventPayload<E>) => void,
+): Disposable {
+  checkOn(event, listener);
   const watch = scope.runtime.on(
     event,
     // A copy: the same data also feeds the SDK's own state copies.

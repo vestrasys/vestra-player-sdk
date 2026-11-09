@@ -1012,7 +1012,10 @@ export interface Player {
    * `plugin.timeline.marks` and `ranges`, `plugin.appearance.theme` and
    * `language`), which stays for the plugin's life as a copy (not a
    * listener: it keeps no plugin running), and the copy takes each event
-   * before the listener runs, so the listener reads the new values there. It suits pushing
+   * before the listener runs, so the listener reads the new values there.
+   * The listener hears only the player's events, never the copy's own first
+   * read: take the starting value once after activation, or read the copy
+   * in a {@link View.bind} function, which follows both. It suits pushing
    * values yourself (`view.set` from the listener) or reading a field the
    * SDK does not expose. Errors go to {@link Scope.onError}, as for every
    * handler; unlike the others, no full update pass follows it, so bound

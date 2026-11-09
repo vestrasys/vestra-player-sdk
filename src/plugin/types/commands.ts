@@ -866,7 +866,11 @@ export interface Commands {
    * listen with `plugin.player.on("commands.keys", …)` and read it there
    * (the SDK's copy already has the event's keys). The first read asks the
    * player, and until its answer arrives (a few milliseconds) every
-   * command reads `[]`; a binding that read it runs again then.
+   * command reads `[]`; a binding that read it runs again then. That answer
+   * is not an event: a `player.on` listener hears only the player's later
+   * `commands.keys` events, so read the keys you start with in a `bind`
+   * function, which runs again when the answer arrives, not only in the
+   * listener.
    *
    * The plugin's own commands, and the player's own as `host/<id>`
    * (`host/volume-up`, `host/mute`: the ids of

@@ -5,6 +5,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin, PluginError, ThemeId } from "../src/plugin/index.ts";
+import { playerOf } from "../src/plugin/player.ts";
+import { Runtime } from "../src/plugin/runtime.ts";
 
 function packageDir(capabilities: string[]) {
   const directory = mkdtempSync(join(tmpdir(), "r3b-"));
@@ -221,5 +223,63 @@ test("a state copy started after a plugin listener still hears each event first"
   host.setAppearance("vestra");
   await host.settle();
   assert.deepEqual(read, ["vestra-light", "vestra"]);
+  await stop();
+});
+
+test("source.state: a listener added before the player's copy starts reads the event's state", async () => {
+  // The startup always starts the copy first; a runtime built by hand
+  // can add the listener before it, the order the dispatch must undo.
+  const host = new TestHost();
+  const runtime = new Runtime(
+    host,
+    { id: "test.order", capabilities: ["events", "playback.read"] },
+    tmpdir(),
+  );
+  const rates: number[] = [];
+  const listener = runtime.on("source.state", (data) =>
+    rates.push(playerOf(runtime).state.rate, (data as { rate: number }).rate),
+  );
+  void playerOf(runtime).start(false);
+  await host.settle();
+  host.setSource({ rate: 1.5 });
+  await host.settle();
+  host.setSource({ rate: 2 });
+  await host.settle();
+  // Each time the copy (first number) already has the event's rate.
+  assert.deepEqual(rates, [1.5, 1.5, 2, 2]);
+  await listener.dispose();
+  runtime.stop();
+  host.close();
+});
+
+test("a state copy that throws stops neither the other copies nor the plugin's listeners; onError hears it", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await startPlugin(() => {}, {
+    capabilities: ["events", "ui.theme"],
+    host,
+  });
+  const errors: PluginError[] = [];
+  plugin.onError((error) => errors.push(error));
+  const runtime = (plugin as unknown as { runtime: Runtime }).runtime;
+  // A broken copy, added before the real one and the listener.
+  runtime.on(
+    "appearance.changed",
+    () => {
+      throw new Error("broken copy");
+    },
+    "events",
+    true,
+  );
+  const read: string[] = [];
+  plugin.player.on("appearance.changed", () =>
+    read.push(plugin.appearance.theme),
+  );
+  await host.settle();
+  host.setAppearance("vestra-light");
+  await host.settle();
+  // The real copy took the event after the broken one, then the listener ran.
+  assert.deepEqual(read, ["vestra-light"]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!.message, /broken copy/);
   await stop();
 });
