@@ -61,6 +61,11 @@ export function sourceIntent(
   inner: Internals,
   intent: Record<string, Json>,
 ): { ticket: Json } {
+  // Both flags cover this intent only, whatever becomes of it (a stale
+  // one too, as in the player).
+  const hold = inner.holdPause;
+  inner.holdPause = false;
+  inner.stepped = false;
   const expected = intent.expected as SourceStamp | undefined;
   const stamp = host.source.stamp;
   if (
@@ -69,10 +74,6 @@ export function sourceIntent(
       expected.intentVersion !== stamp.intentVersion)
   )
     throw new HostError("stale", "stale");
-  // Both flags cover this intent only, whatever becomes of it.
-  const hold = inner.holdPause;
-  inner.holdPause = false;
-  inner.stepped = false;
   // A new load, a restart or Close: the end that was kept is gone.
   if (intent.kind !== "control") inner.endKeepsPause = false;
   const next = {
@@ -121,18 +122,22 @@ export function sourceIntent(
     if (!host.source.source) throw new HostError("invalid", "noSource");
     const control = intent.control as Record<string, Json>;
     if (control.kind === "pause") next.paused = control.paused === true;
-    if (
-      control.kind === "seek" &&
-      !atEndAlready(host, Number(control.seconds))
-    ) {
-      next.position = Number(control.seconds);
-      // Like the player (2026-11-09): a seek leaves the end and plays on,
-      // except a step back from the end, or after an end reached while
-      // paused or by frame stepping.
-      if (host.source.phase === "ended") {
-        next.phase = "ready";
-        next.terminalReason = null;
-        next.paused = hold || inner.endKeepsPause;
+    if (control.kind === "seek") {
+      if (atEndAlready(host, Number(control.seconds))) {
+        // Goes nowhere; keep-open holds the end paused.
+        next.paused = true;
+      } else {
+        next.position = Number(control.seconds);
+        // Like the player (2026-11-09): a seek leaves the end and plays on,
+        // except a step back from the end, or after an end reached while
+        // paused or by frame stepping. Leaving the end starts a new cycle
+        // (session.rs `confirm_seek_from_end`), so the next end is new.
+        if (host.source.phase === "ended") {
+          next.cycle++;
+          next.phase = "ready";
+          next.terminalReason = null;
+          next.paused = hold || inner.endKeepsPause;
+        }
       }
     }
     if (control.kind === "rate") next.rate = Number(control.rate);

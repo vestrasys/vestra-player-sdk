@@ -12,7 +12,7 @@ import type { CommandDeclaration } from "../../commands.ts";
 import type { FakeCommand, TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 import { hostText } from "./i18n.ts";
-import { sourceIntent, audioCondition } from "./media.ts";
+import { atEndAlready, sourceIntent, audioCondition } from "./media.ts";
 
 export function coreFacts(host: TestHost, _inner: Internals) {
   const s = host.source;
@@ -448,8 +448,13 @@ export function coreActionsHandlers(
         // to the last keyframe before the position (1 ms back; the exact
         // target when no keyframes are modelled) that stays paused; Next
         // Keyframe goes nowhere (the plugin says so).
-        if (s.phase === "ended" && p.direction === "backward") {
-          const target = Math.max(0, (s.position ?? 0) - 0.001);
+        const target = Math.max(0, (s.position ?? 0) - 0.001);
+        // "Already at the end" is decided on the raw target, as the player.
+        if (
+          s.phase === "ended" &&
+          p.direction === "backward" &&
+          !atEndAlready(host, target)
+        ) {
           const landed =
             host.keyframes === null
               ? target

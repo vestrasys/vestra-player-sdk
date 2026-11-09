@@ -500,3 +500,56 @@ test("Play pressed in the last moment: the end counts as reached playing, so a s
   assert.equal(host.source.paused, true);
   await stop();
 });
+
+test("end, seek back, end again: two onEnd, as the player starts a new cycle when a seek leaves the end (SDK 1.7.5)", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  const media = await plugin.player.open("/movie.mp4");
+  const ends: number[] = [];
+  media.onEnd((state) => ends.push(state.position ?? -1));
+  host.setSource({ phase: "ready", position: 0, duration: 60 });
+  const end = () =>
+    host.setSource({
+      phase: "ended",
+      terminalReason: "natural",
+      position: 60,
+      paused: true,
+    });
+  end();
+  await host.settle();
+  const cycle = host.source.cycle;
+  // A seek to the end goes nowhere: same cycle, no new end, and paused as
+  // keep-open holds the end (whatever the state said).
+  host.setSource({ paused: false });
+  await plugin.player.seek(60);
+  assert.equal(host.source.cycle, cycle);
+  assert.equal(host.source.paused, true);
+  await plugin.player.seek(30);
+  assert.equal(host.source.cycle, cycle + 1);
+  assert.equal(host.source.phase, "ready");
+  end();
+  await host.settle();
+  assert.deepEqual(ends, [60, 60]);
+  await stop();
+});
+
+test('Previous Keyframe after the end: "already at the end" is decided on the raw target, not the keyframe (SDK 1.7.5)', async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { plugin, stop } = await started(host);
+  // The position reads past the duration (mpv may): position − 1 ms is
+  // still at the end, so nothing moves, though a keyframe lies before it.
+  host.keyframes = [0, 40, 80];
+  host.setSource({
+    phase: "ended",
+    terminalReason: "natural",
+    position: 100.01,
+    duration: 100,
+    paused: true,
+  });
+  await plugin.player.step("keyframe", "backward");
+  assert.equal(host.source.phase, "ended");
+  assert.equal(host.source.position, 100.01);
+  assert.equal(host.source.paused, true);
+  await stop();
+});
