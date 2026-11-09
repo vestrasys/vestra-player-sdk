@@ -734,3 +734,93 @@ test("a window's row patch whose result the window refuses: code ui, the rows ke
   assert.equal((host.window("w1").props.segments as Json[]).length, 2);
   await stop();
 });
+
+test("initial values with a field name not in Slint's spelling: left out and reported (host), the panel and the page still come", async () => {
+  const errors: PluginError[] = [];
+  const { host, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.onError((error) => errors.push(error));
+      plugin.panels
+        .mount("sidebar", "panel.slint")
+        .set({ items: [{ title_x: "a" }], status: "ready" });
+    },
+    { directory: packageWith() },
+  );
+  assert.deepEqual(host.mounted().props, { status: "ready" });
+  await host.request("settings.register", {
+    id: "p",
+    category: "general",
+    title: "P",
+    file: "panel.slint",
+    component: "Panel",
+    global: "Bridge",
+    properties: { items: [{ "-done": true }], status: "x" },
+  });
+  await host.settle();
+  assert.deepEqual(host.settings.pages.get("p")!.props, { status: "x" });
+  assert.deepEqual(
+    errors.map((e) => [e.code, e.message]),
+    [
+      [
+        "host",
+        'items: UI object field "title_x" is not in Slint canonical spelling',
+      ],
+      [
+        "host",
+        'items: UI object field "-done" is not in Slint canonical spelling',
+      ],
+    ],
+  );
+  await stop();
+});
+
+test("a deep struct type used in many places (22 levels of two fields) is checked promptly", async () => {
+  const levels = 22;
+  const structs = Array.from({ length: levels }, (_, i) =>
+    i === levels - 1
+      ? `export struct L${i} { x: int }`
+      : `export struct L${i} { a: L${i + 1}, b: L${i + 1} }`,
+  ).join("\n");
+  const began = Date.now();
+  const { host, stop, open } = await started(
+    windowWith(`${structs}
+export component W inherits Window {
+    in property <L0> deep;
+    out property <L0> deep-out;
+    out property <int> neg: -1;
+    out property <length> gap: 3px;
+}
+`),
+  );
+  assert.equal(
+    (await open({ deep: { c: 1 } }))?.message,
+    "deep: wrong type: deep.c is not a field of the declared struct (a, b)",
+  );
+  assert.equal(
+    (await open({ deep: 1 }))?.message,
+    "deep: wrong type: deep is a number where the declaration has a struct",
+  );
+  assert.equal(await open({ deep: { a: { b: {} } } }), null);
+  // The window holds what it took (filled with defaults): asked field by field.
+  await assert.rejects(
+    host.request("ui.set", {
+      id: "w3",
+      property: "deep",
+      value: { a: { b: { z: 1 } } },
+    }),
+    {
+      code: "ui",
+      message:
+        "deep: wrong type: deep.a.b.z is not a field of the declared struct (a, b)",
+    },
+  );
+  await assert.rejects(
+    host.request("ui.set", { id: "w3", property: "deep-out", value: {} }),
+    { code: "ui", message: "deep-out: not writable (an out property)" },
+  );
+  // Negative numbers and units as literal defaults of out properties.
+  await host.request("ui.set", { id: "w3", property: "neg", value: -1 });
+  await host.request("ui.set", { id: "w3", property: "gap", value: 3 });
+  assert.ok(Date.now() - began < 5000, `${Date.now() - began} ms`);
+  await stop();
+});

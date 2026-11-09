@@ -366,8 +366,9 @@ export const inSetOrder = (values: Record<string, Json>) =>
 
 /**
  * A panel's or settings page's initial properties, as the player keeps
- * them: one over the limits is left out (the property keeps its default)
- * and reported with `ui.error`, the request itself succeeds.
+ * them: one over the limits (`limit`) or with a struct field name not in
+ * Slint's canonical spelling (`host`) is left out (the property keeps its
+ * default) and reported with `ui.error`, the request itself succeeds.
  */
 export function initialValues(
   host: TestHost,
@@ -377,10 +378,16 @@ export function initialValues(
   const kept: Record<string, Json> = {};
   for (const [property, value] of Object.entries(values)) {
     const problem = valueLimitProblem(value);
+    const spelling = problem ? null : spellingProblem(value);
     if (problem)
       host.emit("ui.error", {
         code: "limit",
         message: `${property}: ${problem}`,
+      });
+    else if (spelling)
+      host.emit("ui.error", {
+        code: "host",
+        message: `${property}: ${spelling}`,
       });
     else kept[property] = value;
   }
@@ -665,29 +672,19 @@ export function layoutHandlers(
       const panelSlot = String(p.slot);
       const global = typeof p.global === "string" ? p.global : undefined;
       inner.globals.set(panelSlot, global);
-      // A value the panel cannot take is reported with `ui.error` as the
-      // player reports it when it builds the panel: first those it cannot
-      // convert, then those the panel refuses (named before the refusal).
-      // The panel shows its default for them; the value stays stored, as
-      // in the player, and a patch applies on it.
+      // A value of a type the panel refuses is reported with `ui.error` as
+      // the player reports it when it builds the panel (named before the
+      // refusal). The panel shows its default for it; the value stays
+      // stored, as in the player, and a patch applies on it.
       const view = mountView(panelSlot);
       for (const key of [...inner.unshown])
         if (key.startsWith(`${view}\u0000`)) inner.unshown.delete(key);
-      const unconverted = new Set<string>();
-      for (const name of inSetOrder(properties)) {
-        const problem = spellingProblem(properties[name]!);
-        if (!problem) continue;
-        unconverted.add(name);
-        inner.unshown.add(`${view}\u0000${name}`);
-        host.emit("ui.error", { code: "host", message: `${name}: ${problem}` });
-      }
       const typed =
         global === undefined
           ? null
           : typedView(host, String(p.file), global, "ui", true);
       if (typed)
         for (const name of inSetOrder(properties)) {
-          if (unconverted.has(name)) continue;
           const found = refusal(
             typed.types,
             name,

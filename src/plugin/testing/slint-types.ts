@@ -323,11 +323,17 @@ function parse(path: string, text: string): SlintFile {
   };
   /** The literal after `:` that ends the binding (`;`), or `undefined`. */
   const literal = (): Json | undefined => {
-    const value = at(1);
-    let end = 2;
+    // A negative number is `-` and the number.
+    const negative = is("-", 1) ? 1 : 0;
+    const value = at(1 + negative);
+    let end = 2 + negative;
     let result: Json | undefined;
-    if (value?.t === "num" && /^\d+(\.\d+)?$/.test(value.v))
-      result = Number(value.v);
+    // A plain number, or logical pixels and milliseconds (the units the
+    // player's value holds as written).
+    const number =
+      value?.t === "num" && /^(\d+(?:\.\d+)?)(px|ms)?$/.exec(value.v);
+    if (number) result = (negative ? -1 : 1) * Number(number[1]);
+    else if (negative) result = undefined;
     else if (value?.t === "str" && !value.v.includes("\\")) result = value.v;
     else if (value?.v === "true" || value?.v === "false")
       result = value.v === "true";
@@ -646,7 +652,13 @@ function readView(path: string, global?: string): ViewTypes | null {
       visibility: member.visibility,
       type,
       rows: member.rows,
-      initial: member.initial === null ? jsonDefault(type) : member.initial,
+      // Only an `out` property's value is ever compared (`refusal`).
+      initial:
+        member.visibility !== "out"
+          ? undefined
+          : member.initial === null
+            ? jsonDefault(type)
+            : member.initial,
     });
   }
   // A component of the plugin's own as the base, or one it imports (from
@@ -662,9 +674,29 @@ const anyType: SlintType = { k: "any" };
 /**
  * A type's default as the player's `to_json` writes it (`0`, `""`,
  * `false`, `[]`, a struct of those); `undefined` where it has none (an
- * image, a brush, an enum, a type not known here).
+ * image, a brush, an enum, a type not known here). Each struct type once:
+ * a struct used in many places shares one default.
  */
+const jsonDefaults = new WeakMap<SlintType, Json | undefined>();
 function jsonDefault(type: SlintType): Json | undefined {
+  if (type.k !== "struct") return leafDefault(type);
+  if (jsonDefaults.has(type)) return jsonDefaults.get(type);
+  const out: { [key: string]: Json } = {};
+  let known = true;
+  for (const [name, field] of type.fields) {
+    const value = jsonDefault(field);
+    if (value === undefined) {
+      known = false;
+      break;
+    }
+    out[name] = value;
+  }
+  const result = known ? out : undefined;
+  jsonDefaults.set(type, result);
+  return result;
+}
+
+function leafDefault(type: SlintType): Json | undefined {
   switch (type.k) {
     case "number":
       return 0;
@@ -674,15 +706,6 @@ function jsonDefault(type: SlintType): Json | undefined {
       return false;
     case "array":
       return [];
-    case "struct": {
-      const out: { [key: string]: Json } = {};
-      for (const [name, field] of type.fields) {
-        const value = jsonDefault(field);
-        if (value === undefined) return undefined;
-        out[name] = value;
-      }
-      return out;
-    }
     default:
       return undefined;
   }
@@ -818,10 +841,17 @@ function takes(type: SlintType, value: Json, plain: boolean): boolean {
 
 /**
  * The value a property holds, as far as `mismatch` reads it: a struct's
- * fields, an array's first row, a leaf's kind (`?`: not known).
+ * field names and each field when asked for (a declared default is never
+ * built whole: a struct used in many places of a deep type would make it
+ * grow without bound), an array's first row, a leaf's kind (`?`: not
+ * known).
  */
 type Held =
-  | { k: "struct"; fields: Map<string, Held> }
+  | {
+      k: "struct";
+      names: () => string[];
+      field: (name: string) => Held | undefined;
+    }
   | { k: "array"; first: Held | null }
   | { k: "leaf"; kind: string };
 
@@ -838,13 +868,17 @@ const LEAF: Record<string, string> = {
 
 /** Slint's default value of `type` (`default_value_for_type`). */
 function defaultOf(type: SlintType, rows = false): Held {
-  if (type.k === "struct")
+  if (type.k === "struct") {
+    const fields = type.fields;
     return {
       k: "struct",
-      fields: new Map(
-        [...type.fields].map(([name, field]) => [name, defaultOf(field)]),
-      ),
+      names: () => [...fields.keys()],
+      field: (name) => {
+        const field = fields.get(name);
+        return field && defaultOf(field);
+      },
     };
+  }
   // An array literal with rows: its rows have the declared struct's fields.
   if (type.k === "array")
     return { k: "array", first: rows ? defaultOf(type.of) : null };
@@ -883,10 +917,18 @@ function heldOf(
         heldOf(declared?.get(key) ?? { k: "any" }, field, fill, plain),
       );
     }
-    if (fill && declared)
-      for (const [name, field] of declared)
-        if (!fields.has(name)) fields.set(name, defaultOf(field));
-    return { k: "struct", fields };
+    // Filled: the declared fields it left out hold their defaults.
+    const filled = fill && declared ? declared : undefined;
+    return {
+      k: "struct",
+      names: () => [...new Set([...fields.keys(), ...(filled?.keys() ?? [])])],
+      field: (name) => {
+        const given = fields.get(name);
+        if (given) return given;
+        const field = filled?.get(name);
+        return field && defaultOf(field);
+      },
+    };
   }
   return { k: "leaf", kind: kind(value, plain) };
 }
@@ -911,11 +953,10 @@ function mismatch(
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     for (const [name, value] of fields) {
       const field = `${path}.${name}`;
-      const declared = current.fields.get(name);
+      const declared = current.field(name);
       if (!declared)
-        return `${field} is not a field of the declared struct (${[
-          ...current.fields.keys(),
-        ]
+        return `${field} is not a field of the declared struct (${current
+          .names()
           .sort()
           .join(", ")})`;
       const found = mismatch(field, declared, value, plain);
