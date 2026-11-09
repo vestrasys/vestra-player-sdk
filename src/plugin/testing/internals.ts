@@ -28,6 +28,8 @@ export class Internals {
   readonly writes = new Map<string, number>();
   /** The parts of a whole value held until its last part, by view and property. */
   readonly parts = new Map<string, { seq: number; rows: Json[] }>();
+  /** The exported global each mounted panel's properties belong to, by slot. */
+  readonly globals = new Map<string, string | undefined>();
   nextOwner = 2;
   /** Owners of other plugins' panels, by plugin id ({@link TestHost.mountOther}). */
   readonly others = new Map<string, { slot: string; owner: number }>();

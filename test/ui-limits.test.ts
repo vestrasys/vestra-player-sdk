@@ -13,11 +13,12 @@ function packageWith() {
   const directory = mkdtempSync(join(tmpdir(), "limits-"));
   writeFileSync(
     join(directory, "list.slint"),
-    "export global ListBridge { in property <bool> tabbed; }\nexport component List inherits Rectangle {}\n",
+    "export struct Row { title: string, folder: string, duration: string, key: string, selected: bool, current: bool, missing: bool, probing: bool, a: string, b: string, c: string, d: string, e: bool, f: bool, g: bool, h: bool }\n" +
+      "export global ListBridge { in property <bool> tabbed; in property <[Row]> rows; in property <string> title; }\nexport component List inherits Rectangle {}\n",
   );
   writeFileSync(
     join(directory, "win.slint"),
-    "export component Win inherits Window {}\n",
+    "export component Win inherits Window { in property <[int]> items; }\n",
   );
   writeFileSync(
     join(directory, "manifest.json"),

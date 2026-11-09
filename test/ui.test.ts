@@ -203,7 +203,7 @@ test("panels infer component and bridge and sync props", async () => {
   const directory = mkdtempSync(join(tmpdir(), "panel-"));
   writeFileSync(
     join(directory, "bar.slint"),
-    "export global Bridge { in-out property <string> status; callback action(string); }\nexport component Bar inherits Rectangle {}\n",
+    "export global Bridge { in-out property <string> status; in property <string> source-label; callback action(string); }\nexport component Bar inherits Rectangle {}\n",
   );
   writeFileSync(
     join(directory, "manifest.json"),

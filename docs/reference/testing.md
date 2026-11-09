@@ -9,6 +9,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 
 - **Simplified player side**: no decoding, no Slint rendering or compiling, no native window. A window is a record of its properties and callbacks; a source is a set of facts the test chooses. Check Slint files by running the plugin in the player (`--plugin <dir>`).
 - **The player's checks apply**: the command limits, property value limits, menu ids and processing ranges are enforced with the player's numbers, and the manifest's capabilities apply. Export jobs advance one step on every state query.
+- **Property types are checked against the Slint files**: a value written to a window, panel or settings page is refused when the player's Slint would refuse it, with the player's code and message: a property the view does not declare (`nothing: no such property`), an `out` property, a value of another type (`high-tint: wrong type: high-tint is a string where the declaration has a brush`; a struct field the struct does not declare; `null` outside an array). Numbers fit `int`, `float` and `length` alike; no value fits `brush`, `color` or an enum; types the test host cannot read (from `std-widgets.slint`) take any value. A panel's initial value of the wrong type is left out and reported (`onError`), as the player does; a settings page's values are checked when written, where the player checks them when the Options window shows the page.
 
 ## startPlugin
 

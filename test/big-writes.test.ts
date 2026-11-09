@@ -47,7 +47,9 @@ function packageWith() {
   const directory = mkdtempSync(join(tmpdir(), "big-writes-"));
   writeFileSync(
     join(directory, "list.slint"),
-    "export global ListBridge { in property <[int]> rows; in property <string> total; }\nexport component List inherits Rectangle {}\n",
+    // `Row` is declared nowhere: the test host takes rows of any type (these
+    // tests are about lines and parts, and also write rows of other shapes).
+    "export global ListBridge { in property <[Row]> rows; in property <string> total; }\nexport component List inherits Rectangle {}\n",
   );
   writeFileSync(
     join(directory, "manifest.json"),
@@ -211,7 +213,7 @@ function windowPackage() {
   const directory = packageWith();
   writeFileSync(
     join(directory, "win.slint"),
-    "export component Win inherits Window { in property <[int]> rows; }\n",
+    "export component Win inherits Window { in property <[Row]> rows; }\n",
   );
   writeFileSync(
     join(directory, "manifest.json"),

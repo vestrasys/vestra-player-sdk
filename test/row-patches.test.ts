@@ -257,12 +257,17 @@ test("applyOps applies wire operations in order", () => {
   );
 });
 
-/** A package with a panel, a window and a settings page, each with `rows`. */
+/**
+ * A package with a panel, a window and a settings page, each with `rows`.
+ * `Row` is declared nowhere, so the test host takes rows of any type: these
+ * tests are about patches, with rows (holes, documents, images, numbers) no
+ * Slint struct would hold.
+ */
 function packageWith() {
   const directory = mkdtempSync(join(tmpdir(), "patches-"));
   writeFileSync(
     join(directory, "list.slint"),
-    "export global ListBridge { in property <[int]> rows; }\nexport component List inherits Rectangle {}\n",
+    "export global ListBridge { in property <[Row]> rows; in property <string> total; }\nexport component List inherits Rectangle { in property <[Row]> rows; }\n",
   );
   writeFileSync(
     join(directory, "manifest.json"),
