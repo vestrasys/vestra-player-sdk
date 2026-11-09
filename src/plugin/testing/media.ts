@@ -61,6 +61,11 @@ export function sourceIntent(
   inner: Internals,
   intent: Record<string, Json>,
 ): { ticket: Json } {
+  // Both flags cover this intent only, whatever becomes of it (a stale
+  // one too, as in the player).
+  const hold = inner.holdPause;
+  inner.holdPause = false;
+  inner.stepped = false;
   const expected = intent.expected as SourceStamp | undefined;
   const stamp = host.source.stamp;
   if (
@@ -69,6 +74,8 @@ export function sourceIntent(
       expected.intentVersion !== stamp.intentVersion)
   )
     throw new HostError("stale", "stale");
+  // A new load, a restart or Close: the end that was kept is gone.
+  if (intent.kind !== "control") inner.endKeepsPause = false;
   const next = {
     ...host.source,
     stamp: { ...stamp, intentVersion: stamp.intentVersion + 1 },
@@ -115,7 +122,24 @@ export function sourceIntent(
     if (!host.source.source) throw new HostError("invalid", "noSource");
     const control = intent.control as Record<string, Json>;
     if (control.kind === "pause") next.paused = control.paused === true;
-    if (control.kind === "seek") next.position = Number(control.seconds);
+    if (control.kind === "seek") {
+      if (atEndAlready(host, Number(control.seconds))) {
+        // Goes nowhere; keep-open holds the end paused.
+        next.paused = true;
+      } else {
+        next.position = Number(control.seconds);
+        // Like the player (2026-11-09): a seek leaves the end and plays on,
+        // except a step back from the end, or after an end reached while
+        // paused or by frame stepping. Leaving the end starts a new cycle
+        // (session.rs `confirm_seek_from_end`), so the next end is new.
+        if (host.source.phase === "ended") {
+          next.cycle++;
+          next.phase = "ready";
+          next.terminalReason = null;
+          next.paused = hold || inner.endKeepsPause;
+        }
+      }
+    }
     if (control.kind === "rate") next.rate = Number(control.rate);
   }
   // Like the player: the selected producer is retired as soon as another
@@ -137,6 +161,21 @@ export function sourceIntent(
   host.emit("source.state", host.source);
   cancelResolutions(host, inner);
   return { ticket: { stamp: next.stamp, cycle: next.cycle, owner: 1 } };
+}
+
+/**
+ * Like the player: after the end, a seek at or past the end (the smaller of
+ * the position and the duration, 0.5 ms slack) goes nowhere. It is accepted;
+ * the source stays ended and paused.
+ */
+export function atEndAlready(host: TestHost, seconds: number): boolean {
+  const s = host.source;
+  if (s.phase !== "ended") return false;
+  const end =
+    s.position !== null && s.duration !== null
+      ? Math.min(s.position, s.duration)
+      : (s.position ?? s.duration);
+  return end !== null && seconds >= end - 0.0005;
 }
 
 /** The file resolver of this plugin that claims `source`, if any. */
@@ -450,9 +489,13 @@ export function subtitleChange(
 /** Implements `TestHost.setSource`. */
 export function setSource(
   host: TestHost,
-  _inner: Internals,
+  inner: Internals,
   patch: Partial<SourceState>,
 ) {
+  // The end keeps the pause when reached while paused or by a frame step
+  // (the player reads this as the end arrives).
+  if (patch.phase === "ended" && host.source.phase !== "ended")
+    inner.endKeepsPause = inner.stepped || host.source.paused;
   host.source = {
     ...host.source,
     ...patch,

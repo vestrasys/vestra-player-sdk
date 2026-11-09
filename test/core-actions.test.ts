@@ -289,3 +289,267 @@ test("a left click on the video is Play/Pause by default (player 0.5.2)", async 
   await assert.rejects(host.press("Mouse:LeftDoubleClick"));
   await stop();
 });
+
+test("after the end a step seek leaves the end and plays on; a frame step back stays paused (SDK 1.7.5)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({
+    phase: "ready",
+    position: 100,
+    duration: 100,
+    paused: false,
+  });
+  host.keyframes = [0, 50, 100];
+  host.stats = {
+    ...host.stats,
+    video: { codec: "h264", width: 1920, height: 1080, fps: 25 },
+  } as typeof host.stats;
+  const { plugin, stop } = await started(host);
+  await plugin.player.setStepSeek({ seconds: 5, keyframes: true });
+  const end = () =>
+    host.setSource({
+      phase: "ended",
+      terminalReason: "natural",
+      position: 100,
+      paused: true,
+    });
+
+  // Played to the end: ← is enabled and exact (no keyframe mode), and plays on.
+  end();
+  assert.equal(host.coreAction("seek-backward").state.enabled, true);
+  assert.equal(host.coreAction("rate-up").state.enabled, false);
+  await plugin.host.run("seek-backward");
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.terminalReason, null);
+  assert.equal(host.source.position, 95);
+  assert.equal(host.source.paused, false);
+  assert.equal(host.coreSeeks.at(-1)!.keyframes, false);
+  assert.equal(host.osd.at(-1), "后退 5秒: 01:35 / 01:40");
+  // At ready the keyframe mode applies again.
+  await plugin.host.run("seek-backward");
+  assert.equal(host.source.position, 50);
+
+  // A plugin's seek from the end plays on too.
+  host.setSource({ paused: false });
+  end();
+  await plugin.player.seek(40);
+  await host.settle();
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.paused, false);
+
+  // Previous Frame at the end: one frame back, paused.
+  host.setSource({ position: 100 });
+  end();
+  await host.coreAction("frame-back").run();
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.position, 100 - 1 / 25);
+  assert.equal(host.source.paused, true);
+  assert.deepEqual(host.steps.at(-1), { unit: "frame", direction: "backward" });
+
+  // An end reached by frame stepping keeps the pause on the next seek.
+  host.setSource({ paused: false });
+  await plugin.player.step("frame", "forward");
+  end();
+  await plugin.host.run("seek-backward");
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.paused, true);
+
+  // So does an end reached while paused (a seek to the end while paused).
+  host.setSource({ paused: true });
+  end();
+  await plugin.host.run("seek-backward", { seconds: 10 });
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.paused, true);
+
+  // Play at the end still restarts from 0, playing.
+  end();
+  await plugin.host.run("play-pause");
+  assert.equal(host.source.position, 0);
+  assert.equal(host.source.paused, false);
+  await stop();
+});
+
+test("after the end a seek to the end goes nowhere: accepted, still ended and paused (SDK 1.7.5)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({
+    phase: "ready",
+    position: 99,
+    duration: 100,
+    paused: false,
+  });
+  const { plugin, stop } = await started(host);
+  // keep-open stops a hair before the duration: the end is the smaller.
+  host.setSource({
+    phase: "ended",
+    terminalReason: "natural",
+    position: 99.96,
+    paused: true,
+  });
+  await host.settle();
+  const still = () => {
+    assert.equal(host.source.phase, "ended");
+    assert.equal(host.source.terminalReason, "natural");
+    assert.equal(host.source.position, 99.96);
+    assert.equal(host.source.paused, true);
+  };
+  // → (target clamped to the duration), a seek to the duration, to the
+  // position, and within 0.5 ms of it: no-ops that succeed.
+  await plugin.host.run("seek-forward");
+  still();
+  await plugin.player.seek(100);
+  await plugin.player.seek(99.96);
+  await plugin.player.seek(99.9596);
+  await host.settle();
+  still();
+  // Just before the slack: it leaves the end and plays on.
+  await plugin.player.seek(99.959);
+  await host.settle();
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.position, 99.959);
+  assert.equal(host.source.paused, false);
+  // Play / Space at the end still restarts from 0, playing.
+  host.setSource({
+    phase: "ended",
+    terminalReason: "natural",
+    position: 100,
+    paused: true,
+  });
+  await plugin.host.run("play-pause");
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.position, 0);
+  assert.equal(host.source.paused, false);
+  await stop();
+});
+
+test("keyframe steps after the end: Previous leaves the end paused on the keyframe before, Next goes nowhere (SDK 1.7.5)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({
+    phase: "ready",
+    position: 90,
+    duration: 100,
+    paused: false,
+  });
+  const { plugin, stop } = await started(host);
+  const end = () =>
+    host.setSource({
+      phase: "ended",
+      terminalReason: "natural",
+      position: 100,
+      paused: true,
+    });
+  // No keyframes modelled: 1 ms back, exact.
+  end();
+  await plugin.player.step("keyframe", "backward");
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.position, 100 - 0.001);
+  assert.equal(host.source.paused, true);
+  // Keyframes modelled: the last one before the position (the end itself
+  // is a keyframe: still the one before it).
+  host.keyframes = [0, 40, 80, 100];
+  host.setSource({ paused: false });
+  end();
+  await plugin.player.step("keyframe", "backward");
+  assert.equal(host.source.position, 80);
+  assert.equal(host.source.paused, true);
+  // Next Keyframe at the end: accepted, nothing moves.
+  host.setSource({ paused: false });
+  end();
+  await plugin.player.step("keyframe", "forward");
+  assert.equal(host.source.phase, "ended");
+  assert.equal(host.source.position, 100);
+  assert.deepEqual(host.steps.slice(-3), [
+    { unit: "keyframe", direction: "backward" },
+    { unit: "keyframe", direction: "backward" },
+    { unit: "keyframe", direction: "forward" },
+  ]);
+  // Next Frame stays refused at the end.
+  await rejects(plugin.player.step("frame", "forward"), "unsupported");
+  await stop();
+});
+
+test("Play pressed in the last moment: the end counts as reached playing, so a seek from it plays on (SDK 1.7.5)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  host.setSource({
+    phase: "ready",
+    position: 99.9,
+    duration: 100,
+    paused: true,
+  });
+  const { plugin, stop } = await started(host);
+  // Paused near the end, the user presses Play; the end arrives at once.
+  await plugin.player.setPaused(false);
+  host.setSource({
+    phase: "ended",
+    terminalReason: "natural",
+    position: 100,
+    paused: true,
+  });
+  await plugin.host.run("seek-backward");
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.paused, false);
+  // Paused again, Pause last: the end keeps the pause.
+  await plugin.player.setPaused(false);
+  host.setSource({ position: 99.9 });
+  await plugin.player.setPaused(true);
+  host.setSource({ phase: "ended", terminalReason: "natural", position: 100 });
+  await plugin.host.run("seek-backward");
+  assert.equal(host.source.phase, "ready");
+  assert.equal(host.source.paused, true);
+  await stop();
+});
+
+test("end, seek back, end again: two onEnd, as the player starts a new cycle when a seek leaves the end (SDK 1.7.5)", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(host);
+  const media = await plugin.player.open("/movie.mp4");
+  const ends: number[] = [];
+  media.onEnd((state) => ends.push(state.position ?? -1));
+  host.setSource({ phase: "ready", position: 0, duration: 60 });
+  const end = () =>
+    host.setSource({
+      phase: "ended",
+      terminalReason: "natural",
+      position: 60,
+      paused: true,
+    });
+  end();
+  await host.settle();
+  const cycle = host.source.cycle;
+  // A seek to the end goes nowhere: same cycle, no new end, and paused as
+  // keep-open holds the end (whatever the state said).
+  host.setSource({ paused: false });
+  await plugin.player.seek(60);
+  assert.equal(host.source.cycle, cycle);
+  assert.equal(host.source.paused, true);
+  await plugin.player.seek(30);
+  assert.equal(host.source.cycle, cycle + 1);
+  assert.equal(host.source.phase, "ready");
+  end();
+  await host.settle();
+  assert.deepEqual(ends, [60, 60]);
+  await stop();
+});
+
+test('Previous Keyframe after the end: "already at the end" is decided on the raw target, not the keyframe (SDK 1.7.5)', async () => {
+  const host = new TestHost();
+  host.openElsewhere("/a.mp4");
+  const { plugin, stop } = await started(host);
+  // The position reads past the duration (mpv may): position − 1 ms is
+  // still at the end, so nothing moves, though a keyframe lies before it.
+  host.keyframes = [0, 40, 80];
+  host.setSource({
+    phase: "ended",
+    terminalReason: "natural",
+    position: 100.01,
+    duration: 100,
+    paused: true,
+  });
+  await plugin.player.step("keyframe", "backward");
+  assert.equal(host.source.phase, "ended");
+  assert.equal(host.source.position, 100.01);
+  assert.equal(host.source.paused, true);
+  await stop();
+});

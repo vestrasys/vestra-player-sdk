@@ -934,7 +934,7 @@ export interface Commands {
  * | `play-pause` | Space, a left click on the video | pause / resume, replay after the end |
  * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
- * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says |
+ * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says; after the end an exact seek that plays on |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
  * | `volume-up` / `volume-down` | ↑ / ↓, wheel | ±5 (`volume-up` stops at 100) |
  * | `mute` | M | toggle mute |

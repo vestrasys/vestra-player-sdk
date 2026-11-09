@@ -103,8 +103,11 @@ export function close(host: TestHost, inner: Internals) {
       maxRetries: 5,
       retryDelay: 100,
     });
-  } catch {
-    // Left in the temporary directory.
+  } catch (error) {
+    // Left in the temporary directory, and said so.
+    console.warn(
+      `# TestHost: left ${inner.scratch} (${(error as { code?: string }).code ?? String(error)})`,
+    );
   }
 }
 

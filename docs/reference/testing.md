@@ -152,7 +152,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.keyframes} | Test data: the keyframe times (seconds, ascending) of the current source, for keyframe step seeks. |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreSeeks} | Every step seek the core ran (`seek-backward` / `seek-forward`, from a key, the menu or `host.run`), newest last: the step, whether it went to a keyframe, and where it landed. |
 | {@link "@vestra-player/sdk/testing"!TestHost.seeks} | Every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest last, with the mode it asked for. |
-| {@link "@vestra-player/sdk/testing"!TestHost.steps} | Every `player.step`, newest last. |
+| {@link "@vestra-player/sdk/testing"!TestHost.steps} | Every `player.step` and core frame step, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreRuns} | Every core action run (`host.run`, a core command, a pressed core binding), newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreAction}() | One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...) that the test host registers like the player, as `host/<id>`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.handle}() | Replace the host's behaviour for one wire method until `TestHost.reset`. |
