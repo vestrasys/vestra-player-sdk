@@ -7,6 +7,12 @@ description: One page per task, from adding a window to publishing a plugin, plu
 
 Each guide answers one practical question: "how do I do X?". A guide states its goal, gives the steps, often a complete example, and ends with where to read on. They assume you know the basics from the [Tutorial](../tutorial/index.md).
 
+## How a plugin works
+
+The rules every guide assumes, on one page: the plugin process and its capabilities, handles and scopes, the update pass (`set` against `bind`, when a change shows), how values cross between TypeScript and Slint and which Slint types a plugin can write, commands, menus and keys, what keeps a plugin running and what is lost when it is stopped, the four places that change the picture and sound, the playback state, and how failures are reported.
+
+[Read the guide](how-plugins-work.md)
+
 ## Open a tool window and remember its state
 
 A tool window is a Slint component the plugin creates from TypeScript. The guide opens one from a menu item, wires its controls to the plugin, stores its values, and brings back the values and whether it was open at the next start.

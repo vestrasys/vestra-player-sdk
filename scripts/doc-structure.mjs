@@ -82,6 +82,12 @@ export const GROUPS = [
     pages: [
       { file: "index.md", why: "Group index." },
       {
+        file: "how-plugins-work.md",
+        aliases: ["plugins", "ui", "commands", "processing", "playback"],
+        why: "The general rules every guide assumes, on one page (the former explanation chapter, reduced to what an author needs): process, handles and scopes, the update pass, values between TypeScript and Slint, commands and keys, what keeps a plugin running, processing, playback state, failures. Rules, not a task, so it has a shape of its own.",
+        shape: "rules",
+      },
+      {
         file: "windows.md",
         aliases: ["window-state", "add-a-window"],
         why: "One task: open a tool window from a menu item, wire its controls and bring back its values and whether it was open at the next start (the former Remember a window's state between runs).",
@@ -479,6 +485,8 @@ export const SHAPES = {
     "a first paragraph starting `**Goal:**`; first section `## Steps`; an optional `## Complete example` with code; last section `## See also`",
   troubleshooting:
     "at least three `##` sections, each a symptom; last section `## See also`; no steps section",
+  rules:
+    "a first paragraph starting `**Goal:**`; at least five `##` sections, each one subject's rules; last section `## See also`; no steps section",
   reference:
     "lookup only: no numbered or `Steps` / `Next` / `Before you start` sections and no `**Goal:**`",
   example:
@@ -581,6 +589,15 @@ export function shapeProblems(shape, body) {
     case "troubleshooting":
       if (titles.filter((t) => t !== "See also").length < 3)
         problems.push("fewer than three symptom sections");
+      if (titles.includes("Steps")) problems.push("a `## Steps` section");
+      if (titles.at(-1) !== "See also")
+        problems.push("the last section must be `## See also`");
+      break;
+    case "rules":
+      if (!firstParagraph.startsWith("**Goal:**"))
+        problems.push("the first paragraph must start with `**Goal:**`");
+      if (titles.filter((t) => t !== "See also").length < 5)
+        problems.push("fewer than five rule sections");
       if (titles.includes("Steps")) problems.push("a `## Steps` section");
       if (titles.at(-1) !== "See also")
         problems.push("the last section must be `## See also`");

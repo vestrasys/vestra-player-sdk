@@ -198,6 +198,7 @@ npm run pack                 # dist/, then me.hello-0.1.0.vxp
 
 ## Next
 
+- [How a plugin works](../guides/how-plugins-work.md): the rules behind every plugin, on one page.
 - [Open a tool window and remember its state](../guides/windows.md): a window with a button.
 - [Add settings and translations](../guides/i18n.md): a settings page and a second language.
 - [Design rules](../guides/design-rules.md): make the plugin feel like part of the player.
