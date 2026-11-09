@@ -121,9 +121,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
 | Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
 | Snapshot ▸ Copy Current Frame | `Ctrl+C` | `vestra.capture/capture.copy` |
-| Snapshot ▸ Burst… | `Ctrl+G` | `vestra.capture/capture.burst` |
-| Snapshot ▸ Export Clip… |  | `vestra.capture/capture.clip` |
-| Snapshot ▸ Capture… | `Alt+S` | `vestra.capture/capture.panel` |
+| Snapshot ▸ Burst | `Ctrl+G` | `vestra.capture/capture.burst` |
 | Adjustments and Effects |  | `host/adjust` |
 | Sidebar |  | `host/sidebar` |
 | Chapter and Bookmark List… | `H` | `vestra.marks/marks.list` |
@@ -266,14 +264,12 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Normalize (not in the menu) | `Shift+N` | `vestra.audio/audio.normalize` |
 | Crystalizer (not in the menu) | `Shift+C` | `vestra.audio/audio.clarity` |
 | Reset (not in the menu) |  | `vestra.audio/audio.reset` |
-| Export Clip Range (not in the menu) | `Ctrl+Shift+E` | `vestra.capture/capture.clipExport` |
 | Save Current Frame As… (not in the menu) |  | `vestra.capture/capture.saveAs` |
 | Save Rendered Frame (not in the menu) | `Ctrl+Alt+E` | `vestra.capture/capture.saveScreen` |
 | Save Rendered Frame As… (not in the menu) |  | `vestra.capture/capture.saveScreenAs` |
 | Copy Rendered Frame (not in the menu) | `Ctrl+Alt+C` | `vestra.capture/capture.copyScreen` |
 | Save Video Frame Only (not in the menu) |  | `vestra.capture/capture.saveVideo` |
 | Copy Video Frame Only (not in the menu) |  | `vestra.capture/capture.copyVideo` |
-| Export Tasks… (not in the menu) |  | `vestra.capture/capture.tasks` |
 | Capture as PNG (not in the menu) |  | `vestra.capture/capture.format.png` |
 | Capture as JPEG (not in the menu) |  | `vestra.capture/capture.format.jpeg` |
 | Capture as BMP (not in the menu) |  | `vestra.capture/capture.format.bmp` |
@@ -283,9 +279,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Open Snapshot Folder (not in the menu) |  | `vestra.capture/capture.openFolder` |
 | Show Last Capture in Folder (not in the menu) |  | `vestra.capture/capture.revealLast` |
 | Copy Last Snapshot (not in the menu) |  | `vestra.capture/capture.copyLast` |
-| Set Clip Start (not in the menu) |  | `vestra.capture/capture.clipStart` |
-| Set Clip End (not in the menu) |  | `vestra.capture/capture.clipEnd` |
-| Export Last 30 Seconds (not in the menu) | `Ctrl+Shift+R` | `vestra.capture/capture.last30` |
 | Brief Info (not in the menu) | `Shift+Tab` | `vestra.info/info.brief` |
 | Previous Keyframe (not in the menu) | `Ctrl+Shift+ArrowLeft` | `vestra.playback/keyframe-back` |
 | Next Keyframe (not in the menu) | `Ctrl+Shift+ArrowRight` | `vestra.playback/keyframe-forward` |

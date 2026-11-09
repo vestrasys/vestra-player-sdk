@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.7
+
+**Who must change: nobody; the table follows player #235** (the built-in capture plugin keeps snapshots only; clip export moves to a store plugin). A data refresh of `BUILTIN_COMMANDS`: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged. A plugin whose tests compare a key against the table sees the player's current one: Alt+S, Ctrl+Shift+E and Ctrl+Shift+R are no longer held by a built-in.
+
+- **Removed rows** (`vestra.capture`): `capture.clip` (Snapshot ▸ Export Clip…), `capture.panel` (Snapshot ▸ Capture…, Alt+S), and the palette-only `capture.clipExport` (Export Clip Range, Ctrl+Shift+E), `capture.tasks` (Export Tasks…), `capture.clipStart` (Set Clip Start), `capture.clipEnd` (Set Clip End), `capture.last30` (Export Last 30 Seconds, Ctrl+Shift+R).
+- **Changed row**: `capture.burst` is Snapshot ▸ Burst (no ellipsis: it runs at once), still Ctrl+G. `capture.settings` (Snapshot Settings…) stays palette-only, as before. `BUILTIN_SUBMENUS` is unchanged (the Snapshot submenu stays, owned by `vestra.capture`). The table in [Reference: commands](docs/reference/commands.md#built-in-commands) follows.
+
 ## 1.7.6
 
 **Who must change: plugins that call one of the five removed members — none of the player's built-ins, the plugins repository or the examples does.** `apiVersion` stays `vestra/1`; the API surface snapshot loses the five members.
