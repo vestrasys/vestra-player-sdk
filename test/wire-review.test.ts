@@ -32,7 +32,13 @@ function pkg(
       "  in property <string> total;",
       "  in property <string> label;",
       "}",
-      "export component List inherits Rectangle {}",
+      // The same properties on the window's component.
+      "export component List inherits Rectangle {",
+      "  in property <[{rowId: string, label: string}]> rows;",
+      "  in property <[{rowId: string, label: string}]> my-rows;",
+      "  in property <string> total;",
+      "  in property <string> label;",
+      "}",
       "",
     ].join("\n"),
   );

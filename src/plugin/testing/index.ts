@@ -166,6 +166,7 @@ import {
   layoutHandlers,
 } from "./layout.ts";
 import { osdHandlers } from "./osd.ts";
+import { packageDirectories } from "./slint-types.ts";
 import { failStream, jobsHandlers } from "./jobs.ts";
 import {
   upscalingState,
@@ -3693,6 +3694,9 @@ export async function startPlugin(
   }
   host.manifestId = manifest.id;
   host.loadCatalog(directory);
+  // Its Slint files: the values its views are given are checked against
+  // their declared types.
+  packageDirectories.set(host, directory);
   const data = options.dataDirectory ?? host.dataDirectory;
   for (const [key, value] of options.sessionStorage ?? [])
     host.sessionStorage.set(key, sortedJson(value));

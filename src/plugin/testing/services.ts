@@ -22,6 +22,9 @@ import {
   initialValues,
   seeImages,
   kebab,
+  typedView,
+  checkType,
+  inSetOrder,
 } from "./layout.ts";
 
 /** A `plugin.storage.session` key, checked as the player does. */
@@ -285,6 +288,20 @@ export function servicesHandlers(
         inner,
         shownValues(host, inner, p.properties as Record<string, Json>),
       );
+      // Stricter than the player, which sets a page's values when the
+      // Options window shows it (and fails to show it, code `ui`): the
+      // test host checks their types when they are written, so a test
+      // need not open the window.
+      const typed = typedView(
+        host,
+        String(p.file),
+        String(p.global),
+        "ui",
+        true,
+      );
+      if (typed)
+        for (const name of inSetOrder(properties))
+          checkType(typed, name, properties[name]!, undefined);
       seeImages(host, inner, properties);
       resetWrites(host, inner, `$settings:${id}`);
 
@@ -316,6 +333,7 @@ export function servicesHandlers(
         property,
         p,
         page.props[property],
+        typedView(host, page.file, page.global, "ui", true),
       );
       // A part of a value sent in parts is held until the last (player 0.6.0).
       if (next !== undefined) page.props[property] = next;
