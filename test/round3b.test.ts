@@ -40,7 +40,9 @@ test("timeline: layers merge, last write wins, a new source clears them", async 
     [5],
   );
   const changes: number[] = [];
-  plugin.timeline.onChange((marks) => changes.push(marks.length));
+  plugin.player.on("timeline.changed", () =>
+    changes.push(plugin.timeline.marks.length),
+  );
   await host.settle();
   host.openElsewhere("/a.mkv");
   host.setSource({ duration: 60 });

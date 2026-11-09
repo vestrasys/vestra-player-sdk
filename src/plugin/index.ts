@@ -73,6 +73,8 @@ export async function createPlugin(
   const root = new ScopeImpl(runtime);
   // A runaway of the update passes goes to the plugin's error handlers.
   runtime.passes.report = (error) => root.report(error);
+  // A state copy that throws on an event, as a listener's error would be.
+  runtime.reportMirror = (error) => root.report(error);
   // Failures the plugin did not ask about: a property the player could not
   // show when it rebuilt a panel or the Options window (an image removed
   // since), a callback whose arguments it could not convert, a detached

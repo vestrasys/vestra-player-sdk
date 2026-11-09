@@ -44,7 +44,9 @@ if (listing.status !== 0) {
   console.error(listing.stderr);
   process.exit(1);
 }
+// Windows tar (bsdtar) ends its lines with \r\n.
 const files = listing.stdout
+  .replaceAll("\r", "")
   .split("\n")
   .filter((line) => line && !line.endsWith("/"))
   .map((line) => line.replace(/^package\//, ""));

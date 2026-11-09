@@ -17,7 +17,7 @@ import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { openStream, resolvedStream } from "./stream.ts";
 import type { StreamSource } from "./stream.ts";
-import { playerOn } from "./player/events.ts";
+import { checkOn, playerOn } from "./player/events.ts";
 import { validStep } from "./player/rules.ts";
 import type {
   AudioTrack,
@@ -646,7 +646,13 @@ export function player(scope: ScopeImpl): Player {
       });
     },
     refresh: () => service().refresh(),
-    on: (event, listener) => playerOn(scope, event, listener),
+    on(event, listener) {
+      // Checked first; the copy then starts before the listener subscribes
+      // (it hears each event first in any case).
+      checkOn(event, listener);
+      scope.followCopy(event);
+      return playerOn(scope, event, listener);
+    },
     isCurrent(state) {
       void service().start();
       const raw = raws.get(state);

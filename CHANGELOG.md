@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.6
+
+**Who must change: plugins that call one of the five removed members — none of the player's built-ins, the plugins repository or the examples does.** `apiVersion` stays `vestra/1`; the API surface snapshot loses the five members.
+
+- **Removed** (no deprecation period; a recount found no use anywhere): `plugin.resolvers.fileTypes` and `plugin.resolvers.onFileTypesChange` — use `plugin.player.on("resolvers.fileTypes", ({ fileTypes }) => …)`; `plugin.commands.onKeysChange` — use `plugin.player.on("commands.keys", …)` and read `plugin.commands.keys(id)` there; `plugin.timeline.onChange` — use `plugin.player.on("timeline.changed", …)` (it runs for range changes too, not only marks); `plugin.appearance.onChange` — use `plugin.player.on("appearance.changed", ({ theme }) => …)` (it runs for every event, a language change and the echo of the plugin's own `set` included). `player.on` hears only the player's events: the old `onKeysChange` also ran when the copy's first answer arrived, and none of the listeners runs for a copy's start-up value, so read the starting value once after activation, or read the copy inside a `bind` function, which follows both. Their entries in `API_REQUESTS`, `CAPABILITY_INFO` and the generated Capabilities, Events and Messages tables are gone with them.
+- **`player.on` reads current copies**: a listener of `commands.keys`, `timeline.changed` or `appearance.changed` starts the SDK's copy that the event keeps current (`plugin.commands.keys`, `plugin.timeline.marks` and `ranges`, `plugin.appearance.theme` and `language`; the copy stays after the listener is disposed, a mirror subscription that keeps no plugin running), and every state copy now hears each event before the plugin's own listeners (`player.on`, `wire.on`), whichever was added first; a copy that throws is reported to `onError` and stops neither the other copies nor the listeners. Before, a listener added before the plugin's first read of the copy read the old value on the first event, and on every event when the copy started after it. Tests: `test/round3b-input.test.ts` (both orders), `test/command-keys.test.ts`, `test/ranges-and-osd-actions.test.ts`.
+- `scripts/check-pack.mjs` reads the listing of Windows tar too (`\r\n` line ends), so `pack:check` runs on Windows.
+- `TestHost.fileTypes()` and `updateFileTypes()` stay: they model the player's `resolvers.fileTypes` event, which `player.on` still hears; their doc comments no longer name the removed getter.
+- Golden trace `host-register-keys-settle` rewritten (`UPDATE_TRACES=1`): its `onKeysChange` listener became `player.on("commands.keys")`, which runs on each `commands.keys` event instead of after the first answer, and logs what `keys("first")` reads (the event's labels each time). No wire request changed.
+
 ## 1.7.5
 
 **Who must change: nobody.** The test host follows two player changes (seeking after the end, the playlist's Stop After Current) and reports a temporary directory it could not remove; no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.

@@ -1033,7 +1033,7 @@ export class TestHost implements Transport {
    * declare const host: TestHost;
    * // ---cut---
    * void plugin.appearance.language; // read once: the SDK then follows it
-   * plugin.appearance.onChange(() => {}); // subscribes to appearance events
+   * plugin.player.on("appearance.changed", () => {}); // subscribes to appearance events
    * host.setLanguage("fr");
    * await host.settle();
    * assert.equal(plugin.appearance.language, "fr");
@@ -1496,8 +1496,8 @@ export class TestHost implements Transport {
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
    * // ---cut---
-   * const themes: ThemeId[] = [];
-   * plugin.appearance.onChange((theme) => themes.push(theme)); // subscribes (`events`)
+   * const themes: string[] = [];
+   * plugin.player.on("appearance.changed", ({ theme }) => themes.push(theme)); // subscribes (`events`)
    * host.setAppearance("vestra-light");
    * await host.settle();
    * assert.deepEqual(themes, ["vestra-light"]);
@@ -2082,14 +2082,14 @@ export class TestHost implements Transport {
     hosts?: string[];
   }[] = [];
   /**
-   * What `plugin.resolvers.fileTypes` reports: the extensions of this
+   * The list `resolvers.fileTypes` carries: the extensions of this
    * plugin's file resolvers and of {@link TestHost.otherResolvers}, sorted,
    * each once.
    *
    * @capability None.
    *
    * @example Check the file types a resolver adds
-   * The test checks the list the plugin will read as
+   * The test checks the list the plugin will hear in
    * `resolvers.fileTypes`: the extensions of its own file resolvers and of
    * `otherResolvers`, sorted, each once.
    * ```ts
@@ -2118,18 +2118,23 @@ export class TestHost implements Transport {
    * or stopped).
    *
    * @example Let another plugin's file type appear while running
-   * Another plugin starts and adds `.ch8`; the plugin under test then sees
-   * it in `resolvers.fileTypes`. Changing `otherResolvers` alone pushes
-   * nothing: `updateFileTypes` sends the new list as the player does when
-   * a plugin starts or stops, and `settle()` lets the SDK apply it.
+   * Another plugin starts and adds `.ch8`; the plugin under test, which
+   * listens with `player.on("resolvers.fileTypes")`, then hears it.
+   * Changing `otherResolvers` alone pushes nothing: `updateFileTypes` sends
+   * the new list as the player does when a plugin starts or stops, and
+   * `settle()` lets the listener run.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
    * // ---cut---
+   * const heard: string[][] = [];
+   * // A listener of the event (`events`): each list the player sends.
+   * plugin.player.on("resolvers.fileTypes", ({ fileTypes }) => heard.push(fileTypes));
+   * // Another plugin starts with a resolver for .ch8 files.
    * host.otherResolvers.push({ owner: "example.emulator", extensions: ["ch8"] });
    * host.updateFileTypes();
    * await host.settle();
-   * assert.deepEqual(plugin.resolvers.fileTypes, ["ch8"]);
+   * assert.deepEqual(heard, [["ch8"]]);
    * ```
    *
    * @capability None.

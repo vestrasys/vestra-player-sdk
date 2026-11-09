@@ -371,7 +371,7 @@ test("disposing the resolver aborts a resolve in flight and frees the extension"
   await started.stop();
 });
 
-test("fileTypes lists every file resolver's extensions and follows them with events", async () => {
+test('player.on("resolvers.fileTypes") hears every file resolver\'s extensions as they change', async () => {
   const testHost = host();
   testHost.otherResolvers.push({
     owner: "vestra.gb",
@@ -380,92 +380,23 @@ test("fileTypes lists every file resolver's extensions and follows them with eve
   const { plugin, stop } = await emulator(async () => stream(), {
     host: testHost,
   });
-  // The snapshot before activation had only the other plugin's.
   const seen: string[][] = [];
-  plugin.resolvers.onFileTypesChange((types) => seen.push(types));
+  plugin.player.on("resolvers.fileTypes", ({ fileTypes }) =>
+    seen.push(fileTypes),
+  );
   await testHost.settle();
-  testHost.updateFileTypes();
-  await until(() => plugin.resolvers.fileTypes.includes("nes"), "own nes");
-  assert.deepEqual(plugin.resolvers.fileTypes, ["gb", "gbc", "nes"]);
-  // Another plugin stops.
+  // The plugin's own resolver came with its start, before the listener.
+  assert.deepEqual(testHost.fileTypes(), ["gb", "gbc", "nes"]);
+  // Another plugin stops, then starts again.
   testHost.otherResolvers.length = 0;
   testHost.updateFileTypes();
-  await until(() => plugin.resolvers.fileTypes.length === 1, "gb gone");
-  assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
-  assert.deepEqual(seen.at(-1), ["nes"]);
-  assert.throws(() => (plugin.resolvers.fileTypes as string[]).push("x"));
-  await stop();
-});
-
-test("fileTypes needs no capability; without events it is the list of the first read", async () => {
-  const testHost = host();
-  testHost.otherResolvers.push({
-    owner: "example.emulator",
-    extensions: ["nes"],
-  });
-  let plugin!: Plugin;
-  const { stop } = await startPlugin((p) => void (plugin = p), {
-    capabilities: [],
-    host: testHost,
-  });
-  assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
-  let calls = 0;
-  plugin.resolvers.onFileTypesChange(() => calls++);
-  await testHost.settle();
-  testHost.otherResolvers.length = 0;
-  testHost.updateFileTypes();
-  await testHost.settle();
-  assert.equal(calls, 0);
-  assert.deepEqual(plugin.resolvers.fileTypes, ["nes"]);
-  await stop();
-});
-
-test("fileTypes: a change held across standby still reaches onFileTypesChange", async () => {
-  // Woken from standby: the start-up read already has the new list, then
-  // the player delivers the resolvers.fileTypes it held for the plugin.
-  const testHost = host();
+  await until(() => seen.length === 1, "gb gone");
   testHost.otherResolvers.push({ owner: "vestra.gb", extensions: ["gb"] });
-  let plugin!: Plugin;
-  const { stop } = await startPlugin((p) => void (plugin = p), {
-    capabilities: ["events"],
-    host: testHost,
-  });
-  assert.deepEqual(plugin.resolvers.fileTypes, ["gb"]);
-  const seen: string[][] = [];
-  plugin.resolvers.onFileTypesChange((types) => seen.push(types));
-  await testHost.settle();
-  assert.deepEqual(seen, [], "the start-up list is not a change");
-  testHost.emit("resolvers.fileTypes", { fileTypes: ["gb"] });
-  await testHost.settle();
-  assert.deepEqual(seen, [["gb"]]);
-  // The same list again is not a change for the listeners.
-  testHost.emit("resolvers.fileTypes", { fileTypes: ["gb"] });
-  await testHost.settle();
-  assert.deepEqual(seen, [["gb"]]);
-  testHost.emit("resolvers.fileTypes", { fileTypes: ["gb", "nes"] });
-  await testHost.settle();
-  assert.deepEqual(seen, [["gb"], ["gb", "nes"]]);
-  assert.deepEqual(plugin.resolvers.fileTypes, ["gb", "nes"]);
-  await stop();
-});
-
-test("fileTypes: a change seen by the subscription read is heard once", async () => {
-  const testHost = host();
-  let plugin!: Plugin;
-  const { stop } = await startPlugin((p) => void (plugin = p), {
-    capabilities: ["events"],
-    host: testHost,
-  });
-  assert.deepEqual(plugin.resolvers.fileTypes, []);
-  // Another plugin adds a type before this one subscribes: the read that
-  // follows the subscription finds it, then the event repeats it.
-  testHost.otherResolvers.push({ owner: "vestra.gb", extensions: ["gb"] });
-  const seen: string[][] = [];
-  plugin.resolvers.onFileTypesChange((types) => seen.push(types));
-  await testHost.settle();
-  assert.deepEqual(seen, [["gb"]]);
   testHost.updateFileTypes();
-  await testHost.settle();
-  assert.deepEqual(seen, [["gb"]]);
+  await until(() => seen.length === 2, "gb back");
+  assert.deepEqual(seen, [["nes"], ["gb", "nes"]]);
+  // SDK 1.7.6: no copy of the list any more.
+  assert.equal("fileTypes" in plugin.resolvers, false);
+  assert.equal("onFileTypesChange" in plugin.resolvers, false);
   await stop();
 });

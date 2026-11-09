@@ -1,6 +1,5 @@
 // UI category, part 3: theme and language (appearance) and translated text (i18n).
 // Re-exported by ../types.ts (`export type *`); see that file.
-import type { Disposable } from "./base.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
@@ -40,6 +39,10 @@ export type ThemeId = "vestra" | "vestra-light";
  * Tell the user about a change yourself (for example with
  * {@link Osd.show}).
  *
+ * To run code when the palette or the language changes, listen with
+ * `plugin.player.on("appearance.changed", …)` (needs `events`): `theme` and
+ * `language` already hold the event's values when the listener runs.
+ *
  * @capability None to read `theme`; `events` to follow changes; `ui.theme`
  *   to change it.
  *
@@ -69,41 +72,6 @@ export interface Appearance {
    * plugin's own.
    */
   readonly theme: ThemeId;
-  /**
-   * Run code when the palette changes.
-   *
-   * @remarks
-   * Needs `events`: without it the listener never runs for other plugins'
-   * changes. Views need no help to follow the palette; use this for things the
-   * plugin draws itself (a rendered image, colours it computes). Errors go to
-   * {@link Scope.onError}. When the player starts a stopped plugin for a
-   * palette change, {@link Appearance.theme} already has the new palette at
-   * start and the listener still hears the change. A
-   * language change does not call it, except in one case: a plugin started for
-   * a language change alone may hear the unchanged palette once, since the
-   * player's event does not say which of the two changed.
-   *
-   * @capability events
-   *
-   * @param listener - Receives the new palette.
-   * @returns A handle that removes the listener.
-   *
-   * @example Redraw a picture the plugin renders when the palette changes
-   * The plugin renders a chart image in the palette's colours and draws it
-   * again when the user or another plugin switches palettes. Views that use
-   * `Theme` follow on their own; this listener (which needs `events`) is
-   * for what the plugin draws itself.
-   * ```ts
-   * declare function renderChart(dark: boolean): Promise<void>;
-   * // ---cut---
-   * plugin.appearance.onChange((theme) => {
-   *   void renderChart(theme === "vestra"); // the dark default
-   * });
-   * ```
-   *
-   * @since 1.0.0
-   */
-  onChange(listener: (theme: ThemeId) => void): Disposable;
   /**
    * Switch the palette of every view.
    *

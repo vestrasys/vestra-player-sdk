@@ -5,7 +5,6 @@
 @vestra-player/sdk InterfaceDeclaration AppInfo :: readonly components: { readonly mpv: string | null; readonly libav: Readonly<Record<string, string>>; readonly slint: string; };
 @vestra-player/sdk InterfaceDeclaration AppInfo :: readonly version: string;
 @vestra-player/sdk InterfaceDeclaration Appearance
-@vestra-player/sdk InterfaceDeclaration Appearance :: onChange(listener: (theme: ThemeId) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Appearance :: readonly language: LanguagePreference;
 @vestra-player/sdk InterfaceDeclaration Appearance :: readonly theme: ThemeId;
 @vestra-player/sdk InterfaceDeclaration Appearance :: set(theme: ThemeId): Promise<void>;
@@ -88,7 +87,6 @@
 @vestra-player/sdk InterfaceDeclaration Commands
 @vestra-player/sdk InterfaceDeclaration Commands :: add(options: CommandOptions): Command;
 @vestra-player/sdk InterfaceDeclaration Commands :: keys(id: string): readonly string[];
-@vestra-player/sdk InterfaceDeclaration Commands :: onKeysChange(listener: () => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Condition
 @vestra-player/sdk InterfaceDeclaration Condition :: and(...others: Condition[]): Condition;
 @vestra-player/sdk InterfaceDeclaration Condition :: not(): Condition;
@@ -411,8 +409,6 @@
 @vestra-player/sdk InterfaceDeclaration Resolver extends Disposable
 @vestra-player/sdk InterfaceDeclaration Resolvers
 @vestra-player/sdk InterfaceDeclaration Resolvers :: add(options: ResolverOptions): Resolver;
-@vestra-player/sdk InterfaceDeclaration Resolvers :: onFileTypesChange(listener: (types: string[]) => void): Disposable;
-@vestra-player/sdk InterfaceDeclaration Resolvers :: readonly fileTypes: readonly string[];
 @vestra-player/sdk InterfaceDeclaration Scope :: add<T extends Disposable>(item: T): T;
 @vestra-player/sdk InterfaceDeclaration Scope :: onDispose(cleanup: ((info?: DisposeInfo) => void | Promise<void>) | (() => void | Promise<void>)): Disposable;
 @vestra-player/sdk InterfaceDeclaration Scope :: onError(listener: (error: PluginError) => void): Disposable;
@@ -564,7 +560,6 @@
 @vestra-player/sdk InterfaceDeclaration TextList :: readonly style?: ListStyle;
 @vestra-player/sdk InterfaceDeclaration Timeline
 @vestra-player/sdk InterfaceDeclaration Timeline :: layer(): TimelineLayer;
-@vestra-player/sdk InterfaceDeclaration Timeline :: onChange(listener: (marks: readonly TimelineMark[]) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Timeline :: readonly marks: readonly TimelineMark[];
 @vestra-player/sdk InterfaceDeclaration Timeline :: readonly ranges: readonly TimelineRange[];
 @vestra-player/sdk InterfaceDeclaration TimelineLayer :: set(marks: { time: number; kind: MarkKind; title?: string | Text; }[], options?: { ifCurrent?: PlayerState; }): void;

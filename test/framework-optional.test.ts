@@ -406,9 +406,12 @@ test("player.on takes every HostEvent; dispose unsubscribes", async () => {
     scope.player.on("timeline.changed", (lists) => keys.push(lists));
     await host.settle();
     assert.ok(host.subscriptions.has("timeline.changed"));
+    assert.ok(host.listening.has("timeline.changed"));
     await scope.dispose();
     await host.settle();
-    assert.ok(!host.subscriptions.has("timeline.changed"));
+    // The listener is gone; the timeline copy it started stays, a mirror.
+    assert.ok(!host.listening.has("timeline.changed"));
+    assert.ok(host.subscriptions.has("timeline.changed"));
   } finally {
     await stop();
   }

@@ -51,7 +51,7 @@ plugin.commands.add({
 
 ### Use checked conditions for radio items
 
-`checked` takes a condition too. A radio group over the palettes needs no `appearance.onChange`:
+`checked` takes a condition too. A radio group over the palettes needs no listener of `appearance.changed`:
 
 ```ts
 const { when } = plugin;

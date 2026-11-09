@@ -391,7 +391,7 @@ export interface WindowFacts {
   };
   /** The palette (`plugin.appearance`), with the `window.state` reply; a newer player may name a palette this SDK does not list. */
   appearance?: string;
-  /** The file resolvers' extensions (`plugin.resolvers.fileTypes`). */
+  /** The file resolvers' extensions (as `resolvers.fileTypes` carries them). */
   fileTypes?: string[];
   /** The saved interface language, `"system"` or a locale. */
   language?: string;

@@ -341,6 +341,11 @@ export const STALE_REFERENCES = [
     pattern: /\bid:\s*"nes"|extensions:\s*\[[^\]]*"\.?nes"/,
     why: "the store plugin VestraNES (zysilm.vestranes) owns .nes files; a resolver example would collide with it (`resolver-taken`); use a made-up format",
   },
+  {
+    pattern:
+      /\.resolvers\.(?:fileTypes|onFileTypesChange)\b|\.commands\.onKeysChange\b|\.(?:timeline|appearance)\.onChange\b/,
+    why: 'removed in SDK 1.7.6; use plugin.player.on("resolvers.fileTypes" | "commands.keys" | "timeline.changed" | "appearance.changed", …)',
+  },
 ];
 
 /**

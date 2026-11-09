@@ -5,6 +5,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin, PluginError, ThemeId } from "../src/plugin/index.ts";
+import { playerOf } from "../src/plugin/player.ts";
+import { Runtime } from "../src/plugin/runtime.ts";
 
 function packageDir(capabilities: string[]) {
   const directory = mkdtempSync(join(tmpdir(), "r3b-"));
@@ -66,8 +68,11 @@ test("appearance: read before activation, set, follows other plugins", async () 
     { capabilities: ["events", "ui.theme"], host },
   );
   assert.equal(seen, other);
+  // What a listener reads: the SDK's copy took the event first.
   const changes: string[] = [];
-  plugin.appearance.onChange((theme) => changes.push(theme));
+  plugin.player.on("appearance.changed", () =>
+    changes.push(plugin.appearance.theme),
+  );
   await host.settle();
   await plugin.appearance.set("vestra");
   assert.equal(host.appearance, "vestra");
@@ -75,7 +80,8 @@ test("appearance: read before activation, set, follows other plugins", async () 
   await host.settle();
   // Changes to a palette the SDK does not list are not followed.
   assert.equal(plugin.appearance.theme, "vestra");
-  assert.deepEqual(changes, ["vestra"]);
+  // The echo of its own set, then the unknown palette's event.
+  assert.deepEqual(changes, ["vestra", "vestra"]);
   await assert.rejects(
     plugin.appearance.set("dark" as never),
     /invalid|vestra/,
@@ -93,7 +99,12 @@ test("appearance: read before activation, set, follows other plugins", async () 
   host.setAppearance("vestra-light");
   await host.settle();
   assert.equal(plugin.appearance.theme, "vestra-light");
+  // Every event is heard (the listener reads the copy, already current):
+  // the two above, the request that selected vestra, the own set's echo,
+  // then the other plugin's two picks.
   assert.deepEqual(changes, [
+    "vestra",
+    "vestra",
     "vestra",
     "vestra-light",
     "vestra",
@@ -162,125 +173,113 @@ test("settings: pages register with bound properties, callbacks, show", async ()
   assert.equal(host.settings.pages.size, 0, "disposed with the plugin");
 });
 
-test("appearance: a change held across standby still reaches onChange", async () => {
-  // Woken from standby: the start-up read already has the new palette, then
-  // the player delivers the appearance.changed it held for the plugin.
-  const host = new TestHost();
-  host.appearance = "vestra-light";
-  const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "ui.theme"],
-    host,
-  });
-  assert.equal(plugin.appearance.theme, "vestra-light");
-  const changes: string[] = [];
-  plugin.appearance.onChange((theme) => changes.push(theme));
-  await host.settle();
-  host.emit("appearance.changed", { theme: "vestra-light" });
-  await host.settle();
-  assert.deepEqual(changes, ["vestra-light"]);
-  // The same palette again is not a change for the listeners.
-  host.emit("appearance.changed", { theme: "vestra-light" });
-  await host.settle();
-  assert.deepEqual(changes, ["vestra-light"]);
-  host.setAppearance("vestra");
-  await host.settle();
-  assert.deepEqual(changes, ["vestra-light", "vestra"]);
-  assert.equal(plugin.appearance.theme, "vestra");
-  // The plugin's own set is heard once, not again with the player's echo.
-  await plugin.appearance.set("vestra-light");
-  host.emit("appearance.changed", { theme: "vestra-light" });
-  await host.settle();
-  assert.deepEqual(changes, ["vestra-light", "vestra", "vestra-light"]);
-  await stop();
-});
-
-test("appearance: a language change does not call the theme onChange", async () => {
+test("appearance: player.on reads the event's theme and language from the copy", async () => {
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(() => {}, {
     capabilities: ["events", "ui.theme"],
     host,
   });
-  const changes: string[] = [];
-  plugin.appearance.onChange((theme) => changes.push(theme));
+  // No read of plugin.appearance before: player.on starts the copy.
+  const read: [string, string, string, string | undefined][] = [];
+  plugin.player.on("appearance.changed", (data) =>
+    read.push([
+      data.theme,
+      plugin.appearance.theme,
+      plugin.appearance.language,
+      data.language,
+    ]),
+  );
   await host.settle();
-  // Another plugin (or the user) picks a language: the event carries the
-  // unchanged theme.
-  host.setLanguage("fr");
-  await host.settle();
-  assert.equal(plugin.appearance.language, "fr");
-  assert.deepEqual(changes, []);
-  // The plugin's own setLanguage, and the player's echo of it.
-  await plugin.appearance.setLanguage("de");
-  await host.settle();
-  host.emit("appearance.changed", { theme: "vestra", language: "de" });
-  await host.settle();
-  assert.equal(plugin.appearance.language, "de");
-  assert.deepEqual(changes, []);
-  // A theme change after them is heard, once.
   host.setAppearance("vestra-light");
   await host.settle();
-  host.emit("appearance.changed", { theme: "vestra-light", language: "de" });
+  host.setLanguage("fr");
   await host.settle();
-  assert.deepEqual(changes, ["vestra-light"]);
-  // So is a theme change sent by an older player, without a language.
+  // An older player's event, without a language.
   host.emit("appearance.changed", { theme: "vestra" });
   await host.settle();
-  assert.deepEqual(changes, ["vestra-light", "vestra"]);
+  assert.deepEqual(read, [
+    ["vestra-light", "vestra-light", "system", undefined],
+    ["vestra-light", "vestra-light", "fr", "fr"],
+    ["vestra", "vestra", "fr", undefined],
+  ]);
   await stop();
 });
 
-test("appearance: the plugin's own setLanguage echo alone does not call onChange", async () => {
+test("a state copy started after a plugin listener still hears each event first", async () => {
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(() => {}, {
     capabilities: ["events", "ui.theme"],
     host,
   });
-  const changes: string[] = [];
-  plugin.appearance.onChange((theme) => changes.push(theme));
+  // A raw listener first; the copy starts later, with the first read.
+  const read: string[] = [];
+  plugin.wire.on("appearance.changed", () =>
+    read.push(plugin.appearance.theme),
+  );
+  assert.equal(plugin.appearance.theme, "vestra");
   await host.settle();
-  await plugin.appearance.setLanguage("fr");
+  host.setAppearance("vestra-light");
   await host.settle();
-  assert.deepEqual(changes, []);
+  host.setAppearance("vestra");
+  await host.settle();
+  assert.deepEqual(read, ["vestra-light", "vestra"]);
   await stop();
 });
 
-test("appearance: woken after a theme and a language change, onChange hears the theme", async () => {
-  // The player keeps only the newest held event: the language change's,
-  // which carries the new theme too. The start-up read has both.
+test("source.state: a listener added before the player's copy starts reads the event's state", async () => {
+  // The startup always starts the copy first; a runtime built by hand
+  // can add the listener before it, the order the dispatch must undo.
   const host = new TestHost();
-  host.appearance = "vestra-light";
-  host.language = "fr";
+  const runtime = new Runtime(
+    host,
+    { id: "test.order", capabilities: ["events", "playback.read"] },
+    tmpdir(),
+  );
+  const rates: number[] = [];
+  const listener = runtime.on("source.state", (data) =>
+    rates.push(playerOf(runtime).state.rate, (data as { rate: number }).rate),
+  );
+  void playerOf(runtime).start(false);
+  await host.settle();
+  host.setSource({ rate: 1.5 });
+  await host.settle();
+  host.setSource({ rate: 2 });
+  await host.settle();
+  // Each time the copy (first number) already has the event's rate.
+  assert.deepEqual(rates, [1.5, 1.5, 2, 2]);
+  await listener.dispose();
+  runtime.stop();
+  host.close();
+});
+
+test("a state copy that throws stops neither the other copies nor the plugin's listeners; onError hears it", async () => {
+  const host = new TestHost();
   const { plugin, stop } = await startPlugin(() => {}, {
     capabilities: ["events", "ui.theme"],
     host,
   });
-  const changes: string[] = [];
-  plugin.appearance.onChange((theme) => changes.push(theme));
+  const errors: PluginError[] = [];
+  plugin.onError((error) => errors.push(error));
+  const runtime = (plugin as unknown as { runtime: Runtime }).runtime;
+  // A broken copy, added before the real one and the listener.
+  runtime.on(
+    "appearance.changed",
+    () => {
+      throw new Error("broken copy");
+    },
+    "events",
+    true,
+  );
+  const read: string[] = [];
+  plugin.player.on("appearance.changed", () =>
+    read.push(plugin.appearance.theme),
+  );
   await host.settle();
-  host.emit("appearance.changed", { theme: "vestra-light", language: "fr" });
+  host.setAppearance("vestra-light");
   await host.settle();
-  assert.deepEqual(changes, ["vestra-light"]);
-  await stop();
-});
-
-test("appearance: woken for a language change alone, onChange may hear the theme once", async () => {
-  // The known limit: the held event looks like the theme change of a woken
-  // plugin, since it does not say what changed.
-  const host = new TestHost();
-  host.language = "fr";
-  const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "ui.theme"],
-    host,
-  });
-  const changes: string[] = [];
-  plugin.appearance.onChange((theme) => changes.push(theme));
-  await host.settle();
-  host.emit("appearance.changed", { theme: "vestra", language: "fr" });
-  await host.settle();
-  assert.deepEqual(changes, ["vestra"]);
-  // Only once.
-  host.setLanguage("de");
-  await host.settle();
-  assert.deepEqual(changes, ["vestra"]);
+  // The real copy took the event after the broken one, then the listener ran.
+  assert.deepEqual(read, ["vestra-light"]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!.message, /broken copy/);
   await stop();
 });

@@ -1,4 +1,4 @@
-// plugin.commands.keys and onKeysChange (SDK 1.6.6, player 0.7.6): the key
+// plugin.commands.keys and player.on("commands.keys") (SDK 1.6.6, player 0.7.6): the key
 // labels of the plugin's own commands as the menus write them, always the
 // current binding (the user's keys, a cleared key, a key another command
 // holds), pushed as `commands.keys` when they change; a view bound to them
@@ -96,13 +96,19 @@ test("keys follow rebinding, clearing and Ignore Default Shortcuts; a view bound
     );
 
     let heard = 0;
-    plugin.commands.onKeysChange(() => heard++);
+    // What the listener reads: the SDK's copy took the event first.
+    const read: (readonly string[])[] = [];
+    plugin.player.on("commands.keys", () => {
+      heard++;
+      read.push(plugin.commands.keys("brightness.down"));
+    });
     await host.settle();
     host.rebind("brightness.down", ["Shift+W"]);
     await host.settle();
     assert.deepEqual(plugin.commands.keys("brightness.down"), ["Shift+W"]);
     assert.equal(props()["brightness-down"], "Shift+W");
     assert.equal(heard, 1);
+    assert.deepEqual(read, [["Shift+W"]]);
 
     // Cleared (Ignore Default Shortcuts writes [] for every default).
     host.rebind("brightness.up", []);
@@ -181,7 +187,7 @@ test("only `commands` is needed: one read and a mirror subscription, a listener 
     );
     assert.ok(host.subscriptions.has("commands.keys"));
     assert.deepEqual([...host.listening], []);
-    const listener = plugin.commands.onKeysChange(() => {});
+    const listener = plugin.player.on("commands.keys", () => {});
     await host.settle();
     assert.deepEqual([...host.listening], ["commands.keys"]);
     await listener.dispose();
@@ -198,7 +204,7 @@ test("without `commands` every command reads [] and nothing is asked", async () 
   });
   try {
     assert.deepEqual(plugin.commands.keys("anything"), []);
-    plugin.commands.onKeysChange(() => {});
+    plugin.player.on("commands.keys", () => {});
     await host.settle();
     assert.ok(!host.calls.some((c) => c.method === "commands.keys"));
     assert.ok(!host.subscriptions.has("commands.keys"));
@@ -248,7 +254,7 @@ test("the player's own commands' keys read as host/<id> and follow their rebindi
     assert.deepEqual(plugin.commands.keys("host/volume-up"), shown);
     assert.deepEqual(plugin.commands.keys("host/no-such"), []);
     let heard = 0;
-    plugin.commands.onKeysChange(() => heard++);
+    plugin.player.on("commands.keys", () => heard++);
     await host.settle();
     host.rebind("host/mute", ["Ctrl+M"]);
     await host.settle();

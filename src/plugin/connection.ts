@@ -129,6 +129,11 @@ const SILENT: StateSignals = {
  */
 interface EventGroup {
   listeners: Set<Listener>;
+  /**
+   * The SDK's own state copies among `listeners`: they hear each event
+   * first, so a plugin listener that reads the copy sees the event's data.
+   */
+  mirrors: Set<Listener>;
   active: number;
   /** Why each active holder listens, in the order they came. */
   whys: Map<object, Why>;
@@ -180,6 +185,13 @@ export class Connection {
    * changed that state elsewhere asks for it (`reread`).
    */
   readonly rereads = new Map<string, () => Promise<unknown>>();
+  /**
+   * Where a state copy (mirror) that threw on an event is reported: the
+   * plugin's error handlers once the root scope exists (`onError`, as for
+   * a listener), the log before.
+   */
+  reportMirror: (error: unknown) => void = (error) =>
+    console.error(`[${this.manifest.id}]`, error);
   /** The framework's ears ({@link StateSignals}); silent until `Runtime` sets them. */
   signals: StateSignals = SILENT;
   /**
@@ -365,11 +377,17 @@ export class Connection {
     let entry = this.#events.get(event);
     const created = !entry;
     if (!entry) {
-      entry = { listeners: new Set(), active: 0, whys: new Map() };
+      entry = {
+        listeners: new Set(),
+        mirrors: new Set(),
+        active: 0,
+        whys: new Map(),
+      };
       this.#events.set(event, entry);
     }
     const group = entry;
     group.listeners.add(listener);
+    if (mirror) group.mirrors.add(listener);
     const token = {};
     if (!mirror) {
       group.active++;
@@ -384,7 +402,20 @@ export class Connection {
       group.off = this.host.events.subscribe(
         event as never,
         (data) => {
-          for (const each of [...group.listeners]) each(data);
+          // Split once: the state copies first, each on its own (one that
+          // throws stops neither the others nor the plugin's listeners),
+          // then the plugin's listeners in order.
+          const mirrors: Listener[] = [];
+          const others: Listener[] = [];
+          for (const each of group.listeners)
+            (group.mirrors.has(each) ? mirrors : others).push(each);
+          for (const each of mirrors)
+            try {
+              each(data);
+            } catch (error) {
+              this.reportMirror(error);
+            }
+          for (const each of others) each(data);
         },
         !group.told,
         whys,
@@ -399,6 +430,7 @@ export class Connection {
         if (!listening) return;
         listening = false;
         group.listeners.delete(listener);
+        group.mirrors.delete(listener);
         if (!mirror) group.active--;
         group.whys.delete(token);
         if (this.#events.get(event) !== group) return;
