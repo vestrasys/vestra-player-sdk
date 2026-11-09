@@ -204,6 +204,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Off (not in the menu) |  | `vestra.playlist/playlist.repeat-none` |
 | All (not in the menu) |  | `vestra.playlist/playlist.repeat-all` |
 | One (not in the menu) |  | `vestra.playlist/playlist.repeat-one` |
+| Stop After Current (not in the menu) |  | `vestra.playlist/playlist.repeat-once` |
 | Shuffle (not in the menu) |  | `vestra.playlist/playlist.shuffle` |
 | Open List File… (not in the menu) |  | `vestra.playlist/playlist.open-list` |
 | Save List… (not in the menu) |  | `vestra.playlist/playlist.save-list` |

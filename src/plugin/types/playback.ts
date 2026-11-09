@@ -1224,7 +1224,9 @@ export interface Player {
    */
   setPaused(paused: boolean, options?: Conditional): Promise<void>;
   /**
-   * Jump to `seconds`.
+   * Jump to `seconds`. After the end (`phase: "ended"`) the player leaves
+   * the end there and plays on, unless the end was reached while paused or
+   * by a frame step; a seek at or past the end leaves it ended and paused.
    *
    * @capability playback.control
    * @throws `stale` (rejects) The source changed since the state the call is
@@ -1596,7 +1598,7 @@ export interface Player {
    * at or after position + step, backward on the last at or before position −
    * step, and they always move. Presses during a seek add up and continue from
    * where it landed; the on-screen text shows the landed time. Sources without
-   * moving video seek exactly. {@link Player.seek}, chapters, loops and
+   * moving video seek exactly, and so does a step seek after the end. {@link Player.seek}, chapters, loops and
    * {@link Player.step} are unaffected, and so is a scrub unless it asks for
    * keyframes itself ({@link Scrub.seek} with `keyframes: true`). Omitted or
    * `false`: exact seeks, as before. `seconds` and `keyframes` are written as a

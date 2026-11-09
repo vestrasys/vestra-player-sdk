@@ -69,6 +69,12 @@ export function sourceIntent(
       expected.intentVersion !== stamp.intentVersion)
   )
     throw new HostError("stale", "stale");
+  // Both flags cover this intent only, whatever becomes of it.
+  const hold = inner.holdPause;
+  inner.holdPause = false;
+  inner.stepped = false;
+  // A new load, a restart or Close: the end that was kept is gone.
+  if (intent.kind !== "control") inner.endKeepsPause = false;
   const next = {
     ...host.source,
     stamp: { ...stamp, intentVersion: stamp.intentVersion + 1 },
@@ -115,7 +121,20 @@ export function sourceIntent(
     if (!host.source.source) throw new HostError("invalid", "noSource");
     const control = intent.control as Record<string, Json>;
     if (control.kind === "pause") next.paused = control.paused === true;
-    if (control.kind === "seek") next.position = Number(control.seconds);
+    if (
+      control.kind === "seek" &&
+      !atEndAlready(host, Number(control.seconds))
+    ) {
+      next.position = Number(control.seconds);
+      // Like the player (2026-11-09): a seek leaves the end and plays on,
+      // except a step back from the end, or after an end reached while
+      // paused or by frame stepping.
+      if (host.source.phase === "ended") {
+        next.phase = "ready";
+        next.terminalReason = null;
+        next.paused = hold || inner.endKeepsPause;
+      }
+    }
     if (control.kind === "rate") next.rate = Number(control.rate);
   }
   // Like the player: the selected producer is retired as soon as another
@@ -137,6 +156,21 @@ export function sourceIntent(
   host.emit("source.state", host.source);
   cancelResolutions(host, inner);
   return { ticket: { stamp: next.stamp, cycle: next.cycle, owner: 1 } };
+}
+
+/**
+ * Like the player: after the end, a seek at or past the end (the smaller of
+ * the position and the duration, 0.5 ms slack) goes nowhere. It is accepted;
+ * the source stays ended and paused.
+ */
+export function atEndAlready(host: TestHost, seconds: number): boolean {
+  const s = host.source;
+  if (s.phase !== "ended") return false;
+  const end =
+    s.position !== null && s.duration !== null
+      ? Math.min(s.position, s.duration)
+      : (s.position ?? s.duration);
+  return end !== null && seconds >= end - 0.0005;
 }
 
 /** The file resolver of this plugin that claims `source`, if any. */
@@ -450,9 +484,13 @@ export function subtitleChange(
 /** Implements `TestHost.setSource`. */
 export function setSource(
   host: TestHost,
-  _inner: Internals,
+  inner: Internals,
   patch: Partial<SourceState>,
 ) {
+  // The end keeps the pause when reached while paused or by a frame step
+  // (the player reads this as the end arrives).
+  if (patch.phase === "ended" && host.source.phase !== "ended")
+    inner.endKeepsPause = inner.stepped || host.source.paused;
   host.source = {
     ...host.source,
     ...patch,

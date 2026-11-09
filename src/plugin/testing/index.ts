@@ -2655,7 +2655,14 @@ export class TestHost implements Transport {
     /** `Scrub.seek(seconds, { keyframes: true })`. */
     keyframes: boolean;
   }[] = [];
-  /** Every `player.step`, newest last. */
+  /**
+   * Every `player.step` and core frame step, newest last. The position does
+   * not move, except a step back after the end: like the player, a seek
+   * that stays paused, one frame back (`stats` fps, else 30) for a frame,
+   * to the last {@link TestHost.keyframes | keyframe} before the position
+   * (none modelled: 1 ms back) for a keyframe. A keyframe step forward
+   * after the end goes nowhere.
+   */
   readonly steps: {
     /** `"frame"` or `"keyframe"`. */
     unit: string;
@@ -2839,6 +2846,11 @@ export class TestHost implements Transport {
    * changed (the user paused, playback reached the end, a file finished
    * loading). Any phase other than `empty` also turns on the source
    * capabilities (pause, seek, rate, ...) unless the patch sets them.
+   * After `phase: "ended"`, a seek (a plugin's, a core step seek) returns
+   * to `ready` and plays on (`paused: false`), as in the player; it stays
+   * paused when the end was reached while paused or by a frame step. A
+   * seek at or past the end (the smaller of `position` and `duration`,
+   * 0.5 ms slack) goes nowhere: accepted, still ended and paused.
    * `phase: "loading"` makes a mounted backdrop effective, like the player.
    *
    * @param patch - Wire-level source fields, e.g. `phase`, `position`,
@@ -3490,7 +3502,10 @@ export class TestHost implements Transport {
   }
   /**
    * Close the fake stream servers and delete the host's temporary
-   * directories. `stop()` from {@link startPlugin} calls it.
+   * directories. `stop()` from {@link startPlugin} calls it. It never
+   * throws: a directory that a closing file handle still holds (Windows:
+   * `ENOTEMPTY`, `EBUSY`, `EPERM`) is retried for about 1.5 s, then left
+   * for the system to clean, with a warning on the console.
    *
    * @capability None.
    *
