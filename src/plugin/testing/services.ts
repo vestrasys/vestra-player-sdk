@@ -24,6 +24,7 @@ import {
   kebab,
   typedView,
   checkType,
+  checkSpelling,
   inSetOrder,
 } from "./layout.ts";
 
@@ -299,6 +300,8 @@ export function servicesHandlers(
         "ui",
         true,
       );
+      for (const name of inSetOrder(properties))
+        checkSpelling(name, properties[name]!);
       if (typed)
         for (const name of inSetOrder(properties))
           checkType(typed, name, properties[name]!, undefined);

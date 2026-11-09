@@ -4,7 +4,13 @@
 // same codes and words. Before SDK 1.7.3 such a plugin passed its tests and
 // failed in the player when its window opened.
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -44,6 +50,7 @@ export component W inherits Window {
     in property <[Logo]> logos;
     in property <Outer> outer;
     in property <[MarkdownBlock]> body;
+    in property <[string]> names;
     in property <[{ label: string, on: bool }]> flags;
     in-out property <string> draft: "a \\{ brace } in a string";
     out property <bool> busy;
@@ -68,6 +75,7 @@ export global Bridge {
     in property <[Item]> items;
     in property <string> status;
     out property <int> picked;
+    out property <int> level: 3;
     in property <bool> tabbed;
 }
 export component Panel inherits Rectangle {}
@@ -89,12 +97,9 @@ function packageWith() {
   return directory;
 }
 
-async function started() {
+async function started(directory = packageWith()) {
   const host = new TestHost();
-  const { stop } = await startPlugin(() => {}, {
-    host,
-    directory: packageWith(),
-  });
+  const { stop } = await startPlugin(() => {}, { host, directory });
   let n = 0;
   /** `ui.open` of w.slint with `properties`: its refusal, or null. */
   const open = async (properties: Record<string, Json>) => {
@@ -313,7 +318,7 @@ test("nested structs, anonymous structs, imported and unknown types", async () =
   await stop();
 });
 
-test("panels: initial values the panel cannot take are reported and left out, writes refused with host", async () => {
+test("panels: initial values the panel cannot take are reported and kept stored, writes refused with host", async () => {
   const errors: PluginError[] = [];
   const { host, plugin, stop } = await startPlugin(
     (plugin: Plugin) => {
@@ -326,7 +331,13 @@ test("panels: initial values the panel cannot take are reported and left out, wr
     },
     { directory: packageWith() },
   );
-  assert.deepEqual(host.mounted().props, { status: "ready" });
+  // Stored as the player stores them (a patch applies on them); the panel
+  // shows its defaults for the refused ones.
+  assert.deepEqual(host.mounted().props, {
+    items: [{ title: "a", done: "no" }],
+    status: "ready",
+    extra: 1,
+  });
   assert.deepEqual(
     errors.map((e) => [e.code, e.message]),
     [
@@ -474,5 +485,252 @@ test("a refused 20,000-row write fails once, promptly, with bounded memory", asy
     process.memoryUsage().rss - before < 1024 * 1024 * 1024,
     `rss grew by ${Math.round((process.memoryUsage().rss - before) / 1048576)} MB`,
   );
+  await stop();
+});
+
+/** A package whose w.slint is `source` (the other files as above). */
+function windowWith(source: string, files: Record<string, string> = {}) {
+  const directory = packageWith();
+  writeFileSync(join(directory, "w.slint"), source);
+  for (const [name, text] of Object.entries(files))
+    writeFileSync(join(directory, name), text);
+  return directory;
+}
+
+test("a struct that holds itself, and files that export each other, resolve promptly", async () => {
+  const began = Date.now();
+  const { stop, open } = await started(
+    windowWith(
+      `
+import { B, Missing } from "a.slint";
+export struct T { a: T, b: T }
+export struct U { label: string, a: [U], b: [U], c: [U] }
+export struct V { w: W, n: int }
+export struct W { v: V, s: string }
+export component W2 inherits Window {
+    in property <T> t;
+    in property <[U]> u;
+    in property <V> v;
+    in property <B> b;
+    in property <Missing> missing;
+}
+`,
+      {
+        "a.slint": `export * from "b.slint";\nexport * from "a.slint";\nexport struct A { x: int }\n`,
+        "b.slint": `export * from "a.slint";\nexport * from "b.slint";\nexport struct B { y: string }\n`,
+      },
+    ),
+  );
+  // Where a struct recurs, any value passes (Slint refuses such a file).
+  assert.equal(await open({ t: { a: { a: 1 }, b: {} } }), null);
+  assert.equal(
+    await open({ u: [{ label: "x", a: [{ label: "y", a: [] }] }] }),
+    null,
+  );
+  assert.equal(
+    (await open({ u: [{ label: 1 }] }))?.message,
+    "u: wrong type: u is an array that does not match the declared an array type",
+  );
+  assert.equal(
+    (await open({ v: { n: "1" } }))?.message,
+    "v: wrong type: v.n is a string where the declaration has a number",
+  );
+  // Through `export *` both ways: found, or not found (any value).
+  assert.equal(
+    (await open({ b: { y: 1 } }))?.message,
+    "b: wrong type: b.y is a number where the declaration has a string",
+  );
+  assert.equal(await open({ missing: { anything: 1 } }), null);
+  assert.ok(Date.now() - began < 5000);
+  await stop();
+});
+
+test("properties declared after states, transitions and @children", async () => {
+  const { stop, open } = await started(
+    windowWith(`
+export component W inherits Window {
+    in property <bool> a;
+    states [
+        on when root.a: { background: red; }
+    ]
+    in property <string> after-states;
+    transitions [
+        in on: { animate background { duration: 100ms; } }
+    ]
+    in-out property <int> after-transitions;
+    @children
+    in property <bool> after-children;
+    property <int> still-private;
+    out property <int> out-after: 2;
+}
+`),
+  );
+  assert.equal(
+    await open({
+      "after-states": "x",
+      "after-transitions": 1,
+      "after-children": true,
+    }),
+    null,
+  );
+  assert.equal(
+    (await open({ "after-states": 1 }))?.message,
+    "after-states: wrong type: after-states is a number where the declaration has a string",
+  );
+  assert.equal(
+    (await open({ "still-private": 1 }))?.message,
+    "still-private: no such property",
+  );
+  assert.equal(
+    (await open({ "out-after": 2 }))?.message,
+    "out-after: not writable (an out property)",
+  );
+  await stop();
+});
+
+test("a changed imported file is read again", async () => {
+  const directory = windowWith(
+    `import { Seg } from "seg.slint";\nexport component W inherits Window { in property <Seg> seg; }\n`,
+    { "seg.slint": "export struct Seg { start: float }\n" },
+  );
+  const { stop, open } = await started(directory);
+  assert.equal(await open({ seg: { start: 1 } }), null);
+  const seg = join(directory, "seg.slint");
+  writeFileSync(seg, "export struct Seg { start: string }\n");
+  // The time changes even on a coarse file system clock.
+  const later = new Date(Date.now() + 5000);
+  utimesSync(seg, later, later);
+  assert.ok(readFileSync(seg, "utf8").includes("string"));
+  assert.equal(
+    (await open({ seg: { start: 1 } }))?.message,
+    "seg: wrong type: seg.start is a number where the declaration has a string",
+  );
+  await stop();
+});
+
+test("Markdown documents: their rows are checked against the declared row type", async () => {
+  const { stop, open } = await started();
+  const doc = { $vestraMarkdown: { text: "# Title\n\nText." }, ref: 1 };
+  assert.equal(await open({ body: doc }), null);
+  // The rows' default literal shows the row type: the block's first field
+  // the row struct does not declare.
+  assert.equal(
+    (await open({ rows: doc }))?.message,
+    "rows: wrong type: rows[0].aligns is not a field of the declared struct (id, n)",
+  );
+  assert.equal(
+    (await open({ names: doc }))?.message,
+    "names: wrong type: names is an array that does not match the declared an array type",
+  );
+  // An empty document has no rows: any array takes it.
+  assert.equal(
+    await open({ rows: { $vestraMarkdown: { text: "" }, ref: 2 } }),
+    null,
+  );
+  await stop();
+});
+
+test("struct field names not in Slint's canonical spelling: refused by the conversion, code host", async () => {
+  const { host, stop, open } = await started();
+  assert.deepEqual(refused(await open({ outer: { name_x: "o" } })), {
+    code: "host",
+    message:
+      'outer: UI object field "name_x" is not in Slint canonical spelling',
+  });
+  // Converted before anything is set: named although `heading` comes first.
+  assert.equal(
+    (await open({ heading: 3, logos: [{ key: "a", "-icon": null }] }))?.message,
+    'logos: UI object field "-icon" is not in Slint canonical spelling',
+  );
+  // A field's value before its name.
+  assert.equal(
+    (await open({ outer: { a_b: { c_d: 1 } } }))?.message,
+    'outer: UI object field "c_d" is not in Slint canonical spelling',
+  );
+  // A leading underscore is canonical.
+  assert.equal(
+    (await open({ outer: { _x: 1 } }))?.message,
+    "outer: wrong type: outer._x is not a field of the declared struct (inner, name)",
+  );
+  assert.equal(await open({ banner: { code: "x" } }), null);
+  await assert.rejects(
+    host.request("ui.set", {
+      id: "w5",
+      property: "banner",
+      value: { code_x: "y" },
+    }),
+    {
+      code: "host",
+      message:
+        'banner: UI object field "code_x" is not in Slint canonical spelling',
+    },
+  );
+  await stop();
+});
+
+test("an out property written with the value it holds: nothing happens, except on open", async () => {
+  const { host, stop, open } = await started();
+  assert.equal(await open({}), null);
+  // `ui.set` compares first (`reconcile_in`): the default `false` is no change.
+  await host.request("ui.set", { id: "w1", property: "busy", value: false });
+  await assert.rejects(
+    host.request("ui.set", { id: "w1", property: "busy", value: true }),
+    { code: "ui", message: "busy: not writable (an out property)" },
+  );
+  // `ui.open` sets without comparing.
+  assert.equal(
+    (await open({ busy: false }))?.message,
+    "busy: not writable (an out property)",
+  );
+  await stop();
+  // A panel: the default 0, and a literal default.
+  const panel = await startPlugin(
+    (plugin: Plugin) => {
+      plugin.panels.mount("sidebar", "panel.slint");
+    },
+    { directory: packageWith() },
+  );
+  const write = (property: string, value: Json) =>
+    panel.host.request("ui.setMount", { property, value });
+  await write("picked", 0);
+  await write("level", 3);
+  await assert.rejects(write("level", 4), {
+    code: "host",
+    message: "level: not writable (an out property)",
+  });
+  await panel.stop();
+});
+
+test("a window's row patch whose result the window refuses: code ui, the rows kept", async () => {
+  const { host, stop, open } = await started();
+  const rows = [{ start: 0, end: 1, label: "a" }];
+  assert.equal(await open({ segments: rows }), null);
+  await assert.rejects(
+    host.request("ui.set", {
+      id: "w1",
+      property: "segments",
+      patch: {
+        base: 0,
+        seq: 1,
+        ops: [
+          { op: "insert", at: 1, rows: [{ start: 1, end: 2, title: "b" }] },
+        ],
+      },
+    }),
+    {
+      code: "ui",
+      message:
+        "segments: wrong type: segments[1].title is not a field of the declared struct (end, label, start)",
+    },
+  );
+  assert.equal((host.window("w1").props.segments as Json[]).length, 1);
+  // A whole value goes on.
+  await host.request("ui.set", {
+    id: "w1",
+    property: "segments",
+    value: [...rows, { start: 1, end: 2, label: "b" }],
+    seq: 2,
+  });
+  assert.equal((host.window("w1").props.segments as Json[]).length, 2);
   await stop();
 });

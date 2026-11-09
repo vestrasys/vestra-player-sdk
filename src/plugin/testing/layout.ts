@@ -17,7 +17,12 @@ import type { Handler, Internals } from "./internals.ts";
 import { taken } from "./transport.ts";
 import { windowFacts } from "./core-actions.ts";
 import { declaredText, shownValues, hostText } from "./i18n.ts";
-import { packageDirectories, refusal, viewTypes } from "./slint-types.ts";
+import {
+  packageDirectories,
+  refusal,
+  spellingProblem,
+  viewTypes,
+} from "./slint-types.ts";
 import type { Refusal, ViewTypes } from "./slint-types.ts";
 
 export const kebab = (name: string) =>
@@ -166,6 +171,7 @@ export function writeProperty(
   // The value the view shows after the write: its type is checked once
   // the value is whole, as the player sets it then.
   const shown = (value: Json) => {
+    checkSpelling(property, value);
     if (typed) checkType(typed, property, value, current);
   };
   const patch = p.patch as
@@ -284,13 +290,19 @@ export function checkValues(
 /**
  * A view's declared property types, with how the player words a refusal
  * there: the error `code`, and `bare` when it reads the property before it
- * writes it (`ui.set`, `ui.setMount`, `settings.set`), so that an unknown
- * one is refused as "no such property" without its name.
+ * writes it (`ui.set`, `ui.setMount`, `settings.set`, a panel's or settings
+ * page's initial values), so that an unknown one is refused as "no such
+ * property" without its name. Those writes compare first
+ * (`ui_values::reconcile_in`): a value equal to what the property holds
+ * does nothing, on an `out` property too. `fresh`: the property shows its
+ * default although a value is stored (a panel's initial value it could
+ * not take).
  */
 export interface TypedView {
   types: ViewTypes;
   code: string;
   bare: boolean;
+  fresh?: boolean;
 }
 
 /**
@@ -328,8 +340,24 @@ export function checkType(
   value: Json,
   current: Json | undefined,
 ) {
-  const found = refusal(typed.types, property, value, current);
+  const found = refusal(
+    typed.types,
+    property,
+    value,
+    typed.fresh ? undefined : current,
+    { reconciles: typed.bare },
+  );
   if (found) throw new HostError(typed.code, refusalText(found, typed.bare));
+}
+
+/**
+ * Refuse a struct field name the player's conversion refuses (not in
+ * Slint's canonical spelling), whatever the view declares: code `host`,
+ * the property named.
+ */
+export function checkSpelling(property: string, value: Json) {
+  const problem = spellingProblem(value);
+  if (problem) throw new HostError("host", `${property}: ${problem}`);
 }
 
 /** Property names in the order the player sets them (a `BTreeMap`). */
@@ -552,8 +580,10 @@ export function layoutHandlers(
         p.properties as Record<string, Json>,
       );
       checkValues(host, inner, properties);
-      // Set one by one on the new component: the first one refused fails
-      // the open (code `host`, the property named).
+      // Converted, then set one by one on the new component: the first
+      // one refused fails the open (code `host`, the property named).
+      for (const name of inSetOrder(properties))
+        checkSpelling(name, properties[name]!);
       const typed = typedView(host, String(p.file), undefined, "host", false);
       if (typed)
         for (const name of inSetOrder(properties))
@@ -635,23 +665,38 @@ export function layoutHandlers(
       const panelSlot = String(p.slot);
       const global = typeof p.global === "string" ? p.global : undefined;
       inner.globals.set(panelSlot, global);
-      // A value the panel cannot take is left out (it shows its default)
-      // and reported with `ui.error`, as the player reports it when it
-      // builds the panel: the property named before the refusal.
+      // A value the panel cannot take is reported with `ui.error` as the
+      // player reports it when it builds the panel: first those it cannot
+      // convert, then those the panel refuses (named before the refusal).
+      // The panel shows its default for them; the value stays stored, as
+      // in the player, and a patch applies on it.
+      const view = mountView(panelSlot);
+      for (const key of [...inner.unshown])
+        if (key.startsWith(`${view}\u0000`)) inner.unshown.delete(key);
+      const unconverted = new Set<string>();
+      for (const name of inSetOrder(properties)) {
+        const problem = spellingProblem(properties[name]!);
+        if (!problem) continue;
+        unconverted.add(name);
+        inner.unshown.add(`${view}\u0000${name}`);
+        host.emit("ui.error", { code: "host", message: `${name}: ${problem}` });
+      }
       const typed =
         global === undefined
           ? null
           : typedView(host, String(p.file), global, "ui", true);
       if (typed)
         for (const name of inSetOrder(properties)) {
+          if (unconverted.has(name)) continue;
           const found = refusal(
             typed.types,
             name,
             properties[name]!,
             undefined,
+            { reconciles: true },
           );
           if (!found) continue;
-          delete properties[name];
+          inner.unshown.add(`${view}\u0000${name}`);
           host.emit("ui.error", {
             code: "ui",
             message: `${name}: ${refusalText(found, true)}`,
@@ -773,6 +818,12 @@ export function layoutHandlers(
       const panel = panelFor(host, inner, p);
       const property = String(p.property);
       const global = inner.globals.get(panel.slot);
+      const unshown = `${mountView(panel.slot)}\u0000${property}`;
+      const typed =
+        global === undefined
+          ? null
+          : typedView(host, panel.file, global, "host", true);
+      if (typed) typed.fresh = inner.unshown.has(unshown);
       const next = writeProperty(
         host,
         inner,
@@ -780,12 +831,13 @@ export function layoutHandlers(
         property,
         p,
         panel.props[property],
-        global === undefined
-          ? null
-          : typedView(host, panel.file, global, "host", true),
+        typed,
       );
       // A part of a value sent in parts is held until the last (player 0.6.0).
-      if (next !== undefined) panel.props[property] = next;
+      if (next !== undefined) {
+        panel.props[property] = next;
+        inner.unshown.delete(unshown);
+      }
     },
     "timeline.marks": () => ({
       marks: host.timeline.marks,

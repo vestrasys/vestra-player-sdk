@@ -54,6 +54,12 @@ interface Member {
   type: TypeExpr | null;
   /** The default binding is an array literal with rows. */
   rows: boolean;
+  /**
+   * The value it starts with, when the test host can tell: a literal
+   * default (`: 3`, `: "a"`, `: true`, `: []`); `undefined` for another
+   * binding (`: root.x`, `<=> y`). `null` written: no binding.
+   */
+  initial: Json | undefined | null;
 }
 
 interface Element {
@@ -267,17 +273,23 @@ function parse(path: string, text: string): SlintFile {
     const element: Element = { kind, base, members: new Map() };
     expect("{");
     let depth = 0;
-    let boundary = true;
     while (at() !== undefined) {
       const v = at()!.v;
-      if (depth === 0 && boundary && at()!.t === "id") {
+      // A declaration directly in the body, wherever it stands (after a
+      // `states [...]`, `transitions [...]` or `@children` too): `property`
+      // (after its visibility) followed by `<` or by a name and `<=>`.
+      if (depth === 0 && at()!.t === "id") {
         let visibility: Visibility = "private";
         let offset = 0;
         if (VISIBILITY[v] && is("property", 1)) {
           visibility = VISIBILITY[v]!;
           offset = 1;
         }
-        if (is("property", offset)) {
+        if (
+          is("property", offset) &&
+          (is("<", offset + 1) ||
+            (at(offset + 1)?.t === "id" && is("<=>", offset + 2)))
+        ) {
           p += offset + 1;
           let declared: TypeExpr | null = null;
           if (is("<")) {
@@ -287,8 +299,13 @@ function parse(path: string, text: string): SlintFile {
           }
           const name = normalize(identifier());
           const rows = is(":") && is("[", 1) && !is("]", 2);
-          element.members.set(name, { visibility, type: declared, rows });
-          boundary = false;
+          const initial = is(":") ? literal() : is("<=>") ? undefined : null;
+          element.members.set(name, {
+            visibility,
+            type: declared,
+            rows,
+            initial,
+          });
           continue;
         }
       }
@@ -300,10 +317,25 @@ function parse(path: string, text: string): SlintFile {
         }
         depth--;
       }
-      boundary = v === ";" || v === "{" || v === "}";
       p++;
     }
     return element;
+  };
+  /** The literal after `:` that ends the binding (`;`), or `undefined`. */
+  const literal = (): Json | undefined => {
+    const value = at(1);
+    let end = 2;
+    let result: Json | undefined;
+    if (value?.t === "num" && /^\d+(\.\d+)?$/.test(value.v))
+      result = Number(value.v);
+    else if (value?.t === "str" && !value.v.includes("\\")) result = value.v;
+    else if (value?.v === "true" || value?.v === "false")
+      result = value.v === "true";
+    else if (value?.v === "[" && is("]", 2)) {
+      result = [];
+      end = 3;
+    }
+    return result !== undefined && is(";", end) ? result : undefined;
   };
   const declaration = (exported: boolean) => {
     const keyword = at()!.v;
@@ -391,15 +423,23 @@ function parse(path: string, text: string): SlintFile {
 
 const files = new Map<string, { mtime: number; file: SlintFile | null }>();
 
+/** The files read while a view's types are resolved (`viewTypes`). */
+let reading: Set<string> | null = null;
+
+const mtimeOf = (path: string) => {
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return -1;
+  }
+};
+
 /** A file, parsed once while it is unchanged; `null` if it cannot be read. */
 function load(path: string | null | undefined): SlintFile | null {
   if (!path) return null;
-  let mtime: number;
-  try {
-    mtime = statSync(path).mtimeMs;
-  } catch {
-    return null;
-  }
+  reading?.add(path);
+  const mtime = mtimeOf(path);
+  if (mtime < 0) return null;
   const cached = files.get(path);
   if (cached && cached.mtime === mtime) return cached.file;
   let file: SlintFile | null = null;
@@ -413,39 +453,49 @@ function load(path: string | null | undefined): SlintFile | null {
 }
 
 type Found =
-  | { struct: [string, TypeExpr][]; file: SlintFile }
+  | { struct: [string, TypeExpr][]; name: string; file: SlintFile }
   | { enum: true }
   | { element: Element; file: SlintFile };
 
-/** What `name` exported from `file` is. */
+/**
+ * What `name` exported from `file` is. `seen`: the (file, name) pairs
+ * already asked on this lookup, so that files exporting each other
+ * (`export * from`) end it.
+ */
 function exportOf(
   file: SlintFile | null,
   name: string,
-  depth: number,
+  seen = new Set<string>(),
 ): Found | null {
-  if (!file || depth > 16) return null;
+  if (!file) return null;
+  const key = `${file.path}\u0000${name}`;
+  if (seen.has(key)) return null;
+  seen.add(key);
   const entry = file.exports.get(name);
   if (entry)
     return entry.from === undefined
-      ? local(file, entry.name, depth + 1)
-      : exportOf(load(entry.from), entry.name, depth + 1);
+      ? local(file, entry.name, seen)
+      : exportOf(load(entry.from), entry.name, seen);
   for (const star of file.stars) {
-    const found = exportOf(load(star), name, depth + 1);
+    const found = exportOf(load(star), name, seen);
     if (found) return found;
   }
   return null;
 }
 
 /** What `name` is in the scope of `file`: declared there or imported. */
-function local(file: SlintFile, name: string, depth = 0): Found | null {
-  if (depth > 16) return null;
+function local(
+  file: SlintFile,
+  name: string,
+  seen = new Set<string>(),
+): Found | null {
   const struct = file.structs.get(name);
-  if (struct) return { struct, file };
+  if (struct) return { struct, name, file };
   if (file.enums.has(name)) return { enum: true };
   const element = file.elements.get(name);
   if (element) return { element, file };
   const imported = file.imports.get(name);
-  if (imported) return exportOf(load(imported.from), imported.name, depth + 1);
+  if (imported) return exportOf(load(imported.from), imported.name, seen);
   return null;
 }
 
@@ -466,29 +516,39 @@ const BUILTIN: Record<string, SlintType["k"]> = {
   easing: "other",
 };
 
-function resolveType(file: SlintFile, expr: TypeExpr, depth = 0): SlintType {
-  if (depth > 32) return { k: "any" };
-  if ("array" in expr)
-    return { k: "array", of: resolveType(file, expr.array, depth + 1) };
-  if ("fields" in expr) return structType(file, expr.fields, depth);
+/**
+ * Each named struct resolved once per view read (`viewTypes`), by file
+ * and name. A struct that holds itself (Slint refuses it; the test host
+ * must not loop or expand it without end) is `any` where it recurs.
+ */
+let structs = new Map<string, SlintType | null>();
+
+function resolveType(file: SlintFile, expr: TypeExpr): SlintType {
+  if ("array" in expr) return { k: "array", of: resolveType(file, expr.array) };
+  if ("fields" in expr) return structType(file, expr.fields);
   const builtin = BUILTIN[expr.name];
   if (builtin) return { k: builtin } as SlintType;
   const found = local(file, expr.name);
-  if (found && "struct" in found)
-    return structType(found.file, found.struct, depth);
+  if (found && "struct" in found) {
+    const key = `${found.file.path}\u0000${found.name}`;
+    const known = structs.get(key);
+    // `null`: being resolved, so this is a cycle.
+    if (known === null) return { k: "any" };
+    if (known) return known;
+    structs.set(key, null);
+    const type = structType(found.file, found.struct);
+    structs.set(key, type);
+    return type;
+  }
   if (found && "enum" in found) return { k: "enum" };
   return { k: "any" };
 }
 
-function structType(
-  file: SlintFile,
-  fields: [string, TypeExpr][],
-  depth: number,
-): SlintType {
+function structType(file: SlintFile, fields: [string, TypeExpr][]): SlintType {
   return {
     k: "struct",
     fields: new Map(
-      fields.map(([name, type]) => [name, resolveType(file, type, depth + 1)]),
+      fields.map(([name, type]) => [name, resolveType(file, type)]),
     ),
   };
 }
@@ -498,25 +558,35 @@ export interface Declared {
   visibility: Visibility;
   type: SlintType;
   rows: boolean;
+  /**
+   * The value it holds before any write, as the player's `to_json` gives
+   * it, when the test host can tell (`undefined`: it cannot).
+   */
+  initial: Json | undefined;
 }
 
 /**
  * The writable surface of a view: its properties by normalized name.
- * `open`: names not listed may still exist (the component inherits one
- * this parser does not look into), so they are not refused.
+ * `open`: names not listed may still exist (the component inherits a
+ * component this parser does not look into), so they are not refused.
  */
 export interface ViewTypes {
   properties: Map<string, Declared>;
   open: boolean;
 }
 
-const views = new Map<string, { mtime: number; view: ViewTypes | null }>();
+/** A view's types, and the files they were read from with their times. */
+const views = new Map<
+  string,
+  { files: Map<string, number>; view: ViewTypes | null }
+>();
 
 /**
  * The properties of the view `file` (relative to `directory`) shows: its
  * one exported component (a window), or the exported `global` (a panel or
  * settings page). `null` when the file cannot be read or the view cannot
- * be found: then nothing is checked.
+ * be found: then nothing is checked. Kept while none of the files it was
+ * read from (the view's and those it imports) changed.
  */
 export function viewTypes(
   directory: string,
@@ -524,20 +594,41 @@ export function viewTypes(
   global?: string,
 ): ViewTypes | null {
   const path = resolve(directory, file);
+  const key = `${path}\u0000${global ?? ""}`;
+  const cached = views.get(key);
+  if (
+    cached &&
+    [...cached.files].every(([each, mtime]) => mtimeOf(each) === mtime)
+  )
+    return cached.view;
+  reading = new Set();
+  structs = new Map();
+  let view: ViewTypes | null = null;
+  try {
+    view = readView(path, global);
+  } finally {
+    const read = reading;
+    reading = null;
+    structs = new Map();
+    views.set(key, {
+      files: new Map([...read].map((each) => [each, mtimeOf(each)])),
+      view,
+    });
+  }
+  return view;
+}
+
+function readView(path: string, global?: string): ViewTypes | null {
   const parsed = load(path);
   if (!parsed) return null;
-  const key = `${path}\u0000${global ?? ""}`;
-  const mtime = files.get(path)!.mtime;
-  const cached = views.get(key);
-  if (cached && cached.mtime === mtime) return cached.view;
   let found: Found | null = null;
   if (global !== undefined) {
-    found = exportOf(parsed, normalize(global), 0);
+    found = exportOf(parsed, normalize(global));
     if (!found || !("element" in found) || found.element.kind !== "global")
       found = null;
   } else {
     const components = [...parsed.exports.keys()]
-      .map((name) => exportOf(parsed, name, 0))
+      .map((name) => exportOf(parsed, name))
       .filter(
         (each): each is Found & { element: Element; file: SlintFile } =>
           each !== null &&
@@ -546,25 +637,55 @@ export function viewTypes(
       );
     found = components.length === 1 ? components[0]! : null;
   }
-  let view: ViewTypes | null = null;
-  if (found && "element" in found) {
-    const { element, file: owner } = found;
-    const properties = new Map<string, Declared>();
-    for (const [name, member] of element.members)
-      properties.set(name, {
-        visibility: member.visibility,
-        type: member.type ? resolveType(owner, member.type) : { k: "any" },
-        rows: member.rows,
-      });
-    // A component of the plugin's own as the base: its properties are
-    // not read here.
-    const base = element.base;
-    const open =
-      base !== null && (owner.elements.has(base) || owner.imports.has(base));
-    view = { properties, open };
+  if (!found || !("element" in found)) return null;
+  const { element, file: owner } = found;
+  const properties = new Map<string, Declared>();
+  for (const [name, member] of element.members) {
+    const type = member.type ? resolveType(owner, member.type) : anyType;
+    properties.set(name, {
+      visibility: member.visibility,
+      type,
+      rows: member.rows,
+      initial: member.initial === null ? jsonDefault(type) : member.initial,
+    });
   }
-  views.set(key, { mtime, view });
-  return view;
+  // A component of the plugin's own as the base, or one it imports (from
+  // std-widgets.slint too): its properties are not read here.
+  const base = element.base;
+  const open =
+    base !== null && (owner.elements.has(base) || owner.imports.has(base));
+  return { properties, open };
+}
+
+const anyType: SlintType = { k: "any" };
+
+/**
+ * A type's default as the player's `to_json` writes it (`0`, `""`,
+ * `false`, `[]`, a struct of those); `undefined` where it has none (an
+ * image, a brush, an enum, a type not known here).
+ */
+function jsonDefault(type: SlintType): Json | undefined {
+  switch (type.k) {
+    case "number":
+      return 0;
+    case "string":
+      return "";
+    case "bool":
+      return false;
+    case "array":
+      return [];
+    case "struct": {
+      const out: { [key: string]: Json } = {};
+      for (const [name, field] of type.fields) {
+        const value = jsonDefault(field);
+        if (value === undefined) return undefined;
+        out[name] = value;
+      }
+      return out;
+    }
+    default:
+      return undefined;
+  }
 }
 
 // ------------------------------------------------------------------ check
@@ -586,8 +707,47 @@ const isDocument = (value: Json) =>
   "$vestraMarkdown" in value &&
   Object.keys(value).every((key) => key === "$vestraMarkdown" || key === "ref");
 
+/** A field holding styled text (a Markdown row's `text`): no JSON value is one. */
+const STYLED: Json = Object.freeze({});
+
 const isStruct = (value: Json): value is { [key: string]: Json } =>
-  isObject(value) && !isImage(value) && !isDocument(value);
+  value !== STYLED && isObject(value) && !isImage(value) && !isDocument(value);
+
+/**
+ * One row of a converted Markdown document, as the player builds it
+ * (`ui_markdown::row_value`, a `MarkdownBlock`): every block has these
+ * fields, its lists empty or not.
+ */
+const MARKDOWN_ROW: { [key: string]: Json } = {
+  kind: "",
+  level: 0,
+  indent: 0,
+  quote: 0,
+  marker: "",
+  task: 0,
+  aligns: [],
+  text: STYLED,
+  plain: "",
+  links: [],
+  code: "",
+  alt: "",
+  "has-image": false,
+  image: { $vestraImage: "" },
+  "image-width": 0,
+  "image-height": 0,
+  rows: [],
+};
+
+/**
+ * The rows a Markdown document converts to, as far as the type check sees
+ * them: blocks of the shape above, none for an empty text.
+ */
+function documentRows(value: Json): Json[] {
+  const doc = (value as { $vestraMarkdown?: { text?: unknown } })
+    .$vestraMarkdown;
+  const text = typeof doc?.text === "string" ? doc.text : "";
+  return text.trim() === "" ? [] : [MARKDOWN_ROW];
+}
 
 /** A Markdown document anywhere in `value`. */
 const hasDocument = (value: Json): boolean =>
@@ -611,6 +771,7 @@ const plainRows = (value: Json) => Array.isArray(value) && !hasDocument(value);
  * `plain`: inside plain rows.
  */
 function kind(value: Json, plain = false): string {
+  if (value === STYLED) return "a value";
   if (value === null) return plain ? "an image" : "null";
   if (typeof value === "boolean") return "a bool";
   if (typeof value === "number") return "a number";
@@ -634,7 +795,10 @@ function takes(type: SlintType, value: Json, plain: boolean): boolean {
     case "image":
       return isImage(value) || (plain && value === null);
     case "array":
-      if (isDocument(value)) return true;
+      // A document's rows are checked like any other (`MarkdownBlock`
+      // structs).
+      if (isDocument(value))
+        return documentRows(value).every((row) => takes(type.of, row, false));
       return (
         Array.isArray(value) && value.every((row) => takes(type.of, row, plain))
       );
@@ -698,12 +862,15 @@ function heldOf(
   fill: boolean,
   plain: boolean,
 ): Held {
-  if (isDocument(value)) return { k: "array", first: null };
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) || isDocument(value)) {
+    const document = isDocument(value);
+    const rows = document ? documentRows(value) : (value as Json[]);
     const of = type.k === "array" ? type.of : ({ k: "any" } as const);
     return {
       k: "array",
-      first: value.length ? heldOf(of, value[0]!, false, plain) : null,
+      first: rows.length
+        ? heldOf(of, rows[0]!, false, plain && !document)
+        : null,
     };
   }
   if (isStruct(value)) {
@@ -757,9 +924,16 @@ function mismatch(
     return null;
   }
   if (current.k === "array" && (Array.isArray(next) || isDocument(next))) {
-    if (!current.first || !Array.isArray(next)) return null;
-    for (const [index, row] of next.entries()) {
-      const found = mismatch(`${path}[${index}]`, current.first, row, plain);
+    if (!current.first) return null;
+    const document = isDocument(next);
+    const rows = document ? documentRows(next) : (next as Json[]);
+    for (const [index, row] of rows.entries()) {
+      const found = mismatch(
+        `${path}[${index}]`,
+        current.first,
+        row,
+        plain && !document,
+      );
       if (found) return found;
     }
     return null;
@@ -788,12 +962,23 @@ export function refusal(
   property: string,
   value: Json,
   current: Json | undefined,
+  options: { reconciles?: boolean } = {},
 ): Refusal | null {
   const declared = types.properties.get(normalize(property));
   if (!declared || declared.visibility === "private") {
     if (types.open && !declared) return null;
     return { why: "missing", message: `${property}: no such property` };
   }
+  // A write that compares first (`ui_values::reconcile_in`: `ui.set`, a
+  // panel, a settings page; not `ui.open`) does nothing when the value is
+  // what the property holds, for an `out` one too.
+  if (
+    declared.visibility === "out" &&
+    options.reconciles &&
+    declared.initial !== undefined &&
+    sameJson(declared.initial, value)
+  )
+    return null;
   if (declared.visibility === "out")
     return {
       why: "readonly",
@@ -809,4 +994,73 @@ export function refusal(
     mismatch(property, held, value, plain) ??
     `${property} is ${kind(value)} that does not match the declared ${heldKind(held)} type`;
   return { why: "type", message: `${property}: wrong type: ${detail}` };
+}
+
+/**
+ * Two values the player's `to_json` writes alike (numbers by value);
+ * `null` in an array is an image there, which has no JSON: never alike.
+ */
+function sameJson(a: Json, b: Json, inArray = false): boolean {
+  if (a === null || b === null) return a === b && !inArray;
+  if (Array.isArray(a) || Array.isArray(b))
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, index) => sameJson(item, b[index]!, true))
+    );
+  if (isObject(a) || isObject(b)) {
+    if (!isStruct(a) || !isStruct(b)) return false;
+    const keys = Object.keys(a);
+    return (
+      keys.length === Object.keys(b).length &&
+      keys.every((key) => key in b && sameJson(a[key]!, b[key]!, inArray))
+    );
+  }
+  return a === b;
+}
+
+/** Rust's `{:?}` of a string: quoted, with its escapes. */
+function debugQuoted(text: string): string {
+  let out = '"';
+  for (const char of text) {
+    const code = char.codePointAt(0)!;
+    if (char === '"' || char === "\\") out += "\\" + char;
+    else if (char === "\n") out += "\\n";
+    else if (char === "\r") out += "\\r";
+    else if (char === "\t") out += "\\t";
+    else if (code === 0) out += "\\0";
+    else if (code < 0x20 || code === 0x7f) out += `\\u{${code.toString(16)}}`;
+    else out += char;
+  }
+  return out + '"';
+}
+
+const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * The player's conversion refuses a struct field name not in Slint's
+ * canonical spelling (`ui_values`: no `-` first, no `_` after the first
+ * character), whatever the declaration says: the first such name in the
+ * order the player meets them (fields by name, a field's value before its
+ * name), in its words; `null` when there is none. Image references and
+ * Markdown documents are not structs.
+ */
+export function spellingProblem(value: Json): string | null {
+  if (isDocument(value) || isImage(value)) return null;
+  if (Array.isArray(value)) {
+    for (const row of value) {
+      const found = spellingProblem(row);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!isObject(value)) return null;
+  for (const name of Object.keys(value).sort(byName)) {
+    const found = spellingProblem(value[name]!);
+    if (found) return found;
+    if (name.startsWith("-") || name.slice(1).includes("_"))
+      return `UI object field ${debugQuoted(name)} is not in Slint canonical spelling`;
+  }
+  return null;
 }
