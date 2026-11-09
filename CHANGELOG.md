@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.4
+
+**Who must change: nobody.** A documentation release: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
+
+- **One general guide restored**: [How a plugin works](docs/guides/how-plugins-work.md) puts on one page the rules the 1.7.2 cut lost: values between TypeScript and Slint, `set` versus `bind`, the window life cycle, commands, what keeps a plugin running, processing layers, and failures. It is listed in the Guides and the Tutorial, and `vestra-plugin docs` finds it under plugins, ui, commands, processing and playback.
+
 ## 1.7.3
 
 **Who must change: plugins whose tests wrote a value of the wrong type — their test now fails the way the player already failed.** No API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.

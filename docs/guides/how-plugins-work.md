@@ -44,7 +44,7 @@ Your TypeScript runs in the plugin's process; the `.slint` files run inside the 
 
 - **A tool window file exports exactly one component**, which inherits `Window`; its `in` and `in-out` properties and callbacks are the plugin's side. **A panel or settings page file exports one component and one global**: the player composes the component into its own window, and the global is the bridge the plugin writes and the component reads.
 - **Names:** write camelCase or kebab-case in TypeScript; the SDK writes `canMark` as `can-mark`. Fields inside struct values are passed as spelled, so spell them as the Slint struct does, without `_`.
-- **Values are JSON plus two references.** The table says what the player accepts for each Slint type; anything else is refused with `wrong type` when the window opens or the panel is ready, after every check has passed, because no test host compiles Slint.
+- **Values are JSON plus two references.** The table says what the player accepts for each Slint type; anything else is refused with `wrong type` when the window opens or the panel is ready. The test host reads your `.slint` declarations and rejects a mistyped value the way the player does, so a plugin test catches it first.
 
 | Slint type                           | Write from TypeScript                                                                              |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------- |
