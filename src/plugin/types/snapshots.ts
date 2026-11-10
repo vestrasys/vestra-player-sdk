@@ -1,12 +1,13 @@
 // Media category: snapshots, capture and export jobs.
 // Re-exported by ../types.ts (`export type *`); see that file.
-import type { MediaJob } from "../../media.ts";
+import type { MediaJob, WireExportCheck } from "../../media.ts";
 import type { Disposable } from "./base.ts";
 import type { Conditional } from "./playback.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
 import type { AppInfo } from "./base.ts";
+import type { Player } from "./playback.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- capture and export
@@ -309,6 +310,11 @@ export interface ExportEncoding {
  * - `error.code` is `export-failed`, or `unsupported` for an export the
  *   player cannot make as asked (a stream copy it cannot make, a
  *   `videoBitrate: "source"` whose source bitrate it cannot tell).
+ * - an export of parts ({@link MediaCapture.export}) also has
+ *   `progress.part` (from 1) and `progress.parts` while it runs, and
+ *   `facts.join` once written;
+ *   it can also end with `source-missing` or `source-changed` (since
+ *   1.7.8).
  *
  * @since 1.0.0
  * @category Media
@@ -495,4 +501,468 @@ export interface MediaCapture {
    * @since 1.0.0
    */
   capture(options?: CaptureOptions): Promise<Snapshot>;
+  /**
+   * Remembered local files: tokens for files the user opened, kept across
+   * restarts, for exports made later ({@link MediaCapture.export}) and for
+   * opening them again ({@link MediaSources.open}).
+   *
+   * @capability media.sources
+   * @since 1.7.8
+   */
+  readonly sources: MediaSources;
+  /**
+   * Export a clip whose input is ranges of remembered files instead of a
+   * snapshot: one part is a clip of one file, several parts are joined in
+   * the order given into one file. The same formats as a clip of a
+   * snapshot ({@link ExportOptions}: `copy` and `mp4`), the same job
+   * ({@link ExportJob}: the queue of 2 per plugin and 8 in the player,
+   * `done`, `cancel`, `outcome`); a snapshot's export is unchanged.
+   *
+   * `format: "copy"` copies each part without re-encoding, from the video
+   * keyframe at or before its start (as a copied clip), and needs every
+   * part to have the same video codec, profile, codec data, size, frame
+   * rate and pixel format and the same audio (or none):
+   * {@link MediaCapture.exportCheck} says whether they do and, if not, why.
+   * `format: "mp4"` re-encodes every part to H.264 + AAC at the first
+   * part's size (square pixels) and frame rate under the
+   * {@link ExportEncoding} ceilings, each picture scaled to fit and centred
+   * on black, the sound resampled to 48 kHz stereo (silence for a part
+   * without sound when another part has some).
+   *
+   * While it runs, `progress` covers the whole output (`done` and
+   * `total` in seconds) and says which part is being written (`part`
+   * from 1, of `parts`). A finished job's `facts.join` has the range each
+   * part was written from. A part whose file is gone ends the job
+   * `failed` with `source-missing`, a file changed since it was remembered
+   * with `source-changed`, parts a copy cannot write together with `unsupported`.
+   * Cancelling removes everything written so far.
+   *
+   * @capability media.read and media.control, and media.sources (its
+   * tokens)
+   * @throws `invalid` (rejects) No part or more than 100, a part whose end
+   *   is not after its start, a relative destination, `encoding` with
+   *   `copy` or `container` with `mp4`, an {@link ExportEncoding} value
+   *   outside its set.
+   * @throws `missing` (rejects) A part's token is not one of this
+   *   plugin's references (forgotten, or another plugin's).
+   * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
+   * @throws `unavailable` (rejects) No FFmpeg, or the export worker could not
+   *   start.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.control` and `media.sources`.
+   *
+   * @example Export two ranges of remembered files as one file
+   * Two parts from two files become one file, copied as they are when the
+   * check allows it and re-encoded otherwise. `exportCheck` answers from
+   * the remembered facts; the job then runs in the player's export worker
+   * and `done` resolves with its terminal state.
+   * ```ts
+   * declare const intro: SourceReference, scene: SourceReference;
+   * // ---cut---
+   * const parts = [
+   *   { source: intro.token, start: 0, end: 12 },
+   *   { source: scene.token, start: 95.5, end: 130 },
+   * ];
+   * const check = await plugin.media.exportCheck(parts);
+   * if (check.blocking.length > 0) return; // a file is missing, say
+   * const job = await plugin.media.export({
+   *   parts,
+   *   destination: "/tmp/joined.mp4",
+   *   format: check.copy.ok ? "copy" : "mp4",
+   * });
+   * const end = await job.done;
+   * await plugin.osd.show("Export: {}", [end.status]);
+   * ```
+   *
+   * @since 1.7.8
+   */
+  export(options: PartsExportOptions): Promise<ExportJob>;
+  /**
+   * Check an export of parts before starting it: what blocks it (a part
+   * whose file is missing or changed, an unknown token, a range outside the
+   * file, a file without video), whether a stream copy (`format: "copy"`)
+   * can write the parts and, if not, each difference from the first part,
+   * and what a re-encode (`format: "mp4"`) writes (with `encoding`, under
+   * its ceilings). Parts are numbered from 0 in the order given; one part
+   * checks a clip of one file. It reads the facts remembered with each
+   * reference and looks at each file on disk; nothing is decoded, so it is
+   * cheap enough to run on every change of a list.
+   *
+   * @capability media.control and media.sources
+   * @throws `invalid` (rejects) No part or more than 100, a time that is
+   *   negative, past 24 hours or not finite, an invalid `encoding`.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.control` and `media.sources`.
+   *
+   * @example Say why the fast export is not possible
+   * The plugin shows a line under its list when the parts need a
+   * re-encode. Each reason names the part, the field that differs and both
+   * values, so the line can say "part 2 is 1920×818, part 1 is
+   * 3840×1714".
+   * ```ts
+   * declare const parts: ExportPart[];
+   * // ---cut---
+   * const check = await plugin.media.exportCheck(parts);
+   * if (!check.copy.ok) {
+   *   // Parts count from 0; the first difference is enough for one line.
+   *   const [first] = check.copy.reasons;
+   *   if (first)
+   *     console.log(`part ${first.part + 1} is ${first.value}, part 1 is ${first.expected}`);
+   * }
+   * ```
+   *
+   * @since 1.7.8
+   */
+  exportCheck(
+    parts: ExportPart[],
+    options?: {
+      /** The re-encode's settings, for its size and frame rate. */
+      encoding?: ExportEncoding;
+    },
+  ): Promise<ExportCheck>;
 }
+
+/**
+ * A remembered local file, from {@link MediaSources}: its token and what the
+ * player knows of it. Never its path or its content.
+ *
+ * @since 1.7.8
+ * @category Media
+ */
+export interface SourceReference {
+  /** The opaque token: this plugin's key for the file. Store it. */
+  readonly token: string;
+  /** The file's name, for display. */
+  readonly name: string;
+  /** Its duration in seconds. */
+  readonly duration: number;
+  /**
+   * `ok`; `missing` when no file is at its path any more (moved, renamed,
+   * deleted, a drive not connected); `changed` when the file there has
+   * another size or modification time than when it was remembered.
+   */
+  readonly status: "ok" | "missing" | "changed";
+  /** Its video stream (the default one), `null` for none. */
+  readonly video: {
+    /** FFmpeg's codec name (`h264`, `hevc`, `vp9`, …). */
+    codec: string;
+    /** Width in pixels as stored (before the sample aspect ratio). */
+    width: number;
+    /** Height in pixels. */
+    height: number;
+    /** Frames per second. */
+    fps: number;
+    /** FFmpeg's pixel format (`yuv420p`, …), `null` when unknown. */
+    pixelFormat: string | null;
+  } | null;
+  /** Its audio stream (the default one), `null` for none. */
+  readonly audio: {
+    /** FFmpeg's codec name (`aac`, `opus`, …). */
+    codec: string;
+    /** Samples per second. */
+    sampleRate: number;
+    /** Channel count. */
+    channels: number;
+  } | null;
+}
+
+/**
+ * `plugin.media.sources`: remembered local files. The player gives a
+ * plugin a token for the file playing now; the token survives restarts
+ * and stands for that file in {@link MediaCapture.export},
+ * {@link MediaCapture.exportCheck} and {@link MediaSources.open}.
+ *
+ * Uses beyond exports: a bookmarks or history plugin keeps tokens to
+ * reopen what the user watched at a position ({@link MediaSources.open},
+ * with Locate… when a file moved), a resume plugin follows files across
+ * renames, a compare plugin switches between two remembered files, a
+ * chapters plugin keeps its marks per file without storing paths.
+ *
+ * @remarks
+ * Only the player makes tokens, and only for a local file that is
+ * playing (the user opened it: the file dialog, a drop, the playlist, the
+ * command line); a stream, an address or a plugin's own picture is
+ * refused. A token belongs to the plugin that got it and means nothing to
+ * another. It gives the file's name, duration and stream facts, never its
+ * path or content. The player keeps the plugin's tokens in the profile
+ * until the plugin forgets them or is uninstalled, at most 500 per plugin.
+ * When a file has moved, {@link MediaSources.locate} lets the user find it
+ * again in the player's own file dialog.
+ *
+ * @capability media.sources
+ *
+ * @example Remember the playing file and check it later
+ * The plugin keeps the token in its storage and checks the file before
+ * using it. `reference` answers for the file playing now; `resolve` looks
+ * at the file on disk again, so a moved file reads `missing`.
+ * ```ts
+ * const store = plugin.storage.json("parts", { defaults: { tokens: [] as string[] } });
+ * const added = await plugin.media.sources.reference();
+ * store.save({ tokens: [...store.value.tokens, added.token] });
+ * // … after a restart:
+ * const again = await plugin.media.sources.resolve(added.token);
+ * if (again.status !== "ok") console.log(`${again.name} is ${again.status}`);
+ * ```
+ *
+ * @since 1.7.8
+ * @category Media
+ */
+export interface MediaSources {
+  /**
+   * A token for the file playing now (the same token again for the same
+   * file as it is). Fails `unsupported` for a stream, an address or a
+   * plugin's picture, `stale` when the source changed since `ifCurrent`.
+   *
+   * @capability media.sources
+   * @throws `unsupported` (rejects) The source is not a local file, or the
+   *   player cannot read its streams.
+   * @throws `stale` (rejects) The source changed since `ifCurrent`.
+   * @throws `limit` (rejects) The plugin holds 500 references; forget one.
+   * @throws `unavailable` (rejects) No FFmpeg to read the file with.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.sources`.
+   *
+   * @example Add the marked range to a list, with a thumbnail
+   * The range the user marked becomes a part of the plugin's list. The
+   * token stands for the file; the plugin keeps it with the times, and the
+   * name is what the list shows. There is no thumbnail API: while the file
+   * plays, the plugin captures the part's first frame
+   * ({@link MediaCapture.capture}, `media.read` and `media.control`) and
+   * exports it into its own data directory; `plugin.ui.image` shows it
+   * scaled down.
+   * ```ts
+   * declare const list: { token: string; name: string; start: number; end: number; thumbnail: string }[];
+   * declare const start: number, end: number;
+   * // ---cut---
+   * const file = await plugin.media.sources.reference();
+   * // A new name each time: an export never overwrites a file.
+   * const thumbnail = `${plugin.dataDirectory}/thumb-${file.token}-${Date.now()}.jpg`;
+   * const snapshot = await plugin.media.capture({ at: start });
+   * try {
+   *   await (await snapshot.export({ format: "jpeg", destination: thumbnail, quality: 80 })).done;
+   * } finally {
+   *   await snapshot.dispose();
+   * }
+   * list.push({ token: file.token, name: file.name, start, end, thumbnail });
+   * // In the row: plugin.ui.image(thumbnail, { maxSide: 64 })
+   * ```
+   *
+   * @since 1.7.8
+   */
+  reference(options?: Conditional): Promise<SourceReference>;
+  /**
+   * The reference with its file looked at now: `status` says whether it
+   * is still there as it was.
+   *
+   * @capability media.sources
+   * @throws `missing` (rejects) Not one of this plugin's tokens.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.sources`.
+   *
+   * @example Mark the parts whose file is gone
+   * At start the plugin checks each remembered file once. A part whose file
+   * was moved or deleted reads `missing`, and its row offers Locate.
+   * ```ts
+   * declare const tokens: string[];
+   * // ---cut---
+   * for (const token of tokens) {
+   *   const file = await plugin.media.sources.resolve(token);
+   *   if (file.status === "missing") console.log(`${file.name}: File missing`);
+   * }
+   * ```
+   *
+   * @since 1.7.8
+   */
+  resolve(token: string): Promise<SourceReference>;
+  /**
+   * Ask the user where the file is now: the player shows its own file
+   * dialog (named after the file, opened in its old folder) and, when the
+   * user picks a file, the token stands for that file from then on.
+   * Resolves `null` when the user cancels.
+   *
+   * @capability media.sources
+   * @throws `missing` (rejects) Not one of this plugin's tokens.
+   * @throws `busy` (rejects) Another dialog of the player is open.
+   * @throws `unavailable` (rejects) No window to show the dialog in.
+   * @throws `unsupported` (rejects) The player cannot read the chosen file's
+   *   streams.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.sources`.
+   *
+   * @example Locate a moved file
+   * The row's Locate… button asks the user for the file. The token keeps
+   * its value, so every part that uses it works again.
+   * ```ts
+   * declare const token: string;
+   * // ---cut---
+   * const found = await plugin.media.sources.locate(token);
+   * if (found) console.log(`${found.name} found again`);
+   * ```
+   *
+   * @since 1.7.8
+   */
+  locate(token: string): Promise<SourceReference | null>;
+  /**
+   * The player forgets the token (an unknown one is ignored).
+   *
+   * @capability media.sources
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.sources`.
+   *
+   * @example Forget a file no part uses any more
+   * When the last part from a file leaves the list, the plugin lets the
+   * player forget the file, which frees one of its 500 references.
+   * ```ts
+   * declare const token: string;
+   * // ---cut---
+   * await plugin.media.sources.forget(token);
+   * ```
+   *
+   * @since 1.7.8
+   */
+  forget(token: string): Promise<void>;
+  /**
+   * Every reference this plugin holds, each with its file looked at now.
+   *
+   * @capability media.sources
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.sources`.
+   *
+   * @example Forget the references the list no longer uses
+   * After the user cleared the list, the plugin forgets every file none of
+   * its parts names. `list` gives all of the plugin's tokens, including
+   * ones its own storage lost.
+   * ```ts
+   * declare const used: Set<string>;
+   * // ---cut---
+   * for (const file of await plugin.media.sources.list())
+   *   if (!used.has(file.token)) await plugin.media.sources.forget(file.token);
+   * ```
+   *
+   * @since 1.7.8
+   */
+  list(): Promise<SourceReference[]>;
+  /**
+   * Open the remembered file in the player and play it from `start`
+   * seconds (default its beginning): the user's "preview this part". It
+   * is an ordinary open, as {@link Player.open} of that file would be (the
+   * current source is replaced; the playlist treats it as any open), but
+   * the plugin names the file by its token, not its path, and needs no
+   * `playback.control`. Resolves once the file is loaded. A file that is
+   * gone or changed is refused before anything opens.
+   *
+   * @capability media.sources (and playback.read, to follow the open until
+   * the file is loaded)
+   * @throws `source-missing` (rejects) No file is at the token's path any
+   *   more; offer {@link MediaSources.locate}.
+   * @throws `source-changed` (rejects) The file changed since it was
+   *   remembered; offer {@link MediaSources.locate}.
+   * @throws `missing` (rejects) Not one of this plugin's tokens.
+   * @throws `invalid` (rejects) `start` negative, or at or after the file's
+   *   end.
+   * @throws `replaced` (rejects) Another source replaced it before it
+   *   loaded.
+   * @throws `backend` (rejects) The player could not load the file.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `media.sources`.
+   *
+   * @example Preview a part on double-click
+   * Double-clicking a row of the plugin's list plays that part's file from
+   * the part's start. A file that has moved since is refused, and the row
+   * then offers Locate….
+   * ```ts
+   * declare const part: { token: string; start: number };
+   * // ---cut---
+   * try {
+   *   await plugin.media.sources.open(part.token, { start: part.start });
+   * } catch (error) {
+   *   // Moved or rewritten: the row shows "File missing · Locate…".
+   *   if ((error as { code?: string }).code === "source-missing") console.log("missing");
+   * }
+   * ```
+   *
+   * @since 1.7.8
+   */
+  open(
+    token: string,
+    options?: {
+      /** Seconds of the file to start at; default 0. */
+      start?: number;
+    },
+  ): Promise<void>;
+}
+
+/**
+ * One part of an export of remembered files: a range of one file, in its
+ * own seconds.
+ *
+ * @since 1.7.8
+ * @category Media
+ */
+export interface ExportPart {
+  /** The file's token ({@link SourceReference.token}). */
+  source: string;
+  /** Start, seconds of the file. */
+  start: number;
+  /** End, seconds of the file; after `start`. */
+  end: number;
+}
+
+/**
+ * Options of {@link MediaCapture.export}: the parts in order (1 to 100),
+ * where to write the file (never over an existing one) and the format, as
+ * for a clip of a snapshot ({@link ExportOptions}).
+ *
+ * @since 1.7.8
+ * @category Media
+ */
+export type PartsExportOptions = {
+  /** The parts, in the order they are written. */
+  parts: ExportPart[];
+  /** Absolute path of the new file. */
+  destination: string;
+} & (
+  | {
+      /**
+       * Copy every part as it is (lossless, about as fast as the disk);
+       * each part starts on the keyframe at or before its start.
+       */
+      format: "copy";
+      /**
+       * `auto` (default): MP4 when the codecs fit it, otherwise MKV (the
+       * extension of `destination` follows). `mp4` fails `unsupported`
+       * when they do not.
+       */
+      container?: "auto" | "mp4" | "mkv";
+    }
+  | {
+      /** Re-encode every part to the first part's size and frame rate. */
+      format: "mp4";
+      /** The encoder settings, as for a clip. */
+      encoding?: ExportEncoding;
+    }
+);
+
+/**
+ * The answer of {@link MediaCapture.exportCheck}.
+ *
+ * - `blocking`: problems that stop any export of the parts, each with its part (from 0)
+ *   and `problem`: `unknown` (not this plugin's token), `missing`,
+ *   `changed`, `noVideo` or `range` (outside the file; `duration` is the
+ *   file's, or shorter than one frame).
+ * - `copy`: `{ ok: true, container }` when a stream copy can write the
+ *   parts, else `{ ok: false, reasons }`: each difference of a part from
+ *   the first, `field` being `videoCodec`, `videoParams` (profile or codec
+ *   data), `size` (`"1920×818"`), `fps`, `pixelFormat` or `audio`
+ *   (`"aac 44100 Hz 1 ch"`, `"none"`), with the part's `value` and the
+ *   first part's (`expected`).
+ * - `encode`: what a re-encode writes: the first part's size and frame
+ *   rate (under the encoding's ceilings) and 48 kHz stereo audio when any
+ *   part has sound (`null` audio otherwise); `null` when the first part
+ *   has no video.
+ * - `duration`: the parts' total length in seconds.
+ *
+ * @since 1.7.8
+ * @category Media
+ */
+export type ExportCheck = WireExportCheck;

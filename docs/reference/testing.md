@@ -123,7 +123,10 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.subtitles} | The player's subtitle state: tracks, selection, style layers, fonts and loaded resources. |
 | {@link "@vestra-player/sdk/testing"!TestHost.uploads} | Subtitle uploads in progress, by upload id. |
 | {@link "@vestra-player/sdk/testing"!TestHost.snapshots} | Snapshots taken with `media.capture`, by snapshot id. |
-| {@link "@vestra-player/sdk/testing"!TestHost.exports} | Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last. |
+| {@link "@vestra-player/sdk/testing"!TestHost.exports} | Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last: a snapshot's (`snapshotId`) or, since 1.7.8, an export of remembered files' parts (`parts`), whose job runs half way through its middle part (`progress.part`), then completes (a copy's destination gets the extension of its container). |
+| {@link "@vestra-player/sdk/testing"!TestHost.mediaFiles} | Local files as the fake player knows them, by path, for `plugin.media.sources` and exports of their parts. |
+| {@link "@vestra-player/sdk/testing"!TestHost.sourceOpens} | Every `plugin.media.sources.open` the plugin made (its token and start, 0 for the beginning), newest last. |
+| {@link "@vestra-player/sdk/testing"!TestHost.sourceReferences} | The plugin's source references (`plugin.media.sources`) by token: the path each stands for. |
 | {@link "@vestra-player/sdk/testing"!TestHost.jobs} | Export jobs by job id. |
 | {@link "@vestra-player/sdk/testing"!TestHost.exportFailure} | Set it to make every running export end `failed` with this error on its next state query, as the player reports one (`unsupported` for a stream copy it cannot make, `export-failed` otherwise); `null` (the default) completes them. |
 | {@link "@vestra-player/sdk/testing"!TestHost.producerTransport} | `openStream`'s transport: a local stream (a Unix socket on macOS and Linux, a named pipe on Windows) or, with `"tcp"`, loopback TCP where the plugin must send the token first, as the player on Windows answers. |

@@ -223,8 +223,17 @@ export const STRICT_CATEGORIES = {
     ],
   },
   Media: {
-    full: ["MediaCapture", "Snapshot", "ExportJob"],
-    data: ["CaptureOptions", "ExportOptions", "ExportEncoding", "JobState"],
+    full: ["MediaCapture", "Snapshot", "ExportJob", "MediaSources"],
+    data: [
+      "CaptureOptions",
+      "ExportOptions",
+      "ExportEncoding",
+      "JobState",
+      "SourceReference",
+      "ExportPart",
+      "PartsExportOptions",
+      "ExportCheck",
+    ],
   },
   Packages: {
     full: ["Packages", "PackageCandidate", "PackageChange"],

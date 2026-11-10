@@ -48,6 +48,14 @@ export class Internals {
         end: number;
         container: "mp4" | "mkv" | null;
       } | null;
+      /** An export of parts (`jobs.start { parts }`): its part count, length and container. */
+      join?: {
+        parts: number;
+        total: number;
+        container: "mp4" | "mkv";
+        written: { start: number; end: number }[];
+        mode: "copy" | "mp4";
+      };
     }
   >();
   sentTypes = "[]";

@@ -11,11 +11,15 @@ import { playerOf } from "./player.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
   CaptureOptions,
+  Conditional,
   ExportEncoding,
   ExportJob,
   ExportOptions,
   JobState,
+  ExportPart,
+  PartsExportOptions,
   MediaCapture,
+  MediaSources,
   Snapshot,
 } from "./types.ts";
 
@@ -353,6 +357,154 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
           ? captured
           : await runtime.host.snapshot.state(captured.snapshotId);
       return new SnapshotHandle(scope, service, frozen);
+    },
+    sources: mediaSources(scope),
+    async export(options: PartsExportOptions) {
+      const runtime = scope.runtime;
+      const service = serviceOf(runtime);
+      if (typeof options !== "object" || options === null)
+        throw failure("invalid", "export options must be an object");
+      const parts = checkParts(options.parts);
+      let mode: Record<string, unknown>;
+      if (options.format === "copy") {
+        const container = options.container;
+        if (
+          container !== undefined &&
+          !["auto", "mp4", "mkv"].includes(container)
+        )
+          throw failure("invalid", "container must be auto, mp4 or mkv");
+        if ((options as { encoding?: unknown }).encoding !== undefined)
+          throw failure("invalid", "a copy takes no encoding");
+        mode = {
+          kind: "rawCopy",
+          ...(container === undefined ? {} : { container }),
+        };
+      } else if (options.format === "mp4") {
+        if ((options as { container?: unknown }).container !== undefined)
+          throw failure("invalid", "a re-encode takes no container");
+        mode = {
+          kind: "rawMp4",
+          ...(options.encoding === undefined
+            ? {}
+            : { encoding: checkEncoding(options.encoding) }),
+        };
+      } else
+        throw failure(
+          "invalid",
+          `an export of parts is format copy or mp4, not ${String((options as { format: unknown }).format)}`,
+        );
+      const result = await service.mutate((operationId) =>
+        runtime.host.jobs.startParts({
+          operationId,
+          parts,
+          destination: options.destination,
+          ...mode,
+        } as Parameters<Runtime["host"]["jobs"]["startParts"]>[0]),
+      );
+      return new JobHandle(scope, service, result.jobId);
+    },
+    async exportCheck(
+      parts: ExportPart[],
+      options?: { encoding?: ExportEncoding },
+    ) {
+      const checked = checkParts(parts);
+      return scope.runtime.host.jobs.check(
+        checked,
+        options?.encoding === undefined
+          ? undefined
+          : checkEncoding(options.encoding),
+      );
+    },
+  };
+}
+
+/**
+ * The player's bounds of remembered files and exports of their parts; not
+ * exported, documented in the limits reference.
+ *
+ * @internal
+ */
+export const MEDIA_SOURCE_LIMITS = Object.freeze({
+  /** References one plugin may hold; one more fails with `limit` (500). */
+  references: 500,
+  /** Parts of one export or check, at least 1; more fail with `invalid` (100). */
+  parts: 100,
+  /** Seconds of a part's end in its file (24 hours). */
+  partEnd: 86400,
+} as const);
+
+/** Refuse what the player would refuse of an export's parts, naming the part. */
+function checkParts(parts: ExportPart[]): ExportPart[] {
+  if (
+    !Array.isArray(parts) ||
+    parts.length === 0 ||
+    parts.length > MEDIA_SOURCE_LIMITS.parts
+  )
+    throw failure(
+      "invalid",
+      `an export takes 1 to ${MEDIA_SOURCE_LIMITS.parts} parts`,
+    );
+  return parts.map((part, index) => {
+    const { source, start, end } = part ?? {};
+    if (typeof source !== "string" || source === "")
+      throw failure("invalid", `part ${index}: source must be a token`);
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
+      start < 0 ||
+      end > 86400 ||
+      end <= start
+    )
+      throw failure(
+        "invalid",
+        `part ${index}: start and end must be seconds with 0 <= start < end <= 86400`,
+      );
+    return { source, start, end };
+  });
+}
+
+function mediaSources(scope: ScopeImpl): MediaSources {
+  const host = () => scope.runtime.host.mediaSources;
+  const token = (value: string) => {
+    if (typeof value !== "string" || value === "")
+      throw failure("invalid", "token must be a non-empty string");
+    return value;
+  };
+  return {
+    async reference(options?: Conditional) {
+      // Conditional like a capture: the token is for the file in `ifCurrent`.
+      const expected =
+        options?.ifCurrent === undefined
+          ? undefined
+          : (
+              playerOf(scope.runtime).expected(options.ifCurrent) as {
+                expected?: RawCapture["expected"];
+              }
+            ).expected;
+      return host().reference(expected);
+    },
+    resolve: async (value: string) => host().resolve(token(value)),
+    locate: async (value: string) => host().locate(token(value)),
+    forget: async (value: string) => host().forget(token(value)),
+    list: async () => host().list(),
+    async open(value: string, options: { start?: number } = {}) {
+      const start = options?.start;
+      if (start !== undefined && !(Number.isFinite(start) && start >= 0))
+        throw failure("invalid", "start must be seconds from 0");
+      const checked = token(value);
+      // An ordinary open, followed like player.open's (the player opens the
+      // path the token stands for; the plugin never sees it).
+      await playerOf(scope.runtime).submit(
+        { kind: "open", source: "", startPaused: false },
+        {
+          send: (operationId) =>
+            host().open({
+              token: checked,
+              operationId,
+              ...(start === undefined ? {} : { start }),
+            }),
+        },
+      );
     },
   };
 }

@@ -1995,8 +1995,94 @@ export class TestHost implements Transport {
   >();
   /** Snapshots taken with `media.capture`, by snapshot id. Wire-level. */
   readonly snapshots = new Map<number, Json>();
-  /** Every `jobs.start` request (`kind`, `destination`, `quality`, …), newest last. */
+  /**
+   * Every `jobs.start` request (`kind`, `destination`, `quality`, …),
+   * newest last: a snapshot's (`snapshotId`) or, since 1.7.8, an export of
+   * remembered files' parts (`parts`), whose job runs half way through its
+   * middle part (`progress.part`), then completes (a copy's destination gets
+   * the extension of its container).
+   */
   readonly exports: Record<string, Json>[] = [];
+  /**
+   * Local files as the fake player knows them, by path, for
+   * `plugin.media.sources` and exports of their parts. A file not listed is a 1080p 30 fps
+   * H.264 file with AAC stereo 48 kHz sound, as long as the current
+   * source. Set `status` to `missing` or `changed` to stand for a moved or
+   * rewritten file; `video: null` or `audio: null` for a file without one.
+   *
+   * @example A second file that a copy cannot join to the first
+   * The plugin's list gets a part of a 4K file, then one of a 1080p file:
+   * the check then says `size` and the job has to re-encode.
+   * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.mediaFiles.set("/media/b.mp4", {
+   *   duration: 30,
+   *   video: { codec: "h264", width: 1920, height: 818, fps: 30, pixelFormat: "yuv420p" },
+   * });
+   * host.setSource({ phase: "ready", source: "/media/b.mp4", duration: 30 });
+   * ```
+   *
+   * @since 1.7.8
+   */
+  readonly mediaFiles = new Map<
+    string,
+    {
+      /** Seconds; default the current source's duration (60 without one). */
+      duration?: number;
+      /** `ok` (default), `missing` or `changed`. */
+      status?: "ok" | "missing" | "changed";
+      /** The video stream; `null` for none. */
+      video?: {
+        /** FFmpeg's codec name. */
+        codec: string;
+        /** Pixels. */
+        width: number;
+        /** Pixels. */
+        height: number;
+        /** Frames per second. */
+        fps: number;
+        /** FFmpeg's pixel format. */
+        pixelFormat: string | null;
+      } | null;
+      /** The audio stream; `null` for none. */
+      audio?: {
+        /** FFmpeg's codec name. */
+        codec: string;
+        /** Samples per second. */
+        sampleRate: number;
+        /** Channel count. */
+        channels: number;
+      } | null;
+    }
+  >();
+  /**
+   * Every `plugin.media.sources.open` the plugin made (its token and
+   * start, 0 for the beginning), newest last. Each opens the token's path
+   * as an ordinary open: `source` becomes that path, `position` the start.
+   *
+   * @since 1.7.8
+   */
+  readonly sourceOpens: {
+    /** The token opened. */
+    token: string;
+    /** Seconds it started at. */
+    start: number;
+  }[] = [];
+  /**
+   * The plugin's source references (`plugin.media.sources`) by token: the
+   * path each stands for. `locate` takes its answer from
+   * {@link TestHost.dialogAnswers}. Wire-level.
+   *
+   * @since 1.7.8
+   */
+  readonly sourceReferences = new Map<
+    string,
+    {
+      /** The file's path (never shown to the plugin). */
+      path: string;
+    }
+  >();
   /**
    * Export jobs by job id. Each state query advances a job one step
    * (`queued` → `running` → `completed`; `cancelling` → `cancelled`).

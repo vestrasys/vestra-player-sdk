@@ -68,6 +68,7 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "subtitles.control",
     "media.read",
     "media.control",
+    "media.sources",
     "ui.osd",
     "clipboard",
     "window.control",

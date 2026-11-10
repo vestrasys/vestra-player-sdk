@@ -26,6 +26,7 @@ const SOURCES = {
   SECRET_LIMITS: { file: "src/plugin/services.ts" },
   SESSION_STORAGE_LIMITS: { file: "src/plugin/services.ts" },
   SUBTITLE_LIMITS: { file: "src/plugin/subtitles.ts" },
+  MEDIA_SOURCE_LIMITS: { file: "src/plugin/media.ts" },
   VIDEO_PROCESSING_LIMITS: { file: "src/processing.ts" },
   MANIFEST_LIMITS: { file: "src/manifest.ts" },
   MESSAGE_LIMIT: { file: "src/capabilities.ts", value: true },
