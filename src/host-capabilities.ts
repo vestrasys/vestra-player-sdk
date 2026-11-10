@@ -263,7 +263,17 @@ export const HOST_CAPABILITIES: HostCapabilities = {
     },
     {
       label: "Remember videos you add and export from them later",
-      methods: [{ name: "media.sources.*", needs: "media.sources" }],
+      methods: [
+        {
+          name: "media.sources.open",
+          needs: {
+            ifDeclared: "playback.control",
+            otherwise: "playback.control",
+            then: "media.sources",
+          },
+        },
+        { name: "media.sources.*", needs: "media.sources" },
+      ],
       name: "media.sources",
       requires: [],
       residency: "none",

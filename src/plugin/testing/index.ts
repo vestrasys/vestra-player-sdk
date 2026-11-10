@@ -2035,7 +2035,7 @@ export class TestHost implements Transport {
       /**
        * Stands for the file's size and modification time (default 0): a
        * reference made at another version reads `changed`, and
-       * `reference` gives a new token for the file at a new version, as
+       * `remember` gives a new token for the file at a new version, as
        * the player does for a rewritten file.
        *
        * @since 1.7.8
@@ -3687,8 +3687,14 @@ export class TestHost implements Transport {
  *
  * The manifest id and capabilities come from `directory/manifest.json`
  * unless `capabilities` is given; then `id` (default `"test.plugin"`) and
- * `capabilities` are used and no manifest is read. Calls that need an
- * undeclared capability fail with `capability`, as in the player.
+ * `capabilities` are used and no manifest is read. The test host does not
+ * apply the player's capability table to every request: the members that
+ * check a capability on the plugin's side (`plugin.media.sources` and its
+ * `open`, which also needs `playback.control`, `plugin.secrets`, timeline
+ * marks, video shaders and views, among others) fail with `capability` as in
+ * the player, but a call the player refuses for an undeclared capability can
+ * succeed here. `vestra-plugin check` (and the TypeScript plugin) reports
+ * those calls from the sources.
  *
  * Rejects when `manifest.json` cannot be read or parsed, when `activate`
  * throws, or when a registration made during activation fails (for example

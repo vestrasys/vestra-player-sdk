@@ -434,6 +434,12 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
           throw failure("invalid", "end must be seconds");
         return scope.runtime.host.jobs.checkSnapshot(id(), input.end, encoding);
       }
+      // As the player: parts carry their own ends; `end` is a snapshot's.
+      if ((options as { end?: unknown } | undefined)?.end !== undefined)
+        throw failure(
+          "invalid",
+          "end belongs to a snapshot's check; parts carry their own end",
+        );
       needSources(scope);
       return scope.runtime.host.jobs.check(checkParts(input), encoding);
     },
@@ -441,8 +447,11 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
 }
 
 /**
- * The player's bounds of remembered files and exports of their parts; not
- * exported, documented in the limits reference.
+ * The player's bounds of remembered files and exports of their parts,
+ * documented in the limits reference. Exported from `./runtime` only, for
+ * the player's agreement test; TestHost and the SDK's own checks read
+ * these figures. The bound on references is a resource limit; tokens are
+ * an API convenience, not a security boundary.
  *
  * @internal
  */
@@ -456,7 +465,7 @@ export const MEDIA_SOURCE_LIMITS = Object.freeze({
   /** Seconds of all parts of one export together, as one clip (24 hours). */
   totalSeconds: 86400,
   /**
-   * `reference`, `resolve`, `list` and checks one plugin may have the
+   * `remember`, `get`, `list` and checks one plugin may have the
    * player working on at the same time; one more fails with `busy` (4).
    */
   requests: 4,
@@ -483,12 +492,12 @@ function checkParts(parts: ExportPart[]): ExportPart[] {
       !Number.isFinite(start) ||
       !Number.isFinite(end) ||
       start < 0 ||
-      end > 86400 ||
+      end > MEDIA_SOURCE_LIMITS.partEnd ||
       end <= start
     )
       throw failure(
         "invalid",
-        `part ${index}: start and end must be seconds with 0 <= start < end <= 86400`,
+        `part ${index}: start and end must be seconds with 0 <= start < end <= ${MEDIA_SOURCE_LIMITS.partEnd}`,
       );
     return { source, start, end };
   });
@@ -518,7 +527,7 @@ function mediaSources(scope: ScopeImpl): MediaSources {
     return value;
   };
   return {
-    async reference(options?: Conditional) {
+    async remember(options?: Conditional) {
       // Conditional like a capture: the token is for the file in `ifCurrent`.
       const expected =
         options?.ifCurrent === undefined
@@ -528,14 +537,20 @@ function mediaSources(scope: ScopeImpl): MediaSources {
                 expected?: RawCapture["expected"];
               }
             ).expected;
-      return host().reference(expected);
+      return host().remember(expected);
     },
-    resolve: async (value: string) => host().resolve(token(value)),
+    get: async (value: string) => host().get(token(value)),
     locate: async (value: string) => host().locate(token(value)),
     forget: async (value: string) => host().forget(token(value)),
     list: async () => host().list(),
     async open(value: string, options: { start?: number } = {}) {
       needSources(scope);
+      // An open like Player.open's: the player asks playback.control too.
+      if (!scope.runtime.can("playback.control"))
+        throw failure(
+          "capability",
+          "playback.control must be declared in manifest",
+        );
       const start = options?.start;
       if (start !== undefined && !(Number.isFinite(start) && start >= 0))
         throw failure("invalid", "start must be seconds from 0");

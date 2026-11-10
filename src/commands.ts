@@ -251,8 +251,12 @@ export interface BuiltinSubmenu {
  * with the same keys appears in the same submenu, whatever the interface
  * language; the submenu's title is the declaring plugin's translation. The
  * player's own submenus (`Playback ▸ Speed`, `Playback ▸ Seek`) are not
- * listed. The player's tests check that this list agrees with what its
- * built-in plugins declare.
+ * listed.
+ *
+ * A snapshot of the player's built-in submenus at this SDK release; the
+ * player may differ between SDK releases. The player's tests check that
+ * this list agrees with what its built-in plugins declare when the SDK is
+ * released.
  *
  * @example Add an item to the built-in Snapshot submenu
  * "Copy Snapshot" appears in Snapshot ▸ next to the built-in capture
@@ -659,8 +663,12 @@ vestra.video | video.upscaling | (AI Upscaling)
  * placeholders (`No Audio Tracks`) are. Items that appear only in a
  * passing state are not listed either: the Picture Adjustments plugin's
  * `Video ▸ Restart Player to Apply` (`video.gpu-rendering.restart`), shown
- * while a rendering choice waits for the next start. The player's tests check that this
- * list agrees with what the player and its built-in plugins register.
+ * while a rendering choice waits for the next start.
+ *
+ * A snapshot of the player's built-in commands at this SDK release; the
+ * player may differ between SDK releases. The player's tests check that
+ * this list agrees with what the player and its built-in plugins register
+ * when the SDK is released, not with the player a user runs later.
  *
  * @example Check in a test that a default key is still free
  * The test fails if the player or a built-in plugin already binds Ctrl+K

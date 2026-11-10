@@ -313,6 +313,15 @@ test("BUILTIN_COMMANDS: owners, key paths and canonical bindings", () => {
   );
 });
 
+test("THEMES (plugin.appearance's hand-written list) are THEME_PALETTES' palettes, the default first", async () => {
+  // THEME_PALETTES is the SDK's copy of the player's palettes (the player's
+  // agreement test checks it against theme.rs); THEMES must name the same.
+  const { THEME_PALETTES } = await import("../src/palettes.ts");
+  const { THEMES } = await import("../src/plugin/appearance.ts");
+  assert.deepEqual([...THEMES], Object.keys(THEME_PALETTES));
+  assert.equal(THEMES[0], "vestra");
+});
+
 test("THEME_PALETTES: both palettes have every Theme colour; vestra is palette.slint's", async () => {
   const { THEME_PALETTES } = await import("../src/palettes.ts");
   const { readFileSync } = await import("node:fs");

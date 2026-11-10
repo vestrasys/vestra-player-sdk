@@ -346,13 +346,13 @@ export function mediaClients(transport: Transport) {
         ),
     },
     mediaSources: {
-      reference: (expected?: SourceStamp) =>
+      remember: (expected?: SourceStamp) =>
         transport.request<WireSourceReference>(
-          "media.sources.reference",
+          "media.sources.remember",
           expected === undefined ? {} : { expected },
         ),
-      resolve: (token: string) =>
-        transport.request<WireSourceReference>("media.sources.resolve", {
+      get: (token: string) =>
+        transport.request<WireSourceReference>("media.sources.get", {
           token,
         }),
       locate: (token: string) =>

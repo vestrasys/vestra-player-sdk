@@ -36,8 +36,8 @@ test("media.sources opens the references; an export of their parts is an export"
   );
   assert.equal(info.risky, false);
   assert.deepEqual(info.apis, [
-    "MediaSources.reference",
-    "MediaSources.resolve",
+    "MediaSources.remember",
+    "MediaSources.get",
     "MediaSources.locate",
     "MediaSources.forget",
     "MediaSources.list",
@@ -55,7 +55,7 @@ test("media.sources opens the references; an export of their parts is an export"
 
 test("a reference names the playing file, never its path, and the same file gets the same token", async () => {
   const { host, plugin, stop } = await started();
-  const file = await plugin.media.sources.reference();
+  const file = await plugin.media.sources.remember();
   assert.match(file.token, /^src-/);
   assert.equal(file.name, "a.mp4");
   assert.equal(file.duration, 60);
@@ -68,17 +68,14 @@ test("a reference names the playing file, never its path, and the same file gets
     pixelFormat: "yuv420p",
   });
   assert.ok(!JSON.stringify(file).includes("/media/"));
-  assert.equal((await plugin.media.sources.reference()).token, file.token);
+  assert.equal((await plugin.media.sources.remember()).token, file.token);
   assert.deepEqual(host.sourceReferences.get(file.token), {
     path: "/media/a.mp4",
     version: 0,
   });
   // A moved file reads missing; locate rebinds it to the user's choice.
   host.mediaFiles.set("/media/a.mp4", { status: "missing" });
-  assert.equal(
-    (await plugin.media.sources.resolve(file.token)).status,
-    "missing",
-  );
+  assert.equal((await plugin.media.sources.get(file.token)).status, "missing");
   host.dialogAnswers.push(["/elsewhere/a copy.mp4"]);
   const found = await plugin.media.sources.locate(file.token);
   assert.equal(found?.token, file.token);
@@ -89,7 +86,7 @@ test("a reference names the playing file, never its path, and the same file gets
   assert.equal((await plugin.media.sources.list()).length, 1);
   await plugin.media.sources.forget(file.token);
   assert.deepEqual(await plugin.media.sources.list(), []);
-  await assert.rejects(plugin.media.sources.resolve(file.token), {
+  await assert.rejects(plugin.media.sources.get(file.token), {
     code: "missing",
   });
   await stop();
@@ -100,12 +97,12 @@ test("streams are refused and a reference is conditional on ifCurrent", async ()
   const seen = plugin.player.state;
   host.openElsewhere("https://example.com/live.m3u8");
   host.setSource({ duration: 60 });
-  await assert.rejects(plugin.media.sources.reference(), {
+  await assert.rejects(plugin.media.sources.remember(), {
     code: "unsupported",
   });
   host.openElsewhere("/media/b.mp4");
   host.setSource({ duration: 60 });
-  await assert.rejects(plugin.media.sources.reference({ ifCurrent: seen }), {
+  await assert.rejects(plugin.media.sources.remember({ ifCurrent: seen }), {
     code: "stale",
   });
   await stop();
@@ -113,7 +110,7 @@ test("streams are refused and a reference is conditional on ifCurrent", async ()
 
 test("the export check says what blocks, why a copy cannot write the parts and what a re-encode writes", async () => {
   const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.reference();
+  const a = await plugin.media.sources.remember();
   host.mediaFiles.set("/media/b.mp4", {
     duration: 30,
     video: {
@@ -127,7 +124,7 @@ test("the export check says what blocks, why a copy cannot write the parts and w
   });
   host.openElsewhere("/media/b.mp4");
   host.setSource({ duration: 30 });
-  const b = await plugin.media.sources.reference();
+  const b = await plugin.media.sources.remember();
   const same = await plugin.media.exportCheck([
     { source: a.token, start: 0, end: 5 },
     { source: a.token, start: 10, end: 12 },
@@ -163,12 +160,33 @@ test("the export check says what blocks, why a copy cannot write the parts and w
     { code: "invalid", message: /part 0/ },
   );
   await assert.rejects(plugin.media.exportCheck([]), { code: "invalid" });
+  // Parts carry their own ends: `end` belongs to a snapshot's check, in the
+  // SDK and on the wire (the test host refuses it as the player does).
+  const part = { source: a.token, start: 0, end: 5 };
+  await assert.rejects(plugin.media.exportCheck([part], { end: 5 } as never), {
+    code: "invalid",
+    message: /end belongs to a snapshot/,
+  });
+  await assert.rejects(
+    plugin.wire.request("jobs.check", { parts: [part], end: 5 }),
+    { code: "invalid", message: /end belongs to a snapshotId check/ },
+  );
+  // A null `end` is no end, as serde reads it.
+  assert.equal(
+    (
+      (await plugin.wire.request("jobs.check", {
+        parts: [part],
+        end: null,
+      })) as { blocking: unknown[] }
+    ).blocking.length,
+    0,
+  );
   await stop();
 });
 
 test("an export of parts is a jobs.start with parts, with progress by part, and a copy's file takes its container's extension", async () => {
   const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.reference();
+  const a = await plugin.media.sources.remember();
   const parts = [
     { source: a.token, start: 2, end: 6 },
     { source: a.token, start: 20, end: 24 },
@@ -244,7 +262,7 @@ test("an export of parts is a jobs.start with parts, with progress by part, and 
 
 test("a failed export of parts reports its code in the outcome", async () => {
   const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.reference();
+  const a = await plugin.media.sources.remember();
   host.exportFailure = {
     code: "source-missing",
     message: "part 1 (a.mp4) is missing",
@@ -263,8 +281,11 @@ test("a failed export of parts reports its code in the outcome", async () => {
 });
 
 test("open plays the remembered file from start as an ordinary open, and refuses a moved one", async () => {
-  const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.reference();
+  const { host, plugin, stop } = await started([
+    ...capabilities,
+    "playback.control",
+  ]);
+  const a = await plugin.media.sources.remember();
   host.openElsewhere("/media/other.mp4");
   host.setSource({ duration: 90 });
   await plugin.media.sources.open(a.token, { start: 12.5 });
@@ -293,9 +314,23 @@ test("open plays the remembered file from start as an ordinary open, and refuses
   await stop();
 });
 
+test("open is an open like Player.open: without playback.control it fails capability before anything opens", async () => {
+  const { host, plugin, stop } = await started();
+  const a = await plugin.media.sources.remember();
+  host.openElsewhere("/media/other.mp4");
+  host.setSource({ duration: 90 });
+  await assert.rejects(plugin.media.sources.open(a.token), {
+    code: "capability",
+    message: "playback.control must be declared in manifest",
+  });
+  assert.equal(host.source.source, "/media/other.mp4");
+  assert.deepEqual(host.sourceOpens, []);
+  await stop();
+});
+
 test("a part's thumbnail is a frame exported into the data directory, with the capabilities already declared", async () => {
   const { host, plugin, stop } = await started();
-  const file = await plugin.media.sources.reference();
+  const file = await plugin.media.sources.remember();
   const thumbnail = `${plugin.dataDirectory}/thumb-${file.token}.jpg`;
   const snapshot = await plugin.media.capture({ at: 20 });
   const job = await snapshot.export({
@@ -319,7 +354,7 @@ test("a part's thumbnail is a frame exported into the data directory, with the c
 
 test("a parts export whose file goes or changes while it runs fails with the player's code", async () => {
   const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.reference();
+  const a = await plugin.media.sources.remember();
   const run = async () =>
     (
       await plugin.media.export({
@@ -342,17 +377,17 @@ test("a parts export whose file goes or changes while it runs fails with the pla
     (done.outcome as { error: { code: string } }).error.code,
     "source-changed",
   );
-  assert.equal((await plugin.media.sources.resolve(a.token)).status, "changed");
+  assert.equal((await plugin.media.sources.get(a.token)).status, "changed");
   // The file as it is now gets a token of its own, as in the player.
-  const again = await plugin.media.sources.reference();
+  const again = await plugin.media.sources.remember();
   assert.notEqual(again.token, a.token);
-  assert.equal((await plugin.media.sources.reference()).token, again.token);
+  assert.equal((await plugin.media.sources.remember()).token, again.token);
   await stop();
 });
 
 test("the check bounds the parts as the player does, and takes a snapshot's clip", async () => {
   const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.reference();
+  const a = await plugin.media.sources.remember();
   await assert.rejects(
     plugin.media.exportCheck([
       { source: a.token, start: 0, end: 43200 },
@@ -427,11 +462,12 @@ test("without media.sources the references and parts exports fail capability; a 
   const { plugin, stop } = await started(
     capabilities.filter((name) => name !== "media.sources"),
   );
-  await assert.rejects(plugin.media.sources.reference(), {
+  await assert.rejects(plugin.media.sources.remember(), {
     code: "capability",
   });
   await assert.rejects(plugin.media.sources.open("src-x"), {
     code: "capability",
+    message: /media.sources/,
   });
   await assert.rejects(
     plugin.media.export({
@@ -456,8 +492,21 @@ test("without media.sources the references and parts exports fail capability; a 
 
 test("the player routes the references and joins to media.sources, other jobs to media.control", () => {
   const none = () => false;
+  // Opening replaces what plays: playback.control first, then media.sources.
   assert.equal(
-    requestNeeds("media.sources.reference", undefined, none),
+    requestNeeds("media.sources.open", undefined, none),
+    "playback.control",
+  );
+  assert.equal(
+    requestNeeds(
+      "media.sources.open",
+      undefined,
+      (name) => name === "playback.control",
+    ),
+    "media.sources",
+  );
+  assert.equal(
+    requestNeeds("media.sources.remember", undefined, none),
     "media.sources",
   );
   assert.equal(

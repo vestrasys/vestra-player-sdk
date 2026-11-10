@@ -183,7 +183,7 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 | parts | 100 | Parts of one export or check, at least 1; more fail with `invalid`. |
 | partEnd | 86400 | Seconds of a part's end in its file. |
 | totalSeconds | 86400 | Seconds of all parts of one export together, as one clip. |
-| requests | 4 | `reference`, `resolve`, `list` and checks one plugin may have the player working on at the same time; one more fails with `busy`. |
+| requests | 4 | `remember`, `get`, `list` and checks one plugin may have the player working on at the same time; one more fails with `busy`. |
 | locateInterval | 2 | Seconds between two `locate` dialogs of one plugin; sooner fails with `busy`. |
 
 <!-- /generated -->

@@ -705,9 +705,10 @@ export interface SourceReference {
  * chapters plugin keeps its marks per file without storing paths.
  *
  * @remarks
- * Tokens hide paths at the API level only: a plugin is an ordinary
- * Node.js process, not sandboxed from the file system, and a plugin that
- * can read files can find them by other means. What a token gives is a
+ * Tokens hide paths as an API convenience, not as a security boundary:
+ * while the file plays, `player.state.source` (`playback.read`) shows its
+ * path, and a plugin is an ordinary Node.js process, not sandboxed from
+ * the file system, that can find files by other means. What a token gives is a
  * way to name the user's files without the plugin keeping their paths,
  * and to find them again after a move.
  *
@@ -725,14 +726,14 @@ export interface SourceReference {
  *
  * @example Remember the playing file and check it later
  * The plugin keeps the token in its storage and checks the file before
- * using it. `reference` answers for the file playing now; `resolve` looks
- * at the file on disk again, so a moved file reads `missing`.
+ * using it. `remember` answers for the file playing now; `get` looks at
+ * the file on disk again, so a moved file reads `missing`.
  * ```ts
  * const store = plugin.storage.json("parts", { defaults: { tokens: [] as string[] } });
- * const added = await plugin.media.sources.reference();
+ * const added = await plugin.media.sources.remember();
  * store.save({ tokens: [...store.value.tokens, added.token] });
  * // … after a restart:
- * const again = await plugin.media.sources.resolve(added.token);
+ * const again = await plugin.media.sources.get(added.token);
  * if (again.status !== "ok") console.log(`${again.name} is ${again.status}`);
  * ```
  *
@@ -768,7 +769,7 @@ export interface MediaSources {
    * declare const list: { token: string; name: string; start: number; end: number; thumbnail: string }[];
    * declare const start: number, end: number;
    * // ---cut---
-   * const file = await plugin.media.sources.reference();
+   * const file = await plugin.media.sources.remember();
    * // A new name each time: an export never overwrites a file.
    * const thumbnail = `${plugin.dataDirectory}/thumb-${file.token}-${Date.now()}.jpg`;
    * const snapshot = await plugin.media.capture({ at: start });
@@ -783,7 +784,7 @@ export interface MediaSources {
    *
    * @since 1.7.8
    */
-  reference(options?: Conditional): Promise<SourceReference>;
+  remember(options?: Conditional): Promise<SourceReference>;
   /**
    * The reference with its file looked at now: `status` says whether it
    * is still there as it was.
@@ -802,14 +803,14 @@ export interface MediaSources {
    * declare const tokens: string[];
    * // ---cut---
    * for (const token of tokens) {
-   *   const file = await plugin.media.sources.resolve(token);
+   *   const file = await plugin.media.sources.get(token);
    *   if (file.status === "missing") console.log(`${file.name}: File missing`);
    * }
    * ```
    *
    * @since 1.7.8
    */
-  resolve(token: string): Promise<SourceReference>;
+  get(token: string): Promise<SourceReference>;
   /**
    * Ask the user where the file is now: the player shows its own file
    * dialog (named after the file, opened in its old folder) and, when the
@@ -885,13 +886,16 @@ export interface MediaSources {
    * Open the remembered file in the player and play it from `start`
    * seconds (default its beginning): the user's "preview this part". It
    * is an ordinary open, as {@link Player.open} of that file would be (the
-   * current source is replaced; the playlist treats it as any open), but
-   * the plugin names the file by its token, not its path, and needs no
-   * `playback.control`. Resolves once the file is loaded. A file that is
-   * gone or changed is refused before anything opens.
+   * current source is replaced; the playlist treats it as any open), so it
+   * needs `playback.control` as `Player.open` does, and `media.sources` for
+   * the token. The plugin names the file by its token instead of keeping
+   * its path; that is a convenience, not a boundary: once the file plays,
+   * `player.state.source` (`playback.read`) shows its path, as for any
+   * open. Resolves once the file is loaded. A file that is gone or changed
+   * is refused before anything opens.
    *
-   * @capability media.sources (and playback.read, to follow the open until
-   * the file is loaded)
+   * @capability media.sources and playback.control (and playback.read, to
+   * follow the open until the file is loaded)
    * @throws `source-missing` (rejects) No file is at the token's path any
    *   more; offer {@link MediaSources.locate}.
    * @throws `source-changed` (rejects) The file changed since it was
@@ -903,7 +907,7 @@ export interface MediaSources {
    *   loaded.
    * @throws `backend` (rejects) The player could not load the file.
    * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources`.
+   *   `media.sources` or `playback.control`.
    *
    * @example Preview a part on double-click
    * Double-clicking a row of the plugin's list plays that part's file from
@@ -939,7 +943,10 @@ export interface MediaSources {
  * @category Media
  */
 export interface ExportPart {
-  /** The file's token ({@link SourceReference.token}). */
+  /**
+   * The file's token ({@link SourceReference.token}), from
+   * {@link MediaSources.remember}: a token, not a path.
+   */
   source: string;
   /** Start, seconds of the file. */
   start: number;
@@ -951,6 +958,11 @@ export interface ExportPart {
  * Options of {@link MediaCapture.export}: the parts in order (1 to 100),
  * where to write the file (never over an existing one) and the format, as
  * for a clip of a snapshot ({@link ExportOptions}).
+ *
+ * The fields are a snapshot clip's: `destination`, `format` (`copy` or
+ * `mp4`), `container` and `encoding` mean the same there, so moving an
+ * export from a snapshot to parts changes only its input (`parts` instead
+ * of the snapshot and `end`).
  *
  * @since 1.7.8
  * @category Media

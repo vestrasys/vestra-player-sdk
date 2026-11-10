@@ -16,6 +16,7 @@ import type { WireExportCheck, WireSourceReference } from "../../media.ts";
 import type { TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 import { isCurrentProducer } from "./media.ts";
+import { MEDIA_SOURCE_LIMITS } from "../media.ts";
 
 /** `jobs.start`'s `encoding`, checked against the player's sets. */
 export function validEncoding(value: Json | undefined): boolean {
@@ -130,7 +131,7 @@ export function jobsHandlers(
     if (
       !Array.isArray(parts) ||
       parts.length === 0 ||
-      parts.length > 100 ||
+      parts.length > MEDIA_SOURCE_LIMITS.parts ||
       parts.some(
         (part) =>
           typeof part?.source !== "string" ||
@@ -138,14 +139,14 @@ export function jobsHandlers(
           !Number.isFinite(part.start) ||
           !Number.isFinite(part.end) ||
           part.start < 0 ||
-          part.end > 86400,
+          part.end > MEDIA_SOURCE_LIMITS.partEnd,
       ) ||
       parts.reduce((sum, part) => sum + Math.max(0, part.end - part.start), 0) >
-        86400
+        MEDIA_SOURCE_LIMITS.totalSeconds
     )
       throw new HostError(
         "invalid",
-        "1–100 parts with a token and finite times from 0 to 86400 s (24 hours in all) required",
+        `1–${MEDIA_SOURCE_LIMITS.parts} parts with a token and finite times from 0 to ${MEDIA_SOURCE_LIMITS.partEnd} s (${MEDIA_SOURCE_LIMITS.totalSeconds} s in all) required`,
       );
     const blocking: WireExportCheck["blocking"] = [];
     const files = parts.map((part, index) => {
@@ -426,7 +427,7 @@ export function jobsHandlers(
       return { jobId: job.jobId, cancel: "requested" };
     },
     "jobs.operation": () => ({ status: "unknown" }),
-    "media.sources.reference": (p) => {
+    "media.sources.remember": (p) => {
       const path = host.source.source;
       if (
         p.expected !== undefined &&
@@ -453,13 +454,16 @@ export function jobsHandlers(
           (reference.version ?? 0) === version(path)
         )
           return describe(token);
-      if (host.sourceReferences.size >= 500)
-        throw new HostError("limit", "a plugin holds at most 500 references");
+      if (host.sourceReferences.size >= MEDIA_SOURCE_LIMITS.references)
+        throw new HostError(
+          "limit",
+          `a plugin holds at most ${MEDIA_SOURCE_LIMITS.references} references`,
+        );
       const token = `src-${randomBytes(16).toString("hex")}`;
       host.sourceReferences.set(token, { path, version: version(path) });
       return describe(token);
     },
-    "media.sources.resolve": (p) => describe(known(p.token)),
+    "media.sources.get": (p) => describe(known(p.token)),
     "media.sources.list": () => [...host.sourceReferences.keys()].map(describe),
     "media.sources.forget": (p) =>
       void host.sourceReferences.delete(String(p.token)),
@@ -486,8 +490,15 @@ export function jobsHandlers(
           "invalid",
           "jobs.check takes parts or a snapshotId, one of them",
         );
-      if (p.snapshotId === undefined)
+      if (p.snapshotId === undefined) {
+        // Parts carry their own ends; `end` is the snapshot form's.
+        if (p.end !== undefined && p.end !== null)
+          throw new HostError(
+            "invalid",
+            "end belongs to a snapshotId check; parts carry their own end",
+          );
         return exportCheck(p.parts as ExportPartWire[]);
+      }
       // A snapshot's clip: one part from the current file's facts.
       const snapshot = host.snapshots.get(Number(p.snapshotId)) as
         | { kind: string; time: number; duration: number; source: string }
@@ -534,9 +545,10 @@ export function jobsHandlers(
     if (
       !Array.isArray(parts) ||
       parts.length === 0 ||
-      parts.length > 100 ||
+      parts.length > MEDIA_SOURCE_LIMITS.parts ||
       parts.some((part) => !(part.end > part.start)) ||
-      parts.reduce((sum, part) => sum + (part.end - part.start), 0) > 86400 ||
+      parts.reduce((sum, part) => sum + (part.end - part.start), 0) >
+        MEDIA_SOURCE_LIMITS.totalSeconds ||
       !["rawCopy", "rawMp4"].includes(String(p.kind)) ||
       p.snapshotId !== undefined ||
       p.end !== undefined ||

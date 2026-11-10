@@ -147,14 +147,16 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     // members; the player checks it for jobs.start with parts and jobs.check).
     "MediaCapture.export": [{ method: "jobs.state" }, { method: "jobs.start" }],
     "MediaCapture.exportCheck": [{ method: "jobs.check" }],
-    "MediaSources.reference": [{ method: "media.sources.reference" }],
-    "MediaSources.resolve": [{ method: "media.sources.resolve" }],
+    "MediaSources.remember": [{ method: "media.sources.remember" }],
+    "MediaSources.get": [{ method: "media.sources.get" }],
     "MediaSources.locate": [{ method: "media.sources.locate" }],
     "MediaSources.forget": [{ method: "media.sources.forget" }],
     "MediaSources.list": [{ method: "media.sources.list" }],
+    // An open like Player.open: playback.control (the player's rule for
+    // media.sources.open), with which source.operation needs it too.
     "MediaSources.open": [
       { method: "media.sources.open" },
-      { method: "source.operation", also: true },
+      { method: "source.operation" },
     ],
     "Osd.show": [{ method: "osd.show" }],
     "Osd.panel": [{ method: "osd.panel" }],

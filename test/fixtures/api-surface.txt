@@ -208,11 +208,11 @@
 @vestra-player/sdk InterfaceDeclaration MediaCapture :: readonly sources: MediaSources;
 @vestra-player/sdk InterfaceDeclaration MediaSources
 @vestra-player/sdk InterfaceDeclaration MediaSources :: forget(token: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: get(token: string): Promise<SourceReference>;
 @vestra-player/sdk InterfaceDeclaration MediaSources :: list(): Promise<SourceReference[]>;
 @vestra-player/sdk InterfaceDeclaration MediaSources :: locate(token: string): Promise<SourceReference | null>;
 @vestra-player/sdk InterfaceDeclaration MediaSources :: open(token: string, options?: { start?: number; }): Promise<void>;
-@vestra-player/sdk InterfaceDeclaration MediaSources :: reference(options?: Conditional): Promise<SourceReference>;
-@vestra-player/sdk InterfaceDeclaration MediaSources :: resolve(token: string): Promise<SourceReference>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: remember(options?: Conditional): Promise<SourceReference>;
 @vestra-player/sdk InterfaceDeclaration Osd
 @vestra-player/sdk InterfaceDeclaration Osd :: panel(): OsdPanel;
 @vestra-player/sdk InterfaceDeclaration Osd :: show(text: TextValue, args?: TemplateArgs | null, options?: OsdShowOptions): Promise<void>;
