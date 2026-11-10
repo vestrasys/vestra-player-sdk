@@ -81,7 +81,7 @@ The groups of the top level and their `order` ranges ([Design rules](../guides/d
 
 ## Submenu keys in use
 
-The submenus that exist already, by key path. Write the same keys to add a command to one of them; a near-synonym makes a second submenu.
+The submenus that exist already, by key path. Write the same keys to add a command to one of them; a near-synonym makes a second submenu. This table and {@link "@vestra-player/sdk/testing"!BUILTIN_SUBMENUS | BUILTIN_SUBMENUS} (the built-in plugins' rows) are a snapshot of the player's built-in submenus at this SDK release; the player may differ between SDK releases.
 
 <!-- generated:menu-keys -->
 
@@ -98,7 +98,7 @@ The submenus that exist already, by key path. Write the same keys to add a comma
 
 ## Built-in commands
 
-Every command the player (`host`) and its built-in plugins register when the player starts with nothing open, in menu order; commands outside the main menu come last. The **Command** column is `<owner>/<id>`, the key under which the user's own bindings are stored. The same list is {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS}.
+Every command the player (`host`) and its built-in plugins register when the player starts with nothing open, in menu order; commands outside the main menu come last. The **Command** column is `<owner>/<id>`, the key under which the user's own bindings are stored. The same list is {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS}. It is a snapshot of the player's built-in commands at this SDK release; the player may differ between SDK releases.
 
 <!-- generated:builtin-commands -->
 

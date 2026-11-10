@@ -40,7 +40,7 @@ import type {
   RenderingReasonCode,
   RenderingState,
 } from "./services.ts";
-import type { ExportJob, Snapshot } from "./snapshots.ts";
+import type { ExportJob, MediaSources, Snapshot } from "./snapshots.ts";
 import type { Resolver } from "./sources.ts";
 import type { PropValue, View } from "./ui-content.ts";
 import type { Panel, Window } from "./ui-layout.ts";
@@ -147,7 +147,7 @@ export interface Disposable {
  * | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
  * | `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
  * | `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |
- * | `export-failed` | An export job ({@link ExportJob}) failed: the code of its `outcome.error`, not a rejection; `message` has the worker's or FFmpeg's reason. |
+ * | `export-failed`, `source-missing`, `source-changed`, `no-space` | An export job ({@link ExportJob}) failed: the code of its `outcome.error`, not a rejection; `message` has the worker's or FFmpeg's reason. An export of parts ({@link MediaCapture.export}) ends `source-missing` when a part's file is gone and `source-changed` when it changed since it was remembered; {@link MediaSources.open} rejects with them. An export of parts ends `no-space` when the disk has less room than its estimate. |
  * | `input-overflow` | `openStream` input: the player's queue of physical key transitions was full; the input was revoked and its keys released. |
  * | `internal` | An internal step of the player failed (keeping an operation's result, a subtitle or media job); `message` has the reason. |
  * | `javascript`, `slint` | {@link Packages.validate}: the package's entry module does not pass `node --check` / one of its Slint files does not compile; `message` has the diagnostics. |

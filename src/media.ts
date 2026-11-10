@@ -1,6 +1,10 @@
 /** Finite media jobs. Native-subtitle freezing remains pending. */
 import type { Transport } from "./wire.ts";
-import type { SourceStamp, SourceAudioTrack } from "./source.ts";
+import type {
+  SourceStamp,
+  SourceAudioTrack,
+  SourceOperation,
+} from "./source.ts";
 import type { VideoNode, AudioNode } from "./processing.ts";
 import type {
   SubtitleStamp,
@@ -146,6 +150,15 @@ export type MediaJob = {
       seek: number;
       written: { start: number; end: number };
     };
+    /** An export of parts (`jobs.start { parts }`): how it was written. */
+    join?: {
+      mode: "copy" | "mp4";
+      container: "mp4" | "mkv";
+      /** Each part as written, in seconds of its own file. */
+      parts: { start: number; end: number }[];
+      /** A re-encode: the output size and frame rate. */
+      target: { width: number; height: number; fps: number } | null;
+    };
   };
   outcome:
     | null
@@ -162,7 +175,14 @@ export type MediaJob = {
    * Seconds of a clip written and to write while FFmpeg runs; `null` while
    * unknown.
    */
-  progress?: { done: number; total: number } | null;
+  progress?: {
+    done: number;
+    total: number;
+    /** An export of parts: the part being written, from 1. */
+    part?: number;
+    /** An export of parts: how many parts. */
+    parts?: number;
+  } | null;
 };
 /** The wire form of `ExportEncoding` (`jobs.start`). */
 export type WireEncoding = {
@@ -173,6 +193,57 @@ export type WireEncoding = {
   audioBitrate?: 128 | 192 | 256;
   threads?: "single" | "auto";
   videoBitrate?: "source";
+};
+/** A source reference as the player describes it (`media.sources.*`). */
+export type WireSourceReference = {
+  token: string;
+  name: string;
+  duration: number;
+  status: "ok" | "missing" | "changed";
+  video: {
+    codec: string;
+    width: number;
+    height: number;
+    fps: number;
+    pixelFormat: string | null;
+  } | null;
+  audio: { codec: string; sampleRate: number; channels: number } | null;
+};
+/** One part of an export (`jobs.start { parts }`, `jobs.check`). */
+export type WireExportPart = { source: string; start: number; end: number };
+/** The answer of `jobs.check`. */
+export type WireExportCheck = {
+  blocking: {
+    part: number;
+    problem: "unknown" | "missing" | "changed" | "noVideo" | "range";
+    /** `range`: the file's duration. */
+    duration?: number;
+  }[];
+  copy:
+    | { ok: true; container: "mp4" | "mkv" }
+    | {
+        ok: false;
+        reasons: {
+          part: number;
+          field:
+            | "videoCodec"
+            | "videoParams"
+            | "size"
+            | "fps"
+            | "pixelFormat"
+            | "audio"
+            | "effects";
+          value: string | number | null;
+          expected: string | number | null;
+        }[];
+      };
+  encode: {
+    width: number;
+    height: number;
+    fps: number;
+    audio: { sampleRate: 48000; channels: 2 } | null;
+  } | null;
+  duration: number;
 };
 export type MediaOperation =
   | { status: "pending" | "unknown" | "unknownExpired" }
@@ -241,6 +312,60 @@ export function mediaClients(transport: Transport) {
         }>("jobs.cancel", { jobId, operationId }),
       operation: (operationId: number) =>
         transport.request<MediaOperation>("jobs.operation", { operationId }),
+      /** `jobs.start` with parts of remembered files instead of a snapshot. */
+      startParts: (
+        options: {
+          operationId: number;
+          parts: WireExportPart[];
+          destination: string;
+        } & (
+          | { kind: "rawCopy"; container?: "auto" | "mp4" | "mkv" }
+          | { kind: "rawMp4"; encoding?: WireEncoding }
+        ),
+      ) =>
+        transport.request<{ jobId: number; status: "queued" }>(
+          "jobs.start",
+          options,
+        ),
+      check: (parts: WireExportPart[], encoding?: WireEncoding) =>
+        transport.request<WireExportCheck>(
+          "jobs.check",
+          encoding === undefined ? { parts } : { parts, encoding },
+        ),
+      /** `jobs.check` of a snapshot's clip (to `end`) instead of parts. */
+      checkSnapshot: (
+        snapshotId: number,
+        end: number,
+        encoding?: WireEncoding,
+      ) =>
+        transport.request<WireExportCheck>(
+          "jobs.check",
+          encoding === undefined
+            ? { snapshotId, end }
+            : { snapshotId, end, encoding },
+        ),
+    },
+    mediaSources: {
+      remember: (expected?: SourceStamp) =>
+        transport.request<WireSourceReference>(
+          "media.sources.remember",
+          expected === undefined ? {} : { expected },
+        ),
+      get: (token: string) =>
+        transport.request<WireSourceReference>("media.sources.get", {
+          token,
+        }),
+      locate: (token: string) =>
+        transport.request<WireSourceReference | null>("media.sources.locate", {
+          token,
+        }),
+      forget: (token: string) =>
+        transport.request<void>("media.sources.forget", { token }),
+      list: () =>
+        transport.request<WireSourceReference[]>("media.sources.list", {}),
+      /** An `open` submit of the file, under the player service's operation id. */
+      open: (options: { token: string; operationId: number; start?: number }) =>
+        transport.request<SourceOperation>("media.sources.open", options),
     },
   };
 }

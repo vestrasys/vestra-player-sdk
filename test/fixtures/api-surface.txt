@@ -153,6 +153,10 @@
 @vestra-player/sdk InterfaceDeclaration ExportJob :: readonly state: JobState;
 @vestra-player/sdk InterfaceDeclaration ExportJob :: refresh(): Promise<JobState>;
 @vestra-player/sdk InterfaceDeclaration ExportJob extends Disposable
+@vestra-player/sdk InterfaceDeclaration ExportPart
+@vestra-player/sdk InterfaceDeclaration ExportPart :: end: number;
+@vestra-player/sdk InterfaceDeclaration ExportPart :: source: string;
+@vestra-player/sdk InterfaceDeclaration ExportPart :: start: number;
 @vestra-player/sdk InterfaceDeclaration FileResolverOptions
 @vestra-player/sdk InterfaceDeclaration FileResolverOptions :: extensions: string[];
 @vestra-player/sdk InterfaceDeclaration FileResolverOptions :: id: string;
@@ -199,6 +203,16 @@
 @vestra-player/sdk InterfaceDeclaration Media :: ready(options?: { signal?: AbortSignal; }): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration MediaCapture
 @vestra-player/sdk InterfaceDeclaration MediaCapture :: capture(options?: CaptureOptions): Promise<Snapshot>;
+@vestra-player/sdk InterfaceDeclaration MediaCapture :: export(options: PartsExportOptions): Promise<ExportJob>;
+@vestra-player/sdk InterfaceDeclaration MediaCapture :: exportCheck(input: ExportPart[] | { snapshot: Snapshot; end: number; }, options?: { encoding?: ExportEncoding; }): Promise<ExportCheck>;
+@vestra-player/sdk InterfaceDeclaration MediaCapture :: readonly sources: MediaSources;
+@vestra-player/sdk InterfaceDeclaration MediaSources
+@vestra-player/sdk InterfaceDeclaration MediaSources :: forget(token: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: get(token: string): Promise<SourceReference>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: list(): Promise<SourceReference[]>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: locate(token: string): Promise<SourceReference | null>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: open(token: string, options?: { start?: number; }): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MediaSources :: remember(options?: Conditional): Promise<SourceReference>;
 @vestra-player/sdk InterfaceDeclaration Osd
 @vestra-player/sdk InterfaceDeclaration Osd :: panel(): OsdPanel;
 @vestra-player/sdk InterfaceDeclaration Osd :: show(text: TextValue, args?: TemplateArgs | null, options?: OsdShowOptions): Promise<void>;
@@ -488,6 +502,13 @@
 @vestra-player/sdk InterfaceDeclaration Snapshot :: readonly source: string;
 @vestra-player/sdk InterfaceDeclaration Snapshot :: readonly time: number;
 @vestra-player/sdk InterfaceDeclaration Snapshot extends Disposable
+@vestra-player/sdk InterfaceDeclaration SourceReference
+@vestra-player/sdk InterfaceDeclaration SourceReference :: readonly audio: { codec: string; sampleRate: number; channels: number; } | null;
+@vestra-player/sdk InterfaceDeclaration SourceReference :: readonly duration: number;
+@vestra-player/sdk InterfaceDeclaration SourceReference :: readonly name: string;
+@vestra-player/sdk InterfaceDeclaration SourceReference :: readonly status: "ok" | "missing" | "changed";
+@vestra-player/sdk InterfaceDeclaration SourceReference :: readonly token: string;
+@vestra-player/sdk InterfaceDeclaration SourceReference :: readonly video: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null;
 @vestra-player/sdk InterfaceDeclaration Storage
 @vestra-player/sdk InterfaceDeclaration Storage :: json<T>(name: string, options: { defaults: T; validate?: (value: unknown) => value is T; debounceMs?: number; }): JsonStore<T>;
 @vestra-player/sdk InterfaceDeclaration Storage :: readonly session: SessionStorage;
@@ -734,6 +755,7 @@
 @vestra-player/sdk TypeAliasDeclaration CommandKeys = export type CommandKeys = { keys: Record<string, string[]>; revision: number; };
 @vestra-player/sdk TypeAliasDeclaration ConvolutionPlane = export type ConvolutionPlane = { mode: "square" | "row" | "column"; matrix: number[]; rdiv: number; bias: number; };
 @vestra-player/sdk TypeAliasDeclaration EventPayload = export type EventPayload<E extends HostEvent> = EventPayloads[E];
+@vestra-player/sdk TypeAliasDeclaration ExportCheck = export type ExportCheck = WireExportCheck;
 @vestra-player/sdk TypeAliasDeclaration ExportOptions = export type ExportOptions = { format: "png" | "bmp"; destination: string; sampleTime?: number; } | { format: "jpeg"; destination: string; sampleTime?: number; quality?: number; } | { format: "mp4"; destination: string; end: number; encoding?: ExportEncoding; } | { format: "copy"; destination: string; end: number; container?: "auto" | "mp4" | "mkv"; };
 @vestra-player/sdk TypeAliasDeclaration FilterStatus = export type FilterStatus = { state: "waiting"; } | { state: "applying"; } | { state: "applied"; } | { state: "failed"; error: PluginError; };
 @vestra-player/sdk TypeAliasDeclaration HostAction = export type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute" | "fullscreen";
@@ -747,6 +769,7 @@
 @vestra-player/sdk TypeAliasDeclaration MenuId = export type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings" | "reset";
 @vestra-player/sdk TypeAliasDeclaration PackageChangeStatus = export type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed" | "cancelled" | "failed" | "failedDegraded" | "tooLate";
 @vestra-player/sdk TypeAliasDeclaration PackageSource = export type PackageSource = { kind: "repository"; url: string; } | { kind: "link"; url: string; } | { kind: "file"; } | { kind: "workshop"; } | { kind: "bundled"; };
+@vestra-player/sdk TypeAliasDeclaration PartsExportOptions = export type PartsExportOptions = { parts: ExportPart[]; destination: string; } & ({ format: "copy"; container?: "auto" | "mp4" | "mkv"; } | { format: "mp4"; encoding?: ExportEncoding; });
 @vestra-player/sdk TypeAliasDeclaration PluginError = export type PluginError = Error & { code: string; };
 @vestra-player/sdk TypeAliasDeclaration PropData = export type PropData = null | boolean | number | string | MarkdownRef | ImageRef | Text | TextList | PropData[] | { [key: string]: PropData; };
 @vestra-player/sdk TypeAliasDeclaration PropValue = export type PropValue = PropData | ImageRef;
@@ -842,6 +865,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly listeningWhy: Map<string, string[]>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly local: LocalServices;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mainWindow: { fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; onTop: boolean; cursorAutoHide: "fullscreen" | "playing"; pictureInPicture: { supported: boolean; active: boolean; }; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mediaFiles: Map<string, { duration?: number; status?: "ok" | "missing" | "changed"; version?: number; video?: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null; audio?: { codec: string; sampleRate: number; channels: number; } | null; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
@@ -859,6 +883,8 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sessionStorage: Map<string, Json>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly settings: { pages: Map<string, { category: string; title: string; order: number; file: string; component: string; global: string; props: Record<string, Json>; emit(callback: string, ...args: Json[]): void; }>; shows: (string | null)[]; current: string | null; open: boolean; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly snapshots: Map<number, Json>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sourceOpens: { token: string; start: number; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sourceReferences: Map<string, { path: string; version?: number; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly steps: { unit: string; direction: string; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly subscriptions: Set<string>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly subtitleLoads: { format: "srt" | "ass"; title: string | null; select: "primary" | "secondary" | "none"; bytes: Buffer; }[];

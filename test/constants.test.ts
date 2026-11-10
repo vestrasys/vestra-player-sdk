@@ -68,6 +68,7 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "subtitles.control",
     "media.read",
     "media.control",
+    "media.sources",
     "ui.osd",
     "clipboard",
     "window.control",
@@ -310,6 +311,15 @@ test("BUILTIN_COMMANDS: owners, key paths and canonical bindings", () => {
     [...submenus].sort(),
     BUILTIN_SUBMENUS.map((menu) => menu.path.join("/")).sort(),
   );
+});
+
+test("THEMES (plugin.appearance's hand-written list) are THEME_PALETTES' palettes, the default first", async () => {
+  // THEME_PALETTES is the SDK's copy of the player's palettes (the player's
+  // agreement test checks it against theme.rs); THEMES must name the same.
+  const { THEME_PALETTES } = await import("../src/palettes.ts");
+  const { THEMES } = await import("../src/plugin/appearance.ts");
+  assert.deepEqual([...THEMES], Object.keys(THEME_PALETTES));
+  assert.equal(THEMES[0], "vestra");
 });
 
 test("THEME_PALETTES: both palettes have every Theme colour; vestra is palette.slint's", async () => {

@@ -608,6 +608,40 @@ export function mediaHandlers(
       }
       return result;
     },
+    // The player's `media.sources.open`: the token's file opened as a
+    // `source.submit` open under the plugin's operation id, at `start`.
+    "media.sources.open": (p) => {
+      const reference = host.sourceReferences.get(String(p.token));
+      if (!reference)
+        throw new HostError("missing", "no such source reference");
+      const file = host.mediaFiles.get(reference.path) ?? {};
+      if (file.status === "missing")
+        throw new HostError("source-missing", "the file is missing");
+      if (
+        file.status === "changed" ||
+        (file.version ?? 0) !== (reference.version ?? 0)
+      )
+        throw new HostError(
+          "source-changed",
+          "the file changed since it was remembered",
+        );
+      const start = p.start === undefined ? 0 : Number(p.start);
+      const duration = file.duration ?? host.source.duration ?? 60;
+      if (!(start >= 0 && start < duration))
+        throw new HostError("invalid", "start must be before the file's end");
+      const intent = {
+        kind: "open",
+        source: reference.path,
+        startPaused: false,
+      };
+      host.sourceOpens.push({ token: String(p.token), start });
+      const ticket = sourceIntent(host, inner, intent);
+      // Loaded at once, at the start (the player's `start=`).
+      host.setSource({ phase: "ready", duration, position: start });
+      const result = { status: "completed", ...ticket };
+      inner.sourceBook.set(Number(p.operationId), result);
+      return result;
+    },
     "source.operation": (p) => {
       const result = inner.sourceBook.get(Number(p.operationId));
       if (!result) throw new HostError("unknown-expired", "UnknownExpired");

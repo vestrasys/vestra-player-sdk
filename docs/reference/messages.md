@@ -52,7 +52,7 @@ Open media, control playback, keep the computer awake. Residency `live`: what th
 | --- | --- | --- | --- | --- | --- |
 | `playback.set` | `playback.control` | `{ property, value }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setOutput Player.setOutput} |
 | `source.submit` | `playback.control` | `{ operationId, intent }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub} |
-| `source.operation` | `playback.control` when the manifest declares `playback.control`, otherwise `playback.read` | `{ operationId }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub} |
+| `source.operation` | `playback.control` when the manifest declares `playback.control`, otherwise `playback.read` | `{ operationId }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
 | `audio.addTrack` | `playback.control` | `{ expected?, path, select }` | `SourceAudioTrack` | `invalid`, `unavailable`, `backend`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.addAudioTrack Player.addAudioTrack} |
 | `audio.selectTrack` | `playback.control` | `{ expected?, id }` | `void` | `invalid`, `unavailable`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.selectAudioTrack Player.selectAudioTrack} |
 | `player.setLoop` | `playback.control` | `{ expected?, loop }` | `void` | `invalid`, `unsupported`, `unavailable`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setLoop Player.setLoop} |
@@ -198,7 +198,7 @@ Take snapshots and export clips. Residency `none`: no effect on standby.
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
 | `snapshot.state` | `media.read` | `{ snapshotId }` | `Snapshot` | `stale`, `noSource`, `invalid`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture} |
-| `jobs.state` | `media.read` | `{ jobId }` | `MediaJob` | `released`, `invalid`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} |
+| `jobs.state` | `media.read` | `{ jobId }` | `MediaJob` | `released`, `invalid`, `busy`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
 | `jobs.operation` | `media.read` | `{ operationId }` | `MediaOperation` | `released`, `invalid`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} |
 
 ### `media.control`
@@ -211,8 +211,23 @@ Take snapshots and export clips. Residency `live`: what these methods open (a vi
 | `snapshot.release` | `media.control` | `{ snapshotId, operationId }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.dispose Snapshot.dispose} |
 | `snapshot.*` (any other) | `media.control` | — | — | — | `plugin.wire` only |
 | `jobs.cancel` | `media.control` | `{ jobId, operationId }` | `{ jobId, cancel }` | `rejected`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!ExportJob.cancel ExportJob.cancel} |
-| `jobs.start` | `media.control` | `{ operationId: number; snapshotId: number; destination: string; } & ({ kind: "rawPng" \| "processedPng" \| "rawBmp" \| "processedBmp"; sampleTime?: number \| undefined; } \| { kind: "rawJpeg" \| "processedJpeg"; sampleTime?: number \| undefined; quality?: number \| undefined; } \| { ...; } \| { ...; })` | `{ jobId, status, snapshotId }` | `released`, `invalid`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} |
+| `jobs.check` | `media.control` | `{ parts, encoding? }` | `WireExportCheck` | `invalid`, `released`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.exportCheck MediaCapture.exportCheck} |
+| `jobs.start` | `media.control` | `{ operationId: number; snapshotId: number; destination: string; } & ({ kind: "rawPng" \| "processedPng" \| "rawBmp" \| "processedBmp"; sampleTime?: number \| undefined; } \| { kind: "rawJpeg" \| "processedJpeg"; sampleTime?: number \| undefined; quality?: number \| undefined; } \| { ...; } \| { ...; })` | `{ jobId, status, snapshotId }` | `released`, `invalid`, `busy`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
 | `jobs.*` (any other) | `media.control` | — | — | — | `plugin.wire` only |
+
+### `media.sources`
+
+Remember videos you add and export from them later. Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `media.sources.open` | `media.sources` when the manifest declares `playback.control`, otherwise `playback.control` | `{ token, operationId, start? }` | `SourceOperation` | `missing`, `invalid`, `replaced`, `backend`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
+| `media.sources.forget` | `media.sources` | `{ token }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.forget MediaSources.forget} |
+| `media.sources.get` | `media.sources` | `{ token }` | `WireSourceReference` | `missing`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.get MediaSources.get} |
+| `media.sources.list` | `media.sources` | `{}` | `WireSourceReference[]` | `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list} |
+| `media.sources.locate` | `media.sources` | `{ token }` | `WireSourceReference \| null` | `missing`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.locate MediaSources.locate} |
+| `media.sources.remember` | `media.sources` | `{ expected? }` | `WireSourceReference` | `unsupported`, `stale`, `limit`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.remember MediaSources.remember} |
+| `media.sources.*` (any other) | `media.sources` | — | — | — | `plugin.wire` only |
 
 ### `ui.osd`
 

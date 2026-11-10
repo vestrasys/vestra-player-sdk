@@ -196,40 +196,66 @@ export function requestsNeed(
   // An `ifDeclared` rule is decided last, as if the plugin had declared what
   // the member's other requests need: `Player.seek` needs `playback.control`
   // for `source.submit`, and with it `source.operation` needs nothing more.
-  const declared = (name: string) =>
-    capabilities.includes(name) ||
-    needs.some((need) => need.capability === name);
+  // What a rule answers can change what another rule reads, so the needs are
+  // worked out again, as if the plugin had declared everything an earlier
+  // round needed, until no round adds a capability: `media.sources.open`
+  // asks for `playback.control` until it is declared, then for
+  // `media.sources` (and `source.operation` follows the first). The set
+  // only grows, so the rounds end.
   const conditional = (request: ApiRequest) => {
     const rule = hostMethod(request.method, rules.host)?.needs;
     return typeof rule === "object" && rule !== null && "ifDeclared" in rule;
   };
-  const needs: MemberNeed[] = [];
-  const add = (need: MemberNeed) => {
-    if (needs.some((each) => each.capability === need.capability)) return;
-    needs.push(need);
-    const entry = rules.host.capabilities.find(
-      (capability) => capability.name === need.capability,
-    );
-    for (const required of entry?.requires ?? [])
-      add({
-        capability: required,
-        method: need.method,
-        requiredBy: need.capability,
-      });
-  };
-  for (const request of [
+  const ordered = [
     ...requests.filter((request) => !conditional(request)),
     ...requests.filter(conditional),
-  ]) {
-    const capability = requestNeeds(
-      request.method,
-      request.params,
-      declared,
-      rules.host,
-    );
-    if (capability) add({ capability, method: request.method });
+  ];
+  const round = (previous: ReadonlySet<string>): MemberNeed[] => {
+    const needs: MemberNeed[] = [];
+    const declared = (name: string) =>
+      capabilities.includes(name) ||
+      previous.has(name) ||
+      needs.some((need) => need.capability === name);
+    const add = (need: MemberNeed) => {
+      if (needs.some((each) => each.capability === need.capability)) return;
+      needs.push(need);
+      const entry = rules.host.capabilities.find(
+        (capability) => capability.name === need.capability,
+      );
+      for (const required of entry?.requires ?? [])
+        add({
+          capability: required,
+          method: need.method,
+          requiredBy: need.capability,
+        });
+    };
+    for (const request of ordered) {
+      const capability = requestNeeds(
+        request.method,
+        request.params,
+        declared,
+        rules.host,
+      );
+      if (capability) add({ capability, method: request.method });
+    }
+    return needs;
+  };
+  // Every capability any round needed; the answer is the last round's needs
+  // (read with all of them declared) and then any earlier one it left out.
+  const all = new Map<string, MemberNeed>();
+  for (;;) {
+    const needs = round(new Set(all.keys()));
+    const before = all.size;
+    for (const need of needs)
+      if (!all.has(need.capability)) all.set(need.capability, need);
+    if (all.size === before)
+      return [
+        ...needs,
+        ...[...all.values()].filter(
+          (need) => !needs.some((each) => each.capability === need.capability),
+        ),
+      ];
   }
-  return needs;
 }
 
 /**

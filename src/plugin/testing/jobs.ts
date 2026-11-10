@@ -12,9 +12,11 @@ import { HostError } from "../../wire.ts";
 import { localSocketPath } from "../local.ts";
 import type { Json } from "../../wire.ts";
 import type { SourceState, SourceStamp } from "../../source.ts";
+import type { WireExportCheck, WireSourceReference } from "../../media.ts";
 import type { TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 import { isCurrentProducer } from "./media.ts";
+import { MEDIA_SOURCE_LIMITS } from "../media.ts";
 
 /** `jobs.start`'s `encoding`, checked against the player's sets. */
 export function validEncoding(value: Json | undefined): boolean {
@@ -54,12 +56,186 @@ export function failStream(
   producer.retired = true;
 }
 
+type ExportPartWire = { source: string; start: number; end: number };
+type FileFacts = {
+  duration: number;
+  status: "ok" | "missing" | "changed";
+  video: WireSourceReference["video"];
+  audio: WireSourceReference["audio"];
+};
+
 /** The default handlers of this area's wire methods, by method name. */
 export function jobsHandlers(
   host: TestHost,
   inner: Internals,
 ): Record<string, Handler> {
-  return {
+  /** A file's facts: `mediaFiles`, else a 1080p30 H.264 + AAC file. */
+  const facts = (path: string): FileFacts => {
+    const file = host.mediaFiles.get(path) ?? {};
+    return {
+      duration: file.duration ?? host.source.duration ?? 60,
+      status: file.status ?? "ok",
+      video:
+        file.video === undefined
+          ? {
+              codec: "h264",
+              width: 1920,
+              height: 1080,
+              fps: 30,
+              pixelFormat: "yuv420p",
+            }
+          : file.video,
+      audio:
+        file.audio === undefined
+          ? { codec: "aac", sampleRate: 48000, channels: 2 }
+          : file.audio,
+    };
+  };
+  const known = (token: Json | undefined) => {
+    const value = String(token);
+    if (!host.sourceReferences.has(value))
+      throw new HostError("missing", "no such source reference");
+    return value;
+  };
+  /** A file's version: what the player's size and modification time are. */
+  const version = (path: string) => host.mediaFiles.get(path)?.version ?? 0;
+  /** As the player: gone, rewritten since remembered, or as it was. */
+  const status = (token: string): FileFacts["status"] => {
+    const { path, version: was } = host.sourceReferences.get(token)!;
+    const file = facts(path);
+    if (file.status === "missing") return "missing";
+    return file.status === "changed" || version(path) !== (was ?? 0)
+      ? "changed"
+      : "ok";
+  };
+  const describe = (token: string): WireSourceReference => {
+    const { path } = host.sourceReferences.get(token)!;
+    const file = facts(path);
+    return {
+      token,
+      name: path.split(/[/\\]/).pop() ?? path,
+      duration: file.duration,
+      status: status(token),
+      video: file.video,
+      audio: file.audio,
+    };
+  };
+  /** The player's `media_copy::fits_mp4`: codecs a copy writes into MP4. */
+  const fitsMp4 = (file: FileFacts | null | undefined) =>
+    ["h264", "hevc", "av1", "mpeg4"].includes(file?.video?.codec ?? "") &&
+    (!file?.audio ||
+      ["aac", "mp3", "ac3", "eac3", "alac"].includes(file.audio.codec));
+  // The player's check (`media_sources::check`) over the fake facts.
+  const exportCheck = (parts: ExportPartWire[]): WireExportCheck => {
+    // The player's bounds (`media_sources::parts_valid`).
+    if (
+      !Array.isArray(parts) ||
+      parts.length === 0 ||
+      parts.length > MEDIA_SOURCE_LIMITS.parts ||
+      parts.some(
+        (part) =>
+          typeof part?.source !== "string" ||
+          part.source === "" ||
+          !Number.isFinite(part.start) ||
+          !Number.isFinite(part.end) ||
+          part.start < 0 ||
+          part.end > MEDIA_SOURCE_LIMITS.partEnd,
+      ) ||
+      parts.reduce((sum, part) => sum + Math.max(0, part.end - part.start), 0) >
+        MEDIA_SOURCE_LIMITS.totalSeconds
+    )
+      throw new HostError(
+        "invalid",
+        `1–${MEDIA_SOURCE_LIMITS.parts} parts with a token and finite times from 0 to ${MEDIA_SOURCE_LIMITS.partEnd} s (${MEDIA_SOURCE_LIMITS.totalSeconds} s in all) required`,
+      );
+    const blocking: WireExportCheck["blocking"] = [];
+    const files = parts.map((part, index) => {
+      const reference = host.sourceReferences.get(part.source);
+      if (!reference) {
+        blocking.push({ part: index, problem: "unknown" });
+        return null;
+      }
+      const file = facts(reference.path);
+      const now = status(part.source);
+      if (now !== "ok") blocking.push({ part: index, problem: now });
+      if (!file.video) blocking.push({ part: index, problem: "noVideo" });
+      else if (
+        part.end <= part.start ||
+        part.end - part.start < 1 / file.video.fps - 1e-6 ||
+        part.end > file.duration + 0.001
+      )
+        blocking.push({
+          part: index,
+          problem: "range",
+          duration: file.duration,
+        });
+      return file;
+    });
+    const reasons: Extract<WireExportCheck["copy"], { ok: false }>["reasons"] =
+      [];
+    const first = files[0]?.video ? files[0] : null;
+    const audio = (a: FileFacts["audio"]) =>
+      a ? `${a.codec} ${a.sampleRate} Hz ${a.channels} ch` : "none";
+    if (first?.video)
+      files.forEach((file, part) => {
+        if (part === 0 || !file?.video) return;
+        const v = file.video;
+        const f = first.video!;
+        if (v.codec !== f.codec)
+          reasons.push({
+            part,
+            field: "videoCodec",
+            value: v.codec,
+            expected: f.codec,
+          });
+        if (v.width !== f.width || v.height !== f.height)
+          reasons.push({
+            part,
+            field: "size",
+            value: `${v.width}×${v.height}`,
+            expected: `${f.width}×${f.height}`,
+          });
+        if (v.fps !== f.fps)
+          reasons.push({ part, field: "fps", value: v.fps, expected: f.fps });
+        if (v.pixelFormat !== f.pixelFormat)
+          reasons.push({
+            part,
+            field: "pixelFormat",
+            value: v.pixelFormat,
+            expected: f.pixelFormat,
+          });
+        if (audio(file.audio) !== audio(first.audio))
+          reasons.push({
+            part,
+            field: "audio",
+            value: audio(file.audio),
+            expected: audio(first.audio),
+          });
+      });
+    const mp4 = fitsMp4(first);
+    return {
+      blocking,
+      copy:
+        reasons.length > 0 || !first
+          ? { ok: false, reasons }
+          : { ok: true, container: mp4 ? "mp4" : "mkv" },
+      encode: first?.video
+        ? {
+            width: first.video.width + (first.video.width % 2),
+            height: first.video.height + (first.video.height % 2),
+            fps: first.video.fps,
+            audio: files.some((file) => file?.audio)
+              ? { sampleRate: 48000, channels: 2 }
+              : null,
+          }
+        : null,
+      duration: parts.reduce(
+        (sum, part) => sum + Math.max(0, part.end - part.start),
+        0,
+      ),
+    };
+  };
+  const handlers: Record<string, Handler> = {
     "snapshot.capture": (p) => {
       const expected = p.expected as SourceStamp;
       if (
@@ -89,6 +265,7 @@ export function jobsHandlers(
     "snapshot.state": (p) => host.snapshots.get(Number(p.snapshotId)) ?? null,
     "snapshot.release": (p) => void host.snapshots.delete(Number(p.snapshotId)),
     "jobs.start": (p) => {
+      if (p.parts !== undefined) return startParts(p);
       if (!host.snapshots.has(Number(p.snapshotId)))
         throw new HostError("missing", "snapshot released");
       const kind = String(p.kind);
@@ -149,12 +326,61 @@ export function jobsHandlers(
       const current = structuredClone(job);
       const made = inner.exportJobs.get(job.jobId);
       const clip = made?.clip;
+      const join = made?.join;
       if (job.status === "queued") {
         job.status = "running";
         if (clip) {
           const total = clip.end - clip.start;
           job.progress = { done: total / 2, total };
         }
+        // A join is half written: in its middle part.
+        if (join)
+          job.progress = {
+            done: join.total / 2,
+            total: join.total,
+            part: Math.ceil(join.parts / 2),
+            parts: join.parts,
+          };
+      } else if (
+        job.status === "running" &&
+        join &&
+        !host.exportFailure &&
+        join.tokens.some((token) => status(token) !== "ok")
+      ) {
+        // As the player: a part whose file went or changed ends the job.
+        const index = join.tokens.findIndex((token) => status(token) !== "ok");
+        const gone = status(join.tokens[index]!) === "missing";
+        Object.assign(job, {
+          status: "failed",
+          outcome: {
+            error: {
+              code: gone ? "source-missing" : "source-changed",
+              message: `part ${index + 1} ${gone ? "is missing" : "changed since it was added"}`,
+            },
+          },
+        });
+      } else if (job.status === "running" && join && !host.exportFailure) {
+        const destination =
+          join.mode === "copy"
+            ? made!.destination.replace(
+                /(\.(mp4|m4v|mov|mkv|webm))?$/i,
+                `.${join.container}`,
+              )
+            : made!.destination;
+        Object.assign(job, {
+          status: "completed",
+          publicationStarted: true,
+          facts: {
+            join: {
+              mode: join.mode,
+              container: join.container,
+              parts: join.written,
+              target: null,
+            },
+          },
+          outcome: { destination },
+          progress: { done: join.total, total: join.total },
+        });
       } else if (job.status === "running" && host.exportFailure)
         Object.assign(job, {
           status: "failed",
@@ -201,6 +427,182 @@ export function jobsHandlers(
       return { jobId: job.jobId, cancel: "requested" };
     },
     "jobs.operation": () => ({ status: "unknown" }),
+    "media.sources.remember": (p) => {
+      const path = host.source.source;
+      if (
+        p.expected !== undefined &&
+        ((p.expected as SourceStamp).generation !==
+          host.source.stamp.generation ||
+          (p.expected as SourceStamp).intentVersion !==
+            host.source.stamp.intentVersion)
+      )
+        throw new HostError("stale", "source intent changed");
+      if (
+        !path ||
+        path.includes("://") ||
+        !["ready", "ended"].includes(host.source.phase) ||
+        host.mediaFiles.get(path)?.status === "missing"
+      )
+        throw new HostError(
+          "unsupported",
+          "only a local file can be referenced",
+        );
+      // The same file as it is (path, size and time: `version`): its token.
+      for (const [token, reference] of host.sourceReferences)
+        if (
+          reference.path === path &&
+          (reference.version ?? 0) === version(path)
+        )
+          return describe(token);
+      if (host.sourceReferences.size >= MEDIA_SOURCE_LIMITS.references)
+        throw new HostError(
+          "limit",
+          `a plugin holds at most ${MEDIA_SOURCE_LIMITS.references} references`,
+        );
+      const token = `src-${randomBytes(16).toString("hex")}`;
+      host.sourceReferences.set(token, { path, version: version(path) });
+      return describe(token);
+    },
+    "media.sources.get": (p) => describe(known(p.token)),
+    "media.sources.list": () => [...host.sourceReferences.keys()].map(describe),
+    "media.sources.forget": (p) =>
+      void host.sourceReferences.delete(String(p.token)),
+    // The player's own dialog: answered from `dialogAnswers` like a file
+    // dialog (a one-path array picks that file, `null` cancels).
+    "media.sources.locate": (p) => {
+      const token = known(p.token);
+      const answer = host.dialogAnswers.shift();
+      if (answer === undefined)
+        throw new Error("test host: no dialog answer queued");
+      if (answer !== null && !Array.isArray(answer))
+        throw new Error("test host: a confirm answer was queued");
+      if (answer === null) return null;
+      host.sourceReferences.set(token, {
+        path: answer[0]!,
+        version: version(answer[0]!),
+      });
+      return describe(token);
+    },
+    "jobs.check": (p) => {
+      // As the player: parts or a snapshot, one of them.
+      if ((p.snapshotId === undefined) === (p.parts === undefined))
+        throw new HostError(
+          "invalid",
+          "jobs.check takes parts or a snapshotId, one of them",
+        );
+      if (p.snapshotId === undefined) {
+        // Parts carry their own ends; `end` is the snapshot form's.
+        if (p.end !== undefined && p.end !== null)
+          throw new HostError(
+            "invalid",
+            "end belongs to a snapshotId check; parts carry their own end",
+          );
+        return exportCheck(p.parts as ExportPartWire[]);
+      }
+      // A snapshot's clip: one part from the current file's facts.
+      const snapshot = host.snapshots.get(Number(p.snapshotId)) as
+        | { kind: string; time: number; duration: number; source: string }
+        | undefined;
+      if (!snapshot)
+        throw new HostError("unknown-expired", "snapshot unavailable");
+      const end = Number(p.end);
+      if (!(end > snapshot.time && end <= snapshot.duration))
+        throw new HostError(
+          "invalid",
+          "end must be after the snapshot time and within its duration",
+        );
+      const file = facts(snapshot.source);
+      const fps = file.video?.fps ?? 30;
+      const processed = snapshot.kind === "processed";
+      return {
+        blocking: file.video ? [] : [{ part: 0, problem: "noVideo" }],
+        copy: processed
+          ? {
+              ok: false,
+              reasons: [
+                { part: 0, field: "effects", value: null, expected: null },
+              ],
+            }
+          : { ok: true, container: fitsMp4(file) ? "mp4" : "mkv" },
+        // The source's size (even), as the player's target; a processed
+        // snapshot's picture is the source's in the test host.
+        encode: file.video
+          ? {
+              width: file.video.width + (file.video.width % 2),
+              height: file.video.height + (file.video.height % 2),
+              fps,
+              audio: file.audio ? { sampleRate: 48000, channels: 2 } : null,
+            }
+          : null,
+        duration: end - snapshot.time,
+      } satisfies WireExportCheck;
+    },
+  };
+  /** `jobs.start { parts }`: an export of remembered files' parts. */
+  function startParts(p: Record<string, Json>) {
+    const parts = p.parts as ExportPartWire[];
+    const copy = p.kind === "rawCopy";
+    if (
+      !Array.isArray(parts) ||
+      parts.length === 0 ||
+      parts.length > MEDIA_SOURCE_LIMITS.parts ||
+      parts.some((part) => !(part.end > part.start)) ||
+      parts.reduce((sum, part) => sum + (part.end - part.start), 0) >
+        MEDIA_SOURCE_LIMITS.totalSeconds ||
+      !["rawCopy", "rawMp4"].includes(String(p.kind)) ||
+      p.snapshotId !== undefined ||
+      p.end !== undefined ||
+      p.sampleTime !== undefined ||
+      p.quality !== undefined ||
+      (p.encoding !== undefined && (copy || !validEncoding(p.encoding))) ||
+      (p.container !== undefined && !copy)
+    )
+      throw new HostError("invalid", "invalid export of parts");
+    parts.forEach((part, index) => {
+      if (!host.sourceReferences.has(part.source))
+        throw new HostError(
+          "missing",
+          `part ${index} names no source reference of this plugin`,
+        );
+    });
+    const checked = exportCheck(parts);
+    host.exports.push(structuredClone(p));
+    const jobId = ++inner.next.job;
+    host.jobs.set(jobId, {
+      jobId,
+      status: "queued",
+      publicationStarted: false,
+      facts: null,
+      outcome: null,
+      progress: null,
+    });
+    inner.exportJobs.set(jobId, {
+      destination: String(p.destination),
+      clip: null,
+      join: {
+        tokens: parts.map((part) => part.source),
+        parts: parts.length,
+        total: checked.duration,
+        mode: copy ? "copy" : "mp4",
+        container: !copy
+          ? "mp4"
+          : p.container === "mkv" ||
+              (p.container !== "mp4" &&
+                checked.copy.ok &&
+                checked.copy.container === "mkv")
+            ? "mkv"
+            : "mp4",
+        // A copy starts each part on a "keyframe" 1 s early, as clips do.
+        written: parts.map((part) => ({
+          start: copy ? Math.max(0, part.start - 1) : part.start,
+          end: part.end,
+        })),
+      },
+    });
+    return { jobId, status: "queued" };
+  }
+  return {
+    ...handlers,
     "producer.prepare": async () => {
       const id = ++inner.next.producer;
       const tcp = host.producerTransport === "tcp";

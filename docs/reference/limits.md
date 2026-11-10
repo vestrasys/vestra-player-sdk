@@ -171,6 +171,23 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 
 <!-- /generated -->
 
+## Remembered files and exports of their parts
+
+{@link "@vestra-player/sdk"!MediaSources | plugin.media.sources} and {@link "@vestra-player/sdk"!MediaCapture.export | media.export}. An export of parts is an export job: it counts towards the 2 exports one plugin runs at a time (8 in the player).
+
+<!-- generated:limits MEDIA_SOURCE_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| references | 500 | References one plugin may hold; one more fails with `limit`. |
+| parts | 100 | Parts of one export or check, at least 1; more fail with `invalid`. |
+| partEnd | 86400 | Seconds of a part's end in its file. |
+| totalSeconds | 86400 | Seconds of all parts of one export together, as one clip. |
+| requests | 4 | `remember`, `get`, `list` and checks one plugin may have the player working on at the same time; one more fails with `busy`. |
+| locateInterval | 2 | Seconds between two `locate` dialogs of one plugin; sooner fails with `busy`. |
+
+<!-- /generated -->
+
 ## Messages
 
 Every request a plugin sends travels as one protocol line. The plugin's side refuses a longer one with code `limit` before sending it; property values meet their own limits first.

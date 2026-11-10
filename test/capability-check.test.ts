@@ -27,10 +27,12 @@ import {
   isPluginSource,
 } from "../src/capability-check.ts";
 import {
+  argumentRequests,
   capabilityInfo,
   hostMethod,
   memberNeeds,
   requestNeeds,
+  requestsNeed,
   RULES,
 } from "../src/capability-rules.ts";
 import type { CapabilityRules } from "../src/capability-rules.ts";
@@ -117,6 +119,87 @@ test("memberNeeds: a member whose only request is IfDeclared", () => {
     memberNeeds("Player.query", declared, rules)?.map((n) => n.capability);
   assert.deepEqual(names([]), ["playback.read"]);
   assert.deepEqual(names(["playback.control"]), ["playback.control"]);
+});
+
+test("memberNeeds: IfDeclared rules read each other's answers until they settle (MediaSources.open)", () => {
+  const names = (api: string, declared: string[]) =>
+    memberNeeds(api, declared)?.map((need) => need.capability);
+  const missing = (api: string, declared: string[]) =>
+    names(api, declared)?.filter((name) => !declared.includes(name));
+  // media.sources.open asks for playback.control until it is declared,
+  // then for media.sources; source.operation then needs playback.control,
+  // not playback.read.
+  assert.deepEqual(names("MediaSources.open", []), [
+    "media.sources",
+    "playback.control",
+  ]);
+  assert.deepEqual(missing("MediaSources.open", ["media.sources"]), [
+    "playback.control",
+  ]);
+  assert.deepEqual(missing("MediaSources.open", ["playback.control"]), [
+    "media.sources",
+  ]);
+  assert.deepEqual(
+    missing("MediaSources.open", ["media.sources", "playback.control"]),
+    [],
+  );
+  // Members that settled in one round are unchanged.
+  for (const declared of [[], ["playback.read"], ["playback.control"]]) {
+    assert.deepEqual(names("Player.seek", declared), ["playback.control"]);
+    assert.deepEqual(names("Player.open", declared), ["playback.control"]);
+  }
+  assert.deepEqual(names("MediaSources.list", []), ["media.sources"]);
+  // Two rules that answer each other in turn: every round's needs are kept.
+  const rules: CapabilityRules = {
+    host: {
+      ...HOST_CAPABILITIES,
+      uncapable: [
+        ...HOST_CAPABILITIES.uncapable,
+        {
+          name: "test.flip",
+          needs: {
+            ifDeclared: "clipboard",
+            // oxlint-disable-next-line unicorn/no-thenable -- IfDeclared's field
+            then: "events",
+            otherwise: "clipboard",
+          },
+        },
+        {
+          name: "test.flop",
+          needs: {
+            ifDeclared: "events",
+            // oxlint-disable-next-line unicorn/no-thenable -- IfDeclared's field
+            then: "playback.read",
+            otherwise: "events",
+          },
+        },
+      ],
+    },
+    apis: { "Test.both": [{ method: "test.flip" }, { method: "test.flop" }] },
+  };
+  const both = memberNeeds("Test.both", [], rules)?.map((n) => n.capability);
+  assert.ok(
+    both?.includes("clipboard") && both.includes("events"),
+    String(both),
+  );
+});
+
+test("requestsNeed: a lone media.sources.open (plugin.wire.request) needs both, the rounds only adding", () => {
+  // Alone, the rule answers playback.control with nothing declared and
+  // media.sources once playback.control is: the needs keep both.
+  const requests = argumentRequests("method", "media.sources.open");
+  assert.deepEqual(requests, [{ method: "media.sources.open" }]);
+  const names = (declared: string[]) =>
+    requestsNeed(requests!, declared).map((need) => need.capability);
+  assert.deepEqual(names([]), ["media.sources", "playback.control"]);
+  assert.deepEqual(names(["media.sources"]), [
+    "media.sources",
+    "playback.control",
+  ]);
+  assert.deepEqual(names(["playback.control"]), ["media.sources"]);
+  assert.deepEqual(names(["media.sources", "playback.control"]), [
+    "media.sources",
+  ]);
 });
 
 test("API_REQUESTS names methods the player knows, with the parameters its rules read", () => {

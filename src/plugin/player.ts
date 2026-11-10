@@ -321,12 +321,20 @@ export class PlayerService implements StreamSource {
     options: {
       signal?: AbortSignal;
       accepted?: (ticket: SourceTicket) => void;
+      /**
+       * Send the submit another way under this service's operation id
+       * (`media.sources.open`, which the player turns into this intent's
+       * `source.submit`); followed with `source.operation` as any submit.
+       */
+      send?: (operationId: number) => Promise<SourceOperation>;
     } = {},
   ): Promise<SourceTicket> {
     const id = ++this.#operation;
     let result: SourceOperation;
     try {
-      result = await this.runtime.host.source.submit(intent, id);
+      result = await (options.send
+        ? options.send(id)
+        : this.runtime.host.source.submit(intent, id));
     } catch (error) {
       if (!uncertain(error)) throw error;
       result = await this.#query(id);
