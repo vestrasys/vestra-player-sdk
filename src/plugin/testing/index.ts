@@ -2032,6 +2032,15 @@ export class TestHost implements Transport {
       duration?: number;
       /** `ok` (default), `missing` or `changed`. */
       status?: "ok" | "missing" | "changed";
+      /**
+       * Stands for the file's size and modification time (default 0): a
+       * reference made at another version reads `changed`, and
+       * `reference` gives a new token for the file at a new version, as
+       * the player does for a rewritten file.
+       *
+       * @since 1.7.8
+       */
+      version?: number;
       /** The video stream; `null` for none. */
       video?: {
         /** FFmpeg's codec name. */
@@ -2081,6 +2090,8 @@ export class TestHost implements Transport {
     {
       /** The file's path (never shown to the plugin). */
       path: string;
+      /** The file's `mediaFiles` version when it was remembered. */
+      version?: number;
     }
   >();
   /**

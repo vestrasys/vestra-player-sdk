@@ -617,7 +617,10 @@ export function mediaHandlers(
       const file = host.mediaFiles.get(reference.path) ?? {};
       if (file.status === "missing")
         throw new HostError("source-missing", "the file is missing");
-      if (file.status === "changed")
+      if (
+        file.status === "changed" ||
+        (file.version ?? 0) !== (reference.version ?? 0)
+      )
         throw new HostError(
           "source-changed",
           "the file changed since it was remembered",

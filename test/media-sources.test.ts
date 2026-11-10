@@ -71,6 +71,7 @@ test("a reference names the playing file, never its path, and the same file gets
   assert.equal((await plugin.media.sources.reference()).token, file.token);
   assert.deepEqual(host.sourceReferences.get(file.token), {
     path: "/media/a.mp4",
+    version: 0,
   });
   // A moved file reads missing; locate rebinds it to the user's choice.
   host.mediaFiles.set("/media/a.mp4", { status: "missing" });
@@ -313,6 +314,108 @@ test("a part's thumbnail is a frame exported into the data directory, with the c
   });
   // The row shows it scaled down; no capability needed for that.
   assert.ok(plugin.ui.image(thumbnail, { maxSide: 64 }));
+  await stop();
+});
+
+test("a parts export whose file goes or changes while it runs fails with the player's code", async () => {
+  const { host, plugin, stop } = await started();
+  const a = await plugin.media.sources.reference();
+  const run = async () =>
+    (
+      await plugin.media.export({
+        parts: [{ source: a.token, start: 0, end: 3 }],
+        destination: "/tmp/p.mp4",
+        format: "mp4",
+      })
+    ).done;
+  host.mediaFiles.set("/media/a.mp4", { status: "missing" });
+  let done = await run();
+  assert.equal(done.status, "failed");
+  assert.equal(
+    (done.outcome as { error: { code: string } }).error.code,
+    "source-missing",
+  );
+  // Rewritten since remembered (another size or time): changed.
+  host.mediaFiles.set("/media/a.mp4", { version: 2 });
+  done = await run();
+  assert.equal(
+    (done.outcome as { error: { code: string } }).error.code,
+    "source-changed",
+  );
+  assert.equal((await plugin.media.sources.resolve(a.token)).status, "changed");
+  // The file as it is now gets a token of its own, as in the player.
+  const again = await plugin.media.sources.reference();
+  assert.notEqual(again.token, a.token);
+  assert.equal((await plugin.media.sources.reference()).token, again.token);
+  await stop();
+});
+
+test("the check bounds the parts as the player does, and takes a snapshot's clip", async () => {
+  const { host, plugin, stop } = await started();
+  const a = await plugin.media.sources.reference();
+  await assert.rejects(
+    plugin.media.exportCheck([
+      { source: a.token, start: 0, end: 43200 },
+      { source: a.token, start: 0, end: 43201 },
+    ]),
+    { code: "invalid", message: /at most 86400/ },
+  );
+  // The host refuses what the SDK would, too.
+  await assert.rejects(
+    host.request("jobs.check", {
+      parts: [{ source: a.token, start: 0, end: 90000 }],
+    }),
+    { code: "invalid" },
+  );
+  const raw = await plugin.media.capture({ at: 5 });
+  const check = await plugin.media.exportCheck({ snapshot: raw, end: 25 });
+  assert.deepEqual(check.copy, { ok: true, container: "mp4" });
+  assert.equal(check.duration, 20);
+  const processed = await plugin.media.capture({ at: 5, processed: true });
+  const effects = await plugin.media.exportCheck({
+    snapshot: processed,
+    end: 25,
+  });
+  assert.deepEqual(effects.copy, {
+    ok: false,
+    reasons: [{ part: 0, field: "effects", value: null, expected: null }],
+  });
+  await raw.dispose();
+  await assert.rejects(plugin.media.exportCheck({ snapshot: raw, end: 25 }), {
+    code: "released",
+  });
+  await processed.dispose();
+  await stop();
+});
+
+test("without media.sources the references and parts exports fail capability; a snapshot's check does not need it", async () => {
+  const { plugin, stop } = await started(
+    capabilities.filter((name) => name !== "media.sources"),
+  );
+  await assert.rejects(plugin.media.sources.reference(), {
+    code: "capability",
+  });
+  await assert.rejects(plugin.media.sources.open("src-x"), {
+    code: "capability",
+  });
+  await assert.rejects(
+    plugin.media.export({
+      parts: [{ source: "src-x", start: 0, end: 1 }],
+      destination: "/tmp/x.mp4",
+      format: "mp4",
+    }),
+    { code: "capability" },
+  );
+  await assert.rejects(
+    plugin.media.exportCheck([{ source: "src-x", start: 0, end: 1 }]),
+    { code: "capability" },
+  );
+  const shot = await plugin.media.capture();
+  assert.equal(
+    (await plugin.media.exportCheck({ snapshot: shot, end: 20 })).copy.ok,
+    true,
+  );
+  await shot.dispose();
   await stop();
 });
 

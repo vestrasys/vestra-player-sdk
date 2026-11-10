@@ -211,7 +211,7 @@ Take snapshots and export clips. Residency `live`: what these methods open (a vi
 | `snapshot.release` | `media.control` | `{ snapshotId, operationId }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.dispose Snapshot.dispose} |
 | `snapshot.*` (any other) | `media.control` | — | — | — | `plugin.wire` only |
 | `jobs.cancel` | `media.control` | `{ jobId, operationId }` | `{ jobId, cancel }` | `rejected`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!ExportJob.cancel ExportJob.cancel} |
-| `jobs.check` | `media.control` | `{ parts, encoding? }` | `WireExportCheck` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.exportCheck MediaCapture.exportCheck} |
+| `jobs.check` | `media.control` | `{ parts, encoding? }` | `WireExportCheck` | `invalid`, `released`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.exportCheck MediaCapture.exportCheck} |
 | `jobs.start` | `media.control` | `{ operationId: number; snapshotId: number; destination: string; } & ({ kind: "rawPng" \| "processedPng" \| "rawBmp" \| "processedBmp"; sampleTime?: number \| undefined; } \| { kind: "rawJpeg" \| "processedJpeg"; sampleTime?: number \| undefined; quality?: number \| undefined; } \| { ...; } \| { ...; })` | `{ jobId, status, snapshotId }` | `released`, `invalid`, `busy`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
 | `jobs.*` (any other) | `media.control` | — | — | — | `plugin.wire` only |
 
@@ -222,11 +222,11 @@ Remember videos you add and export from them later. Residency `none`: no effect 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
 | `media.sources.forget` | `media.sources` | `{ token }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.forget MediaSources.forget} |
-| `media.sources.list` | `media.sources` | `{}` | `WireSourceReference[]` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list} |
+| `media.sources.list` | `media.sources` | `{}` | `WireSourceReference[]` | `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list} |
 | `media.sources.locate` | `media.sources` | `{ token }` | `WireSourceReference \| null` | `missing`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.locate MediaSources.locate} |
 | `media.sources.open` | `media.sources` | `{ token, operationId, start? }` | `SourceOperation` | `missing`, `invalid`, `replaced`, `backend`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
-| `media.sources.reference` | `media.sources` | `{ expected? }` | `WireSourceReference` | `unsupported`, `stale`, `limit`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.reference MediaSources.reference} |
-| `media.sources.resolve` | `media.sources` | `{ token }` | `WireSourceReference` | `missing`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.resolve MediaSources.resolve} |
+| `media.sources.reference` | `media.sources` | `{ expected? }` | `WireSourceReference` | `unsupported`, `stale`, `limit`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.reference MediaSources.reference} |
+| `media.sources.resolve` | `media.sources` | `{ token }` | `WireSourceReference` | `missing`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.resolve MediaSources.resolve} |
 | `media.sources.*` (any other) | `media.sources` | — | — | — | `plugin.wire` only |
 
 ### `ui.osd`

@@ -204,7 +204,7 @@
 @vestra-player/sdk InterfaceDeclaration MediaCapture
 @vestra-player/sdk InterfaceDeclaration MediaCapture :: capture(options?: CaptureOptions): Promise<Snapshot>;
 @vestra-player/sdk InterfaceDeclaration MediaCapture :: export(options: PartsExportOptions): Promise<ExportJob>;
-@vestra-player/sdk InterfaceDeclaration MediaCapture :: exportCheck(parts: ExportPart[], options?: { encoding?: ExportEncoding; }): Promise<ExportCheck>;
+@vestra-player/sdk InterfaceDeclaration MediaCapture :: exportCheck(input: ExportPart[] | { snapshot: Snapshot; end: number; }, options?: { encoding?: ExportEncoding; }): Promise<ExportCheck>;
 @vestra-player/sdk InterfaceDeclaration MediaCapture :: readonly sources: MediaSources;
 @vestra-player/sdk InterfaceDeclaration MediaSources
 @vestra-player/sdk InterfaceDeclaration MediaSources :: forget(token: string): Promise<void>;
@@ -865,7 +865,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly listeningWhy: Map<string, string[]>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly local: LocalServices;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mainWindow: { fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; onTop: boolean; cursorAutoHide: "fullscreen" | "playing"; pictureInPicture: { supported: boolean; active: boolean; }; };
-@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mediaFiles: Map<string, { duration?: number; status?: "ok" | "missing" | "changed"; video?: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null; audio?: { codec: string; sampleRate: number; channels: number; } | null; }>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mediaFiles: Map<string, { duration?: number; status?: "ok" | "missing" | "changed"; version?: number; video?: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null; audio?: { codec: string; sampleRate: number; channels: number; } | null; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
@@ -884,7 +884,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly settings: { pages: Map<string, { category: string; title: string; order: number; file: string; component: string; global: string; props: Record<string, Json>; emit(callback: string, ...args: Json[]): void; }>; shows: (string | null)[]; current: string | null; open: boolean; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly snapshots: Map<number, Json>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sourceOpens: { token: string; start: number; }[];
-@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sourceReferences: Map<string, { path: string; }>;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly sourceReferences: Map<string, { path: string; version?: number; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly steps: { unit: string; direction: string; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly subscriptions: Set<string>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly subtitleLoads: { format: "srt" | "ass"; title: string | null; select: "primary" | "secondary" | "none"; bytes: Buffer; }[];

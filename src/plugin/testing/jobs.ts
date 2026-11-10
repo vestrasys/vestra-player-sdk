@@ -96,6 +96,17 @@ export function jobsHandlers(
       throw new HostError("missing", "no such source reference");
     return value;
   };
+  /** A file's version: what the player's size and modification time are. */
+  const version = (path: string) => host.mediaFiles.get(path)?.version ?? 0;
+  /** As the player: gone, rewritten since remembered, or as it was. */
+  const status = (token: string): FileFacts["status"] => {
+    const { path, version: was } = host.sourceReferences.get(token)!;
+    const file = facts(path);
+    if (file.status === "missing") return "missing";
+    return file.status === "changed" || version(path) !== (was ?? 0)
+      ? "changed"
+      : "ok";
+  };
   const describe = (token: string): WireSourceReference => {
     const { path } = host.sourceReferences.get(token)!;
     const file = facts(path);
@@ -103,15 +114,34 @@ export function jobsHandlers(
       token,
       name: path.split(/[/\\]/).pop() ?? path,
       duration: file.duration,
-      status: file.status,
+      status: status(token),
       video: file.video,
       audio: file.audio,
     };
   };
   // The player's check (`media_sources::check`) over the fake facts.
   const exportCheck = (parts: ExportPartWire[]): WireExportCheck => {
-    if (!Array.isArray(parts) || parts.length === 0 || parts.length > 100)
-      throw new HostError("invalid", "1–100 parts required");
+    // The player's bounds (`media_sources::parts_valid`).
+    if (
+      !Array.isArray(parts) ||
+      parts.length === 0 ||
+      parts.length > 100 ||
+      parts.some(
+        (part) =>
+          typeof part?.source !== "string" ||
+          part.source === "" ||
+          !Number.isFinite(part.start) ||
+          !Number.isFinite(part.end) ||
+          part.start < 0 ||
+          part.end > 86400,
+      ) ||
+      parts.reduce((sum, part) => sum + Math.max(0, part.end - part.start), 0) >
+        86400
+    )
+      throw new HostError(
+        "invalid",
+        "1–100 parts with a token and finite times from 0 to 86400 s (24 hours in all) required",
+      );
     const blocking: WireExportCheck["blocking"] = [];
     const files = parts.map((part, index) => {
       const reference = host.sourceReferences.get(part.source);
@@ -120,8 +150,8 @@ export function jobsHandlers(
         return null;
       }
       const file = facts(reference.path);
-      if (file.status !== "ok")
-        blocking.push({ part: index, problem: file.status });
+      const now = status(part.source);
+      if (now !== "ok") blocking.push({ part: index, problem: now });
       if (!file.video) blocking.push({ part: index, problem: "noVideo" });
       else if (
         part.end <= part.start ||
@@ -308,6 +338,24 @@ export function jobsHandlers(
             part: Math.ceil(join.parts / 2),
             parts: join.parts,
           };
+      } else if (
+        job.status === "running" &&
+        join &&
+        !host.exportFailure &&
+        join.tokens.some((token) => status(token) !== "ok")
+      ) {
+        // As the player: a part whose file went or changed ends the job.
+        const index = join.tokens.findIndex((token) => status(token) !== "ok");
+        const gone = status(join.tokens[index]!) === "missing";
+        Object.assign(job, {
+          status: "failed",
+          outcome: {
+            error: {
+              code: gone ? "source-missing" : "source-changed",
+              message: `part ${index + 1} ${gone ? "is missing" : "changed since it was added"}`,
+            },
+          },
+        });
       } else if (job.status === "running" && join && !host.exportFailure) {
         const destination =
           join.mode === "copy"
@@ -396,12 +444,17 @@ export function jobsHandlers(
           "unsupported",
           "only a local file can be referenced",
         );
+      // The same file as it is (path, size and time: `version`): its token.
       for (const [token, reference] of host.sourceReferences)
-        if (reference.path === path) return describe(token);
+        if (
+          reference.path === path &&
+          (reference.version ?? 0) === version(path)
+        )
+          return describe(token);
       if (host.sourceReferences.size >= 500)
         throw new HostError("limit", "a plugin holds at most 500 references");
       const token = `src-${randomBytes(16).toString("hex")}`;
-      host.sourceReferences.set(token, { path });
+      host.sourceReferences.set(token, { path, version: version(path) });
       return describe(token);
     },
     "media.sources.resolve": (p) => describe(known(p.token)),
@@ -418,10 +471,51 @@ export function jobsHandlers(
       if (answer !== null && !Array.isArray(answer))
         throw new Error("test host: a confirm answer was queued");
       if (answer === null) return null;
-      host.sourceReferences.set(token, { path: answer[0]! });
+      host.sourceReferences.set(token, {
+        path: answer[0]!,
+        version: version(answer[0]!),
+      });
       return describe(token);
     },
-    "jobs.check": (p) => exportCheck(p.parts as ExportPartWire[]),
+    "jobs.check": (p) => {
+      if (p.snapshotId === undefined)
+        return exportCheck(p.parts as ExportPartWire[]);
+      // A snapshot's clip: one part from the current file's facts.
+      const snapshot = host.snapshots.get(Number(p.snapshotId)) as
+        | { kind: string; time: number; duration: number; source: string }
+        | undefined;
+      if (!snapshot)
+        throw new HostError("unknown-expired", "snapshot unavailable");
+      const end = Number(p.end);
+      if (!(end > snapshot.time && end <= snapshot.duration))
+        throw new HostError(
+          "invalid",
+          "end must be after the snapshot time and within its duration",
+        );
+      const file = facts(snapshot.source);
+      const fps = file.video?.fps ?? 30;
+      const processed = snapshot.kind === "processed";
+      return {
+        blocking: file.video ? [] : [{ part: 0, problem: "noVideo" }],
+        copy: processed
+          ? {
+              ok: false,
+              reasons: [
+                { part: 0, field: "effects", value: null, expected: null },
+              ],
+            }
+          : { ok: true, container: "mp4" },
+        encode: file.video
+          ? {
+              width: processed ? 1920 : file.video.width,
+              height: processed ? 1080 : file.video.height,
+              fps,
+              audio: file.audio ? { sampleRate: 48000, channels: 2 } : null,
+            }
+          : null,
+        duration: end - snapshot.time,
+      } satisfies WireExportCheck;
+    },
   };
   /** `jobs.start { parts }`: an export of remembered files' parts. */
   function startParts(p: Record<string, Json>) {
@@ -432,6 +526,7 @@ export function jobsHandlers(
       parts.length === 0 ||
       parts.length > 100 ||
       parts.some((part) => !(part.end > part.start)) ||
+      parts.reduce((sum, part) => sum + (part.end - part.start), 0) > 86400 ||
       !["rawCopy", "rawMp4"].includes(String(p.kind)) ||
       p.snapshotId !== undefined ||
       p.end !== undefined ||
@@ -463,6 +558,7 @@ export function jobsHandlers(
       destination: String(p.destination),
       clip: null,
       join: {
+        tokens: parts.map((part) => part.source),
         parts: parts.length,
         total: checked.duration,
         mode: copy ? "copy" : "mp4",

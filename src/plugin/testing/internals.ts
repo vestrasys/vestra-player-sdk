@@ -50,6 +50,8 @@ export class Internals {
       } | null;
       /** An export of parts (`jobs.start { parts }`): its part count, length and container. */
       join?: {
+        /** Each part's token (its file's status decides the outcome). */
+        tokens: string[];
         parts: number;
         total: number;
         container: "mp4" | "mkv";

@@ -231,7 +231,8 @@ export type WireExportCheck = {
             | "size"
             | "fps"
             | "pixelFormat"
-            | "audio";
+            | "audio"
+            | "effects";
           value: string | number | null;
           expected: string | number | null;
         }[];
@@ -330,6 +331,18 @@ export function mediaClients(transport: Transport) {
         transport.request<WireExportCheck>(
           "jobs.check",
           encoding === undefined ? { parts } : { parts, encoding },
+        ),
+      /** `jobs.check` of a snapshot's clip (to `end`) instead of parts. */
+      checkSnapshot: (
+        snapshotId: number,
+        end: number,
+        encoding?: WireEncoding,
+      ) =>
+        transport.request<WireExportCheck>(
+          "jobs.check",
+          encoding === undefined
+            ? { snapshotId, end }
+            : { snapshotId, end, encoding },
         ),
     },
     mediaSources: {

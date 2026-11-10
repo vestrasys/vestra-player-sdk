@@ -535,14 +535,20 @@ export interface MediaCapture {
    * part was written from. A part whose file is gone ends the job
    * `failed` with `source-missing`, a file changed since it was remembered
    * with `source-changed`, parts a copy cannot write together with `unsupported`.
-   * Cancelling removes everything written so far.
+   * Before writing, the player compares the free space with an estimate
+   * (the parts' share of their files for a copy; the picture for a
+   * re-encode) for the intermediate parts, kept in the player's own
+   * temporary folder, and for the output beside `destination`; too little
+   * ends the job `failed` with `no-space`. Cancelling removes everything
+   * written so far, and what a crash leaves in the temporary folder goes
+   * at the player's next start.
    *
    * @capability media.read and media.control, and media.sources (its
    * tokens)
    * @throws `invalid` (rejects) No part or more than 100, a part whose end
-   *   is not after its start, a relative destination, `encoding` with
-   *   `copy` or `container` with `mp4`, an {@link ExportEncoding} value
-   *   outside its set.
+   *   is not after its start, parts longer than 24 hours in all, a relative
+   *   destination, `encoding` with `copy` or `container` with `mp4`, an
+   *   {@link ExportEncoding} value outside its set.
    * @throws `missing` (rejects) A part's token is not one of this
    *   plugin's references (forgotten, or another plugin's).
    * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
@@ -578,21 +584,29 @@ export interface MediaCapture {
    */
   export(options: PartsExportOptions): Promise<ExportJob>;
   /**
-   * Check an export of parts before starting it: what blocks it (a part
-   * whose file is missing or changed, an unknown token, a range outside the
-   * file, a file without video), whether a stream copy (`format: "copy"`)
-   * can write the parts and, if not, each difference from the first part,
-   * and what a re-encode (`format: "mp4"`) writes (with `encoding`, under
-   * its ceilings). Parts are numbered from 0 in the order given; one part
-   * checks a clip of one file. It reads the facts remembered with each
-   * reference and looks at each file on disk; nothing is decoded, so it is
-   * cheap enough to run on every change of a list.
+   * Check an export before starting it, of parts or of a snapshot's clip:
+   * what blocks it (a part whose file is missing or changed, an unknown
+   * token, a range outside the file, a file without video), whether a
+   * stream copy (`format: "copy"`) can write it and, if not, each
+   * difference from the first part (`effects` for a processed snapshot,
+   * whose effects need a re-encode), and what a re-encode (`format:
+   * "mp4"`) writes (with `encoding`, under its ceilings). Parts are
+   * numbered from 0 in the order given; `{ snapshot, end }` is one part,
+   * the snapshot's clip from its time to `end`. For parts it reads the
+   * facts remembered with each reference and looks at each file on disk
+   * (nothing is decoded, so it is cheap enough to run on every change of
+   * a list); for a snapshot it reads the held file's streams.
    *
-   * @capability media.control and media.sources
+   * @capability media.control, and media.sources for parts
    * @throws `invalid` (rejects) No part or more than 100, a time that is
-   *   negative, past 24 hours or not finite, an invalid `encoding`.
+   *   negative, past 24 hours (24 hours in all) or not finite, a snapshot
+   *   `end` not after its time or past its duration, an invalid
+   *   `encoding`.
+   * @throws `released` (rejects) The snapshot was released.
+   * @throws `busy` (rejects) This plugin has 4 checks or source requests
+   *   running.
    * @throws `capability` (rejects) The manifest does not declare
-   *   `media.control` and `media.sources`.
+   *   `media.control` (and `media.sources` for parts).
    *
    * @example Say why the fast export is not possible
    * The plugin shows a line under its list when the parts need a
@@ -611,10 +625,22 @@ export interface MediaCapture {
    * }
    * ```
    *
+   * @example Offer a fast cut of a snapshot only when it is possible
+   * The Clip page greys its Fast button when a stream copy of the marked
+   * range cannot be made. The same check takes a snapshot's clip: one part
+   * from the snapshot time to `end`.
+   * ```ts
+   * declare const snapshot: Snapshot;
+   * // ---cut---
+   * const check = await plugin.media.exportCheck({ snapshot, end: snapshot.time + 20 });
+   * const fast = check.copy.ok;
+   * console.log(fast ? "Fast" : "Precise only");
+   * ```
+   *
    * @since 1.7.8
    */
   exportCheck(
-    parts: ExportPart[],
+    input: ExportPart[] | { snapshot: Snapshot; end: number },
     options?: {
       /** The re-encode's settings, for its size and frame rate. */
       encoding?: ExportEncoding;
@@ -679,6 +705,12 @@ export interface SourceReference {
  * chapters plugin keeps its marks per file without storing paths.
  *
  * @remarks
+ * Tokens hide paths at the API level only: a plugin is an ordinary
+ * Node.js process, not sandboxed from the file system, and a plugin that
+ * can read files can find them by other means. What a token gives is a
+ * way to name the user's files without the plugin keeping their paths,
+ * and to find them again after a move.
+ *
  * Only the player makes tokens, and only for a local file that is
  * playing (the user opened it: the file dialog, a drop, the playlist, the
  * command line); a stream, an address or a plugin's own picture is
@@ -718,6 +750,8 @@ export interface MediaSources {
    *   player cannot read its streams.
    * @throws `stale` (rejects) The source changed since `ifCurrent`.
    * @throws `limit` (rejects) The plugin holds 500 references; forget one.
+   * @throws `busy` (rejects) This plugin has 4 source requests or checks
+   *   running; try again when one has answered.
    * @throws `unavailable` (rejects) No FFmpeg to read the file with.
    * @throws `capability` (rejects) The manifest does not declare
    *   `media.sources`.
@@ -756,6 +790,8 @@ export interface MediaSources {
    *
    * @capability media.sources
    * @throws `missing` (rejects) Not one of this plugin's tokens.
+   * @throws `busy` (rejects) This plugin has 4 source requests or checks
+   *   running; try again when one has answered.
    * @throws `capability` (rejects) The manifest does not declare
    *   `media.sources`.
    *
@@ -782,7 +818,8 @@ export interface MediaSources {
    *
    * @capability media.sources
    * @throws `missing` (rejects) Not one of this plugin's tokens.
-   * @throws `busy` (rejects) Another dialog of the player is open.
+   * @throws `busy` (rejects) Another dialog of the player is open, or this
+   *   plugin showed a Locate dialog less than 2 seconds ago.
    * @throws `unavailable` (rejects) No window to show the dialog in.
    * @throws `unsupported` (rejects) The player cannot read the chosen file's
    *   streams.
@@ -825,6 +862,8 @@ export interface MediaSources {
    * Every reference this plugin holds, each with its file looked at now.
    *
    * @capability media.sources
+   * @throws `busy` (rejects) This plugin has 4 source requests or checks
+   *   running; try again when one has answered.
    * @throws `capability` (rejects) The manifest does not declare
    *   `media.sources`.
    *
@@ -953,7 +992,7 @@ export type PartsExportOptions = {
  * - `copy`: `{ ok: true, container }` when a stream copy can write the
  *   parts, else `{ ok: false, reasons }`: each difference of a part from
  *   the first, `field` being `videoCodec`, `videoParams` (profile or codec
- *   data), `size` (`"1920×818"`), `fps`, `pixelFormat` or `audio`
+ *   data), `size` (`"1920×818"`), `fps`, `pixelFormat`, `audio` or `effects` (a processed snapshot)
  *   (`"aac 44100 Hz 1 ch"`, `"none"`), with the part's `value` and the
  *   first part's (`expected`).
  * - `encode`: what a re-encode writes: the first part's size and frame

@@ -166,6 +166,9 @@ class JobHandle implements ExportJob {
   }
 }
 
+/** A live snapshot's id, for `exportCheck({ snapshot })`. */
+const snapshotIds = new WeakMap<Snapshot, () => number>();
+
 class SnapshotHandle implements Snapshot {
   readonly #scope: ScopeImpl;
   readonly #service: MediaService;
@@ -176,6 +179,11 @@ class SnapshotHandle implements Snapshot {
     this.#service = service;
     this.#frozen = frozen;
     scope.add(this);
+    snapshotIds.set(this, () => {
+      if (this.#released)
+        throw failure("released", "snapshot already released");
+      return this.#frozen.snapshotId;
+    });
   }
   get kind() {
     return this.#frozen.kind;
@@ -364,6 +372,7 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
       const service = serviceOf(runtime);
       if (typeof options !== "object" || options === null)
         throw failure("invalid", "export options must be an object");
+      needSources(scope);
       const parts = checkParts(options.parts);
       let mode: Record<string, unknown>;
       if (options.format === "copy") {
@@ -404,16 +413,29 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
       return new JobHandle(scope, service, result.jobId);
     },
     async exportCheck(
-      parts: ExportPart[],
+      input: ExportPart[] | { snapshot: Snapshot; end: number },
       options?: { encoding?: ExportEncoding },
     ) {
-      const checked = checkParts(parts);
-      return scope.runtime.host.jobs.check(
-        checked,
+      const encoding =
         options?.encoding === undefined
           ? undefined
-          : checkEncoding(options.encoding),
-      );
+          : checkEncoding(options.encoding);
+      if (!Array.isArray(input)) {
+        // A snapshot's clip: needs no media.sources.
+        const id = input?.snapshot
+          ? snapshotIds.get(input.snapshot)
+          : undefined;
+        if (!id)
+          throw failure(
+            "invalid",
+            "exportCheck takes parts or { snapshot, end }",
+          );
+        if (!Number.isFinite(input.end))
+          throw failure("invalid", "end must be seconds");
+        return scope.runtime.host.jobs.checkSnapshot(id(), input.end, encoding);
+      }
+      needSources(scope);
+      return scope.runtime.host.jobs.check(checkParts(input), encoding);
     },
   };
 }
@@ -431,6 +453,15 @@ export const MEDIA_SOURCE_LIMITS = Object.freeze({
   parts: 100,
   /** Seconds of a part's end in its file (24 hours). */
   partEnd: 86400,
+  /** Seconds of all parts of one export together, as one clip (24 hours). */
+  totalSeconds: 86400,
+  /**
+   * `reference`, `resolve`, `list` and checks one plugin may have the
+   * player working on at the same time; one more fails with `busy` (4).
+   */
+  requests: 4,
+  /** Seconds between two `locate` dialogs of one plugin; sooner fails with `busy` (2). */
+  locateInterval: 2,
 } as const);
 
 /** Refuse what the player would refuse of an export's parts, naming the part. */
@@ -444,7 +475,7 @@ function checkParts(parts: ExportPart[]): ExportPart[] {
       "invalid",
       `an export takes 1 to ${MEDIA_SOURCE_LIMITS.parts} parts`,
     );
-  return parts.map((part, index) => {
+  const checked = parts.map((part, index) => {
     const { source, start, end } = part ?? {};
     if (typeof source !== "string" || source === "")
       throw failure("invalid", `part ${index}: source must be a token`);
@@ -461,10 +492,26 @@ function checkParts(parts: ExportPart[]): ExportPart[] {
       );
     return { source, start, end };
   });
+  const total = checked.reduce((sum, part) => sum + part.end - part.start, 0);
+  if (total > MEDIA_SOURCE_LIMITS.totalSeconds)
+    throw failure(
+      "invalid",
+      `the parts are ${total} s long; an export takes at most ${MEDIA_SOURCE_LIMITS.totalSeconds} s`,
+    );
+  return checked;
+}
+
+/** The parts' tokens are media.sources': refuse at once without it, as the player does. */
+function needSources(scope: ScopeImpl) {
+  if (!scope.runtime.can("media.sources"))
+    throw failure("capability", "media.sources must be declared in manifest");
 }
 
 function mediaSources(scope: ScopeImpl): MediaSources {
-  const host = () => scope.runtime.host.mediaSources;
+  const host = () => {
+    needSources(scope);
+    return scope.runtime.host.mediaSources;
+  };
   const token = (value: string) => {
     if (typeof value !== "string" || value === "")
       throw failure("invalid", "token must be a non-empty string");
@@ -488,6 +535,7 @@ function mediaSources(scope: ScopeImpl): MediaSources {
     forget: async (value: string) => host().forget(token(value)),
     list: async () => host().list(),
     async open(value: string, options: { start?: number } = {}) {
+      needSources(scope);
       const start = options?.start;
       if (start !== undefined && !(Number.isFinite(start) && start >= 0))
         throw failure("invalid", "start must be seconds from 0");
