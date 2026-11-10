@@ -119,6 +119,11 @@ export function jobsHandlers(
       audio: file.audio,
     };
   };
+  /** The player's `media_copy::fits_mp4`: codecs a copy writes into MP4. */
+  const fitsMp4 = (file: FileFacts | null | undefined) =>
+    ["h264", "hevc", "av1", "mpeg4"].includes(file?.video?.codec ?? "") &&
+    (!file?.audio ||
+      ["aac", "mp3", "ac3", "eac3", "alac"].includes(file.audio.codec));
   // The player's check (`media_sources::check`) over the fake facts.
   const exportCheck = (parts: ExportPartWire[]): WireExportCheck => {
     // The player's bounds (`media_sources::parts_valid`).
@@ -206,10 +211,7 @@ export function jobsHandlers(
             expected: audio(first.audio),
           });
       });
-    const mp4 =
-      ["h264", "hevc", "av1", "mpeg4"].includes(first?.video?.codec ?? "") &&
-      (!first?.audio ||
-        ["aac", "mp3", "ac3", "eac3", "alac"].includes(first.audio.codec));
+    const mp4 = fitsMp4(first);
     return {
       blocking,
       copy:
@@ -478,6 +480,12 @@ export function jobsHandlers(
       return describe(token);
     },
     "jobs.check": (p) => {
+      // As the player: parts or a snapshot, one of them.
+      if ((p.snapshotId === undefined) === (p.parts === undefined))
+        throw new HostError(
+          "invalid",
+          "jobs.check takes parts or a snapshotId, one of them",
+        );
       if (p.snapshotId === undefined)
         return exportCheck(p.parts as ExportPartWire[]);
       // A snapshot's clip: one part from the current file's facts.
@@ -504,11 +512,13 @@ export function jobsHandlers(
                 { part: 0, field: "effects", value: null, expected: null },
               ],
             }
-          : { ok: true, container: "mp4" },
+          : { ok: true, container: fitsMp4(file) ? "mp4" : "mkv" },
+        // The source's size (even), as the player's target; a processed
+        // snapshot's picture is the source's in the test host.
         encode: file.video
           ? {
-              width: processed ? 1920 : file.video.width,
-              height: processed ? 1080 : file.video.height,
+              width: file.video.width + (file.video.width % 2),
+              height: file.video.height + (file.video.height % 2),
               fps,
               audio: file.audio ? { sampleRate: 48000, channels: 2 } : null,
             }

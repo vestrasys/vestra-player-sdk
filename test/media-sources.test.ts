@@ -380,6 +380,41 @@ test("the check bounds the parts as the player does, and takes a snapshot's clip
     ok: false,
     reasons: [{ part: 0, field: "effects", value: null, expected: null }],
   });
+  // The source's size, not a fixed one; a copy's container by its codecs.
+  assert.deepEqual(effects.encode, {
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    audio: { sampleRate: 48000, channels: 2 },
+  });
+  host.mediaFiles.set("/media/a.mp4", {
+    video: {
+      codec: "vp9",
+      width: 1279,
+      height: 720,
+      fps: 25,
+      pixelFormat: "yuv420p",
+    },
+    audio: { codec: "opus", sampleRate: 48000, channels: 2 },
+  });
+  const vp9 = await plugin.media.exportCheck({ snapshot: raw, end: 25 });
+  assert.deepEqual(vp9.copy, { ok: true, container: "mkv" });
+  assert.equal(vp9.encode?.width, 1280);
+  const sizedProcessed = await plugin.media.exportCheck({
+    snapshot: processed,
+    end: 25,
+  });
+  assert.equal(sizedProcessed.encode?.height, 720);
+  // Neither or both inputs: invalid, as the player.
+  await assert.rejects(host.request("jobs.check", {}), { code: "invalid" });
+  await assert.rejects(
+    host.request("jobs.check", {
+      snapshotId: 1,
+      end: 3,
+      parts: [{ source: a.token, start: 0, end: 1 }],
+    }),
+    { code: "invalid" },
+  );
   await raw.dispose();
   await assert.rejects(plugin.media.exportCheck({ snapshot: raw, end: 25 }), {
     code: "released",
