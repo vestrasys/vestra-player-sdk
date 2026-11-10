@@ -197,9 +197,11 @@ export function requestsNeed(
   // the member's other requests need: `Player.seek` needs `playback.control`
   // for `source.submit`, and with it `source.operation` needs nothing more.
   // What a rule answers can change what another rule reads, so the needs are
-  // worked out again, reading the last round's, until they stop changing:
-  // `MediaSources.open` asks for `playback.control` until it is declared,
-  // then for `media.sources` (and `source.operation` follows the first).
+  // worked out again, as if the plugin had declared everything an earlier
+  // round needed, until no round adds a capability: `media.sources.open`
+  // asks for `playback.control` until it is declared, then for
+  // `media.sources` (and `source.operation` follows the first). The set
+  // only grows, so the rounds end.
   const conditional = (request: ApiRequest) => {
     const rule = hostMethod(request.method, rules.host)?.needs;
     return typeof rule === "object" && rule !== null && "ifDeclared" in rule;
@@ -208,11 +210,11 @@ export function requestsNeed(
     ...requests.filter((request) => !conditional(request)),
     ...requests.filter(conditional),
   ];
-  const round = (previous: readonly MemberNeed[]): MemberNeed[] => {
+  const round = (previous: ReadonlySet<string>): MemberNeed[] => {
     const needs: MemberNeed[] = [];
     const declared = (name: string) =>
       capabilities.includes(name) ||
-      previous.some((need) => need.capability === name) ||
+      previous.has(name) ||
       needs.some((need) => need.capability === name);
     const add = (need: MemberNeed) => {
       if (needs.some((each) => each.capability === need.capability)) return;
@@ -238,26 +240,21 @@ export function requestsNeed(
     }
     return needs;
   };
-  const key = (needs: readonly MemberNeed[]) =>
-    JSON.stringify(
-      needs.map((need) => [need.capability, need.method, need.requiredBy]),
-    );
-  const seen = new Set<string>();
-  let needs = round([]);
-  // Rounds differ only by the branches the rules take, so they settle or
-  // repeat; a repeat (no rule of the player's makes one) ends with the
-  // capabilities of both of its last rounds, so nothing needed is left out.
+  // Every capability any round needed; the answer is the last round's needs
+  // (read with all of them declared) and then any earlier one it left out.
+  const all = new Map<string, MemberNeed>();
   for (;;) {
-    seen.add(key(needs));
-    const next = round(needs);
-    if (key(next) === key(needs)) return needs;
-    if (seen.has(key(next))) {
-      for (const need of next)
-        if (!needs.some((each) => each.capability === need.capability))
-          needs.push(need);
-      return needs;
-    }
-    needs = next;
+    const needs = round(new Set(all.keys()));
+    const before = all.size;
+    for (const need of needs)
+      if (!all.has(need.capability)) all.set(need.capability, need);
+    if (all.size === before)
+      return [
+        ...needs,
+        ...[...all.values()].filter(
+          (need) => !needs.some((each) => each.capability === need.capability),
+        ),
+      ];
   }
 }
 
