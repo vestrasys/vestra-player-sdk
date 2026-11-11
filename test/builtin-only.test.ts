@@ -23,18 +23,18 @@ async function started(builtin = true) {
     (plugin: Plugin) => {
       plugin.commands.add({
         id: "forget-all",
-        path: ["Tools", "Forget All"],
+        path: ["Extras", "Forget All"],
         destructive: true,
         run: () => void ran++,
       });
       plugin.commands.add({
         id: "louder",
-        path: ["Tools", "Louder"],
+        path: ["Extras", "Louder"],
         run: () => void ran++,
       });
       plugin.commands.add({
         id: "off",
-        path: ["Tools", "Off"],
+        path: ["Extras", "Off"],
         enabled: false,
         reason: "Nothing to do",
         run: () => {},
@@ -107,7 +107,7 @@ test("the lead row, its run event and the ticket of each request", async () => {
   );
   await host.settle();
   assert.equal(ran(), 1);
-  assert.equal(host.osd.at(-1), "vestra.test · 1/2 · Tools: Louder");
+  assert.equal(host.osd.at(-1), "vestra.test · 1/2 · Extras: Louder");
   await plugin.commands.run("host/mute", { ticket });
   assert.deepEqual(host.coreRuns, ["mute"]);
   // A newer request ends the earlier ticket; done ends the newer one.
@@ -172,11 +172,11 @@ test("commands.list is the palette's table", async () => {
   const row = (id: string) => commands.find((each) => each.id === id);
   assert.deepEqual(row("vestra.test/forget-all"), {
     id: "vestra.test/forget-all",
-    label: "Tools: Forget All",
-    labelSource: "Tools: Forget All",
+    label: "Extras: Forget All",
+    labelSource: "Extras: Forget All",
     title: "Forget All",
-    category: "Tools",
-    path: ["Tools", "Forget All"],
+    category: "Extras",
+    path: ["Extras", "Forget All"],
     place: "Menu",
     keys: [],
     plugin: "vestra.test",

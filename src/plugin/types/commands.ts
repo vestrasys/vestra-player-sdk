@@ -285,9 +285,11 @@ export interface When {
 /**
  * A built-in top-level menu of the player, named in a command path as `@<id>`
  * or by its English key (see {@link CommandOptions.path}): Open, Playback,
- * Subtitles, Video, Audio, Screen, Settings, Reset. The list is `MENU_IDS` in
- * `@vestra-player/sdk/testing`. Reset (`@reset`) gathers every command that
- * puts something back to its default.
+ * Subtitles, Video, Audio, Screen, Settings, Reset, Tools. The list is
+ * `MENU_IDS` in `@vestra-player/sdk/testing`. Reset (`@reset`) gathers every
+ * command that puts something back to its default; Tools (`@tools`, since
+ * 1.7.12) holds the player's tools (tracks, snapshot, Vestra Player AI, the
+ * store, the command palette, About) and any plugin's own.
  *
  * @since 1.3.0
  * @category Commands
@@ -300,7 +302,8 @@ export type MenuId =
   | "audio"
   | "screen"
   | "settings"
-  | "reset";
+  | "reset"
+  | "tools";
 
 /**
  * An icon of the player's V-Line set (`@vestra/icons.slint`), by name: what
@@ -433,9 +436,11 @@ export interface CommandButton {
  *
  * Built-in menus keep their place. The built-in top-level menus
  * ({@link MenuId}) sit at fixed orders, whatever is inside them: Open 110,
- * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Settings 830,
- * Reset 840 (directly below Settings and in its separator group). Like every
- * built-in menu, Reset shows only when a command is in it. This holds whether
+ * Playback 200, Subtitles 300, Video 400, Audio 500, Screen 710, Tools 820,
+ * Settings 830, Reset 840. Tools and Settings are drawn in the separator group
+ * of Options… and Quit (`settings-main`) and Reset in Settings' group, whatever
+ * groups the items inside declare. Like every built-in menu, Tools, Settings
+ * and Reset show only when a command is in them. This holds whether
  * the path names the menu by id (`["@video", "Blur"]`) or by its key
  * (`["Video", "Blur"]`), so a plugin's item never moves the player's menu.
  * Directly inside a built-in menu, `order` 0 (the default) sorts after every
@@ -469,10 +474,10 @@ export interface CommandOptions {
    * player shows each segment and the title in the interface language from the
    * declaring plugin's catalog (`locales/<lang>.po`, see the [i18n
    * guide](../../../docs/guides/i18n.md)); the player's own menus (Open,
-   * Playback, Subtitles, Video, Audio, Screen, Settings, Reset, and Playback ▸
+   * Playback, Subtitles, Video, Audio, Screen, Settings, Reset, Tools, and Playback ▸
    * Speed, Playback ▸ Seek) always show the player's words. A built-in menu can
    * also be named by its id, `@` plus a {@link MenuId}: `@open`, `@playback`,
-   * `@subtitles`, `@video`, `@audio`, `@screen`, `@settings` or `@reset`. Only
+   * `@subtitles`, `@video`, `@audio`, `@screen`, `@settings`, `@reset` or `@tools`. Only
    * the first segment is read as an id; an unknown id, or an id with nothing
    * after it, fails with `invalid`.
    *
