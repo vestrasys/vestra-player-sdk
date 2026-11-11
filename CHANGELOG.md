@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.10
+
+**Who must change: nobody.** No API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged. A plugin that sends many requests at once now sees some of them answered later, never refused.
+
+- **Requests in flight** (user design, 2026-11-11): the SDK keeps at most 256 of a plugin's requests, and 3 MiB of their lines, sent and not yet answered (`REQUEST_LIMITS`, exported from `./runtime` for the player's agreement test). The rest wait in the plugin's own queue and go out in the order made as answers come in: no error, no reordering. The player's backstop (past 320 unanswered lines or 4 MiB per plugin it answers `limit`; it does not stop the plugin) is so never reached by a plugin on the SDK, only by a client that bypasses it; the byte cap leaves one `MESSAGE_LIMIT` line of room under 4 MiB, since a few large lines would cross 4 MiB long before 256 requests, and each line counts 32 bytes more than the SDK's estimate, for the id's digits and the shared runner's envelope the player also counts. One queue per plugin, each member of the shared runner included (it lives in the plugin's connection, over the runner's transport).
+- **What never waits**: the answers to the player's own calls (`sourceResolvers.respond`, `producer.ack`, `producer.ackInput`), which the player may be waiting for before it answers one of the plugin's requests; they count while in flight. `palette.lead.done` waits in order like any request, so it never passes a waiting `commands.run` of the same ticket. A line over `MESSAGE_LIMIT` is refused at once as before. Events are not requests.
+- **Aborting**: a waiting request whose `AbortSignal` is aborted leaves the queue unsent and rejects with `aborted` (`player.open`'s submit, `subtitles.load`'s upload). A sent request runs to its answer, as before. An abort counts as a definite outcome (nothing is asked again about an operation that was never sent).
+- **Stopping**: when the plugin stops, every waiting request rejects with `disabled` ("plugin stopped"), as the runner rejects those in flight; the cleanup's own requests go out as before.
+- **`TestHost`** sits behind the same queue, so a plugin's tests see the same waiting. Limits reference: "Requests in flight". Tests: `test/request-queue.test.ts` (10,000 requests in order with at most 256 in flight, the byte cap, abort while waiting, stop and disconnect with a full queue, replies past a full queue, `palette.lead.done` behind a waiting `commands.run`). Errors reference: `limit` names the player's backstop.
+- **Capability checker**: `media.sources.open` without `playback.control` names the request `media.sources.open` (it named `source.operation`, which asks for that capability only once it counts as declared); a need is attributed to the request that needed it first.
+
 ## 1.7.9
 
 **Who must change: nobody; additions only.** The two new capabilities are for the player's built-in plugins only: a third-party plugin cannot declare them (the player refuses the package at install, the plugin registry refuses it, `vestra-plugin check` reports it, and every call fails with `capability`). A built-in plugin that uses them needs player 0.7.6. `apiVersion` stays `vestra/1`; the API surface snapshot gains the new members.

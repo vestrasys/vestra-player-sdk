@@ -357,11 +357,21 @@ export function subtitles(scope: ScopeImpl): Subtitles {
           if (options?.signal?.aborted) throw abortError();
         };
         check();
-        await host().begin(uploadId, current.sourceId, srt.length);
+        await host().begin(
+          uploadId,
+          current.sourceId,
+          srt.length,
+          options?.signal,
+        );
         for (let offset = 0; offset < srt.length; offset += CHUNK) {
           check();
           const chunk = Buffer.from(srt.subarray(offset, offset + CHUNK));
-          await host().append(uploadId, offset, chunk.toString("base64"));
+          await host().append(
+            uploadId,
+            offset,
+            chunk.toString("base64"),
+            options?.signal,
+          );
         }
         const sha256 = createHash("sha256").update(srt).digest("hex");
         check();

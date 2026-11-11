@@ -114,7 +114,12 @@ export function sourceClient(transport: Transport) {
   let next = 0;
   return {
     state: () => transport.request<SourceState>("source.state"),
-    submit: (intent: SourceIntent, operationId?: number) => {
+    /** `signal`: aborted while the submit still waits to be sent, it is not sent. */
+    submit: (
+      intent: SourceIntent,
+      operationId?: number,
+      signal?: AbortSignal,
+    ) => {
       operationId ??= next + 1;
       if (!Number.isSafeInteger(operationId) || operationId <= 0) {
         return Promise.reject(
@@ -125,10 +130,11 @@ export function sourceClient(transport: Transport) {
         );
       }
       next = Math.max(next, operationId);
-      return transport.request<SourceOperation>("source.submit", {
-        operationId,
-        intent,
-      });
+      return transport.request<SourceOperation>(
+        "source.submit",
+        { operationId, intent },
+        { signal },
+      );
     },
     operation: (operationId: number) =>
       transport.request<SourceOperation>("source.operation", { operationId }),

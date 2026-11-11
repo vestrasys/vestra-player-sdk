@@ -137,7 +137,7 @@ export interface Disposable {
  * | `timeout` | A time limit ran out (`openStream` start-up, `tools.run`, `system.*` after 10 s). |
  * | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
  * | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
- * | `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link PropValue}, a request is longer than the player's 1 MiB message, or {@link Commands.run} ran too often. |
+ * | `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link PropValue}, a request is longer than the player's 1 MiB message, {@link Commands.run} ran too often, or a client that bypasses the SDK left more than 320 requests or 4 MiB of them unanswered (the player's backstop; the SDK keeps a plugin under it). |
  * | `reserved` | {@link Packages.validate}, {@link PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use. |
  * | `versionMismatch` | The package needs a newer player (`minPlayerVersion`). |
  * | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
