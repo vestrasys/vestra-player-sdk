@@ -149,6 +149,21 @@ test("memberNeeds: IfDeclared rules read each other's answers until they settle 
     assert.deepEqual(names("Player.open", declared), ["playback.control"]);
   }
   assert.deepEqual(names("MediaSources.list", []), ["media.sources"]);
+  // Each need names the request that first asked for it: playback.control
+  // is media.sources.open's, not source.operation's (which asks for it only
+  // once it counts as declared).
+  const methods = (declared: string[]) =>
+    memberNeeds("MediaSources.open", declared)?.map(
+      (need) => `${need.capability}:${need.method}`,
+    );
+  assert.deepEqual(methods([]), [
+    "media.sources:media.sources.open",
+    "playback.control:media.sources.open",
+  ]);
+  assert.deepEqual(methods(["media.sources"]), [
+    "media.sources:media.sources.open",
+    "playback.control:media.sources.open",
+  ]);
   // Two rules that answer each other in turn: every round's needs are kept.
   const rules: CapabilityRules = {
     host: {
@@ -548,6 +563,28 @@ test("checker: wire.commands.register needs commands", () => {
   assert.deepEqual(checkAll(source).findings, [
     "3:24 WireCommands.register commands.register commands",
   ]);
+});
+
+test("checker: media.sources.open without playback.control names media.sources.open", () => {
+  const source = lines('await plugin.media.sources.open("x");');
+  for (const declared of [[], ["media.sources"]])
+    assert.deepEqual(
+      checkAll(source, declared).findings.filter((f) =>
+        f.endsWith("playback.control"),
+      ),
+      ["3:30 MediaSources.open media.sources.open playback.control"],
+    );
+  const directory = project({ "main.ts": source }, ["media.sources"]);
+  const run = spawnSync(process.execPath, [cli, "check"], {
+    cwd: directory,
+    encoding: "utf8",
+  });
+  assert.equal(run.status, 1, run.stdout + run.stderr);
+  assert.match(
+    run.stderr,
+    /main\.ts:3:30: MediaSources\.open needs the capability "playback\.control", which manifest\.json does not declare \(request media\.sources\.open\)/,
+  );
+  assert.doesNotMatch(run.stderr, /source\.operation/);
 });
 
 test("vestra-plugin check lists unchecked calls without failing", () => {
