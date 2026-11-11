@@ -664,9 +664,10 @@ vestra.video | video.upscaling | (AI Upscaling)
  * user's own changes come on top; see {@link @vestra-player/sdk!Bindings | Bindings}). Menu items built
  * from content (tracks, recent files, output devices) are not listed; their
  * placeholders (`No Audio Tracks`) are. Items that appear only in a
- * passing state are not listed either: the Picture Adjustments plugin's
- * `Video ▸ Restart Player to Apply` (`video.gpu-rendering.restart`), shown
- * while a rendering choice waits for the next start.
+ * passing state are not listed either: the video plugin's Restart
+ * (`video.gpu-rendering.restart`), in the Picture panel's Rendering section
+ * beside GPU Rendering (not in a menu), shown while a rendering choice waits
+ * for the next start.
  *
  * A snapshot of the player's built-in commands at this SDK release; the
  * player may differ between SDK releases. The player's tests check that
