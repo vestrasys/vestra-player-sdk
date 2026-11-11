@@ -652,7 +652,7 @@ vestra.video | video.saturation.down | (Saturation -1%) | Y
 vestra.video | video.saturation.up | (Saturation +1%) | U
 vestra.video | video.hue.down | (Hue -1%) | I
 vestra.video | video.hue.up | (Hue +1%) | O
-vestra.video | video.gpu-rendering | (GPU Rendering (Experimental))
+vestra.video | video.gpu-rendering | (GPU Rendering)
 vestra.video | video.upscaling | (AI Upscaling)
 `;
 
