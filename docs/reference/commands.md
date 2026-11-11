@@ -433,7 +433,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Saturation +1% (not in the menu) | `U` | `vestra.video/video.saturation.up` |
 | Hue -1% (not in the menu) | `I` | `vestra.video/video.hue.down` |
 | Hue +1% (not in the menu) | `O` | `vestra.video/video.hue.up` |
-| GPU Rendering (Experimental) (not in the menu) |  | `vestra.video/video.gpu-rendering` |
+| GPU Rendering (not in the menu) |  | `vestra.video/video.gpu-rendering` |
 | AI Upscaling (not in the menu) |  | `vestra.video/video.upscaling` |
 
 <!-- /generated -->

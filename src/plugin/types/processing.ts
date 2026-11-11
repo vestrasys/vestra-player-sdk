@@ -273,8 +273,8 @@ export interface RenderSettings {
  * independent handles.
  *
  * Platforms: macOS renders on the GPU by default; Windows does since
- * version 0.5.14 of the player when the user turns on Video ▸ GPU Rendering
- * (Experimental) (off by default, {@link Rendering}). Under software
+ * version 0.5.14 of the player when the user turns on the Picture panel's
+ * GPU Rendering (off by default, {@link Rendering}). Under software
  * rendering (Windows by default, Linux, headless, fallback) every `set`
  * fails with `unsupported`; {@link SystemInfo.rendering} tells which
  * renderer draws without creating the handle. macOS OpenGL 4.1 has no
@@ -389,8 +389,8 @@ export interface RenderOptions extends Disposable {
  * at most 16 MiB. Elsewhere: `invalid`; a file that does not exist:
  * `missing`. The player reads the files when the list is set.
  *
- * GPU rendering only (macOS; Windows with Video ▸ GPU Rendering
- * (Experimental) turned on): under software rendering a non-empty list is
+ * GPU rendering only (macOS; Windows with the Picture panel's GPU Rendering
+ * turned on): under software rendering a non-empty list is
  * `failed` with `unsupported`, and a switch to software during the run
  * pushes `unsupported` to every handle with shaders and removes every
  * list (they no longer count against the 16); set them again once the
@@ -559,7 +559,7 @@ export interface VideoShaders extends Disposable {
  * // Advice for the codes this plugin knows; any other code shows the message.
  * const advice: Partial<Record<UpscalingReasonCode, string>> = {
  *   driver: "Update the NVIDIA driver to 530 or newer.",
- *   rendering: "Turn on Video ▸ GPU Rendering (Experimental) and restart.",
+ *   rendering: "Turn on Picture ▸ GPU Rendering and restart.",
  * };
  * if (reason) console.log(advice[reason.code] ?? reason.message);
  * ```

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.11
+
+**Who must change: nobody; the table follows player #271.** A data refresh of `BUILTIN_COMMANDS`: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
+
+- **Changed row** (`vestra.video`): `video.gpu-rendering` is titled GPU Rendering (was GPU Rendering (Experimental)); still palette-only, no default key. The table in [Reference: commands](docs/reference/commands.md#built-in-commands) follows.
+- **Not synced, by design**: the built-ins' new `destructive` marks (player #274) are not a column of `BUILTIN_COMMANDS`, which lists owners, paths, titles and keys only. `BUILTIN_SUBMENUS`, the Slint library copy, the capability table, translations, palettes and menu ids already matched the player.
+- **Docs**: the player's renderer switch is named as it now is, the Picture panel's GPU Rendering (it named Video ▸ GPU Rendering (Experimental)): `SystemInfo.rendering`, `RenderOptions`, `VideoShaders`, the `UpscalingReasonCode` example, the GPU rendering guide and Platforms; `BUILTIN_COMMANDS` places the passing `video.gpu-rendering.restart` in the Picture panel's Rendering section (it named Video ▸ Restart Player to Apply).
+
 ## 1.7.10
 
 **Who must change: nobody.** No API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged. A plugin that sends many requests at once now sees some of them answered later, never refused.

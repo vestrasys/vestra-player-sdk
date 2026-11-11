@@ -1123,7 +1123,7 @@ export interface SystemInfo {
    * the renderer is then unknown, not software.
    *
    * Today the player renders on the GPU on macOS, on Windows when the
-   * user turned on Video ▸ GPU Rendering (Experimental) (since version 0.5.14;
+   * user turned on the Picture panel's GPU Rendering (since version 0.5.14;
    * off by default), and in software otherwise: on Windows by default, on
    * Linux and without a user interface (see
    * [Platforms](../../../docs/reference/platforms.md)); test this field
