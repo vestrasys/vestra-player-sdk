@@ -509,3 +509,255 @@ export function commandsHandlers(
     },
   };
 }
+
+/// ---------------------------------------------------------------- built-in only: commands.run, palette.lead
+
+/** The player's refusal of a built-in-only capability to any other plugin. */
+function builtinOnly(host: TestHost) {
+  if (!host.builtin)
+    throw new HostError(
+      "capability",
+      "this capability is for built-in plugins only",
+    );
+}
+
+/** One palette row (the player's `command_palette::Item`). */
+type Row = {
+  global: string;
+  local: string;
+  owner: "host" | "plugin";
+  command: FakeCommand;
+};
+
+/** The palette's rows: the player's core commands and the plugin's own. */
+function rows(host: TestHost): Row[] {
+  return [
+    ...[...host.coreCommands].map(([id, command]): Row => ({
+      global: id,
+      local: id,
+      owner: "host",
+      command,
+    })),
+    ...[...host.commands].map(([id, command]): Row => ({
+      global: `${host.manifestId}/${id}`,
+      local: id,
+      owner: "plugin",
+      command,
+    })),
+  ].filter(
+    ({ command }) =>
+      // As the palette: no panel-only command, no disabled one without a reason.
+      command.declaration.focus !== "panel" &&
+      (command.state.enabled || !!command.display.reason),
+  );
+}
+
+/** A row as `commands.list` writes it (capabilities/commands_run.rs `listed`). */
+function listed(host: TestHost, inner: Internals, row: Row) {
+  const { declaration, display, state } = row.command;
+  const builtin = row.owner === "host" || host.builtin;
+  const plugin = row.owner === "host" ? "Vestra Player" : host.manifestId;
+  const keys = declaration.path ?? [];
+  const parent = display.path.slice(0, -1);
+  const declared = declaration.category ?? null;
+  const category =
+    declared !== null
+      ? (display.category ?? menuTextKey(declared))
+      : parent.length
+        ? parent.join(" ▸ ")
+        : plugin;
+  const categoryKey =
+    declared !== null
+      ? menuTextKey(declared)
+      : parent.length
+        ? keys.slice(0, -1).map(menuTextKey).join(" ▸ ")
+        : row.owner === "host"
+          ? plugin
+          : host.manifestId;
+  const home = declaration.home ? host.commands.get(declaration.home) : null;
+  const place = home
+    ? home.display.title.replace(/…$/, "")
+    : !display.path.length
+      ? ""
+      : declared === null || !parent.length
+        ? "Menu"
+        : `${parent.join(" ▸ ")} ▸`;
+  const root = keys[0] === undefined ? undefined : menuTextKey(keys[0]);
+  return {
+    id: row.global,
+    label: `${category}: ${display.title}`,
+    labelSource: `${categoryKey}: ${menuTextKey(declaration.title)}`,
+    title: display.title,
+    category,
+    path: display.path,
+    place,
+    keys: commandKeys(host, inner).keys[row.local] ?? [],
+    plugin,
+    builtin,
+    enabled: state.enabled,
+    checkable: state.checked !== null,
+    radio: declaration.radio,
+    group: declaration.group,
+    busy: state.busy,
+    // Asks first: not built in, destructive, the player's Close and Quit,
+    // the Settings and Plugins menus.
+    dangerous:
+      !builtin ||
+      declaration.destructive === true ||
+      row.global === "host/stop" ||
+      row.global === "host/quit" ||
+      root === "Settings" ||
+      root === "Plugins",
+    ...(state.checked === null ? {} : { checked: state.checked }),
+    ...(!state.enabled && display.reason ? { reason: display.reason } : {}),
+  };
+}
+
+/** `palette.lead.set` texts: at most this many characters each. */
+const LEAD_TEXTS: Readonly<Record<string, number>> = {
+  title: 40,
+  placeholder: 60,
+  empty: 80,
+  note: 40,
+  "status.text": 80,
+  "status.note": 40,
+};
+
+/** The default handlers of `commands.run` and `palette.lead`. */
+export function builtinHandlers(
+  host: TestHost,
+  inner: Internals,
+): Record<string, Handler> {
+  return {
+    "commands.list": () => {
+      builtinOnly(host);
+      const commands = rows(host).map((row) => listed(host, inner, row));
+      // The revision changes with the table.
+      const text = JSON.stringify(commands);
+      if (text !== inner.listed.text)
+        inner.listed = { text, revision: inner.listed.revision + 1 };
+      return { revision: inner.listed.revision, commands };
+    },
+    "commands.run": async (p) => {
+      builtinOnly(host);
+      // The player's order: the ticket given, step and of, the command,
+      // then the ticket's count and rates, then the alert.
+      if (p.ticket === undefined || p.ticket === null)
+        throw new HostError(
+          "ticket",
+          "commands.run needs the ticket of a palette.lead event",
+        );
+      const whole = (value: Json | undefined) =>
+        Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 99;
+      if (
+        (p.step === undefined) !== (p.of === undefined) ||
+        (p.step !== undefined &&
+          (!whole(p.step) || !whole(p.of) || Number(p.step) > Number(p.of)))
+      )
+        throw new HostError("invalid", "step and of go together, step ≤ of");
+      const id = String(p.id);
+      const row = rows(host).find((each) => each.global === id);
+      if (!row) throw new HostError("missing", `no command ${id}`);
+      if (id === "host/palette")
+        throw new HostError(
+          "invalid",
+          "the command palette is not run this way",
+        );
+      const item = listed(host, inner, row);
+      if (!item.enabled)
+        throw new HostError(
+          "disabled",
+          item.reason ?? `${item.label} is disabled`,
+        );
+      if (item.busy) throw new HostError("busy", `${item.label} is busy`);
+      const now = Date.now();
+      const ticket = inner.tickets.get(String(p.ticket));
+      if (!ticket || now - ticket.last > 120_000) {
+        inner.tickets.delete(String(p.ticket));
+        throw new HostError("ticket", "no live ticket");
+      }
+      inner.runs = inner.runs.filter((at) => now - at < 60_000);
+      ticket.runs = ticket.runs.filter((at) => now - at < 1000);
+      if (ticket.count >= 30)
+        throw new HostError("limit", "a ticket runs at most 30 commands");
+      if (ticket.runs.length >= 4)
+        throw new HostError("limit", "at most 4 commands a second");
+      if (inner.runs.length >= 120)
+        throw new HostError("limit", "at most 120 commands a minute");
+      ticket.count++;
+      ticket.runs.push(now);
+      ticket.last = now;
+      inner.runs.push(now);
+      // The player's own alert, answered like the plugin's alerts.
+      if (item.dangerous) {
+        const answer = host.dialogAnswers.shift();
+        if (answer === undefined || answer === null || Array.isArray(answer))
+          throw new Error(
+            "test host: no confirm answer queued for commands.run",
+          );
+        if (!answer.confirmed) return { ran: false, declined: true };
+      }
+      // The OSD line naming the caller and the command.
+      const step = p.step === undefined ? "" : ` · ${p.step}/${p.of}`;
+      host.osd.push(`${host.manifestId}${step} · ${item.label}`);
+      if (row.owner === "host")
+        await host.request("host.run", { action: id.slice("host/".length) });
+      else
+        host.emit("commands.execute", {
+          id: row.local,
+          revision: row.command.revision,
+        });
+      return { ran: true };
+    },
+    "palette.lead.set": (p) => {
+      builtinOnly(host);
+      for (const [name, max] of Object.entries(LEAD_TEXTS)) {
+        const [first, second] = name.split(".");
+        const value = second
+          ? (p[first!] as Record<string, Json> | null | undefined)?.[second]
+          : p[first!];
+        if (value === undefined || value === null) {
+          if (name === "title")
+            throw new HostError("invalid", "title is required");
+          continue;
+        }
+        const length = [...menuTextKey(value)].length;
+        if (length < 1 || length > max)
+          throw new HostError("invalid", `${name} has 1–${max} characters`);
+      }
+      if (typeof p.icon !== "string" && host.imagePath(p.icon) === null)
+        throw new HostError("invalid", "icon is an icon name or an image");
+      host.paletteLead = { ...p };
+    },
+    "palette.lead.clear": () => {
+      builtinOnly(host);
+      host.paletteLead = null;
+    },
+    "palette.lead.done": (p) => {
+      builtinOnly(host);
+      inner.tickets.delete(String(p.ticket));
+    },
+  };
+}
+
+/** Implements `TestHost.runPaletteLead`. */
+export async function runPaletteLead(
+  host: TestHost,
+  inner: Internals,
+  query: string,
+  options: { keep?: boolean; status?: boolean },
+): Promise<string> {
+  if (!host.paletteLead) throw new Error("test host: no palette lead is set");
+  // One request at a time: the plugin's earlier tickets end.
+  inner.tickets.clear();
+  const ticket = `ticket-${++inner.next.ticket}`;
+  inner.tickets.set(ticket, { count: 0, runs: [], last: Date.now() });
+  host.emit("palette.lead", {
+    query,
+    keep: options.keep ?? false,
+    ticket,
+    status: options.status ?? false,
+  });
+  await host.settle();
+  return ticket;
+}

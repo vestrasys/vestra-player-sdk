@@ -80,6 +80,8 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "secrets",
     "rendering.manage",
     "video.upscaling",
+    "commands.run",
+    "palette.lead",
   ]);
   assert.ok(Object.isFrozen(CAPABILITY_INFO));
   assert.ok(Object.isFrozen(CAPABILITIES));
@@ -93,7 +95,12 @@ test("CAPABILITY_INFO: labels, highlighted ones and requirements", () => {
     "bindings.manage",
     "secrets",
     "rendering.manage",
+    "commands.run",
   ]);
+  const builtinOnly = CAPABILITIES.filter(
+    (name) => CAPABILITY_INFO[name]!.builtinOnly,
+  );
+  assert.deepEqual(builtinOnly, ["commands.run", "palette.lead"]);
   for (const [name, info] of Object.entries(CAPABILITY_INFO)) {
     assert.match(info.label, /^[A-Z][^\n]*[^.\s]$/, name);
     assert.ok(info.apis.length > 0, name);

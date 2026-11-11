@@ -16,7 +16,7 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | `invalid` | A bad argument (out of range, malformed, unknown id). |
 | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
 | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
-| `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path), or this plugin already uses the id (a window or command id). |
+| `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path, the command palette's lead row), or this plugin already uses the id (a window or command id). |
 | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
 | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
 | `backend` | Loading or resolving failed; `message` is the backend's reason. |
@@ -29,13 +29,14 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | `timeout` | A time limit ran out (`openStream` start-up, `tools.run`, `system.*` after 10 s). |
 | `stream`, `device` | `openStream`: the producer failed / the audio device is not ready. |
 | `backend-uncertain` | The player's backend blocked a filter stage; call `retry()`. |
-| `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link "@vestra-player/sdk"!PropValue}, or a request is longer than the player's 1 MiB message. |
+| `limit` | A player-wide limit was reached (for example the number of commands), a property value is over the limits of {@link "@vestra-player/sdk"!PropValue}, a request is longer than the player's 1 MiB message, or {@link "@vestra-player/sdk"!Commands.run} ran too often. |
 | `reserved` | {@link "@vestra-player/sdk"!Packages.validate}, {@link "@vestra-player/sdk"!PackageCandidate.install}: the id is `vestra` or starts with `vestra.` (any case), which only the player's built-in plugins use. |
 | `versionMismatch` | The package needs a newer player (`minPlayerVersion`). |
 | `ui-prepare` | The player could not prepare a mounted panel or a settings page (its Slint file does not compile, a bound property is not declared, or another plugin's panel holds the slot); `message` has the diagnostics. |
 | `ui` | The player could not apply a property to a tool window or a settings page, or could not build the Options window (a property the Slint file does not declare, a value of the wrong type); `message` has Slint's reason. Also reported to {@link "@vestra-player/sdk"!Scope.onError} without a request: a callback whose arguments the player could not convert, a property it could not show again when it rebuilt a view (an image file removed since). |
 | `host` | Any other failure inside the player; `message` is the player's reason. |
-| `disabled` | The plugin is being stopped; pending requests fail with it. |
+| `disabled` | The plugin is being stopped; pending requests fail with it. {@link "@vestra-player/sdk"!Commands.run}: the command is disabled; `message` has its reason. |
+| `ticket` | {@link "@vestra-player/sdk"!Commands.run}: no ticket, or it ended or expired (a ticket comes with {@link "@vestra-player/sdk"!PaletteLeadRun}). |
 | `unknown`, `rejected`, `expired` | After a transport problem the SDK could not confirm the outcome (does not happen in normal operation). |
 | `activation` | The plugin opened a tool window while its activation was still pending and the player could not track it. |
 | `command` | The player could not run or update a command it no longer knows for this plugin (removed meanwhile, or another plugin's). |

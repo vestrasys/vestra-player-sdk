@@ -6,6 +6,8 @@ import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, MENU_IDS } from "../commands.ts";
 import { ImageHandle } from "./view/image.ts";
 import { isTextValue, textProblem } from "../i18n.ts";
 import { conditionJson, isCondition } from "./when.ts";
+import { shownText } from "./osd.ts";
+import type { Json } from "../wire.ts";
 import type {
   CommandDeclaration,
   CommandKeys,
@@ -23,6 +25,11 @@ import type {
   CommandState,
   Commands,
   Condition,
+  Disposable,
+  Palette,
+  PaletteLead,
+  PaletteLeadOptions,
+  PaletteLeadRun,
 } from "./types.ts";
 
 type Spec = {
@@ -117,6 +124,9 @@ function declare(options: CommandOptions): CommandDeclaration {
   // Only when set: players before 0.7.6 refuse the fields.
   if (category !== undefined)
     declaration.category = category as CommandDeclaration["title"];
+  if (options.destructive === true) declaration.destructive = true;
+  else if (options.destructive !== undefined && options.destructive !== false)
+    throw failure("invalid", `command ${options.id}: destructive is a boolean`);
   if (options.home !== undefined) {
     if (typeof options.home !== "string")
       throw failure("invalid", `command ${options.id}: home is a command id`);
@@ -146,21 +156,30 @@ function button(
     throw fail(
       `button order must be an integer 0–${BAR_BUTTON_LIMITS.maxOrder}`,
     );
+  return { icon: iconJson(icon, fail, "button"), order };
+}
+
+/** An icon name of the player's set or an image, checked, in wire form. */
+function iconJson(
+  icon: unknown,
+  fail: (problem: string) => Error,
+  what: string,
+): string | Json {
   if (icon instanceof ImageHandle) {
     if (icon.released)
       throw fail(
-        `button image ${icon.path} was released with the scope that created it`,
+        `${what} image ${icon.path} was released with the scope that created it`,
       );
-    return { icon: icon.toJSON(), order };
+    return icon.toJSON();
   }
   if (
     typeof icon !== "string" ||
     !(BAR_BUTTON_ICONS as readonly string[]).includes(icon)
   )
     throw fail(
-      `unknown button icon ${JSON.stringify(icon)}: a name of @vestra/icons.slint (BAR_BUTTON_ICONS) or an image from plugin.ui.image`,
+      `unknown ${what} icon ${JSON.stringify(icon)}: a name of @vestra/icons.slint (BAR_BUTTON_ICONS) or an image from plugin.ui.image`,
     );
-  return { icon, order };
+  return icon;
 }
 
 class CommandHandle implements Command {
@@ -425,4 +444,140 @@ export const commands = (scope: ScopeImpl): Commands => ({
     scope.runtime.depends(KEYS, id);
     return service.get(id);
   },
+  list: async () => {
+    needs(scope, "commands.run");
+    return scope.runtime.host.commands.list();
+  },
+  async run(id, options) {
+    needs(scope, "commands.run");
+    if (typeof id !== "string" || id === "")
+      throw failure("invalid", "run takes a command id: <plugin>/<id>");
+    const { ticket, step, of } = (options ?? {}) as Partial<
+      Parameters<Commands["run"]>[1]
+    >;
+    if (typeof ticket !== "string" || ticket === "")
+      throw failure("ticket", "run needs the ticket of a user action");
+    // As the player: both or neither, 1 <= step <= of <= 99.
+    const whole = (value: unknown) =>
+      Number.isInteger(value) &&
+      (value as number) >= 1 &&
+      (value as number) <= 99;
+    if (
+      (step === undefined) !== (of === undefined) ||
+      (step !== undefined && (!whole(step) || !whole(of) || step > of!))
+    )
+      throw failure(
+        "invalid",
+        "step and of go together, 1 <= step <= of <= 99",
+      );
+    return scope.runtime.host.commands.run({
+      id,
+      ticket,
+      ...(step === undefined ? {} : { step }),
+      ...(of === undefined ? {} : { of }),
+    });
+  },
+});
+
+/** Refuse at once without `capability`, as the player does. */
+function needs(scope: ScopeImpl, capability: string) {
+  if (!scope.runtime.can(capability))
+    throw failure("capability", `${capability} must be declared in manifest`);
+}
+
+// ---------------------------------------------------------------- palette lead
+
+/** `PaletteLeadOptions` checked and in wire form; the player checks lengths. */
+function leadJson(options: PaletteLeadOptions): { [key: string]: Json } {
+  if (options === null || typeof options !== "object")
+    throw failure("invalid", "lead takes { title, icon, ... }");
+  const text = (value: unknown, what: string) =>
+    shownText(value, undefined, what) as Json;
+  const out: { [key: string]: Json } = {
+    title: text(options.title, "title"),
+    icon: iconJson(
+      options.icon,
+      (problem) => failure("invalid", problem),
+      "lead",
+    ),
+  };
+  for (const key of ["placeholder", "empty", "note"] as const)
+    if (options[key] !== undefined) out[key] = text(options[key], key);
+  const status = options.status;
+  if (status === null) out.status = null;
+  else if (status !== undefined) {
+    if (typeof status !== "object")
+      throw failure("invalid", "status is { text, note? } or null");
+    out.status = {
+      text: text(status.text, "status.text"),
+      ...(status.note === undefined
+        ? {}
+        : { note: text(status.note, "status.note") }),
+    };
+  }
+  return out;
+}
+
+class LeadHandle implements PaletteLead {
+  readonly ready: Promise<void>;
+  readonly #scope: ScopeImpl;
+  readonly #pump: Latest<{ [key: string]: Json }>;
+  readonly #listeners = new Set<(run: PaletteLeadRun) => void>();
+  readonly #event: Disposable;
+  #disposed = false;
+  constructor(scope: ScopeImpl, options: PaletteLeadOptions) {
+    needs(scope, "palette.lead");
+    const first = leadJson(options);
+    this.#scope = scope;
+    const host = scope.runtime.host.palette;
+    this.#pump = new Latest((value) => host.set(value));
+    // Not an activation step: a refusal (a development load is not built
+    // in) reaches `ready` and onError, and the rest of the plugin runs.
+    this.ready = quiet(this.#pump.push(first).then(() => {}));
+    this.ready.catch((error) => scope.report(error));
+    // Sent to the lead's owner unasked, like `commands.execute`.
+    this.#event = scope.runtime.raw("palette.lead", (data) => {
+      const raw = (data ?? {}) as Partial<PaletteLeadRun>;
+      const run: PaletteLeadRun = {
+        query: String(raw.query ?? ""),
+        keep: raw.keep === true,
+        ticket: String(raw.ticket ?? ""),
+        status: raw.status === true,
+      };
+      for (const listener of [...this.#listeners]) scope.run(listener, run);
+    });
+    scope.add(this);
+  }
+  async update(options: PaletteLeadOptions) {
+    if (this.#disposed) return;
+    await this.#pump.push(leadJson(options));
+  }
+  onRun(listener: (run: PaletteLeadRun) => void): Disposable {
+    this.#listeners.add(listener);
+    return { dispose: async () => void this.#listeners.delete(listener) };
+  }
+  async done(ticket: string) {
+    if (typeof ticket !== "string" || ticket === "")
+      throw failure("invalid", "done takes a ticket");
+    await this.#scope.runtime.host.palette.done(ticket);
+  }
+  async dispose() {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#scope.forget(this);
+    this.#listeners.clear();
+    await this.#event.dispose();
+    this.#pump.stop();
+    if (
+      await this.ready.then(
+        () => true,
+        () => false,
+      )
+    )
+      await this.#scope.runtime.host.palette.clear().catch(() => {});
+  }
+}
+
+export const palette = (scope: ScopeImpl): Palette => ({
+  lead: (options) => new LeadHandle(scope, options),
 });

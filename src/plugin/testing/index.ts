@@ -150,6 +150,8 @@ import {
   press,
   barButtons,
   commandsHandlers,
+  builtinHandlers,
+  runPaletteLead,
 } from "./commands.ts";
 import {
   registerCoreActions,
@@ -2774,6 +2776,73 @@ export class TestHost implements Transport {
   /** Every core action run (`host.run`, a core command, a pressed core binding), newest last. */
   readonly coreRuns: string[] = [];
 
+  // ------------------------------------------------------------ built-in only
+
+  /**
+   * The plugin is built into the player (`startPlugin`'s `builtin`). Only
+   * then does the host take the built-in-only capabilities
+   * (`commands.run`, `palette.lead`); otherwise their calls fail with
+   * `capability`, as in the player.
+   *
+   * @since 1.7.9
+   */
+  builtin = false;
+  /**
+   * The palette's lead row as the plugin last set it (`palette.lead.set`,
+   * wire form), `null` without one. Wire-level.
+   *
+   * @since 1.7.9
+   */
+  paletteLead: Record<string, Json> | null = null;
+  /**
+   * Simulate the user activating the palette's lead row: Enter (`keep`:
+   * Shift+Enter) with `query` typed, or Enter on the status row
+   * (`status`). Mints a ticket, sends the `palette.lead` event, waits until
+   * the host is idle and returns the ticket.
+   *
+   * Like the player, `commands.run` takes the ticket until
+   * `PaletteLead.done` or 120 s after its last run, at most 30 runs, 4 a
+   * second, and 120 runs a minute per plugin (`limit`). A command declared
+   * `destructive` (and the player's `host/stop`) is confirmed first: the
+   * answer comes from {@link TestHost.dialogAnswers}
+   * (`{ confirmed: false, checked: false }` is Don't Run); each run adds
+   * the command's title (and ` · step/of`) to {@link TestHost.osd}.
+   *
+   * @param query - What the user typed.
+   * @param options - `keep`: Shift+Enter; `status`: the status row.
+   * @returns The ticket of this user action.
+   *
+   * @example Test a request that runs a destructive command
+   * The user asks the plugin to stop playback and declines the
+   * confirmation. `builtin` lets the plugin hold the lead; the ticket
+   * minted here is what its listener passes to `commands.run`, and the
+   * queued answer declines the player's alert for `host/stop`.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * import { startPlugin } from "@vestra-player/sdk/testing";
+   * import activate from "../main.ts";
+   *
+   * const { host, stop } = await startPlugin(activate, {
+   *   directory: new URL("..", import.meta.url),
+   *   builtin: true, // as a plugin built into the player
+   * });
+   * host.dialogAnswers.push({ confirmed: false, checked: false }); // Don't Run
+   * await host.runPaletteLead("stop playback");
+   * assert.deepEqual(host.coreRuns, []); // declined: nothing ran
+   * await stop();
+   * ```
+   *
+   * @capability None.
+   * @throws `Error` without a code (rejects) The plugin has no lead row.
+   * @since 1.7.9
+   */
+  runPaletteLead(
+    query: string,
+    options: { keep?: boolean; status?: boolean } = {},
+  ): Promise<string> {
+    return runPaletteLead(this, this.#inner, query, options);
+  }
+
   /**
    * One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...)
    * that the test host registers like the player, as `host/<id>`. Throws for
@@ -3668,6 +3737,7 @@ export class TestHost implements Transport {
   readonly #defaults: Record<string, Handler> = {
     ...transportHandlers(this, this.#inner),
     ...commandsHandlers(this, this.#inner),
+    ...builtinHandlers(this, this.#inner),
     ...coreActionsHandlers(this, this.#inner),
     ...i18nHandlers(this, this.#inner),
     ...layoutHandlers(this, this.#inner),
@@ -3776,6 +3846,14 @@ export async function startPlugin(
     id?: string;
     /** Use these capabilities instead of reading `manifest.json`. */
     capabilities?: string[];
+    /**
+     * Run the plugin as one built into the player
+     * ({@link TestHost.builtin}): only then do `commands.run` and
+     * `palette.lead` work. Default `false`.
+     *
+     * @since 1.7.9
+     */
+    builtin?: boolean;
     /** A host to use (to preset data before activation). Default: a new one. */
     host?: TestHost;
     /** Use an existing directory as `plugin.dataDirectory` (to test a restart). */
@@ -3816,6 +3894,7 @@ export async function startPlugin(
     manifest = { id: read.id, capabilities: read.capabilities };
   }
   host.manifestId = manifest.id;
+  if (options.builtin) host.builtin = true;
   host.loadCatalog(directory);
   // Its Slint files: the values its views are given are checked against
   // their declared types.

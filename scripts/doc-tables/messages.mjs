@@ -52,6 +52,8 @@ export const WRAPPED_BY = {
   "events.unsubscribe": ["Player.on", "Player.onChange"],
   "commands.update": ["Command.set"],
   "commands.unregister": ["Command.dispose"],
+  "palette.lead.clear": ["PaletteLead.dispose"],
+  "palette.lead.done": ["PaletteLead.done"],
   "ui.set": ["Window.set", "Window.bind"],
   "ui.show": ["Window.show", "Window.hide"],
   "ui.close": ["Window.close"],

@@ -349,7 +349,9 @@ export type BarButtonIcon =
   | "fullscreen"
   | "exit-fullscreen"
   | "store"
-  | "ai";
+  | "ai"
+  | "sliders"
+  | "search-ai";
 
 /**
  * A command's button on the bottom bar: {@link CommandOptions.button}.
@@ -631,6 +633,16 @@ export interface CommandOptions {
    */
   button?: CommandButton;
   /**
+   * The command cannot be undone: it deletes or clears the user's data,
+   * closes what is open or quits (default false). When another plugin runs
+   * it through {@link Commands.run}, the player asks the user first; a menu
+   * pick, a key or the command palette runs it as before.
+   *
+   * @player 0.7.6
+   * @since 1.7.9
+   */
+  destructive?: boolean;
+  /**
    * Whether the command can run (default true): a value, a function, or a
    * {@link Condition} the player evaluates (`plugin.when`).
    */
@@ -902,6 +914,419 @@ export interface Commands {
    * @since 1.6.6
    */
   keys(id: string): readonly string[];
+  /**
+   * List every command the command palette lists, the player's own and
+   * every plugin's, with its state now. **Built-in plugins only.**
+   *
+   * @remarks
+   * The palette's table as data: for a plugin that runs commands for the
+   * user (an assistant, a macro recorder, a remote control) or shows how to
+   * reach them (a tutorial that says which key opens a window). `revision`
+   * changes whenever a command is added, removed or changes state, so a copy
+   * with the same revision is still current.
+   *
+   * @example Find the key that opens a window
+   * A tutorial panel tells the user which key opens Subtitle Tuning. `list`
+   * returns the palette's rows with their places and current keys; the
+   * panel picks the row by its global id and shows its first key.
+   * ```ts
+   * try {
+   *   const { commands } = await plugin.commands.list();
+   *   const row = commands.find((each) => each.id === "vestra.subtitles/tuning");
+   *   if (row?.keys[0]) await plugin.osd.show("Press {}", [row.keys[0]]);
+   * } catch (error) {
+   *   // `capability`: not a built-in plugin, or `commands.run` not declared.
+   *   if ((error as PluginError).code !== "capability") throw error;
+   * }
+   * ```
+   *
+   * @capability commands.run (built-in plugins only)
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `commands.run`, or the plugin is not built into the player.
+   * @player 0.7.6
+   * @since 1.7.9
+   */
+  list(): Promise<CommandList>;
+  /**
+   * Run any command the palette lists, as the palette runs it, for a request
+   * the user made. **Built-in plugins only.**
+   *
+   * @remarks
+   * Every run needs a ticket: the player mints one only for a user action
+   * ({@link PaletteLeadRun.ticket}, Enter on the palette's lead row), so a
+   * plugin cannot run commands on its own. The ticket ends with
+   * {@link PaletteLead.done}, with the plugin's next lead run, when the
+   * plugin stops, or 120 s after it was given or last used. The player
+   * applies the palette's checks (enabled, not busy), shows an on-screen
+   * line naming the plugin and the command (`Vestra Player AI · 1/2 ·
+   * Playback: Mute`), and asks the user first (Run / Don't Run) before a
+   * command declared {@link CommandOptions.destructive}, the player's Close
+   * and Quit, anything in the Settings and Plugins menus, and every command
+   * of a plugin that is not built in. Runs are limited to 4 a second and 30
+   * per ticket, and 120 a minute per plugin. The run is not added to the
+   * palette's recent list.
+   *
+   * @param id - The command's global id, as {@link CommandInfo.id}:
+   *   `<manifest id>/<local id>`, `host/<id>` for the player's own.
+   * @param options - `ticket`: from the user action this run is for.
+   *   `step` and `of`: this is step `step` of `of` (1-based), shown in the
+   *   on-screen line.
+   * @returns `{ ran: true }` once the command was started, or
+   *   `{ ran: false, declined: true }` when the user chose Don't Run.
+   *
+   * @example Run the commands of one request
+   * The user typed "fullscreen and mute" into the palette's lead row; the
+   * plugin runs the two commands it chose for it. The ticket comes with the
+   * lead's run event and covers every run of this request; `done` ends it.
+   * A declined confirmation or a failure stops the request.
+   * ```ts
+   * declare const lead: PaletteLead;
+   * // ---cut---
+   * lead.onRun(async ({ ticket }) => {
+   *   const ids = ["host/fullscreen", "host/mute"]; // chosen for the request
+   *   try {
+   *     for (const [index, id] of ids.entries()) {
+   *       const result = await plugin.commands.run(id, { ticket, step: index + 1, of: ids.length });
+   *       if (!result.ran) break; // the user chose Don't Run
+   *     }
+   *   } catch (error) {
+   *     // `disabled`, `busy`, `missing`, `ticket` (expired), `limit` (rate).
+   *     await plugin.osd.show("Stopped: {}", [(error as PluginError).message]);
+   *   } finally {
+   *     await lead.done(ticket);
+   *   }
+   * });
+   * ```
+   *
+   * @capability commands.run (built-in plugins only)
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `commands.run`, or the plugin is not built into the player.
+   * @throws `ticket` (rejects) No ticket, or it ended or expired.
+   * @throws `missing` (rejects) No command has this id.
+   * @throws `disabled` (rejects) The command is disabled now; `message` has
+   *   its reason.
+   * @throws `busy` (rejects) The command is busy, or its confirmation
+   *   cannot be shown while another alert is open.
+   * @throws `limit` (rejects) Over the rate limits above.
+   * @throws `invalid` (rejects) Only one of `step` and `of`, or not
+   *   whole numbers with 1 ≤ `step` ≤ `of` ≤ 99; or `id` is the command
+   *   palette itself (`host/palette`).
+   * @player 0.7.6
+   * @since 1.7.9
+   */
+  run(id: string, options: CommandRunOptions): Promise<CommandRunResult>;
+}
+
+/**
+ * How {@link Commands.run} runs a command.
+ *
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface CommandRunOptions {
+  /** The ticket of the user action the run is for ({@link PaletteLeadRun.ticket}). */
+  ticket: string;
+  /** This run's step number (1–99), for the on-screen line; with `of`. */
+  step?: number;
+  /** The request's number of steps (`step`–99); with `step`. */
+  of?: number;
+}
+
+/**
+ * The outcome of {@link Commands.run}: the command started, or the user
+ * declined the confirmation.
+ *
+ * @since 1.7.9
+ * @category Commands
+ */
+export type CommandRunResult =
+  | {
+      /** The command was started. */
+      ran: true;
+    }
+  | {
+      /** The command was not started. */
+      ran: false;
+      /** The user chose Don't Run in the confirmation. */
+      declined: true;
+    };
+
+/**
+ * The command palette's table, from {@link Commands.list}.
+ *
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface CommandList {
+  /** The table's revision: the same number means the same table. */
+  revision: number;
+  /**
+   * Every command the palette lists, in no particular order: not a
+   * panel-only command, nor a disabled one without a reason.
+   */
+  commands: CommandInfo[];
+}
+
+/**
+ * One command of the palette's table ({@link CommandList}), with its texts
+ * as the palette shows them in the interface language.
+ *
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface CommandInfo {
+  /** The global id: `<manifest id>/<local id>`, `host/<id>` for the player's own. */
+  id: string;
+  /** The row's text, `Category: Title`, as shown. */
+  label: string;
+  /** The same in English source text. */
+  labelSource: string;
+  /** The command's title as shown. */
+  title: string;
+  /**
+   * The row's category as shown: the declared category, else the menu path
+   * above the command (`Video ▸ Snapshot`), else the plugin's name.
+   */
+  category: string;
+  /** Its menu path as shown, empty for a command outside the menus. */
+  path: string[];
+  /**
+   * Where it lives: the window its `home` command opens, `Menu`, the menu
+   * above it (`Video ▸`), or `""` outside the menus.
+   */
+  place: string;
+  /** Its current keys as the menus write them. */
+  keys: string[];
+  /** The owning plugin's name as shown, `Vestra Player` for the player's own. */
+  plugin: string;
+  /** The owner is the player or a built-in plugin. */
+  builtin: boolean;
+  /** It can run now. */
+  enabled: boolean;
+  /** Why it is disabled, as shown (only while disabled). */
+  reason?: string;
+  /** It has a check mark or a radio dot. */
+  checkable: boolean;
+  /** The check mark now (with `checkable`). */
+  checked?: boolean;
+  /** The mark is a radio dot. */
+  radio: boolean;
+  /** Its separator group in the menu. */
+  group: string;
+  /** It is busy now. */
+  busy: boolean;
+  /** {@link Commands.run} asks the user before running it. */
+  dangerous: boolean;
+}
+
+// ---------------------------------------------------------------- palette lead (palette.lead)
+
+/**
+ * `plugin.palette`: the command palette's lead row.
+ *
+ * @remarks
+ * The palette's first row hands what the user typed to a plugin: a
+ * calculator ("3.5 GB in MB"), a library or history search, jump to a time,
+ * an assistant that runs commands for a sentence. There is one lead in the
+ * player, and only a built-in plugin can hold it.
+ *
+ * @capability palette.lead (built-in plugins only)
+ *
+ * @example Answer typed time stamps from the palette
+ * The palette's first row reads "Go to: 12:30"; Enter seeks there. `lead`
+ * puts the row up; the player sends the typed text with Enter, and the
+ * plugin ends the request with `done`.
+ * ```ts
+ * // Put up the row once, in activate: the player keeps it while stopped.
+ * const lead = plugin.palette.lead({ title: "Go to", icon: "search" });
+ * lead.onRun(async ({ query, ticket }) => {
+ *   const [minutes = 0, seconds = 0] = query.split(":").map(Number); // "12:30"
+ *   await plugin.player.seek(minutes * 60 + seconds);
+ *   await lead.done(ticket); // this request needs no command runs
+ * });
+ * ```
+ *
+ * @player 0.7.6
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface Palette {
+  /**
+   * Put up the palette's lead row. **Built-in plugins only.**
+   *
+   * The player keeps the row while the plugin is stopped and starts the
+   * plugin for a run, so call it in `activate`. Disposing the handle (or
+   * its scope) removes the row.
+   *
+   * @example See Palette
+   * {@link Palette}
+   *
+   * @capability palette.lead (built-in plugins only)
+   * @throws `capability` (through `ready`) The manifest does not declare
+   *   `palette.lead`, or the plugin is not built into the player.
+   * @throws `conflict` (through `ready`) Another plugin holds the lead.
+   * @throws `invalid` (through `ready`) A text over its length.
+   * @player 0.7.6
+   * @since 1.7.9
+   */
+  lead(options: PaletteLeadOptions): PaletteLead;
+}
+
+/**
+ * What the palette's lead row shows ({@link Palette.lead}). Texts are
+ * English source text or a {@link Text}, translated like command titles.
+ *
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface PaletteLeadOptions {
+  /** The row reads `title: <typed text>`, or `title` alone with nothing typed (1–40 characters). */
+  title: string | Text;
+  /** A name of the player's icon set ({@link BarButtonIcon}) or an image from {@link Ui.image}. */
+  icon: BarButtonIcon | ImageRef;
+  /** The search field's placeholder (up to 60 characters). */
+  placeholder?: string | Text;
+  /** Dimmed after `title` while nothing is typed (up to 80 characters). */
+  empty?: string | Text;
+  /** On the right of the row ("Set up a model first"; up to 40 characters). */
+  note?: string | Text;
+  /**
+   * Replaces the row while nothing is typed (a running request; the cursor
+   * starts on it); `null` or absent: none. Its run event has `status: true`.
+   */
+  status?: {
+    /** The status text (up to 80 characters). */
+    text: string | Text;
+    /** On the right of the row (up to 40 characters). */
+    note?: string | Text;
+  } | null;
+}
+
+/**
+ * The user activated the lead row: the data of {@link PaletteLead.onRun}.
+ *
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface PaletteLeadRun {
+  /** What was typed in the palette. */
+  query: string;
+  /** Shift+Enter: the palette stays open. */
+  keep: boolean;
+  /**
+   * The ticket of this user action, for {@link Commands.run} and
+   * {@link PaletteLead.done}.
+   */
+  ticket: string;
+  /** The user activated the status row ({@link PaletteLeadOptions.status}), for example to stop. */
+  status: boolean;
+}
+
+/**
+ * The palette's lead row, from {@link Palette.lead}. Disposing it removes
+ * the row.
+ *
+ * @remarks
+ * Holds the row while the scope lives. `update` changes what it shows (a
+ * status while a request runs, a note while it cannot run); `onRun` hears
+ * each activation; `done` ends the ticket of a finished request.
+ *
+ * @capability palette.lead (built-in plugins only)
+ *
+ * @example Show a status while a request runs
+ * While the plugin works on a request the row shows "Working… (Enter to
+ * stop)"; Enter on it stops the work. The status row replaces the lead
+ * while nothing is typed; its run event has `status: true`.
+ * ```ts
+ * const lead = plugin.palette.lead({ title: "Ask", icon: "search" });
+ * let stop = new AbortController();
+ * lead.onRun(async ({ query, ticket, status }) => {
+ *   if (status) return stop.abort(); // Enter on the status row
+ *   stop = new AbortController();
+ *   await lead.update({ title: "Ask", icon: "search", status: { text: "Working… (Enter to stop)" } });
+ *   try {
+ *     await plugin.osd.show("Asked: {}", [query]);
+ *   } finally {
+ *     await lead.update({ title: "Ask", icon: "search" });
+ *     await lead.done(ticket);
+ *   }
+ * });
+ * ```
+ *
+ * @player 0.7.6
+ * @since 1.7.9
+ * @category Commands
+ */
+export interface PaletteLead extends Disposable {
+  /**
+   * Settles when the player has the row.
+   *
+   * @throws `capability` (rejects) Not declared, or not a built-in plugin.
+   * @throws `conflict` (rejects) Another plugin holds the lead.
+   * @throws `invalid` (rejects) A text over its length.
+   */
+  readonly ready: Promise<void>;
+  /**
+   * Replace what the row shows.
+   *
+   * @example See PaletteLead
+   * {@link PaletteLead}
+   *
+   * @capability palette.lead (built-in plugins only)
+   * @throws `invalid` (rejects) A text over its length.
+   * @throws `capability` (rejects) The row was refused (see `ready`).
+   * @since 1.7.9
+   */
+  update(options: PaletteLeadOptions): Promise<void>;
+  /**
+   * Listen to the user activating the row (Enter, Shift+Enter or a click).
+   * The player starts a stopped plugin for it.
+   *
+   * @example Keep the palette open for another conversion
+   * A unit converter shows its answer and, after Shift+Enter, leaves the
+   * palette open for the next one. The listener gets the typed text and
+   * `keep`; the player closes the palette on Enter by itself.
+   * ```ts
+   * declare const lead: PaletteLead;
+   * // ---cut---
+   * lead.onRun(async ({ query, keep, ticket }) => {
+   *   const gigabytes = Number.parseFloat(query); // "3.5 GB in MB"
+   *   await plugin.osd.show("{} MB", [gigabytes * 1024]);
+   *   if (keep) await plugin.osd.show("Type the next value");
+   *   await lead.done(ticket);
+   * });
+   * ```
+   *
+   * @capability palette.lead (built-in plugins only)
+   * @since 1.7.9
+   */
+  onRun(listener: (run: PaletteLeadRun) => void): Disposable;
+  /**
+   * End a request's ticket: {@link Commands.run} refuses it from now on.
+   *
+   * @example End a request when it fails
+   * A macro plugin stops at the first command that fails and ends the
+   * ticket, so nothing more runs for this request. `done` ends the ticket
+   * at once; without it the ticket would end 120 s after its last run.
+   * ```ts
+   * declare const lead: PaletteLead;
+   * // ---cut---
+   * lead.onRun(async ({ ticket }) => {
+   *   try {
+   *     await plugin.commands.run("host/mute", { ticket });
+   *   } catch {
+   *     await plugin.osd.show("Macro stopped"); // ticket, limit, disabled…
+   *   } finally {
+   *     await lead.done(ticket);
+   *   }
+   * });
+   * ```
+   *
+   * @capability palette.lead (built-in plugins only)
+   * @throws `capability` (rejects) The manifest does not declare `palette.lead`.
+   * @since 1.7.9
+   */
+  done(ticket: string): Promise<void>;
 }
 
 /**

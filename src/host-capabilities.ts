@@ -17,6 +17,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
   apiVersion: "vestra/1",
   capabilities: [
     {
+      builtinOnly: false,
       label: "Provide audio and video it generates itself",
       methods: [
         { name: "producer.prepare", needs: "producer.av" },
@@ -32,6 +33,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Read what is playing and the position",
       methods: [
         { name: "source.state", needs: "playback.read" },
@@ -47,6 +49,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Open media, control playback, keep the computer awake",
       methods: [
         { name: "playback.set", needs: "playback.control" },
@@ -75,6 +78,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Resolve online video addresses",
       methods: [
         { name: "sourceResolvers.register", needs: "source.resolve" },
@@ -88,6 +92,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Receive playback changes as they happen",
       methods: [
         {
@@ -123,6 +128,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Add menu commands and shortcuts",
       methods: [
         { name: "commands.register", needs: "commands" },
@@ -137,6 +143,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Open tool windows",
       methods: [
         { name: "ui.open", needs: "ui.window" },
@@ -150,6 +157,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Show panels in the bottom bar, the sidebar or behind the video",
       methods: [
         { name: "ui.mount", needs: "ui.mount" },
@@ -166,6 +174,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Show file pickers and confirmations",
       methods: [
         { name: "dialogs.open", needs: "ui.dialog" },
@@ -177,6 +186,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Install, uninstall and disable other plugins",
       methods: [{ name: "packages.*", needs: "plugins.manage" }],
       name: "plugins.manage",
@@ -185,6 +195,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: true,
     },
     {
+      builtinOnly: false,
       label: "Process the picture (filters, shaders)",
       methods: [
         {
@@ -215,6 +226,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Process the sound",
       methods: [],
       name: "processing.audio",
@@ -223,6 +235,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Read subtitles",
       methods: [{ name: "subtitles.state", needs: "subtitles.read" }],
       name: "subtitles.read",
@@ -231,6 +244,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Load and change subtitles",
       methods: [{ name: "subtitles.*", needs: "subtitles.control" }],
       name: "subtitles.control",
@@ -239,6 +253,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Take snapshots and export clips",
       methods: [
         { name: "snapshot.state", needs: "media.read" },
@@ -251,6 +266,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Take snapshots and export clips",
       methods: [
         { name: "snapshot.*", needs: "media.control" },
@@ -262,6 +278,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Remember videos you add and export from them later",
       methods: [
         {
@@ -280,6 +297,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Show messages on the video",
       methods: [
         { name: "osd.show", needs: "ui.osd" },
@@ -291,6 +309,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Read and write the clipboard",
       methods: [
         { name: "clipboard.readText", needs: "clipboard" },
@@ -303,6 +322,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: true,
     },
     {
+      builtinOnly: false,
       label: "Adjust the main window (size, on top, picture-in-picture)",
       methods: [
         { name: "window.setVideoArea", needs: "window.control" },
@@ -316,6 +336,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Change all shortcuts",
       methods: [
         { name: "bindings.list", needs: "bindings.manage" },
@@ -328,6 +349,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: true,
     },
     {
+      builtinOnly: false,
       label: "Show marks on the progress bar",
       methods: [
         { name: "timeline.set", needs: "timeline.marks" },
@@ -339,6 +361,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Receive files dropped on the player",
       methods: [
         { name: "drops.provide", needs: "ui.drop" },
@@ -351,6 +374,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Add pages to the Options window",
       methods: [{ name: "settings.*", needs: "ui.settings" }],
       name: "ui.settings",
@@ -359,6 +383,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Change the player's palette",
       methods: [
         { name: "appearance.set", needs: "ui.theme" },
@@ -370,6 +395,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: false,
     },
     {
+      builtinOnly: false,
       label: "Store sign-in details in the system keychain",
       methods: [
         { name: "secrets.get", needs: "secrets" },
@@ -382,6 +408,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: true,
     },
     {
+      builtinOnly: false,
       label: "Choose GPU or software rendering and restart the player",
       methods: [
         { name: "rendering.setPreference", needs: "rendering.manage" },
@@ -393,6 +420,7 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       risky: true,
     },
     {
+      builtinOnly: false,
       label: "Upscale the video with the GPU's video upscaler",
       methods: [
         { name: "video.upscaling.state", needs: "video.upscaling" },
@@ -401,6 +429,31 @@ export const HOST_CAPABILITIES: HostCapabilities = {
       name: "video.upscaling",
       requires: [],
       residency: "live",
+      risky: false,
+    },
+    {
+      builtinOnly: true,
+      label: "Run any player or plugin command",
+      methods: [
+        { name: "commands.list", needs: "commands.run" },
+        { name: "commands.run", needs: "commands.run" },
+      ],
+      name: "commands.run",
+      requires: [],
+      residency: "none",
+      risky: true,
+    },
+    {
+      builtinOnly: true,
+      label: "Add the first row of the command palette",
+      methods: [
+        { name: "palette.lead.set", needs: "palette.lead" },
+        { name: "palette.lead.clear", needs: "palette.lead" },
+        { name: "palette.lead.done", needs: "palette.lead" },
+      ],
+      name: "palette.lead",
+      requires: [],
+      residency: "recordable",
       risky: false,
     },
   ],

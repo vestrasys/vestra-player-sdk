@@ -35,8 +35,10 @@ const monitoring = (inChain: boolean) => ({
   inChain,
 });
 
-test("video.upscaling: the player's table entry, last; not risky, live", () => {
-  const last = HOST_CAPABILITIES.capabilities.at(-1)!;
+test("video.upscaling: the player's table entry; not risky, live", () => {
+  const last = HOST_CAPABILITIES.capabilities.find(
+    (capability) => capability.name === "video.upscaling",
+  )!;
   assert.deepEqual(last, {
     label: "Upscale the video with the GPU's video upscaler",
     methods: [
@@ -47,6 +49,7 @@ test("video.upscaling: the player's table entry, last; not risky, live", () => {
     requires: [],
     residency: "live",
     risky: false,
+    builtinOnly: false,
   });
   assert.deepEqual(hostMethod("video.upscaling.state"), {
     name: "video.upscaling.state",
@@ -61,6 +64,7 @@ test("video.upscaling: the player's table entry, last; not risky, live", () => {
     requires: [],
     label: "Upscale the video with the GPU's video upscaler",
     risky: false,
+    builtinOnly: false,
   });
 });
 

@@ -2,7 +2,7 @@
  * `<!-- generated:capabilities -->`: every capability of `CAPABILITY_INFO`
  * (src/capabilities.ts), in the player's order, with the members it opens
  * (linked to the API reference), the capabilities they also need and the
- * plugin store's wording.
+ * plugin store's wording; a built-in-only capability says so.
  */
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
@@ -24,7 +24,7 @@ export default async function capabilities({ root, table }) {
       "Highlighted",
     ],
     Object.entries(CAPABILITY_INFO).map(([name, info]) => [
-      `\`${name}\``,
+      info.builtinOnly ? `\`${name}\` (built-in plugins only)` : `\`${name}\``,
       info.apis.map(memberLink).join(", "),
       info.requires.map((needed) => `\`${needed}\``).join(", ") || "—",
       info.label,

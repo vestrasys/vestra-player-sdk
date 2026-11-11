@@ -337,6 +337,25 @@ Upscale the video with the GPU's video upscaler. Residency `live`: what these me
 | `video.upscaling.state` | `video.upscaling` | — | `WireUpscalingState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state} |
 | `video.upscaling.set` | `video.upscaling` | `{ enabled }` | `WireUpscalingState` | `capability`, `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set} |
 
+### `commands.run`
+
+Run any player or plugin command. Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `commands.list` | `commands.run` | `{}` | `CommandList` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
+| `commands.run` | `commands.run` | `{ id, ticket, step?, of? }` | `CommandRunResult` | `capability`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
+
+### `palette.lead`
+
+Add the first row of the command palette. Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `palette.lead.set` | `palette.lead` | `{ [key: string]: Json; }` | `void` | `capability`, `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
+| `palette.lead.clear` | `palette.lead` | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
+| `palette.lead.done` | `palette.lead` | `{ ticket }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
+
 ### No capability
 
 Methods every plugin may call.

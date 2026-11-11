@@ -137,7 +137,16 @@ export const STRICT_CATEGORIES = {
     ],
   },
   Commands: {
-    full: ["Commands", "Command", "Host", "Bindings", "When", "Condition"],
+    full: [
+      "Commands",
+      "Command",
+      "Host",
+      "Bindings",
+      "When",
+      "Condition",
+      "Palette",
+      "PaletteLead",
+    ],
     data: [
       "CommandState",
       "Bindable",
@@ -148,6 +157,12 @@ export const STRICT_CATEGORIES = {
       "HostAction",
       "BindingRef",
       "BindingInfo",
+      "CommandRunOptions",
+      "CommandRunResult",
+      "CommandList",
+      "CommandInfo",
+      "PaletteLeadOptions",
+      "PaletteLeadRun",
     ],
   },
   Playback: {

@@ -177,6 +177,7 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `store` | 14 × 12 | 1.5px |
 | `ai` | 14 × 12 | 1.5px |
 | `sliders` | 14 × 12 | 1.5px |
+| `search-ai` | 14 × 12 | 1.5px |
 
 <!-- /generated -->
 

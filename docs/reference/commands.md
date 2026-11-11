@@ -506,6 +506,15 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Enter Fullscreen** (`host/enter-fullscreen`: no default key, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key, enabled only in fullscreen), **Quit** (`host/quit`), **Sidebar** (`host/sidebar`: the bottom bar's sidebar button, order 800, group `windows`), **Adjustments and Effects** (`host/adjust`: the bottom bar's sliders button, order 791, group `windows`) and **Command Palette** (`host/palette`, `Ctrl+Shift+P`, outside the menu); their keys are in [Built-in commands](#built-in-commands).
 
+## Running commands for the user
+
+**Built-in plugins only** (`commands.run` and `palette.lead`, see [Capabilities](capabilities.md#built-in-plugins-only)): any other plugin's manifest is refused at install and by `vestra-plugin check`, and the calls fail with `capability`.
+
+The command palette's first row can belong to a plugin: {@link "@vestra-player/sdk"!Palette.lead | plugin.palette.lead} puts it up, and Enter on it sends the typed text with a ticket ({@link "@vestra-player/sdk"!PaletteLeadRun | PaletteLeadRun}). With that ticket {@link "@vestra-player/sdk"!Commands.run | plugin.commands.run} runs any command the palette lists, as the palette runs it, and {@link "@vestra-player/sdk"!Commands.list | plugin.commands.list} reads the palette's table. Uses beyond an assistant: a calculator or unit converter answering in the first row, a search over the history that opens what it finds, a macro plugin replaying a saved list of commands, a tutorial that shows the key of a command.
+
+- **The player keeps the boundary.** A ticket comes only from the user's Enter on the row; it ends with `done`, with the plugin's next run of the row, when the plugin stops, or 120 s after its last use. Runs are limited (4 a second and 30 per ticket, 120 a minute per plugin), each shows an OSD line naming the plugin and the command, and the player asks the user first (Run / Don't Run) for a command declared {@link "@vestra-player/sdk"!CommandOptions.destructive | destructive}, its own Close and Quit, anything in the Settings and Plugins menus, and every command of a plugin that is not built in.
+- **`destructive` is for every plugin.** Mark a command that deletes or clears the user's data, closes what is open or quits; a menu pick, a key or the palette runs it as before.
+
 ## Keys the system takes first
 
 These keys may never reach a binding, because the system or the player takes them first; do not use them as defaults. This table is the one list of them; other pages link here.

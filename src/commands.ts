@@ -2,6 +2,7 @@
 import type { Json, Transport } from "./wire.ts";
 import type { ListJson, TextJson } from "./i18n.ts";
 import type { ConditionJson } from "./plugin/when.ts";
+import type { CommandList, CommandRunResult } from "./plugin/types.ts";
 /**
  * The player's command registry caps, the same values as the player's own
  * table (the player's tests check that they agree). They are runaway guards,
@@ -144,7 +145,8 @@ export const MENU_IDS = [
  * icon of the player's V-Line set, `@vestra/icons.slint` (draw one in your own
  * Slint with `Icon { name: "store"; }`). The player's tests check that this
  * list is its icon set. `"sliders"` (three sliders, the player's Adjustments
- * and Effects button).
+ * and Effects button); `"search-ai"` (the magnifier with the AI icon's
+ * cross, the palette's button while a plugin holds its lead row).
  *
  * @example Check in a test that the button's icon exists
  * The test fails before release if the plugin's bar button names an icon
@@ -202,6 +204,7 @@ export const BAR_BUTTON_ICONS = [
   "store",
   "ai",
   "sliders",
+  "search-ai",
 ] as const;
 
 /**
@@ -753,6 +756,8 @@ export type CommandDeclaration = {
    * set, like `category`.
    */
   home?: string;
+  /** The command cannot be undone; sent only when `true`. */
+  destructive?: boolean;
 };
 /**
  * `commands.keys`: each of the plugin's own commands, by local id, and each of
@@ -809,5 +814,10 @@ export function commandClient(transport: Transport) {
         state,
         ...(when ? { when: when as Json } : {}),
       }),
+    /** The palette's table (`commands.run`). */
+    list: () => transport.request<CommandList>("commands.list", {}),
+    /** Run any listed command for a user action's ticket (`commands.run`). */
+    run: (params: { id: string; ticket: string; step?: number; of?: number }) =>
+      transport.request<CommandRunResult>("commands.run", params),
   };
 }

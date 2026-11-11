@@ -23,6 +23,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | `sessionStorage` | The values of `plugin.storage.session` an earlier run left (`host.sessionStorage`), to test a restart within one player session. |
 | `locale` | The interface language (`"zh-Hans"` loads `locales/zh-Hans.po`). Without it the plugin's texts show in English and the player's own texts in Simplified Chinese; `"en"` shows the player in English. |
 | `id`, `capabilities` | Start without a `manifest.json`. |
+| `builtin` | Run the plugin as one built into the player: only then do the built-in-only capabilities (`commands.run`, `palette.lead`) work; otherwise their calls fail with `capability`, as in the player. |
 
 ## Acting like the user
 
@@ -35,6 +36,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | a control in the mounted panel | `host.mounted().emit(callback, ...args)` |
 | answering a dialog | before the action: `host.dialogAnswers.push(["/media/movie.mkv"])` for a file dialog, `null` for Cancel, `{ confirmed: true, checked: false }` for `dialogs.confirm` |
 | another plugin calling `player.next()` | `await host.step("next")` |
+| Enter on the palette's lead row | `const ticket = await host.runPaletteLead("typed text")` (`{ keep: true }` for Shift+Enter, `{ status: true }` for the status row); the ticket is the one the plugin's `onRun` listener got. A `commands.run` of a command that asks first takes its answer from `host.dialogAnswers` (`{ confirmed: false, checked: false }` is Don't Run). |
 
 `press` follows the player's binding table: the panel's bindings first when `panel` is true, then the global ones, the player's own commands before the plugin's. A disabled command lets the key go on to the next command bound to it. It resolves with what the key did:
 
@@ -157,6 +159,9 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.seeks} | Every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest last, with the mode it asked for. |
 | {@link "@vestra-player/sdk/testing"!TestHost.steps} | Every `player.step` and core frame step, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreRuns} | Every core action run (`host.run`, a core command, a pressed core binding), newest last. |
+| {@link "@vestra-player/sdk/testing"!TestHost.builtin} | The plugin is built into the player (`startPlugin`'s `builtin`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.paletteLead} | The palette's lead row as the plugin last set it (`palette.lead.set`, wire form), `null` without one. |
+| {@link "@vestra-player/sdk/testing"!TestHost.runPaletteLead}() | Simulate the user activating the palette's lead row: Enter (`keep`: Shift+Enter) with `query` typed, or Enter on the status row (`status`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreAction}() | One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...) that the test host registers like the player, as `host/<id>`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.handle}() | Replace the host's behaviour for one wire method until `TestHost.reset`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.reset}() | Restore the default behaviour of a method replaced with `TestHost.handle`. |

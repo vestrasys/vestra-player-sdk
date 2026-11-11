@@ -254,3 +254,4 @@ The player's plugin supervisor bounds what a plugin's process may cost and how l
 - Filter chains: the number of nodes across all plugins, one `frameBlend`, and the range of every node's parameters, at {@link "@vestra-player/sdk"!VideoFilter | VideoFilter}; the audio delay at {@link "@vestra-player/sdk"!AudioFilter | AudioFilter}.
 - Generated streams: frame sizes and sample values at {@link "@vestra-player/sdk"!StreamFrame | StreamFrame}; a frame that breaks them ends the stream with `invalid`.
 - Manifest fields: [Manifest](manifest.md).
+- Running commands for the user (built-in plugins only): 4 runs a second and 30 per ticket, 120 a minute per plugin, a ticket ending 120 s after its last use, and `step`/`of` up to 99, at {@link "@vestra-player/sdk"!Commands.run | Commands.run}; the lead row's text lengths at {@link "@vestra-player/sdk"!PaletteLeadOptions | PaletteLeadOptions}.
