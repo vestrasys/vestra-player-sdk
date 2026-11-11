@@ -246,11 +246,41 @@ test("request queue: replies to the player's own calls never wait", async () => 
     ["source.submit", "source.state", ...UNQUEUED_METHODS],
   );
   assert.deepEqual([...UNQUEUED_METHODS].sort(), [
-    "palette.lead.done",
     "producer.ack",
     "producer.ackInput",
     "sourceResolvers.respond",
   ]);
+});
+
+test("request queue: palette.lead.done waits in order behind a commands.run of its ticket", async () => {
+  const wire = manual();
+  const queue = new RequestQueue(wire.transport, {
+    inFlight: 1,
+    inFlightBytes: REQUEST_LIMITS.inFlightBytes,
+  });
+  const first = queue.request("source.state");
+  const run = queue.request("commands.run", { id: "host/pause", ticket: "t1" });
+  const done = queue.request("palette.lead.done", { ticket: "t1" });
+  assert.equal(queue.waiting, 2, "the ticket's end waits with the run");
+  for (let n = 0; n < 3; n++) {
+    wire.answer(n);
+    await turn();
+  }
+  await Promise.all([first, run, done]);
+  assert.deepEqual(
+    wire.sent.map((line) => line.method),
+    ["source.state", "commands.run", "palette.lead.done"],
+  );
+});
+
+test("request queue: each line counts 32 bytes more than the estimate", () => {
+  const wire = manual();
+  const queue = new RequestQueue(wire.transport);
+  void queue.request("source.state");
+  const line = Buffer.byteLength(
+    JSON.stringify({ id: 0, method: "source.state", params: {} }),
+  );
+  assert.equal(queue.inFlight.bytes, line + 1 + 32);
 });
 
 /** A plugin under TestHost whose `clipboard.writeText` replies the test holds. */

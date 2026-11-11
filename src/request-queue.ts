@@ -3,9 +3,10 @@
  * `REQUEST_LIMITS.inFlight` requests, and `REQUEST_LIMITS.inFlightBytes` of
  * them, sent and not yet answered; the rest wait here in the order they were
  * made and go out as answers come in. Nothing fails and nothing is
- * reordered: a request that waits is only late. The player stops a plugin
- * that leaves 320 lines or 4 MiB unanswered (its backstop), which a plugin on
- * the SDK so never reaches.
+ * reordered: a request that waits is only late. The player answers
+ * `limit` to a request past 320 unanswered lines or 4 MiB of them per plugin
+ * (its backstop; it does not stop the plugin), which a plugin on the SDK so
+ * never reaches: only a client that bypasses the SDK meets it.
  *
  * One queue per plugin, made by its `Connection` over the runner's
  * transport: in the shared runner every member has its own `boot`, its own
@@ -43,17 +44,17 @@ export const REQUEST_LIMITS = Object.freeze({
 
 /**
  * Requests that answer the player's own calls (a resolution, a producer's
- * control, the palette's ticket): sent at once, never behind the queue. The
- * player may hold one of the plugin's requests until such an answer comes
- * (an open waits for the plugin's resolver), so waiting behind it could
- * never end. They count while in flight; their number is the player's, so
+ * control): sent at once, never behind the queue. The player may hold one
+ * of the plugin's requests until such an answer comes (an open waits for
+ * the plugin's resolver), so waiting behind it could never end.
+ * `palette.lead.done` is not one: the player waits for nothing on it, and
+ * unqueued it could pass a waiting `commands.run` of the same ticket. They count while in flight; their number is the player's, so
  * the backstop's margin over `inFlight` covers them.
  */
 export const UNQUEUED_METHODS: ReadonlySet<string> = new Set([
   "sourceResolvers.respond",
   "producer.ack",
   "producer.ackInput",
-  "palette.lead.done",
 ]);
 
 /** A request's options on the plugin's side; nothing of them is sent. */
@@ -77,8 +78,16 @@ interface Waiting {
 }
 
 /**
- * UTF-8 bytes of the request's line as the runner writes it (with a
- * one-digit id and the newline; a longer id is within the margin);
+ * What the player counts of a line beyond the SDK's estimate: the id's
+ * digits past one and the shared runner's `"g":<n>,` envelope (about 10–20
+ * bytes), rounded up. With it, `inFlightBytes` plus one unqueued line of
+ * `MESSAGE_LIMIT` stays under the player's 4 MiB.
+ */
+const LINE_MARGIN = 32;
+
+/**
+ * UTF-8 bytes of the request's line as the runner writes it, with a
+ * one-digit id and the newline (without {@link LINE_MARGIN});
  * `undefined` when it cannot be written (the transport says why).
  */
 function lineBytes(
@@ -135,11 +144,12 @@ export class RequestQueue {
     const signal = options?.signal;
     if (this.#closed) return this.#transport.request<T>(method, params);
     if (signal?.aborted) return Promise.reject(abortError());
-    const bytes = lineBytes(method, params);
+    const line = lineBytes(method, params);
     // Not writable, or longer than a line: the transport refuses it
     // without writing it, at once as before.
-    if (bytes === undefined || bytes > MESSAGE_LIMIT)
+    if (line === undefined || line > MESSAGE_LIMIT)
       return this.#transport.request<T>(method, params);
+    const bytes = line + LINE_MARGIN;
     if (UNQUEUED_METHODS.has(method) || (!this.#count && this.#fits(bytes)))
       return this.#send<T>(method, params, bytes);
     return new Promise<T>((resolve, reject) => {
