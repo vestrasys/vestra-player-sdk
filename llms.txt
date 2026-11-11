@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.7.8: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
+> @vestra-player/sdk 1.7.9: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
 
 ## Read the documentation
 
@@ -25,7 +25,7 @@
 
 ## API
 
-- `/API/Commands`: 15 entries: CommandState, Bindable, Condition, When, MenuId, BarButtonIcon, CommandButton, CommandOptions, Command, Commands, HostAction, Host, BindingRef, BindingInfo, Bindings
+- `/API/Commands`: 23 entries: CommandState, Bindable, Condition, When, MenuId, BarButtonIcon, CommandButton, CommandOptions, Command, Commands, CommandRunOptions, CommandRunResult, CommandList, CommandInfo, Palette,…
 - `/API/Media`: 12 entries: CaptureOptions, Snapshot, ExportOptions, ExportEncoding, JobState, ExportJob, MediaCapture, SourceReference, MediaSources, ExportPart, PartsExportOptions, ExportCheck
 - `/API/Packages`: 10 entries: PackageManifest, PackageSource, InstallOptions, PackageCandidate, PackageChangeStatus, PackageChange, PluginInfo, PluginDisplay, PluginWarning, Packages
 - `/API/Playback`: 33 entries: CommandKeys, MarkKind, TimelineMark, RangeStyle, TimelineRange, TimelineLayer, Timeline, AudioTrack, PlayerState, AudioDevice, Chapter, Conditional, Media, Scrub, StreamFrame,…

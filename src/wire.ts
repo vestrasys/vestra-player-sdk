@@ -714,6 +714,14 @@ export function createWire(transport: Transport) {
     ...mediaClients(transport),
     processing: processingClient(transport),
     commands: commandClient(transport),
+    /** The command palette's lead row (`palette.lead`). */
+    palette: {
+      set: (options: { [key: string]: Json }) =>
+        transport.request<void>("palette.lead.set", options),
+      clear: () => transport.request<void>("palette.lead.clear", {}),
+      done: (ticket: string) =>
+        transport.request<void>("palette.lead.done", { ticket }),
+    },
     dialogs: {
       open: (options: {
         kind: "openFile" | "openFiles" | "openDirectory" | "saveFile";

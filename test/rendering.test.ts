@@ -39,6 +39,7 @@ test("rendering.manage: the player's table entry; rendering.state needs none", (
     requires: [],
     residency: "none",
     risky: true,
+    builtinOnly: false,
   });
   assert.deepEqual(hostMethod("rendering.state"), {
     name: "rendering.state",
@@ -49,6 +50,7 @@ test("rendering.manage: the player's table entry; rendering.state needs none", (
     requires: [],
     label: "Choose GPU or software rendering and restart the player",
     risky: true,
+    builtinOnly: false,
   });
 });
 

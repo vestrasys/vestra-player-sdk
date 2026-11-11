@@ -10,7 +10,7 @@ import type {
   Scope,
   StopReason,
 } from "./types.ts";
-import { commands, keysOf } from "./commands.ts";
+import { commands, keysOf, palette } from "./commands.ts";
 import { WHEN } from "./when.ts";
 import { dialogs } from "./services/dialogs.ts";
 import { ui } from "./view/image.ts";
@@ -109,6 +109,7 @@ export class ScopeImpl implements Plugin {
   readonly resolvers = resolvers(this);
   readonly packages = packages(this);
   readonly osd = osd(this);
+  readonly palette = palette(this);
   readonly host = host(this);
   readonly clipboard = clipboard(this);
   readonly power = power(this);

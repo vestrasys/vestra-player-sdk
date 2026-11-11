@@ -39,6 +39,8 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 | `secrets` | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | — | Store sign-in details in the system keychain | yes |
 | `rendering.manage` | {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference}, {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} | — | Choose GPU or software rendering and restart the player | yes |
 | `video.upscaling` | {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | — | Upscale the video with the GPU's video upscaler |  |
+| `commands.run` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Commands.list Commands.list}, {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} | — | Run any player or plugin command | yes |
+| `palette.lead` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} | — | Add the first row of the command palette |  |
 
 <!-- /generated -->
 
@@ -49,6 +51,10 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 - A `processed` snapshot or export ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) also needs `playback.read` and `subtitles.read`.
 - A file resolver ({@link "@vestra-player/sdk"!Resolvers.add | Resolvers.add} with file types) also needs `producer.av`.
 - Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere (the test host behaves the same); the plugin's log gets one warning.
+
+## Built-in plugins only
+
+`commands.run` and `palette.lead` (marked in the table) are for the player's built-in plugins. The player decides by where a plugin comes from (shipped with the player), not by its manifest: it refuses to install any other package that declares one, and every call of any other plugin fails with code `capability`, a development load of a built-in plugin's directory included. The plugin registry refuses such a package too, and `vestra-plugin check` reports the capability as an error (as a reminder for a `vestra.` id, which only built-in plugins have). In tests, {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin}'s `builtin: true` runs the plugin as a built-in one.
 
 ## Without a capability
 

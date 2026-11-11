@@ -38,6 +38,15 @@ export interface CapabilityInfo {
    * clipboard, every shortcut, the keychain, other plugins).
    */
   readonly risky: boolean;
+  /**
+   * `true` when only the player's built-in plugins may declare it
+   * (`commands.run`, `palette.lead`): the player refuses a package of any
+   * other plugin that declares it, and its calls fail with `capability`.
+   * `vestra-plugin check` reports it.
+   *
+   * @since 1.7.9
+   */
+  readonly builtinOnly: boolean;
 }
 
 /**
@@ -88,6 +97,7 @@ export const CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>> =
           requires: Object.freeze(info.requires),
           label: info.label,
           risky: info.risky,
+          builtinOnly: info.builtinOnly,
         }),
       ]),
     ),

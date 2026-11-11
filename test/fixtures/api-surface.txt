@@ -61,12 +61,35 @@
 @vestra-player/sdk InterfaceDeclaration CommandButton
 @vestra-player/sdk InterfaceDeclaration CommandButton :: icon: BarButtonIcon | ImageRef;
 @vestra-player/sdk InterfaceDeclaration CommandButton :: order: number;
+@vestra-player/sdk InterfaceDeclaration CommandInfo
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: builtin: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: busy: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: category: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: checkable: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: checked?: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: dangerous: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: enabled: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: group: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: id: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: keys: string[];
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: label: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: labelSource: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: path: string[];
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: place: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: plugin: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: radio: boolean;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: reason?: string;
+@vestra-player/sdk InterfaceDeclaration CommandInfo :: title: string;
+@vestra-player/sdk InterfaceDeclaration CommandList
+@vestra-player/sdk InterfaceDeclaration CommandList :: commands: CommandInfo[];
+@vestra-player/sdk InterfaceDeclaration CommandList :: revision: number;
 @vestra-player/sdk InterfaceDeclaration CommandOptions
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: bindings?: string[];
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: busy?: Bindable<boolean>;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: button?: CommandButton;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: category?: string | Text;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: checked?: Bindable<boolean | null> | Condition;
+@vestra-player/sdk InterfaceDeclaration CommandOptions :: destructive?: boolean;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: enabled?: Bindable<boolean> | Condition;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: focus?: "panel";
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: group?: string;
@@ -79,6 +102,10 @@
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: repeat?: boolean;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: run(): unknown;
 @vestra-player/sdk InterfaceDeclaration CommandOptions :: title?: string | Text;
+@vestra-player/sdk InterfaceDeclaration CommandRunOptions
+@vestra-player/sdk InterfaceDeclaration CommandRunOptions :: of?: number;
+@vestra-player/sdk InterfaceDeclaration CommandRunOptions :: step?: number;
+@vestra-player/sdk InterfaceDeclaration CommandRunOptions :: ticket: string;
 @vestra-player/sdk InterfaceDeclaration CommandState
 @vestra-player/sdk InterfaceDeclaration CommandState :: busy: boolean;
 @vestra-player/sdk InterfaceDeclaration CommandState :: checked: boolean | null;
@@ -87,6 +114,8 @@
 @vestra-player/sdk InterfaceDeclaration Commands
 @vestra-player/sdk InterfaceDeclaration Commands :: add(options: CommandOptions): Command;
 @vestra-player/sdk InterfaceDeclaration Commands :: keys(id: string): readonly string[];
+@vestra-player/sdk InterfaceDeclaration Commands :: list(): Promise<CommandList>;
+@vestra-player/sdk InterfaceDeclaration Commands :: run(id: string, options: CommandRunOptions): Promise<CommandRunResult>;
 @vestra-player/sdk InterfaceDeclaration Condition
 @vestra-player/sdk InterfaceDeclaration Condition :: and(...others: Condition[]): Condition;
 @vestra-player/sdk InterfaceDeclaration Condition :: not(): Condition;
@@ -276,6 +305,25 @@
 @vestra-player/sdk InterfaceDeclaration Packages :: uninstall(id: string, options?: { removeData?: boolean; }): Promise<PackageChange>;
 @vestra-player/sdk InterfaceDeclaration Packages :: validate(directory: string): Promise<PackageCandidate>;
 @vestra-player/sdk InterfaceDeclaration Packages :: validateArchive(file: string): Promise<PackageCandidate>;
+@vestra-player/sdk InterfaceDeclaration Palette
+@vestra-player/sdk InterfaceDeclaration Palette :: lead(options: PaletteLeadOptions): PaletteLead;
+@vestra-player/sdk InterfaceDeclaration PaletteLead :: done(ticket: string): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PaletteLead :: onRun(listener: (run: PaletteLeadRun) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration PaletteLead :: readonly ready: Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PaletteLead :: update(options: PaletteLeadOptions): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration PaletteLead extends Disposable
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: empty?: string | Text;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: icon: BarButtonIcon | ImageRef;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: note?: string | Text;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: placeholder?: string | Text;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: status?: { text: string | Text; note?: string | Text; } | null;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: title: string | Text;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadRun
+@vestra-player/sdk InterfaceDeclaration PaletteLeadRun :: keep: boolean;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadRun :: query: string;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadRun :: status: boolean;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadRun :: ticket: string;
 @vestra-player/sdk InterfaceDeclaration Panel :: onChange(listener: (state: PanelState | null) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Panel :: onDrop(listener: (event: { paths: string[]; at: { x: number; y: number; }; modifiers: DropModifiers; }) => unknown): Disposable;
 @vestra-player/sdk InterfaceDeclaration Panel :: readonly ready: Promise<void>;
@@ -439,6 +487,7 @@
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly media: MediaCapture;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly osd: Osd;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly packages: Packages;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly palette: Palette;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly panels: Panels;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly player: Player;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly power: Power;
@@ -750,9 +799,10 @@
 @vestra-player/sdk InterfaceDeclaration WireView :: writeRows(property: string, ops: readonly RowOp[]): Promise<boolean>;
 @vestra-player/sdk TypeAliasDeclaration AudioFilter = export type AudioFilter = Filter<{ nodes: AudioNode[]; delayMs?: number; }>;
 @vestra-player/sdk TypeAliasDeclaration AudioNode = export type AudioNode = { kind: "volume"; gainDb: number; } | { kind: "equalizer"; frequency: number; q: 1; gainDb: number; } | { kind: "treble"; frequency: 3000; slope: 0.5; gainDb: number; } | { kind: "dynaudnorm"; enabled: boolean; maxGain: number; peak: number; } | { kind: "channels"; mode: "stereo" | "left" | "right" | "mono" | "swap"; };
-@vestra-player/sdk TypeAliasDeclaration BarButtonIcon = export type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai";
+@vestra-player/sdk TypeAliasDeclaration BarButtonIcon = export type BarButtonIcon = "play" | "pause" | "stop" | "back" | "forward" | "open" | "volume" | "mute" | "playlist" | "detach" | "attach" | "close" | "failed" | "move-top" | "move-up" | "move-down" | "move-bottom" | "search" | "chapter" | "bookmark" | "check-task" | "check-box" | "menu-check" | "submenu" | "scroll-up" | "scroll-down" | "caret-down" | "sort-asc" | "sort-desc" | "tag-remove" | "preview-play" | "add" | "remove" | "sort" | "fullscreen" | "exit-fullscreen" | "store" | "ai" | "sliders" | "search-ai";
 @vestra-player/sdk TypeAliasDeclaration Bindable = export type Bindable<T> = T | (() => T);
 @vestra-player/sdk TypeAliasDeclaration CommandKeys = export type CommandKeys = { keys: Record<string, string[]>; revision: number; };
+@vestra-player/sdk TypeAliasDeclaration CommandRunResult = export type CommandRunResult = { ran: true; } | { ran: false; declined: true; };
 @vestra-player/sdk TypeAliasDeclaration ConvolutionPlane = export type ConvolutionPlane = { mode: "square" | "row" | "column"; matrix: number[]; rdiv: number; bias: number; };
 @vestra-player/sdk TypeAliasDeclaration EventPayload = export type EventPayload<E extends HostEvent> = EventPayloads[E];
 @vestra-player/sdk TypeAliasDeclaration ExportCheck = export type ExportCheck = WireExportCheck;
@@ -803,6 +853,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: appearance: ThemeId;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: audioDevices: { id: string; name: string; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: backdrop: { owner: string; effective: boolean; } | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: builtin: boolean;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: chapters: { title: string | null; start: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: close(): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: command(id: string): FakeCommand;
@@ -836,6 +887,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: openElsewhere(source: string, phase?: SourceState["phase"]): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: osdPanel: string | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: packages: { id: string; version: string | null; origin: "installed" | "development"; state: "starting" | "running" | "disabled" | "failed" | "stopped"; error: string | null; capabilities: string[]; directory: string; builtin?: boolean; source?: PackageSource | null; dataDirectory?: string | null; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: paletteLead: Record<string, Json> | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: panelDrops: boolean;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: popSidebar(popped: boolean): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: power: "off" | "playing";
@@ -900,6 +952,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: rebind(command: string, inputs: readonly string[] | null): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: request<T>(method: string, params?: Json): Promise<T>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: reset(method: string): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: runPaletteLead(query: string, options?: { keep?: boolean; status?: boolean; }): Promise<string>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: selectTab(plugin: string): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: sent(method: string): Record<string, Json>[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: sequence: { canNext: boolean; canPrevious: boolean; } | null;
@@ -930,7 +983,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: upscalingDecoding(cause: UpscalingDecodingCause, plugins?: readonly UpscalingPlugin[]): UpscalingReason;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: window(id: string): FakeWindow;
 @vestra-player/sdk/testing ClassDeclaration TestHost implements Transport
-@vestra-player/sdk/testing FunctionDeclaration startPlugin = export declare function startPlugin(activate: (plugin: Plugin) => unknown, options?: { directory?: string | URL; id?: string; capabilities?: string[]; host?: TestHost; dataDirectory?: string; sessionStorage?: ReadonlyMap<string, Json>; locale?: Locale; }): Promise<{ host: TestHost; plugin: Plugin; stop: { (): Promise<void>; (options: { reason?: StopReason; }): Promise<void>; }; disconnect(): Promise<void>; }>;
+@vestra-player/sdk/testing FunctionDeclaration startPlugin = export declare function startPlugin(activate: (plugin: Plugin) => unknown, options?: { directory?: string | URL; id?: string; capabilities?: string[]; builtin?: boolean; host?: TestHost; dataDirectory?: string; sessionStorage?: ReadonlyMap<string, Json>; locale?: Locale; }): Promise<{ host: TestHost; plugin: Plugin; stop: { (): Promise<void>; (options: { reason?: StopReason; }): Promise<void>; }; disconnect(): Promise<void>; }>;
 @vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand
 @vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly bindings: readonly string[];
 @vestra-player/sdk/testing InterfaceDeclaration BuiltinCommand :: readonly focus: "panel" | null;
@@ -943,6 +996,7 @@
 @vestra-player/sdk/testing InterfaceDeclaration BuiltinSubmenu :: readonly plugins: readonly string[];
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly apis: readonly string[];
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly builtinOnly: boolean;
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly label: string;
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly requires: readonly string[];
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly risky: boolean;
@@ -985,7 +1039,7 @@
 @vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: images: Record<string, string>;
 @vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: text: string;
 @vestra-player/sdk/testing TypeAliasDeclaration FakePanel = export type FakePanel = Omit<FakeWindow, "callbacks" | "userClose"> & { slot: string; component: string; locks: Json; };
-@vestra-player/sdk/testing VariableDeclaration BAR_BUTTON_ICONS = BAR_BUTTON_ICONS: readonly [ "play", "pause", "stop", "back", "forward", "open", "volume", "mute", "playlist", "detach", "attach", "close", "failed", "move-top", "move-up", "move-down", "move-bottom", "search", "chapter", "bookmark", "check-task", "check-box", "menu-check", "submenu", "scroll-up", "scroll-down", "caret-down", "sort-asc", "sort-desc", "tag-remove", "preview-play", "add", "remove", "sort", "fullscreen", "exit-fullscreen", "store", "ai", "sliders" ]
+@vestra-player/sdk/testing VariableDeclaration BAR_BUTTON_ICONS = BAR_BUTTON_ICONS: readonly [ "play", "pause", "stop", "back", "forward", "open", "volume", "mute", "playlist", "detach", "attach", "close", "failed", "move-top", "move-up", "move-down", "move-bottom", "search", "chapter", "bookmark", "check-task", "check-box", "menu-check", "submenu", "scroll-up", "scroll-down", "caret-down", "sort-asc", "sort-desc", "tag-remove", "preview-play", "add", "remove", "sort", "fullscreen", "exit-fullscreen", "store", "ai", "sliders", "search-ai" ]
 @vestra-player/sdk/testing VariableDeclaration BAR_BUTTON_LIMITS = BAR_BUTTON_LIMITS: { readonly perPlugin: 1; readonly total: 8; readonly maxOrder: 999; }
 @vestra-player/sdk/testing VariableDeclaration BINDING_INPUTS = BINDING_INPUTS: Readonly<{ readonly modifiers: readonly [ "Ctrl", "Alt", "Shift", "Cmd" ]; readonly letters: readonly string[]; readonly digits: readonly string[]; readonly functionKeys: string[]; readonly named: readonly [ "Space", "Enter", "Tab", "Escape", "Backspace", "Delete", "Insert", "Home", "End", "PageUp", "PageDown", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Plus", ...string[], "NumpadPlus", "NumpadMinus", "NumpadMultiply", "NumpadDivide", "NumpadEnter", "NumpadDecimal" ]; readonly mouse: readonly [ "Mouse:LeftClick", "Mouse:LeftDoubleClick", "Mouse:LeftDoubleClick:LeftHalf", "Mouse:LeftDoubleClick:RightHalf", "Mouse:MiddleClick", "Mouse:X1", "Mouse:X2", "Mouse:WheelUp", "Mouse:WheelDown", "Mouse:WheelLeft", "Mouse:WheelRight" ]; }>
 @vestra-player/sdk/testing VariableDeclaration BUILTIN_COMMANDS = BUILTIN_COMMANDS: readonly BuiltinCommand[]

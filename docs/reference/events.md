@@ -29,4 +29,4 @@ The player sends an event as one JSON line `{"event": name, "data": …}`, only 
 
 <!-- /generated -->
 
-Events the player sends without a subscription (`commands.execute`, `ui.callback`, `ui.closed`) are handled by the SDK; {@link "@vestra-player/sdk"!Wire.on | plugin.wire.on} hears them too. Requests are in [Messages](messages.md).
+Events the player sends without a subscription (`commands.execute`, `ui.callback`, `ui.closed`, and `palette.lead` to the plugin that holds the palette's lead row, which wakes a stopped plugin: {@link "@vestra-player/sdk"!PaletteLead.onRun | PaletteLead.onRun}) are handled by the SDK; {@link "@vestra-player/sdk"!Wire.on | plugin.wire.on} hears them too. Requests are in [Messages](messages.md).

@@ -44,6 +44,8 @@ export interface HostCapability {
   readonly name: string;
   readonly label: string;
   readonly risky: boolean;
+  /** Only built-in plugins may declare it (absent: `false`). */
+  readonly builtinOnly?: boolean;
   readonly requires: readonly string[];
   readonly residency: string;
   readonly methods: readonly HostMethod[];
@@ -273,6 +275,7 @@ export function capabilityInfo(rules: CapabilityRules = RULES): Record<
     requires: string[];
     label: string;
     risky: boolean;
+    builtinOnly: boolean;
   }
 > {
   const info: ReturnType<typeof capabilityInfo> = {};
@@ -282,6 +285,7 @@ export function capabilityInfo(rules: CapabilityRules = RULES): Record<
       requires: [...capability.requires],
       label: capability.label,
       risky: capability.risky,
+      builtinOnly: capability.builtinOnly === true,
     };
   for (const [api, requests] of Object.entries(rules.apis))
     for (const request of requests) {
