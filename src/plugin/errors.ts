@@ -27,9 +27,15 @@ export function toError(error: unknown): PluginError {
 export const failure = (code: string, message: string = code): PluginError =>
   new HostError(code, message);
 
-/** Host replies are definite; anything else (lost reply, client timeout) is not. */
+/**
+ * Host replies are definite; anything else (lost reply, client timeout) is
+ * not. An abort is definite too: the SDK's request queue rejects a waiting
+ * request with it, unsent (`request-queue.ts`).
+ */
 export const uncertain = (error: unknown) =>
-  !(error instanceof HostError) || error.code === "timeout";
+  error instanceof HostError
+    ? error.code === "timeout"
+    : !(error instanceof Error && error.name === "AbortError");
 
 /** Mark a promise as observed so an unused `ready` never crashes the runner. */
 export function quiet<T>(promise: Promise<T>): Promise<T> {

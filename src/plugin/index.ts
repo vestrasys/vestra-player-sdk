@@ -93,6 +93,10 @@ export async function createPlugin(
     activated: () => runtime.activated(),
     dispose: async (info) => {
       runtime.stopping ??= { reason: stopReason(info?.reason) };
+      // Before the cleanup runs: what still waits to be sent rejects as the
+      // requests in flight do when the runner stops (`disabled`); the
+      // cleanup's own requests go to the transport as before.
+      runtime.requests.close();
       await root.dispose();
       runtime.stop();
     },

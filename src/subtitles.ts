@@ -163,18 +163,30 @@ export function subtitleClient(transport: Transport) {
       expected: SubtitleStamp;
       style: SubtitleStyle | null;
     }) => transport.request<SubtitleState>("subtitles.style", options),
-    begin: (uploadId: number, generation: number, expectedBytes: number) =>
-      transport.request<SubtitleUpload>("subtitles.upload.begin", {
-        uploadId,
-        generation,
-        expectedBytes,
-      }),
-    append: (uploadId: number, offset: number, base64: string) =>
-      transport.request<SubtitleUpload>("subtitles.upload.append", {
-        uploadId,
-        offset,
-        base64,
-      }),
+    /** `signal`: aborted while the request still waits to be sent, it is not sent. */
+    begin: (
+      uploadId: number,
+      generation: number,
+      expectedBytes: number,
+      signal?: AbortSignal,
+    ) =>
+      transport.request<SubtitleUpload>(
+        "subtitles.upload.begin",
+        { uploadId, generation, expectedBytes },
+        { signal },
+      ),
+    /** `signal`: as for `begin`. */
+    append: (
+      uploadId: number,
+      offset: number,
+      base64: string,
+      signal?: AbortSignal,
+    ) =>
+      transport.request<SubtitleUpload>(
+        "subtitles.upload.append",
+        { uploadId, offset, base64 },
+        { signal },
+      ),
     discard: (uploadId: number) =>
       transport.request<void>("subtitles.upload.discard", { uploadId }),
     /** Atomic registration plus selection. inputOrigin guards a translation's original content revision. */

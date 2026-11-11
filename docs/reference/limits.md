@@ -200,6 +200,25 @@ Every request a plugin sends travels as one protocol line. The plugin's side ref
 
 <!-- /generated -->
 
+## Requests in flight
+
+The SDK keeps at most 256 of a plugin's requests, and 3 MiB of their lines, sent and not yet answered. A request made beyond that waits in the plugin's own queue and goes out, in the order it was made, when an answer comes in: nothing fails and nothing is reordered, the request is only late. The player stops a plugin that leaves 320 lines or 4 MiB unanswered; a plugin on the SDK never reaches that backstop. The byte figure keeps one more line of `MESSAGE_LIMIT` under it, for the replies that never wait.
+
+- **Per plugin.** Each plugin has its own queue, also each member of the shared runner of the built-ins.
+- **Replies never wait.** The answers to the player's own calls (`sourceResolvers.respond`, `producer.ack`, `producer.ackInput`, `palette.lead.done`) go out at once, past the queue: the player may hold one of the plugin's requests until such an answer comes (an open waits for the plugin's resolver). Events the plugin hears are not requests and are not counted.
+- **Aborting.** An `AbortSignal` aborted while its request still waits takes it out of the queue, unsent, with `aborted` (`player.open`'s submit, `subtitles.load`'s upload). A request already sent runs to its answer, as before.
+- **Stopping.** When the plugin stops, what still waits rejects with `disabled`, as the requests in flight do.
+- **Tests.** `TestHost` is behind the same queue: a plugin's tests see the same waiting.
+
+<!-- generated:limits REQUEST_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| inFlight | 256 | Requests one plugin has sent the player and not yet had answered; the next waits in the plugin's queue until an answer comes, under the player's backstop of 320 lines. |
+| inFlightBytes | 3145728 (3 MiB) | UTF-8 bytes of those requests' lines together; the next waits unless nothing is in flight. One `MESSAGE_LIMIT` line more stays under the player's backstop of 4 MiB, for the replies that never wait. |
+
+<!-- /generated -->
+
 ## Render options
 
 {@link "@vestra-player/sdk"!RenderSettings | RenderSettings}; more shaders fail with `invalid`.

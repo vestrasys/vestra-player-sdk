@@ -674,7 +674,15 @@ export type TemplateArgsJson = ArgJson[] | { [name: string]: ArgJson };
 export type TextValueJson = string | TextJson | ListJson;
 
 export interface Transport {
-  request<T>(method: string, params?: Json): Promise<T>;
+  /**
+   * One request. `options` belong to the plugin's side (the SDK's request
+   * queue, `request-queue.ts`) and are never sent; a runner ignores them.
+   */
+  request<T>(
+    method: string,
+    params?: Json,
+    options?: { signal?: AbortSignal },
+  ): Promise<T>;
   on(event: string, listener: (data: unknown) => void): () => void;
   /** Replaces the real local services (test host). */
   local?: LocalServices;

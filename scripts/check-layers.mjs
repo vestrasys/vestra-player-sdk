@@ -73,6 +73,7 @@ const LOWER = [
   "src/media.ts",
   "src/producer.ts",
   "src/subtitles.ts",
+  "src/request-queue.ts",
   // L1
   "src/plugin/errors.ts",
   "src/plugin/latest.ts",

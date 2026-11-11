@@ -334,7 +334,7 @@ export class PlayerService implements StreamSource {
     try {
       result = await (options.send
         ? options.send(id)
-        : this.runtime.host.source.submit(intent, id));
+        : this.runtime.host.source.submit(intent, id, options.signal));
     } catch (error) {
       if (!uncertain(error)) throw error;
       result = await this.#query(id);
