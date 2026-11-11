@@ -432,7 +432,9 @@ export interface CommandButton {
  * plugin id, then declaration order, never by title. `group` only draws
  * separators, so keep a group's orders contiguous. Recommended top-level
  * ranges: `open` 100–199, `domain` 200–699 (playback, subtitles, video,
- * audio…), `screen` 700–799, `windows` 800–899, `exit` 900–999.
+ * audio…), `screen` 700–799, `windows` 800–819, `settings-main` 820–999
+ * (Tools ▸, Options…, Quit); put a tool into Tools ▸ (`@tools`) rather than
+ * the top level.
  *
  * Built-in menus keep their place. The built-in top-level menus
  * ({@link MenuId}) sit at fixed orders, whatever is inside them: Open 110,
