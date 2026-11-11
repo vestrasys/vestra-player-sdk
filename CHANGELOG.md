@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.7.10
 
 **Who must change: nobody.** No API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged. A plugin that sends many requests at once now sees some of them answered later, never refused.
 
@@ -9,6 +9,7 @@
 - **Aborting**: a waiting request whose `AbortSignal` is aborted leaves the queue unsent and rejects with `aborted` (`player.open`'s submit, `subtitles.load`'s upload). A sent request runs to its answer, as before. An abort counts as a definite outcome (nothing is asked again about an operation that was never sent).
 - **Stopping**: when the plugin stops, every waiting request rejects with `disabled` ("plugin stopped"), as the runner rejects those in flight; the cleanup's own requests go out as before.
 - **`TestHost`** sits behind the same queue, so a plugin's tests see the same waiting. Limits reference: "Requests in flight". Tests: `test/request-queue.test.ts` (10,000 requests in order with at most 256 in flight, the byte cap, abort while waiting, stop and disconnect with a full queue, replies past a full queue, `palette.lead.done` behind a waiting `commands.run`). Errors reference: `limit` names the player's backstop.
+- **Capability checker**: `media.sources.open` without `playback.control` names the request `media.sources.open` (it named `source.operation`, which asks for that capability only once it counts as declared); a need is attributed to the request that needed it first.
 
 ## 1.7.9
 
