@@ -244,6 +244,10 @@ export function requestsNeed(
   };
   // Every capability any round needed; the answer is the last round's needs
   // (read with all of them declared) and then any earlier one it left out.
+  // Each keeps the request of the round that first needed it, the one read
+  // closest to the manifest: `MediaSources.open` needs `playback.control` for
+  // `media.sources.open`, not for `source.operation`, which asks for it only
+  // once it counts as declared.
   const all = new Map<string, MemberNeed>();
   for (;;) {
     const needs = round(new Set(all.keys()));
@@ -252,7 +256,7 @@ export function requestsNeed(
       if (!all.has(need.capability)) all.set(need.capability, need);
     if (all.size === before)
       return [
-        ...needs,
+        ...needs.map((need) => all.get(need.capability)!),
         ...[...all.values()].filter(
           (need) => !needs.some((each) => each.capability === need.capability),
         ),
