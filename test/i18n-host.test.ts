@@ -58,6 +58,7 @@ const activate = (plugin: Plugin) => {
   });
   plugin.commands.add({ id: "plain", path: ["Settings", "Plain"], run() {} });
   plugin.commands.add({ id: "picture", path: ["@reset", "Picture"], run() {} });
+  plugin.commands.add({ id: "ruler", path: ["@tools", "Ruler"], run() {} });
 };
 
 test("the test host shows a plugin's declarations in its locale", async () => {
@@ -82,6 +83,8 @@ test("the test host shows a plugin's declarations in its locale", async () => {
       "复位",
       "Picture",
     ]);
+    // Tools (SDK 1.7.12) as well.
+    assert.deepEqual(zh.host.command("ruler").display.path, ["工具", "Ruler"]);
     await zh.stop();
     const en = await startPlugin(activate, { directory, locale: "en" });
     assert.equal(en.plugin.i18n.locale, "en");
@@ -90,6 +93,7 @@ test("the test host shows a plugin's declarations in its locale", async () => {
       "Tools",
       "Blur…",
     ]);
+    assert.deepEqual(en.host.command("ruler").display.path, ["Tools", "Ruler"]);
     await en.stop();
   } finally {
     rmSync(directory, { recursive: true, force: true });

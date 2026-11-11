@@ -219,10 +219,10 @@ test("raw registrations get the player's answers", async () => {
       code: "invalid",
       message: "invalid command: binding F3 is listed twice",
     });
-    await assert.rejects(register({ path: ["@tools", "A"] }), {
+    await assert.rejects(register({ path: ["@view", "A"] }), {
       code: "invalid",
       message:
-        "invalid command: unknown menu id @tools; the built-in menus are @open, @playback, @subtitles, @video, @audio, @screen, @settings, @reset",
+        "invalid command: unknown menu id @view; the built-in menus are @open, @playback, @subtitles, @video, @audio, @screen, @settings, @reset, @tools",
     });
     await assert.rejects(register({ path: ["@video"] }), {
       code: "invalid",
@@ -238,22 +238,26 @@ test("raw registrations get the player's answers", async () => {
   }
 });
 
-test("the player's own Toggle Fullscreen, Quit, Adjustments and Effects and Sidebar take part in conflicts", async () => {
+test("the player's own Quit and Tools ▸ Command Palette… take part in conflicts", async () => {
   const conflict =
     "command conflict: menu path duplicates a command or collides with a leaf/group";
   await refused({ id: "a", path: ["Quit"] }, "conflict", conflict);
   await refused(
-    { id: "a", path: ["Toggle Fullscreen", "X"] },
+    { id: "a", path: ["Tools", "Command Palette…"] },
     "conflict",
     conflict,
   );
-  await refused({ id: "a", path: ["Sidebar"] }, "conflict", conflict);
   await refused(
-    { id: "a", path: ["Adjustments and Effects", "X"] },
+    { id: "a", path: ["@tools", "Command Palette…", "X"] },
     "conflict",
     conflict,
   );
+  await accepted({ id: "a", path: ["@tools", "Ruler"] });
   await accepted({ id: "a", path: ["Quit Later"] });
+  // The short menu (SDK 1.7.12): out of the menu, their titles are free.
+  await accepted({ id: "a", path: ["Toggle Fullscreen", "X"] });
+  await accepted({ id: "a", path: ["Sidebar"] });
+  await accepted({ id: "a", path: ["Adjustments and Effects", "X"] });
 });
 
 test("the seek items follow setStepSeek, as the player registers them again", async () => {

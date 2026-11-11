@@ -56,7 +56,7 @@ These are the rules the built-in plugins follow. Token names, sizes, icons and w
 
 - **By subject, not by plugin**: a video filter in Video, a subtitle tool in Subtitles, an open-something in Open. A domain of your own gets a submenu named after the domain (Games), not the plugin.
 - **Look for an existing item first** in [Built-in commands](../reference/commands.md#built-in-commands); do not duplicate the player or scatter one feature over several menus.
-- **The top level is for frequent, direct commands** and items that show a window or panel, in their kind's group and `order` range ([The top level](../reference/commands.md#the-top-level)). No "File" or "View" menu.
+- **Keep the top level short**: it holds Open ▸, Close, Play/Pause, Tools ▸, Options… and Quit, plus the domain menus. A tool, or an item that shows a window, goes into Tools ▸ (`["@tools", "Screen Ruler…"]`); a domain of your own is one top-level submenu ([The top level](../reference/commands.md#the-top-level)). No "File" or "View" menu.
 - **Name a built-in menu by its id** (`["@video", "Blur"]`). Without an `order` your item goes after the player's; give your related items a `group` of their own.
 - **Resets go under `@reset`**, titled by what they reset without the word Reset (`["@reset", "Picture"]`), grouped per domain, and nowhere else.
 - **Shared submenus merge by their English words**: write them exactly as [Submenu keys in use](../reference/commands.md#submenu-keys-in-use) does, and ask the maintainers to register a new one.

@@ -106,8 +106,11 @@ export const COMMAND_LIMITS = {
  * to put a command into that menu whatever language the player's menus are in.
  * Later segments are titles.
  * `reset`: the Reset menu, directly below Settings, gathers every command that
- * puts something back to its default. The player's tests check that this list
- * agrees with the player's.
+ * puts something back to its default. `tools` (SDK 1.7.12): the Tools menu,
+ * after the domain menus and before Options…, the home of the player's tools
+ * (tracks, snapshot, Vestra Player AI, the store, the command palette) and of
+ * any plugin's own. The player's tests check that this list agrees with the
+ * player's.
  *
  * @example Put a command into the built-in Video menu
  * "Blur" appears in the player's Video menu in every interface language.
@@ -138,6 +141,7 @@ export const MENU_IDS = [
   "screen",
   "settings",
   "reset",
+  "tools",
 ] as const;
 
 /**
@@ -262,11 +266,10 @@ export interface BuiltinSubmenu {
  * released.
  *
  * @example Add an item to the built-in Snapshot submenu
- * "Copy Snapshot" appears in Snapshot ▸ next to the built-in capture
- * plugin's items. Paths merge by their English keys, so a command whose
- * path starts with the submenu's keys (`["Snapshot"]`, a top-level submenu)
- * lands in the same submenu whatever the interface
- * language.
+ * "Copy Snapshot" appears in Tools ▸ Snapshot ▸ next to the built-in
+ * capture plugin's items. Paths merge by their English keys, so a command
+ * whose path starts with the submenu's keys (`["Tools", "Snapshot"]`) lands
+ * in the same submenu whatever the interface language.
  * ```ts
  * import type { Plugin } from "@vestra-player/sdk";
  * declare const plugin: Plugin;
@@ -277,7 +280,7 @@ export interface BuiltinSubmenu {
  * const snapshot = BUILTIN_SUBMENUS.find((menu) => menu.path.at(-1) === "Snapshot")!;
  * plugin.commands.add({
  *   id: "snapshot-to-clipboard",
- *   // ["Snapshot", "Copy Snapshot"]
+ *   // ["Tools", "Snapshot", "Copy Snapshot"]
  *   path: [...snapshot.path, "Copy Snapshot"],
  *   run: copySnapshot,
  * });
@@ -289,9 +292,9 @@ export interface BuiltinSubmenu {
  */
 export const BUILTIN_SUBMENUS: readonly BuiltinSubmenu[] = Object.freeze([
   { path: ["Open", "Recently Played"], plugins: ["vestra.history"] },
-  { path: ["Audio Track"], plugins: ["vestra.audio"] },
-  { path: ["Subtitle Track"], plugins: ["vestra.subtitles"] },
-  { path: ["Snapshot"], plugins: ["vestra.capture"] },
+  { path: ["Tools", "Audio Track"], plugins: ["vestra.audio"] },
+  { path: ["Tools", "Subtitle Track"], plugins: ["vestra.subtitles"] },
+  { path: ["Tools", "Snapshot"], plugins: ["vestra.capture"] },
 ]);
 
 /**
@@ -323,7 +326,7 @@ export interface BuiltinCommand {
 
 /** owner | id | key path, or (title) outside the menu | bindings | panel */
 const BUILTIN_COMMAND_TABLE = `
-vestra.playback | open | Open File… | Ctrl+O, F3
+vestra.playback | open | Open ▸ Open File… | Ctrl+O, F3
 vestra.playback | open-url | Open ▸ Open URL… | Ctrl+U
 vestra.playlist | playlist.open-folder | Open ▸ Open Folder… | F2
 vestra.subtitles | load | Open ▸ Open Subtitle… | Alt+O
@@ -336,21 +339,21 @@ vestra.history | recent.clear | Open ▸ Recently Played ▸ Clear Entries
 vestra.history | recent.enabled | Open ▸ Recently Played ▸ Record Playback History
 host | stop | Close | F4
 host | play-pause | Play/Pause | Space, Mouse:LeftClick
-vestra.audio | audio.track.none | Audio Track ▸ No Audio Tracks
-vestra.subtitles | track-off | Subtitle Track ▸ Off
-vestra.capture | capture.save | Snapshot ▸ Save Current Frame | Ctrl+E
-vestra.capture | capture.copy | Snapshot ▸ Copy Current Frame | Ctrl+C
-vestra.capture | capture.burst | Snapshot ▸ Burst | Ctrl+G
-host | adjust | Adjustments and Effects
-host | sidebar | Sidebar
-vestra.marks | marks.list | Chapter and Bookmark List… | H
-host | fullscreen | Toggle Fullscreen | Escape
-vestra.workshop | workshop.open | Vestra Player AI…
-vestra.store | open | Plugin Store…
-host | palette | Command Palette… | Ctrl+Shift+P
+vestra.audio | audio.track.none | Tools ▸ Audio Track ▸ No Audio Tracks
+vestra.subtitles | track-off | Tools ▸ Subtitle Track ▸ Off
+vestra.capture | capture.save | Tools ▸ Snapshot ▸ Save Current Frame | Ctrl+E
+vestra.capture | capture.copy | Tools ▸ Snapshot ▸ Copy Current Frame | Ctrl+C
+vestra.capture | capture.burst | Tools ▸ Snapshot ▸ Burst | Ctrl+G
+vestra.marks | marks.list | Tools ▸ Chapter and Bookmark List… | H
+vestra.workshop | workshop.open | Tools ▸ Vestra Player AI…
+vestra.store | open | Tools ▸ Plugin Store…
+host | palette | Tools ▸ Command Palette… | Ctrl+Shift+P
+vestra.info | info.about | Tools ▸ About Vestra Player… | F1
 vestra.preferences | options | Options… | F5
-vestra.info | info.about | About Vestra Player… | F1
 host | quit | Quit | Cmd+Q
+host | adjust | (Adjustments and Effects)
+host | sidebar | (Sidebar)
+host | fullscreen | (Toggle Fullscreen) | Escape
 host | previous | (Previous) | PageUp, Mouse:X2
 host | next | (Next) | PageDown, Mouse:X1
 host | enter-fullscreen | (Enter Fullscreen)
@@ -654,6 +657,8 @@ vestra.video | video.hue.down | (Hue -1%) | I
 vestra.video | video.hue.up | (Hue +1%) | O
 vestra.video | video.gpu-rendering | (GPU Rendering)
 vestra.video | video.upscaling | (AI Upscaling)
+vestra.workshop | askvestra.undo | (Undo Last Request)
+vestra.workshop | askvestra.stop | (Stop)
 `;
 
 /**

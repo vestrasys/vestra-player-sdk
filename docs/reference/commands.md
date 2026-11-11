@@ -29,51 +29,55 @@ A command's `path` is a list of 1 to 8 segments in English source text, the last
 | `@screen` | `Screen` |
 | `@settings` | `Settings` |
 | `@reset` | `Reset` |
+| `@tools` | `Tools` |
 
 <!-- /generated -->
 
-Each built-in menu shows only while a plugin has a command in it, at its fixed order (Playback 200, Subtitles 300, Video 400, Audio 500 and Screen 710 among the domain items, Settings 830 and Reset 840 in the settings group); the fixed orders are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}. The player's own controls are in the Picture, Audio, Subtitles and Playback panels and in the command palette.
+Each built-in menu shows only while a command is in it, at its fixed order (Playback 200, Subtitles 300, Video 400, Audio 500 and Screen 710 among the domain items; Tools 820, Settings 830 and Reset 840 in the settings group, whatever groups the items inside declare); the fixed orders are on {@link "@vestra-player/sdk"!CommandOptions.order | CommandOptions.order}. The player's own controls are in the Picture, Audio, Subtitles and Playback panels and in the command palette.
 
 ## The top level
 
-The top level as the player ships it (shortcuts in the Windows notation; the menu shows each system's own):
+The top level as the player ships it, with Tools ▸ open (shortcuts in the Windows notation; the menu shows each system's own):
 
 ```text
-Open File…                    Ctrl+O, F3    group open
-Open ▸
+Open ▸                                      group open
+  Open File…                  Ctrl+O, F3
+  …
 Close                         F4
 ────────────────────────────────────────
 Play/Pause                    Space         group domain
-Audio Track ▸
-Subtitle Track ▸
-Snapshot ▸
+(a plugin's domain menus and submenus, e.g. Games ▸)
 ────────────────────────────────────────
-Adjustments and Effects  ✓                  group windows
-Sidebar  ✓
-Chapter and Bookmark List…    H
-────────────────────────────────────────
-Toggle Fullscreen             Escape        group screen
-────────────────────────────────────────
-Vestra Player AI…                           group windows
-Plugin Store…
-────────────────────────────────────────
-Command Palette…              Ctrl+Shift+P  group settings-main
+Tools ▸                                     group settings-main
+  Audio Track ▸                             group domain
+  Subtitle Track ▸
+  Snapshot ▸
+  ──────────────────────────────────────
+  Chapter and Bookmark List…  H             group marks
+  ──────────────────────────────────────
+  Vestra Player AI…                         group windows
+  Plugin Store…
+  Command Palette…            Ctrl+Shift+P
+  ──────────────────────────────────────
+  About Vestra Player…        F1            group settings-main
+  (a plugin's tools, without an order)
 Options…                      F5
-About Vestra Player…          F1
-────────────────────────────────────────
-Quit                          Cmd+Q         group exit
+Quit                          Cmd+Q
 ```
+
+Adjustments and Effects, Sidebar and Toggle Fullscreen are not in the menu: the bottom bar's buttons, `Escape` and the command palette have them.
 
 The groups of the top level and their `order` ranges ([Design rules](../guides/design-rules.md) says which to use):
 
-| Group                  | `order`          | For                                                                                                                                                                 |
-| ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `open`                 | 100–199          | Opening and closing sources                                                                                                                                         |
-| `domain` (the default) | 200–699          | Play/Pause (201), the Audio Track, Subtitle Track and Snapshot submenus, the built-in domain menus while a plugin fills them, and a new domain of your own          |
-| `windows`              | 790–809, 820–828 | Items that show a window or a panel (a check mark when it toggles one): Adjustments and Effects (791), Sidebar (800) and the chapter list, then Vestra Player AI… (820) and Plugin Store… (822) |
-| `screen`               | 810–819          | Toggle Fullscreen (810), alone between two separators; a plugin's window size and placement items go into Screen ▸ (`@screen`, 710)                                 |
-| `settings-main`        | 829–899          | Command Palette… (829), Options… (830), About Vestra Player… (880), and Settings ▸ and Reset ▸ while a plugin fills them                                            |
-| `exit`                 | 900–999          | Quit                                                                                                                                                                |
+| Group                  | `order`  | For                                                                                                                                                   |
+| ---------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open`                 | 100–199  | Opening and closing sources: Open ▸ (110), Close (120)                                                                                                |
+| `domain` (the default) | 200–699  | Play/Pause (201), the built-in domain menus while a plugin fills them, and a new domain of your own                                                   |
+| `screen`               | 700–799  | Screen ▸ (`@screen`, 710) while a plugin fills it: window size and placement                                                                         |
+| `windows`              | 800–819  | A top-level item that shows a window or a panel; prefer Tools ▸ (`@tools`)                                                                          |
+| `settings-main`        | 820–999  | Tools ▸ (820), Options… (830), Quit (990), and Settings ▸ and Reset ▸ while a plugin fills them; Tools ▸ and Settings ▸ are always drawn in this group |
+
+Inside Tools ▸ the player's items use these groups: `domain` for the track and snapshot submenus (301, 302, 420), `marks` for the chapter list (801), `windows` for Vestra Player AI… (820), Plugin Store… (822) and Command Palette… (829), `settings-main` for About Vestra Player… (880). A plugin's tool without an `order` comes after About; give it an order and a group to sit beside the player's items.
 
 ## The Reset menu
 
@@ -90,9 +94,9 @@ The submenus that exist already, by key path. Write the same keys to add a comma
 | Playback ▸ Speed | the player |
 | Playback ▸ Seek | the player |
 | Open ▸ Recently Played | `vestra.history` |
-| Audio Track | `vestra.audio` |
-| Subtitle Track | `vestra.subtitles` |
-| Snapshot | `vestra.capture` |
+| Tools ▸ Audio Track | `vestra.audio` |
+| Tools ▸ Subtitle Track | `vestra.subtitles` |
+| Tools ▸ Snapshot | `vestra.capture` |
 
 <!-- /generated -->
 
@@ -104,7 +108,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 | Menu item | Default bindings | Command |
 | --- | --- | --- |
-| Open File… | `Ctrl+O`, `F3` | `vestra.playback/open` |
+| Open ▸ Open File… | `Ctrl+O`, `F3` | `vestra.playback/open` |
 | Open ▸ Open URL… | `Ctrl+U` | `vestra.playback/open-url` |
 | Open ▸ Open Folder… | `F2` | `vestra.playlist/playlist.open-folder` |
 | Open ▸ Open Subtitle… | `Alt+O` | `vestra.subtitles/load` |
@@ -117,21 +121,21 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Open ▸ Recently Played ▸ Record Playback History |  | `vestra.history/recent.enabled` |
 | Close | `F4` | `host/stop` |
 | Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
-| Audio Track ▸ No Audio Tracks |  | `vestra.audio/audio.track.none` |
-| Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
-| Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
-| Snapshot ▸ Copy Current Frame | `Ctrl+C` | `vestra.capture/capture.copy` |
-| Snapshot ▸ Burst | `Ctrl+G` | `vestra.capture/capture.burst` |
-| Adjustments and Effects |  | `host/adjust` |
-| Sidebar |  | `host/sidebar` |
-| Chapter and Bookmark List… | `H` | `vestra.marks/marks.list` |
-| Toggle Fullscreen | `Escape` | `host/fullscreen` |
-| Vestra Player AI… |  | `vestra.workshop/workshop.open` |
-| Plugin Store… |  | `vestra.store/open` |
-| Command Palette… | `Ctrl+Shift+P` | `host/palette` |
+| Tools ▸ Audio Track ▸ No Audio Tracks |  | `vestra.audio/audio.track.none` |
+| Tools ▸ Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
+| Tools ▸ Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
+| Tools ▸ Snapshot ▸ Copy Current Frame | `Ctrl+C` | `vestra.capture/capture.copy` |
+| Tools ▸ Snapshot ▸ Burst | `Ctrl+G` | `vestra.capture/capture.burst` |
+| Tools ▸ Chapter and Bookmark List… | `H` | `vestra.marks/marks.list` |
+| Tools ▸ Vestra Player AI… |  | `vestra.workshop/workshop.open` |
+| Tools ▸ Plugin Store… |  | `vestra.store/open` |
+| Tools ▸ Command Palette… | `Ctrl+Shift+P` | `host/palette` |
+| Tools ▸ About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Options… | `F5` | `vestra.preferences/options` |
-| About Vestra Player… | `F1` | `vestra.info/info.about` |
 | Quit | `Cmd+Q` | `host/quit` |
+| Adjustments and Effects (not in the menu) |  | `host/adjust` |
+| Sidebar (not in the menu) |  | `host/sidebar` |
+| Toggle Fullscreen (not in the menu) | `Escape` | `host/fullscreen` |
 | Previous (not in the menu) | `PageUp`, `Mouse:X2` | `host/previous` |
 | Next (not in the menu) | `PageDown`, `Mouse:X1` | `host/next` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
@@ -435,6 +439,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Hue +1% (not in the menu) | `O` | `vestra.video/video.hue.up` |
 | GPU Rendering (not in the menu) |  | `vestra.video/video.gpu-rendering` |
 | AI Upscaling (not in the menu) |  | `vestra.video/video.upscaling` |
+| Undo Last Request (not in the menu) |  | `vestra.workshop/askvestra.undo` |
+| Stop (not in the menu) |  | `vestra.workshop/askvestra.stop` |
 
 <!-- /generated -->
 
@@ -488,7 +494,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 | --- | --- | --- |
 | `stop` | Close | `F4` |
 | `play-pause` | Play/Pause | `Space`, `Mouse:LeftClick` |
-| `fullscreen` | Toggle Fullscreen | `Escape` |
+| `fullscreen` |  | `Escape` |
 | `previous` |  | `PageUp`, `Mouse:X2` |
 | `next` |  | `PageDown`, `Mouse:X1` |
 | `volume-up` |  | `ArrowUp`, `Mouse:WheelUp` |
@@ -504,7 +510,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Enter Fullscreen** (`host/enter-fullscreen`: no default key, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key, enabled only in fullscreen), **Quit** (`host/quit`), **Sidebar** (`host/sidebar`: the bottom bar's sidebar button, order 800, group `windows`), **Adjustments and Effects** (`host/adjust`: the bottom bar's sliders button, order 791, group `windows`) and **Command Palette** (`host/palette`, `Ctrl+Shift+P`, outside the menu); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Enter Fullscreen** (`host/enter-fullscreen`: no default key, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key, enabled only in fullscreen), **Quit** (`host/quit`), **Sidebar** (`host/sidebar`: the bottom bar's sidebar button, outside the menu), **Adjustments and Effects** (`host/adjust`: the bottom bar's sliders button, outside the menu) and **Command Palette…** (`host/palette`, `Ctrl+Shift+P`: Tools ▸ Command Palette…, order 829, group `windows`); their keys are in [Built-in commands](#built-in-commands).
 
 ## Running commands for the user
 

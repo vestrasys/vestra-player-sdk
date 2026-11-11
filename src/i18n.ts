@@ -907,6 +907,7 @@ export const MENU_KEYS: Readonly<Record<string, string>> = {
   screen: "Screen",
   settings: "Settings",
   reset: "Reset",
+  tools: "Tools",
 };
 
 /** The player's old Chinese titles of its own menus: parent, title, key. */
@@ -934,6 +935,7 @@ export const HOST_GROUPS = [
   "Screen",
   "Settings",
   "Reset",
+  "Tools",
   "Playback/Speed",
   "Playback/Seek",
 ];
@@ -974,6 +976,7 @@ export const HOST_ZH_HANS: Readonly<Record<string, string>> = {
   Screen: "屏幕",
   Settings: "设置",
   Reset: "复位",
+  Tools: "工具",
   Speed: "速度",
   Seek: "跳转",
   Close: "关闭",
