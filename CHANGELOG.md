@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.13
+
+**Who must change: nobody.** A product-data refresh of the Slint library copy: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
+
+- **`@vestra/icons.slint`** follows the player (main 20d4d542): the palette button's `search-ai` icon is a speech bubble open at its top right with the AI icon's sparkle (design B; it was the magnifier with the AI icon's cross). Same name, box (14 × 12) and line width; `BAR_BUTTON_ICONS` describes it so. 1.7.12 shipped without it: its sync compared against a player checkout that did not have the icon yet.
+
 ## 1.7.12
 
 **Who must change: nobody; additions only.** `MENU_IDS` and `MenuId` gain `tools`, `apiVersion` stays `vestra/1`, no new capability; the API surface snapshot gains the new id. A plugin may now put commands in `@tools`; one that does needs the first player with the short menu as its `minPlayerVersion`: older players refuse `@tools` with `invalid` (since SDK 1.5.49 that command is skipped and the rest of the plugin activates). `["Tools", …]` by key works on every player (older ones show a plugin's own Tools submenu).
