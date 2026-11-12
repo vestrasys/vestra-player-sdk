@@ -344,7 +344,7 @@ Run any player or plugin command. Residency `none`: no effect on standby.
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
 | `commands.list` | `commands.run` | `{}` | `CommandList` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
-| `commands.run` | `commands.run` | `{ id, ticket, step?, of? }` | `CommandRunResult` | `capability`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
+| `commands.run` | `commands.run` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `capability`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
 
 ### `palette.lead`
 

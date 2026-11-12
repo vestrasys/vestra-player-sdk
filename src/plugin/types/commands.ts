@@ -968,33 +968,49 @@ export interface Commands {
    * line naming the plugin and the command (`Vestra Player AI · 1/2 ·
    * Playback: Mute`), and asks the user first (Run / Don't Run) before a
    * command declared {@link CommandOptions.destructive}, the player's Close
-   * and Quit, anything in the Settings and Plugins menus, and every command
+   * and Quit, anything in the Settings and Reset menus, and every command
    * of a plugin that is not built in. Runs are limited to 4 a second and 30
    * per ticket, and 120 a minute per plugin. The run is not added to the
    * palette's recent list.
+   *
+   * A request of several commands names the rest of its plan in `then` on
+   * its first run (since 1.7.16): if any command of the plan asks first,
+   * the player asks once, before the first command runs, listing the whole
+   * plan, and the later runs of the planned commands with the same ticket
+   * do not ask again. Don't Run runs none of them. See
+   * {@link CommandRunOptions.then}.
    *
    * @param id - The command's global id, as {@link CommandInfo.id}:
    *   `<manifest id>/<local id>`, `host/<id>` for the player's own.
    * @param options - `ticket`: from the user action this run is for.
    *   `step` and `of`: this is step `step` of `of` (1-based), shown in the
-   *   on-screen line.
+   *   on-screen line. `then`: the commands the ticket runs next, asked for
+   *   together with this one.
    * @returns `{ ran: true }` once the command was started, or
    *   `{ ran: false, declined: true }` when the user chose Don't Run.
    *
    * @example Run the commands of one request
-   * The user typed "fullscreen and mute" into the palette's lead row; the
-   * plugin runs the two commands it chose for it. The ticket comes with the
-   * lead's run event and covers every run of this request; `done` ends it.
-   * A declined confirmation or a failure stops the request.
+   * The user typed "reset the picture and mute" into the palette's lead
+   * row; the plugin runs the two commands it chose for it. The ticket comes
+   * with the lead's run event and covers every run of this request; `done`
+   * ends it. The first run names the rest of the plan in `then`, so the
+   * player asks once for both (Reset: Picture asks first) before anything
+   * runs. A declined confirmation or a failure stops the request.
    * ```ts
    * declare const lead: PaletteLead;
    * // ---cut---
    * lead.onRun(async ({ ticket }) => {
-   *   const ids = ["host/fullscreen", "host/mute"]; // chosen for the request
+   *   const ids = ["vestra.video/video.reset", "host/mute"]; // chosen for the request
    *   try {
    *     for (const [index, id] of ids.entries()) {
-   *       const result = await plugin.commands.run(id, { ticket, step: index + 1, of: ids.length });
-   *       if (!result.ran) break; // the user chose Don't Run
+   *       const result = await plugin.commands.run(id, {
+   *         ticket,
+   *         step: index + 1,
+   *         of: ids.length,
+   *         // The first run names the rest of the plan.
+   *         ...(index === 0 ? { then: ids.slice(1) } : {}),
+   *       });
+   *       if (!result.ran) break; // the user chose Don't Run: nothing ran
    *     }
    *   } catch (error) {
    *     // `disabled`, `busy`, `missing`, `ticket` (expired), `limit` (rate).
@@ -1009,15 +1025,17 @@ export interface Commands {
    * @throws `capability` (rejects) The manifest does not declare
    *   `commands.run`, or the plugin is not built into the player.
    * @throws `ticket` (rejects) No ticket, or it ended or expired.
-   * @throws `missing` (rejects) No command has this id.
+   * @throws `missing` (rejects) No listed command has this id, or one of
+   *   the ids of `then`.
    * @throws `disabled` (rejects) The command is disabled now; `message` has
    *   its reason.
    * @throws `busy` (rejects) The command is busy, or its confirmation
    *   cannot be shown while another alert is open.
    * @throws `limit` (rejects) Over the rate limits above.
    * @throws `invalid` (rejects) Only one of `step` and `of`, or not
-   *   whole numbers with 1 ≤ `step` ≤ `of` ≤ 99; or `id` is the command
-   *   palette itself (`host/palette`).
+   *   whole numbers with 1 ≤ `step` ≤ `of` ≤ 99; `then` is not an array
+   *   of at most 7 non-empty strings; or `id` or an id of `then` is the
+   *   command palette itself (`host/palette`).
    * @player 0.7.6
    * @since 1.7.9
    */
@@ -1037,6 +1055,39 @@ export interface CommandRunOptions {
   step?: number;
   /** The request's number of steps (`step`–99); with `step`. */
   of?: number;
+  /**
+   * The rest of the request's plan: the global ids of the commands this
+   * ticket runs next, in order. At most 7, so a plan has at most 8
+   * commands; the same id may appear more than once. Absent, `null` or
+   * empty: this command is the whole plan.
+   *
+   * The player looks at the whole plan, this command first. When none of
+   * it asks first (see {@link Commands.run}), nothing is asked and nothing
+   * is remembered. When any of it does, the player asks once, before this
+   * command runs, listing every command of the plan:
+   *
+   * - **Run** runs this command and remembers the rest of the plan for the
+   *   ticket. Each later run of a planned command with the same ticket,
+   *   in any order, uses up one of its entries and does not ask. A command
+   *   not left in the plan (never in it, or its entries used up) is judged
+   *   on its own and asks first as usual.
+   * - **Don't Run** runs nothing and remembers nothing: the result is
+   *   `{ ran: false, declined: true }`.
+   *
+   * A later run that gives `then` again starts a new plan: the rest of the
+   * earlier one is forgotten and the new plan is judged as above. The plan
+   * ends with its ticket. The ids of `then` must be listed commands now
+   * (`missing` otherwise; `host/palette` is `invalid`); whether each is
+   * enabled and not busy is checked when it runs, as for any run. `then`
+   * itself is no run: only runs count against the rate limits.
+   *
+   * Players before the approval sheet (Ask Vestra UX, step 3) ignore the
+   * field and ask before each command that asks first; a built-in plugin
+   * ships with its player.
+   *
+   * @since 1.7.16
+   */
+  then?: string[] | null;
 }
 
 /**

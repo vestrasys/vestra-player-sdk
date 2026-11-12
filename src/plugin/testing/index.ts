@@ -2804,10 +2804,15 @@ export class TestHost implements Transport {
    * Like the player, `commands.run` takes the ticket until
    * `PaletteLead.done` or 120 s after its last run, at most 30 runs, 4 a
    * second, and 120 runs a minute per plugin (`limit`). A command declared
-   * `destructive` (and the player's `host/stop`) is confirmed first: the
-   * answer comes from {@link TestHost.dialogAnswers}
-   * (`{ confirmed: false, checked: false }` is Don't Run); each run adds
-   * the command's title (and ` · step/of`) to {@link TestHost.osd}.
+   * `destructive` (and the player's `host/stop` and `host/quit`, and the
+   * Settings and Reset menus) is confirmed first: the answer comes from
+   * {@link TestHost.dialogAnswers} (`{ confirmed: false, checked: false }`
+   * is Don't Run, `confirmed: true` Run, with `checked: true` Run and
+   * "Don't ask again", which runs like Run since every command a test host
+   * lists is built in). A run with `then` (since 1.7.16) takes one answer
+   * for its whole plan and remembers an approved plan for the ticket, as
+   * the player does ({@link "@vestra-player/sdk"!CommandRunOptions.then}). Each run adds the
+   * command's title (and ` · step/of`) to {@link TestHost.osd}.
    *
    * @param query - What the user typed.
    * @param options - `keep`: Shift+Enter; `status`: the status row.
@@ -2817,7 +2822,8 @@ export class TestHost implements Transport {
    * The user asks the plugin to stop playback and declines the
    * confirmation. `builtin` lets the plugin hold the lead; the ticket
    * minted here is what its listener passes to `commands.run`, and the
-   * queued answer declines the player's alert for `host/stop`.
+   * queued answer declines the player's alert for `host/stop`. One answer
+   * covers a request whose first run names the rest of its plan in `then`.
    * ```ts
    * import assert from "node:assert/strict";
    * import { startPlugin } from "@vestra-player/sdk/testing";
