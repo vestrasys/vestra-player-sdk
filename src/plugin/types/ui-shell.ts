@@ -602,10 +602,11 @@ export interface ConfirmOptions {
  * window is drawn in the player; one asked while a tool window has the
  * focus, and every file dialog, is the system's own (see
  * {@link Dialogs.confirm}). Each call resolves when the user answers; there
- * is no time limit and no way to close a dialog from code. Only one dialog
- * (of any kind, from any plugin, the player's approval sheet included)
- * waits for the user at a time: another call meanwhile rejects with `busy`.
- * Playback continues while a dialog is open; command key bindings pause.
+ * is no time limit and no way to close a dialog from code. Only one system
+ * dialog (of any kind, from any plugin) is open at a time: another call
+ * meanwhile rejects with `busy`. A confirmation is also `busy` while
+ * another confirmation or the player's approval sheet waits for the
+ * user's answer; the file dialogs are not. Playback continues while a dialog is open; command key bindings pause.
  *
  * **Platforms:** every system with a window; a player without one
  * (headless) rejects every call with `unavailable`.
@@ -616,8 +617,8 @@ export interface ConfirmOptions {
  * @capability ui.dialog
  *
  * @example Ask before deleting, remembering "Don't ask again"
- * Deleting asks for confirmation with a "Don't ask again" box; once the user ticks it, later deletes go ahead without
- * asking. `confirm` resolves with the button and the checkbox when the
+ * Deleting asks for confirmation with a "Don't ask again" box; once the
+ * user ticks it, later deletes go ahead without asking. `confirm` resolves with the button and the checkbox when the
  * user answers; the texts are templates the player translates, so the
  * count goes in `args`. Remembering the box is up to the plugin.
  * ```ts

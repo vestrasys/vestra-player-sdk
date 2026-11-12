@@ -1029,9 +1029,8 @@ export interface Commands {
    *   the ids of `then`.
    * @throws `disabled` (rejects) The command is disabled now; `message` has
    *   its reason.
-   * @throws `busy` (rejects) The command is busy, or its confirmation
-   *   cannot be shown while a system dialog is open or another
-   *   confirmation or approval sheet waits for the user's answer.
+   * @throws `busy` (rejects) The command is busy, or another confirmation
+   *   or approval sheet is waiting for the user's answer.
    * @throws `limit` (rejects) Over the rate limits above.
    * @throws `invalid` (rejects) Only one of `step` and `of`, or not
    *   whole numbers with 1 ≤ `step` ≤ `of` ≤ 99; `then` is not an array
