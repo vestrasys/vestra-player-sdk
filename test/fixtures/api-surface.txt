@@ -167,6 +167,7 @@
 @vestra-player/sdk InterfaceDeclaration EventPayloads :: "resolvers.fileTypes": { fileTypes: string[]; };
 @vestra-player/sdk InterfaceDeclaration EventPayloads :: "source.state": SourceState;
 @vestra-player/sdk InterfaceDeclaration EventPayloads :: "timeline.changed": WireTimeline;
+@vestra-player/sdk InterfaceDeclaration EventPayloads :: "video.motion.changed": Omit<WireMotionState, "mode">;
 @vestra-player/sdk InterfaceDeclaration EventPayloads :: "video.upscaling.changed": Omit<WireUpscalingState, "enabled">;
 @vestra-player/sdk InterfaceDeclaration EventPayloads :: "window.state": WindowFacts;
 @vestra-player/sdk InterfaceDeclaration ExportEncoding
@@ -243,6 +244,21 @@
 @vestra-player/sdk InterfaceDeclaration MediaSources :: locate(token: string): Promise<SourceReference | null>;
 @vestra-player/sdk InterfaceDeclaration MediaSources :: open(token: string, options?: { start?: number; }): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration MediaSources :: remember(options?: Conditional): Promise<SourceReference>;
+@vestra-player/sdk InterfaceDeclaration MotionReason
+@vestra-player/sdk InterfaceDeclaration MotionReason :: readonly code: MotionReasonCode;
+@vestra-player/sdk InterfaceDeclaration MotionReason :: readonly message: string;
+@vestra-player/sdk InterfaceDeclaration MotionState
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly active: MotionMode;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly display: MotionReason | null;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly displayFps: number;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly double: MotionReason | null;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly engine: MotionEngine;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly gpu: string | null;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly inChain: boolean;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly mode: MotionMode;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly outputFps: number | null;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly searchMode: "native" | "performance" | null;
+@vestra-player/sdk InterfaceDeclaration MotionState :: readonly sourceFps: number | null;
 @vestra-player/sdk InterfaceDeclaration Osd
 @vestra-player/sdk InterfaceDeclaration Osd :: panel(): OsdPanel;
 @vestra-player/sdk InterfaceDeclaration Osd :: show(text: TextValue, args?: TemplateArgs | null, options?: OsdShowOptions): Promise<void>;
@@ -502,7 +518,7 @@
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly timeline: Timeline;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly tools: Tools;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly ui: Ui;
-@vestra-player/sdk InterfaceDeclaration Scope :: readonly video: { filter(id: string): VideoFilter; view(): VideoView; render(): RenderOptions; shaders(id?: string): VideoShaders; readonly upscaling: VideoUpscaling; };
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly video: { filter(id: string): VideoFilter; view(): VideoView; render(): RenderOptions; shaders(id?: string): VideoShaders; readonly upscaling: VideoUpscaling; motion(engine: MotionEngine): VideoMotion; };
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly when: When;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly window: MainWindow;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly windows: Windows;
@@ -681,6 +697,10 @@
 @vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly displayWidth: number;
 @vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly height: number;
 @vestra-player/sdk InterfaceDeclaration UpscalingVideoSize :: readonly width: number;
+@vestra-player/sdk InterfaceDeclaration VideoMotion
+@vestra-player/sdk InterfaceDeclaration VideoMotion :: onChange(listener: (state: MotionState) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration VideoMotion :: set(mode: MotionMode): Promise<MotionState>;
+@vestra-player/sdk InterfaceDeclaration VideoMotion :: state(): Promise<MotionState>;
 @vestra-player/sdk InterfaceDeclaration VideoShaders :: clear(): void;
 @vestra-player/sdk InterfaceDeclaration VideoShaders :: onStatus(listener: (status: FilterStatus) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration VideoShaders :: readonly status: FilterStatus;
@@ -769,6 +789,18 @@
 @vestra-player/sdk InterfaceDeclaration WireMark :: plugin: string;
 @vestra-player/sdk InterfaceDeclaration WireMark :: time: number;
 @vestra-player/sdk InterfaceDeclaration WireMark :: title: string | null;
+@vestra-player/sdk InterfaceDeclaration WireMotionState
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: active: "off" | "double" | "display";
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: display: WireRenderingReason | null;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: displayFps: number;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: double: WireRenderingReason | null;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: engine: string;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: gpu: string | null;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: inChain: boolean;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: mode: "off" | "double" | "display";
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: outputFps: number | null;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: searchMode: "native" | "performance" | null;
+@vestra-player/sdk InterfaceDeclaration WireMotionState :: sourceFps: number | null;
 @vestra-player/sdk InterfaceDeclaration WireRange
 @vestra-player/sdk InterfaceDeclaration WireRange :: end: number;
 @vestra-player/sdk InterfaceDeclaration WireRange :: plugin: string;
@@ -810,7 +842,7 @@
 @vestra-player/sdk TypeAliasDeclaration ExportOptions = export type ExportOptions = { format: "png" | "bmp"; destination: string; sampleTime?: number; } | { format: "jpeg"; destination: string; sampleTime?: number; quality?: number; } | { format: "mp4"; destination: string; end: number; encoding?: ExportEncoding; } | { format: "copy"; destination: string; end: number; container?: "auto" | "mp4" | "mkv"; };
 @vestra-player/sdk TypeAliasDeclaration FilterStatus = export type FilterStatus = { state: "waiting"; } | { state: "applying"; } | { state: "applied"; } | { state: "failed"; error: PluginError; };
 @vestra-player/sdk TypeAliasDeclaration HostAction = export type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute" | "fullscreen";
-@vestra-player/sdk TypeAliasDeclaration HostEvent = export type HostEvent = "source.state" | "playback.backend" | "window.state" | "packages.changed" | "bindings.changed" | "commands.keys" | "timeline.changed" | "appearance.changed" | "resolvers.fileTypes" | "video.upscaling.changed";
+@vestra-player/sdk TypeAliasDeclaration HostEvent = export type HostEvent = "source.state" | "playback.backend" | "window.state" | "packages.changed" | "bindings.changed" | "commands.keys" | "timeline.changed" | "appearance.changed" | "resolvers.fileTypes" | "video.upscaling.changed" | "video.motion.changed";
 @vestra-player/sdk TypeAliasDeclaration JobState = export type JobState = Omit<MediaJob, "jobId">;
 @vestra-player/sdk TypeAliasDeclaration Json = export type Json = null | boolean | number | string | Json[] | { [key: string]: Json; };
 @vestra-player/sdk TypeAliasDeclaration LanguagePreference = export type LanguagePreference = "system" | Locale;
@@ -818,6 +850,9 @@
 @vestra-player/sdk TypeAliasDeclaration Locale = export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
 @vestra-player/sdk TypeAliasDeclaration MarkKind = export type MarkKind = "chapter" | "bookmark" | "marker";
 @vestra-player/sdk TypeAliasDeclaration MenuId = export type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings" | "reset" | "tools";
+@vestra-player/sdk TypeAliasDeclaration MotionEngine = export type MotionEngine = "amd" | "nvidia";
+@vestra-player/sdk TypeAliasDeclaration MotionMode = export type MotionMode = "off" | "double" | "display";
+@vestra-player/sdk TypeAliasDeclaration MotionReasonCode = export type MotionReasonCode = "engine" | "platform" | "no-gpu" | "runtime" | "filter" | "rendering" | "upscaling" | "doubling" | "failed" | "overload" | "rate" | "format" | "size" | (string & {});
 @vestra-player/sdk TypeAliasDeclaration PackageChangeStatus = export type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed" | "cancelled" | "failed" | "failedDegraded" | "tooLate";
 @vestra-player/sdk TypeAliasDeclaration PackageSource = export type PackageSource = { kind: "repository"; url: string; } | { kind: "link"; url: string; } | { kind: "file"; } | { kind: "workshop"; } | { kind: "bundled"; };
 @vestra-player/sdk TypeAliasDeclaration PartsExportOptions = export type PartsExportOptions = { parts: ExportPart[]; destination: string; } & ({ format: "copy"; container?: "auto" | "mp4" | "mkv"; } | { format: "mp4"; encoding?: ExportEncoding; });
@@ -882,6 +917,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: loseConnection(): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: manifestId: string;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: markdown(value: Json | undefined): MarkdownWire | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: motionChanged(): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: mountOther(slot: "bottom" | "sidebar" | "adjust" | "backdrop", plugin: string, options?: { title?: string; }): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: mounted(slot?: "bottom" | "sidebar" | "adjust" | "backdrop"): FakePanel;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: on(event: string, listener: (data: unknown) => void): () => void;
@@ -920,6 +956,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mainWindow: { fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; onTop: boolean; cursorAutoHide: "fullscreen" | "playing"; pictureInPicture: { supported: boolean; active: boolean; }; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mediaFiles: Map<string, { duration?: number; status?: "ok" | "missing" | "changed"; version?: number; video?: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null; audio?: { codec: string; sampleRate: number; channels: number; } | null; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly motion: { mode: MotionMode; double: MotionReason | null; display: MotionReason | null; renderingStarting: boolean; sourceFps: number | null; outputFps: number | null; performance: boolean; displayFps: number; gpu: string | null; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly otherResolvers: { owner: string; extensions?: string[]; schemes?: string[]; hosts?: string[]; }[];

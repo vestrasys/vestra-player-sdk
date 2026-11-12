@@ -8,6 +8,7 @@ import type { SourceState } from "../../source.ts";
 import type {
   PackageInfo,
   WindowFacts,
+  WireMotionState,
   WireTimeline,
   WireUpscalingState,
 } from "../../wire.ts";
@@ -861,7 +862,7 @@ export interface PlaybackStats {
     width: number | null;
     /** Coded height. */
     height: number | null;
-    /** Frames per second (after a `frameBlend` node: the output rate). */
+    /** Frames per second (after a `frameBlend` node: the output rate; motion smoothing's doubling is not counted). */
     fps: number | null;
     /** Short decoder name, e.g. "h264". */
     decoder: string | null;
@@ -1025,7 +1026,8 @@ export interface Player {
    *
    * Each event needs a capability: `events` for most, `bindings.manage` for
    * `bindings.changed`, `commands` for `commands.keys`, `video.upscaling` for
-   * `video.upscaling.changed`, none for `packages.changed`. Without it the
+   * `video.upscaling.changed`, `video.motion` for `video.motion.changed`,
+   * none for `packages.changed`. Without it the
    * listener never runs (for `events`, a warning in the log says so). Added
    * during `activate`, that fails the activation.
    *
@@ -1037,7 +1039,7 @@ export interface Player {
    *   `listener` is not a function.
    *
    * @capability That of the event: `events`, or `bindings.manage`,
-   * `commands`, `video.upscaling` for the events named above.
+   * `commands`, `video.upscaling`, `video.motion` for the events named above.
    *
    * @example Push the speed to a panel as it changes
    * A bottom panel shows the playback speed. The listener gets each
@@ -1764,7 +1766,8 @@ export type HostEvent =
   | "timeline.changed"
   | "appearance.changed"
   | "resolvers.fileTypes"
-  | "video.upscaling.changed";
+  | "video.upscaling.changed"
+  | "video.motion.changed";
 
 /**
  * The data each {@link HostEvent} carries, as the player sends it: the
@@ -1814,6 +1817,8 @@ export interface EventPayloads {
   };
   /** The AI upscaling state, without this plugin's own `enabled`. */
   "video.upscaling.changed": Omit<WireUpscalingState, "enabled">;
+  /** Motion smoothing's state, without this plugin's own `mode`. */
+  "video.motion.changed": Omit<WireMotionState, "mode">;
 }
 
 /**

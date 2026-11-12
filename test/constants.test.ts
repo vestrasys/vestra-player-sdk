@@ -80,6 +80,7 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "secrets",
     "rendering.manage",
     "video.upscaling",
+    "video.motion",
     "commands.run",
     "palette.lead",
   ]);

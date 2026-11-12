@@ -80,8 +80,8 @@ Receive playback changes as they happen. Residency `live`: what these methods op
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `events.subscribe` | by `event`: `bindings.changed` → `bindings.manage`, `commands.keys` → `commands`, `packages.changed` → none, `video.upscaling.changed` → `video.upscaling`; any other: `events` | `{ event, mirror?, why? }` | — | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange}, {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Packages.onChange Packages.onChange}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} |
-| `events.unsubscribe` | by `event`: `bindings.changed` → `bindings.manage`, `commands.keys` → `commands`, `packages.changed` → none, `video.upscaling.changed` → `video.upscaling`; any other: `events` | `{ event }` | — | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.on Player.on}, {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange} |
+| `events.subscribe` | by `event`: `bindings.changed` → `bindings.manage`, `commands.keys` → `commands`, `packages.changed` → none, `video.upscaling.changed` → `video.upscaling`, `video.motion.changed` → `video.motion`; any other: `events` | `{ event, mirror?, why? }` | — | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange}, {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Packages.onChange Packages.onChange}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange}, {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} |
+| `events.unsubscribe` | by `event`: `bindings.changed` → `bindings.manage`, `commands.keys` → `commands`, `packages.changed` → none, `video.upscaling.changed` → `video.upscaling`, `video.motion.changed` → `video.motion`; any other: `events` | `{ event }` | — | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.on Player.on}, {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange} |
 
 ### `commands`
 
@@ -336,6 +336,15 @@ Upscale the video with the GPU's video upscaler. Residency `live`: what these me
 | --- | --- | --- | --- | --- | --- |
 | `video.upscaling.state` | `video.upscaling` | — | `WireUpscalingState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state} |
 | `video.upscaling.set` | `video.upscaling` | `{ enabled }` | `WireUpscalingState` | `capability`, `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set} |
+
+### `video.motion`
+
+Smooth motion with the GPU's frame-rate converter. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `video.motion.state` | `video.motion` | `{ engine }` | `WireMotionState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!VideoMotion.state VideoMotion.state} |
+| `video.motion.set` | `video.motion` | `{ engine, mode }` | `WireMotionState` | `capability`, `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoMotion.set VideoMotion.set} |
 
 ### `commands.run`
 

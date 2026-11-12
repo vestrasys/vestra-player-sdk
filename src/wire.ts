@@ -666,6 +666,43 @@ export interface WireUpscalingState {
   inChain?: boolean;
 }
 /**
+ * Motion smoothing's state as `video.motion.state` and `video.motion.set`
+ * answer it (also sent without `mode` as the event `video.motion.changed`):
+ * what `MotionState` is made from. A reason is `{ code, message }`, as a
+ * rendering reason.
+ *
+ * @remarks
+ * The player's wire shape (`video.motion.state`, `video.motion.changed`), part of the protocol, which is not
+ * semver: it can gain fields with a player version.
+ *
+ * @since 1.7.19
+ * @category Playback
+ */
+export interface WireMotionState {
+  /** The converter this state is of (`amd`; `nvidia` is reserved). */
+  engine: string;
+  /** This plugin's own mode (`off`, `double` or `display`). */
+  mode: "off" | "double" | "display";
+  /** What the player does now, for this plugin or another one. */
+  active: "off" | "double" | "display";
+  /** Why Double Frame Rate cannot work now; `null` while it can. */
+  double: WireRenderingReason | null;
+  /** Why Match Display cannot work now; `null` while it can. */
+  display: WireRenderingReason | null;
+  /** The converter's motion search while it runs; `null` while off. */
+  searchMode: "native" | "performance" | null;
+  /** The video's frame rate; `null` while unknown. */
+  sourceFps: number | null;
+  /** The converter's output rate, measured; `null` while off. */
+  outputFps: number | null;
+  /** The display's refresh rate the player paces to. */
+  displayFps: number;
+  /** The GPU that converts; `null` where there is none. */
+  gpu: string | null;
+  /** The converter is in the player's video filter chain now. */
+  inChain: boolean;
+}
+/**
  * Template arguments on the wire (`osd.show`, `osd.panel`, `dialogs.confirm`, a
  * text's `args`): data, or text values.
  */
@@ -707,7 +744,8 @@ export type HostEvent =
   | "timeline.changed"
   | "appearance.changed"
   | "resolvers.fileTypes"
-  | "video.upscaling.changed";
+  | "video.upscaling.changed"
+  | "video.motion.changed";
 
 export function createWire(transport: Transport) {
   const subscriptions = new Map<
@@ -859,6 +897,14 @@ export function createWire(transport: Transport) {
       upscalingSet: (enabled: boolean) =>
         transport.request<WireUpscalingState>("video.upscaling.set", {
           enabled,
+        }),
+      /** Motion smoothing (`plugin.video.motion`). */
+      motionState: (engine: string) =>
+        transport.request<WireMotionState>("video.motion.state", { engine }),
+      motionSet: (engine: string, mode: string) =>
+        transport.request<WireMotionState>("video.motion.set", {
+          engine,
+          mode,
         }),
     },
     /** Mark layers on the seek bar (`plugin.timeline`). */

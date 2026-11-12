@@ -1,4 +1,5 @@
 /** Scopes own handles. Disposal runs newest first and never throws. */
+import type { MotionEngine } from "./types.ts";
 import { failure, toError } from "./errors.ts";
 import type { Change } from "./passes.ts";
 import type { Runtime } from "./runtime.ts";
@@ -43,6 +44,7 @@ import {
   storage,
   system,
   tools,
+  videoMotion,
   videoUpscaling,
 } from "./services.ts";
 
@@ -102,6 +104,7 @@ export class ScopeImpl implements Plugin {
     render: () => videoRender(this),
     shaders: (id?: string) => videoShaders(this, id),
     upscaling: videoUpscaling(this),
+    motion: (engine: MotionEngine) => videoMotion(this, engine),
   };
   readonly audio = audioFilters(this);
   readonly subtitles = subtitles(this);

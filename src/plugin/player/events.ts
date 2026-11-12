@@ -24,6 +24,7 @@ export const EVENT_NEEDS: Readonly<Record<HostEvent, string | null>> = {
   "appearance.changed": "events",
   "resolvers.fileTypes": "events",
   "video.upscaling.changed": "video.upscaling",
+  "video.motion.changed": "video.motion",
 };
 
 /** `Player.on`'s arguments: a {@link HostEvent} name and a function. */

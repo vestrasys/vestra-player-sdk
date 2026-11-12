@@ -195,6 +195,7 @@ export const STRICT_CATEGORIES = {
       "WireTimeline",
       "WireUpscalingReason",
       "WireUpscalingState",
+      "WireMotionState",
     ],
   },
   Services: {
@@ -270,6 +271,7 @@ export const STRICT_CATEGORIES = {
       "RenderOptions",
       "VideoShaders",
       "VideoUpscaling",
+      "VideoMotion",
     ],
     data: [
       "FilterStatus",
@@ -284,6 +286,11 @@ export const STRICT_CATEGORIES = {
       "UpscalingDecodingCause",
       "UpscalingPlugin",
       "UpscalingVideoSize",
+      "MotionEngine",
+      "MotionMode",
+      "MotionState",
+      "MotionReason",
+      "MotionReasonCode",
     ],
   },
 };

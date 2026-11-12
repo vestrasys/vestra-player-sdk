@@ -23,10 +23,13 @@ import type {
   Storage,
   System,
   Tools,
+  MotionEngine,
+  MotionState,
   UpscalingState,
+  VideoMotion,
   VideoUpscaling,
 } from "./types.ts";
-import type { Json, WireUpscalingState } from "../wire.ts";
+import type { Json, WireMotionState, WireUpscalingState } from "../wire.ts";
 
 const MAX_OUTPUT = 16 * 1024 * 1024;
 
@@ -618,3 +621,72 @@ export const videoUpscaling = (scope: ScopeImpl): VideoUpscaling => {
 
 /** Each plugin's own upscaling request, as its last answer said. */
 const enabledOf = new WeakMap<object, boolean>();
+
+/** The modes `VideoMotion.set` accepts. */
+const MOTION_MODES: readonly string[] = ["off", "double", "display"];
+/** The engines `plugin.video.motion(engine)` accepts. */
+const MOTION_ENGINES: readonly string[] = ["amd", "nvidia"];
+
+/**
+ * `plugin.video.motion(engine)`: both requests need `video.motion` and
+ * name the engine; the event names it too and leaves out each plugin's own
+ * `mode`, which the SDK keeps from the answers per engine (only this
+ * plugin's `set` changes it).
+ */
+export const videoMotion = (
+  scope: ScopeImpl,
+  engine: MotionEngine,
+): VideoMotion => {
+  if (typeof engine !== "string" || !MOTION_ENGINES.includes(engine))
+    throw failure("invalid", 'engine must be "amd" or "nvidia"');
+  const declared = () => {
+    if (!scope.runtime.can("video.motion"))
+      throw failure("capability", "video.motion must be declared in manifest");
+  };
+  const modes = () => {
+    let map = modeOf.get(scope.runtime);
+    if (!map) modeOf.set(scope.runtime, (map = new Map()));
+    return map;
+  };
+  const noted = (state: WireMotionState) => {
+    modes().set(engine, state.mode);
+    return state as MotionState;
+  };
+  return {
+    async state() {
+      declared();
+      return noted(await scope.runtime.host.video.motionState(engine));
+    },
+    async set(mode) {
+      declared();
+      if (typeof mode !== "string" || !MOTION_MODES.includes(mode))
+        throw failure("invalid", 'mode must be "off", "double" or "display"');
+      return noted(await scope.runtime.host.video.motionSet(engine, mode));
+    },
+    onChange(listener) {
+      declared();
+      const watch = scope.runtime.on(
+        "video.motion.changed",
+        (data) => {
+          const state = data as Omit<WireMotionState, "mode">;
+          // Another engine's change is not this handle's.
+          if (state.engine !== engine) return;
+          scope.run(listener, {
+            ...state,
+            mode: modes().get(engine) ?? "off",
+          } as MotionState);
+        },
+        "video.motion",
+      );
+      return scope.add({
+        dispose: async () => {
+          scope.forget(watch);
+          await watch.dispose();
+        },
+      });
+    },
+  };
+};
+
+/** Each plugin's own motion smoothing mode per engine, as its last answer said. */
+const modeOf = new WeakMap<object, Map<string, WireMotionState["mode"]>>();
