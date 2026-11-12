@@ -1,23 +1,20 @@
 ---
 title: Publish a plugin
-description: Submit a plugin to the official plugin repository, update or withdraw it, ask for a version to be revoked, and see what users see in the store.
+description: Submit a plugin to the official plugin repository by pull request, update or withdraw it, ask for a version to be revoked, and see what users see in the store.
 ---
 
 # Publish a plugin
 
 **Goal:** your plugin appears in the player's plugin store, where users install, update and uninstall it.
 
-The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) hold the full rules; this page is the author's path through them. To publish without the official repository, [host your own plugin store](own-store.md): users add its address, and its plugins come with an Unofficial mark.
+The store reads the official plugin repository, [vestrasys/vestra-player-plugins](https://github.com/vestrasys/vestra-player-plugins). Every change to it is a pull request to its `main` branch, and **a merge is a release**: there are no beta channels, and CI and revocation are the safety net. Every plugin in it is a third-party plugin; only the plugins built into the player are official. The repository's README ([Submit it to the store](https://github.com/vestrasys/vestra-player-plugins#submit-it-to-the-store)) and its [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) checklist hold the full rules; this page is the author's path through them. To publish without the official repository, [host your own plugin store](own-store.md): users add its address, and its plugins come with an Unofficial mark.
+
+Today a plugin gets into the store through a pull request that adds its source to the repository's `plugins/<name>/` (a **hosted** plugin). A maintainer has to agree to host a new plugin; the pull request is where that happens, so open an issue first if you want an answer before you write the plugin.
+
+> [!NOTE]
+> Registering a plugin whose source stays in your own repository is planned and not available yet. The repository's [MAINTAINING.md](https://github.com/vestrasys/vestra-player-plugins/blob/main/MAINTAINING.md#registered-third-party-plugins-planned) describes the planned format and flow.
 
 ## Steps
-
-### Choose a way in
-
-- **Registered** (the usual way): the source stays in your own public GitHub repository, and you register it with one file in the repository's `registry/`. CI builds the package from the commit you name, as Flathub does.
-- **Hosted**: the source lives in the repository's `plugins/<name>/`, and every change is a pull request there. It needs a maintainer's agreement: open an issue first.
-
-> [!IMPORTANT]
-> Building registered plugins from source is not implemented yet. The registration format, the id rule and the owner check are final and checked by CI, but a registration pull request cannot be merged until the build lands (the repository's README shows the status).
 
 ### Prepare the package
 
@@ -40,63 +37,45 @@ Next to `manifest.json` the store needs:
 
 ### Choose the id
 
-The id is `<owner>.<name>`, where `<owner>` is the GitHub user or organization that owns the source repository (for a hosted plugin, the owner recorded in the repository's `plugins/owners.toml`), compared without case: `https://github.com/someone/cool-visualizer` publishes ids that start with `someone.`. Letters, digits, `.`, `-` and `_` only.
+The id is `<owner>.<name>`, where `<owner>` is the GitHub user or organization that maintains the plugin (you), recorded in the repository's `plugins/owners.toml`, and `<name>` is the plugin's folder name: `plugins/cool-visualizer/` owned by `someone` is `someone.cool-visualizer`. The owner is compared without case. Letters, digits, `.`, `-` and `_` only.
 
-- `vestra.` is reserved for the player's built-in plugins.
-- An id is unique in the repository, also against a hosted plugin's and also with different case.
+- `vestra` is reserved for the player's built-in plugins: neither the id nor the owner may use it.
+- An id is unique in the repository, also with different case.
 - A changed id is a new plugin to the store: the old id's version history is not carried over.
 
-### Register the plugin
+### Add the plugin to the repository
 
-Push the plugin to your public repository (it may live in a subdirectory) and note the full 40-character id of the commit to publish; a tag such as `v1.0.0` is good practice, but the registration pins the commit. Then fork the plugin repository and add `registry/<id>.toml`:
+Fork the plugin repository and put your plugin folder in `plugins/<name>/`: `manifest.json`, the sources (`.ts`, `.slint`), `tests/`, `README.md` and `CHANGELOG.md`. Leave out `tsconfig*.json`, `node_modules` and `package.json`: the repository root provides the SDK, TypeScript and esbuild (a plugin that bundles npm packages follows CONTRIBUTING's rules for them). Add the line `<name> = "<owner>"` to `plugins/owners.toml`.
 
-The file is shown in the [complete example](#complete-example) below.
-
-| Key | Rule |
-| --- | --- |
-| file name | the plugin id plus `.toml`; equals `id` in the manifest |
-| `repository` | `https://github.com/<owner>/<repo>`, no trailing `/` or `.git`; `<owner>` is the id's prefix |
-| `commit` | the full 40-digit lowercase commit id to build |
-| `path` | the folder that holds `manifest.json`, relative, no `..` |
-| `owners` | the GitHub logins allowed to change or remove this file later; must include you |
-
-No other keys. `npm ci && npm run registry` in the plugin repository checks the file.
-
-A hosted plugin instead adds its folder under `plugins/` (manifest, sources, `tests/`, `README.md`, `CHANGELOG.md`) and its owner to `plugins/owners.toml`, after the maintainers agreed in the issue; `npm run plugin -- check <name>` (and `test`, `pack`) run the checks there.
+Then run the repository's checks from its root (Node.js 26 or later): `npm ci`, then the one command in CONTRIBUTING's [Run the checks](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#run-the-checks). `npm run plugin -- check <name>` (and `test`, `build`, `pack`) checks one plugin at a time.
 
 ### Open the pull request
 
-Title it `Add someone.cool-visualizer` (or `Update someone.cool-visualizer to 1.2.0`) and fill in the pull request checklist. On the pull request:
+Title it `Add someone.cool-visualizer` and fill in the checklist of the pull request template ([Open the pull request](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#open-the-pull-request)). On the pull request:
 
-- **Registry owners** checks that you are in `owners` of a new registration, or already an owner of the one you change. It runs the base branch's script and never runs your code.
-- **CI** validates the file and runs the publish flow without publishing; for a hosted plugin it also type checks, tests and packs the plugin on macOS, Windows and Linux.
-- **Review:** a maintainer reads the source at the registered commit (for an update, the diff since the previous one) and merges, or answers in the pull request.
+- **CI** runs the same checks on macOS, Windows and Linux: the id and the owner, the type check, the tests and the package, and the publish flow without publishing. It must pass.
+- **Review:** a maintainer reads the source and merges, or answers in the pull request.
 
-After the merge, the repository's publish workflow builds the package, releases it as `<id>-v<version>`, signs the index and deploys it; the store shows the plugin at its next refresh.
+After the merge, the repository's publish workflow packs the plugin, releases it as `<id>-v<version>`, adds it to the signed index and deploys it; the store shows the plugin at its next refresh.
 
 ## Complete example
 
-Publishing `someone.cool-visualizer` from `https://github.com/someone/cool-visualizer`: check, test and pack in the plugin folder, then add one file to a fork of the plugin repository and open the pull request "Add someone.cool-visualizer".
+Publishing `someone.cool-visualizer`: check, test and pack in the plugin folder, copy it to `plugins/cool-visualizer/` in a fork of the plugin repository, add its owner, run the checks and open the pull request "Add someone.cool-visualizer".
 
 ```sh
 npx vestra-plugin check && npx vestra-plugin test && npx vestra-plugin pack
-git rev-parse HEAD   # the commit to register
 ```
 
 ```text
-# registry/someone.cool-visualizer.toml
-repository = "https://github.com/someone/cool-visualizer"
-commit = "3f2a9c1d4b5e6f708192a3b4c5d6e7f8091a2b3c"
-path = "."            # optional, default "."
-owners = ["someone"]
+# plugins/owners.toml (the added line)
+cool-visualizer = "someone"
 ```
 
 ## Update, withdraw, revoke
 
-- **Update:** bump `version` in the manifest, add a `CHANGELOG.md` entry, commit, and open a pull request that changes `commit` (a hosted plugin: the pull request with the change). A version is published once and never rebuilt: a change without a new version does not reach users, and a version is never reused or lowered.
-- **Owners:** after the first merge only an owner listed on `main` may change or remove the registration, including the list of owners; a maintainer can step in for an abandoned one.
-- **Withdraw:** an owner opens a pull request that deletes the registration file. The plugin drops out of the next index, so the store no longer offers it or checks it for updates; copies already installed stay installed (revocations still reach them), and the released packages stay downloadable.
-- **Revoke:** for a version that is broken or harmful, an owner asks a maintainer for an entry in the repository's `revoked.json`: the plugin id, the versions (`1.2.0`, or a range such as `>=1.0.0 <1.2.0`) and a reason of up to 500 characters, shown to users. Entries are never removed or edited once merged, so fix a mistake with a new version. The store disables an installed version that matches, tells the user why, and offers the fixed version when there is one; a user who enables it again is asked to confirm the risk first.
+- **Update:** bump `version` in the manifest, add a `CHANGELOG.md` entry, and open a pull request titled `Update <id> to <version>` (CONTRIBUTING's [Update your plugin](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md#update-your-plugin)). A version is published once and never rebuilt: a change without a new version does not reach users, and a version is never reused or lowered.
+- **Withdraw:** ask a maintainer to retire the plugin. Its folder is removed from `plugins/` and it drops out of the next index, so the store no longer offers it or checks it for updates; copies already installed stay installed (revocations still reach them), and the released packages stay downloadable.
+- **Revoke:** for a version that is broken or harmful, the owner asks a maintainer for an entry in the repository's `revoked.json`: the plugin id, the versions (`1.2.0`, or a range such as `>=1.0.0 <1.2.0`) and a reason of up to 500 characters, shown to users. Entries are never removed or edited once merged, so fix a mistake with a new version. The store disables an installed version that matches, tells the user why, and offers the fixed version when there is one; a user who enables it again is asked to confirm the risk first.
 
 ## What users see in the store
 
@@ -113,4 +92,4 @@ The store shows the newest version's manifest fields, so what you write there is
 - [Manifest](../reference/manifest.md): the display fields and `minPlayerVersion`.
 - [Capabilities](../reference/capabilities.md): the wording the store shows for each capability.
 - [Test a plugin](testing.md) and [Command line](../reference/cli.md).
-- The plugin repository's [README](https://github.com/vestrasys/vestra-player-plugins#contributing-a-plugin) and [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md).
+- The plugin repository's [README](https://github.com/vestrasys/vestra-player-plugins#submit-it-to-the-store), [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) (the author's checklist) and [MAINTAINING](https://github.com/vestrasys/vestra-player-plugins/blob/main/MAINTAINING.md) (how the repository works inside).
