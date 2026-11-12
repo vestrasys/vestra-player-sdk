@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.18
+
+**Who must change: nobody.** A docs-only patch following the player (Ask Vestra UX, step 5: main-window confirmations drawn in the player): no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged. `dialogs.confirm` keeps its parameters and its answer `{ confirmed, checked }`.
+
+- **`Dialogs.confirm`** (player b38b2316, 31a3170f): a confirmation for the main window (no tool window has the focus) is drawn in the player in the style of its approval sheet: the message, the detail (a long one scrolls and the buttons stay in view), the checkbox at the footer's left, confirm (Enter) and cancel (Esc) at its right; presses in its first 0.5 s are ignored and a click outside it is Cancel. One raised while a tool window has the focus stays the system's dialog on that window (Windows: the quiet task dialog; macOS: an `NSAlert` sheet). On other systems with a window it is drawn in the player instead of rejecting with `unsupported` (which only older players there still give); headless is still `unavailable`. A new `busy` case: another confirmation or the approval sheet is waiting for the user's answer (`Commands.run`'s confirmation too). `destructive` now draws nothing in the player (no red text, no warning icon); the Windows task dialog still shows its warning icon and macOS's alert its red button. The TSDoc of `Dialogs`, `ConfirmOptions` and `Commands.run`, [Platforms](docs/reference/platforms.md) and [Troubleshooting](docs/guides/troubleshooting.md) follow.
+
 ## 1.7.17
 
 **Who must change: nobody.** A product-data refresh (Ask Vestra UX, step 4): no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.

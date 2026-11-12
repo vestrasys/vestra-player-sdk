@@ -81,7 +81,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A key binding does not fire
 
-**Cause:** Command key bindings belong to the main window (and the floating sidebar): they do not fire while a tool window or the Options window has focus, while a menu or a system dialog is open, or when a focused control takes the key (Space in a text field). In a tool window, the floating sidebar or the Options window, the standard close keys (Ctrl+W and Ctrl+F4 on Windows, ⌘W on macOS) close that window before any binding sees them. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`.
+**Cause:** Command key bindings belong to the main window (and the floating sidebar): they do not fire while a tool window or the Options window has focus, while a menu, a system dialog or a confirmation drawn in the player is open, or when a focused control takes the key (Space in a text field). In a tool window, the floating sidebar or the Options window, the standard close keys (Ctrl+W and Ctrl+F4 on Windows, ⌘W on macOS) close that window before any binding sees them. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`.
 
 **Fix:** Choose a default key the system does not take, and give a disabled command a `reason` when its key should be eaten. See [Commands, menus and bindings](../reference/commands.md) and [Keys the system takes first](../reference/commands.md#keys-the-system-takes-first).
 
