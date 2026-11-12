@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
-    "oxlint": "1.89.0",
+    "oxlint": "1.91.0",
     "prettier": "^3.9.10",
     "publint": "0.3.25",
     "typedoc": "0.28.20",
