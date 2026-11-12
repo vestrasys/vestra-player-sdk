@@ -7,6 +7,8 @@ import type {
   AudioFilter,
   RenderOptions,
   VideoFilter,
+  MotionEngine,
+  VideoMotion,
   VideoShaders,
   VideoUpscaling,
   VideoView,
@@ -257,11 +259,12 @@ export interface Scope extends Disposable {
   readonly player: Player;
   /**
    * Video processing: this plugin's filter chain, the display layer, the
-   * GPU render options, this plugin's shaders and the GPU's video
-   * upscaler. The first four need `processing.video` and `playback.read`;
-   * the filter chain also needs `events` (without it the SDK never sees
-   * the media become ready and the chain stays `waiting`). The upscaler
-   * needs `video.upscaling` only.
+   * GPU render options, this plugin's shaders, the GPU's video upscaler and
+   * motion smoothing. The first four need `processing.video` and
+   * `playback.read`; the filter chain also needs `events` (without it the
+   * SDK never sees the media become ready and the chain stays `waiting`).
+   * The upscaler needs `video.upscaling` only, motion smoothing
+   * `video.motion` only.
    */
   readonly video: {
     /**
@@ -317,6 +320,19 @@ export interface Scope extends Disposable {
      * it on or off for this plugin.
      */
     readonly upscaling: VideoUpscaling;
+    /**
+     * Motion smoothing with one GPU vendor's frame-rate converter (needs
+     * `video.motion`): whether it works here and why not, and this
+     * plugin's mode. `amd` is AMD AMF's on Windows; `nvidia` is reserved
+     * (every mode reports `engine` until a player has it).
+     *
+     * @param engine - The converter: `"amd"` or `"nvidia"`.
+     * @returns A {@link VideoMotion} for that converter.
+     * @throws `invalid` (throws) `engine` is not one of the two.
+     * @player 0.8.1
+     * @since 1.7.19
+     */
+    motion(engine: MotionEngine): VideoMotion;
   };
   /**
    * Audio processing: this plugin's filter chain and delay

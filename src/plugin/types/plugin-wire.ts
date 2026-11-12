@@ -154,7 +154,7 @@ export interface Wire {
    *   `listener` is not a function.
    *
    * @capability That of the event: `events`, or `bindings.manage`,
-   * `commands`, `video.upscaling` as for {@link Player.on}; none for an
+   * `commands`, `video.upscaling`, `video.motion` as for {@link Player.on}; none for an
    * event listened to without a subscription.
    *
    * @example Log each command the player runs for this plugin

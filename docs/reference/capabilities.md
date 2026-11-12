@@ -39,6 +39,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 | `secrets` | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | — | Store sign-in details in the system keychain | yes |
 | `rendering.manage` | {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference}, {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} | — | Choose GPU or software rendering and restart the player | yes |
 | `video.upscaling` | {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | — | Upscale the video with the GPU's video upscaler |  |
+| `video.motion` | {@linkcode "@vestra-player/sdk"!VideoMotion.state VideoMotion.state}, {@linkcode "@vestra-player/sdk"!VideoMotion.set VideoMotion.set}, {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} | — | Smooth motion with the GPU's frame-rate converter |  |
 | `commands.run` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Commands.list Commands.list}, {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} | — | Run any player or plugin command | yes |
 | `palette.lead` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} | — | Add the first row of the command palette |  |
 

@@ -181,6 +181,9 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "VideoUpscaling.state": [{ method: "video.upscaling.state" }],
     "VideoUpscaling.set": [{ method: "video.upscaling.set" }],
     "VideoUpscaling.onChange": [listen("video.upscaling.changed")],
+    "VideoMotion.state": [{ method: "video.motion.state" }],
+    "VideoMotion.set": [{ method: "video.motion.set" }],
+    "VideoMotion.onChange": [listen("video.motion.changed")],
     "WireCommands.register": [{ method: "commands.register" }],
   });
 
@@ -203,6 +206,7 @@ export const SUBSCRIBED_EVENTS: readonly string[] = Object.freeze([
   "appearance.changed",
   "resolvers.fileTypes",
   "video.upscaling.changed",
+  "video.motion.changed",
 ]);
 
 /**

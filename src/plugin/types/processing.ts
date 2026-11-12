@@ -1,4 +1,4 @@
-// Processing category: video and audio filters, view, render options, shaders, upscaling.
+// Processing category: video and audio filters, view, render options, shaders, upscaling, motion smoothing.
 // Re-exported by ../types.ts (`export type *`); see that file.
 import type { AudioNode, VideoNode } from "../../processing.ts";
 import type { Disposable, PluginError } from "./base.ts";
@@ -998,4 +998,332 @@ export interface VideoUpscaling {
    * @since 1.5.43
    */
   onChange(listener: (state: UpscalingState) => void): Disposable;
+}
+
+// ---------------------------------------------------------------- motion smoothing
+
+/**
+ * A GPU vendor's frame-rate converter for motion smoothing: `amd` (AMD
+ * AMF's, on Windows with an AMD Radeon GPU); `nvidia` is reserved for
+ * NVIDIA's converter, which no player has yet (every mode reports
+ * `engine`). Each vendor's motion smoothing is its own plugin.
+ *
+ * @player 0.8.1
+ * @since 1.7.19
+ * @category Processing
+ */
+export type MotionEngine = "amd" | "nvidia";
+
+/**
+ * What motion smoothing does: `off`; `double`, twice the video's frame rate
+ * with real in-between frames from the GPU's frame-rate converter, shown as
+ * they come; `display`, the doubled frames also interpolated to the
+ * display's refresh rate (GPU rendering only), so 24 fps doubled to 48 meets
+ * a 60 Hz display without judder.
+ *
+ * @player 0.8.1
+ * @since 1.7.19
+ * @category Processing
+ */
+export type MotionMode = "off" | "double" | "display";
+
+/**
+ * Why a motion smoothing mode does not work, as a stable kebab-case code. A
+ * newer player may add codes: compare with the ones you handle and show
+ * {@link MotionReason.message} for the rest. The codes, in the order the
+ * player checks them (the first that holds is reported):
+ *
+ * | Code | Meaning |
+ * | --- | --- |
+ * | `engine` | The player has no converter of this engine (`nvidia`, until a player has it). |
+ * | `platform` | The player has no frame-rate converter on this system (macOS, Linux). |
+ * | `no-gpu` | No GPU with a frame-rate converter (Windows: no AMD Radeon GPU). |
+ * | `runtime` | The GPU's runtime is missing (Windows: AMD's AMF runtime, installed with the AMD driver), or the converter failed to start the same way on two videos in this run (an older GPU AMF does not serve). |
+ * | `filter` | The player's video library has no frame-rate converter (a player built without it). |
+ * | `rendering` | Match Display only: the player renders in software, or GPU rendering is still starting ({@link Rendering}). |
+ * | `upscaling` | AI upscaling is on ({@link VideoUpscaling}); the two cannot run together. |
+ * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling); the two cannot run together. |
+ * | `failed` | The converter stopped on this video; the message has its error. The next video tries again. |
+ * | `overload` | The GPU could not keep up with this video, even with the faster motion search. The next video tries again. |
+ * | `rate` | The video's frame rate does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
+ * | `format` | The video's format was not measured: 10-bit or deeper, or HDR. |
+ * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). The next video may fit. |
+ *
+ * `engine`, `platform`, `no-gpu`, `runtime`, `filter` and `rendering` (once GPU
+ * rendering is not just starting) hold until the player restarts, and
+ * {@link VideoMotion.set} rejects a mode they stand in the way of; the
+ * others can pass during the run, so `set` keeps the request and the player
+ * applies it as soon as they do.
+ *
+ * @example Advise the user by reason
+ * The plugin shows its own advice for the reasons the user can act on and
+ * the player's message for the rest.
+ * ```ts
+ * const { double } = await plugin.video.motion("amd").state();
+ * // Advice for the codes this plugin knows; any other code shows the message.
+ * const advice: Partial<Record<MotionReasonCode, string>> = {
+ *   upscaling: "Turn off AI Upscaling to smooth motion.",
+ *   runtime: "Install or update the AMD graphics driver.",
+ * };
+ * if (double) console.log(advice[double.code] ?? double.message);
+ * ```
+ *
+ * @player 0.8.1
+ * @since 1.7.19
+ * @category Processing
+ */
+export type MotionReasonCode =
+  | "engine"
+  | "platform"
+  | "no-gpu"
+  | "runtime"
+  | "filter"
+  | "rendering"
+  | "upscaling"
+  | "doubling"
+  | "failed"
+  | "overload"
+  | "rate"
+  | "format"
+  | "size"
+  // Any other string: a newer player's code (the names above stay suggested).
+  | (string & {});
+
+/**
+ * Why a motion smoothing mode does not work: a stable
+ * {@link MotionReasonCode} to branch on and a sentence to show, the same
+ * shape as {@link RenderingReason}.
+ *
+ * @example Grey out a mode with the player's reason
+ * The plugin shows why Match Display is not offered.
+ * ```ts
+ * const state = await plugin.video.motion("amd").state();
+ * if (state.display) console.log(`Match Display: ${state.display.message}`);
+ * ```
+ *
+ * @player 0.8.1
+ * @since 1.7.19
+ * @category Processing
+ */
+export interface MotionReason {
+  /** The reason as a stable kebab-case code; branch on this. */
+  readonly code: MotionReasonCode;
+  /**
+   * The reason as English text for people, for example with the rates and
+   * what to change; never branch on it.
+   */
+  readonly message: string;
+}
+
+/**
+ * What {@link VideoMotion.state} and {@link VideoMotion.set} report: this
+ * plugin's mode, what the player does now, and why each mode cannot work.
+ *
+ * @example Say what motion smoothing does now
+ * The plugin's status line shows the rates while the converter runs, else
+ * why the chosen mode waits.
+ * ```ts
+ * const state = await plugin.video.motion("amd").state();
+ * // The reason of the mode this plugin chose.
+ * const waiting = state.mode === "display" ? state.display : state.double;
+ * const line =
+ *   state.active === "off"
+ *     ? (waiting?.message ?? "Off")
+ *     : `${state.sourceFps} → ${state.outputFps ?? "…"} fps`;
+ * console.log(line);
+ * ```
+ *
+ * @player 0.8.1
+ * @since 1.7.19
+ * @category Processing
+ */
+export interface MotionState {
+  /** The converter this state is of ({@link MotionEngine}). */
+  readonly engine: MotionEngine;
+  /** This plugin's request ({@link VideoMotion.set}); `off` until it asks. */
+  readonly mode: MotionMode;
+  /**
+   * What the player does now, for this plugin or another one (the strongest
+   * mode asked for that can work): `off` while nothing is asked, while a
+   * reason stands in the way, and while the video's rate is not known yet.
+   */
+  readonly active: MotionMode;
+  /** Why Double Frame Rate cannot work now; `null` while it can. */
+  readonly double: MotionReason | null;
+  /** Why Match Display cannot work now; `null` while it can. */
+  readonly display: MotionReason | null;
+  /**
+   * The converter's motion search while it runs: `native` on the full
+   * frames, `performance` on downscaled ones (the first step when the GPU
+   * falls behind); `null` while off.
+   */
+  readonly searchMode: "native" | "performance" | null;
+  /** The video's frame rate, in frames a second; `null` while unknown. */
+  readonly sourceFps: number | null;
+  /** The converter's output rate as measured, in tenths; `null` while off. */
+  readonly outputFps: number | null;
+  /** The display's refresh rate the player paces to, in Hz. */
+  readonly displayFps: number;
+  /** The name of the GPU that converts; `null` where there is none. */
+  readonly gpu: string | null;
+  /** The converter is in the player's video filter chain now, read from the chain itself. */
+  readonly inChain: boolean;
+}
+
+/**
+ * `plugin.video.motion(engine)`: motion smoothing, the video's frame rate doubled by
+ * the GPU's frame-rate converter (AMD AMF's on Windows; `video.motion`).
+ * Read whether it works here and why not; choose a mode for this plugin.
+ *
+ * @remarks
+ * The converter makes real in-between frames (motion estimation, not
+ * blending). While some plugin asks for a mode that can work, the player
+ * puts the converter last in the video filter chain, decodes with copy-back
+ * (the converter needs the frames in memory) and, for `display`, has the
+ * GPU renderer interpolate the doubled frames to the display. The strongest
+ * mode any plugin asked for applies; a stopped plugin's request is revoked.
+ *
+ * The player watches the converter while the video plays: when its output
+ * falls behind the doubled rate or many frames are dropped, it first
+ * switches to a faster motion search on downscaled frames, then turns the
+ * converter off for this video with an `overload` reason. The next video
+ * starts afresh.
+ *
+ * Motion smoothing and {@link VideoUpscaling | AI upscaling} exclude each
+ * other (the upscaler needs the frames on the GPU, the converter in
+ * memory): while upscaling is on, every mode waits with `upscaling`.
+ * Doubling makes film look like video (the "soap-opera effect"): offer it
+ * off by default.
+ *
+ * **Windows:** an AMD Radeon GPU with the AMD driver (AMF). On a laptop
+ * with two GPUs the converter runs on the AMD one, whichever GPU renders.
+ * **macOS, Linux:** every mode reports `platform`.
+ *
+ * @example Offer the three modes as radio commands
+ * Each command chooses one mode; one the player cannot run here is
+ * refused with `unsupported`, and the state is read again for its reason.
+ * ```ts
+ * let state: MotionState | null = null; // unknown until first picked
+ * for (const mode of ["off", "double", "display"] as const)
+ *   plugin.commands.add({
+ *     id: `motion.${mode}`,
+ *     title: mode,
+ *     radio: true,
+ *     checked: () => (state?.mode ?? "off") === mode,
+ *     run: async () => {
+ *       try {
+ *         state = await plugin.video.motion("amd").set(mode);
+ *       } catch (error) {
+ *         // Cannot work in this run (no AMD GPU, Match Display in software…).
+ *         if ((error as PluginError).code !== "unsupported") throw error;
+ *         state = await plugin.video.motion("amd").state();
+ *       }
+ *     },
+ *   });
+ * ```
+ *
+ * @capability video.motion
+ * @player 0.8.1
+ * @since 1.7.19
+ * @category Processing
+ */
+export interface VideoMotion {
+  /**
+   * Read this plugin's mode, what the player does now and why each mode
+   * cannot work.
+   *
+   * @capability video.motion
+   * @returns The state. The first call of any plugin looks for the GPU
+   *   (no device is created, so no GPU is woken).
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `video.motion`.
+   *
+   * @example Find out whether Match Display can work here
+   * The plugin reads the state when its panel shows; a reason greys the
+   * mode out with the player's message.
+   * ```ts
+   * const { display } = await plugin.video.motion("amd").state();
+   * if (display) console.log(display.message);
+   * ```
+   *
+   * @since 1.7.19
+   */
+  state(): Promise<MotionState>;
+  /**
+   * Choose this plugin's motion smoothing mode.
+   *
+   * @remarks
+   * The mode stays this plugin's request until it changes it or stops; the
+   * player applies it whenever it can work (a `rate`, `size`, `format`, `doubling`, `upscaling`,
+   * `failed` or `overload` reason can pass with the next video). `off`
+   * takes the converter out at once unless another plugin asks for it. The
+   * mode is a request of the whole plugin, not of a {@link Scope}.
+   *
+   * @capability video.motion
+   * @param mode - `off`, `double` or `display`.
+   * @returns The new state.
+   * @throws `capability` (rejects) The manifest does not declare
+   *   `video.motion`.
+   * @throws `invalid` (rejects) `mode` is not one of the three.
+   * @throws `unsupported` (rejects) A mode that cannot work in this run:
+   *   `platform`, `no-gpu`, `runtime`, `filter`, and `rendering` for
+   *   `display` once GPU rendering is not just starting; `message` is the
+   *   reason. Nothing changes. `off` is always accepted.
+   *
+   * @example Turn on Match Display, or say why not
+   * The plugin asks for Match Display and tells the user when it waits
+   * (the video's rate, AI upscaling) or cannot work in this run.
+   * ```ts
+   * try {
+   *   const state = await plugin.video.motion("amd").set("display");
+   *   // Kept, but waiting for a reason that can pass.
+   *   if (state.active === "off" && state.display)
+   *     await plugin.osd.show("Motion smoothing waits: {}", [state.display.message]);
+   * } catch (error) {
+   *   // Cannot work in this run: nothing changed.
+   *   if ((error as PluginError).code !== "unsupported") throw error;
+   *   await plugin.osd.show("Motion smoothing: {}", [(error as PluginError).message]);
+   * }
+   * ```
+   *
+   * @since 1.7.19
+   */
+  set(mode: MotionMode): Promise<MotionState>;
+  /**
+   * Call `listener` with the new state whenever it changes while some
+   * plugin asks for motion smoothing: what is active, the reasons, the
+   * search mode, the rates.
+   *
+   * @remarks
+   * The player looks twice a second while a mode is asked for and sends a
+   * change only when something differs (the measured output rate in
+   * tenths); after the last plugin turns it off one more change says so.
+   * Nothing is sent before the first `state()` or `set()` of any plugin.
+   * `mode` is this plugin's own request, as in `state()`.
+   *
+   * **A listener keeps the plugin running**, as
+   * {@link VideoUpscaling.onChange}'s does: listen only while a window or
+   * panel shows the state.
+   *
+   * @capability video.motion
+   * @param listener - Receives the new state.
+   * @returns Stops listening; also when the scope that added it is
+   *   disposed.
+   * @throws `capability` (synchronously) The manifest does not declare
+   *   `video.motion`.
+   *
+   * @example Show the rates while a panel is open
+   * The plugin listens only while its panel shows, since the listener
+   * keeps the plugin running.
+   * ```ts
+   * const watch = plugin.video.motion("amd").onChange((state) => {
+   *   console.log(`${state.sourceFps ?? "?"} → ${state.outputFps ?? "off"} fps on ${state.gpu ?? "no GPU"}`);
+   * });
+   * // When the panel hides:
+   * await watch.dispose();
+   * ```
+   *
+   * @since 1.7.19
+   */
+  onChange(listener: (state: MotionState) => void): Disposable;
 }

@@ -26,6 +26,7 @@ The player sends an event as one JSON line `{"event": name, "data": …}`, only 
 | `appearance.changed` | `{ theme: string; language?: string }`: The palette changed (`theme`), or the interface language the user saved (`language`; the oldest players send no language). | none: `Player.on` only | yes | `events` |
 | `resolvers.fileTypes` | `{ fileTypes: string[] }`: The file extensions the plugins' file resolvers claim now. | none: `Player.on` only | yes | `events` |
 | `video.upscaling.changed` | `Omit<WireUpscalingState, "enabled">`: The AI upscaling state, without this plugin's own `enabled`. | {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | no | `video.upscaling` |
+| `video.motion.changed` | `Omit<WireMotionState, "mode">`: Motion smoothing's state, without this plugin's own `mode`. | {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} | no | `video.motion` |
 
 <!-- /generated -->
 
