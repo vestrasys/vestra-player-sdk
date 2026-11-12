@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.17
+
+**Who must change: nobody.** A product-data refresh (Ask Vestra UX, step 4): no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
+
+- **`BUILTIN_COMMANDS`** (player 5c1773be): the player's new `host/ask-again` (**Ask Again Before Plugin Commands**, category Command Palette, in the palette only, no default key) forgets every "Don't ask again" of the approval sheet. `TestHost` counts it among the player's own commands toward `COMMAND_LIMITS.total`. The table in [Reference: commands](docs/reference/commands.md#built-in-commands) and the list of the player's own commands there follow.
+
 ## 1.7.16
 
 **Who must change: nobody.** One optional field on an existing call (Ask Vestra UX, step 3: one approval for the whole request); `apiVersion` stays `vestra/1`, no new capability or message; the API surface snapshot gains the field. The field is an option of `commands.run`, not a separate `commands.plan`: the plan only matters for the run that starts it, a separate call would be a second request whose ordering against the first the player would have to tie together, and an option keeps an older player's behaviour (it ignores the field and asks per command) without a version check.
