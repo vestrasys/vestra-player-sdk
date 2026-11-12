@@ -1200,12 +1200,41 @@ export interface PaletteLeadOptions {
   /**
    * Replaces the row while nothing is typed (a running request; the cursor
    * starts on it); `null` or absent: none. Its run event has `status: true`.
+   * While the palette is closed the player shows it in a status strip at
+   * the top of the main window, as its `state` says.
    */
   status?: {
     /** The status text (up to 80 characters). */
     text: string | Text;
     /** On the right of the row (up to 40 characters). */
     note?: string | Text;
+    /**
+     * Still working or ended. Absent: `"working"`.
+     *
+     * - `"working"`: the work goes on. The strip shows the text with a
+     *   moving line and a Stop button (Stop is Enter on the status row)
+     *   and stays until the status changes or is removed.
+     * - `"done"`, `"failed"`, `"note"`: an end state (finished; failed; a
+     *   sentence for the user, such as an answer). The player shows it
+     *   with a check, in the danger colour, or plain, then removes it by
+     *   itself after a few seconds (about 2 s, 6 s, and 4–10 s by length;
+     *   longer while the pointer is on it). It is shown once: not kept,
+     *   not shown again later (when the plugin is stopped or woken), and
+     *   the row goes back to its usual form. The plugin needs no timer of
+     *   its own and may call {@link PaletteLead.done} right after setting
+     *   it.
+     *
+     * Once {@link Commands.run} has shown a step of the ticket in the
+     * strip, a `"working"` text changes only the palette's status row,
+     * until an end state, `status: null` or the end of the ticket.
+     *
+     * Players before the status strip refuse the field (`invalid`); a
+     * built-in plugin ships with its player. Any other value: `invalid`
+     * (through `ready`, or `update` rejects).
+     *
+     * @since 1.7.15
+     */
+    state?: "working" | "done" | "failed" | "note";
   } | null;
 }
 

@@ -130,6 +130,44 @@ test("the lead row, its run event and the ticket of each request", async () => {
   await stop();
 });
 
+test("the lead's status state: sent only when set, checked like the player", async () => {
+  const { host, plugin, stop } = await started();
+  const lead = plugin.palette.lead({
+    title: "Ask",
+    icon: "ai",
+    status: { text: "Planning…" },
+  });
+  await lead.ready;
+  assert.deepEqual(host.paletteLead, {
+    title: "Ask",
+    icon: "ai",
+    status: { text: "Planning…" },
+  });
+  for (const state of ["working", "done", "failed", "note"] as const) {
+    await lead.update({
+      title: "Ask",
+      icon: "ai",
+      status: { text: "Done · Mute", state },
+    });
+    assert.deepEqual(host.paletteLead!.status, { text: "Done · Mute", state });
+  }
+  await assert.rejects(
+    lead.update({
+      title: "Ask",
+      icon: "ai",
+      status: { text: "Done", state: "finished" as "done" },
+    }),
+    { code: "invalid", message: /status\.state is one of/ },
+  );
+  // Refused: the row stays as last set.
+  assert.deepEqual(host.paletteLead!.status, {
+    text: "Done · Mute",
+    state: "note",
+  });
+  await lead.dispose();
+  await stop();
+});
+
 test("commands.run asks before a destructive command and follows the palette's checks", async () => {
   const { host, plugin, stop, ran } = await started();
   const ticket = await host.runPaletteLead("forget everything");

@@ -643,9 +643,10 @@ export interface Dialogs {
    * tool window the user just clicked in), else on the main window.
    *
    * **Windows:** a task dialog owned by the active player window, titled
-   * "Vestra Player"; `detail` follows `message` after a blank line. A
-   * `checkbox` is asked as a second yes/no dialog after the user confirms
-   * (on cancel it is not asked and `checked` is `false`).
+   * "Vestra Player" and centred on it: `message` is the main instruction
+   * and `detail` the text below it. A `checkbox` is the dialog's own
+   * verification box (no second dialog); `checked` is its state on cancel
+   * too. No system sound plays; `destructive` shows a warning icon.
    *
    * Remembering "Don't ask again" is up to the plugin (see
    * {@link Scope.storage}).
