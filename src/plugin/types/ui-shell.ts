@@ -552,7 +552,11 @@ export interface Panels {
 export interface ConfirmOptions {
   /** The question, shown in bold; 1–200 characters. */
   message: TextValue;
-  /** More text under the message; at most 2000 characters. */
+  /**
+   * More text under the message; at most 2000 characters. In the
+   * confirmation drawn in the player a long detail scrolls and the buttons
+   * stay in view.
+   */
   detail?: TextValue;
   /** The confirm button's text (the default button: Enter picks it); 1–40 characters. */
   confirm: TextValue;
@@ -563,13 +567,18 @@ export interface ConfirmOptions {
    */
   cancel?: TextValue;
   /**
-   * Mark the confirm button as destructive: red text on macOS, a warning
-   * icon on Windows.
+   * Mark the confirm button as destructive. Only a tool window's system
+   * dialog shows it (a warning icon on Windows, red button text on
+   * macOS); the confirmation drawn in the player marks nothing, as its
+   * approval sheet marks no destructive step. Enter confirms either way.
    *
    * @defaultValue `false`
    */
   destructive?: boolean;
-  /** A checkbox under the text, such as "Don't ask again"; 1–40 characters. */
+  /**
+   * A checkbox, such as "Don't ask again" (in the player, at the left of
+   * the buttons); 1–40 characters.
+   */
   checkbox?: TextValue;
   /**
    * Values for the placeholders of `message` and `detail`. Any of the texts may
@@ -585,20 +594,21 @@ export interface ConfirmOptions {
 }
 
 /**
- * The system's own dialogs: a confirmation alert and the open and save file
- * dialogs. `plugin.dialogs`.
+ * Confirmations and the system's open and save file dialogs.
+ * `plugin.dialogs`.
  *
  * @remarks
- * The plugin passes text and gets the answer; the system draws the dialog,
- * so it looks and behaves like every other dialog on the system. Each call
- * resolves when the user answers; there is no time limit and no way to close
- * a dialog from code. Only one dialog (of any kind, from any plugin) is open
- * at a time: another call meanwhile rejects with `busy`. Playback continues
- * while a dialog is open; command key bindings pause.
+ * The plugin passes text and gets the answer. A confirmation for the main
+ * window is drawn in the player; one asked while a tool window has the
+ * focus, and every file dialog, is the system's own (see
+ * {@link Dialogs.confirm}). Each call resolves when the user answers; there
+ * is no time limit and no way to close a dialog from code. Only one dialog
+ * (of any kind, from any plugin, the player's approval sheet included)
+ * waits for the user at a time: another call meanwhile rejects with `busy`.
+ * Playback continues while a dialog is open; command key bindings pause.
  *
- * **Platforms:** {@link Dialogs.confirm} needs macOS or Windows (other
- * systems reject it with `unsupported`); the file dialogs work on every
- * system.
+ * **Platforms:** every system with a window; a player without one
+ * (headless) rejects every call with `unavailable`.
  *
  * For anything more than a question or a path, use a {@link Windows | tool
  * window}.
@@ -606,8 +616,7 @@ export interface ConfirmOptions {
  * @capability ui.dialog
  *
  * @example Ask before deleting, remembering "Don't ask again"
- * Deleting asks for confirmation in a system alert with a "Don't ask
- * again" box; once the user ticks it, later deletes go ahead without
+ * Deleting asks for confirmation with a "Don't ask again" box; once the user ticks it, later deletes go ahead without
  * asking. `confirm` resolves with the button and the checkbox when the
  * user answers; the texts are templates the player translates, so the
  * count goes in `args`. Remembering the box is up to the plugin.
@@ -636,17 +645,29 @@ export interface ConfirmOptions {
  */
 export interface Dialogs {
   /**
-   * Ask the user to confirm something, in a system alert.
+   * Ask the user to confirm something.
    *
    * @remarks
-   * **macOS:** an `NSAlert` sheet on the active player window (usually the
-   * tool window the user just clicked in), else on the main window.
+   * **For the main window** (no tool window has the focus, also while the
+   * player is not in the foreground, which then takes no focus): drawn in
+   * the player in the style of its approval sheet, the same on every
+   * system: `message`, then `detail` (a long one scrolls; the sheet stays
+   * inside the window and its buttons in view), the `checkbox` at the
+   * footer's left and the confirm (Enter) and cancel (Esc) buttons at its
+   * right. Presses in its first 0.5 s are ignored, and a click outside it
+   * is Cancel. A click toggles the checkbox (Space does not).
+   * `destructive` draws nothing different.
    *
-   * **Windows:** a task dialog owned by the active player window, titled
-   * "Vestra Player" and centred on it: `message` is the main instruction
-   * and `detail` the text below it. A `checkbox` is the dialog's own
-   * verification box (no second dialog); `checked` is its state on cancel
-   * too. No system sound plays; `destructive` shows a warning icon.
+   * **For a tool window** (a plugin's window, Options or the floating
+   * sidebar has the focus): the system's dialog on that window. macOS: an
+   * `NSAlert` sheet with the custom buttons and the checkbox. Windows: a
+   * task dialog titled "Vestra Player" and centred on the window: `message`
+   * is the main instruction and `detail` the text below it; a `checkbox`
+   * is the dialog's own verification box (no second dialog); no system
+   * sound plays; `destructive` shows a warning icon. Other systems have no
+   * system alerts, so it is drawn in the player there too.
+   *
+   * Either way `checked` is the checkbox's state on cancel too.
    *
    * Remembering "Don't ask again" is up to the plugin (see
    * {@link Scope.storage}).
@@ -660,16 +681,18 @@ export interface Dialogs {
    *
    * @throws `invalid` (rejects) A text is empty or too long, or `destructive`
    *   is not a boolean.
-   * @throws `busy` (rejects) Another dialog is open.
+   * @throws `busy` (rejects) Another dialog is open, or another
+   *   confirmation or the approval sheet is waiting for the user's answer.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `unsupported` (rejects) A system other than macOS and Windows.
+   * @throws `unsupported` (rejects) Only players before the confirmation
+   *   drawn in the player, on a system other than macOS and Windows.
    * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
    * @example Confirm before replacing the playlist
    * The user sees "Replace the current playlist?" with a Replace button and
-   * the playlist is replaced only after a yes. The system draws the alert
-   * and the promise resolves when the user answers; only one dialog is
-   * open at a time, so a second one meanwhile rejects with `busy`.
+   * the playlist is replaced only after a yes. The promise resolves when
+   * the user answers; only one dialog waits for the user at a time, so a
+   * second one meanwhile rejects with `busy`.
    * ```ts
    * try {
    *   const { confirmed } = await plugin.dialogs.confirm({
@@ -679,7 +702,7 @@ export interface Dialogs {
    *   if (confirmed) await plugin.osd.show("Playlist replaced");
    * } catch (error) {
    *   if ((error as PluginError).code !== "busy") throw error;
-   *   // Another dialog is already open: let the user finish that one.
+   *   // Another dialog is waiting: let the user finish that one.
    * }
    * ```
    *
