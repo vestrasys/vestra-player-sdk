@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.15
+
+**Who must change: nobody.** One optional field on an existing call (Ask Vestra UX, step 2: the status strip); `apiVersion` stays `vestra/1`, no new capability or message; the API surface snapshot gains the field.
+
+- **`PaletteLeadOptions.status.state`** (`palette.lead.set`'s `status.state`): `"working"` (the default) or an end state, `"done"`, `"failed"` or `"note"`. While the palette is closed the player shows the status in a strip at the top of the main window: `working` with a moving line and a Stop button, until the status changes; an end state with a check, in the danger colour or plain, removed by the player after a few seconds and never shown again (not kept while the plugin is stopped), so the plugin needs no timer. Once `commands.run` has shown a step of the ticket in the strip, a `working` text changes only the palette's status row. The SDK sends `state` only when set; any other value is `invalid` (through `ready`, or `update` rejects). Players before the strip refuse the field with `invalid`; a built-in plugin ships with its player. Docs: [Reference: commands](docs/reference/commands.md#running-commands-for-the-user).
+- **`TestHost`** checks `status.state` like the player (absent or `null` is `working`, any other value than the four is `invalid`) and keeps it in `host.paletteLead`; the end state's timing is the player's and is not modelled. Test: `test/builtin-only.test.ts`.
+- **Docs, Windows confirmations** (player main 7cc5d648): `Dialogs.confirm` and [Platforms](docs/reference/platforms.md) say what the player now shows: `message` is the main instruction with `detail` below it, the `checkbox` is the dialog's own verification box (no second dialog), `checked` is reported on cancel too, and no system sound plays.
+
 ## 1.7.14
 
 **Who must change: nobody.** A product-data refresh and a `TestHost` follow-up to player 0.8.0: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
