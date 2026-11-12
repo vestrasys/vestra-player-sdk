@@ -609,9 +609,9 @@ function listed(host: TestHost, inner: Internals, row: Row) {
       : declared === null || !parent.length
         ? "Menu"
         : `${parent.join(" ▸ ")} ▸`;
-  // The built-in menu's key, as the player's `path_keys` (`@settings`:
-  // `Settings`).
-  const root = menuKeys(keys.slice(0, 1).map(menuTextKey))[0];
+  // The built-in menu's key, as the player's `path_keys`: the whole path
+  // normalized (`@settings` and the old title `设置` are `Settings`).
+  const root = menuKeys(keys.map(menuTextKey))[0];
   return {
     id: row.global,
     label: `${category}: ${display.title}`,

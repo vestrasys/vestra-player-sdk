@@ -1058,8 +1058,11 @@ export interface CommandRunOptions {
   /**
    * The rest of the request's plan: the global ids of the commands this
    * ticket runs next, in order. At most 7, so a plan has at most 8
-   * commands; the same id may appear more than once. Absent, `null` or
-   * empty: this command is the whole plan.
+   * commands; the same id may appear more than once. Absent or `null`: no
+   * new plan; the run is judged as a later run below (one left in an
+   * approved plan uses up an entry and does not ask). An empty array: a
+   * new plan of this command alone, which replaces the rest of an earlier
+   * one.
    *
    * The player looks at the whole plan, this command first. When none of
    * it asks first (see {@link Commands.run}), nothing is asked and nothing
@@ -1074,8 +1077,9 @@ export interface CommandRunOptions {
    * - **Don't Run** runs nothing and remembers nothing: the result is
    *   `{ ran: false, declined: true }`.
    *
-   * A later run that gives `then` again starts a new plan: the rest of the
-   * earlier one is forgotten and the new plan is judged as above. The plan
+   * A later run that gives `then` again (`[]` included) starts a new plan:
+   * the rest of the earlier one is forgotten and the new plan is judged as
+   * above. The plan
    * ends with its ticket. The ids of `then` must be listed commands now
    * (`missing` otherwise; `host/palette` is `invalid`); whether each is
    * enabled and not busy is checked when it runs, as for any run. `then`

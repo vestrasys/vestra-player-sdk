@@ -36,6 +36,7 @@ async function started() {
       add("tune", ["@settings", "Tune"]);
       add("start-over", ["@reset", "Start Over"]);
       add("manage", ["Plugins", "Manage"]);
+      add("old-tune", ["设置", "Old Tune"]);
       plugin.palette.lead({ title: "Ask", icon: "search-ai" });
     },
     { capabilities, host, builtin: true, id: "vestra.test" },
@@ -224,6 +225,8 @@ test("commands.list: the Settings and Reset menus ask first, a Plugins category 
   assert.equal(dangerous("tune"), true);
   assert.equal(dangerous("start-over"), true);
   assert.equal(dangerous("manage"), false);
+  // The old Chinese title of Settings: the whole path normalized.
+  assert.equal(dangerous("old-tune"), true);
   assert.equal(dangerous("louder"), false);
   await stop();
 });
@@ -252,5 +255,47 @@ test("palette.lead texts are counted as shown, on one line", async () => {
   });
   assert.ok(host.paletteLead!.status);
   await lead.dispose();
+  await stop();
+});
+
+test("an empty then replaces the remaining plan", async () => {
+  const { host, plugin, stop, ran } = await started();
+  const ticket = await host.runPaletteLead("louder, then forget");
+  host.dialogAnswers.push({ confirmed: true, checked: false });
+  await plugin.commands.run("vestra.test/louder", {
+    ticket,
+    then: ["vestra.test/forget-all"],
+  });
+  // A new plan of softer alone: nothing in it asks, nothing is remembered.
+  await plugin.commands.run("vestra.test/softer", { ticket, then: [] });
+  assert.equal(host.dialogAnswers.length, 0);
+  // forget-all was only in the replaced plan: it asks on its own.
+  host.dialogAnswers.push({ confirmed: false, checked: false });
+  assert.deepEqual(
+    await plugin.commands.run("vestra.test/forget-all", { ticket }),
+    { ran: false, declined: true },
+  );
+  assert.equal(host.dialogAnswers.length, 0);
+  await host.settle();
+  assert.deepEqual(ran, ["louder", "softer"]);
+  await stop();
+});
+
+test("a run without then uses up an entry of the approved plan", async () => {
+  const { host, plugin, stop, ran } = await started();
+  const ticket = await host.runPaletteLead("louder, then forget");
+  host.dialogAnswers.push({ confirmed: true, checked: false });
+  await plugin.commands.run("vestra.test/louder", {
+    ticket,
+    then: ["vestra.test/forget-all"],
+  });
+  // then: null is no new plan: the planned run does not ask.
+  assert.deepEqual(
+    await plugin.commands.run("vestra.test/forget-all", { ticket, then: null }),
+    { ran: true },
+  );
+  assert.equal(host.dialogAnswers.length, 0);
+  await host.settle();
+  assert.deepEqual(ran, ["louder", "forget-all"]);
   await stop();
 });
