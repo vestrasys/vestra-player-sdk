@@ -394,6 +394,7 @@ host | previous | (Previous) | PageUp, Mouse:X2
 host | next | (Next) | PageDown, Mouse:X1
 host | enter-fullscreen | (Enter Fullscreen)
 host | exit-fullscreen | (Leave Fullscreen)
+host | ask-again | (Ask Again Before Plugin Commands)
 host | volume-up | (Volume +) | ArrowUp, Mouse:WheelUp
 host | volume-down | (Volume −) | ArrowDown, Mouse:WheelDown
 host | mute | (Mute) | M

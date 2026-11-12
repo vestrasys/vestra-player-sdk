@@ -140,6 +140,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Next (not in the menu) | `PageDown`, `Mouse:X1` | `host/next` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
+| Ask Again Before Plugin Commands (not in the menu) |  | `host/ask-again` |
 | Volume + (not in the menu) | `ArrowUp`, `Mouse:WheelUp` | `host/volume-up` |
 | Volume − (not in the menu) | `ArrowDown`, `Mouse:WheelDown` | `host/volume-down` |
 | Mute (not in the menu) | `M` | `host/mute` |
@@ -510,7 +511,7 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 <!-- /generated -->
 
-The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Enter Fullscreen** (`host/enter-fullscreen`: no default key, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key, enabled only in fullscreen), **Quit** (`host/quit`), **Sidebar** (`host/sidebar`: the bottom bar's sidebar button, outside the menu), **Adjustments and Effects** (`host/adjust`: the bottom bar's sliders button, outside the menu) and **Command Palette…** (`host/palette`, `Ctrl+Shift+P`: Tools ▸ Command Palette…, order 829, group `windows`); their keys are in [Built-in commands](#built-in-commands).
+The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Enter Fullscreen** (`host/enter-fullscreen`: no default key, enabled only when windowed), **Leave Fullscreen** (`host/exit-fullscreen`: no default key, enabled only in fullscreen), **Quit** (`host/quit`), **Sidebar** (`host/sidebar`: the bottom bar's sidebar button, outside the menu), **Adjustments and Effects** (`host/adjust`: the bottom bar's sliders button, outside the menu), **Ask Again Before Plugin Commands** (`host/ask-again`: in the palette only, category Command Palette, no default key; it forgets every "Don't ask again" of the approval sheet, so a `commands.run` of a command of a plugin that is not built in asks first again) and **Command Palette…** (`host/palette`, `Ctrl+Shift+P`: Tools ▸ Command Palette…, order 829, group `windows`); their keys are in [Built-in commands](#built-in-commands).
 
 ## Running commands for the user
 
