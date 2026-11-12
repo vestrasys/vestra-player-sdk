@@ -657,8 +657,8 @@ vestra.video | video.hue.down | (Hue -1%) | I
 vestra.video | video.hue.up | (Hue +1%) | O
 vestra.video | video.gpu-rendering | (GPU Rendering)
 vestra.video | video.upscaling | (AI Upscaling)
-vestra.workshop | askvestra.undo | (Undo Last Request)
 vestra.workshop | askvestra.stop | (Stop)
+vestra.workshop | askvestra.working | (Vestra is working) |  | panel
 `;
 
 /**

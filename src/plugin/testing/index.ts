@@ -152,6 +152,7 @@ import {
   commandsHandlers,
   builtinHandlers,
   runPaletteLead,
+  pluginCapabilities,
 } from "./commands.ts";
 import {
   registerCoreActions,
@@ -3894,6 +3895,7 @@ export async function startPlugin(
     manifest = { id: read.id, capabilities: read.capabilities };
   }
   host.manifestId = manifest.id;
+  pluginCapabilities.set(host, manifest.capabilities);
   if (options.builtin) host.builtin = true;
   host.loadCatalog(directory);
   // Its Slint files: the values its views are given are checked against

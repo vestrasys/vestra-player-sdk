@@ -250,6 +250,40 @@ test("bindings: list, override, unbind, reset; press follows the overlay", async
   await stop();
 });
 
+test("bindings.list leaves out panel commands of a plugin without ui.mount (player 0.8.0)", async () => {
+  const activate = (p: Plugin) => {
+    p.commands.add({ id: "busy", title: "Busy", focus: "panel", run() {} });
+    p.commands.add({ id: "ask", title: "Ask", run() {} });
+  };
+  const listed = async (capabilities: string[]) => {
+    const host = new TestHost();
+    // A stored binding of the hidden command: declared, so no orphan.
+    host.bindings.overlay.set("test.plugin/busy", ["Ctrl+K"]);
+    const { plugin, stop } = await startPlugin(activate, {
+      capabilities: ["commands", "bindings.manage", ...capabilities],
+      host,
+    });
+    const list = await plugin.bindings.list();
+    // Still declared: the user's binding can be set.
+    await plugin.bindings.set({ plugin: "test.plugin", command: "busy" }, [
+      "Ctrl+J",
+    ]);
+    await stop();
+    return {
+      mine: list.commands
+        .filter((c) => c.plugin === "test.plugin")
+        .map((c) => c.command)
+        .sort(),
+      orphans: list.orphans,
+    };
+  };
+  assert.deepEqual(await listed([]), { mine: ["ask"], orphans: [] });
+  assert.deepEqual(await listed(["ui.mount"]), {
+    mine: ["ask", "busy"],
+    orphans: [],
+  });
+});
+
 test("packages: a built-in can be neither disabled nor uninstalled", async () => {
   const host = new TestHost();
   host.packages = [

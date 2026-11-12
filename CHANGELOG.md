@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.14
+
+**Who must change: nobody.** A product-data refresh and a `TestHost` follow-up to player 0.8.0: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
+
+- **`BUILTIN_COMMANDS`** (`vestra.workshop`, player a08759b0: Ask Vestra runs commands only): `askvestra.undo` (Undo Last Request) is gone; `askvestra.working` (Vestra is working) is new, `focus: "panel"`, in no menu, palette or bar (the plugin keeps itself busy with it while a request runs). The table in [Reference: commands](docs/reference/commands.md#built-in-commands) follows.
+- **`bindings.list`** (player 0.8.0): a `focus: "panel"` command of a plugin whose manifest declares no `ui.mount` is left out, since no key can reach it; it stays declared, so its stored binding is not an orphan and `bindings.set` accepts it. `Bindings.list` says so, and `TestHost` follows for the plugin under test (from its manifest; a `TestHost` used without `startPlugin` lists every command as before). Test: `test/round3a.test.ts`.
+
 ## 1.7.13
 
 **Who must change: nobody.** A product-data refresh of the Slint library copy: no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
