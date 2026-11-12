@@ -75,7 +75,7 @@ A menu item whose `enabled` or `checked` is a function that reads `plugin.player
 
 ## Publish a plugin
 
-Plugins reach the store through pull requests to the official plugin repository. The guide covers preparing the package, choosing the id, registering the source repository (or hosting the plugin there), the pull request and its checks, updating, withdrawing, asking for a revocation, and what users see of the plugin in the store.
+Plugins reach the store through pull requests to the official plugin repository. The guide covers preparing the package, choosing the id, adding the plugin to the repository, the pull request and its checks, updating, withdrawing, asking for a revocation, and what users see of the plugin in the store.
 
 [Read the guide](publish.md)
 
