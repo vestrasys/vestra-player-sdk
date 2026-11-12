@@ -2,7 +2,12 @@
 import { Latest } from "./latest.ts";
 import { failure, quiet, uncertain } from "./errors.ts";
 import { checkBindings } from "./bindings.ts";
-import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, MENU_IDS } from "../commands.ts";
+import {
+  BAR_BUTTON_ICONS,
+  BAR_BUTTON_LIMITS,
+  MENU_IDS,
+  thenProblem,
+} from "../commands.ts";
 import { ImageHandle } from "./view/image.ts";
 import { isTextValue, textProblem } from "../i18n.ts";
 import { conditionJson, isCondition } from "./when.ts";
@@ -452,7 +457,7 @@ export const commands = (scope: ScopeImpl): Commands => ({
     needs(scope, "commands.run");
     if (typeof id !== "string" || id === "")
       throw failure("invalid", "run takes a command id: <plugin>/<id>");
-    const { ticket, step, of } = (options ?? {}) as Partial<
+    const { ticket, step, of, then } = (options ?? {}) as Partial<
       Parameters<Commands["run"]>[1]
     >;
     if (typeof ticket !== "string" || ticket === "")
@@ -470,11 +475,20 @@ export const commands = (scope: ScopeImpl): Commands => ({
         "invalid",
         "step and of go together, 1 <= step <= of <= 99",
       );
+    // As the player: the rest of the plan, 0–7 non-empty ids.
+    const planned = then ?? undefined;
+    if (planned !== undefined) {
+      const problem = thenProblem(planned);
+      if (problem) throw failure("invalid", problem);
+    }
     return scope.runtime.host.commands.run({
       id,
       ticket,
       ...(step === undefined ? {} : { step }),
       ...(of === undefined ? {} : { of }),
+      // An array, never called: not a thenable.
+      // oxlint-disable-next-line unicorn/no-thenable
+      ...(planned === undefined ? {} : { then: [...planned] }),
     });
   },
 });

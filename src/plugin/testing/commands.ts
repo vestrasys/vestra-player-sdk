@@ -14,6 +14,7 @@ import {
   BUILTIN_COMMANDS,
   COMMAND_LIMITS,
   MENU_IDS,
+  thenProblem,
 } from "../../commands.ts";
 import { canonical, keyLabel } from "../bindings.ts";
 import { evaluate } from "../when.ts";
@@ -608,7 +609,9 @@ function listed(host: TestHost, inner: Internals, row: Row) {
       : declared === null || !parent.length
         ? "Menu"
         : `${parent.join(" ▸ ")} ▸`;
-  const root = keys[0] === undefined ? undefined : menuTextKey(keys[0]);
+  // The built-in menu's key, as the player's `path_keys`: the whole path
+  // normalized (`@settings` and the old title `设置` are `Settings`).
+  const root = menuKeys(keys.map(menuTextKey))[0];
   return {
     id: row.global,
     label: `${category}: ${display.title}`,
@@ -626,14 +629,15 @@ function listed(host: TestHost, inner: Internals, row: Row) {
     group: declaration.group,
     busy: state.busy,
     // Asks first: not built in, destructive, the player's Close and Quit,
-    // the Settings and Plugins menus.
+    // the built-in Settings and Reset menus (capabilities/commands_run.rs
+    // `dangerous`).
     dangerous:
       !builtin ||
       declaration.destructive === true ||
       row.global === "host/stop" ||
       row.global === "host/quit" ||
       root === "Settings" ||
-      root === "Plugins",
+      root === "Reset",
     ...(state.checked === null ? {} : { checked: state.checked }),
     ...(!state.enabled && display.reason ? { reason: display.reason } : {}),
   };
@@ -684,14 +688,26 @@ export function builtinHandlers(
           (!whole(p.step) || !whole(p.of) || Number(p.step) > Number(p.of)))
       )
         throw new HostError("invalid", "step and of go together, step ≤ of");
+      // The rest of the plan: its shape, then (after the command) each id.
+      const then = p.then === undefined || p.then === null ? null : p.then;
+      if (then !== null) {
+        const problem = thenProblem(then);
+        if (problem) throw new HostError("invalid", problem);
+      }
+      const table = rows(host);
+      const find = (id: string) => {
+        // The player lists its palette command (a test host does not).
+        if (id === "host/palette")
+          throw new HostError(
+            "invalid",
+            "the command palette is not run this way",
+          );
+        const row = table.find((each) => each.global === id);
+        if (!row) throw new HostError("missing", `no command ${id}`);
+        return row;
+      };
       const id = String(p.id);
-      const row = rows(host).find((each) => each.global === id);
-      if (!row) throw new HostError("missing", `no command ${id}`);
-      if (id === "host/palette")
-        throw new HostError(
-          "invalid",
-          "the command palette is not run this way",
-        );
+      const row = find(id);
       const item = listed(host, inner, row);
       if (!item.enabled)
         throw new HostError(
@@ -699,6 +715,10 @@ export function builtinHandlers(
           item.reason ?? `${item.label} is disabled`,
         );
       if (item.busy) throw new HostError("busy", `${item.label} is busy`);
+      // Listed now; enabled and busy are checked when each runs.
+      const planned = ((then ?? []) as string[]).map((each) =>
+        listed(host, inner, find(each)),
+      );
       const now = Date.now();
       const ticket = inner.tickets.get(String(p.ticket));
       if (!ticket || now - ticket.last > 120_000) {
@@ -717,14 +737,30 @@ export function builtinHandlers(
       ticket.runs.push(now);
       ticket.last = now;
       inner.runs.push(now);
-      // The player's own alert, answered like the plugin's alerts.
-      if (item.dangerous) {
+      // Whether to ask: a new plan (`then`) is judged whole and replaces the
+      // rest of an earlier one; a run left in the approved plan uses up one
+      // entry and does not ask; anything else is judged on its own.
+      let asks: boolean;
+      if (then !== null) {
+        ticket.plan = null;
+        asks = [item, ...planned].some((each) => each.dangerous);
+      } else {
+        const at = ticket.plan?.indexOf(id) ?? -1;
+        if (at >= 0) ticket.plan!.splice(at, 1);
+        asks = at < 0 && item.dangerous;
+      }
+      // The player's own question, answered like the plugin's alerts: Run
+      // (`confirmed`), Run with "Don't ask again" (`confirmed` and
+      // `checked`: every command a test host lists is built in, so there
+      // is nothing to remember), or Don't Run.
+      if (asks) {
         const answer = host.dialogAnswers.shift();
         if (answer === undefined || answer === null || Array.isArray(answer))
           throw new Error(
             "test host: no confirm answer queued for commands.run",
           );
         if (!answer.confirmed) return { ran: false, declined: true };
+        if (then !== null) ticket.plan = [...(then as string[])];
       }
       // The OSD line naming the caller and the command.
       const step = p.step === undefined ? "" : ` · ${p.step}/${p.of}`;
@@ -746,13 +782,19 @@ export function builtinHandlers(
           ? (p[first!] as Record<string, Json> | null | undefined)?.[second]
           : p[first!];
         if (value === undefined || value === null) {
-          if (name === "title")
-            throw new HostError("invalid", "title is required");
+          if (name === "title" || (name === "status.text" && p.status))
+            throw new HostError("invalid", `${name} is required`);
           continue;
         }
-        const length = [...menuTextKey(value)].length;
-        if (length < 1 || length > max)
-          throw new HostError("invalid", `${name} has 1–${max} characters`);
+        // Counted as shown, as the player counts it: translated with the
+        // plugin's catalog, a text value rendered with its arguments.
+        const shown = declaredText(host, inner, value, name);
+        const length = [...shown].length;
+        if (length < 1 || length > max || /[\0\n\r]/.test(shown))
+          throw new HostError(
+            "invalid",
+            `${name} must be 1–${max} characters on one line`,
+          );
       }
       if (typeof p.icon !== "string" && host.imagePath(p.icon) === null)
         throw new HostError("invalid", "icon is an icon name or an image");
@@ -791,7 +833,12 @@ export async function runPaletteLead(
   // One request at a time: the plugin's earlier tickets end.
   inner.tickets.clear();
   const ticket = `ticket-${++inner.next.ticket}`;
-  inner.tickets.set(ticket, { count: 0, runs: [], last: Date.now() });
+  inner.tickets.set(ticket, {
+    count: 0,
+    runs: [],
+    last: Date.now(),
+    plan: null,
+  });
   host.emit("palette.lead", {
     query,
     keep: options.keep ?? false,

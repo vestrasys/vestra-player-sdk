@@ -83,10 +83,13 @@ export class Internals {
     resolution: 0,
     ticket: 0,
   };
-  /** `commands.run` tickets: runs, run times in the last second, last use (ms). */
+  /**
+   * `commands.run` tickets: runs, run times in the last second, last use
+   * (ms), and the rest of an approved plan (`then`), `null` without one.
+   */
   readonly tickets = new Map<
     string,
-    { count: number; runs: number[]; last: number }
+    { count: number; runs: number[]; last: number; plan: string[] | null }
   >();
   /** The last `commands.list` table (JSON) and its revision. */
   listed = { text: "", revision: 0 };

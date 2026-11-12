@@ -105,6 +105,7 @@
 @vestra-player/sdk InterfaceDeclaration CommandRunOptions
 @vestra-player/sdk InterfaceDeclaration CommandRunOptions :: of?: number;
 @vestra-player/sdk InterfaceDeclaration CommandRunOptions :: step?: number;
+@vestra-player/sdk InterfaceDeclaration CommandRunOptions :: then?: string[] | null;
 @vestra-player/sdk InterfaceDeclaration CommandRunOptions :: ticket: string;
 @vestra-player/sdk InterfaceDeclaration CommandState
 @vestra-player/sdk InterfaceDeclaration CommandState :: busy: boolean;

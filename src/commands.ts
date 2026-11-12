@@ -232,6 +232,42 @@ export const BAR_BUTTON_LIMITS = {
 } as const;
 
 /**
+ * The player's limits on `commands.run` (built-in plugins only), the same
+ * values as the player's (its agreement test checks that they agree).
+ * Internal: exported from `@vestra-player/sdk/runtime` only.
+ *
+ * @internal
+ */
+export const COMMAND_RUN_LIMITS = {
+  /** Commands of one plan: the run and the ids of its `then` (8). */
+  plan: 8,
+  /** Runs of one ticket (30). */
+  perTicket: 30,
+  /** Runs a second, per ticket (4). */
+  perSecond: 4,
+  /** Runs a minute, per plugin (120). */
+  perMinute: 120,
+  /** A ticket ends this long after it was given or last ran a command (ms). */
+  ticketIdleMs: 120_000,
+} as const;
+
+/**
+ * What is wrong with `commands.run`'s `then` (given, not `null`), as
+ * the player words it; `null` when nothing is. The SDK and `TestHost`
+ * check it the same way.
+ *
+ * @internal
+ */
+export function thenProblem(then: unknown): string | null {
+  if (!Array.isArray(then)) return "then is an array of command ids";
+  if (then.length > COMMAND_RUN_LIMITS.plan - 1)
+    return `then has at most ${COMMAND_RUN_LIMITS.plan - 1} command ids`;
+  if (then.some((id) => typeof id !== "string" || id === ""))
+    return "then has command ids: non-empty strings";
+  return null;
+}
+
+/**
  * A submenu that one of the player's built-in plugins declares: an entry of
  * {@link BUILTIN_SUBMENUS}.
  *
@@ -823,7 +859,12 @@ export function commandClient(transport: Transport) {
     /** The palette's table (`commands.run`). */
     list: () => transport.request<CommandList>("commands.list", {}),
     /** Run any listed command for a user action's ticket (`commands.run`). */
-    run: (params: { id: string; ticket: string; step?: number; of?: number }) =>
-      transport.request<CommandRunResult>("commands.run", params),
+    run: (params: {
+      id: string;
+      ticket: string;
+      step?: number;
+      of?: number;
+      then?: string[];
+    }) => transport.request<CommandRunResult>("commands.run", params),
   };
 }
