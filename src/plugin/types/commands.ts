@@ -1580,6 +1580,11 @@ export interface Bindings {
   /**
    * Every declared command, and overrides whose command is gone.
    *
+   * A `focus: "panel"` command of a plugin whose manifest does not declare
+   * `ui.mount` is left out (player 0.8.0): it has no panel, so no key can
+   * reach it. It is still declared: its stored binding is not an orphan,
+   * and `set` accepts it.
+   *
    * @capability bindings.manage
    * @throws `capability` (rejects) The manifest does not declare
    *   `bindings.manage`.

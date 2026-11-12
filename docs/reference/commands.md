@@ -439,8 +439,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Hue +1% (not in the menu) | `O` | `vestra.video/video.hue.up` |
 | GPU Rendering (not in the menu) |  | `vestra.video/video.gpu-rendering` |
 | AI Upscaling (not in the menu) |  | `vestra.video/video.upscaling` |
-| Undo Last Request (not in the menu) |  | `vestra.workshop/askvestra.undo` |
 | Stop (not in the menu) |  | `vestra.workshop/askvestra.stop` |
+| Vestra is working (not in the menu) |  | `vestra.workshop/askvestra.working` |
 
 <!-- /generated -->
 

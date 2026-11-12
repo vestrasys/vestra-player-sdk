@@ -119,7 +119,39 @@ export function splitCommandKey(
   return { plugin: key.slice(0, at), command: key.slice(at + 1) };
 }
 
+/**
+ * The capabilities of the plugin under test's manifest, set by
+ * `startPlugin`; a host without an entry (requests sent by hand) lists
+ * every command in `bindings.list`.
+ */
+export const pluginCapabilities = new WeakMap<TestHost, readonly string[]>();
+
+/**
+ * `bindings.list`, as the player's (binding_manager.rs `list`, player
+ * 0.8.0): a `focus: "panel"` command of a plugin whose manifest declares no
+ * `ui.mount` can never fire from a key, so it is left out; it stays declared
+ * (its stored binding is no orphan, `bindings.set` accepts it).
+ */
 export function bindingTable(host: TestHost, inner: Internals) {
+  const all = bindingRows(host, inner);
+  const capabilities = pluginCapabilities.get(host);
+  const hidden =
+    capabilities !== undefined && !capabilities.includes("ui.mount");
+  const declared = new Set(all.map((c) => `${c.plugin}/${c.command}`));
+  const commands = all.filter(
+    (c) => !(hidden && c.scope === "panel" && c.plugin === host.manifestId),
+  );
+  const orphans = [...host.bindings.overlay]
+    .filter(([key]) => !declared.has(key))
+    .map(([key, inputs]) => ({
+      ref: splitCommandKey(host, inner, key),
+      inputs,
+    }));
+  return { commands, orphans };
+}
+
+/** Every command's row of the binding table, bindable or not. */
+function bindingRows(host: TestHost, inner: Internals) {
   const claims = bindingClaims(host, inner);
   const commands = [...host.coreCommands, ...host.commands].map(
     ([id, { declaration }]) => {
@@ -166,14 +198,7 @@ export function bindingTable(host: TestHost, inner: Internals) {
       };
     },
   );
-  const declared = new Set(commands.map((c) => `${c.plugin}/${c.command}`));
-  const orphans = [...host.bindings.overlay]
-    .filter(([key]) => !declared.has(key))
-    .map(([key, inputs]) => ({
-      ref: splitCommandKey(host, inner, key),
-      inputs,
-    }));
-  return { commands, orphans };
+  return commands;
 }
 
 /** A command's state as the player shows it: its conditions evaluated. */
@@ -493,7 +518,7 @@ export function commandsHandlers(
     "bindings.list": () => bindingTable(host, inner),
     "bindings.set": (p) => {
       const key = `${p.plugin}/${p.command}`;
-      const known = bindingTable(host, inner).commands.some(
+      const known = bindingRows(host, inner).some(
         (c) => `${c.plugin}/${c.command}` === key,
       );
       if (!known && !host.bindings.overlay.has(key))
