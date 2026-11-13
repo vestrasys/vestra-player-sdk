@@ -14,7 +14,8 @@
  * and the player read one rule.
  *
  * With `--check` it changes nothing and fails (exit 1) when the copy differs
- * from the player's file. The player's `tests/sdk/host-agreement.test.ts`
+ * from the player's file: compared by value, so the order of an object's
+ * keys does not matter (the order of capabilities and methods does). The player's `tests/sdk/host-agreement.test.ts`
  * makes the same comparison against the installed SDK.
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -37,9 +38,26 @@ if (!player) {
 const source = join(resolve(player), "src/host/capabilities.json");
 const table = JSON.parse(readFileSync(source, "utf8"));
 
+/**
+ * A value as JSON with every object's keys in order: two tables are the
+ * same when they hold the same values, whatever order their keys were
+ * written in (the player's generator and Prettier need not agree on it;
+ * the `cases` of `events.subscribe` differ so). The order of arrays is
+ * kept: it is the player's order of capabilities and methods.
+ */
+function canonical(value) {
+  return JSON.stringify(value, (_key, each) =>
+    each && typeof each === "object" && !Array.isArray(each)
+      ? Object.fromEntries(
+          Object.entries(each).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+        )
+      : each,
+  );
+}
+
 if (check) {
   const { HOST_CAPABILITIES } = await import(pathToFileURL(target).href);
-  if (JSON.stringify(HOST_CAPABILITIES) !== JSON.stringify(table)) {
+  if (canonical(HOST_CAPABILITIES) !== canonical(table)) {
     console.error(
       `src/host-capabilities.ts differs from ${source}; run npm run capabilities:sync -- ${player}`,
     );

@@ -36,11 +36,11 @@ export default async function mpvRules({ root, table }) {
     ],
     ...Object.entries(MPV_RULES.filterCommands).map(([name, operations]) => [
       code([name]),
-      `Only ${code(operations)} of one filter with a label of the plugin's own (\`@label:…\`, not starting with \`${MPV_RULES.reservedLabel}\`); anything else is refused (\`filters\`).`,
+      `Only ${code(operations)} of one filter with a label of the plugin's own (\`@label:…\`, not starting with \`${MPV_RULES.reservedLabel}\` and not ${code(MPV_RULES.reservedLabels)}); anything else is refused (\`filters\`).`,
     ]),
     [
       code(MPV_RULES.filterMessages),
-      "Only to a filter label of the plugin's own (`refused` otherwise); without a label argument the command is `invalid`.",
+      "Only to a filter label of the plugin's own (`refused` otherwise, ${code(MPV_RULES.reservedLabels)} included: mpv reads it as every filter); without a label argument the command is `invalid`.",
     ],
   ];
   return [

@@ -272,6 +272,137 @@ test("refused: prefixes, option paths, sub-properties and cycle-values' !reverse
     assert.equal(mpvCommandRefusal([name]), null, name);
 });
 
+test("a command's name is looked up as mpv reads it (_ for -); the refusal keeps the caller's spelling; properties are not folded", async () => {
+  const { host, plugin, stop } = await started();
+  assert.equal(
+    mpvCommandRefusal(["quit_watch_later"]),
+    'mpv command "quit_watch_later" is refused: it ends the player',
+  );
+  await assert.rejects(
+    plugin.mpv.command(["quit_watch_later"]),
+    code(
+      "refused",
+      /^mpv command "quit_watch_later" is refused: it ends the player$/,
+    ),
+  );
+  // Every command of the table, spelled with underscores.
+  for (const [name, category] of Object.entries(MPV_RULES.commands)) {
+    const spelled = name.replaceAll("-", "_");
+    assert.equal(
+      mpvCommandRefusal([spelled, "x"]),
+      `mpv command ${JSON.stringify(spelled)} is refused: ${MPV_RULES.categories[category]}`,
+      spelled,
+    );
+  }
+  // The writers: checked as a write of their property.
+  assert.match(
+    mpvCommandRefusal(["cycle_values", "!reverse", "pause", "yes", "no"])!,
+    /^mpv property "pause" is refused/,
+  );
+  assert.match(
+    mpvCommandRefusal(["change_list", "vf", "append", "hflip"])!,
+    /^mpv property "vf" is refused/,
+  );
+  assert.equal(
+    mpvCommandRefusal(["cycle_values", "deband", "yes", "no"]),
+    null,
+  );
+  // The filter messages: the missing label, the owner's label.
+  for (const name of ["vf_command", "af_command"]) {
+    assert.equal(
+      mpvCommandProblem([name]),
+      "vf-command and af-command take a filter label as their first argument",
+    );
+    assert.match(
+      mpvCommandRefusal([name, "vestra-motion", "x", "y"])!,
+      new RegExp(`^mpv command "${name}" is refused: a plugin changes only`),
+    );
+    assert.equal(mpvCommandRefusal([name, "crisp", "x", "y"]), null);
+  }
+  // Nothing else is folded: mpv knows no command of another case.
+  assert.equal(mpvCommandRefusal(["QUIT"]), null);
+  assert.equal(mpvCommandRefusal(["SET", "pause", "yes"]), null);
+  // A property's name is looked up as written: mpv does not fold it, and
+  // an underscore is part of a sub-path (user-data/my_key).
+  for (const name of ["sub_delay", "Pause", "PAUSE", "input_ipc_server"])
+    assert.equal(mpvPropertyRefusal(name, true), null, name);
+  assert.equal(mpvCommandRefusal(["set", "sub_delay", "1"]), null);
+  assert.ok(!host.calls.some((call) => call.method.startsWith("mpv.")));
+  await stop();
+});
+
+test("the label all is reserved (mpv reads it as every filter); ALL and all2 are ordinary labels", async () => {
+  const { host, plugin, stop } = await started();
+  assert.deepEqual([...MPV_RULES.reservedLabels], ["all"]);
+  assert.equal(MPV_RULES.reservedLabel, "vestra-");
+  for (const stage of ["vf", "af"]) {
+    for (const args of [
+      [stage, "add", "@all:hflip"],
+      [stage, "add", "@all"],
+      [stage, "toggle", "@all"],
+      [stage, "remove", "@all"],
+      [`${stage}-command`, "all", "strength", "0.4"],
+      [`${stage}_command`, "all", "strength", "0.4"],
+    ])
+      await assert.rejects(
+        plugin.mpv.command(args),
+        code("refused", /a plugin changes only its own labelled filters/),
+        JSON.stringify(args),
+      );
+    assert.equal(host.mpv.labels.size, 0);
+    for (const label of ["ALL", "all2", "All", "overall"]) {
+      await plugin.mpv.command([stage, "add", `@${label}:hflip`]);
+      assert.equal(host.mpv.labels.get(`${stage}/${label}`), "test.mpv");
+      await plugin.mpv.command([`${stage}-command`, label, "x", "y"]);
+      await plugin.mpv.command([stage, "remove", `@${label}`]);
+    }
+  }
+  assert.equal(host.mpv.labels.size, 0);
+  await stop();
+});
+
+test("the P2 additions: what the player writes or reports itself, and the prefixes in the player's order", () => {
+  for (const [name, category] of [
+    ["use-filedir-conf", "code"],
+    ["volume-gain", "managed"],
+    ["ao-volume", "managed"],
+    ["ao-mute", "managed"],
+    ["shuffle", "managed"],
+    ["chapter-list", "managed"],
+    ["video-crop", "managed"],
+    ["video-scale-x", "managed"],
+    ["video-scale-y", "managed"],
+    ["alang", "managed"],
+    ["slang", "managed"],
+    ["vlang", "managed"],
+  ] as const) {
+    assert.equal(MPV_RULES.properties[name], category, name);
+    assert.equal(
+      mpvPropertyRefusal(name, true),
+      `mpv property ${JSON.stringify(name)} is refused: ${MPV_RULES.categories[category]}`,
+    );
+    // Reading stays open.
+    assert.equal(mpvPropertyRefusal(name, false), null, name);
+  }
+  assert.deepEqual(Object.entries(MPV_RULES.propertyPrefixes), [
+    ["input-ipc-", "clients"],
+    ["input-", "input"],
+    ["load-", "code"],
+    ["clipboard-", "clipboard"],
+    ["screenshot-", "files"],
+    ["watch-later-", "files"],
+    ["playlist-", "managed"],
+    ["autofit", "managed"],
+    ["video-align-", "managed"],
+    ["sub-", "managed"],
+    ["secondary-sub-", "managed"],
+  ]);
+  for (const name of ["video-align-x", "video-align-y"])
+    assert.match(mpvPropertyRefusal(name, true)!, /manages/, name);
+  // Not in the table: mpv answers for it.
+  assert.equal(mpvPropertyRefusal("video-margin-ratio-left", true), null);
+});
+
 test("filters: only the plugin's own labelled filter; the player's labels and whole-chain changes are refused", async () => {
   const { host, plugin, stop } = await started();
   for (const stage of ["vf", "af"]) {

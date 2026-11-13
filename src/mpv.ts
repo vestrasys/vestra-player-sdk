@@ -65,7 +65,14 @@ export const MPV_LIMITS = Object.freeze({
  * - `filterCommands`: the filter chain commands and the operations a
  *   plugin may use, on its own labelled filters only; `filterMessages`:
  *   commands whose first argument is a filter label, which must be the
- *   plugin's own; `reservedLabel`: the start of the player's own labels.
+ *   plugin's own; `reservedLabel`: the start of the player's own labels;
+ *   `reservedLabels`: whole labels that are not a plugin's (`all`, which
+ *   mpv reads as every filter of the chain).
+ *
+ * A command's name is looked up with `_` read as `-`, as mpv reads it
+ * (`cycle_values` is `cycle-values`); a refusal names it as the caller
+ * wrote it. A property's name is looked up as written: mpv does not fold
+ * it.
  *
  * Internal: exported from `@vestra-player/sdk/runtime` only; the tables of
  * [mpv](../docs/reference/mpv.md) are generated from it.
@@ -82,6 +89,7 @@ export const MPV_RULES: {
   readonly filterCommands: Readonly<Record<string, readonly string[]>>;
   readonly filterMessages: readonly string[];
   readonly reservedLabel: string;
+  readonly reservedLabels: readonly string[];
 } = Object.freeze({
   categories: Object.freeze({
     process: "it starts a program (a plugin starts its own with Node)",
@@ -193,6 +201,7 @@ export const MPV_RULES: {
     profile: "code",
     config: "code",
     "config-dir": "code",
+    "use-filedir-conf": "code",
     osc: "code",
     // Control channels.
     wid: "clients",
@@ -224,6 +233,10 @@ export const MPV_RULES: {
     speed: "managed",
     volume: "managed",
     mute: "managed",
+    // Above the player's volume, or the system mixer's.
+    "volume-gain": "managed",
+    "ao-volume": "managed",
+    "ao-mute": "managed",
     "time-pos": "managed",
     "playback-time": "managed",
     "percent-pos": "managed",
@@ -235,6 +248,8 @@ export const MPV_RULES: {
     loop: "managed",
     "loop-file": "managed",
     "loop-playlist": "managed",
+    shuffle: "managed",
+    "chapter-list": "managed",
     "ab-loop-a": "managed",
     "ab-loop-b": "managed",
     "ab-loop-count": "managed",
@@ -246,6 +261,10 @@ export const MPV_RULES: {
     vid: "managed",
     sid: "managed",
     "secondary-sid": "managed",
+    // Which track the next load selects.
+    alang: "managed",
+    slang: "managed",
+    vlang: "managed",
     audio: "managed",
     video: "managed",
     sub: "managed",
@@ -284,6 +303,9 @@ export const MPV_RULES: {
     "video-pan-y": "managed",
     "video-aspect-override": "managed",
     "video-rotate": "managed",
+    "video-crop": "managed",
+    "video-scale-x": "managed",
+    "video-scale-y": "managed",
     keepaspect: "managed",
     panscan: "managed",
     // The window: plugin.window.
@@ -306,6 +328,8 @@ export const MPV_RULES: {
     "watch-later-": "files",
     "playlist-": "managed",
     autofit: "managed",
+    // Where the picture sits in the video area: the display layer's.
+    "video-align-": "managed",
     // Subtitle selection, files and style: plugin.subtitles.
     "sub-": "managed",
     "secondary-sub-": "managed",
@@ -326,6 +350,7 @@ export const MPV_RULES: {
   }),
   filterMessages: Object.freeze(["vf-command", "af-command"]),
   reservedLabel: "vestra-",
+  reservedLabels: Object.freeze(["all"]),
 });
 
 /**
@@ -410,7 +435,10 @@ export function mpvCommandProblem(args: unknown): string | null {
       return "a command's arguments are strings, finite numbers or booleans";
   // A message to a filter names the filter: without a label there is
   // nothing to check the owner of.
-  if (MPV_RULES.filterMessages.includes(name) && typeof rest[0] !== "string")
+  if (
+    MPV_RULES.filterMessages.includes(commandKey(name)) &&
+    typeof rest[0] !== "string"
+  )
     return MPV_FILTER_MESSAGE_PROBLEM;
   return null;
 }
@@ -435,17 +463,28 @@ export function mpvPropertyRefusal(
     : null;
 }
 
-/** The label of a filter value: `@label` or `@label:…`; `null` without one. */
+/**
+ * The label of a filter value: `@label` or `@label:…`; `null` without
+ * one a plugin may have (the player's own start, a reserved word).
+ */
 function filterLabel(value: unknown): string | null {
   if (typeof value !== "string" || !value.startsWith("@")) return null;
   const label = value.slice(1).split(":")[0]!;
   return label.length >= 1 &&
     label.length <= MPV_LIMITS.labelChars &&
     LABEL.test(label) &&
-    !label.startsWith(MPV_RULES.reservedLabel)
+    !label.startsWith(MPV_RULES.reservedLabel) &&
+    !MPV_RULES.reservedLabels.includes(label)
     ? label
     : null;
 }
+
+/**
+ * A command's name as the tables have it: mpv reads `_` in a command's
+ * name as `-` (`cycle_values` runs `cycle-values`). Nothing else is
+ * folded: mpv does not accept another case.
+ */
+const commandKey = (name: string) => name.replaceAll("_", "-");
 
 /**
  * Why the pass-through refuses a command (`refused`), as the player words
@@ -461,8 +500,9 @@ function filterLabel(value: unknown): string | null {
 export function mpvCommandRefusal(
   args: readonly (string | number | boolean)[],
 ): string | null {
-  const name = String(args[0]);
-  const shown = `mpv command ${JSON.stringify(name)}`;
+  // Looked up as mpv reads it; shown as the caller wrote it.
+  const name = commandKey(String(args[0]));
+  const shown = `mpv command ${JSON.stringify(String(args[0]))}`;
   if (Object.hasOwn(MPV_RULES.commands, name))
     return refusal(shown, MPV_RULES.commands[name]!);
   if (MPV_RULES.writers.includes(name)) {
@@ -492,7 +532,7 @@ export function mpvCommandRefusal(
 export function mpvFilterChange(
   args: readonly (string | number | boolean)[],
 ): { stage: string; operation: string; label: string } | null {
-  const stage = String(args[0]);
+  const stage = commandKey(String(args[0]));
   if (!Object.hasOwn(MPV_RULES.filterCommands, stage)) return null;
   const label = filterLabel(args[2]);
   return label === null ? null : { stage, operation: String(args[1]), label };

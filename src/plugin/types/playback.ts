@@ -1889,7 +1889,8 @@ export type MpvValue =
  * clipboard. The full table is in [mpv](../../../docs/reference/mpv.md).
  *
  * Filters: `["vf", "add", "@label:…"]` (and `af`; `add`, `pre`, `toggle`,
- * `remove`) with a label of the plugin's own, not starting with `vestra-`.
+ * `remove`) with a label of the plugin's own, not starting with `vestra-`
+ * and not `all`.
  * A labelled filter belongs to the plugin that added it: another plugin
  * cannot change it (`conflict`), and the player removes it when the plugin
  * stops. The player's own filters (the typed chains of {@link Scope.video},
