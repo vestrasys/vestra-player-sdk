@@ -166,7 +166,15 @@ export const STRICT_CATEGORIES = {
     ],
   },
   Playback: {
-    full: ["Player", "Media", "Scrub", "Stream", "Timeline", "TimelineLayer"],
+    full: [
+      "Player",
+      "Media",
+      "Scrub",
+      "Stream",
+      "Timeline",
+      "TimelineLayer",
+      "Mpv",
+    ],
     data: [
       "PlayerState",
       "AudioTrack",
@@ -185,6 +193,7 @@ export const STRICT_CATEGORIES = {
       "HostEvent",
       "EventPayloads",
       "EventPayload",
+      "MpvValue",
       "CommandKeys",
       "PackageInfo",
       "WindowFacts",

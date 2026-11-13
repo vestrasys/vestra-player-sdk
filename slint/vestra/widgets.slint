@@ -149,9 +149,12 @@ export component ToolTipArea {
 // Dialog button: text (21px, or 18px when `small`), or an icon button when
 // `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height
 // viewbox (filled, or 1.5px round-capped lines when `stroked`, as the
-// @vestra/icons.slint set). The caller sizes icon buttons.
+// @vestra/icons.slint set). The caller sizes icon buttons. `key`: the key that
+// presses it, in a `KeyHint` 6px after the text ([Run `Enter`]); empty (the
+// default) draws nothing and takes no space.
 export component Button {
     in property <string> text;
+    in property <string> key;
     in property <string> icon;
     in property <length> icon-width: 14px;
     in property <length> icon-height: 12px;
@@ -170,7 +173,7 @@ export component Button {
     preferred-height: self.min-height;
     // A longer (translated) label widens the button instead of overflowing it.
     preferred-width: root.icon-only ? self.min-width
-        : max(self.min-width, label.preferred-width + 2 * Theme.button-padding);
+        : max(self.min-width, row.preferred-width);
     accessible-role: button;
     accessible-label: root.text;
     accessible-enabled: root.enabled;
@@ -183,15 +186,20 @@ export component Button {
         background: !root.enabled ? Theme.button-disabled
             : touch.pressed ? Theme.button-press
             : touch.has-hover ? Theme.button-hover : Theme.button-bg;
-        HorizontalLayout {
+        row := HorizontalLayout {
             padding-left: Theme.button-padding;
             padding-right: Theme.button-padding;
+            spacing: root.key == "" ? 0px : 6px;
             alignment: center;
-            label := Text {
+            Text {
                 text: root.text;
                 color: root.enabled ? Theme.text-list : Theme.text-dim;
                 font-size: Theme.font-body;
                 vertical-alignment: center;
+            }
+            VerticalLayout {
+                alignment: center;
+                KeyHint { text: root.key; }
             }
         }
     }

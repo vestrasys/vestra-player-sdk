@@ -83,6 +83,7 @@ test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () =
     "video.motion",
     "commands.run",
     "palette.lead",
+    "mpv",
   ]);
   assert.ok(Object.isFrozen(CAPABILITY_INFO));
   assert.ok(Object.isFrozen(CAPABILITIES));
@@ -97,6 +98,7 @@ test("CAPABILITY_INFO: labels, highlighted ones and requirements", () => {
     "secrets",
     "rendering.manage",
     "commands.run",
+    "mpv",
   ]);
   const builtinOnly = CAPABILITIES.filter(
     (name) => CAPABILITY_INFO[name]!.builtinOnly,

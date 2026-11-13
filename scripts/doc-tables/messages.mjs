@@ -98,6 +98,7 @@ export const WRAPPED_BY = {
   "video.render.release": ["Plugin.video.render"],
   "window.state": ["MainWindow.state"],
   "drops.withdraw": ["Drops.provide"],
+  "mpv.unobserve": ["Mpv.observe"],
 };
 
 /** What a capability's residency (capabilities.json) means for standby. */

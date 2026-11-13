@@ -19,7 +19,8 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path, the command palette's lead row), or this plugin already uses the id (a window or command id). |
 | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
 | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
-| `backend` | Loading or resolving failed; `message` is the backend's reason. |
+| `backend` | Loading or resolving failed, or mpv failed a command or a property of {@link "@vestra-player/sdk"!Mpv}; `message` is the backend's reason. |
+| `refused` | {@link "@vestra-player/sdk"!Mpv}: a command or a property the pass-through does not carry (it would start a program, load code, write files, end the player, or change what the player manages); `message` names it and why. |
 | `failed` | The operation ran and failed (`media.ready()` load error, a non-zero `tools.run` exit, the system refused). |
 | `replaced` | Accepted, but another source replaced it before it finished. |
 | `ended` | {@link "@vestra-player/sdk"!Media.ready}: the media already played to the end. |

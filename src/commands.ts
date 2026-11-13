@@ -252,6 +252,49 @@ export const COMMAND_RUN_LIMITS = {
 } as const;
 
 /**
+ * The player's limits on the texts of `palette.lead.set`, in characters as
+ * shown (translated, a text value with its arguments), each on one line;
+ * the same values as the player's (its agreement test checks that they
+ * agree). The player checks them; `TestHost` does the same.
+ * Internal: exported from `@vestra-player/sdk/runtime` only.
+ *
+ * @internal
+ */
+export const PALETTE_LEAD_LIMITS = {
+  /** `title` (40). */
+  title: 40,
+  /** `placeholder` (60). */
+  placeholder: 60,
+  /** `empty` (80). */
+  empty: 80,
+  /** `note` (40). */
+  note: 40,
+  /** `status.text` of a working status: one line of the row and the strip (80). */
+  statusText: 80,
+  /** `status.text` of an end state: what the strip's two lines hold (160). */
+  statusEndText: 160,
+  /** `status.note` (40). */
+  statusNote: 40,
+  /** `status.strip`: one line of the strip (80). */
+  statusStrip: 80,
+} as const;
+
+/**
+ * `palette.lead.set`'s `status.state` values, the first the default
+ * (absent or `null`); the others are end states. The same list as the
+ * player's. Internal: exported from `@vestra-player/sdk/runtime` only.
+ *
+ * @internal
+ */
+export const PALETTE_LEAD_STATES = [
+  "working",
+  "done",
+  "failed",
+  "note",
+  "stopped",
+] as const;
+
+/**
  * What is wrong with `commands.run`'s `then` (given, not `null`), as
  * the player words it; `null` when nothing is. The SDK and `TestHost`
  * check it the same way.
@@ -562,7 +605,7 @@ vestra.playlist | playlist.remove | (Remove Selected) | Delete | panel
 vestra.playlist | playlist.remove-unselected | (Remove Unselected) | Ctrl+Delete | panel
 vestra.playlist | playlist.remove-invalid | (Remove Invalid Items)
 vestra.playlist | playlist.clear | (Remove All) | Alt+Delete | panel
-vestra.playlist | playlist.reveal | (Show in Finder) | Ctrl+F | panel
+vestra.playlist | playlist.reveal | (Show in Folder) | Ctrl+F | panel
 vestra.playlist | playlist.move-top | (Move to Top)
 vestra.playlist | playlist.move-up | (Move Up) | Ctrl+ArrowUp | panel
 vestra.playlist | playlist.move-down | (Move Down) | Ctrl+ArrowDown | panel

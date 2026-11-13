@@ -200,6 +200,14 @@ export const GROUPS = [
         why: "Every request method of the player's protocol, generated from the player's capability table and the SDK's clients: what style C sends; too large and too different (protocol, not API) to join Capabilities.",
       },
       {
+        file: "scan.md",
+        why: "The capability scan in one place: the eight categories and what each covers (generated from capability-scan.json), how files are read, the JSON that vestra-plugin scan prints and its limits; consumed by the plugin repository's index and the store, so its format is reference.",
+      },
+      {
+        file: "mpv.md",
+        why: "The mpv pass-through's contract in one place: members and messages, the refusal table generated from MPV_RULES, filter and observer ownership, limits; it spans commands and properties that are mpv's, not API symbols.",
+      },
+      {
         file: "i18n.md",
         why: "The languages, file formats, template rules, extract/check behaviour, review markers and limits of translations: lookup, split from the translation guide.",
       },

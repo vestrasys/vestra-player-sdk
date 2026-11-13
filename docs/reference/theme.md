@@ -202,11 +202,12 @@ Icon { name: "close"; width: 20px; height: 20px; }         // scaled
 | `detail` | in `string` |  |  |
 | `showing` | out `bool` |  | The tip is showing (read-only); it follows the tip's delay closely, not exactly. |
 
-**`Button`**: Dialog button: text (21px, or 18px when `small`), or an icon button when `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height viewbox (filled, or 1.5px round-capped lines when `stroked`, as the @vestra/icons.slint set). The caller sizes icon buttons.
+**`Button`**: Dialog button: text (21px, or 18px when `small`), or an icon button when `text` is empty and `icon` holds Path data drawn in an icon-width × icon-height viewbox (filled, or 1.5px round-capped lines when `stroked`, as the @vestra/icons.slint set). The caller sizes icon buttons. `key`: the key that presses it, in a `KeyHint` 6px after the text ([Run `Enter`]); empty (the default) draws nothing and takes no space.
 
 | Member | Kind | Default | Note |
 | --- | --- | --- | --- |
 | `text` | in `string` |  |  |
+| `key` | in `string` |  |  |
 | `icon` | in `string` |  |  |
 | `icon-width` | in `length` | `14px` |  |
 | `icon-height` | in `length` | `12px` |  |

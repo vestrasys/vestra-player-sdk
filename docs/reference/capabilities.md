@@ -42,6 +42,7 @@ A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manif
 | `video.motion` | {@linkcode "@vestra-player/sdk"!VideoMotion.state VideoMotion.state}, {@linkcode "@vestra-player/sdk"!VideoMotion.set VideoMotion.set}, {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} | — | Smooth motion with the GPU's frame-rate converter |  |
 | `commands.run` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Commands.list Commands.list}, {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} | — | Run any player or plugin command | yes |
 | `palette.lead` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} | — | Add the first row of the command palette |  |
+| `mpv` | {@linkcode "@vestra-player/sdk"!Mpv.command Mpv.command}, {@linkcode "@vestra-player/sdk"!Mpv.get Mpv.get}, {@linkcode "@vestra-player/sdk"!Mpv.set Mpv.set}, {@linkcode "@vestra-player/sdk"!Mpv.observe Mpv.observe} | — | Control the playback engine (mpv) directly: send its commands and change its options | yes |
 
 <!-- /generated -->
 

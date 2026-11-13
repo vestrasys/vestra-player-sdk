@@ -30,6 +30,7 @@ const ALLOWED = [
   /^CHANGELOG\.md$/,
   /^LICENSE$/,
   /^llms\.txt$/,
+  /^capability-scan\.json$/,
   /^dist\/docs-tree\.json\.gz$/,
   /^bin\/[\w-]+\.mjs$/,
   /^slint\/[\w/-]+\.slint$/,

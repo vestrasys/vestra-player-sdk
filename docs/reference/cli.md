@@ -12,6 +12,7 @@ description: The vestra-plugin commands and options, the rules of build and pack
 ```text
 usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]
        vestra-plugin check [plugin-dir...] --json
+       vestra-plugin scan [plugin-dir...]
        vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...
        vestra-plugin i18n check [plugin-dir...]
        vestra-plugin docs [path] [--page N]
@@ -28,6 +29,7 @@ usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [
 | `vestra-plugin build` | check, then write dist/: .ts → .js with types stripped, other package files copied, dist/manifest.json with `version` |
 | `vestra-plugin test` | node --test on tests/*.test.{ts,mjs} |
 | `vestra-plugin pack` | build, then dist/ → <out>/<id>-<version>.vxp (a zip; default out: the current directory) with its sha256 and size |
+| `vestra-plugin scan` | the boundary categories the plugin's code uses (player, plugins, clipboard, credentials, camera, microphone, screen, notifications), as JSON: by type for TypeScript, by name (best effort, said in the output) for JavaScript; reads the source only, checks and changes nothing |
 | `vestra-plugin docs` | the SDK's documentation by path, for coding agents: `/` lists Overview, Guides and API, `/API/Media/Snapshot/dispose` is one member's whole documentation; --search <query> lists matching paths; at most 8 KB per answer, --page N for the rest |
 | `vestra-plugin i18n extract` | find the texts to translate (@tr in .slint files, the texts handed to commands.add, osd.show, dialogs, settings and panel titles, the manifest's display fields), write locales/messages.pot and merge it into every locales/<lang>.po (translations kept, vanished ones marked obsolete); --locale <lang> starts a new language |
 | `vestra-plugin i18n check` | coverage per language, placeholder and plural problems, a stale messages.pot, and texts that cannot be translated (composed in TypeScript, not literals, not English, Slint text without @tr) as warnings; fails (exit 1) on a stale messages.pot, a .po missing messages, an unreadable file |

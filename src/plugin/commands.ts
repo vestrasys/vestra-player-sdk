@@ -527,8 +527,11 @@ function leadJson(options: PaletteLeadOptions): { [key: string]: Json } {
       ...(status.note === undefined
         ? {}
         : { note: text(status.note, "status.note") }),
-      // Sent only when set (players before it refuse the field); the
-      // player checks the value.
+      // Sent only when set (players before them refuse the fields); the
+      // player checks the values.
+      ...(status.strip === undefined
+        ? {}
+        : { strip: text(status.strip, "status.strip") }),
       ...(status.state === undefined ? {} : { state: status.state as Json }),
     };
   }

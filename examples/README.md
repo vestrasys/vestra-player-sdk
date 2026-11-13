@@ -27,4 +27,4 @@ npm run check && npm test && npm run pack
 
 Each example has one main version in `main.ts`; `signal-generator` and `panel-menu` also have `main-b.ts` and `main-c.ts`, the same plugin in styles B and C (point the manifest's `entry` at one to run it), and `three-ways` has one file per style.
 
-Each example is laid out the same way: `manifest.json` (id `examples.<name>`), `main.ts`, `ui/*.slint`, `tests/*.test.ts`, `package.json` (depends on `"@vestra-player/sdk": "file:../.."`), `README.md`. To start your own plugin from one, copy its folder and change the dependency to `"@vestra-player/sdk": "^1.7.0"` and the manifest `id`.
+Each example is laid out the same way: `manifest.json` (id `examples.<name>`), `main.ts`, `ui/*.slint`, `tests/*.test.ts`, `package.json` (depends on `"@vestra-player/sdk": "file:../.."`), `README.md`. To start your own plugin from one, copy its folder and change the dependency to `"@vestra-player/sdk": "^1.8.0"` and the manifest `id`.

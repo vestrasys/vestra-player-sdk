@@ -2,7 +2,7 @@
 // Re-exported by ../types.ts (`export type *`); see that file.
 import type { Bindings, Commands, Host, Palette, When } from "./commands.ts";
 import type { Packages } from "./packages.ts";
-import type { Player, Timeline } from "./playback.ts";
+import type { Mpv, Player, Timeline } from "./playback.ts";
 import type {
   AudioFilter,
   RenderOptions,
@@ -129,7 +129,8 @@ export interface Disposable {
  * | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path, the command palette's lead row), or this plugin already uses the id (a window or command id). |
  * | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
  * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
- * | `backend` | Loading or resolving failed; `message` is the backend's reason. |
+ * | `backend` | Loading or resolving failed, or mpv failed a command or a property of {@link Mpv}; `message` is the backend's reason. |
+ * | `refused` | {@link Mpv}: a command or a property the pass-through does not carry (it would start a program, load code, write files, end the player, or change what the player manages); `message` names it and why. |
  * | `failed` | The operation ran and failed (`media.ready()` load error, a non-zero `tools.run` exit, the system refused). |
  * | `replaced` | Accepted, but another source replaced it before it finished. |
  * | `ended` | {@link Media.ready}: the media already played to the end. |
@@ -375,6 +376,12 @@ export interface Scope extends Disposable {
   readonly system: System;
   /** Small secrets in the system's secret store (`secrets`). */
   readonly secrets: Secrets;
+  /**
+   * mpv's own commands and properties, sent as they are (`mpv`).
+   *
+   * @since 1.8.0
+   */
+  readonly mpv: Mpv;
   /** The main window: fullscreen, video area, size, level, pointer hiding. */
   readonly window: MainWindow;
   /** The player's version and components, and the system it runs on. */

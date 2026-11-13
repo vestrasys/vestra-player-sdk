@@ -74,6 +74,7 @@ const LOWER = [
   "src/producer.ts",
   "src/subtitles.ts",
   "src/request-queue.ts",
+  "src/mpv.ts",
   // L1
   "src/plugin/errors.ts",
   "src/plugin/latest.ts",
@@ -88,6 +89,7 @@ const LOWER = [
   "src/plugin/packages.ts",
   "src/plugin/markdown.ts",
   "src/plugin/drops.ts",
+  "src/plugin/mpv.ts",
   "src/plugin/services/dialogs.ts",
   "src/plugin/view/image.ts",
   "src/plugin/view/writer.ts",
