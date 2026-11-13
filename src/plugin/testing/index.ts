@@ -2676,7 +2676,7 @@ export class TestHost implements Transport {
     display: MotionReason | null;
     /** GPU rendering is still starting: a `rendering` reason then lets `set` keep the request. */
     renderingStarting: boolean;
-    /** The video's rate; `null`: not known yet (nothing is active). */
+    /** The converter's input rate (`MotionState.sourceFps`); `null`: not known yet (nothing is active). */
     sourceFps: number | null;
     /** The measured output rate while active; `null`: twice `sourceFps`. */
     outputFps: number | null;

@@ -691,7 +691,7 @@ export interface WireMotionState {
   display: WireRenderingReason | null;
   /** The converter's motion search while it runs; `null` while off. */
   searchMode: "native" | "performance" | null;
-  /** The video's frame rate; `null` while unknown. */
+  /** The converter's input rate (`MotionState.sourceFps`); `null` while unknown. */
   sourceFps: number | null;
   /** The converter's output rate, measured; `null` while off. */
   outputFps: number | null;
