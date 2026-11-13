@@ -20,6 +20,7 @@ import { canonical, keyLabel } from "../bindings.ts";
 import { evaluate } from "../when.ts";
 import type { ConditionFacts } from "../when.ts";
 import type { CommandWhen } from "../../commands.ts";
+import { PALETTE_LEAD_LIMITS, PALETTE_LEAD_STATES } from "../../commands.ts";
 import { menuKeys, textKey } from "../../i18n.ts";
 import type { FakeCommand, FakeBarButton, TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
@@ -643,18 +644,22 @@ function listed(host: TestHost, inner: Internals, row: Row) {
   };
 }
 
-/** `palette.lead.set` texts: at most this many characters each. */
+/**
+ * `palette.lead.set` texts: at most this many characters each
+ * (`PALETTE_LEAD_LIMITS`). `status.text` is a working status's; an end
+ * state's may be longer (`statusEndText`, since 1.8.0).
+ */
 const LEAD_TEXTS: Readonly<Record<string, number>> = {
-  title: 40,
-  placeholder: 60,
-  empty: 80,
-  note: 40,
-  "status.text": 80,
-  "status.note": 40,
+  title: PALETTE_LEAD_LIMITS.title,
+  placeholder: PALETTE_LEAD_LIMITS.placeholder,
+  empty: PALETTE_LEAD_LIMITS.empty,
+  note: PALETTE_LEAD_LIMITS.note,
+  "status.text": PALETTE_LEAD_LIMITS.statusText,
+  "status.note": PALETTE_LEAD_LIMITS.statusNote,
 };
 
 /** `palette.lead.set`'s `status.state` (absent or null: `working`). */
-const LEAD_STATES: readonly string[] = ["working", "done", "failed", "note"];
+const LEAD_STATES: readonly string[] = PALETTE_LEAD_STATES;
 
 /** The default handlers of `commands.run` and `palette.lead`. */
 export function builtinHandlers(
@@ -776,7 +781,19 @@ export function builtinHandlers(
     },
     "palette.lead.set": (p) => {
       builtinOnly(host);
-      for (const [name, max] of Object.entries(LEAD_TEXTS)) {
+      const status = p.status as Record<string, Json> | null | undefined;
+      // An end state's text may fill the strip's two lines (1.8.0). Any
+      // other state, a wrong one included, has the working limit: the
+      // checks keep their order (texts, icon, state).
+      const end =
+        typeof status?.state === "string" &&
+        status.state !== "working" &&
+        LEAD_STATES.includes(status.state);
+      for (const [name, limit] of Object.entries(LEAD_TEXTS)) {
+        const max =
+          end && name === "status.text"
+            ? PALETTE_LEAD_LIMITS.statusEndText
+            : limit;
         const [first, second] = name.split(".");
         const value = second
           ? (p[first!] as Record<string, Json> | null | undefined)?.[second]
@@ -809,6 +826,27 @@ export function builtinHandlers(
           "invalid",
           `status.state is one of ${LEAD_STATES.join(", ")}`,
         );
+      // The strip's own text (1.8.0), checked last: for a working status
+      // only, then as a text of the strip's one line.
+      const strip = status?.strip;
+      if (strip !== undefined && strip !== null) {
+        if (end)
+          throw new HostError(
+            "invalid",
+            "status.strip is for a working status",
+          );
+        const shown = declaredText(host, inner, strip, "status.strip");
+        const length = [...shown].length;
+        if (
+          length < 1 ||
+          length > PALETTE_LEAD_LIMITS.statusStrip ||
+          /[\0\n\r]/.test(shown)
+        )
+          throw new HostError(
+            "invalid",
+            `status.strip must be 1–${PALETTE_LEAD_LIMITS.statusStrip} characters on one line`,
+          );
+      }
       host.paletteLead = { ...p };
     },
     "palette.lead.clear": () => {

@@ -17,5 +17,6 @@ Tables to look things up in while you write a plugin. Each page collects facts t
 - [Error codes](errors.md): every `error.code` and what it means.
 - [Events](events.md): every event a plugin can listen to, its payload, its listeners, whether it wakes a stopped plugin and its capability.
 - [Messages](messages.md): every request method of the player's protocol by capability, with its parameters, result, errors and the SDK member that sends it.
+- [mpv](mpv.md): the mpv pass-through: members and messages, what it refuses and why, who owns filters and observers, limits.
 - [Translations](i18n.md): languages, where English source text goes, templates, files, `i18n extract` and `i18n check`, review markers and limits.
 - [Test host](testing.md): what `startPlugin` takes, how `TestHost` acts like the user and simulates the player, and every member.

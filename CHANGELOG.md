@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.8.0
+
+**Who must change: nobody.** Pure additions and a product-data sync (user rulings 2026-11-13, plan A): the 31 existing capabilities, their members, what each needs and every existing behaviour of the SDK and of `TestHost` are as in 1.7.20; the existing tests and golden traces pass unchanged. A plugin that does nothing keeps working on every player. A plugin that uses an addition needs the player released with this SDK (`minPlayerVersion`); `apiVersion` stays `vestra/1`.
+
+**mpv pass-through** (a new capability and member). `plugin.mpv` sends mpv's own commands and properties to the player's mpv. Intended users: a GPU vendor's motion-smoothing or upscaling plugin (a filter and its options, without a new player method per feature, as 1.7.19 needed), a shader or scaler pack that sets renderer options, a statistics panel that observes mpv's measurements.
+
+- **Capability `mpv`** (new, the 32nd; **risky**: the store highlights it; not built-in only; residency `live`), shown as "Control the playback engine (mpv) directly: send its commands and change its options". It crosses a boundary (§1.6): what it sets is the user's player beyond the plugin's own contributions and stays after the plugin stops. It is the last row of the player's table; no existing capability changes.
+- **`Mpv`** (`plugin.mpv`): `command(args)` (the command's name and its arguments as an array; resolves with mpv's result), `get(name)`, `set(name, value)`, `observe(name, listener)` (the current value first, then each change, at most every 100 ms; a `Disposable`). Values are `MpvValue` (JSON). Messages: `mpv.command`, `mpv.get`, `mpv.set`, `mpv.observe`, `mpv.unobserve`, and the event `mpv.property`, sent to the observer without a subscription. The channel is the contract; the names and what they do are mpv's and can change with a player version.
+- **Refused** with the new error code **`refused`** (the message names the command or property and why), by a closed rule: what starts a program, loads scripts or configuration, opens a control channel or talks to mpv's other clients, makes the player write or delete files, ends the player, drives its keyboard and mouse, reaches the clipboard, or changes what the player manages itself (the source and the playlist, the position, the tracks, the output and the window, the subtitle style, the renderer options of `plugin.video`, the filter chains as a whole). Reading is not refused, except the clipboard. It is not a sandbox: a plugin does the first four with Node. The table is data shared with the player (`MPV_RULES`, `MPV_LIMITS`, exported from `./runtime` for its agreement test) and printed in the new reference page [mpv](docs/reference/mpv.md). mpv's own errors arrive as `backend` with mpv's words ("mpv: property not found").
+- **Ownership**: a filter is added as `["vf", "add", "@label:…"]` (`af`; `add`, `pre`, `toggle`, `remove`) with a label of the plugin's own, not starting with `vestra-`. The label has one owner (`conflict` for another plugin), the player removes a plugin's filters and observers when it stops, and keeps a plugin that has one running. The player's own filters (the typed chains, the upscaler, motion smoothing) stay beside it; a pass-through filter does not reach snapshots and exports, which the typed chains do. A property a plugin set stays set until the player quits.
+- **`TestHost.mpv`** and **`TestHost.setMpvProperty()`** (new members; nothing existing changes): the commands sent, a map of property values, the owners of filter labels and the observed properties, with the player's refusals from the same table; no mpv runs. Test: `test/mpv.test.ts`.
+
+**Palette lead status** (additions). For a plugin that holds the palette's lead row and reports a request's progress (Ask Vestra today; a calculator or a search that answers in the strip, an assistant that the user can stop). An older player refuses each of them with `invalid`.
+
+- **An end state's `status.text` may have 160 characters** (`done`, `failed`, `note`, `stopped`), still on one line: the strip shows it on up to two lines. A working text stays at 80 (one line of the row and of the strip).
+- **`status.state: "stopped"`**: a new end state for the text shown after the user stopped the work, which was sent as `note` and looked like an answer. The player shows it plain with its icon dimmed, for about 2 s.
+- **`status.strip`**: an optional text the strip shows instead of `text` while working (1–80 characters on one line), so the row can read "Vestra is working · Planning…" and the strip "Planning…". Sent only when set; with an end state it is `invalid` (an end state shows in the strip alone, so its `text` is the strip's).
+- **`TestHost`** accepts the new values and nothing else changes: its checks keep their order (texts, icon, state), a wrong state keeps the 80-character limit, and `strip` is checked last and kept in `host.paletteLead.status`. The refusal of a wrong state lists the fifth name ("status.state is one of working, done, failed, note, stopped"). The limits and the state names are `PALETTE_LEAD_LIMITS` and `PALETTE_LEAD_STATES`, exported from `./runtime` for the player's agreement test. Test: `test/lead-status.test.ts`.
+
+**Product data** (player f54a87d3).
+
+- **Slint widget copy**: `slint/vestra/widgets.slint` gains `Button`'s `key` property (the key that presses it, shown as a key cap after the text; empty by default, which draws nothing).
+- **`BUILTIN_COMMANDS`**: the playlist's `playlist.reveal` is titled "Show in Folder" (playlist 0.2.7; it said "Show in Finder"). Its id, key and focus are unchanged; the table in [Reference: commands](docs/reference/commands.md#built-in-commands) follows.
+
+The API surface snapshot gains `Mpv`, `MpvValue`, `Scope.mpv`, `TestHost.mpv`, `TestHost.setMpvProperty`, and `strip` and `"stopped"` in `PaletteLeadOptions.status`; nothing is removed. `test/constants.test.ts` gains the name `mpv` in its two lists of capabilities (one added line each).
+
 ## 1.7.20
 
 **Who must change: nobody.** A docs-only patch (a review follow-up of motion smoothing): no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.

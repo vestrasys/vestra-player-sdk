@@ -1837,3 +1837,187 @@ export interface EventPayloads {
  * @category Playback
  */
 export type EventPayload<E extends HostEvent> = EventPayloads[E];
+
+// ---------------------------------------------------------------- mpv pass-through (mpv)
+
+/**
+ * A value of mpv, as JSON: what a property holds, a command returns or an
+ * argument of `set` is (mpv's "node": nothing, a flag, a number, a string,
+ * a list or a map of them).
+ *
+ * @since 1.8.0
+ * @category Playback
+ */
+export type MpvValue =
+  null | boolean | number | string | MpvValue[] | { [key: string]: MpvValue };
+
+/**
+ * `plugin.mpv`: mpv's own commands and properties, sent to the player's
+ * mpv as they are. Needs the capability `mpv`, which the store shows the
+ * user before installing.
+ *
+ * @example Turn mpv's debanding on and show whether it took effect
+ * A plugin offers mpv's `deband` option, which the plugin API has no member
+ * for. `set` writes the property and `get` reads it back; the names and
+ * the values are mpv's.
+ * ```ts
+ * await plugin.mpv.set("deband", true);
+ * const on = await plugin.mpv.get("deband");
+ * await plugin.osd.show(on ? "Debanding on" : "Debanding off");
+ * ```
+ *
+ * @remarks
+ * The channel is the SDK's contract: four members, their errors, what is
+ * refused and who owns what. The names, the arguments and what they do are
+ * mpv's, as its manual describes them for the mpv the player ships
+ * ([commands](https://mpv.io/manual/stable/#list-of-input-commands),
+ * [properties](https://mpv.io/manual/stable/#properties),
+ * [options](https://mpv.io/manual/stable/#options)); they can change with
+ * a player version, which the SDK does not track. Prefer a typed member
+ * where one exists ({@link Player}, {@link Scope.video}, {@link Scope.subtitles}):
+ * it is checked, tested by {@link "@vestra-player/sdk/testing"!TestHost | TestHost} and reaches snapshots and
+ * exports, which a filter added here does not.
+ *
+ * Refused with code `refused` (the message names the command or property
+ * and why): what starts a program, loads scripts or configuration, opens a
+ * control channel, makes the player write or delete files, ends the player,
+ * drives its keyboard and mouse, reaches the clipboard, or changes what the
+ * player manages itself (the source and the playlist, the position, the
+ * tracks, the output, the window, the subtitle style, the renderer options
+ * of {@link Scope.video}, its own filters). A plugin does the first four with
+ * Node; the last has a typed member. Reading is not refused, except the
+ * clipboard. The full table is in [mpv](../../../docs/reference/mpv.md).
+ *
+ * Filters: `["vf", "add", "@label:…"]` (and `af`; `add`, `pre`, `toggle`,
+ * `remove`) with a label of the plugin's own, not starting with `vestra-`.
+ * A labelled filter belongs to the plugin that added it: another plugin
+ * cannot change it (`conflict`), and the player removes it when the plugin
+ * stops. The player's own filters (the typed chains of {@link Scope.video},
+ * the upscaler, motion smoothing) stay in the chain beside it.
+ *
+ * A property a plugin set keeps its value after the plugin stops, until
+ * the player quits (what the capability `mpv` discloses); a plugin that
+ * wants it back sets it back. Observers end with the plugin. A filter
+ * or an observer keeps the plugin running.
+ *
+ * @capability mpv
+ * @see [mpv](../../../docs/reference/mpv.md)
+ * @since 1.8.0
+ * @category Playback
+ */
+export interface Mpv {
+  /**
+   * Run an mpv command: its name, then its arguments, as mpv's manual lists
+   * them. Resolves with the command's result (`null` for most).
+   *
+   * @param args - The command's name and its arguments: strings, numbers
+   *   or booleans. No prefix (`no-osd`, `async`) and no property expansion.
+   * @returns What the command returns.
+   *
+   * @example Add a filter of the plugin's own and remove it again
+   * A plugin sharpens the picture with an FFmpeg filter the typed chain
+   * does not offer, and takes it out when the user switches it off. The
+   * label makes the filter the plugin's: the player removes it by itself
+   * when the plugin stops.
+   * ```ts
+   * await plugin.mpv.command(["vf", "add", "@crisp:lavfi=[cas=strength=0.6]"]);
+   * // later
+   * await plugin.mpv.command(["vf", "remove", "@crisp"]);
+   * ```
+   *
+   * @capability mpv
+   * @throws `capability` (rejects) The manifest does not declare `mpv`.
+   * @throws `invalid` (rejects) Not an array of a name and up to 31
+   *   arguments, or an argument that is not a string, number or boolean.
+   * @throws `refused` (rejects) A command the channel does not carry; the
+   *   message names it and why.
+   * @throws `conflict` (rejects) A filter label another plugin owns.
+   * @throws `backend` (rejects) mpv failed the command; `message` is
+   *   mpv's error ("mpv: invalid parameter").
+   * @since 1.8.0
+   */
+  command(args: readonly (string | number | boolean)[]): Promise<MpvValue>;
+  /**
+   * Read an mpv property now.
+   *
+   * @param name - The property, as mpv names it (`"estimated-vf-fps"`,
+   *   `"video-params/w"`).
+   * @returns Its value.
+   *
+   * @example Show the decoder in use
+   * A statistics panel reads which hardware decoder mpv uses now.
+   * `get` resolves with mpv's value: here a string, `"no"` without one.
+   * ```ts
+   * const decoder = await plugin.mpv.get("hwdec-current");
+   * await plugin.osd.show("Decoder: {}", [String(decoder)]);
+   * ```
+   *
+   * @capability mpv
+   * @throws `capability` (rejects) The manifest does not declare `mpv`.
+   * @throws `invalid` (rejects) Not a property name.
+   * @throws `refused` (rejects) The clipboard's properties.
+   * @throws `backend` (rejects) mpv has no such property, or it has no
+   *   value now ("mpv: property not found", "mpv: property unavailable").
+   * @since 1.8.0
+   */
+  get(name: string): Promise<MpvValue>;
+  /**
+   * Set an mpv property (or option). It keeps the value after the plugin
+   * stops, until the player quits.
+   *
+   * @param name - The property, as mpv names it.
+   * @param value - Its new value, in the type mpv has for it.
+   *
+   * @example Use a sharper scaler while a panel is open
+   * A plugin switches mpv's scaler and puts the old one back when its
+   * panel closes. The value is read first, since `set` does not undo
+   * itself.
+   * ```ts
+   * const before = await plugin.mpv.get("scale");
+   * await plugin.mpv.set("scale", "ewa_lanczossharp");
+   * // when the panel closes
+   * await plugin.mpv.set("scale", before);
+   * ```
+   *
+   * @capability mpv
+   * @throws `capability` (rejects) The manifest does not declare `mpv`.
+   * @throws `invalid` (rejects) Not a property name, or no value.
+   * @throws `refused` (rejects) A property the channel does not carry; the
+   *   message names it and why.
+   * @throws `backend` (rejects) mpv refused the value or has no such
+   *   property; `message` is mpv's error.
+   * @since 1.8.0
+   */
+  set(name: string, value: MpvValue): Promise<void>;
+  /**
+   * Hear an mpv property's value now and after each change. The player
+   * sends the newest value at most every 100 ms. While a listener exists
+   * the player keeps the plugin running.
+   *
+   * @param name - The property, as mpv names it.
+   * @param listener - Receives the value: first the current one, then
+   *   each change.
+   * @returns A handle that stops listening; it is disposed with the scope.
+   *
+   * @example Follow the frame rate after filters
+   * A panel shows the frame rate mpv measures behind its filter chain.
+   * The listener runs with the current value and again whenever it
+   * changes; a failure to observe goes to `plugin.onError`.
+   * ```ts
+   * declare const panel: Panel;
+   * // ---cut---
+   * plugin.mpv.observe("estimated-vf-fps", (fps) => {
+   *   panel.set({ fps: typeof fps === "number" ? fps.toFixed(1) : "—" });
+   * });
+   * ```
+   *
+   * @capability mpv
+   * @throws `capability` (throws) The manifest does not declare `mpv`.
+   * @throws `invalid` (throws) Not a property name, or no listener.
+   * @throws `refused` (throws) The clipboard's properties.
+   * @throws `limit` (through `onError`) More than 64 properties observed
+   *   by this plugin.
+   * @since 1.8.0
+   */
+  observe(name: string, listener: (value: MpvValue) => void): Disposable;
+}

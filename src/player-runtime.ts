@@ -33,7 +33,12 @@ export {
 export { BINDING_INPUTS } from "./plugin/bindings.ts";
 export { MEDIA_SOURCE_LIMITS } from "./plugin/media.ts";
 export { REQUEST_LIMITS, UNQUEUED_METHODS } from "./request-queue.ts";
-export { COMMAND_RUN_LIMITS } from "./commands.ts";
+export {
+  COMMAND_RUN_LIMITS,
+  PALETTE_LEAD_LIMITS,
+  PALETTE_LEAD_STATES,
+} from "./commands.ts";
+export { MPV_LIMITS, MPV_RULES } from "./mpv.ts";
 export { OSD_LIMITS } from "./plugin/osd.ts";
 export { TIMELINE_LIMITS } from "./plugin/timeline.ts";
 export { SECRET_LIMITS, SESSION_STORAGE_LIMITS } from "./plugin/services.ts";

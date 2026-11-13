@@ -35,6 +35,7 @@ import { mainWindow } from "./window.ts";
 import { bindingsApi } from "./bindings.ts";
 import { trackedState } from "./state.ts";
 import { wire } from "./wire-facade.ts";
+import { mpv } from "./mpv.ts";
 import {
   clipboard,
   host,
@@ -120,6 +121,7 @@ export class ScopeImpl implements Plugin {
   readonly storage = storage(this);
   readonly system = system(this);
   readonly secrets = secrets(this);
+  readonly mpv = mpv(this);
   readonly rendering = rendering(this);
   readonly window = mainWindow(this);
   readonly bindings = bindingsApi(this);

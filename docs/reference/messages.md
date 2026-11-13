@@ -365,6 +365,18 @@ Add the first row of the command palette. Residency `recordable`: the player rec
 | `palette.lead.clear` | `palette.lead` | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
 | `palette.lead.done` | `palette.lead` | `{ ticket }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
 
+### `mpv`
+
+Control the playback engine (mpv) directly: send its commands and change its options. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `mpv.command` | `mpv` | `{ args }` | `{ result: Json }` | `capability`, `invalid`, `refused`, `conflict`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.command Mpv.command} |
+| `mpv.get` | `mpv` | `{ name }` | `{ value: Json }` | `capability`, `invalid`, `refused`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.get Mpv.get} |
+| `mpv.set` | `mpv` | `{ name, value }` | `void` | `capability`, `invalid`, `refused`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.set Mpv.set} |
+| `mpv.observe` | `mpv` | `{ name }` | `void` | `capability`, `invalid`, `refused`, `limit` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.observe Mpv.observe} |
+| `mpv.unobserve` | `mpv` | `{ name }` | `void` | `capability`, `invalid`, `refused`, `limit` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.observe Mpv.observe} |
+
 ### No capability
 
 Methods every plugin may call.

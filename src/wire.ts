@@ -1006,6 +1006,22 @@ export function createWire(transport: Transport) {
       openUrl: (url: string) =>
         transport.request<void>("system.openUrl", { url }),
     },
+    /**
+     * The mpv pass-through (`mpv`): commands and properties as mpv names
+     * them. The observed values arrive as `mpv.property` events.
+     */
+    mpv: {
+      command: (args: (string | number | boolean)[]) =>
+        transport.request<{ result: Json }>("mpv.command", { args }),
+      get: (name: string) =>
+        transport.request<{ value: Json }>("mpv.get", { name }),
+      set: (name: string, value: Json) =>
+        transport.request<void>("mpv.set", { name, value }),
+      observeProperty: (name: string) =>
+        transport.request<void>("mpv.observe", { name }),
+      unobserveProperty: (name: string) =>
+        transport.request<void>("mpv.unobserve", { name }),
+    },
     /** The system's secret store, per plugin (`secrets`). */
     secrets: {
       get: (name: string) =>

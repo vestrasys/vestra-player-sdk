@@ -259,6 +259,11 @@
 @vestra-player/sdk InterfaceDeclaration MotionState :: readonly outputFps: number | null;
 @vestra-player/sdk InterfaceDeclaration MotionState :: readonly searchMode: "native" | "performance" | null;
 @vestra-player/sdk InterfaceDeclaration MotionState :: readonly sourceFps: number | null;
+@vestra-player/sdk InterfaceDeclaration Mpv
+@vestra-player/sdk InterfaceDeclaration Mpv :: command(args: readonly (string | number | boolean)[]): Promise<MpvValue>;
+@vestra-player/sdk InterfaceDeclaration Mpv :: get(name: string): Promise<MpvValue>;
+@vestra-player/sdk InterfaceDeclaration Mpv :: observe(name: string, listener: (value: MpvValue) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Mpv :: set(name: string, value: MpvValue): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Osd
 @vestra-player/sdk InterfaceDeclaration Osd :: panel(): OsdPanel;
 @vestra-player/sdk InterfaceDeclaration Osd :: show(text: TextValue, args?: TemplateArgs | null, options?: OsdShowOptions): Promise<void>;
@@ -334,7 +339,7 @@
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: icon: BarButtonIcon | ImageRef;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: note?: string | Text;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: placeholder?: string | Text;
-@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: status?: { text: string | Text; note?: string | Text; state?: "working" | "done" | "failed" | "note"; } | null;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: status?: { text: string | Text; note?: string | Text; strip?: string | Text; state?: "working" | "done" | "failed" | "note" | "stopped"; } | null;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: title: string | Text;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadRun
 @vestra-player/sdk InterfaceDeclaration PaletteLeadRun :: keep: boolean;
@@ -502,6 +507,7 @@
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly host: Host;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly i18n: I18n;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly media: MediaCapture;
+@vestra-player/sdk InterfaceDeclaration Scope :: readonly mpv: Mpv;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly osd: Osd;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly packages: Packages;
 @vestra-player/sdk InterfaceDeclaration Scope :: readonly palette: Palette;
@@ -853,6 +859,7 @@
 @vestra-player/sdk TypeAliasDeclaration MotionEngine = export type MotionEngine = "amd" | "nvidia";
 @vestra-player/sdk TypeAliasDeclaration MotionMode = export type MotionMode = "off" | "double" | "display";
 @vestra-player/sdk TypeAliasDeclaration MotionReasonCode = export type MotionReasonCode = "engine" | "platform" | "no-gpu" | "runtime" | "filter" | "rendering" | "upscaling" | "doubling" | "failed" | "overload" | "rate" | "format" | "size" | (string & {});
+@vestra-player/sdk TypeAliasDeclaration MpvValue = export type MpvValue = null | boolean | number | string | MpvValue[] | { [key: string]: MpvValue; };
 @vestra-player/sdk TypeAliasDeclaration PackageChangeStatus = export type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed" | "cancelled" | "failed" | "failedDegraded" | "tooLate";
 @vestra-player/sdk TypeAliasDeclaration PackageSource = export type PackageSource = { kind: "repository"; url: string; } | { kind: "link"; url: string; } | { kind: "file"; } | { kind: "workshop"; } | { kind: "bundled"; };
 @vestra-player/sdk TypeAliasDeclaration PartsExportOptions = export type PartsExportOptions = { parts: ExportPart[]; destination: string; } & ({ format: "copy"; container?: "auto" | "mp4" | "mkv"; } | { format: "mp4"; encoding?: ExportEncoding; });
@@ -957,6 +964,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mediaFiles: Map<string, { duration?: number; status?: "ok" | "missing" | "changed"; version?: number; video?: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null; audio?: { codec: string; sampleRate: number; channels: number; } | null; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly motion: { mode: MotionMode; double: MotionReason | null; display: MotionReason | null; renderingStarting: boolean; sourceFps: number | null; outputFps: number | null; performance: boolean; displayFps: number; gpu: string | null; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mpv: { commands: (string | number | boolean)[][]; properties: Map<string, Json>; labels: Map<string, string>; observed: Set<string>; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly otherResolvers: { owner: string; extensions?: string[]; schemes?: string[]; hosts?: string[]; }[];
@@ -999,6 +1007,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setBackdropEffective(effective: boolean): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setLanguage(language: LanguagePreference): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setMainWindow(patch: Partial<{ fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; pictureInPicture: { supported: boolean; active: boolean; }; }>): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: setMpvProperty(name: string, value: Json): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setPackages(list: TestHost["packages"]): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setSource(patch: Partial<SourceState>): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setTimelineLayer(pluginId: string, marks: { time: number; kind: string; title?: string | null; }[]): void;

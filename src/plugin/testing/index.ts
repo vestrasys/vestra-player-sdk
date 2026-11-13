@@ -171,6 +171,7 @@ import {
   layoutHandlers,
 } from "./layout.ts";
 import { osdHandlers } from "./osd.ts";
+import { mpvHandlers, setMpvProperty } from "./mpv.ts";
 import { packageDirectories } from "./slint-types.ts";
 import { failStream, jobsHandlers } from "./jobs.ts";
 import {
@@ -2343,6 +2344,59 @@ export class TestHost implements Transport {
     },
   };
   /**
+   * The mpv pass-through (`plugin.mpv`), without an mpv: `commands` are
+   * the commands the plugin sent, in order (they do nothing else);
+   * `properties` is what `get` answers and `set` writes (a property not in
+   * it fails `backend`, "mpv: property not found"); `labels` are the
+   * owners of filter labels by `"vf/<label>"` or `"af/<label>"` (preset
+   * another plugin's id to test `conflict`); `observed` are the properties
+   * the plugin observes. The player's refusals apply (`refused`,
+   * `invalid`, the limit of 64 observed properties), from the same table
+   * as the player's.
+   *
+   * @since 1.8.0
+   */
+  readonly mpv = {
+    /** The commands the plugin sent, in order, as their arrays. */
+    commands: [] as (string | number | boolean)[][],
+    /** Property values by name: what `get` answers and `set` writes. */
+    properties: new Map<string, Json>(),
+    /** The owner (a plugin id) of each filter label, by `"vf/<label>"` or `"af/<label>"`. */
+    labels: new Map<string, string>(),
+    /** The properties the plugin observes now. */
+    observed: new Set<string>(),
+  };
+  /**
+   * Simulate mpv changing a property: store the value and send it to the
+   * plugin if it observes the property (`plugin.mpv.observe`).
+   *
+   * @param name - The property, as mpv names it.
+   * @param value - Its new value.
+   *
+   * @capability None.
+   *
+   * @example The frame rate behind the filters changes
+   * The plugin's listener hears the value the test gives the property.
+   * `setMpvProperty` stores it and sends the `mpv.property` event that
+   * the player sends to an observer; `settle` lets it arrive.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * const seen: unknown[] = [];
+   * plugin.mpv.observe("estimated-vf-fps", (fps) => seen.push(fps));
+   * await host.settle();
+   * host.setMpvProperty("estimated-vf-fps", 59.94);
+   * await host.settle();
+   * assert.deepEqual(seen, [null, 59.94]); // no value at first, then the change
+   * ```
+   *
+   * @since 1.8.0
+   */
+  setMpvProperty(name: string, value: Json) {
+    setMpvProperty(this, name, value);
+  }
+  /**
    * The player's secret store for this plugin: name → value. Preset entries
    * to simulate stored secrets; inject failures with
    * `host.handle("secrets.get", ...)`. Like the player, `secrets.set` of a
@@ -3843,6 +3897,7 @@ export class TestHost implements Transport {
     ...i18nHandlers(this, this.#inner),
     ...layoutHandlers(this, this.#inner),
     ...osdHandlers(this, this.#inner),
+    ...mpvHandlers(this, this.#inner),
     ...jobsHandlers(this, this.#inner),
     ...processingHandlers(this, this.#inner),
     ...mediaHandlers(this, this.#inner),
