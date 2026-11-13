@@ -99,6 +99,6 @@ The rules every plugin follows: only the public SDK, no other plugins' internals
 
 ## Troubleshooting
 
-Symptoms and their causes: interface pitfalls (callbacks bound too late, one-way bindings, state lost when the main window is rebuilt, hover effects that cost frames), values that do not appear after an `await`, `stale` and `capability` failures, key bindings that do not fire, tests that fail only in CI, state lost at a restart.
+Symptoms and their causes: interface pitfalls (callbacks bound too late, one-way bindings, state lost when a panel gets a new instance, hover effects that cost frames), values that do not appear after an `await`, `stale` and `capability` failures, key bindings that do not fire, tests that fail only in CI, state lost at a restart.
 
 [Read the page](troubleshooting.md)

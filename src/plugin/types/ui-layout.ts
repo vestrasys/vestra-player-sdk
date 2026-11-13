@@ -612,13 +612,20 @@ export interface SidebarSlot extends PanelSlot {
  * the global, so {@link View.on} has no "bind before show" rule.
  *
  * **Life cycle.** `mount()` returns at once; in the next microtask the SDK
- * sends the mount with every property bound or set so far. The player queues
- * mounts and rebuilds its main window with the panel; {@link Panel.ready}
- * then resolves. Rebuilding happens whenever any plugin mounts or unmounts a
- * panel, and detaching the sidebar puts a new instance in a floating window.
- * The player restores the bridge properties to the values last written, but
- * state kept only inside the component (a scroll position, a property the
- * plugin never writes) starts over: keep what matters in bridge properties.
+ * sends the mount with every property bound or set so far. The player
+ * compiles each panel's file on its own, when the panel is first shown (see
+ * {@link Panel.ready}), and puts it in its position without rebuilding the
+ * main window: mounting or unmounting a panel leaves the other panels as they
+ * are. A panel keeps its component instance while its place exists, so a
+ * switch back to its tab finds it as it was. It gets a new instance when its
+ * place is made again (its column closed and opened, the column's fullscreen
+ * overlay, the sidebar moving to or from its floating window) and when the
+ * player unloaded it to make room (a column keeps at most 4 panels loaded)
+ * and shows it again. A new instance starts with the bridge properties last
+ * written, but state kept only inside the component (a scroll position, a
+ * property the plugin never writes) starts over: keep what matters in bridge
+ * properties. Each panel's file is compiled with its own globals: two panels
+ * that import the same file do not share a global.
  * `dispose()`, disposing the scope or stopping the plugin unmounts it.
  *
  * Testing: `host.mounted()` of `@vestra-player/sdk/testing` has the panel's
@@ -627,7 +634,7 @@ export interface SidebarSlot extends PanelSlot {
  * @example Mount a sidebar list with a right-click menu (examples/panel-menu)
  * The sidebar gets an "Example list" tab whose rows can be selected and
  * have a context menu. `mount` returns at once and the player adds the
- * panel when it rebuilds its main window; `bind` keeps the rows and the
+ * panel as a tab; `bind` keeps the rows and the
  * selection on the panel's bridge global, and the `context-menu` callback
  * opens a menu of the plugin's commands where the user clicked.
  *
@@ -643,10 +650,25 @@ export interface SidebarSlot extends PanelSlot {
  */
 export interface Panel extends View, Disposable {
   /**
-   * Resolves once the player has mounted the panel and the main window shows
-   * it; rejects when the mount failed.
+   * Resolves once the player has mounted the panel; rejects when the mount
+   * failed.
    *
    * @remarks
+   * **When the file compiles** (player 0.9.0). A panel shown at once (the
+   * bottom bar, the backdrop, the current tab of an open sidebar or adjust
+   * column) is compiled before `ready` settles: a file that does not compile
+   * rejects `ready` with `ui-prepare`. A tab mounted in the background (a
+   * sidebar tab that is not current, any tab of a closed column) compiles
+   * nothing at the mount, and `ready` resolves. Its file is compiled when the
+   * tab is first shown; the adjust column compiles its first tabs (up to 4,
+   * the current one among them) when it opens, and a tab mounted among them
+   * while it is open right after its mount. A failure then is not a
+   * rejection: it goes to {@link Scope.onError} as a `ui-prepare` error, and
+   * the tab stays empty until the plugin mounts the panel again (disposes it
+   * and mounts it anew, or restarts). So a broken file in a background tab
+   * does not fail activation; show the tab ({@link PanelSlot.activate}) to
+   * see its compile result.
+   *
    * Mounts made while `activate` runs must succeed before the plugin is
    * ready: a rejection fails activation, except `conflict` for a taken
    * position (below), which the player and `TestHost`
@@ -664,9 +686,11 @@ export interface Panel extends View, Disposable {
    * standby when idle; showing the tab starts it again (see
    * {@link Panel.state}).
    *
-   * @throws `ui-prepare` (rejects) The Slint file does not compile, or a bound
-   * property is not declared on the bridge global; `message` has the
-   * diagnostics.
+   * @throws `ui-prepare` (rejects) For a panel shown at once: the Slint file
+   * does not compile, or a bound property is not declared on the bridge
+   * global; `message` has the diagnostics. For a tab mounted in the
+   * background the same failure goes to {@link Scope.onError} when the tab is
+   * first compiled (above).
    * @throws `conflict` (rejects) Another plugin's panel holds the bottom bar or
    * the backdrop (shown, or being mounted); `message` names the position and
    * the holder (「底栏已被 vestra.playback 使用」). Not an activation failure. Never
@@ -698,8 +722,9 @@ export interface Panel extends View, Disposable {
    * which takes the tab over, and {@link Panel.ready} resolves again. Anything
    * the plugin kept only in memory is gone: restore the view from storage
    * (session storage survives standby). While it is in the background, the
-   * player may also drop the panel's component and build it again from the
-   * bridge properties last written, as it does on any rebuild.
+   * player may also unload the panel's component (a column keeps at most 4
+   * panels loaded) and make a new instance from the bridge properties last
+   * written when the tab is shown again.
    *
    * @throws Never; `null` stands for "not mounted".
    *

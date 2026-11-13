@@ -296,7 +296,7 @@ export interface Ui {
    * @remarks
    * Returns at once without touching the file. The player checks the file each
    * time it receives the reference (a property write, a window or settings page
-   * opening, the main window being rebuilt): it must be inside this plugin's
+   * opening, a new instance of a panel): it must be inside this plugin's
    * package directory or {@link Plugin.dataDirectory} after following links, at
    * most 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
    * does not matter). A failed check of a whole-value image is a failed

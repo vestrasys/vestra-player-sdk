@@ -335,10 +335,11 @@ export interface BackdropSlot {
  * A panel file exports **one component and one global**. The global is the
  * bridge: the plugin writes its properties and handles its callbacks. The
  * component lays the panel out and reads and calls the global. The split
- * exists because the player composes the component into its own windows: a
- * new instance of the component is made whenever the main window is rebuilt
- * or the sidebar moves to or from its floating window, while the global is
- * one stable address.
+ * exists because the player places the component in its own windows: a new
+ * instance of the component is made whenever the panel's place is made again
+ * (a column closed and opened, its fullscreen overlay, the sidebar moving to
+ * or from its floating window; see {@link Panel}), while the global is one
+ * stable address.
  *
  * A plugin mounts at most one panel per slot: a
  * playback plugin can have its control bar in `"bottom"` and its controls in
@@ -352,7 +353,7 @@ export interface BackdropSlot {
  * @example Mount a list in the sidebar (examples/panel-menu)
  * The sidebar gets an "Example list" tab showing three rows. `mount`
  * returns at once; the SDK sends the mount with the values bound so far,
- * and the player rebuilds its main window with the panel. The Slint file
+ * and the player adds the panel as a tab. The Slint file
  * exports the component and the bridge global whose properties `bind`
  * writes.
  *
@@ -423,8 +424,10 @@ export interface Panels {
    * launches. Its strip is always drawn, so panel coordinates (drops) start
    * below it, and the bridge global's `tabbed` property, if declared, is
    * `true`. As in the sidebar, only the current tab's plugin is kept
-   * running while the column is open, and the player compiles a panel the
-   * first time it is shown, not at start-up.
+   * running while the column is open. The player compiles an adjust panel
+   * when the column opens (its first tabs, up to 4) or when the tab is first
+   * shown, not at the mount while the column is closed (see
+   * {@link Panel.ready}).
    *
    * @param slot - Where to mount the panel.
    * @param file - Path relative to the package directory, for example
