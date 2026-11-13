@@ -112,6 +112,9 @@ export const MPV_RULES: {
     "script-message": "clients",
     "script-message-to": "clients",
     "script-binding": "clients",
+    // Hooks: a client that does not answer one stalls loading.
+    "hook-add": "clients",
+    "hook-continue": "clients",
     // Files the player would write or delete.
     screenshot: "files",
     "screenshot-to-file": "files",
@@ -153,6 +156,7 @@ export const MPV_RULES: {
     seek: "managed",
     "revert-seek": "managed",
     "sub-seek": "managed",
+    "sub-step": "managed",
     "frame-step": "managed",
     "frame-back-step": "managed",
     "ab-loop": "managed",
@@ -264,6 +268,7 @@ export const MPV_RULES: {
     deinterlace: "managed",
     framedrop: "managed",
     "audio-stream-silence": "managed",
+    "lavfi-complex": "managed",
     // The renderer's options: plugin.video.render(), plugin.video.shaders().
     "glsl-shaders": "managed",
     "video-sync": "managed",
@@ -272,11 +277,15 @@ export const MPV_RULES: {
     "gamut-mapping-mode": "managed",
     "hdr-compute-peak": "managed",
     "target-peak": "managed",
+    interpolation: "managed",
     // The display layer: plugin.video.view().
     "video-zoom": "managed",
     "video-pan-x": "managed",
     "video-pan-y": "managed",
     "video-aspect-override": "managed",
+    "video-rotate": "managed",
+    keepaspect: "managed",
+    panscan: "managed",
     // The window: plugin.window.
     fullscreen: "managed",
     fs: "managed",
@@ -318,6 +327,13 @@ export const MPV_RULES: {
   filterMessages: Object.freeze(["vf-command", "af-command"]),
   reservedLabel: "vestra-",
 });
+
+/**
+ * `invalid` for `vf-command` / `af-command` without a label argument, as
+ * the player words it.
+ */
+const MPV_FILTER_MESSAGE_PROBLEM =
+  "vf-command and af-command take a filter label as their first argument";
 
 /** A command or property name as mpv writes one. */
 const NAME = /^[a-z0-9][a-z0-9/_-]*$/i;
@@ -392,6 +408,10 @@ export function mpvCommandProblem(args: unknown): string | null {
       !(typeof each === "number" && Number.isFinite(each))
     )
       return "a command's arguments are strings, finite numbers or booleans";
+  // A message to a filter names the filter: without a label there is
+  // nothing to check the owner of.
+  if (MPV_RULES.filterMessages.includes(name) && typeof rest[0] !== "string")
+    return MPV_FILTER_MESSAGE_PROBLEM;
   return null;
 }
 

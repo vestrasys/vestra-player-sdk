@@ -211,8 +211,30 @@ test("refused: prefixes, option paths, sub-properties and cycle-values' !reverse
     "options/pause",
     "file-local-options/vf",
     "clipboard/text",
+    // What the player writes itself.
+    "interpolation",
+    "keepaspect",
+    "panscan",
+    "video-rotate",
+    "lavfi-complex",
   ])
     assert.ok(refused(name), name);
+  for (const [name, category] of [
+    ["hook-add", "clients"],
+    ["hook-continue", "clients"],
+    ["sub-step", "managed"],
+  ] as const)
+    assert.equal(MPV_RULES.commands[name], category, name);
+  // A message to a filter without a label is a wrong shape, not a refusal.
+  for (const name of ["vf-command", "af-command"]) {
+    for (const args of [[name], [name, 1, "x"], [name, true]])
+      assert.equal(
+        mpvCommandProblem(args),
+        "vf-command and af-command take a filter label as their first argument",
+        JSON.stringify(args),
+      );
+    assert.equal(mpvCommandProblem([name, "crisp", "strength", "0.4"]), null);
+  }
   // The first matching prefix decides: a control channel, not input.
   assert.match(
     mpvPropertyRefusal("input-ipc-server", true)!,
@@ -221,7 +243,6 @@ test("refused: prefixes, option paths, sub-properties and cycle-values' !reverse
   for (const name of [
     "deband",
     "scale",
-    "interpolation",
     "tscale",
     "video-params/w",
     "estimated-vf-fps",

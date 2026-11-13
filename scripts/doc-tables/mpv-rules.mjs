@@ -40,7 +40,7 @@ export default async function mpvRules({ root, table }) {
     ]),
     [
       code(MPV_RULES.filterMessages),
-      "Only to a filter label of the plugin's own.",
+      "Only to a filter label of the plugin's own (`refused` otherwise); without a label argument the command is `invalid`.",
     ],
   ];
   return [
