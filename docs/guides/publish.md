@@ -33,7 +33,7 @@ Next to `manifest.json` the store needs:
 - the display fields in the manifest: `name`, `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl`, optionally `icon`, and `minPlayerVersion`, the player you tested with ([Manifest](../reference/manifest.md) has the rules);
 - `README.md` (what the plugin does, how to use it, what it needs, its limits) and `CHANGELOG.md`, at most 256 KiB each: the store shows both;
 - tests under `tests/` that pass ([Test a plugin](testing.md));
-- only the [capabilities](../reference/capabilities.md) the plugin uses: the store lists them on the plugin's page.
+- code that uses only what the plugin needs: the store shows what it uses, from the repository's scan of the package ([Capability scan](../reference/scan.md)).
 
 ### Choose the id
 
@@ -82,14 +82,14 @@ cool-visualizer = "someone"
 The store shows the newest version's manifest fields, so what you write there is the plugin's page:
 
 - **The list**: name and version, author and repository, the punchline. Search covers the name, id, author, punchline and tags; the list can be filtered by tag and sorted by name or by the date of the newest version. There are no download counts.
-- **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the Versions tab never installs a version older than the one installed from the same repository; to go back, a user uninstalls the plugin, then installs the older version from the Versions tab while the index still lists it, or its `.vxp`. A side column shows the version, the date, the license, a link to `sourceUrl` and the capabilities in plain words, the risky ones highlighted (the wording is the "Shown in the store as" column of [Capabilities](../reference/capabilities.md)), with a fixed note that capabilities limit only the player API, not file or network access.
-- **Before installing**, the user confirms a dialog that lists the capabilities; an update that adds capabilities lists the new ones. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
+- **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the Versions tab never installs a version older than the one installed from the same repository; to go back, a user uninstalls the plugin, then installs the older version from the Versions tab while the index still lists it, or its `.vxp`. A side column shows the version, the date, the license, a link to `sourceUrl` and what the code uses, from the scan ([Capability scan](../reference/scan.md)).
+- **Before installing**, the user confirms a dialog that lists what the code uses; an update that uses more lists what is new. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
 - **The README** is rendered as Markdown; relative links and images resolve against the README's own address, and remote images are shown for the official repository.
 
 ## See also
 
 - [Host your own plugin store](own-store.md): publish from your own `index.json` instead, without review; users add it as an unofficial repository.
 - [Manifest](../reference/manifest.md): the display fields and `minPlayerVersion`.
-- [Capabilities](../reference/capabilities.md): the wording the store shows for each capability.
+- [Capability scan](../reference/scan.md): the categories the store shows.
 - [Test a plugin](testing.md) and [Command line](../reference/cli.md).
 - The plugin repository's [README](https://github.com/vestrasys/vestra-player-plugins#submit-it-to-the-store), [CONTRIBUTING](https://github.com/vestrasys/vestra-player-plugins/blob/main/CONTRIBUTING.md) (the author's checklist) and [MAINTAINING](https://github.com/vestrasys/vestra-player-plugins/blob/main/MAINTAINING.md) (how the repository works inside).

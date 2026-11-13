@@ -57,7 +57,7 @@ export class LayoutService {
     if (this.#started) await this.read();
   }
   start() {
-    if (this.#started || !this.#runtime.can("ui.mount")) return;
+    if (this.#started) return;
     this.#started = true;
     // A mirror: panels listen through `watch`.
     this.#runtime.on("window.state", () => void this.read(), "events", true);

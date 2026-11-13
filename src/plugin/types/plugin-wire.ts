@@ -36,11 +36,7 @@ import type { SettingsPage } from "./ui-shell.ts";
  * and names the listener in its log), `view(v)` sends one write per property
  * at a time and splits large ones, and `commands.register` waits during
  * activation like `commands.add`. What it leaves to the plugin: the
- * parameters' shape, the value limits, revisions of `request`, retries. The
- * player still checks every capability, so a method needs the capability
- * the player's table gives it (`vestra-plugin check` reads a literal method
- * name and says which one; a method name it cannot read is reported as
- * unchecked).
+ * parameters' shape, the value limits, revisions of `request`, retries.
  *
  * The [Tutorial](../../../docs/tutorial/index.md) shows `bind()` (the
  * default), {@link Player.on} with {@link View.set}, and `plugin.wire`
@@ -61,8 +57,6 @@ import type { SettingsPage } from "./ui-shell.ts";
  * });
  * ```
  *
- * @capability That of each method and event: the player's capability
- * table, as `vestra-plugin check` reports it.
  * @experimental
  * @since 1.7.0
  * @category Plugin
@@ -74,10 +68,8 @@ export interface Wire {
    * @remarks
    * Experimental: the wire protocol is not semver; this member changes with
    * versions. `method` and `params` go to the player as given; the answer is
-   * the player's result, typed by the caller (`T`). The player checks the
-   * capability the method needs and refuses with `capability` when the manifest
-   * does not declare it; its other refusals arrive with their own codes
-   * (`invalid`, `missing`, `stale`…).
+   * the player's result, typed by the caller (`T`). The player's refusals
+   * arrive with their own codes (`invalid`, `missing`, `stale`…).
    *
    * Nothing of the SDK's sits between: no value limits, no `seq` or
    * revision, no retry after a lost reply, no wait during activation. A
@@ -103,18 +95,13 @@ export interface Wire {
    *   `events.subscribe` or `events.unsubscribe` of a {@link HostEvent},
    *   or `events.subscribe` of another event without `why` (a non-empty
    *   list of strings) or `mirror: true`.
-   * @throws `capability` (rejects) The manifest does not declare the
-   *   capability the method needs.
    * @throws `unsupported` (rejects) The player does not know the method.
    * @throws `disabled` (rejects) The plugin is stopping.
-   *
-   * @capability That of the method, from the player's capability table:
-   * `vestra-plugin check` names it for a literal method name.
    *
    * @example Write a panel property without the SDK
    * The plugin's bottom panel shows "1.00×" in its `rate` property, written
    * with the player's own request. The parameters are the protocol's
-   * (`property`, `value`); the player checks `ui.mount` and the value.
+   * (`property`, `value`); the player checks the value.
    * ```ts
    * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
    * await bar.ready;
@@ -135,8 +122,8 @@ export interface Wire {
    * (`events.subscribe`) as for {@link Player.on}: once per name however
    * many listeners, always marked as a listener with where it was added
    * (`why`), never as a copy of the state (`mirror`), so the player keeps
-   * the plugin running while it listens. The event's capability is the
-   * same as for `Player.on` (`events` for most). Any other name is listened
+   * the plugin running while it listens. As for `Player.on`, most of
+   * them arrive only after {@link Player.subscribe}. Any other name is listened
    * to without a subscription: events the player sends unasked
    * (`commands.execute`, `ui.callback`, `ui.closed`), or an event of a newer
    * player that the plugin subscribed to itself with {@link Wire.request}.
@@ -152,10 +139,6 @@ export interface Wire {
    *
    * @throws `invalid` (throws) `event` is not a non-empty string, or
    *   `listener` is not a function.
-   *
-   * @capability That of the event: `events`, or `bindings.manage`,
-   * `commands`, `video.upscaling`, `video.motion` as for {@link Player.on}; none for an
-   * event listened to without a subscription.
    *
    * @example Log each command the player runs for this plugin
    * The listener hears the player's `commands.execute` event, which the
@@ -191,8 +174,6 @@ export interface Wire {
    *
    * @throws `invalid` (throws) `view` is not a window, panel or settings
    *   page of this plugin.
-   *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
    * @example Write a list in rows
    * The sidebar shows a list the plugin keeps itself. The first write sends
@@ -262,7 +243,6 @@ export interface Wire {
  * plugin.onDispose(() => clearInterval(timer));
  * ```
  *
- * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
  * @experimental
  * @since 1.7.0
  * @category Plugin
@@ -292,8 +272,6 @@ export interface WireView {
    * @throws `limit` (rejects) The player refused a value over its limits.
    * @throws `stale` (rejects) A patch's `base` is not what the player
    *   shows.
-   *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
    * @example Show a frame counter
    * A panel shows how many frames the plugin produced, pushed from the
@@ -341,7 +319,6 @@ export interface WireView {
    *   the whole value.
    * @throws `unavailable` (rejects) The view does not show.
    *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    * @player 0.6.0
    *
    * @example Append a row to a long list
@@ -398,7 +375,6 @@ export interface WireView {
  * });
  * ```
  *
- * @capability commands
  * @experimental
  * @since 1.7.0
  * @category Plugin
@@ -422,8 +398,6 @@ export interface WireCommands {
    * @throws `invalid` (throws) `id` is not a non-empty string, or
    *   `declaration` is not an object.
    * @throws `conflict` (throws) A command of this plugin already has the id.
-   *
-   * @capability commands
    *
    * @example Register a command and turn it off later
    * The command starts enabled; once the plugin has nothing to export, it
@@ -543,7 +517,6 @@ export interface WireCommandState {
  * });
  * ```
  *
- * @capability commands
  * @experimental
  * @since 1.7.0
  * @category Plugin
@@ -556,7 +529,6 @@ export interface WireCommand extends Disposable {
    *
    * @throws `invalid` (rejects) The player refused the declaration.
    * @throws `conflict` (rejects) Another command has this menu path.
-   * @throws `capability` (rejects) The manifest does not declare `commands`.
    * @throws `limit` (rejects) Too many commands in this plugin or the
    *   player.
    */
@@ -577,8 +549,6 @@ export interface WireCommand extends Disposable {
    * @throws `invalid` (rejects) The player refused the state.
    * @throws `missing` (rejects) The command is not registered (refused, or
    *   disposed).
-   *
-   * @capability commands
    *
    * @example Check a command after its action
    * The plugin turns its grid on and shows the check mark in the menu once

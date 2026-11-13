@@ -11,10 +11,6 @@ A tool window keeps nothing by itself: closing it destroys the window instance, 
 
 ## Steps
 
-### Declare the capabilities
-
-Add `ui.window` to the manifest's `capabilities`, plus whatever the window's controls do (`playback.control` to seek, `processing.video` for a video filter).
-
 ### Write the window in Slint
 
 Create a `.slint` file under `ui/` whose exported component inherits `Window` (`ui/brightness.slint` in the complete example). Declare an `in` property for each value the plugin writes, an `in-out` property for a value both the plugin and a control change (a slider), and a `callback` for each thing the user does. Take colours, sizes and widgets from `@vestra/theme.slint` and `@vestra/widgets.slint`. For your editor, point the Slint language server's library path `vestra` at `node_modules/@vestra-player/sdk/slint/vestra`.
@@ -37,7 +33,7 @@ Save `open: true` when your command shows the window, and `open: false` in `onCl
 
 ## Complete example
 
-A **Brightness** window under **Video ▸ Brightness…**: a slider from −1 to 1, a value label and a Reset button. It remembers the brightness and whether it was open. The manifest's `capabilities` are `commands`, `ui.window`, `processing.video`, `playback.read` and `events`.
+A **Brightness** window under **Video ▸ Brightness…**: a slider from −1 to 1, a value label and a Reset button. It remembers the brightness and whether it was open.
 
 `ui/brightness.slint`:
 
@@ -100,6 +96,8 @@ function isSaved(value: unknown): value is Saved {
 }
 
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   // Load: read once, synchronously; defaults if there is no valid file.
   const store = plugin.storage.json<Saved>("brightness", {
     defaults: DEFAULTS,

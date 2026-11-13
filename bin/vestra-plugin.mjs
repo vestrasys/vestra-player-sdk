@@ -13,12 +13,8 @@
  * A plugin directory holds manifest.json; the default is the current
  * directory. Works in any project that depends on @vestra-player/sdk.
  *
- *   check   strict type check of the plugin's .ts files and tests/*.ts
- *           (then every use of an API member whose capability manifest.json
- *           does not declare: file:line, member, capability; fails on any;
- *           a plugin.wire.request or event listener whose name the check
- *           cannot read is listed as unchecked, without failing; --json
- *           prints the findings and the unchecked calls as JSON)
+ *   check   the manifest, then a strict type check of the plugin's .ts
+ *           files and tests/*.ts
  *   build   check, then write dist/: .ts → .js with types stripped, other
  *           package files copied, dist/manifest.json with `version`
  *   test    node --test on tests/*.test.{ts,mjs}
@@ -104,9 +100,6 @@ const { manifestProblems } = await import(
 const i18n = await import(pathToFileURL(join(sdkRoot, "dist/i18n.js")).href);
 const i18nTools = await import(
   pathToFileURL(join(sdkRoot, "dist/i18n-tools.js")).href
-);
-const capabilityCheck = await import(
-  pathToFileURL(join(sdkRoot, "dist/capability-check.js")).href
 );
 const SDK = "@vestra-player/sdk";
 
@@ -319,10 +312,10 @@ function checkConfig(target, sources) {
   };
 }
 
-async function check(target, report = null) {
-  const say = report ? () => {} : (line) => console.log(line);
+async function check(target) {
+  const say = (line) => console.log(line);
   for (const hint of target.hints ?? []) say(`${target.name}: hint: ${hint}`);
-  dependencies(target, !!report);
+  dependencies(target);
   const own = (await files(target.directory)).filter(
     (file) => isTypeScript(file) || file.endsWith(".mts"),
   );
@@ -336,48 +329,19 @@ async function check(target, report = null) {
   );
   if (!sources.length) {
     say(`${target.name}: no TypeScript to check`);
-    report?.push({ plugin: target.name, findings: [], unchecked: [] });
     return;
   }
   const tsc = compiler("typescript/lib/tsc.js");
   const scratch = await mkdtemp(join(tmpdir(), "vestra-plugin-check-"));
-  let findings;
-  let unchecked;
   try {
     const config = join(scratch, "tsconfig.json");
     await writeFile(config, JSON.stringify(checkConfig(target, sources)));
-    if (
-      run(process.execPath, [tsc, "-p", config], {
-        stdio: report ? ["ignore", process.stderr, "inherit"] : "inherit",
-      }) !== 0
-    )
+    if (run(process.execPath, [tsc, "-p", config], { stdio: "inherit" }) !== 0)
       fail(`${target.name}: type check failed`);
     say(`${target.name}: type check passed (${sources.length} files)`);
-    ({ findings, unchecked } = await capabilityFindings(target, config));
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }
-  if (report) report.push({ plugin: target.name, findings, unchecked });
-  else {
-    for (const finding of findings)
-      console.error(
-        `${relative(process.cwd(), finding.file) || finding.file}:${finding.line}:${finding.column}: ${finding.message} (request ${finding.method})`,
-      );
-    // Calls whose capability depends on a name the check cannot read
-    // (plugin.wire.request with a computed method): a note, never a failure.
-    for (const call of unchecked)
-      console.log(
-        `${relative(process.cwd(), call.file) || call.file}:${call.line}:${call.column}: unchecked: ${call.message}`,
-      );
-  }
-  if (findings.length) {
-    const missing = [...new Set(findings.map((each) => each.capability))];
-    fail(
-      `${target.name}: ${findings.length} use${findings.length === 1 ? "" : "s"} of undeclared capabilities; add ${missing.map((each) => `"${each}"`).join(", ")} to manifest.json "capabilities" (or stop using those members)`,
-    );
-  }
-  say(`${target.name}: capabilities declared for every API use`);
-  if (report) return;
   for (const line of await forWarnings(target))
     console.log(`${target.name}: warning: ${line}`);
   // Translation warnings never fail the check.
@@ -390,48 +354,6 @@ async function check(target, report = null) {
       console.log(`${target.name}: i18n: ${error.message}`);
     }
   }
-}
-
-/**
- * Uses of API members whose capability the manifest does not declare
- * (`findings`), and calls whose capability depends on a name the check
- * cannot read (`unchecked`: `plugin.wire.request` with a computed method),
- * in the plugin's production files (not tests/), with the type check's
- * compiler options (src/capability-check.ts).
- */
-async function capabilityFindings(target, config) {
-  const ts = await typescript();
-  const parsed = ts.getParsedCommandLineOfConfigFile(
-    config,
-    {},
-    {
-      ...ts.sys,
-      onUnRecoverableConfigFileDiagnostic: (diagnostic) =>
-        fail(
-          `${target.name}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`,
-        ),
-    },
-  );
-  const files = (await sourceFiles(target)).typescript.map((file) =>
-    join(target.directory, file),
-  );
-  if (!parsed || !files.length) return { findings: [], unchecked: [] };
-  const program = ts.createProgram(parsed.fileNames, parsed.options);
-  const capabilities = Array.isArray(target.manifest.capabilities)
-    ? target.manifest.capabilities
-    : [];
-  const { findings, unchecked } = capabilityCheck.checkCapabilities(
-    ts,
-    program,
-    { files, capabilities },
-  );
-  return {
-    findings: findings.map((finding) => ({
-      ...finding,
-      file: resolve(finding.file),
-    })),
-    unchecked: unchecked.map((call) => ({ ...call, file: resolve(call.file) })),
-  };
 }
 
 /** Slint source without its comments (string literals kept as they are). */
@@ -996,7 +918,6 @@ async function scanCommand(args) {
 
 const USAGE = [
   "usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]",
-  "       vestra-plugin check [plugin-dir...] --json",
   "       vestra-plugin scan [plugin-dir...]",
   "       vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...",
   "       vestra-plugin i18n check [plugin-dir...]",
@@ -1079,12 +1000,10 @@ async function main() {
   }
   if (locales.length && subcommand !== "extract")
     fail("--locale applies to i18n extract");
-  const jsonIndex = args.indexOf("--json");
-  const report = jsonIndex >= 0 ? [] : null;
-  if (report) {
-    args.splice(jsonIndex, 1);
-    if (command !== "check") fail("--json applies to check");
-  }
+  if (args.includes("--json"))
+    fail(
+      "--json was removed in SDK 1.9.0 with the capability check it reported (manifest capabilities are gone); check prints its result as text",
+    );
   const flag = option("--version");
   const out = option("--out");
   const directories = args.length ? args : ["."];
@@ -1092,12 +1011,11 @@ async function main() {
     fail("--version applies to a single plugin");
   const failed = [];
   for (const directory of directories) {
-    const reported = report?.length ?? 0;
     try {
       const target = await plugin(directory);
       if (subcommand === "extract") await i18nExtract(target, locales);
       else if (subcommand === "check") await i18nCheck(target);
-      else if (command === "check") await check(target, report);
+      else if (command === "check") await check(target);
       else if (command === "build") await build(target, flag);
       else if (command === "pack") await pack(target, flag, out);
       else await test(target);
@@ -1105,15 +1023,8 @@ async function main() {
       if (!error.expected) throw error;
       console.error(`✖ ${error.message}`);
       failed.push(directory);
-      if (report) {
-        if (report.length === reported)
-          report.push({ findings: [], unchecked: [] });
-        report[reported].error = error.message;
-      }
     }
-    if (report) report[reported] = { directory, ...report[reported] };
   }
-  if (report) console.log(JSON.stringify(report, null, 2));
   if (failed.length) {
     console.error(
       `${subcommand ? `i18n ${subcommand}` : command} failed for: ${failed.join(", ")}`,

@@ -5,7 +5,7 @@
  */
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { join, sep } from "node:path";
-import { API_VERSION, CAPABILITIES, CAPABILITY_INFO } from "./capabilities.ts";
+import { API_VERSION } from "./protocol.ts";
 
 export const MANIFEST_LIMITS = Object.freeze({
   idBytes: 128,
@@ -28,7 +28,6 @@ export const MANIFEST_FIELDS: readonly string[] = [
   "version",
   "apiVersion",
   "entry",
-  "capabilities",
   "name",
   "author",
   "punchline",
@@ -49,6 +48,13 @@ export const validVersion = (value: unknown): value is string =>
   VERSION.test(value) &&
   value.split(".").every((part) => BigInt(part) <= 4294967295n);
 
+/**
+ * Why a manifest with `capabilities` is refused (SDK 1.9.0, player 0.9.0):
+ * the field is gone, and what it switched on is two calls.
+ */
+export const CAPABILITIES_REMOVED =
+  'manifest.json has "capabilities", which SDK 1.9.0 (player 0.9.0) removed: delete the field. What it switched on is now a call, first in activate(): plugin.player.subscribe() for "events", await plugin.player.read() for "playback.read"; everything else needs nothing (the store shows what the code uses, from its scan)';
+
 /** Problems with `manifest` (empty: valid) and hints that do not fail. */
 export function manifestProblems(
   manifest: Record<string, unknown>,
@@ -64,7 +70,8 @@ export function manifestProblems(
   )
     return { problems: ["manifest.json must be an object"], hints };
   for (const key of Object.keys(manifest))
-    if (!MANIFEST_FIELDS.includes(key)) problem(`unknown field "${key}"`);
+    if (key === "capabilities") problem(CAPABILITIES_REMOVED);
+    else if (!MANIFEST_FIELDS.includes(key)) problem(`unknown field "${key}"`);
   const id = manifest.id;
   if (
     typeof id !== "string" ||
@@ -81,25 +88,6 @@ export function manifestProblems(
     problem(
       `apiVersion is ${JSON.stringify(manifest.apiVersion)}; this SDK is ${API_VERSION}`,
     );
-  const capabilities = manifest.capabilities;
-  if (!Array.isArray(capabilities)) problem("capabilities must be an array");
-  else {
-    const unknown = capabilities.filter((c) => !CAPABILITIES.includes(c));
-    if (unknown.length) problem(`unknown capabilities ${unknown.join(", ")}`);
-    if (new Set(capabilities).size !== capabilities.length)
-      problem("capabilities must be unique");
-    // Only a built-in plugin may declare these. Built-in plugins have a
-    // `vestra.` id, which the player refuses for any other package: any
-    // other id is an error, a `vestra.` id a reminder.
-    const builtinOnly = capabilities.filter(
-      (c) => CAPABILITY_INFO[c]?.builtinOnly,
-    );
-    if (builtinOnly.length) {
-      const text = `${builtinOnly.join(", ")}: built-in plugins only (the player refuses any other plugin that declares ${builtinOnly.length === 1 ? "it" : "them"}, and its calls fail with code capability)`;
-      if (typeof id === "string" && /^vestra\./i.test(id)) hints.push(text);
-      else problem(text);
-    }
-  }
   if (typeof manifest.entry !== "string" || !relative(manifest.entry))
     problem("entry must be a relative path inside the package");
   if (manifest.version !== undefined && !validVersion(manifest.version))

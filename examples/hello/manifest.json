@@ -1,1 +1,7 @@
-{ "id": "examples.hello", "version": "0.1.0", "apiVersion": "vestra/1", "entry": "main.ts", "capabilities": ["commands", "ui.osd"] }
+{
+  "id": "examples.hello",
+  "version": "0.1.0",
+  "apiVersion": "vestra/1",
+  "entry": "main.ts",
+  "minPlayerVersion": "0.9.0"
+}

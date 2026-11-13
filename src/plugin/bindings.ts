@@ -192,7 +192,7 @@ const reference = (ref: BindingRef): BindingRef => {
   return { plugin: ref.plugin, command: ref.command };
 };
 
-/** `plugin.bindings` (`bindings.manage`): the table and the user overlay. */
+/** `plugin.bindings`: the table and the user overlay. */
 export const bindingsApi = (scope: ScopeImpl): Bindings => ({
   async list() {
     const table = await scope.runtime.host.bindings.list();
@@ -233,7 +233,7 @@ export const bindingsApi = (scope: ScopeImpl): Bindings => ({
     const watch = scope.runtime.on(
       "bindings.changed",
       () => scope.run(listener),
-      "bindings.manage",
+      null,
     );
     return scope.add({
       dispose: async () => {

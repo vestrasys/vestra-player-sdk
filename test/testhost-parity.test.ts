@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Plugin } from "../src/index.ts";
-import { startPlugin } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 test("a disabled core action rejects with command, like the player's menu", async () => {
   const { host, stop } = await startPlugin(() => {}, {

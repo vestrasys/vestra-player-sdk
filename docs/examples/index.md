@@ -15,7 +15,7 @@ To run one, see [Running an example](#running-an-example) at the end of this pag
 
 The smallest complete plugin, and the README's Quick start: **Tools ▸ Hello** shows an on-screen message.
 
-**You learn:** the manifest and capabilities · a menu command · the on-screen display.
+**You learn:** the manifest · a menu command · the on-screen display.
 
 [Walkthrough](hello.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/hello)
 

@@ -11,15 +11,14 @@ The player has one source. The user, other plugins and yours all change it, so e
 
 ## Steps
 
-### Capabilities
+### Follow the player
 
-```json
-{
-  "capabilities": ["commands", "playback.read", "playback.control", "events"]
-}
+```ts
+plugin.player.subscribe(); // the player's events from now on
+await plugin.player.read(); // the player's state and timeline, read once
 ```
 
-`playback.read` reads the state, `playback.control` changes it, `events` keeps `player.state` current when the change comes from elsewhere (without it, the state only moves after your own calls and `refresh()`), and `commands` gives your actions menu items and keys.
+Call both first in `activate`. `read()` fills `player.state` and the timeline once and keeps the state current after your own actions; `subscribe()` keeps it current when the change comes from elsewhere (without it, the state only moves after your own calls and `refresh()`).
 
 ### Read the state
 
@@ -94,7 +93,7 @@ media.onEnd((ended) =>
 
 ### Behave exactly like the player's own keys
 
-For buttons in your own bar or window, prefer the player's core actions to calling the controls yourself. `plugin.host.run` (capability `commands`) runs them with the player's checks, accumulation of repeated presses and on-screen text:
+For buttons in your own bar or window, prefer the player's core actions to calling the controls yourself. `plugin.host.run` runs them with the player's checks, accumulation of repeated presses and on-screen text:
 
 ```ts
 declare const bar: Panel;
@@ -136,12 +135,14 @@ A second provider is refused with `conflict` (`sequence-taken`). During activati
 
 ## Complete example
 
-A plugin that shows the position on the OSD, offers a Pause item that greys out by itself, and a "Back to the Start" item that does nothing when the user changed the source meanwhile (`commands`, `ui.osd`, `playback.read`, `playback.control`, `events`):
+A plugin that shows the position on the OSD, offers a Pause item that greys out by itself, and a "Back to the Start" item that does nothing when the user changed the source meanwhile:
 
 ```ts
 import type { Plugin, PluginError } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   // A live line on the OSD while something plays.
   const info = plugin.osd.panel();
   plugin.player.onChange((state) => {

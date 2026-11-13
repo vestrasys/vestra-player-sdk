@@ -17,10 +17,10 @@ import type { Plugin, PluginError, ResolvedStream } from "../src/index.ts";
 import {
   LIST_SEPARATORS,
   LOCALES,
-  startPlugin,
   TEXT_LIMITS,
   TestHost,
 } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import { parsePo, renderText, Catalog, textKey } from "../src/i18n.ts";
 import { error, list, text } from "../src/plugin/language.ts";
 
@@ -430,7 +430,6 @@ test("extract finds text(), error() and $vestraText sources; a spread field is r
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
     }),
   );
   writeFileSync(join(dir, "package.json"), '{"type":"module"}');

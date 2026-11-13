@@ -11,7 +11,7 @@ Thank you for helping. Bug reports, documentation fixes, new or better examples 
 
 ## Changes to the public API: discuss first
 
-The SDK describes the plugin API `vestra/1`, which the player implements. A new or changed type, method, capability or error code needs a matching change in the player, so **open an issue with the "API proposal" template before you write code**. Pull requests that change the public API without an agreed proposal will be closed.
+The SDK describes the plugin API `vestra/1`, which the player implements. A new or changed type, method, event or error code needs a matching change in the player, so **open an issue with the "API proposal" template before you write code**. Pull requests that change the public API without an agreed proposal will be closed.
 
 Documentation, examples, tests, the test host's fidelity and the `vestra-plugin` tool can be changed directly.
 

@@ -3,16 +3,10 @@
 // model of the player.
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  CAPABILITY_INFO,
-  HostError,
-  startPlugin,
-  TestHost,
-} from "../src/plugin/testing.ts";
+import { HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import type { MotionMode, MotionState } from "../src/plugin/types.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
-import { hostMethod } from "../src/capability-rules.ts";
 
 async function started(capabilities: string[], host = new TestHost()) {
   let plugin!: Plugin;
@@ -26,55 +20,6 @@ async function started(capabilities: string[], host = new TestHost()) {
 }
 const code = (expected: string) => (error: HostError) =>
   error.code === expected;
-
-test("video.motion: the player's table entry; not risky, live", () => {
-  const entry = HOST_CAPABILITIES.capabilities.find(
-    (capability) => capability.name === "video.motion",
-  )!;
-  assert.deepEqual(entry, {
-    label: "Smooth motion with the GPU's frame-rate converter",
-    methods: [
-      { name: "video.motion.state", needs: "video.motion" },
-      { name: "video.motion.set", needs: "video.motion" },
-    ],
-    name: "video.motion",
-    requires: [],
-    residency: "live",
-    risky: false,
-    builtinOnly: false,
-  });
-  assert.deepEqual(hostMethod("video.motion.set"), {
-    name: "video.motion.set",
-    needs: "video.motion",
-  });
-  assert.deepEqual(CAPABILITY_INFO["video.motion"], {
-    apis: ["VideoMotion.state", "VideoMotion.set", "VideoMotion.onChange"],
-    requires: [],
-    label: "Smooth motion with the GPU's frame-rate converter",
-    risky: false,
-    builtinOnly: false,
-  });
-  // The event needs video.motion, not events.
-  const needs = hostMethod("events.subscribe")?.needs as {
-    cases: Record<string, string | null>;
-  };
-  assert.equal(needs.cases["video.motion.changed"], "video.motion");
-});
-
-test("state and set need video.motion and send nothing without it", async () => {
-  const { plugin, host, stop } = await started([]);
-  await assert.rejects(plugin.video.motion("amd").state(), code("capability"));
-  await assert.rejects(
-    plugin.video.motion("amd").set("double"),
-    code("capability"),
-  );
-  assert.throws(
-    () => plugin.video.motion("amd").onChange(() => {}),
-    code("capability"),
-  );
-  assert.ok(!host.calls.some((call) => call.method.startsWith("video.motion")));
-  await stop();
-});
 
 test("the default model: both modes work, off until asked; set applies", async () => {
   const { plugin, host, stop } = await started(["video.motion"]);

@@ -83,7 +83,6 @@ import type { Panel, Window } from "./ui-layout.ts";
  * created it; disposing the scope (or stopping the plugin) disposes them in
  * reverse creation order, so a plugin rarely calls `dispose` itself.
  *
- * @capability None of its own: that of the handle.
  * @since 1.0.0
  * @category Plugin
  */
@@ -92,7 +91,6 @@ export interface Disposable {
    * Release the resource. Resolves once the player confirmed the release
    * (or immediately for purely local resources). Never rejects.
    *
-   * @capability None of its own: that of the handle.
    * @throws Never.
    *
    * @example Remove a command when its feature is turned off
@@ -122,7 +120,7 @@ export interface Disposable {
  * | code | meaning |
  * | --- | --- |
  * | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link Conditional}. |
- * | `capability` | The manifest does not declare the capability the call needs. |
+ * | `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`) and this plugin is not one. |
  * | `invalid` | A bad argument (out of range, malformed, unknown id). |
  * | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
  * | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
@@ -202,7 +200,6 @@ export type PluginError = Error & {
  * `child.dispose()` releases its handles and deeper children in reverse
  * creation order.
  *
- * Capabilities: each module documents the manifest capability it needs.
  * Reading {@link Scope.window}, {@link Scope.app}, {@link Scope.appearance}
  * `.theme`, {@link Scope.ui}, {@link Scope.tools}, {@link Scope.storage} and
  * {@link Scope.system} needs none.
@@ -237,7 +234,6 @@ export type PluginError = Error & {
  * go: dispose the child and everything it created is released, while the
  * rest of the plugin keeps running.
  *
- * @capability That of each module (see the modules).
  * @since 1.0.0
  * @category Plugin
  */
@@ -250,22 +246,20 @@ export interface Scope extends Disposable {
    * while the plugin is stopped. See {@link When}.
    */
   readonly when: When;
-  /** Tool windows from `.slint` files (`ui.window`). */
+  /** Tool windows from `.slint` files. */
   readonly windows: Windows;
-  /** Docked panels: bottom bar, sidebar and backdrop (`ui.mount`). */
+  /** Docked panels: bottom bar, sidebar and backdrop. */
   readonly panels: Panels;
-  /** Native file dialogs and confirmation alerts (`ui.dialog`). */
+  /** Native file dialogs and confirmation alerts. */
   readonly dialogs: Dialogs;
-  /** Playback state and controls (`playback.read`, `events`, `playback.control`). */
+  /** Playback state and controls. */
   readonly player: Player;
   /**
    * Video processing: this plugin's filter chain, the display layer, the
    * GPU render options, this plugin's shaders, the GPU's video upscaler and
-   * motion smoothing. The first four need `processing.video` and
-   * `playback.read`; the filter chain also needs `events` (without it the
-   * SDK never sees the media become ready and the chain stays `waiting`).
-   * The upscaler needs `video.upscaling` only, motion smoothing
-   * `video.motion` only.
+   * motion smoothing. The filter chain follows the player: call
+   * `plugin.player.subscribe()` and `plugin.player.read()` first (without `subscribe()` the SDK never sees
+   * the media become ready and the chain stays `waiting`).
    */
   readonly video: {
     /**
@@ -277,38 +271,31 @@ export interface Scope extends Disposable {
      */
     filter(id: string): VideoFilter;
     /**
-     * The display layer (needs `processing.video`). The first plugin to call
+     * The display layer. The first plugin to call
      * it owns the layer; another plugin's view fails with `conflict` until the
      * owner disposes or stops.
      *
-     * @throws `capability` (throws) The manifest does not declare
-     *   `processing.video`.
      * @throws `Error` without a code (throws) A second call in the same plugin
      *   while the first view is not disposed.
      */
     view(): VideoView;
     /**
-     * The GPU renderer's options (needs `processing.video`), owned like the
+     * The GPU renderer's options, owned like the
      * display layer. Under software rendering the handle is `failed` with
      * `unsupported` after the player's first answer, and `onError` hears it.
      *
-     * @throws `capability` (throws) The manifest does not declare
-     *   `processing.video`.
      * @throws `Error` without a code (throws) A second call in the same plugin
      *   while the first handle is not disposed.
      */
     render(): RenderOptions;
     /**
-     * This plugin's own GPU shaders named `id` (default `"shaders"`; needs
-     * `processing.video`). Unlike {@link Scope.video | render()}, every plugin
+     * This plugin's own GPU shaders named `id` (default `"shaders"`). Unlike {@link Scope.video | render()}, every plugin
      * may hold shader handles at the same time; the player joins their lists.
      * Nothing is sent until the first `set()`.
      *
      * @param id - Local name of the handle, 1–128 bytes, unique within
      *   the plugin.
      * @returns A {@link VideoShaders} owned by this scope.
-     * @throws `capability` (throws) The manifest does not declare
-     *   `processing.video`.
      * @throws `invalid` (throws) `id` is empty, longer than 128 bytes or
      *   has control characters.
      * @throws `Error` without a code (throws) A second handle with the
@@ -316,14 +303,13 @@ export interface Scope extends Disposable {
      */
     shaders(id?: string): VideoShaders;
     /**
-     * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on Windows;
-     * needs `video.upscaling`): whether it works here and why not, and turning
+     * The GPU's video upscaler (NVIDIA RTX Video Super Resolution on
+     * Windows): whether it works here and why not, and turning
      * it on or off for this plugin.
      */
     readonly upscaling: VideoUpscaling;
     /**
-     * Motion smoothing with one GPU vendor's frame-rate converter (needs
-     * `video.motion`): whether it works here and why not, and this
+     * Motion smoothing with one GPU vendor's frame-rate converter: whether it works here and why not, and this
      * plugin's mode. `amd` is AMD AMF's on Windows; `nvidia` is reserved
      * (every mode reports `engine` until a player has it).
      *
@@ -336,9 +322,8 @@ export interface Scope extends Disposable {
     motion(engine: MotionEngine): VideoMotion;
   };
   /**
-   * Audio processing: this plugin's filter chain and delay
-   * (`processing.audio`, `playback.read` and `events`, as for
-   * {@link VideoFilter}).
+   * Audio processing: this plugin's filter chain and delay (it follows the
+   * player as {@link VideoFilter} does).
    */
   readonly audio: {
     /**
@@ -350,15 +335,15 @@ export interface Scope extends Disposable {
      */
     filter(id: string): AudioFilter;
   };
-  /** Subtitle tracks, uploads and style (`subtitles.read`, `subtitles.control`). */
+  /** Subtitle tracks, uploads and style. */
   readonly subtitles: Subtitles;
-  /** Frozen snapshots and offline exports (`media.read`, `media.control`). */
+  /** Frozen snapshots and offline exports. */
   readonly media: MediaCapture;
-  /** Page-URL to stream-URL resolvers (`source.resolve`). */
+  /** Page-URL to stream-URL resolvers. */
   readonly resolvers: Resolvers;
-  /** The installed plugins; validation, installs (`plugins.manage` for changes). */
+  /** The installed plugins; validation, installs. */
   readonly packages: Packages;
-  /** On-screen messages over the video (`ui.osd`). */
+  /** On-screen messages over the video. */
   readonly osd: Osd;
   /** The command palette's lead row (`palette.lead`, built-in plugins only). */
   readonly palette: Palette;
@@ -366,7 +351,7 @@ export interface Scope extends Disposable {
   readonly host: Host;
   /** The system clipboard (`clipboard`). */
   readonly clipboard: Clipboard;
-  /** Keeping the computer awake while playing (`playback.control`). */
+  /** Keeping the computer awake while playing. */
   readonly power: Power;
   /** ffmpeg / ffprobe, run by this plugin's process. */
   readonly tools: Tools;
@@ -386,21 +371,21 @@ export interface Scope extends Disposable {
   readonly window: MainWindow;
   /** The player's version and components, and the system it runs on. */
   readonly app: App;
-  /** GPU or software rendering: read the choice, change it (`rendering.manage`). */
+  /** GPU or software rendering: read the choice, change it. */
   readonly rendering: Rendering;
-  /** Every command's bindings and the user's overrides (`bindings.manage`). */
+  /** Every command's bindings and the user's overrides. */
   readonly bindings: Bindings;
   /** Runtime images for Slint `image` properties. */
   readonly ui: Ui;
   /** Marks on the seek bar, merged from every plugin's layer. */
   readonly timeline: Timeline;
-  /** Files dropped on the video area, by extension (`ui.drop`). */
+  /** Files dropped on the video area, by extension. */
   readonly drops: Drops;
   /** The player's palette and the saved interface language. */
   readonly appearance: Appearance;
   /** The interface language of this run (read-only). */
   readonly i18n: I18n;
-  /** Pages in the player's options window (`ui.settings`). */
+  /** Pages in the player's options window. */
   readonly settings: Settings;
   /**
    * Direct messages to the player: requests by method name, raw events, direct
@@ -415,8 +400,6 @@ export interface Scope extends Disposable {
   /**
    * A child scope; disposing it releases only what was created through it.
    * The child is itself owned by this scope.
-   *
-   * @capability None.
    *
    * @example Tie a temporary window and its timer to one feature
    * A "Live stats" feature opens a window and starts a timer; turning it off
@@ -453,8 +436,6 @@ export interface Scope extends Disposable {
    * @param item - Any {@link Disposable}, for example a handle created
    *   through another scope.
    * @returns `item` itself, for chaining.
-   *
-   * @capability None.
    *
    * @example Dispose a handle from another scope together with this one
    * A filter made through the root scope is withdrawn when a child feature
@@ -509,7 +490,6 @@ export interface Scope extends Disposable {
    * `DisposeInfo` as its first argument: wrap it (`() => controller.abort()`)
    * when that matters.
    *
-   * @capability None.
    * @since 1.0.0
    */
   onDispose(
@@ -537,7 +517,6 @@ export interface Scope extends Disposable {
    * });
    * ```
    *
-   * @capability None.
    * @since 1.0.0
    */
   onError(listener: (error: PluginError) => void): Disposable;
@@ -548,8 +527,6 @@ export interface Scope extends Disposable {
    * changing state from your own timers or between awaits of a long task.
    *
    * Several calls within one microtask are merged into one pass.
-   *
-   * @capability None.
    *
    * @example Show progress from a long task between awaits
    * A progress label moves while a long download runs, not only when it
@@ -617,8 +594,6 @@ export interface Scope extends Disposable {
    * @throws `invalid` (throws) `initial` is not a plain object (`null`, an
    *   array, a class instance).
    *
-   * @capability None.
-   *
    * @example Show a check's answer without a manual update
    * A panel shows whether the current file has video once an asynchronous
    * check answers. The answer is written to a tracked field; only the
@@ -670,7 +645,7 @@ export interface Scope extends Disposable {
  * Tools ▸ Say hello, or Ctrl+H, shows "Hello from" and the plugin's id.
  * The player imports `main.ts`, calls its default export with the
  * `Plugin` object, and keeps the registrations made during activation;
- * the manifest declares the capabilities `commands` and `ui.osd`.
+ * the manifest says only who the plugin is.
  * ```ts
  * import type { Plugin } from "@vestra-player/sdk";
  *
@@ -689,7 +664,6 @@ export interface Scope extends Disposable {
  * the modules of {@link Scope}, it carries the plugin's `id` and its
  * `dataDirectory`.
  *
- * @capability That of each module (see the modules).
  * @see [Tutorial](../../../docs/tutorial/index.md)
  * @since 1.0.0
  * @category Plugin
@@ -703,7 +677,7 @@ export interface Plugin extends Scope {
    * Each installation has its own directory: it is kept across restarts,
    * disabling and upgrades, and a reinstall of the same id from a different
    * source gets a new, empty one. It is deleted only by
-   * `packages.uninstall(id, { removeData: true })`. No capability.
+   * `packages.uninstall(id, { removeData: true })`.
    *
    * The path's format is not part of the API: do not derive another
    * plugin's directory from it (a plugin manager reads
@@ -727,7 +701,7 @@ export interface Plugin extends Scope {
  * - `quit`: the player quits (or restarts after a lost GPU device). Every
  *   plugin is stopped at the same time, with 1 s in all (300 ms after a lost
  *   device).
- * - `disable`: the user, or a plugin with `plugins.manage`, switched the
+ * - `disable`: the user, or a plugin that manages plugins, switched the
  *   plugin off. Its session storage is cleared.
  * - `uninstall`: the user uninstalls it.
  * - `reload`: it is reloaded (from the plugin manager, or a development
@@ -851,9 +825,9 @@ export interface WindowState {
 }
 
 /**
- * The player's main window. Reading needs no capability; changes need `window.control`.
+ * The player's main window: read it, change it.
  *
- * With `events`, `state` follows the window from the first read or
+ * After `plugin.player.subscribe()`, `state` follows the window from the first read or
  * `onChange`; without it, it updates only at start and after this plugin's
  * `setVideoArea`.
  *
@@ -880,12 +854,9 @@ export interface WindowState {
  *
  * @remarks
  * `plugin.window` is the player's main window: its size, whether it is
- * maximized or fullscreen, picture-in-picture and the video area. Reading it needs no capability;
- * changing it needs `window.control`. Changes that last only while the
+ * maximized or fullscreen, picture-in-picture and the video area. Changes that last only while the
  * plugin runs (always on top, pointer auto-hide) revert when it stops.
  *
- * @capability None to read; window.control to change; events to follow
- * outside changes.
  * @since 1.0.0
  * @category Plugin
  */
@@ -893,14 +864,12 @@ export interface MainWindow {
   /** Latest state; zero video area without a native window. */
   readonly state: WindowState;
   /**
-   * The window state changed (needs `events` for outside changes).
-   *
-   * @capability events (for outside changes)
+   * The window state changed (outside changes after `plugin.player.subscribe()`).
    *
    * @example Fit a panel to fullscreen
    * The plugin's panel uses larger text while the player is fullscreen. The
    * listener runs after the SDK updated `state` from the player's events
-   * (with `events`; without it only after this plugin's own changes).
+   * (after `plugin.player.subscribe()`; without it only after this plugin's own changes).
    * ```ts
    * declare const bar: Panel;
    * // ---cut---
@@ -921,11 +890,8 @@ export interface MainWindow {
    * The visible area excludes the menu bar and Dock on macOS; on Windows it
    * is the whole display. `unavailable` without a user interface too.
    *
-   * @capability window.control
    * @throws `unavailable` (rejects) Fullscreen, or no user interface.
    * @throws `invalid` (rejects) A size outside 1–16384 logical points.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `window.control`.
    *
    * @example Make the video area 1280×720 points
    * The window resizes so that the video column is 1280×720 logical points,
@@ -950,11 +916,8 @@ export interface MainWindow {
    * Float the player's windows above other applications. Newest call wins; reverts when this plugin stops.
    * `unavailable` without a user interface.
    *
-   * @capability window.control
    * @throws `unavailable` (rejects) No user interface.
    * @throws `invalid` (rejects) `onTop` is not a boolean.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `window.control`.
    *
    * @example Keep the player above other windows
    * The player's windows (tool windows too) float above other applications
@@ -981,11 +944,8 @@ export interface MainWindow {
    * playing, in a window too (not only fullscreen). Newest call wins;
    * reverts to `"fullscreen"` when this plugin stops.
    *
-   * @capability window.control
    * @throws `invalid` (rejects) A mode other than `"fullscreen"` or
    *   `"playing"`.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `window.control`.
    *
    * @example Hide the pointer over playing video in a window too
    * The pointer disappears after 3 idle seconds over playing video, not only
@@ -1021,15 +981,12 @@ export interface MainWindow {
    *   await plugin.window.setPictureInPicture(!plugin.window.state.pictureInPicture.active);
    * ```
    *
-   * @capability window.control
    * @throws `unsupported` (rejects) The system has no picture-in-picture
    *   (`supported` is false).
    * @throws `unavailable` (rejects) No video, or no user interface.
    * @throws `invalid` (rejects) `on` is not a boolean.
    * @throws `busy` (rejects) The previous call is still switching.
    * @throws `failed` (rejects) The system refused.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `window.control`.
    * @since 1.0.0
    */
   setPictureInPicture(on: boolean): Promise<void>;
@@ -1063,8 +1020,7 @@ export interface AppInfo {
 }
 
 /**
- * `plugin.app`: the fixed facts plus the system, read on request. No
- * capability.
+ * `plugin.app`: the fixed facts plus the system, read on request.
  *
  * @example Describe the player and the system for a bug report
  * The plugin builds a line such as "Vestra 0.5.10 on macOS 26.2" to copy
@@ -1083,7 +1039,6 @@ export interface AppInfo {
  * the displays at each call; the operating system's name and version are
  * worked out once, at the first call, and reused.
  *
- * @capability None.
  * @since 1.0.0
  * @category Plugin
  */
@@ -1091,9 +1046,8 @@ export interface App extends AppInfo {
   /**
    * The operating system, the displays and the renderer, read when called
    * (displays come and go; the renderer can fall back from GPU to software
-   * once). No capability. CPU and memory: Node's `os` module.
+   * once). CPU and memory: Node's `os` module.
    *
-   * @capability None.
    * @throws `busy` (rejects) The player could not start the request (no
    *   thread available).
    *
@@ -1156,7 +1110,7 @@ export interface SystemInfo {
    * The plugin adds its HDR command only when the player renders on the GPU,
    * instead of creating the render options just to find out from a failed
    * status. `system()` asks the player, which reports the renderer drawing at
-   * that moment; no capability is needed to ask.
+   * that moment.
    * ```ts
    * const { rendering } = await plugin.app.system();
    * if (rendering === "gpu") {
@@ -1184,8 +1138,8 @@ export interface SystemInfo {
    * @example Say why the video is drawn in software
    * An About page explains a software renderer with the player's own words,
    * for example that the graphics driver is on the player's denylist.
-   * `system()` reports the renderer and its reason together, with no
-   * capability; the message is English text that may name the adapter and
+   * `system()` reports the renderer and its reason together; the message is
+   * English text that may name the adapter and
    * the driver version.
    * ```ts
    * const { rendering, renderingReason } = await plugin.app.system();

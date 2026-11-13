@@ -3,7 +3,8 @@
 // of the player's approval; and the lead's texts counted as shown.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { COMMAND_RUN_LIMITS } from "../src/player-runtime.ts";
 import { text } from "../src/plugin/language.ts";

@@ -1,4 +1,4 @@
-/** Package validation, install and uninstall (`plugins.manage`). */
+/** Package validation, install and uninstall. */
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type {
@@ -220,7 +220,6 @@ const info = (plugin: WirePlugin): PluginInfo =>
     origin: plugin.origin,
     state: plugin.state,
     error: plugin.error,
-    capabilities: [...plugin.capabilities],
     directory: plugin.directory,
     builtin: plugin.builtin === true,
     source: plugin.source ? Object.freeze({ ...plugin.source }) : null,

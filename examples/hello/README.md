@@ -4,9 +4,9 @@ The [Quick start](https://github.com/vestrasys/vestra-player-sdk#quick-start), r
 
 ![Hello running in Vestra Player](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `ui.osd` | `commands.add`, `osd.show`; tests with `startPlugin` |
+| — | `commands.add`, `osd.show`; tests with `startPlugin` |
 
 ## Run it
 

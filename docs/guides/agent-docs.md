@@ -30,7 +30,7 @@ before writing code.
 
 - `/Guides/<group>/<page>` is a page of this site: `/Guides/Guides/Test a plugin`. The page's file name works too, with or without `.md` (`/Guides/Guides/testing`), and so does a page's old title. The Tutorial is one page, `/Guides/Tutorial`.
 - `/API/<category>/<symbol>` is a declaration of `@vestra-player/sdk`, `@vestra-player/sdk/testing` or `@vestra-player/sdk/docs`, with its import line: `/API/Media/Snapshot`. `/API/Testing` holds the test host, `/API/Docs` this tree's own functions.
-- `/API/<category>/<symbol>/<member>` is one member with its signature, parameters, return value, errors, capability, player version and examples: `/API/Media/Snapshot/dispose`. The SDK types a signature names are linked below it.
+- `/API/<category>/<symbol>/<member>` is one member with its signature, parameters, return value, errors, player version and examples: `/API/Media/Snapshot/dispose`. The SDK types a signature names are linked below it.
 - Case, spaces and punctuation do not matter, the leading `/` is optional, and `.` works like `/`.
 - A name alone finds its node, even when it is not at the level asked: `TestHost`, `TestHost.settle`, `plugin.player`, `/API/Snapshot`. A declaration wins over a guide page of a similar name; one segment that leads nowhere (a wrong category) is left out. When several nodes fit equally well, the answer lists them instead of guessing.
 - `#heading` after a path opens the page of a long answer that has that section: `/Guides/Reference/Test host#acting-like-the-user`.

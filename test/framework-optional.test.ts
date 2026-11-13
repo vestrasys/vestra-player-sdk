@@ -9,7 +9,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { ScopeImpl } from "../src/plugin/scope.ts";
 import type { Json } from "../src/wire.ts";
 import type {
@@ -21,7 +22,6 @@ import type {
 } from "../src/plugin/types.ts";
 import type { HostEvent as WireEvent } from "../src/wire.ts";
 import { EVENT_NEEDS } from "../src/plugin/player/events.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
 
 /** A package with one panel/window file holding `rows`, `total` and `label`. */
 function packageWith(capabilities: string[] = ["ui.mount", "ui.window"]) {
@@ -307,14 +307,16 @@ test("without events nothing subscribes to the player's state", async () => {
   }
 });
 
-test("with events the copy follows from the start, as in 1.6.21: a late first read is current", async () => {
+test("with subscribe() first in activate the copy follows from the start: a late first read is current", async () => {
   for (const capabilities of [["events"], ["events", "playback.read"]]) {
     const { plugin, host, stop } = await startPlugin(() => {}, {
       capabilities,
     });
     try {
-      // Subscribed (a mirror) before the start-up read.
-      assert.deepEqual(host.calls[0]?.method, "events.subscribe");
+      // The window's start-up read, then subscribed (a mirror) before the
+      // player's read (1.9.0: the calls run after the window's read).
+      assert.deepEqual(host.calls[0]?.method, "window.state");
+      assert.deepEqual(host.calls[1]?.method, "events.subscribe");
       assert.deepEqual(host.sent("events.subscribe"), [
         { event: "source.state", mirror: true },
       ]);
@@ -527,21 +529,21 @@ test("plugin.state: a write from an onChange listener re-runs the readers; plain
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
-test("HostEvent is the wire's list, and each event needs what the player checks", () => {
+test("HostEvent is the wire's list, and the events that wait for subscribe() are the ones `events` covered", () => {
   const same: Same<HostEvent, WireEvent> = true;
   const payload: Same<EventPayload<"commands.keys">["revision"], number> = true;
   assert.ok(same && payload);
-  const subscribe = HOST_CAPABILITIES.capabilities
-    .flatMap((c) => c.methods)
-    .find((m) => m.name === "events.subscribe")!;
-  const needs = subscribe.needs as {
-    cases: Record<string, string | null>;
-    otherwise: string;
-  };
-  for (const [event, need] of Object.entries(EVENT_NEEDS))
-    assert.equal(
-      need,
-      event in needs.cases ? needs.cases[event] : needs.otherwise,
-      event,
-    );
+  assert.deepEqual(
+    Object.entries(EVENT_NEEDS)
+      .filter(([, need]) => need === "events")
+      .map(([event]) => event),
+    [
+      "source.state",
+      "playback.backend",
+      "window.state",
+      "timeline.changed",
+      "appearance.changed",
+      "resolvers.fileTypes",
+    ],
+  );
 });

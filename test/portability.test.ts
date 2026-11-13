@@ -5,7 +5,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import {
   executableNames,
@@ -69,10 +70,7 @@ test("system.* are player requests with absolute, present paths", async () => {
   await stop();
 });
 
-test("secrets need the capability and are bounded", async () => {
-  const without = await started([]);
-  await assert.rejects(without.plugin.secrets.get("key"), code("capability"));
-  await without.stop();
+test("secrets are bounded", async () => {
   const { plugin, host, stop } = await started(["secrets"]);
   assert.equal(await plugin.secrets.get("opensubtitles-api-key"), null);
   await plugin.secrets.set("opensubtitles-api-key", "密钥 1");

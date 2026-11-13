@@ -344,7 +344,7 @@ A component's public functions are called from your own Slint code, through an e
 
 `@vestra/markdown.slint` shows a document made by {@link "@vestra-player/sdk"!Ui.markdown | plugin.ui.markdown}: give `blocks` its value. Links report `link-clicked(url)`, resolved against the document's base; the plugin decides what to open (usually {@link "@vestra-player/sdk"!System | plugin.system}). `code-copy: true` adds a Copy button to code blocks that reports `copy-code(code)`; the plugin copies it ({@link "@vestra-player/sdk"!Clipboard | plugin.clipboard}).
 
-**Selectable text**: `selectable: true` on `MarkdownView` or `MarkdownBlocks` lets the user select and copy text, one block at a time, with a right-click menu of **Copy** and **Select All** (and **Copy Link** in a block with one link). A block without links then shows its plain text; a block with links keeps its styles and clickable links. Code blocks are always selectable. Copying needs no capability.
+**Selectable text**: `selectable: true` on `MarkdownView` or `MarkdownBlocks` lets the user select and copy text, one block at a time, with a right-click menu of **Copy** and **Select All** (and **Copy Link** in a block with one link). A block without links then shows its plain text; a block with links keeps its styles and clickable links. Code blocks are always selectable.
 
 `MarkdownBlock` has two fields a plugin may read: `plain`, the block's text without styles (each link followed by its address, `text (url)`), and `links`, the addresses of its links in order.
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { createPlugin } from "../src/plugin/index.ts";
 
@@ -92,11 +93,7 @@ test("plugin.app comes from the handshake; without one it is unknown", async () 
   assert.equal(plugin.scope().app.components.slint, "1.18.1");
   assert.ok(Object.isFrozen(plugin.app));
   await stop();
-  const bare = await createPlugin(
-    new TestHost(),
-    { id: "x", capabilities: [] },
-    process.cwd(),
-  );
+  const bare = await createPlugin(new TestHost(), { id: "x" }, process.cwd());
   assert.deepEqual(bare.plugin.app, {
     version: "0.0.0",
     build: null,
@@ -250,19 +247,16 @@ test("bindings: list, override, unbind, reset; press follows the overlay", async
   await stop();
 });
 
-test("bindings.list leaves out panel commands of a plugin without ui.mount (player 0.8.0)", async () => {
+test("bindings.list lists panel commands too: no manifest says whether a plugin mounts a panel (1.9.0)", async () => {
   const activate = (p: Plugin) => {
     p.commands.add({ id: "busy", title: "Busy", focus: "panel", run() {} });
     p.commands.add({ id: "ask", title: "Ask", run() {} });
   };
-  const listed = async (capabilities: string[]) => {
+  const listed = async () => {
     const host = new TestHost();
-    // A stored binding of the hidden command: declared, so no orphan.
+    // A stored binding of the panel command: declared, so no orphan.
     host.bindings.overlay.set("test.plugin/busy", ["Ctrl+K"]);
-    const { plugin, stop } = await startPlugin(activate, {
-      capabilities: ["commands", "bindings.manage", ...capabilities],
-      host,
-    });
+    const { plugin, stop } = await startPlugin(activate, { host });
     const list = await plugin.bindings.list();
     // Still declared: the user's binding can be set.
     await plugin.bindings.set({ plugin: "test.plugin", command: "busy" }, [
@@ -277,11 +271,7 @@ test("bindings.list leaves out panel commands of a plugin without ui.mount (play
       orphans: list.orphans,
     };
   };
-  assert.deepEqual(await listed([]), { mine: ["ask"], orphans: [] });
-  assert.deepEqual(await listed(["ui.mount"]), {
-    mine: ["ask", "busy"],
-    orphans: [],
-  });
+  assert.deepEqual(await listed(), { mine: ["ask", "busy"], orphans: [] });
 });
 
 test("packages: a built-in can be neither disabled nor uninstalled", async () => {
@@ -293,7 +283,7 @@ test("packages: a built-in can be neither disabled nor uninstalled", async () =>
       origin: "installed",
       state: "running",
       error: null,
-      capabilities: [],
+
       directory: "/install/plugins/vestra.audio",
       builtin: true,
       source: { kind: "bundled" },

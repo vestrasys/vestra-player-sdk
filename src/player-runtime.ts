@@ -15,13 +15,7 @@ export type {
 } from "./plugin/index.ts";
 export { HostError } from "./wire.ts";
 export type { Json, Transport } from "./wire.ts";
-export {
-  API_VERSION,
-  CAPABILITIES,
-  CAPABILITY_INFO,
-  MESSAGE_LIMIT,
-} from "./capabilities.ts";
-export { HOST_CAPABILITIES } from "./host-capabilities.ts";
+export { API_VERSION, MESSAGE_LIMIT } from "./protocol.ts";
 export {
   BAR_BUTTON_ICONS,
   BAR_BUTTON_LIMITS,

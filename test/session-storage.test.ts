@@ -5,8 +5,8 @@ import test from "node:test";
 import {
   MESSAGE_LIMIT,
   SESSION_STORAGE_LIMITS,
-  startPlugin,
 } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { PluginError } from "../src/plugin/index.ts";
 
 const code = (expected: string) => (error: unknown) =>

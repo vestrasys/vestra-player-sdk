@@ -106,6 +106,10 @@
   "calls": {
     "start": [
       {
+        "method": "window.state",
+        "params": {}
+      },
+      {
         "method": "events.subscribe",
         "params": {
           "event": "source.state",
@@ -114,10 +118,6 @@
       },
       {
         "method": "source.state",
-        "params": {}
-      },
-      {
-        "method": "window.state",
         "params": {}
       },
       {

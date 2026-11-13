@@ -3,15 +3,9 @@
 // filter label ownership, observers, and TestHost's model of them.
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  CAPABILITY_INFO,
-  startPlugin,
-  TestHost,
-} from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { MpvValue, Plugin, PluginError } from "../src/plugin/index.ts";
-import { hostMethod } from "../src/capability-rules.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
-import { CAPABILITIES } from "../src/player-runtime.ts";
 import {
   MPV_LIMITS,
   MPV_RULES,
@@ -35,64 +29,6 @@ async function started(
 }
 const code = (expected: string, message?: RegExp) => (error: PluginError) =>
   error.code === expected && (!message || message.test(error.message));
-
-test("mpv is one risky capability of its own: the table's row, its five methods and CAPABILITY_INFO", () => {
-  // The row as the player generates it: the last one of its table.
-  assert.deepEqual(HOST_CAPABILITIES.capabilities.at(-1), {
-    builtinOnly: false,
-    label:
-      "Control the playback engine (mpv) directly: send its commands and change its options",
-    methods: [
-      { name: "mpv.command", needs: "mpv" },
-      { name: "mpv.get", needs: "mpv" },
-      { name: "mpv.set", needs: "mpv" },
-      { name: "mpv.observe", needs: "mpv" },
-      { name: "mpv.unobserve", needs: "mpv" },
-    ],
-    name: "mpv",
-    requires: [],
-    residency: "live",
-    risky: true,
-  });
-  for (const name of [
-    "mpv.command",
-    "mpv.get",
-    "mpv.set",
-    "mpv.observe",
-    "mpv.unobserve",
-  ])
-    assert.deepEqual(hostMethod(name), { name, needs: "mpv" });
-  assert.deepEqual(CAPABILITY_INFO["mpv"], {
-    apis: ["Mpv.command", "Mpv.get", "Mpv.set", "Mpv.observe"],
-    requires: [],
-    label:
-      "Control the playback engine (mpv) directly: send its commands and change its options",
-    risky: true,
-    builtinOnly: false,
-  });
-  assert.equal(CAPABILITIES.at(-1), "mpv");
-  // It opens no member of another module, and no other capability opens
-  // one of its own.
-  for (const [name, info] of Object.entries(CAPABILITY_INFO))
-    if (name !== "mpv")
-      assert.ok(!info.apis.some((api) => api.startsWith("Mpv.")), name);
-});
-
-test("without mpv every member fails capability and nothing is sent", async () => {
-  const { host, plugin, stop } = await started([]);
-  await assert.rejects(
-    plugin.mpv.command(["drop-buffers"]),
-    code("capability"),
-  );
-  await assert.rejects(plugin.mpv.get("deband"), code("capability"));
-  await assert.rejects(plugin.mpv.set("deband", true), code("capability"));
-  assert.throws(
-    () => plugin.mpv.observe("deband", () => {}),
-    code("capability"),
-  );
-  assert.ok(!host.calls.some((call) => call.method.startsWith("mpv.")));
-  await stop();
-});
 
 test("command, get and set go to mpv as they are", async () => {
   const { host, plugin, stop } = await started();

@@ -25,7 +25,8 @@ import type {
 export interface StreamSource {
   readonly runtime: {
     readonly host: Wire;
-    can(capability: string): boolean;
+    /** `plugin.player.read()` was called: the state is read after own actions. */
+    readonly reads: boolean;
   };
   /** The newest source state seen. */
   readonly raw: SourceState;
@@ -238,13 +239,13 @@ async function retirement(
 ): Promise<PluginError | null | undefined> {
   const code = (error as PluginError | undefined)?.code;
   if (code !== "unavailable" && code !== "stale") return undefined;
-  const readable = service.runtime.can("playback.read");
+  const readable = service.runtime.reads;
   if (readable) await service.refresh().catch(() => {});
   const raw = service.raw;
   if (raw.stamp.generation !== generation || raw.phase === "empty") return null;
   if (raw.phase === "error")
     return failure("stream", service.state.error ?? "无法打开此媒体");
-  // Without `playback.read` the state may be behind: no failure was seen.
+  // Without `plugin.player.read()` the state may be behind: no failure was seen.
   return readable ? undefined : null;
 }
 

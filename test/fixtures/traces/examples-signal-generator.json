@@ -50,11 +50,11 @@
   "calls": {
     "start": [
       {
-        "method": "source.state",
+        "method": "window.state",
         "params": {}
       },
       {
-        "method": "window.state",
+        "method": "source.state",
         "params": {}
       },
       {

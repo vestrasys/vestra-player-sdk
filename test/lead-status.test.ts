@@ -5,7 +5,8 @@
 // additions and the order they are checked in.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { PaletteLeadOptions, Plugin } from "../src/plugin/index.ts";
 import { PALETTE_LEAD_LIMITS, PALETTE_LEAD_STATES } from "../src/commands.ts";
 import * as runtime from "../src/player-runtime.ts";

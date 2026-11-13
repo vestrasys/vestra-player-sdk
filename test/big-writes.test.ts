@@ -16,10 +16,10 @@ import {
 import type { WireOp } from "../src/plugin/patch.ts";
 import {
   MESSAGE_LIMIT,
-  startPlugin,
   TestHost,
   UI_VALUE_LIMITS,
 } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Json } from "../src/wire.ts";
 import type { Panel, Plugin, Window } from "../src/plugin/types.ts";
 

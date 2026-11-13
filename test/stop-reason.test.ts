@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import { createPlugin } from "../src/plugin/index.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import type { DisposeInfo, PluginError } from "../src/plugin/types.ts";
@@ -68,7 +69,7 @@ test("stop reason: a runner that calls dispose() without an argument (player 0.6
   const host = new TestHost();
   const instance = await createPlugin(
     host,
-    { id: "test.plugin", capabilities: [] },
+    { id: "test.plugin" },
     process.cwd(),
   );
   const infos: (DisposeInfo | undefined)[] = [];
@@ -161,7 +162,7 @@ test("stop reason: the runtime keeps known reasons only, and the first one", asy
   const host = new TestHost();
   const instance = await createPlugin(
     host,
-    { id: "test.plugin", capabilities: [] },
+    { id: "test.plugin" },
     process.cwd(),
   );
   await instance.dispose({ reason: "restart-everything" });
@@ -171,7 +172,7 @@ test("stop reason: the runtime keeps known reasons only, and the first one", asy
   host.close();
   const other = await createPlugin(
     new TestHost(),
-    { id: "test.plugin", capabilities: [] },
+    { id: "test.plugin" },
     process.cwd(),
   );
   await other.dispose({ reason: "upgrade" });

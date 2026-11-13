@@ -1,212 +1,29 @@
 /**
- * The TypeScript language-service plugin `@vestra-player/sdk/ts-plugin`: the
- * capability checker of `vestra-plugin check` in the editor. A use of an API
- * member whose capability `manifest.json` does not declare is an error at the
- * member, with the quick fix "Add '<capability>' to manifest.json". A call
- * whose capability depends on a name the checker cannot read
- * (`plugin.wire.request(method)` with a computed method) is a warning
- * (`CAPABILITY_UNCHECKED`).
- *
- * A project enables it in its tsconfig.json:
+ * The TypeScript language-service plugin `@vestra-player/sdk/ts-plugin`.
+ * Up to 1.8 it showed the capability checker's findings in the editor, with
+ * the quick fix "Add '<capability>' to manifest.json". SDK 1.9.0 removed
+ * manifest capabilities, and with them the checker: the plugin now changes
+ * nothing and is kept only so that a tsconfig.json that lists it
  *
  *   { "compilerOptions": { "plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }] } }
  *
- * The editor must run the project's own TypeScript (VS Code: "TypeScript:
- * Select TypeScript Version" → "Use Workspace Version"); `tsc` ignores
- * language-service plugins, which is why `vestra-plugin check` runs the same
- * checker. The manifest is the nearest `manifest.json` above the file; files
- * in its `tests/`, `node_modules/`, `dist/` and `vendor/` are not checked.
+ * still loads without an error in the TypeScript server's log. Remove the
+ * entry; a later major version removes the module.
  *
  * @internal
  */
 import type TS from "typescript";
-import {
-  addCapabilityEdit,
-  CAPABILITY_DIAGNOSTIC,
-  CAPABILITY_UNCHECKED,
-  checkCapabilities,
-  isPluginSource,
-} from "./capability-check.ts";
-import type { CapabilityFinding, UncheckedCall } from "./capability-check.ts";
-
-const FIX_NAME = "vestraAddCapability";
-
-/** The nearest manifest.json at or above a file, with its capabilities. */
-function manifestFor(
-  ts: typeof TS,
-  file: string,
-): { path: string; directory: string; capabilities: string[] } | undefined {
-  let directory = file.replaceAll("\\", "/");
-  for (;;) {
-    const parent = directory.slice(0, directory.lastIndexOf("/"));
-    if (!parent || parent === directory) return undefined;
-    directory = parent;
-    const path = `${directory}/manifest.json`;
-    if (!ts.sys.fileExists(path)) continue;
-    try {
-      const manifest = JSON.parse(ts.sys.readFile(path) ?? "") as {
-        capabilities?: unknown;
-      };
-      if (!Array.isArray(manifest.capabilities)) return undefined;
-      return {
-        path,
-        directory,
-        capabilities: manifest.capabilities.filter(
-          (each): each is string => typeof each === "string",
-        ),
-      };
-    } catch {
-      return undefined;
-    }
-  }
-}
-
-/**
- * The manifest's text for the quick fix. The TypeScript server applies a
- * code fix only to files it knows, and editors do not hand it JSON files
- * (VS Code does not), so the manifest is made known first; its text is then
- * the server's: an open buffer when the editor shares one, else the file on
- * disk (VS Code: the saved manifest, not unsaved edits).
- */
-function manifestText(
-  ts: typeof TS,
-  info: TS.server.PluginCreateInfo,
-  path: string,
-): string | undefined {
-  const service = info.project?.projectService;
-  const script =
-    service && ts.server?.toNormalizedPath
-      ? service.getOrCreateScriptInfoForNormalizedPath(
-          ts.server.toNormalizedPath(path),
-          false,
-        )
-      : undefined;
-  const snapshot = script?.getSnapshot();
-  return snapshot
-    ? snapshot.getText(0, snapshot.getLength())
-    : ts.sys.readFile(path);
-}
 
 /** @internal The plugin factory tsserver calls (`ts-plugin/index.js`). */
-export default function init(modules: {
+export default function init(_modules: {
   typescript: typeof TS;
 }): TS.server.PluginModule {
-  const ts = modules.typescript;
   return {
     create(info) {
-      const service = info.languageService;
-      const log = (message: string) =>
-        info.project?.projectService?.logger?.info(
-          `[@vestra-player/sdk/ts-plugin] ${message}`,
-        );
-      const none = { findings: [], unchecked: [] };
-      const results = (
-        file: string,
-      ): { findings: CapabilityFinding[]; unchecked: UncheckedCall[] } => {
-        const manifest = manifestFor(ts, file);
-        const program = service.getProgram();
-        if (!manifest || !program || !isPluginSource(manifest.directory, file))
-          return none;
-        try {
-          return checkCapabilities(ts, program, {
-            files: [file],
-            capabilities: manifest.capabilities,
-          });
-        } catch (error) {
-          log(`check failed: ${(error as Error).stack ?? String(error)}`);
-          return none;
-        }
-      };
-      const findings = (file: string) => results(file).findings;
-      const proxy = Object.create(null) as TS.LanguageService;
-      for (const key of Object.keys(service) as (keyof TS.LanguageService)[]) {
-        const member = service[key];
-        (proxy as unknown as Record<string, unknown>)[key] =
-          typeof member === "function" ? member.bind(service) : member;
-      }
-      proxy.getSemanticDiagnostics = (file) => {
-        const prior = service.getSemanticDiagnostics(file);
-        const source = service.getProgram()?.getSourceFile(file);
-        const { findings: missing, unchecked } = results(file);
-        return [
-          ...prior,
-          ...missing.map((finding): TS.Diagnostic => ({
-            file: source,
-            start: finding.start,
-            length: finding.length,
-            messageText: finding.message,
-            category: ts.DiagnosticCategory.Error,
-            code: CAPABILITY_DIAGNOSTIC,
-            source: "vestra",
-          })),
-          ...unchecked.map((call): TS.Diagnostic => ({
-            file: source,
-            start: call.start,
-            length: call.length,
-            messageText: call.message,
-            category: ts.DiagnosticCategory.Warning,
-            code: CAPABILITY_UNCHECKED,
-            source: "vestra",
-          })),
-        ];
-      };
-      proxy.getSupportedCodeFixes = (file) => [
-        ...service.getSupportedCodeFixes(file),
-        String(CAPABILITY_DIAGNOSTIC),
-      ];
-      proxy.getCodeFixesAtPosition = (
-        file,
-        start,
-        end,
-        errorCodes,
-        format,
-        preferences,
-      ) => {
-        const prior = service.getCodeFixesAtPosition(
-          file,
-          start,
-          end,
-          errorCodes,
-          format,
-          preferences,
-        );
-        if (!errorCodes.includes(CAPABILITY_DIAGNOSTIC)) return prior;
-        const manifest = manifestFor(ts, file);
-        if (!manifest) return prior;
-        const text = manifestText(ts, info, manifest.path);
-        if (text === undefined) return prior;
-        const wanted = new Set(
-          findings(file)
-            .filter(
-              (finding) =>
-                finding.start <= end && finding.start + finding.length >= start,
-            )
-            .map((finding) => finding.capability),
-        );
-        const fixes: TS.CodeFixAction[] = [];
-        for (const capability of wanted) {
-          const edit = addCapabilityEdit(ts, text, capability);
-          if (!edit) continue;
-          fixes.push({
-            fixName: FIX_NAME,
-            description: `Add '${capability}' to manifest.json`,
-            changes: [
-              {
-                fileName: manifest.path,
-                textChanges: [
-                  {
-                    span: { start: edit.start, length: edit.length },
-                    newText: edit.newText,
-                  },
-                ],
-              },
-            ],
-          });
-        }
-        return [...prior, ...fixes];
-      };
-      log("enabled");
-      return proxy;
+      info.project?.projectService?.logger?.info(
+        "[@vestra-player/sdk/ts-plugin] does nothing since SDK 1.9.0 (no manifest capabilities); remove it from tsconfig.json",
+      );
+      return info.languageService;
     },
   };
 }

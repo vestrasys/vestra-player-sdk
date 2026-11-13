@@ -23,12 +23,11 @@ Use the id rule of the official repository, so that your plugin can move there l
 { "schema": 1, "name": "Someone's plugins", "revoked": [], "plugins": [
   { "id": "someone.cool-visualizer", "name": "Cool Visualizer", "versions": [
     { "version": "1.0.0", "apiVersion": "vestra/1", "minPlayerVersion": null,
-      "capabilities": ["commands", "ui.osd"],
       "downloadUrl": "https://someone.github.io/my-plugins/packages/someone.cool-visualizer-1.0.0.vxp",
       "sha256": "<64 lowercase hex digits>", "size": 9370, "published": "2026-11-01T12:00:00Z" } ] } ] }
 ```
 
-- `version`, `apiVersion` (`vestra/1`), `minPlayerVersion` (or `null`) and `capabilities` are copied from the version's `manifest.json`. The store refuses a downloaded package whose id, version or capabilities differ from the entry.
+- `version`, `apiVersion` (`vestra/1`) and `minPlayerVersion` (or `null`) are copied from the version's `manifest.json`. The store refuses a downloaded package whose id or version differs from the entry.
 - `downloadUrl` (https), `sha256` and `size` (bytes, at most 64 MiB) are those of the `.vxp`; the store installs it only when both match. `published` is a date (ISO 8601); the store sorts `versions` itself, newest first.
 - `iconUrl`, `readmeUrl` and `changelogUrl` each come with `…Sha256` and `…Size`, or all three are `null`. The icon is PNG or JPEG of at most 512 KiB; README and changelog at most 256 KiB each. Keep them on the same origin as `index.json` (scheme, host and port): from an unofficial store the store loads no icon from another origin, and a README or changelog there only when the user asks. Images in the README or changelog of an unofficial store must be absolute https addresses on the same site; they show after the user clicks Show Images. A relative image shows only its alt text, so the script below publishes each one next to the README and rewrites its link to that absolute address.
 - Optional: `author`, `punchline`, `description`, `tags`, `license`, `sourceUrl` and `translations` (the display fields per language, as in the [official index](https://github.com/vestrasys/vestra-player-plugins/blob/main/MAINTAINING.md#indexjson)).
@@ -141,7 +140,6 @@ for (const name of readdirSync("plugins").sort()) {
         version: manifest.version,
         apiVersion: manifest.apiVersion,
         minPlayerVersion: manifest.minPlayerVersion ?? null,
-        capabilities: manifest.capabilities,
         downloadUrl: BASE + file,
         ...digest(join(site, file)),
         published: published || new Date().toISOString(),

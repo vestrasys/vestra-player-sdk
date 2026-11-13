@@ -3,14 +3,7 @@
   "version": "1.0.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "minPlayerVersion": "0.3.0",
-  "capabilities": [
-    "commands",
-    "ui.window",
-    "processing.video",
-    "playback.read",
-    "events"
-  ],
+  "minPlayerVersion": "0.9.0",
   "name": "Blur",
   "author": "Vestra Player SDK examples",
   "punchline": "A live Gaussian blur over the video that is playing",

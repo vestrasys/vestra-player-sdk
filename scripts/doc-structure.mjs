@@ -164,10 +164,6 @@ export const GROUPS = [
         why: "Manifest field rules: lookup across many symbols.",
       },
       {
-        file: "capabilities.md",
-        why: "Every capability with the API it opens, what it requires and its store wording: one generated table.",
-      },
-      {
         file: "limits.md",
         why: "Every runtime limit in one generated table instead of scattered over the API.",
       },
@@ -193,11 +189,11 @@ export const GROUPS = [
       },
       {
         file: "events.md",
-        why: "Every player event a plugin can listen to by name (HostEvent), generated from the types and the capability tables: what styles B and C subscribe to; the API reference has one member per payload, not the table across them.",
+        why: "Every player event a plugin can listen to by name (HostEvent), generated from the types: what styles B and C subscribe to; the API reference has one member per payload, not the table across them.",
       },
       {
         file: "messages.md",
-        why: "Every request method of the player's protocol, generated from the player's capability table and the SDK's clients: what style C sends; too large and too different (protocol, not API) to join Capabilities.",
+        why: "Every request method of the player's protocol, generated from the SDK's clients: what style C sends; too large and too different (protocol, not API) for the API reference.",
       },
       {
         file: "scan.md",

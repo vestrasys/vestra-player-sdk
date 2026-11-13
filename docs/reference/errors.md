@@ -12,7 +12,7 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | Code | Meaning |
 | --- | --- |
 | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link "@vestra-player/sdk"!Conditional}. |
-| `capability` | The manifest does not declare the capability the call needs. |
+| `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`) and this plugin is not one. |
 | `invalid` | A bad argument (out of range, malformed, unknown id). |
 | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
 | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |

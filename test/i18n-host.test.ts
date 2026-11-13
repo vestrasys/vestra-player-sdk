@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import type { Plugin } from "../src/index.ts";
-import { LOCALES, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { LOCALES, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 /** A package directory with a manifest and a zh-Hans catalog. */
 function pluginDirectory() {

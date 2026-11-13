@@ -9,7 +9,7 @@ The smallest useful plugin: one menu command that shows a message over the video
 
 ## What it demonstrates
 
-The manifest and capabilities · a menu command · the on-screen display.
+The manifest · a menu command · the on-screen display.
 
 The [Tutorial](../tutorial/index.md) teaches the same steps from an empty folder.
 
@@ -37,7 +37,7 @@ The code below is pulled from these files, so it is exactly what CI builds and t
 
 - `id` names the plugin, as `<owner>.<name>` (your GitHub user or organization). `vestra.` ids are reserved for the player's built-in plugins.
 - `entry` is the module the player loads: the TypeScript file itself during development.
-- `capabilities` lists what the plugin may do. `commands` lets it add a menu command, `ui.osd` lets it show a message over the video. A call without its capability fails with `code: "capability"`.
+- Nothing in it says what the plugin may do: the store shows what the code uses, from a scan of the package ([Capability scan](../reference/scan.md)).
 
 ## The code
 
@@ -56,7 +56,7 @@ Nothing needs cleaning up: the command belongs to `plugin` and is removed when t
 
 {@includeCode ../../examples/hello/tests/main.test.ts}
 
-- {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin} runs `activate` against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player. `directory` makes it read `manifest.json`, so the test has the plugin's real capabilities.
+- {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin} runs `activate` against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player. `directory` makes it read `manifest.json`, so the test has the plugin's real id.
 - `host.command("hello")` is the registered command: its `declaration` (here the menu path) and `run()`, which acts like a click.
 - `host.osd` lists every message the plugin showed.
 

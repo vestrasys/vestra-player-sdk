@@ -567,7 +567,7 @@ function notFound(asked: string, segments: string[], page: number | undefined) {
  * page of the documentation site (its file name works too:
  * `/Guides/Guides/testing`); `/API/<category>/<symbol>/<member>` is a
  * declaration with its signature, parameters, return value, errors,
- * capability, player version and examples. Matching ignores case, spaces
+ * player version and examples. Matching ignores case, spaces
  * and punctuation; a leading `/` and a `.md` suffix are optional; `.`
  * works like `/` (`Snapshot.export`); a name that is not at its level is
  * looked up below it (`TestHost`, `/API/Snapshot` finds

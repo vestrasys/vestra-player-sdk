@@ -10,7 +10,8 @@ import { join } from "node:path";
 import test from "node:test";
 import type { Plugin } from "../src/index.ts";
 import { keyLabel } from "../src/plugin/bindings.ts";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 function picturePackage() {
   const directory = mkdtempSync(join(tmpdir(), "command-keys-"));
@@ -198,16 +199,15 @@ test("only `commands` is needed: one read and a mirror subscription, a listener 
   }
 });
 
-test("without `commands` every command reads [] and nothing is asked", async () => {
-  const { plugin, host, stop } = await startPlugin(() => {}, {
-    capabilities: [],
-  });
+test("keys start on first use, with no manifest declaration (1.9.0): an unknown command reads []", async () => {
+  const { plugin, host, stop } = await startPlugin(() => {});
   try {
-    assert.deepEqual(plugin.commands.keys("anything"), []);
-    plugin.player.on("commands.keys", () => {});
-    await host.settle();
     assert.ok(!host.calls.some((c) => c.method === "commands.keys"));
-    assert.ok(!host.subscriptions.has("commands.keys"));
+    assert.deepEqual(plugin.commands.keys("anything"), []);
+    await host.settle();
+    assert.equal(host.sent("commands.keys").length, 1);
+    assert.ok(host.subscriptions.has("commands.keys"));
+    assert.deepEqual(plugin.commands.keys("anything"), []);
   } finally {
     await stop();
   }

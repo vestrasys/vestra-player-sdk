@@ -7,12 +7,12 @@ description: Choose between settings files, session values and the secret store,
 
 **Goal:** your plugin keeps its settings across restarts, keeps work in progress across a reload, and keeps an API token safe, each in the right place.
 
-| What | Where | Lasts | Capability |
-| --- | --- | --- | --- |
-| Settings, history, small state | `plugin.storage.json(name)`: a JSON file in the data directory | Across player restarts and plugin upgrades | none |
-| Work in progress for this run | `plugin.storage.session`: values in the player's memory | Across plugin restarts (reload, crash, upgrade); cleared when the player quits, when the user or a plugin with `plugins.manage` disables it (also by installing an update with `enabled: false`), when it is uninstalled, and when an earlier installation kept for a later reinstall is dropped | none |
-| Tokens, passwords | `plugin.secrets`: the system's keychain or Credential Manager | Until deleted, or until the plugin is uninstalled with its data | `secrets` |
-| Anything else (caches, downloads) | Your own files under `plugin.dataDirectory` | Until you delete them | none |
+| What | Where | Lasts |
+| --- | --- | --- |
+| Settings, history, small state | `plugin.storage.json(name)`: a JSON file in the data directory | Across player restarts and plugin upgrades |
+| Work in progress for this run | `plugin.storage.session`: values in the player's memory | Across plugin restarts (reload, crash, upgrade); cleared when the player quits, when the user or a plugin that manages plugins disables it (also by installing an update with `enabled: false`), when it is uninstalled, and when an earlier installation kept for a later reinstall is dropped |
+| Tokens, passwords | `plugin.secrets`: the system's keychain or Credential Manager | Until deleted, or until the plugin is uninstalled with its data |
+| Anything else (caches, downloads) | Your own files under `plugin.dataDirectory` | Until you delete them |
 
 All four are private to the plugin; another plugin never reads them.
 

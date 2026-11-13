@@ -143,7 +143,7 @@ test("a symbol shows its import, declaration, description and members", () => {
   );
 });
 
-test("a member shows its signature, parameters, returns, errors, capability, version and examples", () => {
+test("a member shows its signature, parameters, returns, errors, version and examples", () => {
   const dispose = docs("/API/Media/Snapshot/dispose");
   assert.match(dispose, /^\/API\/Media\/Snapshot\/dispose · Method/);
   assert.match(dispose, /```ts\ndispose\(\): Promise<void>\n```/);
@@ -152,7 +152,7 @@ test("a member shows its signature, parameters, returns, errors, capability, ver
     /Inherited from \[Disposable\.dispose\]\(\/API\/Plugin\/Disposable\/dispose\)/,
   );
   assert.match(dispose, /\*\*Throws\*\*\n\n- Never\./);
-  assert.match(dispose, /\*\*Capability:\*\* /);
+  assert.doesNotMatch(dispose, /\*\*Capability:\*\*/);
   assert.match(dispose, /\*\*Since:\*\* 1\.0\.0/);
   assert.match(
     dispose,
@@ -527,11 +527,11 @@ test("the three plugin styles: the tutorial, the event and the message tables", 
     "video.upscaling.changed",
   ])
     assert.ok(events.includes(`\n| \`${name}\` |`), name);
-  // Messages: a method sent by an SDK member and its capability rule.
+  // Messages: a method sent by an SDK member, in its area.
   const messages = pages((page) =>
     docs("/Guides/Reference/Messages", { page }),
   ).join("\n");
-  assert.match(messages, /^\| `ui\.setMount` \| `ui\.mount` \|/m);
+  assert.match(messages, /^### `ui`$/m);
+  assert.match(messages, /^\| `ui\.setMount` \| /m);
   assert.match(messages, /SDK member: \[`Panel\.set`\]/);
-  assert.match(messages, /`plugin\.wire` only/);
 });

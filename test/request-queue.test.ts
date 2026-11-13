@@ -11,8 +11,9 @@ import {
   RequestQueue,
   UNQUEUED_METHODS,
 } from "../src/request-queue.ts";
-import { MESSAGE_LIMIT } from "../src/capabilities.ts";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { MESSAGE_LIMIT } from "../src/protocol.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import type { PluginError } from "../src/plugin/types.ts";
 

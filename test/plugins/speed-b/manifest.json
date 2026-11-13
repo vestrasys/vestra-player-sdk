@@ -3,12 +3,5 @@
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": [
-    "commands",
-    "ui.mount",
-    "playback.read",
-    "playback.control",
-    "events"
-  ],
   "name": "Speed Display (b)"
 }

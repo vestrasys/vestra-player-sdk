@@ -4,14 +4,14 @@ A plugin that generates its own video and audio: **Open ▸ Signal generator** p
 
 ![Colour bars from the signal generator](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `producer.av`, `playback.control`, `playback.read` | `player.openStream` with a `frame()` callback, `Stream.stop` and `onStop`, a checkable command in the `@open` menu; tests with `startPlugin` |
+| `read()` | `player.openStream` with a `frame()` callback, `Stream.stop` and `onStop`, a checkable command in the `@open` menu; tests with `startPlugin` |
 
 ## Files
 
 ```text
-manifest.json                   id and capabilities
+manifest.json                   id
 main.ts                         the picture, the tone, frame(), start and stop, the command
 tests/signal-generator.test.ts  tests of frame() and of the stream on the in-memory test host
 ```

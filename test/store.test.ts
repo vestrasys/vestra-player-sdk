@@ -5,7 +5,8 @@ import { existsSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type {
   InstallOptions,
   PackageManifest,
@@ -26,7 +27,6 @@ const manifest = (id: string, version: string): PackageManifest => ({
   version,
   apiVersion: "vestra/1",
   entry: "main.js",
-  capabilities: [],
 });
 
 async function manager(host = new TestHost()) {
@@ -49,7 +49,6 @@ test("packages: list entries without the new fields read as before", async () =>
       origin: "installed",
       state: "running",
       error: null,
-      capabilities: [],
       directory: "/plugins/a.video",
     },
   ];
@@ -70,7 +69,6 @@ test("packages: .vxp install with a source, conflict, replace and built-ins", as
       origin: "installed",
       state: "running",
       error: null,
-      capabilities: [],
       directory: "/plugins/video",
       builtin: true,
       source: { kind: "bundled" },

@@ -25,8 +25,6 @@ export interface PackageManifest {
   apiVersion: string;
   /** Entry module path inside the package. */
   entry: string;
-  /** Declared capabilities. */
-  capabilities: string[];
   /** Display name, 1–64 characters. */
   name?: string;
   /** Author, 1–64 characters. */
@@ -133,18 +131,15 @@ export interface InstallOptions {
  * Installing starts a {@link PackageChange}; the player keeps only the 32
  * most recent candidates.
  *
- * @capability plugins.manage
- *
  * @example Show what a package asks for before installing it
- * Before installing, the plugin shows the package's name and the
- * capabilities it declares. The candidate's `manifest` is the manifest
- * as the player read it.
+ * Before installing, the plugin shows the package's id and version. The
+ * candidate's `manifest` is the manifest as the player read it.
  * ```ts
  * declare const directory: string;
  * // ---cut---
  * const candidate = await plugin.packages.validate(directory);
- * const { id, version, capabilities } = candidate.manifest;
- * await plugin.osd.show("{} {}: {}", [id, version, capabilities.join(", ")]);
+ * const { id, version } = candidate.manifest;
+ * await plugin.osd.show("{} {}", [id, version]);
  * ```
  *
  * @since 1.0.0
@@ -168,7 +163,6 @@ export interface PackageCandidate {
    * update keeps a disabled plugin disabled unless `enabled` says otherwise
    * (see {@link InstallOptions.enabled}).
    *
-   * @capability plugins.manage
    * @throws `invalid` (rejects) An option is malformed: a `source` the
    *   player does not accept, or a `replace` or `enabled` that is not a
    *   boolean.
@@ -183,8 +177,6 @@ export interface PackageCandidate {
    *   needed).
    * @throws `stale` (rejects) The candidate is older than the 32 the player
    *   keeps.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
    *
    * @example Replace a plugin installed from another source
    * The new package replaces the installed plugin even though it came from
@@ -240,8 +232,6 @@ export type PackageChangeStatus =
  * resolves with the terminal status and does not reject for a failed
  * change: `message` says why.
  *
- * @capability plugins.manage
- *
  * @example Report each step of an install
  * The OSD shows each step of the install and the end result. `onChange`
  * runs for every new status; `done` resolves when the change is over.
@@ -263,8 +253,6 @@ export interface PackageChange {
   readonly message: string | null;
   /**
    * The status changed.
-   *
-   * @capability plugins.manage
    *
    * @example Close a progress window when the change ends
    * The plugin's progress window closes once the install is over, whatever
@@ -296,10 +284,6 @@ export interface PackageChange {
   /**
    * Ask to cancel (it may be `tooLate`).
    *
-   * @capability plugins.manage
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
-   *
    * @example Cancel an install the user no longer wants
    * The install stops if it has not gone too far. `cancel` asks the player;
    * the change then ends `cancelled`. When the change had already committed
@@ -313,6 +297,7 @@ export interface PackageChange {
    * console.log(await change.done); // "cancelled"; "committed" when it was too late
    * ```
    *
+   * @throws `disabled` (rejects) The plugin is stopping.
    * @since 1.0.0
    */
   cancel(): Promise<void>;
@@ -335,8 +320,6 @@ export interface PluginInfo {
   state: "starting" | "running" | "disabled" | "failed" | "stopped";
   /** Why it failed (`state: "failed"`). */
   error: string | null;
-  /** Declared capabilities. */
-  capabilities: string[];
   /**
    * The package directory (read its `manifest.json` for display fields).
    * A built-in's directory is inside the player installation
@@ -438,8 +421,8 @@ export interface PluginWarning {
 }
 
 /**
- * `plugin.packages`: the plugins the player knows. `list` and `onChange`
- * need no capability; everything else needs `plugins.manage`.
+ * `plugin.packages`: the plugins the player knows, and installing,
+ * enabling, reloading and uninstalling them.
  *
  * @example Install a plugin from an unpacked package
  * The plugin installs a package directory it downloaded and unpacked, and
@@ -459,25 +442,22 @@ export interface PluginWarning {
  *
  * @remarks
  * The plugins the player knows: installed, built-in and this run's
- * development loads. Reading the list needs no capability; installing,
- * enabling, reloading and uninstalling need `plugins.manage` and act on
- * other plugins, never on the calling one. Built-in plugins update with
+ * development loads. Installing, enabling,
+ * reloading and uninstalling act on other plugins, never on the calling one. Built-in plugins update with
  * the player and cannot be installed, disabled or uninstalled.
  *
- * @capability None for `list` and `onChange`; plugins.manage for the rest.
  * @since 1.0.0
  * @category Packages
  */
 export interface Packages {
   /**
-   * Validate a package directory (`plugins.manage`). A package whose id is
+   * Validate a package directory. A package whose id is
    * reserved for the built-in plugins (`vestra` or `vestra.*`) fails with
    * `reserved`.
    *
    * The player keeps the 32 most recent candidates of all plugins; an older
    * one's `install` fails with `stale` (validate again).
    *
-   * @capability plugins.manage
    * @throws `host` (rejects) Not a package directory, or a manifest that
    *   breaks the rules (another `apiVersion` included); `message` says why.
    * @throws `invalid` (rejects) A bad request (a path that is not a string).
@@ -487,8 +467,6 @@ export interface Packages {
    * @throws `versionMismatch` (rejects) The package's `minPlayerVersion` is
    *   newer than the player.
    * @throws `disabled` (rejects) The calling plugin is stopping.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
    *
    * @example Check a package directory before installing it
    * The plugin checks a folder it unpacked and installs it if the player
@@ -510,12 +488,11 @@ export interface Packages {
    */
   validate(directory: string): Promise<PackageCandidate>;
   /**
-   * Validate a `.vxp` package file (`plugins.manage`): the same checks as
+   * Validate a `.vxp` package file: the same checks as
    * {@link Packages.validate} after unpacking. Check the file's sha256 yourself
    * before calling when you know it. A reserved id fails with `reserved`, as in
    * {@link Packages.validate}.
    *
-   * @capability plugins.manage
    * @throws `invalid` (rejects) The path does not end in `.vxp`, or the
    *   archive cannot be unpacked (over 64 MB, too many files, a damaged zip,
    *   an unsafe path).
@@ -527,8 +504,6 @@ export interface Packages {
    * @throws `versionMismatch` (rejects) The package's `minPlayerVersion` is
    *   newer than the player.
    * @throws `disabled` (rejects) The calling plugin is stopping.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
    *
    * @example Install a downloaded package file
    * A `.vxp` the plugin downloaded is checked and installed. The player
@@ -546,11 +521,9 @@ export interface Packages {
    */
   validateArchive(file: string): Promise<PackageCandidate>;
   /**
-   * Every plugin: running, installed, and this run's development loads. No capability.
+   * Every plugin: running, installed, and this run's development loads.
    *
-   * @capability None.
-   * @throws `Error` (rejects) Only when the player cannot be asked; no
-   *   capability is needed.
+   * @throws `Error` (rejects) Only when the player cannot be asked.
    *
    * @example Show which plugins are running
    * The plugin lists the running plugins by name. `list` asks the player
@@ -566,9 +539,7 @@ export interface Packages {
    */
   list(): Promise<PluginInfo[]>;
   /**
-   * The new list after any start, stop, failure, install or uninstall. No capability.
-   *
-   * @capability None.
+   * The new list after any start, stop, failure, install or uninstall.
    *
    * @example Refresh a plugin list after any change
    * A store window's list updates when a plugin starts, stops, fails, is
@@ -581,19 +552,16 @@ export interface Packages {
    */
   onChange(listener: (plugins: PluginInfo[]) => void): Disposable;
   /**
-   * Stop or start a plugin (`plugins.manage`). An installed plugin stays
+   * Stop or start a plugin. An installed plugin stays
    * disabled across launches; a development load only for this run.
    * `invalid` to disable oneself, `missing` unknown.
    * `busy` while it is being installed or reloaded. `unsupported` to disable a built-in
    * ({@link PluginInfo.builtin}): users manage third-party plugins only.
    *
-   * @capability plugins.manage
    * @throws `invalid` (rejects) Disabling the calling plugin itself.
    * @throws `missing` (rejects) An unknown id.
    * @throws `busy` (rejects) The plugin is being installed or reloaded.
    * @throws `unsupported` (rejects) A built-in plugin.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
    *
    * @example Turn a third-party plugin off
    * The plugin stops another plugin and keeps it disabled across launches
@@ -607,7 +575,7 @@ export interface Packages {
    */
   setEnabled(id: string, enabled: boolean): Promise<void>;
   /**
-   * Restart a plugin (`plugins.manage`): stop it and start it again from the
+   * Restart a plugin: stop it and start it again from the
    * same package with the same data directory, for example to recover one
    * that misbehaves. Built-ins included. A stopped or failed plugin is just
    * started. The disabled flag is never written, so a reload never leaves
@@ -624,14 +592,11 @@ export interface Packages {
    * @player 0.5.1
    * @since 1.5.19
    *
-   * @capability plugins.manage
    * @throws `invalid` (rejects) The calling plugin itself, or a disabled
    *   plugin.
    * @throws `missing` (rejects) An unknown id.
    * @throws `busy` (rejects) The plugin is being installed or reloaded.
    * @throws `unsupported` (rejects) A player before 0.5.1.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
    *
    * @example Restart a plugin that misbehaves
    * The other plugin is stopped and started again from the same package and
@@ -643,13 +608,12 @@ export interface Packages {
    */
   reload(id: string): Promise<void>;
   /**
-   * Remove an installed plugin (`plugins.manage`); `removeData` also deletes
+   * Remove an installed plugin; `removeData` also deletes
    * its data directory, otherwise reinstalling it from the same source
    * reconnects to its data. Its user bindings stay (as orphans).
    * `unsupported` for built-ins and development loads, `missing`
    * unknown, `invalid` for oneself.
    *
-   * @capability plugins.manage
    * @throws `unsupported` (rejects) A built-in plugin or a development load.
    * @throws `missing` (rejects) An unknown id.
    * @throws `invalid` (rejects) The calling plugin itself.
@@ -657,8 +621,6 @@ export interface Packages {
    *   plugin is being installed or reloaded.
    * @throws `revisionConflict` (rejects) The installed revision of that
    *   plugin changed meanwhile; call `uninstall` again.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `plugins.manage`.
    *
    * @example Uninstall a plugin together with its data
    * The other plugin is removed and its data directory deleted, so a later

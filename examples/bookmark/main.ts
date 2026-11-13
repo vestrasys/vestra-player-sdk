@@ -6,6 +6,8 @@ import type { Plugin } from "@vestra-player/sdk";
  */
 // #region state
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   const { player } = plugin;
   let mark: number | null = null;
   // #endregion state

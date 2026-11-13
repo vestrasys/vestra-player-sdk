@@ -1,4 +1,4 @@
-/** Pages of the player's options window (`plugin.settings`, `ui.settings`). */
+/** Pages of the player's options window (`plugin.settings`). */
 import { failure, quiet } from "./errors.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type { PropertyWrite } from "../wire.ts";

@@ -2,6 +2,8 @@ import type { Plugin } from "@vestra-player/sdk";
 
 /** A speed slider in the adjust column. */
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   // #region mount
   // "adjust": the panel changes what is playing. After the user closes it,
   // they do not keep looking at it (that would be the sidebar).

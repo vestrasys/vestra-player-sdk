@@ -40,11 +40,8 @@ export type ThemeId = "vestra" | "vestra-light";
  * {@link Osd.show}).
  *
  * To run code when the palette or the language changes, listen with
- * `plugin.player.on("appearance.changed", …)` (needs `events`): `theme` and
+ * `plugin.player.on("appearance.changed", …)` (after `plugin.player.subscribe()`): `theme` and
  * `language` already hold the event's values when the listener runs.
- *
- * @capability None to read `theme`; `events` to follow changes; `ui.theme`
- *   to change it.
  *
  * @example Offer the light palette as a menu item
  * Settings ▸ Light colours switches every view of the player to the light
@@ -67,7 +64,7 @@ export type ThemeId = "vestra" | "vestra-light";
  */
 export interface Appearance {
   /**
-   * The palette in use. Read before activation; with `events` it follows
+   * The palette in use. Read before activation; after `plugin.player.subscribe()`, it follows
    * other plugins' changes from the first read on, without it only this
    * plugin's own.
    */
@@ -79,20 +76,17 @@ export interface Appearance {
    * The player applies it to every open view without interrupting a drag or
    * an open menu, and saves it across restarts.
    *
-   * @capability ui.theme
-   *
    * @param theme - The palette to use.
    * @returns Resolves once the player has accepted the change;
    *   {@link Appearance.theme} has the new value.
    *
    * @throws `invalid` (rejects) `theme` is not a {@link ThemeId}.
-   * @throws `capability` (rejects) The manifest does not declare `ui.theme`.
    *
    * @example Switch to the light palette
    * Every view of the player turns light, and stays light after a restart.
    * The player applies the palette to every open view and saves the
    * choice; when the promise resolves, `appearance.theme` already has the
-   * new value. Without `ui.theme` it rejects with `capability`.
+   * new value.
    * ```ts
    * await plugin.appearance.set("vestra-light");
    * ```
@@ -107,7 +101,7 @@ export interface Appearance {
    * @remarks
    * This is the choice for the next start. The language of this run is
    * {@link I18n.locale} and never changes while the player runs. Read before
-   * activation; with `events` it follows other plugins' changes, without it
+   * activation; after `plugin.player.subscribe()`, it follows other plugins' changes, without it
    * only this plugin's own. Players before 0.4.3 report `"system"`.
    *
    * @since 1.5.9
@@ -119,10 +113,9 @@ export interface Appearance {
    * @remarks
    * The player keeps the choice in its interface state; the language
    * changes when the player starts again (tell the user, for example "Takes
-   * effect after restart"). Every plugin with `events` hears the change in
+   * effect after restart"). Every plugin after `plugin.player.subscribe()`, hears the change in
    * {@link Appearance.language}.
    *
-   * @capability ui.theme
    * @player 0.4.3
    *
    * @param language - `"system"` or a {@link Locale}.
@@ -130,7 +123,6 @@ export interface Appearance {
    *   has the new value.
    *
    * @throws `invalid` (rejects) `language` is not `"system"` or a {@link Locale}.
-   * @throws `capability` (rejects) The manifest does not declare `ui.theme`.
    * @throws `unsupported` (rejects) A player before 0.4.3.
    *
    * @example Choose German for the next start
@@ -294,8 +286,6 @@ export type TextValue = string | Text | TextList;
  * into `locales/messages.pot`; see the
  * [i18n guide](../../../docs/guides/i18n.md).
  *
- * @capability None.
- *
  * @example Format a date the way the interface language writes it
  * The OSD shows today's date in the user's language and date format. The
  * sentence is a template the player translates; only the data in it, the
@@ -357,8 +347,6 @@ export interface I18n {
    * await plugin.osd.show("Download failed: {}", [plugin.i18n.text("Connection timed out")]);
    * ```
    *
-   * @capability None.
-   *
    * @since 1.5.11
    */
   text(source: string, args?: TemplateArgs): Text;
@@ -381,8 +369,6 @@ export interface I18n {
    * const missing = ["a.glsl", "b.glsl"];
    * await plugin.osd.show("Removed missing shaders: {}", [plugin.i18n.list(missing)]);
    * ```
-   *
-   * @capability None.
    *
    * @since 1.5.11
    */
@@ -423,8 +409,6 @@ export interface I18n {
    * });
    * ```
    *
-   * @capability None.
-   *
    * @since 1.5.11
    */
   error(source: string, args?: TemplateArgs): TextError;
@@ -454,8 +438,6 @@ export interface I18n {
    * const lines = list([text("Version {}", ["1.0"]), text("Cores: {}", [8])], "lines");
    * await plugin.clipboard.writeText(resolve(lines));
    * ```
-   *
-   * @capability None.
    *
    * @since 1.5.11
    */

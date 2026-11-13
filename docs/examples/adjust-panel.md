@@ -27,7 +27,7 @@ Ask: after the user closes the panel, do they still look at what it showed? A pl
 
 ```text
 examples/adjust-panel/
-  manifest.json                   identity and capabilities
+  manifest.json                   identity
   main.ts                         the code
   ui/speed.slint                  the panel
   tests/adjust-panel.test.ts      tests against the SDK's in-memory player
@@ -38,7 +38,7 @@ examples/adjust-panel/
 
 {@includeCode ../../examples/adjust-panel/manifest.json}
 
-`playback.read` and `playback.control` read and set the speed; `events` keeps `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without it, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
+`plugin.player.subscribe()` and `await plugin.player.read()`, first in `activate`, keep `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without `subscribe()`, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
 
 ## The panel in Slint
 

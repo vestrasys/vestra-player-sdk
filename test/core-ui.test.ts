@@ -3,7 +3,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import { canonical } from "../src/plugin/bindings.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 
@@ -319,11 +320,7 @@ test("dataDirectory is a writable directory kept across restarts when passed aga
   );
   await again.stop();
   const { createPlugin } = await import("../src/plugin/index.ts");
-  const bare = await createPlugin(
-    new TestHost(),
-    { id: "x", capabilities: [] },
-    process.cwd(),
-  );
+  const bare = await createPlugin(new TestHost(), { id: "x" }, process.cwd());
   assert.throws(() => bare.plugin.dataDirectory, { code: "unavailable" });
   await bare.dispose();
 });

@@ -4,9 +4,9 @@
 
 ![Markdown running in Vestra Player](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `ui.window` | `ui.markdown`, `MarkdownView` from `@vestra/markdown.slint`, `Window.set`; package assets in `package.json` (`"vestra": { "assets": [...] }`) |
+| — | `ui.markdown`, `MarkdownView` from `@vestra/markdown.slint`, `Window.set`; package assets in `package.json` (`"vestra": { "assets": [...] }`) |
 
 ## Run it
 

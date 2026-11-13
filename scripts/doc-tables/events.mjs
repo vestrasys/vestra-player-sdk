@@ -4,12 +4,11 @@
  *
  * - its payload: the type and summary of its member of `EventPayloads`;
  * - the SDK members that listen to it: the `events.subscribe` requests of
- *   `API_REQUESTS` (src/api-requests.ts) with that event name, the same
- *   table the capability check reads (`also` ones in parentheses);
+ *   `API_REQUESTS` (src/api-requests.ts) with that event name;
  * - whether the player wakes a stopped plugin for it (`WAKE_EVENTS`,
  *   src/plugin/connection.ts);
- * - the capability `events.subscribe` needs for it, from the player's
- *   table (`HOST_CAPABILITIES`, src/host-capabilities.ts).
+ * - whether it reaches the plugin only after `plugin.player.subscribe()`
+ *   (`EVENT_NEEDS`, src/plugin/player/events.ts).
  *
  * Fails when the union, the
  * `EventPayloads` members and `SUBSCRIBED_EVENTS` disagree, or when a
@@ -24,7 +23,7 @@ import {
   typeFile,
   unionLiterals,
 } from "./lib/source.mjs";
-import { capabilityRule, memberLinks } from "./messages.mjs";
+import { memberLinks } from "./messages.mjs";
 
 /** `HostEvent` in order, each with its payload's type text and summary. */
 export function hostEvents() {
@@ -63,27 +62,21 @@ export default async function events({ root, table }) {
   const load = (path) => import(pathToFileURL(join(root, path)));
   const { API_REQUESTS, SUBSCRIBED_EVENTS } = await load("src/api-requests.ts");
   const { WAKE_EVENTS } = await load("src/plugin/connection.ts");
-  const { HOST_CAPABILITIES } = await load("src/host-capabilities.ts");
+  const { EVENT_NEEDS } = await load("src/plugin/player/events.ts");
   const list = hostEvents();
   const names = list.map((event) => event.name);
   if (JSON.stringify([...SUBSCRIBED_EVENTS]) !== JSON.stringify(names))
     throw new Error("SUBSCRIBED_EVENTS differs from HostEvent");
-  const subscribe = HOST_CAPABILITIES.capabilities
-    .flatMap((capability) => capability.methods)
-    .find((method) => method.name === "events.subscribe");
-  if (!subscribe) throw new Error("HOST_CAPABILITIES: no events.subscribe");
-
   const listeners = (event) => {
     const own = [];
-    const also = [];
     for (const [member, requests] of Object.entries(API_REQUESTS))
       for (const request of requests)
         if (
           request.method === "events.subscribe" &&
           request.params?.event === event
         )
-          (request.also ? also : own).push(member);
-    return { own, also };
+          own.push(member);
+    return own;
   };
 
   return table(
@@ -92,22 +85,16 @@ export default async function events({ root, table }) {
       "Payload",
       "SDK members that listen to it",
       "Wakes a stopped plugin",
-      "Capability",
+      "After `subscribe()` only",
     ],
     list.map(({ name, type, doc }) => {
-      const { own, also } = listeners(name);
-      const members = [
-        memberLinks(own),
-        also.length ? `(${memberLinks(also)})` : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
+      const members = memberLinks(listeners(name));
       return [
         `\`${name}\``,
         `\`${type}\`: ${doc}`,
         members || "none: `Player.on` only",
         WAKE_EVENTS.includes(name) ? "yes" : "no",
-        capabilityRule(subscribe.needs, { event: name }),
+        EVENT_NEEDS[name] === "events" ? "yes" : "no",
       ];
     }),
   );

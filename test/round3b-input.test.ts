@@ -3,7 +3,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin, PluginError, ThemeId } from "../src/plugin/index.ts";
 import { playerOf } from "../src/plugin/player.ts";
 import { Runtime } from "../src/plugin/runtime.ts";
@@ -230,16 +231,13 @@ test("source.state: a listener added before the player's copy starts reads the e
   // The startup always starts the copy first; a runtime built by hand
   // can add the listener before it, the order the dispatch must undo.
   const host = new TestHost();
-  const runtime = new Runtime(
-    host,
-    { id: "test.order", capabilities: ["events", "playback.read"] },
-    tmpdir(),
-  );
+  const runtime = new Runtime(host, { id: "test.order" }, tmpdir());
+  runtime.deliver();
   const rates: number[] = [];
   const listener = runtime.on("source.state", (data) =>
     rates.push(playerOf(runtime).state.rate, (data as { rate: number }).rate),
   );
-  void playerOf(runtime).start(false);
+  void playerOf(runtime).start();
   await host.settle();
   host.setSource({ rate: 1.5 });
   await host.settle();

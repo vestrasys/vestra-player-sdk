@@ -52,8 +52,6 @@ export type SettingsCategory =
  * Testing: `host.settingsPage(id)` of `@vestra-player/sdk/testing` has the
  * page's `props` and `emit(callback, ...args)`.
  *
- * @capability ui.settings
- *
  * @example Put two preferences on a page and keep them in a store
  * Options ▸ Video ▸ Blur shows two check boxes whose values survive
  * restarts. The checkboxes are bound two-way (`<=>`) to `in-out`
@@ -138,8 +136,6 @@ export type SettingsPage = View &
      *   is beyond ±1,000,000.
      * @throws `host` (rejects) The file is missing or outside the package
      *   directory.
-     * @throws `capability` (rejects) The manifest does not declare
-     *   `ui.settings`.
      */
     readonly ready: Promise<void>;
   };
@@ -158,8 +154,6 @@ export type SettingsPage = View &
  * global (the bridge) declares the properties and callbacks, the component
  * lays the page out and reads them. Pages are 440 logical pixels wide; the
  * window scrolls a taller page.
- *
- * @capability ui.settings
  *
  * @example Add a page that edits a stored setting
  * Options ▸ Playback ▸ Resume shows the plugin's Resume switch. `page`
@@ -194,8 +188,6 @@ export interface Settings {
    *
    * Within a category, pages are sorted by `order`, then by plugin id and
    * page id.
-   *
-   * @capability ui.settings
    *
    * @param file - Path relative to the package directory, for example
    *   `"ui/settings.slint"`.
@@ -250,8 +242,6 @@ export interface Settings {
    * first opens, that is the page the user saw last (the player remembers
    * it), else the first one.
    *
-   * @capability ui.settings
-   *
    * @param pageId - The `id` of one of this plugin's pages.
    * @returns Resolves once the window is shown.
    *
@@ -259,8 +249,6 @@ export interface Settings {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `ui` (rejects) The window could not be built (for example a page
    *   wrote a property its file does not declare).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `ui.settings`.
    *
    * @example Open the plugin's page from an "Options…" button
    * The button in the plugin's window opens the Options window at the
@@ -284,10 +272,8 @@ export interface Settings {
  * The player decides when the backdrop shows: while the source is empty or
  * loading, and while ready media has no video picture (audio files). The
  * plugin decides what to draw, from {@link Player.state} and
- * {@link Player.stats}. With `events`, `state` follows every change; without
+ * {@link Player.stats}. After `plugin.player.subscribe()`, `state` follows every change; without
  * it, it refreshes only when this plugin mounts.
- *
- * @capability ui.mount; `events` to follow changes.
  *
  * @example React when a video picture appears
  * The OSD says "Video is playing" when the backdrop gives way to a video
@@ -316,8 +302,6 @@ export interface BackdropSlot {
   /**
    * Run code when a backdrop appears or disappears, or when it is shown or
    * hidden.
-   *
-   * @capability ui.mount and events
    *
    * @param listener - Receives the new state (`null`: no backdrop).
    * @returns A handle that removes the listener.
@@ -364,8 +348,6 @@ export interface BackdropSlot {
  * plugins; the sidebar and the adjust column one tab per plugin.
  * {@link Panels.bottom}, {@link Panels.sidebar} and {@link Panels.adjust}
  * describe the positions, whoever mounted there.
- *
- * @capability ui.mount
  *
  * @example Mount a list in the sidebar (examples/panel-menu)
  * The sidebar gets an "Example list" tab showing three rows. `mount`
@@ -443,8 +425,6 @@ export interface Panels {
    * `true`. As in the sidebar, only the current tab's plugin is kept
    * running while the column is open, and the player compiles a panel the
    * first time it is shown, not at start-up.
-   *
-   * @capability ui.mount
    *
    * @param slot - Where to mount the panel.
    * @param file - Path relative to the package directory, for example
@@ -614,8 +594,6 @@ export interface ConfirmOptions {
  * For anything more than a question or a path, use a {@link Windows | tool
  * window}.
  *
- * @capability ui.dialog
- *
  * @example Ask before deleting, remembering "Don't ask again"
  * Deleting asks for confirmation with a "Don't ask again" box; once the
  * user ticks it, later deletes go ahead without asking. `confirm` resolves with the button and the checkbox when the
@@ -673,8 +651,6 @@ export interface Dialogs {
    * Remembering "Don't ask again" is up to the plugin (see
    * {@link Scope.storage}).
    *
-   * @capability ui.dialog
-   *
    * @param options - The text and buttons; see {@link ConfirmOptions}.
    * @returns The answer: `confirmed` is `true` when the user picked the
    *   confirm button (Escape, the cancel button or closing the dialog give
@@ -687,7 +663,6 @@ export interface Dialogs {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `unsupported` (rejects) Only players before the confirmation
    *   drawn in the player, on a system other than macOS and Windows.
-   * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
    * @example Confirm before replacing the playlist
    * The user sees "Replace the current playlist?" with a Replace button and
@@ -718,15 +693,12 @@ export interface Dialogs {
   /**
    * Ask the user for one file to open.
    *
-   * @capability ui.dialog
-   *
    * @param options - `title`: the dialog's title, at most 256 bytes.
    * @returns The absolute path, or `null` when the user cancelled.
    *
    * @throws `busy` (rejects) Another dialog is open.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `invalid` (rejects) `title` is longer than 256 bytes.
-   * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
    * @example Let the user pick a subtitle file
    * The system's Open dialog appears titled "Choose a subtitle file" and
@@ -746,15 +718,12 @@ export interface Dialogs {
   /**
    * Ask the user for one or more files to open.
    *
-   * @capability ui.dialog
-   *
    * @param options - `title`: the dialog's title, at most 256 bytes.
    * @returns The absolute paths, or `[]` when the user cancelled.
    *
    * @throws `busy` (rejects) Another dialog is open.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `invalid` (rejects) `title` is longer than 256 bytes.
-   * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
    * @example Let the user pick several files at once
    * The Open dialog allows selecting several files; the OSD says how many
@@ -774,15 +743,12 @@ export interface Dialogs {
   /**
    * Ask the user for a folder.
    *
-   * @capability ui.dialog
-   *
    * @param options - `title`: the dialog's title, at most 256 bytes.
    * @returns The absolute path, or `null` when the user cancelled.
    *
    * @throws `busy` (rejects) Another dialog is open.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `invalid` (rejects) `title` is longer than 256 bytes.
-   * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
    * @example Let the user choose a folder for snapshots
    * The system's folder dialog appears titled "Save snapshots in". It
@@ -805,8 +771,6 @@ export interface Dialogs {
    * @remarks
    * The dialog only returns a path; writing the file is up to the plugin.
    *
-   * @capability ui.dialog
-   *
    * @param options - `title`: the dialog's title, at most 256 bytes.
    *   `fileName`: the proposed file name (a plain name without `/` or `\`,
    *   at most 256 bytes).
@@ -816,7 +780,6 @@ export interface Dialogs {
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `invalid` (rejects) `title` is too long, or `fileName` is too long
    *   or contains `/` or `\`.
-   * @throws `capability` (rejects) The manifest does not declare `ui.dialog`.
    *
    * @example Ask where to save a snapshot
    * The system's Save dialog proposes "frame.png" and returns where the
@@ -854,12 +817,10 @@ export interface Dialogs {
  * several plugins have one, they are stacked from top to bottom. `dispose()`,
  * disposing the scope or stopping the plugin removes it.
  *
- * @capability ui.osd
- *
  * @example Show live playback numbers over the video
  * A block over the video shows the position and the duration, updated
  * as playback moves. `player.onChange` runs after the SDK updated the
- * state (with `events`); `set` never throws and sends only the newest
+ * state (after `plugin.player.subscribe()`); `set` never throws and sends only the newest
  * text while one is in flight, so calling it on every change is fine.
  * ```ts
  * const info = plugin.osd.panel();
@@ -880,10 +841,7 @@ export interface OsdPanel extends Disposable {
    * Latest value wins: calling it on every state change is fine, the same
    * text is not sent twice and only the newest text is sent while a write is
    * in flight. Never throws; a failed write goes to {@link Scope.onError}
-   * (`invalid` for too much text, `unavailable` without a user interface,
-   * `capability` without `ui.osd`).
-   *
-   * @capability ui.osd
+   * (`invalid` for too much text, `unavailable` without a user interface).
    *
    * @param text - The text, with `\n` between lines: at most 32 lines and
    *   4096 bytes once translated and formatted. `null` hides the block. A
@@ -956,8 +914,6 @@ export interface OsdPanelOptions {
  * [Limits: on-screen display](../../../docs/reference/limits.md#on-screen-display)
  * ({@link "@vestra-player/sdk/testing"!OSD_LIMITS | OSD_LIMITS}).
  *
- * @capability ui.osd
- *
  * @example Show on-screen messages the user can turn off
  * "Blur on" appears over the video unless the user turned messages off in
  * the plugin's settings. `osd.show` asks the player to draw the text for a
@@ -992,8 +948,6 @@ export interface Osd {
    * a {@link TextList} of texts; `text` may also be a `Text` (then without
    * `args`).
    *
-   * @capability ui.osd
-   *
    * @param text - The template, 1–200 characters once translated and formatted;
    * line breaks become spaces. With `options.actions` the message ends in up to
    * two buttons, each running one of the plugin's own commands
@@ -1009,7 +963,6 @@ export interface Osd {
    *   or there are more than 2 actions, a title is empty or longer than 40
    *   characters once translated, or a command is not one of the plugin's.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `capability` (rejects) The manifest does not declare `ui.osd`.
    *
    * @example Confirm an action and show a value
    * The OSD shows "Bookmark added", then "Speed 1.5×" in the user's
@@ -1053,8 +1006,6 @@ export interface Osd {
    * @remarks
    * Nothing is shown until {@link OsdPanel.set}. A plugin has one block;
    * dispose it before creating another.
-   *
-   * @capability ui.osd
    *
    * @returns An {@link OsdPanel} owned by this scope.
    *

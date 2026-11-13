@@ -1,6 +1,6 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.8.0: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
+> @vestra-player/sdk 1.9.0: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
 
 ## Read the documentation
 
@@ -20,7 +20,7 @@
 
 - `/Guides/Tutorial`: Write a first plugin for Vestra Player: a menu item that shows the playback position, then the three styles a plugin can use, and how to test and publish it.
 - `/Guides/Guides`: One page per task, from adding a window to publishing a plugin, plus the design rules and troubleshooting.
-- `/Guides/Reference`: Lookup tables that span many symbols, from manifest fields and capabilities to the test host, mostly generated from the SDK's code.
+- `/Guides/Reference`: Lookup tables that span many symbols, from manifest fields to the test host, mostly generated from the SDK's code.
 - `/Guides/Examples`: Complete, tested example plugins with a screenshot each and a step-by-step walkthrough of their code.
 
 ## API
@@ -35,5 +35,5 @@
 - `/API/Sources`: 7 entries: ResolverOptions, WebResolverOptions, FileResolverOptions, ResolvedStream, Resolver, Resolvers, ResolvedMedia
 - `/API/Subtitles`: 5 entries: SubtitleTrack, SubtitlesState, SubtitleConditional, Subtitles, SubtitleStyle
 - `/API/UI`: 44 entries: ImageRef, ImageOptions, MarkdownRef, MarkdownOptions, PropValue, PropData, Props, Ui, View, Window, Windows, SlotState, SlotPanel, PanelState, PanelSlot, SidebarSlot, Panel,…
-- `/API/Testing`: 34 entries: CapabilityInfo, CAPABILITY_INFO, MESSAGE_LIMIT, COMMAND_LIMITS, MENU_IDS, BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, BuiltinSubmenu, BUILTIN_SUBMENUS, BuiltinCommand, BUILTIN_COMMANDS, LOCALES,…
+- `/API/Testing`: 32 entries: COMMAND_LIMITS, MENU_IDS, BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, BuiltinSubmenu, BUILTIN_SUBMENUS, BuiltinCommand, BUILTIN_COMMANDS, LOCALES, LIST_SEPARATORS, TEXT_LIMITS, THEME_PALETTES,…
 - `/API/Docs`: 4 entries: DOCS_PAGE_BYTES, DocsOptions, docs, searchDocs

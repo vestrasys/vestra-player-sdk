@@ -2,15 +2,9 @@
 // rendering.manage capability and TestHost's model of the player.
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  CAPABILITY_INFO,
-  HostError,
-  startPlugin,
-  TestHost,
-} from "../src/plugin/testing.ts";
+import { HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
-import { hostMethod } from "../src/capability-rules.ts";
 
 async function started(capabilities: string[], host = new TestHost()) {
   let plugin!: Plugin;
@@ -24,35 +18,6 @@ async function started(capabilities: string[], host = new TestHost()) {
 }
 const code = (expected: string) => (error: HostError) =>
   error.code === expected;
-
-test("rendering.manage: the player's table entry; rendering.state needs none", () => {
-  const last = HOST_CAPABILITIES.capabilities.find(
-    (capability) => capability.name === "rendering.manage",
-  )!;
-  assert.deepEqual(last, {
-    label: "Choose GPU or software rendering and restart the player",
-    methods: [
-      { name: "rendering.setPreference", needs: "rendering.manage" },
-      { name: "rendering.restart", needs: "rendering.manage" },
-    ],
-    name: "rendering.manage",
-    requires: [],
-    residency: "none",
-    risky: true,
-    builtinOnly: false,
-  });
-  assert.deepEqual(hostMethod("rendering.state"), {
-    name: "rendering.state",
-    needs: null,
-  });
-  assert.deepEqual(CAPABILITY_INFO["rendering.manage"], {
-    apis: ["Rendering.setPreference", "Rendering.restartPlayer"],
-    requires: [],
-    label: "Choose GPU or software rendering and restart the player",
-    risky: true,
-    builtinOnly: false,
-  });
-});
 
 test("state() needs no capability and reports the defaults of a GPU player", async () => {
   const { plugin, host, stop } = await started([]);
@@ -75,25 +40,6 @@ test("state() needs no capability and reports the defaults of a GPU player", asy
     code: "default",
     message: "nothing rules GPU rendering out",
   });
-  await stop();
-});
-
-test("setPreference and restartPlayer need rendering.manage", async () => {
-  const { plugin, host, stop } = await started([]);
-  await assert.rejects(
-    plugin.rendering.setPreference("software"),
-    code("capability"),
-  );
-  await assert.rejects(plugin.rendering.restartPlayer(), code("capability"));
-  assert.equal(
-    host.calls.some(
-      (call) =>
-        call.method !== "rendering.state" &&
-        call.method.startsWith("rendering."),
-    ),
-    false,
-  );
-  assert.equal(host.rendering.preference, "auto");
   await stop();
 });
 

@@ -1,17 +1,12 @@
-// Built-in-only capabilities (SDK 1.7.9, player 0.7.6): commands.run
-// (`plugin.commands.list` / `run`) and palette.lead (`plugin.palette.lead`),
-// with TestHost's model of the player's tickets, rates and confirmation.
+// Built-in-only requests (SDK 1.7.9, player 0.7.6): `plugin.commands.list` /
+// `run` and `plugin.palette.lead`, with TestHost's model of the player's
+// tickets, rates and confirmation. The player refuses them to a plugin that
+// is not built in (by identity, not by a declaration since 1.9.0).
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  CAPABILITY_INFO,
-  startPlugin,
-  TestHost,
-} from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin, PluginError } from "../src/plugin/index.ts";
-import { manifestProblems } from "../src/manifest.ts";
-
-const capabilities = ["commands", "commands.run", "palette.lead"];
 
 /** A plugin with one lead and two commands of its own; `builtin` as asked. */
 async function started(builtin = true) {
@@ -43,22 +38,10 @@ async function started(builtin = true) {
         .lead({ title: "Ask", icon: "search-ai" })
         .onRun((run) => void runs.push(run));
     },
-    { capabilities, host, builtin, id: "vestra.test" },
+    { host, builtin, id: "vestra.test" },
   );
   return { host, plugin, stop, runs, ran: () => ran };
 }
-
-test("commands.run and palette.lead are built-in only", () => {
-  for (const name of ["commands.run", "palette.lead"])
-    assert.equal(CAPABILITY_INFO[name]!.builtinOnly, true, name);
-  assert.equal(CAPABILITY_INFO["commands"]!.builtinOnly, false);
-  assert.equal(CAPABILITY_INFO["commands.run"]!.risky, true);
-  assert.deepEqual(CAPABILITY_INFO["commands.run"]!.apis, [
-    "Commands.list",
-    "Commands.run",
-  ]);
-  assert.deepEqual(CAPABILITY_INFO["palette.lead"]!.apis, ["Palette.lead"]);
-});
 
 test("a plugin that is not built in is refused with capability", async () => {
   const errors: PluginError[] = [];
@@ -68,7 +51,7 @@ test("a plugin that is not built in is refused with capability", async () => {
       plugin.onError((error) => void errors.push(error));
       plugin.palette.lead({ title: "Ask", icon: "ai" });
     },
-    { capabilities, host },
+    { host },
   );
   await assert.rejects(plugin.commands.list(), { code: "capability" });
   await assert.rejects(plugin.commands.run("host/mute", { ticket: "t" }), {
@@ -81,12 +64,10 @@ test("a plugin that is not built in is refused with capability", async () => {
   );
   assert.equal(host.paletteLead, null);
   await stop();
-  // Undeclared: refused before the player is asked.
-  const bare = await startPlugin(() => {}, { capabilities: [], builtin: true });
-  await assert.rejects(bare.plugin.commands.list(), { code: "capability" });
-  assert.throws(() => bare.plugin.palette.lead({ title: "A", icon: "ai" }), {
-    code: "capability",
-  });
+  // Built in, nothing declared (1.9.0): the player answers.
+  const bare = await startPlugin(() => {}, { builtin: true });
+  assert.ok((await bare.plugin.commands.list()).commands.length > 0);
+  await bare.plugin.palette.lead({ title: "A", icon: "ai" }).ready;
   await bare.stop();
 });
 
@@ -235,27 +216,9 @@ test("commands.list is the palette's table", async () => {
   await stop();
 });
 
-test("destructive is sent only when set; vestra-plugin check knows built-in only", async () => {
+test("destructive is sent only when set", async () => {
   const { host, stop } = await started();
   assert.equal(host.command("forget-all").declaration.destructive, true);
   assert.equal("destructive" in host.command("louder").declaration, false);
   await stop();
-  const manifest = (id: string) => ({
-    id,
-    version: "1.0.0",
-    apiVersion: "vestra/1",
-    entry: "main.js",
-    capabilities: ["commands.run"],
-  });
-  const other = manifestProblems(manifest("someone.ask"), ".");
-  assert.match(
-    other.problems.join("\n"),
-    /commands\.run: built-in plugins only/,
-  );
-  const builtin = manifestProblems(manifest("vestra.ask"), ".");
-  assert.deepEqual(builtin.problems, []);
-  assert.match(
-    builtin.hints.join("\n"),
-    /commands\.run: built-in plugins only/,
-  );
 });

@@ -25,7 +25,7 @@ export type SubtitleStamp = {
  * bottom of the video, and appear 250 ms earlier. `refresh` reads the
  * subtitle state from the player, whose `fonts` lists the font ids a style
  * may name; `setStyle` then sends this plugin's style layer
- * (`subtitles.control`, `subtitles.read`). It shows unless another plugin
+ *. It shows unless another plugin
  * with a manifest id that sorts later has a layer too: the player picks the
  * effective layer by manifest id, not by which call came last.
  * ```ts

@@ -5,7 +5,7 @@ description: Every manifest.json field with its rules.
 
 # Manifest
 
-`manifest.json` sits at the root of the plugin directory and of the package. The player and every `vestra-plugin` command check it against the same rules: an unknown field, an unknown capability, a field that breaks its rule, or a path that leaves the package (symbolic links included) is refused.
+`manifest.json` sits at the root of the plugin directory and of the package. The player and every `vestra-plugin` command check it against the same rules: an unknown field, a field that breaks its rule, or a path that leaves the package (symbolic links included) is refused.
 
 ```json
 {
@@ -13,7 +13,6 @@ description: Every manifest.json field with its rules.
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": ["commands", "ui.window"],
   "name": "Bookmark",
   "punchline": "Mark a moment and jump back to it.",
   "minPlayerVersion": "0.4.3"
@@ -32,7 +31,6 @@ description: Every manifest.json field with its rules.
 | `version` | required in the package | `x.y.z`, three whole numbers. `vestra-plugin build` writes it into `dist/manifest.json` from `--version`, the manifest or `package.json`. |
 | `apiVersion` | required | `vestra/1`. |
 | `entry` | required | Path of the entry module inside the package: `.ts` while developing, `.js` after `build`. |
-| `capabilities` | required | Capabilities from [Capabilities](capabilities.md), each at most once. |
 | `name` | display | 1–64 characters, one line, no leading or trailing white space. English; translated with the plugin's catalog. |
 | `author` | display | 1–64 characters, one line. |
 | `punchline` | display | One-line summary, 1–120 characters. English; translated. |
@@ -49,7 +47,7 @@ description: Every manifest.json field with its rules.
 
 - `name`, `punchline`, `description` and `tags` are English source text; the player shows them translated with the plugin's own catalog ([Add settings and translations](../guides/i18n.md)) through {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}.
 - An `icon`, `readme` or `changelog` that is named but missing is refused. `vestra-plugin build` copies them (and a default `README.md` or `CHANGELOG.md`) into the package: the README is the plugin's page in the store, so write it for users.
-- A call to a member whose capability is not declared fails with code `capability` ([Capabilities](capabilities.md)).
+- `capabilities` is no field any more (SDK 1.9.0, player 0.9.0): a manifest that has it is refused, and the message says what to call instead (`plugin.player.subscribe()`, `await plugin.player.read()`). The store shows what the code uses from a scan ([Capability scan](scan.md)).
 
 ## Versions
 

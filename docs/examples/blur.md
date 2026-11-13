@@ -29,7 +29,7 @@ You should know the basics from [Hello](hello.md): a plugin is a folder with a `
 
 ```text
 examples/blur/
-  manifest.json       id and capabilities
+  manifest.json       id
   main.ts             the filter, the window and the menu command
   ui/blur.slint       the window: one slider
   tests/blur.test.ts  tests against the SDK's in-memory test host
@@ -40,14 +40,7 @@ examples/blur/
 
 {@includeCode ../../examples/blur/manifest.json}
 
-A call whose capability is missing from the manifest fails with `code: "capability"`. Blur needs five:
-
-| Capability                | Why                                                                                                                                                                                   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands`                | `plugin.commands.add`: the menu item.                                                                                                                                                 |
-| `ui.window`               | `plugin.windows.create`: the Blur window.                                                                                                                                             |
-| `processing.video`        | `plugin.video.filter`: the blur itself.                                                                                                                                               |
-| `playback.read`, `events` | A filter reads the player's state, and follows its changes, to know when there is a video to apply the blur to. Without `events` a blur set before a video starts would stay waiting. |
+The manifest says who the plugin is. What it follows is two calls first in `activate`: `plugin.player.subscribe()` and `await plugin.player.read()`. A filter reads the player's state, and follows its changes, to know when there is a video to apply the blur to; without `subscribe()` a blur set before a video starts would stay waiting.
 
 ## main.ts, top to bottom
 

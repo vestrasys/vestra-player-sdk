@@ -1,25 +1,15 @@
 /**
- * Which player requests each member of the plugin API sends: the SDK's half
- * of the capability rule (the player's half, what each request needs, is
- * `HOST_CAPABILITIES`). A member is written `Interface.member` as in
- * `CAPABILITY_INFO`; members declared on `Scope` are written `Plugin.…`.
+ * Which player requests each member of the plugin API sends, written
+ * `Interface.member`; members declared on `Scope` are written `Plugin.…`.
+ * The generated reference pages read it: the Stability column of the
+ * message table (docs/reference/messages.md) and the members of each event
+ * (docs/reference/events.md). For a listener the row is the
+ * `events.subscribe` with its event name.
  *
- * List the requests that decide the member's capabilities: the one it
- * sends to do its work, and for a listener the `events.subscribe` with its
- * event name. A string parameter that the player's rule reads (`event`,
- * `stage`) is given in `params`. `also: true` marks a request whose
- * capability the member needs on top of its own (documented at the member,
- * not listed in its capability's `CAPABILITY_INFO.apis`).
- *
- * Members that need no capability are left out, apart from a few that show
- * a rule's "none" case. Members of objects that another listed member
- * returns (a `Window` from `Windows.create`, a `Panel` from `Panels.mount`)
- * are left out too: the call that created the object already needs the
- * capability.
- *
- * Order matters for `CAPABILITY_INFO`: each capability lists its members in
- * this table's order. test/capability-rules.test.ts checks every method and
- * parameter against the player's table.
+ * A row lists the request the member sends to do its work. Members whose
+ * requests come from a handle another member returned (a `Window` from
+ * `Windows.create`) are listed in the message table's `WRAPPED_BY`
+ * (scripts/doc-tables/messages.mjs) instead.
  *
  * @internal
  */
@@ -28,18 +18,16 @@
 export interface ApiRequest {
   /** The wire method (`source.submit`). */
   readonly method: string;
-  /** String parameters the player's rule for the method reads. */
+  /** String parameters that name what is meant (`event`, `stage`). */
   readonly params?: Readonly<Record<string, string>>;
-  /** A further capability, documented at the member. */
-  readonly also?: true;
 }
 
 const submit = [{ method: "source.submit" }, { method: "source.operation" }];
-const readsSubtitles: ApiRequest = { method: "subtitles.state", also: true };
-const listen = (event: string, also?: true): ApiRequest =>
-  also
-    ? { method: "events.subscribe", params: { event }, also }
-    : { method: "events.subscribe", params: { event } };
+const readsSubtitles: ApiRequest = { method: "subtitles.state" };
+const listen = (event: string): ApiRequest => ({
+  method: "events.subscribe",
+  params: { event },
+});
 
 /** @internal */
 export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
@@ -53,7 +41,7 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Player.open": submit,
     "Player.openStream": [
       { method: "producer.prepare" },
-      { method: "source.submit", also: true },
+      { method: "source.submit" },
     ],
     "Player.setPaused": submit,
     "Player.seek": submit,
@@ -133,7 +121,7 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Packages.uninstall": [{ method: "packages.uninstall" }],
     "Plugin.video.filter": [
       { method: "processing.replace", params: { stage: "video" } },
-      listen("source.state", true),
+      listen("source.state"),
     ],
     "Plugin.video.view": [{ method: "video.view.set" }],
     "Plugin.video.render": [{ method: "video.render.set" }],
@@ -146,8 +134,6 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
       { method: "snapshot.capture" },
     ],
     "Snapshot.export": [{ method: "jobs.state" }, { method: "jobs.start" }],
-    // Parts of remembered files: also media.sources (documented at the
-    // members; the player checks it for jobs.start with parts and jobs.check).
     "MediaCapture.export": [{ method: "jobs.state" }, { method: "jobs.start" }],
     "MediaCapture.exportCheck": [{ method: "jobs.check" }],
     "MediaSources.remember": [{ method: "media.sources.remember" }],
@@ -155,8 +141,7 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "MediaSources.locate": [{ method: "media.sources.locate" }],
     "MediaSources.forget": [{ method: "media.sources.forget" }],
     "MediaSources.list": [{ method: "media.sources.list" }],
-    // An open like Player.open: playback.control (the player's rule for
-    // media.sources.open), with which source.operation needs it too.
+    // An open like Player.open, followed with source.operation.
     "MediaSources.open": [
       { method: "media.sources.open" },
       { method: "source.operation" },
@@ -212,22 +197,3 @@ export const SUBSCRIBED_EVENTS: readonly string[] = Object.freeze([
   "video.upscaling.changed",
   "video.motion.changed",
 ]);
-
-/**
- * Members whose requests depend on an argument, which `API_REQUESTS` cannot
- * list: the event name of a listener (`event`: a subscribed event's
- * `events.subscribe`, nothing for the others) or the method name of a request
- * (`method`: that method, with the string fields of the second argument as its
- * parameters). The capability check reads the argument when its type is one
- * string (a literal, a constant), and reports the call as unchecked otherwise
- * (a computed name, a union of several, the member taken by destructuring or as
- * a value).
- *
- * @internal
- */
-export const ARGUMENT_APIS: Readonly<Record<string, "event" | "method">> =
-  Object.freeze({
-    "Player.on": "event",
-    "Wire.on": "event",
-    "Wire.request": "method",
-  });

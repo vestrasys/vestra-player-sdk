@@ -40,8 +40,6 @@ export interface CaptureOptions extends Conditional {
  * times and playback is unaffected. Disposing it releases the player's
  * copy; an export using it after that fails with `released`.
  *
- * @capability media.read and media.control
- *
  * @example Export one frame as PNG and as JPEG
  * The same frozen frame is written twice, lossless and compressed. Each
  * `export` starts a job of its own; the snapshot is released after both
@@ -101,7 +99,6 @@ export interface Snapshot extends Disposable {
    * make (no video stream, a cover image, an external audio track, codecs `mp4`
    * cannot hold) ends `failed` with the code `unsupported`.
    *
-   * @capability media.read and media.control
    * @throws `released` (rejects) The snapshot was already released.
    * @throws `invalid` (rejects) Bad options (`quality` outside 1–100, a
    *   relative destination, a clip `end` not after the snapshot time or
@@ -110,8 +107,6 @@ export interface Snapshot extends Disposable {
    * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
    * @throws `unavailable` (rejects) No FFmpeg, or the export worker could not
    *   start.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.read` and `media.control`.
    *
    * @example Export a 30-second clip
    * A clip from the snapshot time to 30 seconds later is written as MP4.
@@ -332,8 +327,6 @@ export type JobState = Omit<MediaJob, "jobId">;
  * rejects for a failed export: the failure is in `outcome`. Disposing an
  * unfinished job cancels it.
  *
- * @capability media.read and media.control
- *
  * @example Show export progress and cancel on request
  * The OSD shows the job's status while it runs, and a Cancel command stops
  * it. `onChange` follows the state (`queued`, `running`, `cancelling`,
@@ -357,8 +350,6 @@ export interface ExportJob extends Disposable {
   /**
    * The state changed.
    *
-   * @capability media.read
-   *
    * @example Log each state of an export
    * The plugin's log records each status the job goes through (`queued`,
    * `running`, `cancelling` after a cancel, then a terminal one). The listener runs when the SDK learns a
@@ -381,10 +372,7 @@ export interface ExportJob extends Disposable {
   /**
    * Ask to cancel: `requested`, `tooLate` (already publishing) or `terminal` (already over).
    *
-   * @capability media.control
    * @throws `rejected` (rejects) The player did not accept the request.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.control`.
    *
    * @example Cancel an export the user no longer wants
    * The running export stops, unless it is already writing its file.
@@ -404,10 +392,6 @@ export interface ExportJob extends Disposable {
   /**
    * Read the state from the player now.
    *
-   * @capability media.read
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.read`.
-   *
    * @example Read a job's state now
    * The plugin reads the newest state of an export without waiting for an
    * event. `refresh` asks the player and resolves with the state, which
@@ -419,15 +403,14 @@ export interface ExportJob extends Disposable {
    * console.log(state.status);
    * ```
    *
+   * @throws `disabled` (rejects) The plugin is stopping.
    * @since 1.0.0
    */
   refresh(): Promise<JobState>;
 }
 
 /**
- * `plugin.media`: snapshots and exports. Needs `media.read` and
- * `media.control` (processed snapshots also `playback.read` and
- * `subtitles.read`). Exports decode offline and do not disturb playback.
+ * `plugin.media`: snapshots and exports. Exports decode offline and do not disturb playback.
  *
  * @example Save the current frame as JPEG
  * The frame on screen, with the plugin's own picture effects, is saved
@@ -457,8 +440,6 @@ export interface ExportJob extends Disposable {
  * holds at most 4 snapshots at a time (16 in the player); release them
  * when done.
  *
- * @capability media.read and media.control (processed snapshots also
- * `playback.read` and `subtitles.read`)
  * @since 1.0.0
  * @category Media
  */
@@ -470,7 +451,6 @@ export interface MediaCapture {
    * plain SRT text can) or a picture over the size limits; `noSource` when
    * nothing is playing.
    *
-   * @capability media.read and media.control
    * @throws `stale` (rejects) The source changed since `ifCurrent`.
    * @throws `noSource` (rejects) Nothing is playing.
    * @throws `invalid` (rejects) `at` at or after the end of the source.
@@ -481,8 +461,6 @@ export interface MediaCapture {
    * @throws `unsupported` (rejects) A processed snapshot the player cannot
    *   freeze: subtitles that cannot be flattened (only plain SRT text can),
    *   or a picture over the size limits.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.read` and `media.control`.
    *
    * @example Freeze the frame at the 10-second mark
    * The plugin freezes the frame at 0:10 of the open file, raw, to export it
@@ -506,7 +484,6 @@ export interface MediaCapture {
    * restarts, for exports made later ({@link MediaCapture.export}) and for
    * opening them again ({@link MediaSources.open}).
    *
-   * @capability media.sources
    * @since 1.7.8
    */
   readonly sources: MediaSources;
@@ -543,8 +520,6 @@ export interface MediaCapture {
    * written so far, and what a crash leaves in the temporary folder goes
    * at the player's next start.
    *
-   * @capability media.read and media.control, and media.sources (its
-   * tokens)
    * @throws `invalid` (rejects) No part or more than 100, a part whose end
    *   is not after its start, parts longer than 24 hours in all, a relative
    *   destination, `encoding` with `copy` or `container` with `mp4`, an
@@ -554,8 +529,6 @@ export interface MediaCapture {
    * @throws `busy` (rejects) This plugin runs 2 exports (or the player 8).
    * @throws `unavailable` (rejects) No FFmpeg, or the export worker could not
    *   start.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.control` and `media.sources`.
    *
    * @example Export two ranges of remembered files as one file
    * Two parts from two files become one file, copied as they are when the
@@ -597,7 +570,6 @@ export interface MediaCapture {
    * (nothing is decoded, so it is cheap enough to run on every change of
    * a list); for a snapshot it reads the held file's streams.
    *
-   * @capability media.control, and media.sources for parts
    * @throws `invalid` (rejects) No part or more than 100, a time that is
    *   negative, past 24 hours (24 hours in all) or not finite, a snapshot
    *   `end` not after its time or past its duration, an invalid
@@ -605,8 +577,6 @@ export interface MediaCapture {
    * @throws `released` (rejects) The snapshot was released.
    * @throws `busy` (rejects) This plugin has 4 checks or source requests
    *   running.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.control` (and `media.sources` for parts).
    *
    * @example Say why the fast export is not possible
    * The plugin shows a line under its list when the parts need a
@@ -706,7 +676,7 @@ export interface SourceReference {
  *
  * @remarks
  * Tokens hide paths as an API convenience, not as a security boundary:
- * while the file plays, `player.state.source` (`playback.read`) shows its
+ * while the file plays, `player.state.source` shows its
  * path, and a plugin is an ordinary Node.js process, not sandboxed from
  * the file system, that can find files by other means. What a token gives is a
  * way to name the user's files without the plugin keeping their paths,
@@ -721,8 +691,6 @@ export interface SourceReference {
  * until the plugin forgets them or is uninstalled, at most 500 per plugin.
  * When a file has moved, {@link MediaSources.locate} lets the user find it
  * again in the player's own file dialog.
- *
- * @capability media.sources
  *
  * @example Remember the playing file and check it later
  * The plugin keeps the token in its storage and checks the file before
@@ -746,7 +714,6 @@ export interface MediaSources {
    * file as it is). Fails `unsupported` for a stream, an address or a
    * plugin's picture, `stale` when the source changed since `ifCurrent`.
    *
-   * @capability media.sources
    * @throws `unsupported` (rejects) The source is not a local file, or the
    *   player cannot read its streams.
    * @throws `stale` (rejects) The source changed since `ifCurrent`.
@@ -754,15 +721,13 @@ export interface MediaSources {
    * @throws `busy` (rejects) This plugin has 4 source requests or checks
    *   running; try again when one has answered.
    * @throws `unavailable` (rejects) No FFmpeg to read the file with.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources`.
    *
    * @example Add the marked range to a list, with a thumbnail
    * The range the user marked becomes a part of the plugin's list. The
    * token stands for the file; the plugin keeps it with the times, and the
    * name is what the list shows. There is no thumbnail API: while the file
    * plays, the plugin captures the part's first frame
-   * ({@link MediaCapture.capture}, `media.read` and `media.control`) and
+   * ({@link MediaCapture.capture}) and
    * exports it into its own data directory; `plugin.ui.image` shows it
    * scaled down.
    * ```ts
@@ -789,12 +754,9 @@ export interface MediaSources {
    * The reference with its file looked at now: `status` says whether it
    * is still there as it was.
    *
-   * @capability media.sources
    * @throws `missing` (rejects) Not one of this plugin's tokens.
    * @throws `busy` (rejects) This plugin has 4 source requests or checks
    *   running; try again when one has answered.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources`.
    *
    * @example Mark the parts whose file is gone
    * At start the plugin checks each remembered file once. A part whose file
@@ -817,15 +779,12 @@ export interface MediaSources {
    * user picks a file, the token stands for that file from then on.
    * Resolves `null` when the user cancels.
    *
-   * @capability media.sources
    * @throws `missing` (rejects) Not one of this plugin's tokens.
    * @throws `busy` (rejects) Another dialog of the player is open, or this
    *   plugin showed a Locate dialog less than 2 seconds ago.
    * @throws `unavailable` (rejects) No window to show the dialog in.
    * @throws `unsupported` (rejects) The player cannot read the chosen file's
    *   streams.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources`.
    *
    * @example Locate a moved file
    * The row's Locate… button asks the user for the file. The token keeps
@@ -843,10 +802,6 @@ export interface MediaSources {
   /**
    * The player forgets the token (an unknown one is ignored).
    *
-   * @capability media.sources
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources`.
-   *
    * @example Forget a file no part uses any more
    * When the last part from a file leaves the list, the plugin lets the
    * player forget the file, which frees one of its 500 references.
@@ -856,17 +811,15 @@ export interface MediaSources {
    * await plugin.media.sources.forget(token);
    * ```
    *
+   * @throws `disabled` (rejects) The plugin is stopping.
    * @since 1.7.8
    */
   forget(token: string): Promise<void>;
   /**
    * Every reference this plugin holds, each with its file looked at now.
    *
-   * @capability media.sources
    * @throws `busy` (rejects) This plugin has 4 source requests or checks
    *   running; try again when one has answered.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources`.
    *
    * @example Forget the references the list no longer uses
    * After the user cleared the list, the plugin forgets every file none of
@@ -886,16 +839,12 @@ export interface MediaSources {
    * Open the remembered file in the player and play it from `start`
    * seconds (default its beginning): the user's "preview this part". It
    * is an ordinary open, as {@link Player.open} of that file would be (the
-   * current source is replaced; the playlist treats it as any open), so it
-   * needs `playback.control` as `Player.open` does, and `media.sources` for
-   * the token. The plugin names the file by its token instead of keeping
+   * current source is replaced; the playlist treats it as any open). The plugin names the file by its token instead of keeping
    * its path; that is a convenience, not a boundary: once the file plays,
-   * `player.state.source` (`playback.read`) shows its path, as for any
+   * `player.state.source` shows its path, as for any
    * open. Resolves once the file is loaded. A file that is gone or changed
    * is refused before anything opens.
    *
-   * @capability media.sources and playback.control (and playback.read, to
-   * follow the open until the file is loaded)
    * @throws `source-missing` (rejects) No file is at the token's path any
    *   more; offer {@link MediaSources.locate}.
    * @throws `source-changed` (rejects) The file changed since it was
@@ -906,8 +855,6 @@ export interface MediaSources {
    * @throws `replaced` (rejects) Another source replaced it before it
    *   loaded.
    * @throws `backend` (rejects) The player could not load the file.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `media.sources` or `playback.control`.
    *
    * @example Preview a part on double-click
    * Double-clicking a row of the plugin's list plays that part's file from

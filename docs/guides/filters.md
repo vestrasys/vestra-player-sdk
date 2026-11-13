@@ -19,9 +19,9 @@ The centre is the pixel itself, the edges its four direct neighbours, the corner
 
 ## Steps
 
-### Declare the capabilities
+### Follow the player
 
-`processing.video` opens `plugin.video`, which also needs `playback.read`, and `events` for the filter chain. A processed snapshot needs `media.read`, `media.control` and `subtitles.read`.
+A filter chain follows the player's source: call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`, so a chain set before a video starts applies when one does.
 
 ### Write the kernel as a shader
 
@@ -106,17 +106,7 @@ Use `gblur` for a blur, a `convolution` for a kernel of your own (sharpen, embos
   "id": "me.blur-kernel",
   "version": "0.1.0",
   "apiVersion": "vestra/1",
-  "entry": "main.ts",
-  "capabilities": [
-    "commands",
-    "ui.osd",
-    "processing.video",
-    "playback.read",
-    "events",
-    "media.read",
-    "media.control",
-    "subtitles.read"
-  ]
+  "entry": "main.ts"
 }
 ```
 
@@ -126,7 +116,9 @@ Use `gblur` for a blur, a `convolution` for a kernel of your own (sharpen, embos
 import { join } from "node:path";
 import type { ConvolutionPlane, Plugin } from "@vestra-player/sdk";
 
-export default function activate(plugin: Plugin) {
+export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   const shaderFile = join(import.meta.dirname, "shaders", "blur.glsl");
   const shaders = plugin.video.shaders("blur");
   let shaderOn = false;

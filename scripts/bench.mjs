@@ -79,7 +79,6 @@ function packageWith() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "bench.plugin",
-      capabilities: ["ui.window", "commands", "playback.read", "events"],
     }),
   );
   return directory;
@@ -119,7 +118,16 @@ async function withPlugin(activate, body) {
   const directory = packageWith();
   const host = new TestHost();
   host.setSource({ phase: "ready", duration: 7200, position: 0 });
-  const started = await startPlugin(activate, { host, directory });
+  // What the plugin follows: the player's events and state, as a plugin
+  // that shows them calls first in activate.
+  const started = await startPlugin(
+    async (plugin) => {
+      plugin.player.subscribe();
+      await plugin.player.read();
+      return activate(plugin);
+    },
+    { host, directory },
+  );
   try {
     await body({ ...started, host });
   } finally {

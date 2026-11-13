@@ -2,9 +2,9 @@
 
 A speed slider in the player's adjust column, the column of controls for what is playing, between the video and the sidebar. Alt+5 opens the column at this tab and closes it again; the key shows under the tab.
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `ui.mount`, `playback.read`, `playback.control`, `events` | `panels.mount("adjust")`, `Panel.toggle`, `CommandOptions.home`, `player.setRate` |
+| `subscribe()`, `read()` | `panels.mount("adjust")`, `Panel.toggle`, `CommandOptions.home`, `player.setRate` |
 
 Why `"adjust"` and not `"sidebar"`: after the user closes the panel, they do not keep looking at it; it only changes what is playing. A list, chapters or search results would go in the sidebar.
 

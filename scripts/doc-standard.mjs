@@ -7,9 +7,9 @@
  * Each category lists the exported names of `@vestra-player/sdk` it covers:
  *
  * - `full`: modules and handles (types with methods). Required: a summary,
- *   `@remarks`, `@example`, `@capability`, `@since` and `@category <name>`.
- *   Each method declared on it: a summary, `@example`, `@capability`,
- *   `@since`, and `@throws` when it returns a Promise. Each property: a
+ *   `@remarks`, `@example`, `@since` and `@category <name>`.
+ *   Each method declared on it: a summary, `@example`, `@since`, and
+ *   `@throws` when it returns a Promise. Each property: a
  *   summary, and `@throws` when it is a Promise.
  * - `data`: plain data types (options, states, values). Required: a summary,
  *   `@since` and `@category <name>`; each field has a summary.
@@ -58,8 +58,6 @@ export const STRICT_CATEGORIES = {
       "HostError",
     ],
     data: [
-      "CapabilityInfo",
-      "CAPABILITY_INFO",
       "MESSAGE_LIMIT",
       "COMMAND_LIMITS",
       "MENU_IDS",

@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import type { Plugin } from "../src/index.ts";
-import { startPlugin } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import { parsePo } from "../src/i18n.ts";
 
 test("a disabled command lets its key pass to the next one bound to it", async () => {
@@ -89,7 +89,6 @@ test("a TRANSLATORS comment on an as const table entry reaches the .pot", () => 
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["ui.osd"],
     }),
   );
   writeFileSync(join(dir, "package.json"), '{"type":"module"}');
