@@ -1045,7 +1045,7 @@ export type MotionMode = "off" | "double" | "display";
  * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling); the two cannot run together. |
  * | `failed` | The converter stopped on this video; the message has its error. The next video tries again. |
  * | `overload` | The GPU could not keep up with this video, even with the faster motion search. The next video tries again. |
- * | `rate` | The video's frame rate does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
+ * | `rate` | The converter's input rate ({@link MotionState.sourceFps}: 25i deinterlaced by field reads 50) does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
  * | `format` | The video's format was not measured: 10-bit or deeper, or HDR. |
  * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). The next video may fit. |
  *
@@ -1145,7 +1145,8 @@ export interface MotionState {
   /**
    * What the player does now, for this plugin or another one (the strongest
    * mode asked for that can work): `off` while nothing is asked, while a
-   * reason stands in the way, and while the video's rate is not known yet.
+   * reason stands in the way, and until the input rate is measured
+   * ({@link MotionState.sourceFps} may show the container's rate before).
    */
   readonly active: MotionMode;
   /** Why Double Frame Rate cannot work now; `null` while it can. */
@@ -1158,7 +1159,14 @@ export interface MotionState {
    * falls behind); `null` while off.
    */
   readonly searchMode: "native" | "performance" | null;
-  /** The video's frame rate, in frames a second; `null` while unknown. */
+  /**
+   * The converter's input rate, in frames a second: the rate after every
+   * other filter in the player's chain, measured while the converter is
+   * out of it. A plugin's filter that changes the rate counts, and a video
+   * the player deinterlaces by field reads twice its frame rate (25i: 50).
+   * Until it is measured, the container's frame rate; `null` while neither
+   * is known.
+   */
   readonly sourceFps: number | null;
   /** The converter's output rate as measured, in tenths; `null` while off. */
   readonly outputFps: number | null;

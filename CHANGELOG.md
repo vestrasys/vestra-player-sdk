@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.20
+
+**Who must change: nobody.** A docs-only patch (a review follow-up of motion smoothing): no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
+
+- **`MotionState.sourceFps`** (player d9fb0fb0, `playback/motion.rs`): documented as what the player reports, the converter's input rate. It is measured after every other filter in the player's chain while the converter is out of it, so a plugin's rate-changing filter counts and a video deinterlaced by field reads twice its frame rate; until it is measured it is the container's frame rate, `null` while neither is known. `MotionState.active` (off until the input rate is measured), the `rate` reason, `WireMotionState.sourceFps` and `TestHost.motion.sourceFps` refer to it. The generated tables are unchanged; `llms.txt` changes only its version.
+
 ## 1.7.19
 
 **Who must change: nobody.** A new capability and member for the player's motion smoothing (player 0.8.1), which each GPU vendor's store plugin offers (user ruling 2026-11-12: AMD Motion Smoothing now, NVIDIA's later); `apiVersion` stays `vestra/1`; the API surface snapshot gains the new names.
