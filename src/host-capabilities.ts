@@ -345,6 +345,18 @@ export const HOST_CAPABILITIES: HostCapabilities = {
     },
     {
       methods: [
+        { name: "mpv.command", needs: "player" },
+        { name: "mpv.get", needs: "player" },
+        { name: "mpv.set", needs: "player" },
+        { name: "mpv.observe", needs: "player" },
+        { name: "mpv.unobserve", needs: "player" },
+      ],
+      name: "mpv",
+      residency: "live",
+      summary: "Send mpv commands and read, set and observe its properties",
+    },
+    {
+      methods: [
         { name: "packages.list", needs: null },
         { name: "window.state", needs: null },
         { name: "system.reveal", needs: null },

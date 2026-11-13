@@ -358,6 +358,18 @@ Residency `recordable`: the player records the registrations and keeps them whil
 | `palette.lead.clear` | none | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
 | `palette.lead.done` | none | `{ ticket }` | `void` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
 
+### Send mpv commands and read, set and observe its properties
+
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `mpv.command` | `player` | `{ args }` | `{ result: Json }` | `capability`, `invalid`, `refused`, `conflict`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.command Mpv.command} |
+| `mpv.get` | `player` | `{ name }` | `{ value: Json }` | `capability`, `invalid`, `refused`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.get Mpv.get} |
+| `mpv.set` | `player` | `{ name, value }` | `void` | `capability`, `invalid`, `refused`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.set Mpv.set} |
+| `mpv.observe` | `player` | `{ name }` | `void` | `capability`, `invalid`, `refused`, `limit` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.observe Mpv.observe} |
+| `mpv.unobserve` | `player` | `{ name }` | `void` | `capability`, `invalid`, `refused`, `limit` | SDK member: {@linkcode "@vestra-player/sdk"!Mpv.observe Mpv.observe} |
+
 ### Read the plugin list, the window and rendering state; open files and links with the system; keep values for this run
 
 Residency `none`: no effect on standby.

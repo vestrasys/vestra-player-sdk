@@ -141,6 +141,8 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.dialogAnswers} | Answers for `dialogs.open` (paths, `null` = cancelled) and `dialogs.confirm` (`{ confirmed, checked }`), consumed in order. |
 | {@link "@vestra-player/sdk/testing"!TestHost.confirms} | Every `dialogs.confirm` request (its options), newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.mainWindow} | The main window as the player would show it. |
+| {@link "@vestra-player/sdk/testing"!TestHost.mpv} | The mpv pass-through (`plugin.mpv`), without an mpv: `commands` are the commands the plugin sent, in order (they do nothing else); `properties` is what `get` answers and `set` writes (a property not in it fails `backend`, "mpv: property not found"); `labels` are the owners of filter labels by `"vf/<label>"` or `"af/<label>"` (preset another plugin's id to test `conflict`); `observed` are the properties the plugin observes. |
+| {@link "@vestra-player/sdk/testing"!TestHost.setMpvProperty}() | Simulate mpv changing a property: store the value and send it to the plugin if it observes the property (`plugin.mpv.observe`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.secrets} | The player's secret store for this plugin: name → value. |
 | {@link "@vestra-player/sdk/testing"!TestHost.sessionStorage} | `plugin.storage.session`: key → value, as the player keeps them. |
 | {@link "@vestra-player/sdk/testing"!TestHost.systemInfo} | What `plugin.app.system()` reports. |

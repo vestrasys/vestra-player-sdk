@@ -92,6 +92,10 @@ test("CAPABILITY_INFO: labels, reserved ones and what each opens", () => {
     "Bindings.list",
     "Bindings.set",
     "Bindings.reset",
+    "Mpv.command",
+    "Mpv.get",
+    "Mpv.set",
+    "Mpv.observe",
     "Rendering.setPreference",
     "Rendering.restartPlayer",
   ]);

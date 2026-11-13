@@ -22,6 +22,7 @@ const SOURCES = {
   TEXT_LIMITS: { file: "src/i18n.ts" },
   MARKDOWN_LIMITS: { file: "src/plugin/markdown.ts" },
   OSD_LIMITS: { file: "src/plugin/osd.ts" },
+  MPV_LIMITS: { file: "src/mpv.ts" },
   TIMELINE_LIMITS: { file: "src/plugin/timeline.ts" },
   SECRET_LIMITS: { file: "src/plugin/services.ts" },
   SESSION_STORAGE_LIMITS: { file: "src/plugin/services.ts" },
