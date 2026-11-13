@@ -4,6 +4,7 @@
  * keep its translations up to date.
  *
  *   vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]
+ *   vestra-plugin scan [plugin-dir...]
  *   vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...
  *   vestra-plugin i18n check [plugin-dir...]
  *   vestra-plugin docs [path] [--page N]
@@ -23,6 +24,11 @@
  *   test    node --test on tests/*.test.{ts,mjs}
  *   pack    build, then dist/ → <out>/<id>-<version>.vxp (a zip; default
  *           out: the current directory) with its sha256 and size
+ *   scan    the boundary categories the plugin's code uses (player,
+ *           plugins, clipboard, credentials, camera, microphone, screen,
+ *           notifications), as JSON: by type for TypeScript, by name
+ *           (best effort, said in the output) for JavaScript; reads the
+ *           source only, checks and changes nothing
  *   docs    the SDK's documentation by path, for coding agents: `/` lists
  *           Overview, Guides and API, `/API/Media/Snapshot/dispose` is
  *           one member's whole documentation; --search <query> lists
@@ -871,9 +877,127 @@ async function pack(target, flag, outDirectory) {
   );
 }
 
+/**
+ * `vestra-plugin scan`: the boundary categories a plugin's code uses
+ * (src/capability-scan.ts, capability-scan.json), as JSON on standard
+ * output: one object for one directory, an array for several. It reads the
+ * source and the manifest's id and version; it runs no type check and no
+ * build, and changes nothing.
+ *
+ * TypeScript files are scanned by type, against this SDK's own
+ * declarations (whatever the project has installed); JavaScript files, and
+ * TypeScript files of a plugin that imports no SDK types, by name. A
+ * directory with no source outside dist/ (a built package) is scanned in
+ * dist/.
+ */
+async function scanPlugin(directory) {
+  const ts = await typescript();
+  const scanner = await import(
+    pathToFileURL(join(sdkRoot, "dist/capability-scan.js")).href
+  );
+  const root = resolve(directory);
+  if (!present(join(root, "manifest.json")))
+    fail(`${directory}: no manifest.json in ${root}`);
+  const manifest = await json(join(root, "manifest.json"));
+  const isScript = (file) => /\.[mc]?js$/.test(file);
+  const isTyped = (file) => /\.[mc]?tsx?$/.test(file) && !isDeclaration(file);
+  let all = (await files(root)).filter(
+    (file) => isScript(file) || isTyped(file),
+  );
+  // A built package: its code is dist/ alone.
+  if (!all.length && present(join(root, "dist")))
+    all = (await files(join(root, "dist")))
+      .filter(isScript)
+      .map((file) => join("dist", file));
+  all.sort();
+  let typed = all.filter(isTyped).map((file) => join(root, file));
+  const read = async (file) => ({
+    file,
+    text: await readFile(file, "utf8"),
+  });
+  const named = await Promise.all(
+    all.filter(isScript).map((file) => read(join(root, file))),
+  );
+  const relativeTo = (file) =>
+    relative(root, resolve(file)).split(sep).join("/");
+  const program = typed.length
+    ? ts.createProgram(typed, {
+        target: ts.ScriptTarget.ES2023,
+        module: ts.ModuleKind.NodeNext,
+        moduleResolution: ts.ModuleResolutionKind.NodeNext,
+        allowImportingTsExtensions: true,
+        noEmit: true,
+        skipLibCheck: true,
+        types: [],
+        // This SDK's declarations, wherever the plugin's own copy is.
+        paths: { [SDK]: [join(sdkRoot, "dist/index.d.ts")] },
+      })
+    : undefined;
+  let found = scanner.scan(ts, program, {
+    typed,
+    named,
+    relative: relativeTo,
+  });
+  const notes = [];
+  if (!found.resolved) {
+    // No SDK types to go by: read the TypeScript by name too.
+    notes.push(
+      "The TypeScript files import no types of @vestra-player/sdk; they were scanned by name (best effort).",
+    );
+    named.push(...(await Promise.all(typed.map(read))));
+    typed = [];
+    found = scanner.scan(ts, undefined, {
+      typed,
+      named,
+      relative: relativeTo,
+    });
+  }
+  if (named.length)
+    notes.push(
+      "Files scanned by name have no types: a member counts when it is used on something named as its module of plugin (plugin.clipboard.readText, clipboard.readText). A use under another name is missed, and a name that only looks like one is counted.",
+    );
+  if (!typed.length && !named.length)
+    notes.push("No TypeScript or JavaScript files were found.");
+  if (found.unchecked.length)
+    notes.push(
+      "Some requests by name could not be placed (unchecked): what they ask for is not in uses.",
+    );
+  return {
+    scan: scanner.SCAN_FORMAT,
+    sdk: (await json(join(sdkRoot, "package.json"))).version,
+    plugin: typeof manifest.id === "string" ? manifest.id : null,
+    version: typeof manifest.version === "string" ? manifest.version : null,
+    uses: found.uses,
+    method:
+      typed.length && named.length
+        ? "mixed"
+        : typed.length
+          ? "types"
+          : named.length
+            ? "names"
+            : "none",
+    files: { types: typed.length, names: named.length },
+    evidence: found.evidence,
+    unchecked: found.unchecked,
+    notes,
+  };
+}
+
+/** `vestra-plugin scan [plugin-dir...]`. */
+async function scanCommand(args) {
+  const directories = args.length ? args : ["."];
+  const results = [];
+  for (const directory of directories)
+    results.push({ directory, ...(await scanPlugin(directory)) });
+  const [only] = results;
+  if (results.length === 1) delete only.directory;
+  console.log(JSON.stringify(results.length === 1 ? only : results, null, 2));
+}
+
 const USAGE = [
   "usage: vestra-plugin <check|build|test|pack> [plugin-dir...] [--version x.y.z] [--out dir]",
   "       vestra-plugin check [plugin-dir...] --json",
+  "       vestra-plugin scan [plugin-dir...]",
   "       vestra-plugin i18n extract [plugin-dir...] [--locale <lang>]...",
   "       vestra-plugin i18n check [plugin-dir...]",
   "       vestra-plugin docs [path] [--page N]",
@@ -930,6 +1054,10 @@ async function main() {
   }
   if (command === "docs") {
     await docsCommand(args);
+    return;
+  }
+  if (command === "scan") {
+    await scanCommand(args);
     return;
   }
   let subcommand = null;

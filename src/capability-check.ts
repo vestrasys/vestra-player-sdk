@@ -511,3 +511,133 @@ export function addCapabilityEdit(
       : `, ${quoted}`,
   };
 }
+
+/** @internal One use of an SDK member, where {@link findMemberUses} found it. */
+export interface MemberUse {
+  readonly file: string;
+  /** 1-based line and column of the member's name. */
+  readonly line: number;
+  readonly column: number;
+  /** The member, as it was asked for (`Clipboard.readText`). */
+  readonly api: string;
+}
+
+/**
+ * @internal A request sent by name (`plugin.wire.request("clipboard.readText")`):
+ * the method when the types fix it to one string, else `undefined` (a
+ * computed name, a union of several, the member taken as a value).
+ */
+export interface RequestUse {
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+  readonly method: string | undefined;
+}
+
+/**
+ * Every use, in `files`, of the SDK members named by `apis`
+ * (`Interface.member`), and every request sent by name
+ * (`ARGUMENT_APIS`' `method` members: `Wire.request`), in file and position
+ * order. The same type-aware resolution as {@link checkCapabilities}, for
+ * any list of members: a use is a property access, an element access with
+ * a literal name or a destructured property whose symbol is the SDK's
+ * declaration of the member. It reads no manifest and no capability rule
+ * (the capability scan, `capability-scan.ts`, gives it its own lists).
+ *
+ * `resolved` is `false` when the program has no import of
+ * `@vestra-player/sdk` that resolves: nothing can be found by type then.
+ *
+ * @internal
+ */
+export function findMemberUses(
+  ts: typeof TS,
+  program: TS.Program,
+  options: {
+    readonly files: readonly string[];
+    readonly apis: Iterable<string>;
+  },
+): { resolved: boolean; uses: MemberUse[]; requests: RequestUse[] } {
+  const uses: MemberUse[] = [];
+  const requests: RequestUse[] = [];
+  const members = resolveMembers(ts, program, options.apis);
+  const senders = resolveMembers(
+    ts,
+    program,
+    Object.entries(ARGUMENT_APIS)
+      .filter(([, kind]) => kind === "method")
+      .map(([api]) => api),
+  );
+  const resolved = members.size > 0 || senders.size > 0;
+  if (!resolved) return { resolved, uses, requests };
+  const checker = program.getTypeChecker();
+  const apiOf = (table: Members, symbol: TS.Symbol | undefined) => {
+    for (const declaration of symbol?.declarations ?? []) {
+      const api = table.get(declaration);
+      if (api) return api;
+    }
+    return undefined;
+  };
+  for (const fileName of options.files) {
+    const file = program.getSourceFile(fileName);
+    if (!file) continue;
+    const position = (name: TS.Node) => {
+      const { line, character } = file.getLineAndCharacterOfPosition(
+        name.getStart(file),
+      );
+      return { file: file.fileName, line: line + 1, column: character + 1 };
+    };
+    const seen = (name: TS.Node, symbol: TS.Symbol | undefined) => {
+      const api = apiOf(members, symbol);
+      if (api) uses.push({ ...position(name), api });
+      if (!apiOf(senders, symbol)) return;
+      // A direct call with one literal name is a request of that name;
+      // anything else (a computed name, the member taken as a value) is a
+      // request the scan cannot name.
+      const access = name.parent;
+      const call = access?.parent;
+      const direct =
+        access &&
+        (ts.isPropertyAccessExpression(access) ||
+          ts.isElementAccessExpression(access)) &&
+        call &&
+        ts.isCallExpression(call) &&
+        call.expression === access
+          ? call
+          : undefined;
+      const values = direct
+        ? literalStrings(ts, checker, direct.arguments[0])
+        : undefined;
+      requests.push({
+        ...position(name),
+        method: values?.length === 1 ? values[0] : undefined,
+      });
+    };
+    const visit = (node: TS.Node): void => {
+      if (ts.isPropertyAccessExpression(node))
+        seen(node.name, checker.getSymbolAtLocation(node.name));
+      else if (
+        ts.isElementAccessExpression(node) &&
+        ts.isStringLiteralLike(node.argumentExpression)
+      )
+        seen(
+          node.argumentExpression,
+          checker.getSymbolAtLocation(node.argumentExpression),
+        );
+      else if (
+        ts.isBindingElement(node) &&
+        ts.isObjectBindingPattern(node.parent)
+      ) {
+        const name = node.propertyName ?? node.name;
+        const text =
+          ts.isIdentifier(name) || ts.isStringLiteralLike(name)
+            ? name.text
+            : undefined;
+        if (text !== undefined)
+          seen(name, checker.getTypeAtLocation(node.parent).getProperty(text));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+  }
+  return { resolved, uses, requests };
+}
