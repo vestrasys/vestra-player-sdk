@@ -12,6 +12,8 @@ import {
 import type { Plugin, PluginError } from "../src/plugin/index.ts";
 import { manifestProblems } from "../src/manifest.ts";
 import { retiredCapabilities } from "../src/capability-rules.ts";
+import { PALETTE_LEAD_LIMITS, PALETTE_LEAD_STATES } from "../src/commands.ts";
+import type { PaletteLeadOptions } from "../src/plugin/index.ts";
 
 const capabilities = ["plugins"];
 
@@ -147,7 +149,13 @@ test("the lead's status state: sent only when set, checked like the player", asy
     icon: "ai",
     status: { text: "Planning…" },
   });
-  for (const state of ["working", "done", "failed", "note"] as const) {
+  for (const state of [
+    "working",
+    "done",
+    "failed",
+    "note",
+    "stopped",
+  ] as const) {
     await lead.update({
       title: "Ask",
       icon: "ai",
@@ -161,12 +169,83 @@ test("the lead's status state: sent only when set, checked like the player", asy
       icon: "ai",
       status: { text: "Done", state: "finished" as "done" },
     }),
-    { code: "invalid", message: /status\.state is one of/ },
+    {
+      code: "invalid",
+      message: "status.state is one of working, done, failed, note, stopped",
+    },
   );
   // Refused: the row stays as last set.
   assert.deepEqual(host.paletteLead!.status, {
     text: "Done · Mute",
-    state: "note",
+    state: "stopped",
+  });
+  assert.deepEqual(
+    [...PALETTE_LEAD_STATES],
+    ["working", "done", "failed", "note", "stopped"],
+  );
+  await lead.dispose();
+  await stop();
+});
+
+test("the lead's status texts: an end state holds two lines, the strip's own text is for a working status (SDK 1.8.0)", async () => {
+  const { host, plugin, stop } = await started();
+  const lead = plugin.palette.lead({ title: "Ask", icon: "ai" });
+  await lead.ready;
+  const set = (status: NonNullable<PaletteLeadOptions["status"]>) =>
+    lead.update({ title: "Ask", icon: "ai", status });
+  assert.deepEqual(PALETTE_LEAD_LIMITS, {
+    title: 40,
+    placeholder: 60,
+    empty: 80,
+    note: 40,
+    statusText: 80,
+    statusEndText: 160,
+    statusNote: 40,
+    statusStrip: 80,
+  });
+  // Working: 80 characters, with or without the state.
+  await set({ text: "a".repeat(80) });
+  for (const state of [undefined, "working"] as const)
+    await assert.rejects(
+      set({ text: "a".repeat(81), ...(state ? { state } : {}) }),
+      {
+        code: "invalid",
+        message: "status.text must be 1–80 characters on one line",
+      },
+    );
+  // An end state: 160, still on one line (the strip wraps it).
+  for (const state of ["done", "failed", "note", "stopped"] as const) {
+    await set({ text: "a".repeat(160), state });
+    await assert.rejects(set({ text: "a".repeat(161), state }), {
+      code: "invalid",
+      message: "status.text must be 1–160 characters on one line",
+    });
+    await assert.rejects(set({ text: "one\ntwo", state }), {
+      code: "invalid",
+    });
+  }
+  // The strip's own text: sent only when set, 1–80, working only.
+  await set({ text: "Vestra is working · Planning…", strip: "Planning…" });
+  assert.deepEqual(host.paletteLead!.status, {
+    text: "Vestra is working · Planning…",
+    strip: "Planning…",
+  });
+  await set({ text: "Working", strip: "Planning…", state: "working" });
+  await assert.rejects(set({ text: "Working", strip: "a".repeat(81) }), {
+    code: "invalid",
+    message: "status.strip must be 1–80 characters on one line",
+  });
+  await assert.rejects(set({ text: "Working", strip: "" }), {
+    code: "invalid",
+  });
+  await assert.rejects(set({ text: "Stopped", strip: "x", state: "stopped" }), {
+    code: "invalid",
+    message: "status.strip is for a working status",
+  });
+  await set({ text: "Stopped", state: "stopped" });
+  assert.deepEqual(host.paletteLead!.status, {
+    text: "Stopped",
+    state: "stopped",
   });
   await lead.dispose();
   await stop();

@@ -334,7 +334,7 @@
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: icon: BarButtonIcon | ImageRef;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: note?: string | Text;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: placeholder?: string | Text;
-@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: status?: { text: string | Text; note?: string | Text; state?: "working" | "done" | "failed" | "note"; } | null;
+@vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: status?: { text: string | Text; note?: string | Text; strip?: string | Text; state?: "working" | "done" | "failed" | "note" | "stopped"; } | null;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadOptions :: title: string | Text;
 @vestra-player/sdk InterfaceDeclaration PaletteLeadRun
 @vestra-player/sdk InterfaceDeclaration PaletteLeadRun :: keep: boolean;

@@ -1253,21 +1253,44 @@ export interface PaletteLeadOptions {
    * the top of the main window, as its `state` says.
    */
   status?: {
-    /** The status text (up to 80 characters). */
+    /**
+     * The status text, on one line: up to 80 characters while working; up
+     * to 160 for an end state, which the strip shows on up to two lines
+     * (since 1.8.0; 80 before).
+     */
     text: string | Text;
     /** On the right of the row (up to 40 characters). */
     note?: string | Text;
+    /**
+     * What the status strip shows instead of `text` while working (up to
+     * 80 characters on one line), for a row that says more than the strip
+     * needs: the row reads "Vestra is working · Planning…", the strip
+     * "Planning…". Absent: the strip shows `text`. Only for a working
+     * status: an end state is shown in the strip alone, so its `text` is
+     * the strip's, and `strip` with one is `invalid`. Like a working
+     * `text`, it does not change the strip once {@link Commands.run} has
+     * shown a step of the ticket there.
+     *
+     * Sent only when set: players before it refuse the field (`invalid`,
+     * through `ready`, or `update` rejects).
+     *
+     * @since 1.8.0
+     */
+    strip?: string | Text;
     /**
      * Still working or ended. Absent: `"working"`.
      *
      * - `"working"`: the work goes on. The strip shows the text with a
      *   moving line and a Stop button (Stop is Enter on the status row)
      *   and stays until the status changes or is removed.
-     * - `"done"`, `"failed"`, `"note"`: an end state (finished; failed; a
-     *   sentence for the user, such as an answer). The player shows it
-     *   with a check, in the danger colour, or plain, then removes it by
-     *   itself after a few seconds (about 2 s, 6 s, and 4–10 s by length;
-     *   longer while the pointer is on it). It is shown once: not kept,
+     * - `"done"`, `"failed"`, `"note"`, `"stopped"`: an end state
+     *   (finished; failed; a sentence for the user, such as an answer; the
+     *   user stopped the work). The player shows it with a check, in the
+     *   danger colour, plain, or plain with its icon dimmed, then removes
+     *   it by itself after a few seconds (about 2 s, 6 s, 4–10 s by
+     *   length, and 2 s; longer while the pointer is on it). `"stopped"`
+     *   (since 1.8.0) says that nothing came of the request, which `"note"`
+     *   cannot: use it for the text shown after Stop. It is shown once: not kept,
      *   not shown again later (when the plugin is stopped or woken), and
      *   the row goes back to its usual form. The plugin needs no timer of
      *   its own and may call {@link PaletteLead.done} right after setting
@@ -1277,13 +1300,13 @@ export interface PaletteLeadOptions {
      * strip, a `"working"` text changes only the palette's status row,
      * until an end state, `status: null` or the end of the ticket.
      *
-     * Players before the status strip refuse the field (`invalid`). Any
-     * other value: `invalid`
-     * (through `ready`, or `update` rejects).
+     * Players before the status strip refuse the field (`invalid`), and
+     * players before SDK 1.8.0's refuse `"stopped"`. Any other value:
+     * `invalid` (through `ready`, or `update` rejects).
      *
      * @since 1.7.15
      */
-    state?: "working" | "done" | "failed" | "note";
+    state?: "working" | "done" | "failed" | "note" | "stopped";
   } | null;
 }
 

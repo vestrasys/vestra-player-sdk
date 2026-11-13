@@ -519,14 +519,20 @@ function leadJson(options: PaletteLeadOptions): { [key: string]: Json } {
   if (status === null) out.status = null;
   else if (status !== undefined) {
     if (typeof status !== "object")
-      throw failure("invalid", "status is { text, note?, state? } or null");
+      throw failure(
+        "invalid",
+        "status is { text, note?, strip?, state? } or null",
+      );
     out.status = {
       text: text(status.text, "status.text"),
       ...(status.note === undefined
         ? {}
         : { note: text(status.note, "status.note") }),
-      // Sent only when set (players before it refuse the field); the
-      // player checks the value.
+      // Sent only when set (players before them refuse the fields); the
+      // player checks the values.
+      ...(status.strip === undefined
+        ? {}
+        : { strip: text(status.strip, "status.strip") }),
       ...(status.state === undefined ? {} : { state: status.state as Json }),
     };
   }

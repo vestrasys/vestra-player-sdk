@@ -20,6 +20,7 @@ import { canonical, keyLabel } from "../bindings.ts";
 import { evaluate } from "../when.ts";
 import type { ConditionFacts } from "../when.ts";
 import type { CommandWhen } from "../../commands.ts";
+import { PALETTE_LEAD_LIMITS, PALETTE_LEAD_STATES } from "../../commands.ts";
 import { menuKeys, textKey } from "../../i18n.ts";
 import type { FakeCommand, FakeBarButton, TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
@@ -626,18 +627,24 @@ function listed(host: TestHost, inner: Internals, row: Row) {
   };
 }
 
-/** `palette.lead.set` texts: at most this many characters each. */
-const LEAD_TEXTS: Readonly<Record<string, number>> = {
-  title: 40,
-  placeholder: 60,
-  empty: 80,
-  note: 40,
-  "status.text": 80,
-  "status.note": 40,
-};
+/**
+ * `palette.lead.set` texts: at most this many characters each
+ * (`PALETTE_LEAD_LIMITS`); an end state's `status.text` may be longer.
+ */
+const leadTexts = (end: boolean): Readonly<Record<string, number>> => ({
+  title: PALETTE_LEAD_LIMITS.title,
+  placeholder: PALETTE_LEAD_LIMITS.placeholder,
+  empty: PALETTE_LEAD_LIMITS.empty,
+  note: PALETTE_LEAD_LIMITS.note,
+  "status.text": end
+    ? PALETTE_LEAD_LIMITS.statusEndText
+    : PALETTE_LEAD_LIMITS.statusText,
+  "status.note": PALETTE_LEAD_LIMITS.statusNote,
+  "status.strip": PALETTE_LEAD_LIMITS.statusStrip,
+});
 
 /** `palette.lead.set`'s `status.state` (absent or null: `working`). */
-const LEAD_STATES: readonly string[] = ["working", "done", "failed", "note"];
+const LEAD_STATES: readonly string[] = PALETTE_LEAD_STATES;
 
 /** The default handlers of `commands.list`, `commands.run` and `palette.lead`. */
 export function builtinHandlers(
@@ -756,7 +763,23 @@ export function builtinHandlers(
       return { ran: true };
     },
     "palette.lead.set": (p) => {
-      for (const [name, max] of Object.entries(LEAD_TEXTS)) {
+      const status = p.status as Record<string, Json> | null | undefined;
+      // The player's order: the state first (it decides the text's limit),
+      // then the texts, then the icon.
+      const state = status?.state;
+      if (
+        state !== undefined &&
+        state !== null &&
+        !LEAD_STATES.includes(state as string)
+      )
+        throw new HostError(
+          "invalid",
+          `status.state is one of ${LEAD_STATES.join(", ")}`,
+        );
+      const end = typeof state === "string" && state !== "working";
+      if (end && status?.strip !== undefined && status.strip !== null)
+        throw new HostError("invalid", "status.strip is for a working status");
+      for (const [name, max] of Object.entries(leadTexts(end))) {
         const [first, second] = name.split(".");
         const value = second
           ? (p[first!] as Record<string, Json> | null | undefined)?.[second]
@@ -778,17 +801,6 @@ export function builtinHandlers(
       }
       if (typeof p.icon !== "string" && host.imagePath(p.icon) === null)
         throw new HostError("invalid", "icon is an icon name or an image");
-      const state = (p.status as Record<string, Json> | null | undefined)
-        ?.state;
-      if (
-        state !== undefined &&
-        state !== null &&
-        !LEAD_STATES.includes(state as string)
-      )
-        throw new HostError(
-          "invalid",
-          `status.state is one of ${LEAD_STATES.join(", ")}`,
-        );
       host.paletteLead = { ...p };
     },
     "palette.lead.clear": () => {

@@ -28,6 +28,13 @@ Each new name at most once (`bindings.manage` and `ui.theme` together are one `p
 - **`TestHost`** (its design is unchanged): `commands.list`, `commands.run` and `palette.lead.*` no longer refuse a plugin that is not `builtin`; `builtin` (and `startPlugin`'s option) now only makes the plugin's own commands built-in ones in `commands.list`, which `commands.run` runs without asking first. `bindings.list` leaves out a `focus: "panel"` command of a plugin that has no panel mounted, as the player now does (until 1.8.0 it went by the manifest's `ui.mount`); `Bindings.list` says so. As before, `TestHost` does not apply the capability table to requests.
 - **Docs**: every `@capability` tag, the generated tables of capabilities, events (no capability column) and messages (one section per part of the player, with its residency), the guides, the tutorial and the eleven examples (their manifests declare nothing now) follow. `llms.txt` and the API surface snapshot are regenerated (the snapshot loses `CapabilityInfo.builtinOnly`, `requires` and `risky` and gains `reserved`).
 
+**Palette lead status** (additions; who must change: nobody). For a plugin that holds the palette's lead row and reports a request's progress (Ask Vestra today; a calculator or a search that answers in the strip, an assistant that the user can stop). Each needs the player released with this SDK; an older player refuses them with `invalid`.
+
+- **An end state's `status.text` may have 160 characters** (`done`, `failed`, `note`, `stopped`), still on one line: the strip shows it on up to two lines. A working text stays at 80 (one line of the row and of the strip).
+- **`status.state: "stopped"`**: a new end state for the text shown after the user stopped the work, which was sent as `note` and looked like an answer. The player shows it plain with its icon dimmed, for about 2 s.
+- **`status.strip`**: an optional text the strip shows instead of `text` while working (1–80 characters on one line), so the row can read "Vestra is working · Planning…" and the strip "Planning…". Sent only when set; with an end state it is `invalid` (an end state shows in the strip alone, so its `text` is the strip's).
+- **`TestHost`** follows: the limits by state, the fifth state, `strip` kept in `host.paletteLead.status`. The limits and the state names are `PALETTE_LEAD_LIMITS` and `PALETTE_LEAD_STATES`, exported from `./runtime` for the player's agreement test. Test: `test/commands-run.test.ts`. The API surface snapshot gains `strip` and `"stopped"`.
+
 ## 1.7.20
 
 **Who must change: nobody.** A docs-only patch (a review follow-up of motion smoothing): no API change, `apiVersion` stays `vestra/1`, the API surface snapshot is unchanged.
