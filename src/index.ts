@@ -9,15 +9,15 @@
  *
  * Start with {@link Plugin} and {@link Scope}: every module
  * (`plugin.commands`, `plugin.player`, `plugin.windows`…) hangs off them and
- * documents the manifest capability it needs. Errors are described at
+ * documents the manifest capability it needs, if any. Errors are described at
  * {@link PluginError}. Tests use `@vestra-player/sdk/testing`.
  *
  * @example Add a menu item that shows a message
  * The player gets a Tools ▸ Hello menu item; picking it shows "Hello" on
  * the video. The player imports the entry module and calls `activate` with
- * the plugin's `Plugin` object; `commands.add` registers the item (manifest
- * capability `commands`), and the player calls `run` when the user picks it
- * or presses a key bound to it. `osd.show` needs `ui.osd`.
+ * the plugin's `Plugin` object; `commands.add` registers the item, and the
+ * player calls `run` when the user picks it or presses a key bound to it.
+ * Neither needs a manifest capability.
  * ```ts
  * import type { Plugin } from "@vestra-player/sdk";
  *

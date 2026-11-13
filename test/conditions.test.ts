@@ -38,7 +38,7 @@ test("conditions are sent as `when` and evaluated by the host", async () => {
         run: () => {},
       });
     },
-    { capabilities: ["events", "playback.read", "commands"] },
+    { capabilities: [] },
   );
   try {
     const register = sent(host).find((c) => c.id === "save")!;
@@ -81,7 +81,7 @@ test("conditions are sent as `when` and evaluated by the host", async () => {
 
 test("set switches between a condition and a function", async () => {
   const { plugin, host, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "playback.read", "commands"],
+    capabilities: [],
   });
   try {
     const { when } = plugin;
@@ -112,7 +112,7 @@ test("set switches between a condition and a function", async () => {
 
 test("plugin.when refuses what is not in its vocabulary", async () => {
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   try {
     const { when } = plugin;
@@ -146,7 +146,7 @@ test("keepsRunning says why, with where the plugin added it", async () => {
         run: () => {},
       });
     },
-    { capabilities: ["events", "playback.read", "commands"] },
+    { capabilities: [] },
   );
   try {
     // packages.changed wakes a stopped plugin: it keeps nothing running.

@@ -41,8 +41,7 @@ export interface WebResolverOptions {
  * A resolver for local files by extension: when anyone opens such a file with
  * {@link Player.open} (the Open dialog, the playlist, next / previous, the
  * recent list, a drop that calls `open`), the player asks this plugin for a
- * stream it generates instead of playing the file. Needs `source.resolve` and
- * `producer.av`.
+ * stream it generates instead of playing the file.
  *
  * @remarks
  * The open keeps everything of the original call: its `ifCurrent`, its
@@ -149,7 +148,7 @@ export interface ResolvedStream {
  * scope or stopping the plugin unregisters it and aborts resolutions in
  * flight; the extensions or hosts are free again for other plugins.
  *
- * @capability source.resolve
+ * @capability None.
  *
  * @example Report when another plugin already handles the format
  * The plugin tells the user when its `.ch8` resolver could not register
@@ -185,16 +184,13 @@ export interface Resolver extends Disposable {
    *   scheme + host, or this plugin already registered this id.
    * @throws `busy` (rejects) The player already holds 16 resolvers.
    * @throws `invalid` (rejects) A malformed declaration.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `source.resolve`.
    */
   readonly ready: Promise<void>;
 }
 
 /**
  * `plugin.resolvers`: turn web page URLs into playable streams, or local
- * files into streams this plugin generates. Needs `source.resolve` (file
- * resolvers also `producer.av`).
+ * files into streams this plugin generates.
  *
  * @example Play pages of a video site
  * Opening a `https://video.example.com/…` page plays its video. When the
@@ -224,7 +220,7 @@ export interface Resolver extends Disposable {
  * anyone opens a matching address or file (the Open dialog, the playlist,
  * another plugin), so the plugin does not intercept opens itself.
  *
- * @capability source.resolve (file resolvers also `producer.av`)
+ * @capability None.
  * @see [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
  * @category Sources
@@ -237,7 +233,7 @@ export interface Resolvers {
    * (`conflict` otherwise). A rejected `resolve` fails the open with the
    * error's message.
    *
-   * @capability source.resolve
+   * @capability None.
    *
    * @example Play a site's pages through the plugin
    * Opening a `https://video.example.com/…` address plays the page's video.

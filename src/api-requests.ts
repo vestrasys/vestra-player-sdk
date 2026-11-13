@@ -4,22 +4,25 @@
  * `HOST_CAPABILITIES`). A member is written `Interface.member` as in
  * `CAPABILITY_INFO`; members declared on `Scope` are written `Plugin.…`.
  *
- * List the requests that decide the member's capabilities: the one it
- * sends to do its work, and for a listener the `events.subscribe` with its
- * event name. A string parameter that the player's rule reads (`event`,
- * `stage`) is given in `params`. `also: true` marks a request whose
- * capability the member needs on top of its own (documented at the member,
- * not listed in its capability's `CAPABILITY_INFO.apis`).
+ * List the request a member sends to do its work, and for a listener the
+ * `events.subscribe` with its event name in `params` (the Events reference
+ * table names each event's listeners from it; no rule of the player reads a
+ * parameter). `also: true` marks a request the member sends beside its own
+ * (a state read before a change): the reference tables name the member for
+ * its own requests only.
  *
- * Members that need no capability are left out, apart from a few that show
- * a rule's "none" case. Members of objects that another listed member
- * returns (a `Window` from `Windows.create`, a `Panel` from `Panels.mount`)
- * are left out too: the call that created the object already needs the
- * capability.
+ * Since 1.8.0 most rows need no capability (four boundaries are left:
+ * `player`, `plugins`, `clipboard`, `credentials`). The rows stay: the
+ * capability check reads the table, so a member the player later puts
+ * behind one of the four is reported without a change here, and the
+ * Messages and Events reference tables name the SDK member of every
+ * request from it. Members of objects that another listed member returns
+ * (a `Window` from `Windows.create`, a `Panel` from `Panels.mount`) are
+ * left out.
  *
  * Order matters for `CAPABILITY_INFO`: each capability lists its members in
- * this table's order. test/capability-rules.test.ts checks every method and
- * parameter against the player's table.
+ * this table's order. test/capability-check.test.ts checks every method
+ * against the player's table.
  *
  * @internal
  */
@@ -28,9 +31,9 @@
 export interface ApiRequest {
   /** The wire method (`source.submit`). */
   readonly method: string;
-  /** String parameters the player's rule for the method reads. */
+  /** A listener's event name (`{ event }` of `events.subscribe`). */
   readonly params?: Readonly<Record<string, string>>;
-  /** A further capability, documented at the member. */
+  /** A request beside the member's own (a state read before a change). */
   readonly also?: true;
 }
 
@@ -132,22 +135,18 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Packages.reload": [{ method: "packages.reload" }],
     "Packages.uninstall": [{ method: "packages.uninstall" }],
     "Plugin.video.filter": [
-      { method: "processing.replace", params: { stage: "video" } },
+      { method: "processing.replace" },
       listen("source.state", true),
     ],
     "Plugin.video.view": [{ method: "video.view.set" }],
     "Plugin.video.render": [{ method: "video.render.set" }],
     "Plugin.video.shaders": [{ method: "video.shaders.set" }],
-    "Plugin.audio.filter": [
-      { method: "processing.replace", params: { stage: "audio" } },
-    ],
+    "Plugin.audio.filter": [{ method: "processing.replace" }],
     "MediaCapture.capture": [
       { method: "snapshot.state" },
       { method: "snapshot.capture" },
     ],
     "Snapshot.export": [{ method: "jobs.state" }, { method: "jobs.start" }],
-    // Parts of remembered files: also media.sources (documented at the
-    // members; the player checks it for jobs.start with parts and jobs.check).
     "MediaCapture.export": [{ method: "jobs.state" }, { method: "jobs.start" }],
     "MediaCapture.exportCheck": [{ method: "jobs.check" }],
     "MediaSources.remember": [{ method: "media.sources.remember" }],
@@ -155,8 +154,7 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "MediaSources.locate": [{ method: "media.sources.locate" }],
     "MediaSources.forget": [{ method: "media.sources.forget" }],
     "MediaSources.list": [{ method: "media.sources.list" }],
-    // An open like Player.open: playback.control (the player's rule for
-    // media.sources.open), with which source.operation needs it too.
+    // An open like Player.open's.
     "MediaSources.open": [
       { method: "media.sources.open" },
       { method: "source.operation" },
@@ -190,8 +188,9 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
 /**
  * The events whose listener subscribes (`events.subscribe` with the event
  * name): the plugin API's `HostEvent`. Other names a plugin listens to
- * (`commands.execute`, `ui.callback`) arrive unasked and need nothing.
- * test/wire-facade.test.ts keeps it equal to `HostEvent`.
+ * (`commands.execute`, `ui.callback`) arrive unasked. The Events reference
+ * table is built from it; test/wire-facade.test.ts keeps it equal to
+ * `HostEvent`.
  *
  * @internal
  */
@@ -210,20 +209,14 @@ export const SUBSCRIBED_EVENTS: readonly string[] = Object.freeze([
 ]);
 
 /**
- * Members whose requests depend on an argument, which `API_REQUESTS` cannot
- * list: the event name of a listener (`event`: a subscribed event's
- * `events.subscribe`, nothing for the others) or the method name of a request
- * (`method`: that method, with the string fields of the second argument as its
- * parameters). The capability check reads the argument when its type is one
- * string (a literal, a constant), and reports the call as unchecked otherwise
- * (a computed name, a union of several, the member taken by destructuring or as
- * a value).
+ * Members whose request depends on an argument, which `API_REQUESTS` cannot
+ * list: `plugin.wire.request`, by its method name. The capability check
+ * reads the argument when its type is one string (a literal, a constant),
+ * and reports the call as unchecked otherwise (a computed name, a union of
+ * several, the member taken by destructuring or as a value). A listener's
+ * event name (`plugin.player.on`, `plugin.wire.on`) is not read: no event
+ * needs a capability.
  *
  * @internal
  */
-export const ARGUMENT_APIS: Readonly<Record<string, "event" | "method">> =
-  Object.freeze({
-    "Player.on": "event",
-    "Wire.on": "event",
-    "Wire.request": "method",
-  });
+export const ARGUMENT_APIS: readonly string[] = Object.freeze(["Wire.request"]);

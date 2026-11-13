@@ -1,16 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { createPlugin } from "../src/plugin/index.ts";
 
-const all = [
-  "playback.read",
-  "playback.control",
-  "events",
-  "ui.dialog",
-  "window.control",
-];
+const all: string[] = [];
 
 async function started(host = new TestHost(), capabilities = all) {
   let plugin!: Plugin;
@@ -199,7 +196,7 @@ test("bindings: list, override, unbind, reset; press follows the overlay", async
       });
     },
     {
-      capabilities: ["commands", "events", "bindings.manage", "playback.read"],
+      capabilities: ["player"],
       host,
     },
   );
@@ -250,19 +247,30 @@ test("bindings: list, override, unbind, reset; press follows the overlay", async
   await stop();
 });
 
-test("bindings.list leaves out panel commands of a plugin without ui.mount (player 0.8.0)", async () => {
-  const activate = (p: Plugin) => {
-    p.commands.add({ id: "busy", title: "Busy", focus: "panel", run() {} });
-    p.commands.add({ id: "ask", title: "Ask", run() {} });
-  };
-  const listed = async (capabilities: string[]) => {
+// Until 1.8.0 the manifest's `ui.mount` decided it; the player now goes by
+// the panels it holds.
+test("bindings.list leaves out panel commands of a plugin that has no panel", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "round3a-panel-"));
+  writeFileSync(
+    join(directory, "panel.slint"),
+    "export global Bridge { in property <float> position; }\nexport component Panel inherits Rectangle {}\n",
+  );
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({ id: "test.plugin", capabilities: ["player"] }),
+  );
+  const listed = async (panel: boolean) => {
     const host = new TestHost();
     // A stored binding of the hidden command: declared, so no orphan.
     host.bindings.overlay.set("test.plugin/busy", ["Ctrl+K"]);
-    const { plugin, stop } = await startPlugin(activate, {
-      capabilities: ["commands", "bindings.manage", ...capabilities],
-      host,
-    });
+    const { plugin, stop } = await startPlugin(
+      (p: Plugin) => {
+        p.commands.add({ id: "busy", title: "Busy", focus: "panel", run() {} });
+        p.commands.add({ id: "ask", title: "Ask", run() {} });
+        if (panel) p.panels.mount("sidebar", "panel.slint");
+      },
+      { directory, host },
+    );
     const list = await plugin.bindings.list();
     // Still declared: the user's binding can be set.
     await plugin.bindings.set({ plugin: "test.plugin", command: "busy" }, [
@@ -277,8 +285,8 @@ test("bindings.list leaves out panel commands of a plugin without ui.mount (play
       orphans: list.orphans,
     };
   };
-  assert.deepEqual(await listed([]), { mine: ["ask"], orphans: [] });
-  assert.deepEqual(await listed(["ui.mount"]), {
+  assert.deepEqual(await listed(false), { mine: ["ask"], orphans: [] });
+  assert.deepEqual(await listed(true), {
     mine: ["ask", "busy"],
     orphans: [],
   });
@@ -300,7 +308,7 @@ test("packages: a built-in can be neither disabled nor uninstalled", async () =>
     },
   ];
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["plugins.manage"],
+    capabilities: ["plugins"],
     host,
   });
   await rejects(
@@ -341,7 +349,7 @@ test("packages: list, follow, enable, disable and uninstall", async () => {
     entry("b.dev", "development"),
   ];
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["plugins.manage"],
+    capabilities: ["plugins"],
     host,
   });
   assert.deepEqual(
@@ -433,7 +441,7 @@ test("secondary subtitles: select by role, load as secondary, never the primary"
       streamIndex: null,
     });
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["subtitles.read", "subtitles.control", "playback.read"],
+    capabilities: [],
     host,
   });
   let state = await plugin.subtitles.refresh();

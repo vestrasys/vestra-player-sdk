@@ -30,7 +30,7 @@ test("timeline: layers merge, last write wins, a new source clears them", async 
       p.onError((error) => errors.push(error));
     },
     {
-      capabilities: ["playback.read", "events", "timeline.marks"],
+      capabilities: [],
       host,
     },
   );
@@ -86,7 +86,7 @@ test("timeline: layers merge, last write wins, a new source clears them", async 
 
 test("ui.image: wire references, new value per call, released with its scope", async () => {
   const errors: PluginError[] = [];
-  const directory = packageDir(["ui.mount", "events"]);
+  const directory = packageDir([]);
   let plugin!: Plugin;
   const { host, stop } = await startPlugin(
     (p: Plugin) => {
@@ -122,7 +122,7 @@ test("ui.image: wire references, new value per call, released with its scope", a
 
 test("backdrop: one at a time, state follows the player", async () => {
   const host = new TestHost();
-  const directory = packageDir(["ui.mount", "events"]);
+  const directory = packageDir([]);
   const states: (boolean | null)[] = [];
   const { plugin, stop } = await startPlugin(
     (p: Plugin) => {

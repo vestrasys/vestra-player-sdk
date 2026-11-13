@@ -7,7 +7,7 @@ import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { renderProblem } from "../src/plugin/view.ts";
 
-const capabilities = ["playback.read", "events", "processing.video"];
+const capabilities: string[] = [];
 const state = (handle: { status: { state: string } }) => handle.status.state;
 const code = (handle: {
   status: { state: string; error?: { code: string } };

@@ -6,7 +6,7 @@
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `ui.window` | `ui.markdown`, `MarkdownView` from `@vestra/markdown.slint`, `Window.set`; package assets in `package.json` (`"vestra": { "assets": [...] }`) |
+| none                    | `ui.markdown`, `MarkdownView` from `@vestra/markdown.slint`, `Window.set`; package assets in `package.json` (`"vestra": { "assets": [...] }`) |
 
 ## Run it
 

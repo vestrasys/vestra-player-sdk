@@ -392,9 +392,7 @@ class KeysService {
     if (this.#started) return;
     this.#started = true;
     const runtime = this.#runtime;
-    // Without `commands` the plugin has no commands: every read is [].
-    if (!runtime.can("commands")) return;
-    runtime.on(KEYS, (data) => this.#accept(data), "commands", true);
+    runtime.on(KEYS, (data) => this.#accept(data), true);
     // Subscribed first: a change after this answer comes as an event.
     runtime.host.commands.keys().then(
       (answer) => this.#accept(answer),
@@ -450,11 +448,11 @@ export const commands = (scope: ScopeImpl): Commands => ({
     return service.get(id);
   },
   list: async () => {
-    needs(scope, "commands.run");
+    needs(scope, "plugins");
     return scope.runtime.host.commands.list();
   },
   async run(id, options) {
-    needs(scope, "commands.run");
+    needs(scope, "plugins");
     if (typeof id !== "string" || id === "")
       throw failure("invalid", "run takes a command id: <plugin>/<id>");
     const { ticket, step, of, then } = (options ?? {}) as Partial<
@@ -543,7 +541,6 @@ class LeadHandle implements PaletteLead {
   readonly #event: Disposable;
   #disposed = false;
   constructor(scope: ScopeImpl, options: PaletteLeadOptions) {
-    needs(scope, "palette.lead");
     const first = leadJson(options);
     this.#scope = scope;
     const host = scope.runtime.host.palette;

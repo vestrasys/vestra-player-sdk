@@ -14,10 +14,10 @@ import {
 } from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import type { PluginError, VideoNode } from "../src/plugin/types.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
+import { hostMethod } from "../src/capability-rules.ts";
 import { nodeProblem } from "../src/processing.ts";
 
-const capabilities = ["playback.read", "events", "processing.video"];
+const capabilities: string[] = [];
 
 async function started(host = new TestHost(), caps = capabilities) {
   let plugin!: Plugin;
@@ -50,18 +50,16 @@ function cube(directory: string, name: string, size = 2) {
   return file;
 }
 
-test("video.shaders.set needs processing.video, like the rest of plugin.video", () => {
-  const video = HOST_CAPABILITIES.capabilities.find(
-    (c) => c.name === "processing.video",
-  )!;
-  assert.ok(
-    video.methods.some(
-      (m) => m.name === "video.shaders.set" && m.needs === "processing.video",
-    ),
-  );
-  assert.ok(
-    CAPABILITY_INFO["processing.video"]!.apis.includes("Plugin.video.shaders"),
-  );
+test("video.shaders.set needs no capability, like the rest of plugin.video", () => {
+  for (const name of [
+    "video.shaders.set",
+    "video.view.set",
+    "video.render.set",
+    "processing.replace",
+  ])
+    assert.deepEqual(hostMethod(name), { name, needs: null });
+  for (const info of Object.values(CAPABILITY_INFO))
+    assert.ok(!info.apis.some((api) => api.startsWith("Plugin.video.")));
 });
 
 test("shaders: set, clear and dispose; the player holds the real paths", async () => {
@@ -194,15 +192,6 @@ test("shaders: software rendering refuses them; a fallback and a compile failure
   shaders.clear();
   await host.settle();
   assert.equal(failure(shaders), "applied", "clear() still succeeds");
-  await stop();
-});
-
-test("shaders: without processing.video the call throws capability", async () => {
-  const { plugin, stop } = await started(new TestHost(), [
-    "playback.read",
-    "events",
-  ]);
-  assert.throws(() => plugin.video.shaders(), { code: "capability" });
   await stop();
 });
 

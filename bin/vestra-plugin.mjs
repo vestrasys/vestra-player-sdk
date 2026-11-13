@@ -15,8 +15,8 @@
  *   check   strict type check of the plugin's .ts files and tests/*.ts
  *           (then every use of an API member whose capability manifest.json
  *           does not declare: file:line, member, capability; fails on any;
- *           a plugin.wire.request or event listener whose name the check
- *           cannot read is listed as unchecked, without failing; --json
+ *           a plugin.wire.request whose method name the check cannot
+ *           read is listed as unchecked, without failing; --json
  *           prints the findings and the unchecked calls as JSON)
  *   build   check, then write dist/: .ts → .js with types stripped, other
  *           package files copied, dist/manifest.json with `version`

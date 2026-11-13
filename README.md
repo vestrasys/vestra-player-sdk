@@ -41,7 +41,7 @@ npm i -D @vestra-player/sdk   # Node.js 26 or newer
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": ["commands", "ui.osd"]
+  "capabilities": []
 }
 ```
 

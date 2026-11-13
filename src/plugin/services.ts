@@ -74,8 +74,7 @@ export const host = (scope: ScopeImpl): Host => ({
     await scope.runtime.host.host.run(action, seconds);
     // Like the player's own controls: `player.state` shows the result (the
     // player's state copy registered how to read it again).
-    if (scope.runtime.can("playback.read"))
-      await scope.runtime.reread("source.state");
+    await scope.runtime.reread("source.state");
   },
 });
 
@@ -467,7 +466,7 @@ export function system(scope: ScopeImpl): System {
  * system store, `unavailable` when it cannot be reached, `failed` when the
  * user denies access): only
  * those codes get the "could not be saved" message, anything else (a
- * missing `secrets` capability) is a bug and is thrown on.
+ * missing `credentials` capability) is a bug and is thrown on.
  * ```ts
  * import type { Plugin, PluginError } from "@vestra-player/sdk";
  * declare const plugin: Plugin;
@@ -509,8 +508,8 @@ const SECRET = new RegExp(`^[a-z0-9._-]{1,${SECRET_LIMITS.nameChars}}$`);
 
 export const secrets = (scope: ScopeImpl): Secrets => {
   const named = (name: unknown) => {
-    if (!scope.runtime.can("secrets"))
-      throw failure("capability", "secrets must be declared in manifest");
+    if (!scope.runtime.can("credentials"))
+      throw failure("capability", "credentials must be declared in manifest");
     if (typeof name !== "string" || !SECRET.test(name))
       throw failure(
         "invalid",
@@ -541,11 +540,8 @@ const PREFERENCES = new Set<string>(["auto", "gpu", "software"]);
 
 export const rendering = (scope: ScopeImpl): Rendering => {
   const manage = () => {
-    if (!scope.runtime.can("rendering.manage"))
-      throw failure(
-        "capability",
-        "rendering.manage must be declared in manifest",
-      );
+    if (!scope.runtime.can("player"))
+      throw failure("capability", "player must be declared in manifest");
   };
   return {
     state: async () =>
@@ -569,17 +565,10 @@ export const rendering = (scope: ScopeImpl): Rendering => {
 };
 
 /**
- * `plugin.video.upscaling`: both requests need `video.upscaling`; the player
- * answers once its GPU check ran (the first call starts it).
+ * `plugin.video.upscaling`: the player answers once its GPU check ran (the
+ * first call starts it).
  */
 export const videoUpscaling = (scope: ScopeImpl): VideoUpscaling => {
-  const declared = () => {
-    if (!scope.runtime.can("video.upscaling"))
-      throw failure(
-        "capability",
-        "video.upscaling must be declared in manifest",
-      );
-  };
   // This plugin's own request, kept from every answer for `onChange`: the
   // event leaves it out (it is each plugin's own), and only this plugin's
   // `set` changes it.
@@ -589,25 +578,19 @@ export const videoUpscaling = (scope: ScopeImpl): VideoUpscaling => {
   };
   return {
     async state() {
-      declared();
       return noted(await scope.runtime.host.video.upscalingState());
     },
     async set(enabled) {
-      declared();
       if (typeof enabled !== "boolean")
         throw failure("invalid", "enabled must be true or false");
       return noted(await scope.runtime.host.video.upscalingSet(enabled));
     },
     onChange(listener) {
-      declared();
-      const watch = scope.runtime.on(
-        "video.upscaling.changed",
-        (data) =>
-          scope.run(listener, {
-            ...(data as Omit<WireUpscalingState, "enabled">),
-            enabled: enabledOf.get(scope.runtime) ?? false,
-          } as UpscalingState),
-        "video.upscaling",
+      const watch = scope.runtime.on("video.upscaling.changed", (data) =>
+        scope.run(listener, {
+          ...(data as Omit<WireUpscalingState, "enabled">),
+          enabled: enabledOf.get(scope.runtime) ?? false,
+        } as UpscalingState),
       );
       return scope.add({
         dispose: async () => {
@@ -628,8 +611,7 @@ const MOTION_MODES: readonly string[] = ["off", "double", "display"];
 const MOTION_ENGINES: readonly string[] = ["amd", "nvidia"];
 
 /**
- * `plugin.video.motion(engine)`: both requests need `video.motion` and
- * name the engine; the event names it too and leaves out each plugin's own
+ * `plugin.video.motion(engine)`: both requests name the engine; the event names it too and leaves out each plugin's own
  * `mode`, which the SDK keeps from the answers per engine (only this
  * plugin's `set` changes it).
  */
@@ -639,10 +621,6 @@ export const videoMotion = (
 ): VideoMotion => {
   if (typeof engine !== "string" || !MOTION_ENGINES.includes(engine))
     throw failure("invalid", 'engine must be "amd" or "nvidia"');
-  const declared = () => {
-    if (!scope.runtime.can("video.motion"))
-      throw failure("capability", "video.motion must be declared in manifest");
-  };
   const modes = () => {
     let map = modeOf.get(scope.runtime);
     if (!map) modeOf.set(scope.runtime, (map = new Map()));
@@ -654,30 +632,23 @@ export const videoMotion = (
   };
   return {
     async state() {
-      declared();
       return noted(await scope.runtime.host.video.motionState(engine));
     },
     async set(mode) {
-      declared();
       if (typeof mode !== "string" || !MOTION_MODES.includes(mode))
         throw failure("invalid", 'mode must be "off", "double" or "display"');
       return noted(await scope.runtime.host.video.motionSet(engine, mode));
     },
     onChange(listener) {
-      declared();
-      const watch = scope.runtime.on(
-        "video.motion.changed",
-        (data) => {
-          const state = data as Omit<WireMotionState, "mode">;
-          // Another engine's change is not this handle's.
-          if (state.engine !== engine) return;
-          scope.run(listener, {
-            ...state,
-            mode: modes().get(engine) ?? "off",
-          } as MotionState);
-        },
-        "video.motion",
-      );
+      const watch = scope.runtime.on("video.motion.changed", (data) => {
+        const state = data as Omit<WireMotionState, "mode">;
+        // Another engine's change is not this handle's.
+        if (state.engine !== engine) return;
+        scope.run(listener, {
+          ...state,
+          mode: modes().get(engine) ?? "off",
+        } as MotionState);
+      });
       return scope.add({
         dispose: async () => {
           scope.forget(watch);

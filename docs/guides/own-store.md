@@ -23,7 +23,7 @@ Use the id rule of the official repository, so that your plugin can move there l
 { "schema": 1, "name": "Someone's plugins", "revoked": [], "plugins": [
   { "id": "someone.cool-visualizer", "name": "Cool Visualizer", "versions": [
     { "version": "1.0.0", "apiVersion": "vestra/1", "minPlayerVersion": null,
-      "capabilities": ["commands", "ui.osd"],
+      "capabilities": [],
       "downloadUrl": "https://someone.github.io/my-plugins/packages/someone.cool-visualizer-1.0.0.vxp",
       "sha256": "<64 lowercase hex digits>", "size": 9370, "published": "2026-11-01T12:00:00Z" } ] } ] }
 ```

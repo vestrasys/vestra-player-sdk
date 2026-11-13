@@ -10,7 +10,7 @@ async function started(host: TestHost) {
       plugin = p;
     },
     {
-      capabilities: ["commands", "playback.read", "playback.control", "events"],
+      capabilities: [],
       host,
     },
   );
@@ -186,7 +186,7 @@ test("core actions: the core table with its bindings, states and conflicts", asy
       });
     },
     {
-      capabilities: ["commands", "playback.read", "playback.control", "events"],
+      capabilities: [],
       host,
     },
   );

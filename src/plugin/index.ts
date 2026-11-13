@@ -58,13 +58,13 @@ export async function createPlugin(
     options,
   );
   // Player, window and timeline state are synchronous for plugins: read them
-  // first. With `events` the copy of the player's state follows the events
-  // from the start, subscribed before the read, as before 1.7.0: a read in
-  // any later handler is current. Without `events` nothing can be
-  // subscribed, and the copy starts on its first use. Window and timeline
-  // subscribe on their first use.
+  // first. The copy of the player's state follows the events from the
+  // start, subscribed before the read: a read in any later handler is
+  // current. (Until 1.8.0 only a plugin that declared `events` started
+  // this way; every plugin does now.) Window and timeline subscribe on
+  // their first use.
   const player = playerOf(runtime);
-  if (runtime.can("events")) void player.start(false);
+  void player.start(false);
   await Promise.all([
     player.init(),
     windowOf(runtime).init(),

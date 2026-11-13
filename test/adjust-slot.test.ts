@@ -16,7 +16,7 @@ function packageWith(id = "test.wheels") {
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id, capabilities: ["ui.mount", "events", "commands"] }),
+    JSON.stringify({ id, capabilities: [] }),
   );
   return directory;
 }

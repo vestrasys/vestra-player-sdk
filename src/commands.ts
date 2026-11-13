@@ -232,7 +232,7 @@ export const BAR_BUTTON_LIMITS = {
 } as const;
 
 /**
- * The player's limits on `commands.run` (built-in plugins only), the same
+ * The player's limits on `commands.run`, the same
  * values as the player's (its agreement test checks that they agree).
  * Internal: exported from `@vestra-player/sdk/runtime` only.
  *

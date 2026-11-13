@@ -53,7 +53,7 @@ function packageWith() {
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "test.big", capabilities: ["ui.mount"] }),
+    JSON.stringify({ id: "test.big", capabilities: [] }),
   );
   return directory;
 }
@@ -217,7 +217,7 @@ function windowPackage() {
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "test.big", capabilities: ["ui.mount", "ui.window"] }),
+    JSON.stringify({ id: "test.big", capabilities: [] }),
   );
   return directory;
 }

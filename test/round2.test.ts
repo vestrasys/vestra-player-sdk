@@ -22,16 +22,7 @@ import { systemServices } from "../src/plugin/local.ts";
 import { canonical } from "../src/plugin/bindings.ts";
 import { nodeProblem } from "../src/processing.ts";
 
-const all = [
-  "playback.read",
-  "playback.control",
-  "events",
-  "subtitles.read",
-  "subtitles.control",
-  "processing.video",
-  "processing.audio",
-  "clipboard",
-];
+const all = ["clipboard"];
 
 async function started(host = new TestHost()) {
   let plugin!: Plugin;
@@ -620,7 +611,7 @@ test("a window the user closed reports onClose, is no longer opened, and reopens
   const host = new TestHost();
   let plugin!: Plugin;
   const { stop } = await startPlugin((p: Plugin) => void (plugin = p), {
-    capabilities: ["ui.window"],
+    capabilities: [],
     host,
   });
   const window = plugin.windows.create("info.slint");

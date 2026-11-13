@@ -36,7 +36,7 @@ examples/markdown/
 
 {@includeCode ../../examples/markdown/manifest.json}
 
-- `commands` for the menu item, `ui.window` for the window. `plugin.ui.markdown` needs no capability.
+- `capabilities` is empty: the menu item, the window and `plugin.ui.markdown` need none.
 - `name` to `license` are display fields for the plugin manager. They do not affect how the plugin runs, and any plugin can have them; [Manifest](../reference/manifest.md#fields) lists their rules.
 
 ## The package file

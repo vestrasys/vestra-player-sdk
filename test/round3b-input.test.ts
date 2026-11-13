@@ -22,7 +22,7 @@ function packageDir(capabilities: string[]) {
 }
 
 test("drops: providers by extension, folders, panel onDrop first", async () => {
-  const directory = packageDir(["ui.mount", "ui.drop"]);
+  const directory = packageDir([]);
   const media: { paths: string[]; alt: boolean }[] = [];
   const panel: { paths: string[]; y: number }[] = [];
   let listener: { dispose(): Promise<void> } | undefined;
@@ -65,7 +65,7 @@ test("appearance: read before activation, set, follows other plugins", async () 
     (p: Plugin) => {
       seen = p.appearance.theme;
     },
-    { capabilities: ["events", "ui.theme"], host },
+    { capabilities: ["player"], host },
   );
   assert.equal(seen, other);
   // What a listener reads: the SDK's copy took the event first.
@@ -114,7 +114,7 @@ test("appearance: read before activation, set, follows other plugins", async () 
 });
 
 test("settings: pages register with bound properties, callbacks, show", async () => {
-  const directory = packageDir(["ui.settings"]);
+  const directory = packageDir([]);
   const picked: string[] = [];
   let caption = "A";
   const { host, plugin, stop } = await startPlugin(
@@ -176,7 +176,7 @@ test("settings: pages register with bound properties, callbacks, show", async ()
 test("appearance: player.on reads the event's theme and language from the copy", async () => {
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "ui.theme"],
+    capabilities: ["player"],
     host,
   });
   // No read of plugin.appearance before: player.on starts the copy.
@@ -208,7 +208,7 @@ test("appearance: player.on reads the event's theme and language from the copy",
 test("a state copy started after a plugin listener still hears each event first", async () => {
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "ui.theme"],
+    capabilities: ["player"],
     host,
   });
   // A raw listener first; the copy starts later, with the first read.
@@ -232,7 +232,7 @@ test("source.state: a listener added before the player's copy starts reads the e
   const host = new TestHost();
   const runtime = new Runtime(
     host,
-    { id: "test.order", capabilities: ["events", "playback.read"] },
+    { id: "test.order", capabilities: [] },
     tmpdir(),
   );
   const rates: number[] = [];
@@ -255,7 +255,7 @@ test("source.state: a listener added before the player's copy starts reads the e
 test("a state copy that throws stops neither the other copies nor the plugin's listeners; onError hears it", async () => {
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "ui.theme"],
+    capabilities: ["player"],
     host,
   });
   const errors: PluginError[] = [];
@@ -267,7 +267,6 @@ test("a state copy that throws stops neither the other copies nor the plugin's l
     () => {
       throw new Error("broken copy");
     },
-    "events",
     true,
   );
   const read: string[] = [];

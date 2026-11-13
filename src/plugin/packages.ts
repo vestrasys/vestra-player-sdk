@@ -1,4 +1,4 @@
-/** Package validation, install and uninstall (`plugins.manage`). */
+/** Package validation, install and uninstall (`plugins`). */
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type {
@@ -177,10 +177,8 @@ export const packages = (scope: ScopeImpl): Packages => ({
   },
   list: async () => (await scope.runtime.host.packages.list()).map(info),
   onChange(listener) {
-    const watch = scope.runtime.on(
-      "packages.changed",
-      (data) => scope.run(listener, (data as WirePlugin[]).map(info)),
-      null,
+    const watch = scope.runtime.on("packages.changed", (data) =>
+      scope.run(listener, (data as WirePlugin[]).map(info)),
     );
     return scope.add({
       dispose: async () => {

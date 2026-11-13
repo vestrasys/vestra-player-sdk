@@ -73,7 +73,7 @@ test("secrets need the capability and are bounded", async () => {
   const without = await started([]);
   await assert.rejects(without.plugin.secrets.get("key"), code("capability"));
   await without.stop();
-  const { plugin, host, stop } = await started(["secrets"]);
+  const { plugin, host, stop } = await started(["credentials"]);
   assert.equal(await plugin.secrets.get("opensubtitles-api-key"), null);
   await plugin.secrets.set("opensubtitles-api-key", "密钥 1");
   assert.equal(await plugin.secrets.get("opensubtitles-api-key"), "密钥 1");
@@ -114,10 +114,7 @@ test("plugin.app.system() asks the player; the facts stay plain data", async () 
 
 test("plugin.app.system() reports the renderer, following TestHost.videoRender.gpu", async () => {
   const host = new TestHost();
-  const { plugin, stop } = await started(
-    ["processing.video", "playback.read", "events"],
-    host,
-  );
+  const { plugin, stop } = await started([], host);
   assert.equal((await plugin.app.system()).rendering, "gpu");
   // The player falls back to software rendering (a window without GPU frames).
   host.failVideoRender(
@@ -137,10 +134,7 @@ test("plugin.app.system() reports the renderer, following TestHost.videoRender.g
 test("snapshots export JPEG with a quality and BMP", async () => {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
-  const { plugin, stop } = await started(
-    ["playback.read", "events", "media.read", "media.control"],
-    host,
-  );
+  const { plugin, stop } = await started([], host);
   const shot = await plugin.media.capture();
   await (
     await shot.export({ format: "jpeg", destination: "/t/a.jpg" })

@@ -110,7 +110,7 @@ const reason = (error: unknown): string | TextJson | ListJson => {
 };
 export function sourceResolverClient(transport: Transport) {
   return {
-    /** Requires source.resolve. One registered host/scheme pair, and one file
+    /** One registered host/scheme pair, and one file
      * extension, has one owner (another plugin: `conflict`, reason
      * `resolver-taken`). Resolution shares source.submit arbitration and the
      * original operation ID. This backend supports paired streams with

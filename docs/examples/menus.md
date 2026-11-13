@@ -44,7 +44,7 @@ examples/menus/
 
 {@includeCode ../../examples/menus/manifest.json}
 
-`commands` for the menu items; `playback.read` and `events` to read the current speed and keep it up to date; `playback.control` to change it.
+No capability: menu items, and reading and changing the playback speed, need none.
 
 ## The code
 

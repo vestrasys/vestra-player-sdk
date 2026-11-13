@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": ["commands", "ui.window"],
+  "capabilities": [],
   "name": "Markdown example",
   "author": "Vestra Player",
   "punchline": "A window that shows a Markdown document",

@@ -8,7 +8,7 @@ import type {
   PluginError,
 } from "../src/plugin/index.ts";
 
-const capabilities = ["playback.read", "playback.control", "events"];
+const capabilities: string[] = [];
 const start = (
   activate: (plugin: Plugin) => unknown = () => {},
   host?: TestHost,
@@ -229,7 +229,7 @@ test("aborting ready() closes the media", async () => {
 
 test("streams preroll, activate through the start control and stop cleanly", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   let frames = 0;
@@ -258,7 +258,7 @@ test("streams preroll, activate through the start control and stop cleanly", asy
 
 test("a frame that breaks a limit ends the stream with invalid", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   // Wrong size during start-up: openStream rejects.
@@ -298,7 +298,7 @@ test("a frame that breaks a limit ends the stream with invalid", async () => {
 
 test("onStop is not called when the plugin stops its own stream", async () => {
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   const stream = await plugin.player.openStream({
@@ -315,7 +315,7 @@ test("onStop is not called when the plugin stops its own stream", async () => {
 
 test("onStop gets null when the player retires a replaced or closed stream, the failure otherwise", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   const errors: PluginError[] = [];
@@ -364,7 +364,7 @@ test("onStop gets null when the player retires a replaced or closed stream, the 
 
 test("openStream replaced while it starts rejects with replaced", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   host.handle("producer.ack", (params) => {
@@ -394,7 +394,7 @@ test("openStream replaced while it starts rejects with replaced", async () => {
  */
 async function slowCloseStream() {
   const started = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   const { host, plugin } = started;
@@ -491,7 +491,7 @@ test("an accepted open that fails on its own keeps the backend code", async () =
 
 test("aborting a stream before the host answered its selection still closes it", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   let release = () => {};
@@ -527,7 +527,7 @@ test("aborting a stream before the host answered its selection still closes it",
 
 test("stream start-up timeouts name their stage", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "producer.av"],
+    capabilities: [...capabilities],
     host: streamHost(),
   });
   // The first buffers never arrive.

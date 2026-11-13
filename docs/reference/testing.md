@@ -23,7 +23,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | `sessionStorage` | The values of `plugin.storage.session` an earlier run left (`host.sessionStorage`), to test a restart within one player session. |
 | `locale` | The interface language (`"zh-Hans"` loads `locales/zh-Hans.po`). Without it the plugin's texts show in English and the player's own texts in Simplified Chinese; `"en"` shows the player in English. |
 | `id`, `capabilities` | Start without a `manifest.json`. |
-| `builtin` | Run the plugin as one built into the player: only then do the built-in-only capabilities (`commands.run`, `palette.lead`) work; otherwise their calls fail with `capability`, as in the player. |
+| `builtin` | Run the plugin as one built into the player: `commands.run` then runs its own commands without asking first unless they are destructive. |
 
 ## Acting like the user
 
@@ -66,7 +66,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | Member | What it is |
 | --- | --- |
 | {@link "@vestra-player/sdk/testing"!TestHost.calls} | Every request the plugin sent, in order: `{ method, params }`. |
-| {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to (needs `events` etc.). |
+| {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to. |
 | {@link "@vestra-player/sdk/testing"!TestHost.listening} | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
 | {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
@@ -161,7 +161,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.seeks} | Every seek a plugin submitted (`player.seek`, `Scrub.seek`), newest last, with the mode it asked for. |
 | {@link "@vestra-player/sdk/testing"!TestHost.steps} | Every `player.step` and core frame step, newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreRuns} | Every core action run (`host.run`, a core command, a pressed core binding), newest last. |
-| {@link "@vestra-player/sdk/testing"!TestHost.builtin} | The plugin is built into the player (`startPlugin`'s `builtin`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.builtin} | The plugin is built into the player (`startPlugin`'s `builtin`): its commands are listed by `commands.list` as built-in ones, which `commands.run` runs without asking first unless they are destructive; another plugin's command is always confirmed. |
 | {@link "@vestra-player/sdk/testing"!TestHost.paletteLead} | The palette's lead row as the plugin last set it (`palette.lead.set`, wire form), `null` without one. |
 | {@link "@vestra-player/sdk/testing"!TestHost.runPaletteLead}() | Simulate the user activating the palette's lead row: Enter (`keep`: Shift+Enter) with `query` typed, or Enter on the status row (`status`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreAction}() | One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...) that the test host registers like the player, as `host/<id>`. |

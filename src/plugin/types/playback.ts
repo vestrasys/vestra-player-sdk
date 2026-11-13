@@ -91,7 +91,7 @@ export interface TimelineRange {
  * refused one is reported to `onError`. Disposing the layer, its scope or
  * stopping the plugin removes the marks.
  *
- * @capability timeline.marks
+ * @capability None.
  *
  * @example Clear the plugin's marks
  * The plugin's marks disappear from the seek bar while it keeps its
@@ -129,7 +129,7 @@ export interface TimelineLayer extends Disposable {
    * );
    * ```
    *
-   * @capability timeline.marks
+   * @capability None.
    * @since 1.0.0
    */
   set(
@@ -169,7 +169,7 @@ export interface TimelineLayer extends Disposable {
    * panel.onChange(show);
    * ```
    *
-   * @capability timeline.marks
+   * @capability None.
    * @since 1.6.9
    */
   setRanges(
@@ -193,11 +193,10 @@ export interface TimelineLayer extends Disposable {
  * the layers by time and shows them. A new source clears every layer, so a
  * plugin publishes again for each file. `marks` is the merged list, which
  * any plugin can read. To run code when they change, listen with
- * `plugin.player.on("timeline.changed", …)` (needs `events`): `marks` and
+ * `plugin.player.on("timeline.changed", …)`: `marks` and
  * `ranges` already hold the event's lists when the listener runs.
  *
- * @capability `timeline.marks` to publish; `playback.read` to read;
- * `events` to follow changes.
+ * @capability None.
  *
  * @example Count the chapter marks other plugins published
  * The plugin reads how many chapter marks the seek bar shows, whoever
@@ -212,11 +211,11 @@ export interface TimelineLayer extends Disposable {
  * @category Playback
  */
 export interface Timeline {
-  /** Every layer merged, by time (`playback.read`). Empty on a new source. */
+  /** Every layer merged, by time. Empty on a new source. */
   readonly marks: readonly TimelineMark[];
   /**
-   * Every layer's ranges merged, by start (`playback.read`). Empty on a new
-   * source. Kept current like `marks` (with `events`): read it in a
+   * Every layer's ranges merged, by start. Empty on a new
+   * source. Kept current like `marks`: read it in a
    * {@link View.bind} function and the view follows it.
    *
    * @example Draw the published ranges in a seek bar of your own
@@ -240,14 +239,14 @@ export interface Timeline {
    * });
    * ```
    *
-   * @capability playback.read
+   * @capability None.
    * @since 1.6.9
    */
   readonly ranges: readonly TimelineRange[];
   /**
-   * This plugin's layer (`timeline.marks`); a second call throws.
+   * This plugin's layer; a second call throws.
    *
-   * @capability timeline.marks
+   * @capability None.
    *
    * @example Publish this plugin's marks
    * The plugin gets its one layer and puts two chapter marks on the seek
@@ -294,9 +293,6 @@ export interface AudioTrack {
 
 /**
  * An immutable view of the player. Keep one to make a later call conditional on it.
- *
- * Without `events`, {@link Player.state} only updates at start and after
- * this plugin's own operations.
  *
  * @see {@link Player.state}, [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
@@ -449,13 +445,11 @@ export interface Conditional {
  * @remarks
  * A source this plugin opened with {@link Player.open}. It does not own
  * the source: the user or another plugin can replace it at any time, and
- * `current` then turns false. `ready` and `onEnd` follow the player state:
- * with `events` they react to the player's events, without it `ready`
- * polls the state every 100 ms (which needs `playback.read`). Disposing the
+ * `current` then turns false. `ready` and `onEnd` follow the player's
+ * events. Disposing the
  * scope that opened it does not close the media; call `close` for that.
  *
- * @capability That of {@link Player.open} (`playback.control`); `ready` and
- * `onEnd` follow the state through `events` and `playback.read`.
+ * @capability None.
  *
  * @example Open a file and say when it ends
  * The file opens and plays, and the OSD says "Finished" when it reaches its
@@ -477,8 +471,7 @@ export interface Media {
    * `replaced` (another source took over) or `ended`; with `AbortError` when
    * the signal aborts, after closing the media.
    *
-   * @capability That of {@link Player.open}; `playback.read` or `events` to
-   * see the state change.
+   * @capability None.
    * @throws `failed` (rejects) The media could not be loaded.
    * @throws `replaced` (rejects) Another source took over first.
    * @throws `ended` (rejects) The media already played to the end.
@@ -505,7 +498,7 @@ export interface Media {
   /**
    * Called once each time a playthrough of this media ends naturally.
    *
-   * @capability That of {@link Player.open}; `events` to hear the end.
+   * @capability None.
    *
    * @example Play the next file when this one ends
    * When the plugin's file ends naturally, the next one opens. The listener
@@ -529,9 +522,8 @@ export interface Media {
   /**
    * Close it if it is still the player's source; otherwise do nothing.
    *
-   * @capability That of {@link Player.open} (`playback.control`).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example Close the preview the plugin opened
    * The plugin closes the preview it opened, but leaves alone anything the
@@ -576,7 +568,7 @@ export interface Media {
  * file, the user pausing) ends the gesture: `active` turns false and later
  * seeks resolve `false`.
  *
- * @capability playback.control
+ * @capability None.
  * @see [Keep a slider responsive while dragging](../../../docs/guides/slider.md)
  * @since 1.0.0
  * @category Playback
@@ -611,9 +603,7 @@ export interface Scrub {
    * bar.on("dragMove", (seconds: number) => void scrub?.seek(seconds, { keyframes }));
    * ```
    *
-   * @capability playback.control
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
+   * @capability None.
    * @throws `stale` (rejects) The source changed from outside while this
    *   seek was being sent (a superseded target or an ended gesture resolves
    *   `false` instead).
@@ -627,7 +617,7 @@ export interface Scrub {
   /**
    * End the gesture; later seeks resolve `false`.
    *
-   * @capability playback.control
+   * @capability None.
    *
    * @example End the gesture when the user lets go
    * Releasing the slider ends the gesture, so a late `dragMove` cannot move
@@ -713,7 +703,7 @@ export type StreamStartError = PluginError & {
  * another source replaces it or the user closes it (`onStop` with `null`),
  * or when it fails (`onStop` with the error).
  *
- * @capability producer.av and playback.control
+ * @capability None.
  *
  * @example Stop the stream from a menu item
  * A menu item ends the plugin's generated stream and closes it as the
@@ -749,10 +739,9 @@ export interface Stream extends Disposable {
    * The player retires a stream's producer as soon as it is replaced or
    * closed; the SDK reads the player's state to tell that from a failure
    * (before 1.5.7 a replaced or closed stream could get `unavailable`
-   * "producer absent"). Without `playback.read` a failure the SDK has not
-   * seen yet is reported as null.
+   * "producer absent").
    *
-   * @capability producer.av
+   * @capability None.
    *
    * @example Tell the user why the stream stopped
    * The OSD explains a failure, and nothing is said when the user simply
@@ -776,7 +765,7 @@ export interface Stream extends Disposable {
    * so stopping never shows as a playback failure. `dispose()` and
    * deactivation do the same.
    *
-   * @capability producer.av and playback.control
+   * @capability None.
    * @throws Whatever code closing the player's source failed with (the
    *   frame connection and the producer are released either way). A
    *   stream that is no longer the source just resolves.
@@ -916,11 +905,6 @@ export interface PlaybackStats {
 /**
  * `plugin.player`: playback state and controls.
  *
- * Capabilities: reading (`state` at start, `refresh`, `stats`, `chapters`,
- * `audioDevices`) needs `playback.read`; live updates and `onChange` need
- * `events`; every control needs `playback.control`; `openStream` needs
- * `producer.av` as well as `playback.control`.
- *
  * Controls are conditional (see {@link Conditional}): they fail with
  * `stale` and do nothing when the source changed since the state you saw.
  *
@@ -942,7 +926,7 @@ export interface PlaybackStats {
  * @remarks
  * `plugin.player` is the player's one source: what is open, its phase and
  * position, and the controls. `state` is a snapshot the SDK keeps current
- * from the player's events (with `events`) and refreshes after this
+ * from the player's events and refreshes after this
  * plugin's own calls; `onChange` runs after it changed. Every control is
  * conditional: it acts on the state the plugin last saw and fails with
  * `stale` when the source changed meanwhile: another file, a close, or any
@@ -951,9 +935,7 @@ export interface PlaybackStats {
  * only the plugin's own handles (a stream, its sequence provider, its
  * output device) are withdrawn.
  *
- * @capability `playback.read` to read; `playback.control` to control;
- * `events` to follow changes made elsewhere; `producer.av` for
- * {@link Player.openStream}.
+ * @capability None.
  *
  * @see [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
@@ -963,16 +945,14 @@ export interface Player {
   /**
    * Latest state; always newer than anything delivered before.
    *
-   * With `events` the SDK follows the player's events for this copy from
-   * the plugin's start; without it the copy moves only with the start-up
-   * read and the plugin's own calls (`playback.read`).
+   * The SDK follows the player's events for this copy from the plugin's
+   * start.
    */
   readonly state: PlayerState;
   /**
-   * The state changed (needs `events` for outside changes).
+   * The state changed.
    *
-   * @capability events (for changes made elsewhere; without it the listener
-   * runs only after this plugin's own calls)
+   * @capability None.
    *
    * @example Show the position while it plays
    * The OSD block shows the position, updated as playback moves. The SDK
@@ -1024,12 +1004,7 @@ export interface Player {
    * {@link Scope.state} field re-runs only its readers, and
    * {@link Scope.update} re-runs everything.
    *
-   * Each event needs a capability: `events` for most, `bindings.manage` for
-   * `bindings.changed`, `commands` for `commands.keys`, `video.upscaling` for
-   * `video.upscaling.changed`, `video.motion` for `video.motion.changed`,
-   * none for `packages.changed`. Without it the
-   * listener never runs (for `events`, a warning in the log says so). Added
-   * during `activate`, that fails the activation.
+   * No event needs a capability.
    *
    * @param event - The event's name.
    * @param listener - Receives each event's data.
@@ -1038,8 +1013,7 @@ export interface Player {
    * @throws `invalid` (throws) `event` is not a {@link HostEvent} name, or
    *   `listener` is not a function.
    *
-   * @capability That of the event: `events`, or `bindings.manage`,
-   * `commands`, `video.upscaling`, `video.motion` for the events named above.
+   * @capability None.
    *
    * @example Push the speed to a panel as it changes
    * A bottom panel shows the playback speed. The listener gets each
@@ -1058,15 +1032,14 @@ export interface Player {
     listener: (data: EventPayload<E>) => void,
   ): Disposable;
   /**
-   * Read the state from the player now (`playback.read`).
+   * Read the state from the player now.
    *
-   * @capability playback.read
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.read`.
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example Read the state before deciding
-   * A command reads the newest state from the player before acting, even
-   * without `events`. `refresh` asks the player and resolves with the new
+   * A command reads the newest state from the player before acting.
+   * `refresh` asks the player and resolves with the new
    * snapshot; `player.state` holds it afterwards.
    * ```ts
    * const state = await plugin.player.refresh();
@@ -1107,7 +1080,7 @@ export interface Player {
    * extension a file resolver claims (the source is then a stream that
    * plugin generates; `paused` reaches it).
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `stale` (rejects) `ifCurrent` no longer holds; nothing was opened.
    * @throws `replaced` (rejects) Accepted, then another source took over
    *   before it finished (for example while a URL was still being resolved).
@@ -1123,8 +1096,6 @@ export interface Player {
    *   returned (for example split streams with different headers).
    * @throws `unavailable` (rejects) The stream a file resolver prepared was
    *   not ready to play.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Open a file paused
    * The file opens at its start without playing. `open` resolves once the
@@ -1143,9 +1114,8 @@ export interface Player {
     options?: { paused?: boolean; signal?: AbortSignal } & Conditional,
   ): Promise<Media>;
   /**
-   * Start a source whose frames this plugin generates. Needs `producer.av`
-   * and `playback.control` (the stream becomes the player's source, like
-   * {@link Player.open}).
+   * Start a source whose frames this plugin generates (the stream becomes
+   * the player's source, like {@link Player.open}).
    *
    * The SDK calls `frame()` on the audio clock and handles prefill,
    * activation, pausing and acknowledgement. Frames travel over a local
@@ -1175,7 +1145,7 @@ export interface Player {
    * stream.onStop((error) => error && plugin.osd.show(error.message));
    * ```
    *
-   * @capability producer.av and playback.control
+   * @capability None.
    * @throws `timeout` (rejects) A {@link StreamStartError}: the stream did not
    *   start in time.
    * @throws `stream` (rejects) The player failed to start the stream.
@@ -1191,15 +1161,13 @@ export interface Player {
   /**
    * Pause or resume.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin); nothing was done.
    * @throws `invalid` (rejects) Nothing is open.
    * @throws `busy` (rejects) A generated stream is still handling a previous
    *   control.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Pause, but only the file the user was watching
    * A "pause on lock" helper pauses the current file and does nothing when
@@ -1222,7 +1190,7 @@ export interface Player {
    * the end there and plays on, unless the end was reached while paused or
    * by a frame step; a seek at or past the end leaves it ended and paused.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin); nothing was done.
@@ -1232,8 +1200,6 @@ export interface Player {
    *   cannot seek.
    * @throws `busy` (rejects) A generated stream is still handling a previous
    *   control.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Jump back ten seconds
    * Playback jumps ten seconds back, never before the start. The target is
@@ -1252,7 +1218,7 @@ export interface Player {
   /**
    * Set the playback speed.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin); nothing was done.
@@ -1262,8 +1228,6 @@ export interface Player {
    *   cannot change speed.
    * @throws `busy` (rejects) A generated stream is still handling a previous
    *   control.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Play at one and a half times the speed
    * Playback speeds up to 1.5×, with the speed on the OSD. `setRate` sets
@@ -1282,15 +1246,13 @@ export interface Player {
   /**
    * Play from the start (the "replay" after the end).
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin); nothing was done.
    * @throws `invalid` (rejects) Nothing is open.
    * @throws `unsupported` (rejects) The source is a generated stream, which
    *   cannot restart.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Replay a file after it ended
    * A Replay button starts the file again from its start once it has ended.
@@ -1306,12 +1268,10 @@ export interface Player {
   /**
    * Close the current source.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin); nothing was done.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Close the file when the sleep timer runs out
    * After 30 minutes the open file is closed, unless the user opened another
@@ -1334,7 +1294,7 @@ export interface Player {
   /**
    * Start a drag gesture from the current state.
    *
-   * @capability playback.control
+   * @capability None.
    *
    * @example Start a gesture when the user grabs the slider
    * A drag on the plugin's seek slider becomes one gesture whose seeks never
@@ -1358,11 +1318,9 @@ export interface Player {
    * Resolves `true` when this request was applied, `false` if superseded.
    * `volume` is 0–200.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `invalid` (rejects) `volume` outside 0–200, or `muted` not a
    *   boolean.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Duck the volume during an announcement
    * The volume drops to 30 while the plugin's announcement plays, then
@@ -1410,18 +1368,16 @@ export interface Player {
    * });
    * ```
    *
-   * @capability playback.control
+   * @capability None.
    * @since 1.0.0
    */
   provideSequence(provider: SequenceProvider): Disposable;
   /**
    * Ask the provider to go forward / back. Rejects `unavailable` when it cannot.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `unavailable` (rejects) There is no sequence provider, or it has
    *   no next item.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Skip to the next item from a plugin button
    * The plugin's own Next button plays the next item of whichever plugin
@@ -1443,11 +1399,9 @@ export interface Player {
   /**
    * Ask the provider to go back. Rejects `unavailable` when it cannot.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `unavailable` (rejects) There is no sequence provider, or it has
    *   no previous item.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Go back to the previous item
    * The plugin's Previous button asks the sequence provider for the item
@@ -1469,11 +1423,10 @@ export interface Player {
   previous(): Promise<void>;
   /**
    * Codec, size, frame counts and backend of the current playback.
-   * `playback.read`; `video` and `audio` are `null` without a source.
+   * `video` and `audio` are `null` without a source.
    *
-   * @capability playback.read
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.read`.
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example Show the video codec and size
    * The OSD shows something like "h264 1920×1080". `stats` asks the player
@@ -1493,13 +1446,11 @@ export interface Player {
    * not exportable). It stays until the source changes. Rejects `invalid` for a
    * bad path, `unavailable` without ready media, `backend` when it cannot load.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `invalid` (rejects) Not an absolute path to a file.
    * @throws `unavailable` (rejects) No ready media.
    * @throws `backend` (rejects) The player could not load the file.
    * @throws `stale` (rejects) `ifCurrent` no longer holds.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Add a dubbed audio file and switch to it
    * A separate audio file plays with the film instead of its own sound.
@@ -1521,14 +1472,12 @@ export interface Player {
   /**
    * Select one of `state.audioTracks` by id; `invalid` for an unknown id.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `invalid` (rejects) No track with this id.
    * @throws `unavailable` (rejects) No ready media.
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Switch to the next audio track
    * Each press of the plugin's key moves to the next audio track of the
@@ -1553,7 +1502,7 @@ export interface Player {
    * is current afterwards. One step at a time: a second call while one is
    * in flight rejects `busy`.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `unsupported` (rejects) Nothing playable to step through (no
    *   moving video: audio only, cover art, a generated stream), a backward
    *   frame step on a source that cannot seek, or a keyframe step in either
@@ -1562,8 +1511,6 @@ export interface Player {
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Step one frame forward for a close look
    * The picture advances by one frame and playback pauses. `step` resolves
@@ -1598,11 +1545,9 @@ export interface Player {
    * `false`: exact seeks, as before. `seconds` and `keyframes` are written as a
    * pair: the newest call sets both.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `invalid` (rejects) `seconds` outside 0.1–3600 or not in tenths,
    *   or `keyframes` not a boolean.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Make ← and → jump 10 seconds to keyframes
    * The arrow keys now jump 10 seconds and land on keyframes, which is fast
@@ -1619,11 +1564,9 @@ export interface Player {
   /**
    * The chapters of the current media (empty without media or chapters),
    * read on demand; `sourceId` tells which source they belong to.
-   * `playback.read`.
    *
-   * @capability playback.read
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.read`.
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example List the chapters of the open file
    * The plugin reads the chapter titles of the current file to show them in
@@ -1651,7 +1594,7 @@ export interface Player {
    * `invalid` out of range, `unsupported` for a source that cannot seek,
    * `unavailable` without ready media. A new source clears it.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `invalid` (rejects) `a`/`b` out of range or `count` not a positive
    *   integer.
    * @throws `unsupported` (rejects) The source cannot seek, or is a generated
@@ -1660,8 +1603,6 @@ export interface Player {
    * @throws `stale` (rejects) The source changed since the state the call is
    *   based on (another file, a close, or any pause, seek
    *   or speed change by the user or another plugin).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Loop a passage three times
    * Playback repeats 1:00–1:30 three times, then goes on. The player jumps
@@ -1678,11 +1619,10 @@ export interface Player {
     options?: Conditional,
   ): Promise<void>;
   /**
-   * The output devices present now (not the system default entry). `playback.read`.
+   * The output devices present now (not the system default entry).
    *
-   * @capability playback.read
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.read`.
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example Offer the audio output devices in a menu
    * A submenu lists the output devices present now, with a radio mark on the
@@ -1706,16 +1646,14 @@ export interface Player {
   /**
    * Play on this device while it is present, else on the system default
    * (`null` = always the default). Generated streams follow too. Kept for
-   * this run only. `playback.control`.
+   * this run only.
    *
    * Unknown ids are accepted (`state.audioOutput.active` stays `null`); a
    * malformed id is `invalid`. Reverts to the default when this plugin
    * stops; save the choice yourself to restore it on activation.
    *
-   * @capability playback.control
+   * @capability None.
    * @throws `invalid` (rejects) A malformed id.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `playback.control`.
    *
    * @example Restore the user's output device on start
    * The plugin plays on the device the user picked last time, or on the

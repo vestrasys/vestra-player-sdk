@@ -15,10 +15,9 @@
  * (their object comes from a call that is checked) and options that need
  * more (a `processed` capture, a file resolver).
  *
- * Members whose capability depends on an argument (`plugin.player.on` and
- * `plugin.wire.on` by event name, `plugin.wire.request` by method name,
- * `ARGUMENT_APIS`) are checked by that argument when its type fixes it to one
- * string (a literal, a constant); otherwise (a computed name, a union of
+ * A member whose capability depends on an argument (`plugin.wire.request`,
+ * by its method name; `ARGUMENT_APIS`) is checked by that argument when its
+ * type fixes it to one string (a literal, a constant); otherwise (a computed name, a union of
  * several, the member taken by destructuring or as a value) the call is
  * reported as unchecked ({@link checkCapabilities}), and the player still
  * checks it.
@@ -66,8 +65,6 @@ export interface CapabilityFinding {
   readonly capability: string;
   /** The request that needs it. */
   readonly method: string;
-  /** The declared-or-needed capability whose `requires` names it. */
-  readonly requiredBy?: string;
   /** One line for people. */
   readonly message: string;
 }
@@ -167,7 +164,7 @@ function sdkMembers(
 function argumentMembers(ts: typeof TS, program: TS.Program): Members {
   let members = argumentCache.get(program);
   if (!members) {
-    members = resolveMembers(ts, program, Object.keys(ARGUMENT_APIS));
+    members = resolveMembers(ts, program, ARGUMENT_APIS);
     argumentCache.set(program, members);
   }
   return members;
@@ -175,9 +172,8 @@ function argumentMembers(ts: typeof TS, program: TS.Program): Members {
 
 /**
  * @internal A call whose capability the checker cannot tell: a member of
- * `ARGUMENT_APIS` (`plugin.wire.request`, `player.on`, `wire.on`) whose name
- * argument is not a string the types fix, or a method the player's table does
- * not know. The player still checks it at run time.
+ * `ARGUMENT_APIS` (`plugin.wire.request`) whose method name is not a string
+ * the types fix, or a method the player's table does not know. The player still checks it at run time.
  */
 export interface UncheckedCall {
   readonly file: string;
@@ -216,31 +212,6 @@ function literalStrings(
 }
 
 /**
- * The string fields of a request's parameters that the player's rules may
- * read (`event`, `stage`): those of an object literal whose value is one
- * string the types fix.
- */
-function stringFields(
-  ts: typeof TS,
-  checker: TS.TypeChecker,
-  node: TS.Expression | undefined,
-): Record<string, string> | undefined {
-  if (!node || !ts.isObjectLiteralExpression(node)) return undefined;
-  const fields: Record<string, string> = {};
-  for (const property of node.properties) {
-    if (!ts.isPropertyAssignment(property)) continue;
-    const name = property.name;
-    const key =
-      ts.isIdentifier(name) || ts.isStringLiteralLike(name)
-        ? name.text
-        : undefined;
-    const values = literalStrings(ts, checker, property.initializer);
-    if (key !== undefined && values?.length === 1) fields[key] = values[0]!;
-  }
-  return Object.keys(fields).length ? fields : undefined;
-}
-
-/**
  * Every use, in `options.files`, of a member whose capability the manifest
  * does not declare, in file and position order.
  *
@@ -260,9 +231,8 @@ export function findUndeclaredCapabilities(
  * calls whose capability depends on a name the checker cannot read
  * (`unchecked`).
  *
- * A call of `plugin.player.on` or `plugin.wire.on` is checked by its event
- * name, one of `plugin.wire.request` by its method name and the string
- * fields of its parameters (`{ event: "…" }`), when the types fix them.
+ * A call of `plugin.wire.request` is checked by its method name when the
+ * types fix it.
  *
  * @internal
  */
@@ -314,17 +284,14 @@ export function checkCapabilities(
           api,
           capability: need.capability,
           method: need.method,
-          ...(need.requiredBy ? { requiredBy: need.requiredBy } : {}),
-          message: need.requiredBy
-            ? `${shown} needs the capability "${need.capability}" (required by "${need.requiredBy}"), which manifest.json does not declare`
-            : `${shown} needs the capability "${need.capability}", which manifest.json does not declare`,
+          message: `${shown} needs the capability "${need.capability}", which manifest.json does not declare`,
         });
       }
     };
     const report = (name: TS.Node, symbol: TS.Symbol | undefined) => {
       const api = apiOf(members, symbol);
       if (!api) return;
-      missing(name, api, memberNeeds(api, options.capabilities, rules) ?? []);
+      missing(name, api, memberNeeds(api, rules) ?? []);
     };
     /** A call of a member of `ARGUMENT_APIS`, by its name argument. */
     const call = (node: TS.CallExpression) => {
@@ -338,7 +305,6 @@ export function checkCapabilities(
       if (!name) return;
       const api = apiOf(calls, checker.getSymbolAtLocation(name));
       if (!api) return;
-      const kind = ARGUMENT_APIS[api]!;
       const values = literalStrings(ts, checker, node.arguments[0]);
       // One name, or not checked: a union could be any of its names at run
       // time, and none of them is known to be used.
@@ -346,16 +312,12 @@ export function checkCapabilities(
         unchecked.push({
           ...position(name),
           api,
-          message: `${api} with ${kind === "event" ? "an event" : "a method"} name that is not one literal: its capability is not checked here (the player checks it)`,
+          message: `${api} with a method name that is not one literal: its capability is not checked here (the player checks it)`,
         });
         return;
       }
-      const params =
-        kind === "method"
-          ? stringFields(ts, checker, node.arguments[1])
-          : undefined;
       for (const value of values) {
-        const requests = argumentRequests(kind, value, params, rules);
+        const requests = argumentRequests(value, rules);
         const shown = `${api}(${JSON.stringify(value)})`;
         if (!requests) {
           unchecked.push({
@@ -365,18 +327,13 @@ export function checkCapabilities(
           });
           continue;
         }
-        missing(
-          name,
-          api,
-          requestsNeed(requests, options.capabilities, rules),
-          shown,
-        );
+        missing(name, api, requestsNeed(requests, rules), shown);
       }
     };
     /**
      * A member of `ARGUMENT_APIS` taken other than by a direct call (`const
-     * { request } = plugin.wire`, `const on = plugin.player.on`): its calls
-     * cannot be followed, so it is unchecked where it is taken.
+     * { request } = plugin.wire`): its calls cannot be followed, so it is
+     * unchecked where it is taken.
      */
     const taken = (name: TS.Node, symbol: TS.Symbol | undefined) => {
       const api = apiOf(calls, symbol);

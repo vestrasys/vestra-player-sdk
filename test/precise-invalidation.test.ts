@@ -34,7 +34,7 @@ function packageWith() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "test.precise",
-      capabilities: ["ui.mount", "playback.read", "events"],
+      capabilities: [],
     }),
   );
   return directory;
@@ -362,7 +362,7 @@ test("the player's runner path (createPlugin over a transport) skips and refresh
   };
   const instance = await createPlugin(
     transport,
-    { id: "x", capabilities: ["playback.read", "events", "commands"] },
+    { id: "x", capabilities: [] },
     process.cwd(),
   );
   const counts = { paused: 0, position: 0 };
@@ -539,7 +539,7 @@ test("disposing the plugin cancels a pending safety pass", async () => {
   };
   const instance = await createPlugin(
     transport,
-    { id: "x", capabilities: ["playback.read", "events", "commands"] },
+    { id: "x", capabilities: [] },
     process.cwd(),
   );
   let passes = 0;

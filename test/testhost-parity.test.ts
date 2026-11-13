@@ -8,7 +8,7 @@ import { startPlugin } from "../src/plugin/testing.ts";
 
 test("a disabled core action rejects with command, like the player's menu", async () => {
   const { host, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   try {
     // Nothing is open: play/pause is disabled.
@@ -40,7 +40,7 @@ test("press: only the first disabled command decides", async () => {
         run() {},
       });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     // The first has no reason: the key passes, the second's reason is not shown.

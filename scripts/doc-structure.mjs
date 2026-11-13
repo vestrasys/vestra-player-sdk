@@ -165,7 +165,7 @@ export const GROUPS = [
       },
       {
         file: "capabilities.md",
-        why: "Every capability with the API it opens, what it requires and its store wording: one generated table.",
+        why: "The eight capabilities with the API each opens and its store wording, one generated table; the names retired in 1.8.0 and their replacements.",
       },
       {
         file: "limits.md",

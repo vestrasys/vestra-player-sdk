@@ -19,11 +19,11 @@ import type {
   Window,
 } from "../src/plugin/types.ts";
 import { SUBSCRIBED_EVENTS } from "../src/api-requests.ts";
-import { EVENT_NEEDS } from "../src/plugin/player/events.ts";
+import { HOST_EVENTS } from "../src/plugin/player/events.ts";
 import { CHUNK_BYTES } from "../src/plugin/patch.ts";
 
 /** A package with a panel/window file holding `rows`, `total` and `label`. */
-function packageWith(capabilities: string[] = ["ui.mount", "ui.window"]) {
+function packageWith(capabilities: string[] = []) {
   const directory = mkdtempSync(join(tmpdir(), "wire-"));
   writeFileSync(
     join(directory, "list.slint"),
@@ -61,10 +61,10 @@ const declaration = {
   repeat: false,
 };
 
-test("SUBSCRIBED_EVENTS is HostEvent (EVENT_NEEDS)", () => {
+test("SUBSCRIBED_EVENTS is HostEvent (HOST_EVENTS)", () => {
   assert.deepEqual(
     [...SUBSCRIBED_EVENTS].sort(),
-    Object.keys(EVENT_NEEDS).sort(),
+    Object.keys(HOST_EVENTS).sort(),
   );
 });
 
@@ -100,7 +100,7 @@ test("wire.request: TestHost takes a raw request as the player does", async () =
 
 test("wire.request: the SDK's events are not subscribed raw; another event needs why or mirror", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["events"],
+    capabilities: [],
   });
   try {
     const before = host.sent("events.subscribe").length;
@@ -161,7 +161,7 @@ test("wire.on: a HostEvent is subscribed as a listener with its why, never a mir
       plugin = p;
       p.wire.on("window.state", (data) => seen.push(data));
     },
-    { capabilities: ["events"] },
+    { capabilities: [] },
   );
   try {
     const lines = host
@@ -196,7 +196,7 @@ test("wire.on: another name is heard without a subscription; dispose stops it", 
       plugin = p;
       p.commands.add({ id: "go", title: "Go", run: () => {} });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     const listening = plugin.wire.on("commands.execute", (data) =>
@@ -451,7 +451,7 @@ test("wire.commands.register: one bare registration, run, explicit updates", asy
       });
       assert.equal(command.id, "rate.cycle");
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     assert.deepEqual(host.sent("commands.register"), [
@@ -517,7 +517,7 @@ test("wire.commands.register: a refused declaration fails startPlugin (strictDec
           declaration: { ...declaration, path: ["@nowhere", "Bad"] },
         });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     { code: "invalid", message: /@nowhere/ },
   );

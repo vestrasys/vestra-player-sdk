@@ -1,8 +1,8 @@
 /**
  * `<!-- generated:capabilities -->`: every capability of `CAPABILITY_INFO`
  * (src/capabilities.ts), in the player's order, with the members it opens
- * (linked to the API reference), the capabilities they also need and the
- * plugin store's wording; a built-in-only capability says so.
+ * (linked to the API reference) and the plugin store's wording; a reserved
+ * capability says so.
  */
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
@@ -16,19 +16,12 @@ export default async function capabilities({ root, table }) {
     pathToFileURL(join(root, "src/capabilities.ts"))
   );
   return table(
-    [
-      "Capability",
-      "Opens",
-      "Also needs",
-      "Shown in the store as",
-      "Highlighted",
-    ],
+    ["Capability", "State", "Opens", "Shown in the store as"],
     Object.entries(CAPABILITY_INFO).map(([name, info]) => [
-      info.builtinOnly ? `\`${name}\` (built-in plugins only)` : `\`${name}\``,
-      info.apis.map(memberLink).join(", "),
-      info.requires.map((needed) => `\`${needed}\``).join(", ") || "—",
+      `\`${name}\``,
+      info.reserved ? "reserved" : "active",
+      info.apis.map(memberLink).join(", ") || "nothing yet",
       info.label,
-      info.risky ? "yes" : "",
     ]),
   );
 }

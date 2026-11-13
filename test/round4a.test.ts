@@ -5,7 +5,7 @@ import type { Plugin } from "../src/plugin/index.ts";
 import { nodeProblem } from "../src/processing.ts";
 import { COMMAND_LIMITS } from "../src/commands.ts";
 
-const capabilities = ["playback.read", "events", "processing.video"];
+const capabilities: string[] = [];
 
 const state = (view: { status: { state: string } }) => view.status.state;
 

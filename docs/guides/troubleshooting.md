@@ -55,12 +55,6 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Fix:** Keep the element and change properties instead: `Rectangle { visible: touch.has-hover; … }` or `opacity:`. Use `if` only for things that change rarely (a mode, a selection made with a click, a list that was loaded).
 
-## Panel position or palette state does not follow other plugins or the user
-
-**Cause:** The plugin lacks the `events` capability: {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and their `onChange` listeners follow outside changes only with it.
-
-**Fix:** Declare `events` in the manifest.
-
 ## A value changed after an await does not appear
 
 **Cause:** The SDK sends bound values in an update pass after a handler returns and again when its promise settles; a value changed after an `await` inside a longer task appears only when that task ends.

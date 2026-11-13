@@ -19,9 +19,7 @@ import type {
   Window,
 } from "../src/plugin/types.ts";
 
-function pkg(
-  capabilities = ["ui.mount", "ui.window", "commands", "events"],
-): string {
+function pkg(capabilities = []): string {
   const directory = mkdtempSync(join(tmpdir(), "wire-review-"));
   writeFileSync(
     join(directory, "list.slint"),
@@ -133,7 +131,7 @@ test("M1: a cut list completed by inserts falls back to the whole value on stale
   const request = host.request.bind(host);
   let refused = 0;
   host.request = (async (method: string, params: Record<string, Json>) => {
-    const patch = params.patch as { base?: number } | undefined;
+    const patch = params?.patch as { base?: number } | undefined;
     if (method === "ui.setMount" && patch?.base === 0 && refused++ === 0)
       throw new HostError("stale", "the property changed");
     return request(method, params);
@@ -191,7 +189,7 @@ test("L1 (P4): commands.add and wire.commands.register wait for each other's rem
       plugin = p;
       p.onError((error) => errors.push(error));
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     const added = plugin.commands.add({
@@ -249,7 +247,7 @@ test("L2 (P5): a raw subscription to one of the SDK's events is refused, marked 
       plugin = p;
       p.wire.on("source.state", () => {});
     },
-    { capabilities: ["events", "playback.read"] },
+    { capabilities: [] },
   );
   try {
     await host.settle(10);
@@ -523,7 +521,7 @@ test("L6: an update without when keeps the conditions sent before", async () => 
     (p: Plugin) => {
       plugin = p;
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     const when = { enabled: { playing: true } } as unknown as Json;

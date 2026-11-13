@@ -38,7 +38,7 @@ examples/theme-widgets/
 
 {@includeCode ../../examples/theme-widgets/manifest.json}
 
-`commands` for the menu item and the keys, `ui.window` for the window.
+No capability: the menu item, the keys and the window need none.
 
 ## The window
 
@@ -100,6 +100,6 @@ Start the player with `--plugin <path to examples/theme-widgets>` and choose **E
 
 ## Try next
 
-1. **Use the level.** Add `ui.osd` and show the level with `plugin.osd.show` when the slider is released (the `Slider`'s `released` callback).
+1. **Use the level.** Show the level with `plugin.osd.show` when the slider is released (the `Slider`'s `released` callback).
 2. **A text field.** Add `UrlInputRow` from `@vestra/widgets.slint`, the player's input row with confirm and cancel buttons.
 3. **More tokens.** [Theme](../reference/theme.md) lists every `Theme` token and widget property.

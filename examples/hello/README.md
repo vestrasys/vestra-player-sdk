@@ -6,7 +6,7 @@ The [Quick start](https://github.com/vestrasys/vestra-player-sdk#quick-start), r
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `ui.osd` | `commands.add`, `osd.show`; tests with `startPlugin` |
+| none                 | `commands.add`, `osd.show`; tests with `startPlugin` |
 
 ## Run it
 

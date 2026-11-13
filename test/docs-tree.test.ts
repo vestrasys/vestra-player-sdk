@@ -531,7 +531,8 @@ test("the three plugin styles: the tutorial, the event and the message tables", 
   const messages = pages((page) =>
     docs("/Guides/Reference/Messages", { page }),
   ).join("\n");
-  assert.match(messages, /^\| `ui\.setMount` \| `ui\.mount` \|/m);
+  assert.match(messages, /^\| `ui\.setMount` \| none \|/m);
+  assert.match(messages, /^\| `bindings\.set` \| `player` \|/m);
   assert.match(messages, /SDK member: \[`Panel\.set`\]/);
   assert.match(messages, /`plugin\.wire` only/);
 });

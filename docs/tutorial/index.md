@@ -47,7 +47,7 @@ Add the scripts to `package.json`:
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.7.2" }
+  "devDependencies": { "@vestra-player/sdk": "^1.8.0" }
 }
 ```
 
@@ -84,11 +84,11 @@ Create `manifest.json`. Replace `me` with your GitHub user name:
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": ["commands", "ui.osd", "playback.read", "events"]
+  "capabilities": []
 }
 ```
 
-The capabilities let the plugin add menu items (`commands`), show on-screen messages (`ui.osd`), read the playback state (`playback.read`) and keep it current (`events`: without it, `plugin.player.state` is read only at start and after the plugin's own calls). A call whose capability is missing fails. Every field is in [Manifest](../reference/manifest.md), every capability in [Capabilities](../reference/capabilities.md).
+The plugin declares no capability: menu items, on-screen messages and the playback state need none, and `plugin.player.state` follows the player from the plugin's start. A manifest lists a capability only when the plugin changes the user's player settings, manages other plugins, or uses the clipboard or the keychain; a call whose capability is missing fails. Every field is in [Manifest](../reference/manifest.md), every capability in [Capabilities](../reference/capabilities.md).
 
 ## 3. Add a menu item
 

@@ -1,4 +1,4 @@
-/** File drops (`plugin.drops`, `Panel.onDrop`; capability `ui.drop`). */
+/** File drops (`plugin.drops`, `Panel.onDrop`). */
 import { failure } from "./errors.ts";
 import type { Connection } from "./connection.ts";
 import type { ScopeImpl } from "./scope.ts";

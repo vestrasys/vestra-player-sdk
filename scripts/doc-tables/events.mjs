@@ -7,9 +7,9 @@
  *   `API_REQUESTS` (src/api-requests.ts) with that event name, the same
  *   table the capability check reads (`also` ones in parentheses);
  * - whether the player wakes a stopped plugin for it (`WAKE_EVENTS`,
- *   src/plugin/connection.ts);
- * - the capability `events.subscribe` needs for it, from the player's
- *   table (`HOST_CAPABILITIES`, src/host-capabilities.ts).
+ *   src/plugin/connection.ts).
+ *
+ * No event needs a capability (`events.subscribe` is open to every plugin).
  *
  * Fails when the union, the
  * `EventPayloads` members and `SUBSCRIBED_EVENTS` disagree, or when a
@@ -24,7 +24,7 @@ import {
   typeFile,
   unionLiterals,
 } from "./lib/source.mjs";
-import { capabilityRule, memberLinks } from "./messages.mjs";
+import { memberLinks } from "./messages.mjs";
 
 /** `HostEvent` in order, each with its payload's type text and summary. */
 export function hostEvents() {
@@ -63,16 +63,10 @@ export default async function events({ root, table }) {
   const load = (path) => import(pathToFileURL(join(root, path)));
   const { API_REQUESTS, SUBSCRIBED_EVENTS } = await load("src/api-requests.ts");
   const { WAKE_EVENTS } = await load("src/plugin/connection.ts");
-  const { HOST_CAPABILITIES } = await load("src/host-capabilities.ts");
   const list = hostEvents();
   const names = list.map((event) => event.name);
   if (JSON.stringify([...SUBSCRIBED_EVENTS]) !== JSON.stringify(names))
     throw new Error("SUBSCRIBED_EVENTS differs from HostEvent");
-  const subscribe = HOST_CAPABILITIES.capabilities
-    .flatMap((capability) => capability.methods)
-    .find((method) => method.name === "events.subscribe");
-  if (!subscribe) throw new Error("HOST_CAPABILITIES: no events.subscribe");
-
   const listeners = (event) => {
     const own = [];
     const also = [];
@@ -92,7 +86,6 @@ export default async function events({ root, table }) {
       "Payload",
       "SDK members that listen to it",
       "Wakes a stopped plugin",
-      "Capability",
     ],
     list.map(({ name, type, doc }) => {
       const { own, also } = listeners(name);
@@ -107,7 +100,6 @@ export default async function events({ root, table }) {
         `\`${type}\`: ${doc}`,
         members || "none: `Player.on` only",
         WAKE_EVENTS.includes(name) ? "yes" : "no",
-        capabilityRule(subscribe.needs, { event: name }),
       ];
     }),
   );

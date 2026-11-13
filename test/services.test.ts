@@ -4,13 +4,7 @@ import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin, VideoFilter } from "../src/plugin/index.ts";
 import type { VideoNode } from "../src/processing.ts";
 
-const capabilities = [
-  "playback.read",
-  "playback.control",
-  "events",
-  "processing.video",
-  "processing.audio",
-];
+const capabilities: string[] = [];
 const eq = (brightness: number): VideoNode[] => [
   { kind: "eq", brightness, contrast: 1, saturation: 1, gamma: 1 },
 ];
@@ -248,7 +242,7 @@ test("subtitles: load uploads in chunks, selects, styles and removes", async () 
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["subtitles.read", "subtitles.control", "events"],
+    capabilities: [],
     host,
   });
   const srt = new Uint8Array(70 * 1024).fill(65);
@@ -282,13 +276,7 @@ test("capture freezes the seen source and exports to completion", async () => {
   host.openElsewhere("/a.mp4");
   host.setSource({ position: 12, duration: 60 });
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [
-      "playback.read",
-      "events",
-      "media.read",
-      "media.control",
-      "subtitles.read",
-    ],
+    capabilities: [],
     host,
   });
   const seen = plugin.player.state;
@@ -316,7 +304,7 @@ test("export jobs can be cancelled", async () => {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["playback.read", "events", "media.read", "media.control"],
+    capabilities: [],
     host,
   });
   const shot = await plugin.media.capture();
@@ -344,7 +332,7 @@ test("resolvers register and unregister with their scope", async () => {
         }),
       });
     },
-    { capabilities: ["source.resolve"] },
+    { capabilities: [] },
   );
   assert.equal(host.resolvers.has("demo"), true);
   await stop();
@@ -425,7 +413,7 @@ test("subtitles: aborting load between chunks discards the upload and never comm
     styleReason: null,
   });
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["subtitles.read", "subtitles.control", "events"],
+    capabilities: [],
     host,
   });
   const state = await plugin.subtitles.refresh();

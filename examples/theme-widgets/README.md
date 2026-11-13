@@ -6,7 +6,7 @@
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `ui.window` | `windows.create`, `Window.bind` / `on`, `commands.keys`; `Theme`, `Button`, `Slider`, `ToolTipArea` (with `keys`), `KeyHint` in Slint |
+| none                    | `windows.create`, `Window.bind` / `on`, `commands.keys`; `Theme`, `Button`, `Slider`, `ToolTipArea` (with `keys`), `KeyHint` in Slint |
 
 ## Run it
 

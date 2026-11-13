@@ -21,7 +21,7 @@ async function refused(options: Omit<CommandOptions, "run">, message: string) {
       (plugin: Plugin) => {
         plugin.commands.add({ ...options, run() {} });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     (error: HostError) => {
       assert.equal(error.code, "invalid", JSON.stringify(options));
@@ -43,7 +43,7 @@ test("category and home are sent only when set", async () => {
         run() {},
       });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     const plain = host.command("plain").declaration;
@@ -100,7 +100,7 @@ test("the category follows the player's text rules; home is a command id", async
           run() {},
         });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     { code: "invalid", message: "command a: home is a command id" },
   );
@@ -114,7 +114,7 @@ test("the category follows the player's text rules; home is a command id", async
           run() {},
         });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     {
       code: "invalid",
@@ -134,7 +134,7 @@ test("the category shows translated, in the command and in bindings.list", async
         version: "0.1.0",
         apiVersion: "vestra/1",
         entry: "main.ts",
-        capabilities: ["commands", "bindings.manage"],
+        capabilities: ["player"],
       }),
     );
     mkdirSync(join(directory, "locales"));

@@ -19,15 +19,7 @@ import type {
   Window,
 } from "../src/plugin/types.ts";
 
-function packageWith(
-  capabilities: string[] = [
-    "ui.mount",
-    "ui.window",
-    "commands",
-    "events",
-    "playback.read",
-  ],
-) {
+function packageWith(capabilities: string[] = []) {
   const directory = mkdtempSync(join(tmpdir(), "edges-"));
   writeFileSync(
     join(directory, "list.slint"),
@@ -272,7 +264,7 @@ test("events without playback.read: a handler's first read is current", async ()
           void read.push([p.player.state.phase, p.player.state.paused]),
       });
     },
-    { host, directory: packageWith(["commands", "events"]) },
+    { host, directory: packageWith([]) },
   );
   try {
     await host.settle();

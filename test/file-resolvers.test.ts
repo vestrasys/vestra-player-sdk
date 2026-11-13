@@ -9,13 +9,7 @@ import type {
   Stream,
 } from "../src/plugin/index.ts";
 
-const capabilities = [
-  "playback.read",
-  "playback.control",
-  "events",
-  "source.resolve",
-  "producer.av",
-];
+const capabilities: string[] = [];
 
 /** The default local stream: a Unix socket, a named pipe on Windows. */
 function host() {
@@ -303,7 +297,7 @@ test("another plugin's extension is a conflict that does not fail activation", a
       void resolver.ready.catch((error: PluginError) => (code = error.code));
       plugin.commands.add({ id: "still", path: ["文件", "Still"], run() {} });
     },
-    { capabilities: [...capabilities, "commands"], host: fake },
+    { capabilities: [...capabilities], host: fake },
   );
   assert.equal(code, "conflict");
   assert.ok(fake.command("still"));

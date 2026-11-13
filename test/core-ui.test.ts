@@ -123,7 +123,7 @@ test("declarations are sent in full with defaults", async () => {
 });
 
 test("slot state is shared and changes through the host; showMenu sends command ids", async () => {
-  const directory = packageWith(["ui.mount", "events", "commands"], panelFile);
+  const directory = packageWith([], panelFile);
   let own: ReturnType<Plugin["panels"]["mount"]> | undefined;
   const changes: unknown[] = [];
   const { host, plugin, stop } = await startPlugin(
@@ -164,7 +164,7 @@ test("slot state is shared and changes through the host; showMenu sends command 
 });
 
 test("fullscreen collapses the attached sidebar to the edge; the edge and setVisible pop it out", async () => {
-  const directory = packageWith(["ui.mount", "events"], panelFile);
+  const directory = packageWith([], panelFile);
   let own: ReturnType<Plugin["panels"]["mount"]> | undefined;
   const { host, plugin, stop } = await startPlugin(
     (plugin: Plugin) => {
@@ -206,7 +206,7 @@ test("fullscreen collapses the attached sidebar to the edge; the edge and setVis
 });
 
 test("osd lines, one osd panel per plugin, cleared on dispose", async () => {
-  const directory = packageWith(["ui.osd"]);
+  const directory = packageWith([]);
   const { host, plugin, stop } = await startPlugin(() => {}, { directory });
   await plugin.osd.show("音量: 80%");
   assert.deepEqual(host.osd, ["音量: 80%"]);
@@ -239,7 +239,7 @@ test("sequence provider flags follow bindings; next/previous route to it; stats"
     },
     {
       host,
-      directory: packageWith(["playback.read", "playback.control", "events"]),
+      directory: packageWith([]),
     },
   );
   await host.settle();

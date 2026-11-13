@@ -6,7 +6,7 @@ A live Gaussian blur over the video that is playing. **Video ▸ Blur…** opens
 
 | Capabilities                                                           | API                                                                                                                                      |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands`, `ui.window`, `processing.video`, `playback.read`, `events` | `commands.add` in the `@video` menu, `windows.create` with `bind` and `on`, `video.filter` with a `gblur` node; tests with `startPlugin` |
+| none                                                                   | `commands.add` in the `@video` menu, `windows.create` with `bind` and `on`, `video.filter` with a `gblur` node; tests with `startPlugin` |
 
 ## Files
 

@@ -1,9 +1,14 @@
 import { capabilityInfo } from "./capability-rules.ts";
 
 /**
- * What one manifest capability is for: the members it opens, the
- * capabilities they also need, and how the plugin store describes it. An
- * entry of {@link CAPABILITY_INFO}.
+ * What one manifest capability is for: the members it opens and how the
+ * plugin store describes it. An entry of {@link CAPABILITY_INFO}.
+ *
+ * A capability is a boundary, not a feature: a plugin declares one when it
+ * touches things that are neither its own nor the playback session's: the
+ * user's player settings (`player`), other plugins (`plugins`) or the
+ * user's system (`clipboard`, `credentials`). The list is closed: a new
+ * player API takes one of these names or needs none.
  *
  * @since 1.5.14
  *
@@ -12,63 +17,52 @@ import { capabilityInfo } from "./capability-rules.ts";
 export interface CapabilityInfo {
   /**
    * The members this capability opens, as `Interface.member` (for example
-   * `Commands.add` is `plugin.commands.add`). A call to one of them without
-   * the capability fails with code `capability`; `Plugin.video.filter` is
-   * `plugin.video.filter`. A member can be listed
-   * under more than one capability when it needs all of them
-   * (`Panel.onChange` needs `ui.mount` and `events`).
+   * `Bindings.set` is `plugin.bindings.set`). A call to one of them without
+   * the capability fails with code `capability`. Empty for a
+   * {@link CapabilityInfo.reserved | reserved} capability.
    */
   readonly apis: readonly string[];
   /**
-   * Capabilities every member in {@link CapabilityInfo.apis} also needs:
-   * declare them as well. What only one member or one option needs
-   * (`Plugin.video.filter` also needs `events`) is documented at that member.
-   */
-  readonly requires: readonly string[];
-  /**
    * How the plugin store and the player's install confirmation describe the
-   * capability to the user, in English (the player translates it). Two
-   * capabilities can share one description (`media.read` and
-   * `media.control`); the store then shows it once.
+   * capability to the user, in English (the player translates it).
    */
   readonly label: string;
   /**
-   * `true` when the store highlights the capability as one to think about
-   * before installing (it reaches outside the plugin's own features: the
-   * clipboard, every shortcut, the keychain, other plugins).
-   */
-  readonly risky: boolean;
-  /**
-   * `true` when only the player's built-in plugins may declare it
-   * (`commands.run`, `palette.lead`): the player refuses a package of any
-   * other plugin that declares it, and its calls fail with `capability`.
-   * `vestra-plugin check` reports it.
+   * `true` for a name kept for a later player API (`camera`,
+   * `microphone`, `screen`, `notifications`): no member needs it yet. The
+   * player accepts a manifest that declares it and grants nothing by it;
+   * `vestra-plugin check` says so in a hint.
    *
-   * @since 1.7.9
+   * @since 1.8.0
    */
-  readonly builtinOnly: boolean;
+  readonly reserved: boolean;
 }
 
 /**
  * Every manifest capability the player knows (`vestra/1`), in the player's
- * order, with the members it opens, the capabilities they also need and the
- * store's wording. Built from the player's own capability table (its
+ * order, with the members it opens and the store's wording. Built from the player's own capability table (its
  * `src/host/capabilities.json`, copied into the SDK) and the requests each
  * member sends, the same rule `vestra-plugin check` and the SDK's
  * TypeScript plugin apply; the player's tests check that the copy is
  * current.
  *
- * A member not listed under any capability needs none (`plugin.tools`,
- * `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui`,
- * `plugin.i18n`, reading `plugin.window.state`, `plugin.appearance.theme`,
- * `plugin.packages.list` and `plugin.rendering.state`).
+ * A member not listed under any capability needs none: everything that is
+ * the plugin's own (its commands, windows, panels, settings pages, messages
+ * on the video, drops, resolvers, marks) and everything of the playback
+ * session (playback, subtitles, filters, upscaling, motion smoothing,
+ * snapshots and exports, media sources, the main window, keeping the
+ * computer awake). Network, files and child processes are not capabilities
+ * either: a plugin is a Node.js process with the user's access to them.
  *
- * @example Check in a test that the manifest declares every required capability
- * The test fails, naming the missing capability, when the manifest declares
- * a capability without one its members also need. It reads the plugin's own
- * `manifest.json` and looks each declared name up in `CAPABILITY_INFO`,
- * whose `requires` lists the capabilities that must be declared with it;
- * at run time the player would refuse such a call with code `capability`.
+ * Until 1.8.0 the list had 31 names, one per feature; the changelog of
+ * 1.8.0 maps each old name to its new one or to "delete".
+ *
+ * @example Check in a test that the manifest declares only capabilities in use
+ * The test fails, naming the capability, when the manifest declares a name
+ * the player does not know or one that opens nothing yet. It reads the plugin's
+ * own `manifest.json` and looks each declared name up in
+ * `CAPABILITY_INFO`; `vestra-plugin check` reports the same, and also every
+ * member the plugin uses whose capability is missing.
  * ```ts
  * import assert from "node:assert/strict";
  * import { readFile } from "node:fs/promises";
@@ -77,10 +71,13 @@ export interface CapabilityInfo {
  * const manifest: { capabilities: string[] } = JSON.parse(
  *   await readFile(new URL("../manifest.json", import.meta.url), "utf8"),
  * );
- * for (const capability of manifest.capabilities)
- *   // An unknown name has no entry: `vestra-plugin check` reports it.
- *   for (const needed of CAPABILITY_INFO[capability]?.requires ?? [])
- *     assert.ok(manifest.capabilities.includes(needed), needed);
+ * for (const capability of manifest.capabilities) {
+ *   // An unknown name (or one retired in 1.8.0) has no entry.
+ *   const info = CAPABILITY_INFO[capability];
+ *   assert.ok(info, `${capability} is not a capability`);
+ *   // A reserved name opens no member yet: nothing to declare it for.
+ *   assert.equal(info.reserved, false, `${capability} is reserved`);
+ * }
  * ```
  *
  * @since 1.5.14
@@ -94,10 +91,8 @@ export const CAPABILITY_INFO: Readonly<Record<string, CapabilityInfo>> =
         name,
         Object.freeze({
           apis: Object.freeze(info.apis),
-          requires: Object.freeze(info.requires),
           label: info.label,
-          risky: info.risky,
-          builtinOnly: info.builtinOnly,
+          reserved: info.reserved,
         }),
       ]),
     ),

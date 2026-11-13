@@ -132,7 +132,7 @@ test("stop reason: t.after(stop) type checks", async (t) => {
 
 test("stop reason: disconnect() is host-lost and requests are refused", async () => {
   const host = new TestHost();
-  const { plugin, disconnect } = await started(host, ["ui.osd"]);
+  const { plugin, disconnect } = await started(host, []);
   let refused: string | undefined;
   plugin.onDispose(async (info) => {
     assert.equal(info?.reason, "host-lost");
@@ -148,7 +148,7 @@ test("stop reason: disconnect() is host-lost and requests are refused", async ()
 test("stop reason: disconnect() fails requests still in flight with disabled", async () => {
   const host = new TestHost();
   host.handle("osd.show", () => new Promise(() => {})); // never answered
-  const { plugin, disconnect } = await started(host, ["ui.osd"]);
+  const { plugin, disconnect } = await started(host, []);
   const pending = plugin.osd.show("waiting").then(
     () => "answered",
     (error: PluginError) => error.code,
@@ -181,11 +181,7 @@ test("stop reason: the runtime keeps known reasons only, and the first one", asy
 test("previous-crash: shader lists and render shaders are refused, clearing works", async () => {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
-  const { plugin, stop } = await started(host, [
-    "playback.read",
-    "events",
-    "processing.video",
-  ]);
+  const { plugin, stop } = await started(host, []);
   const file = join(plugin.dataDirectory, "a.glsl");
   writeFileSync(file, "//!HOOK MAIN\n");
   host.previousCrash = "plugin shaders are off for this start";

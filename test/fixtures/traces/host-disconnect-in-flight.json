@@ -91,7 +91,22 @@
   "stopReason": "host-lost",
   "calls": [
     {
+      "method": "events.subscribe",
+      "params": {
+        "event": "source.state",
+        "mirror": true
+      }
+    },
+    {
+      "method": "source.state",
+      "params": {}
+    },
+    {
       "method": "window.state",
+      "params": {}
+    },
+    {
+      "method": "timeline.marks",
       "params": {}
     },
     {

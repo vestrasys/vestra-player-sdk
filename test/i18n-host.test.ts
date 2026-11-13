@@ -16,7 +16,7 @@ function pluginDirectory() {
       version: "0.1.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd", "ui.dialog", "ui.theme", "events"],
+      capabilities: ["player"],
     }),
   );
   mkdirSync(join(directory, "locales"));
@@ -148,7 +148,7 @@ test("the player's own texts follow the locale; without one they stay Chinese", 
   const run = async (host: TestHost) => {
     host.openElsewhere("/a.mp4");
     const { stop } = await startPlugin(() => {}, {
-      capabilities: ["commands", "playback.read", "playback.control"],
+      capabilities: [],
       host,
     });
     await host.coreAction("play-pause").run();
@@ -190,7 +190,7 @@ test("appearance.language is the saved choice; setLanguage saves it for the next
   const host = new TestHost();
   host.locale = "fr";
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["ui.theme", "events"],
+    capabilities: ["player"],
     host,
   });
   assert.equal(plugin.i18n.locale, "fr");

@@ -11,7 +11,7 @@ import { text } from "../src/plugin/language.ts";
 // `then` is commands.run's plan, an array: not a thenable.
 /* oxlint-disable unicorn/no-thenable */
 
-const capabilities = ["commands", "commands.run", "palette.lead"];
+const capabilities = ["plugins"];
 
 /** The plugin's runs a second are 4 a ticket: wait for room. */
 const nextSecond = () => new Promise((resolve) => setTimeout(resolve, 1000));

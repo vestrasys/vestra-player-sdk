@@ -674,7 +674,7 @@ hostScenario("disconnect-in-flight", async () => {
         bye = outcome(p.osd.show("bye"));
       });
     },
-    { capabilities: ["ui.osd"], host },
+    { capabilities: [], host },
   );
   const log = watch(host);
   const slow = outcome(plugin.osd.show("slow"));
@@ -721,7 +721,7 @@ hostScenario("register-keys-settle", async () => {
         log.push(["plugin", "commands.keys", toJson(p.commands.keys("first"))]),
       );
     },
-    { capabilities: ["commands"], host },
+    { capabilities: [], host },
   );
   log.push(["mark", "started", toJson(plugin.commands.keys("first"))]);
   const late = plugin.commands.add({
@@ -778,7 +778,7 @@ hostScenario("press", async () => {
         run() {},
       });
     },
-    { capabilities: ["commands", "ui.osd"], host },
+    { capabilities: [], host },
   );
   void plugin;
   const log = watch(host);
@@ -840,12 +840,7 @@ hostScenario("producer-lifecycle", async () => {
   const host = new TestHost();
   const scratch = dirname(host.dataDirectory);
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [
-      "playback.read",
-      "playback.control",
-      "events",
-      "producer.av",
-    ],
+    capabilities: [],
     host,
   });
   const facts: Record<string, Json> = {
@@ -902,14 +897,7 @@ hostScenario("start-taken", async () => {
     height: 2,
     frame: () => ({ video: new Uint8Array(16), audio: new Float32Array(1600) }),
   });
-  const capabilities = [
-    "playback.read",
-    "playback.control",
-    "events",
-    "source.resolve",
-    "producer.av",
-    "commands",
-  ];
+  const capabilities: string[] = [];
   const host = new TestHost();
   host.otherResolvers.push({ owner: "other.plugin", extensions: ["nes"] });
   let ready: Promise<Json> | undefined;
@@ -976,7 +964,7 @@ hostScenario("residency-told", async () => {
           p.player.onChange(() => {});
           if (extra) p.window.onChange(() => {});
         },
-        { capabilities: ["events", "playback.read"], id },
+        { capabilities: [], id },
       );
       runs.push(toJson(host.keepsRunning));
       await stop();

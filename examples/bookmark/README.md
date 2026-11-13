@@ -6,7 +6,7 @@ A small, complete plugin: **Playback → Bookmark…** opens a tool window that 
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `ui.window`, `playback.read`, `events`, `playback.control` | `windows.create`, `Window.bind` / `on`, `player.state`, `player.seek` |
+| none                                                                   | `windows.create`, `Window.bind` / `on`, `player.state`, `player.seek` |
 
 ## Run it
 

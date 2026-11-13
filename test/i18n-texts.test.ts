@@ -106,18 +106,7 @@ function directory() {
   return dir;
 }
 
-const capabilities = [
-  "commands",
-  "ui.osd",
-  "ui.dialog",
-  "ui.window",
-  "bindings.manage",
-  "playback.read",
-  "playback.control",
-  "events",
-  "source.resolve",
-  "producer.av",
-];
+const capabilities = ["player"];
 
 test("text and list values are plain, frozen data and refuse malformed input", () => {
   const value = text("Track {} ({})", [2, "opus"]);
@@ -362,7 +351,7 @@ test("timeline titles, OSD panel columns and the export-only resolve", async () 
     {
       directory: dir,
       locale: "zh-Hans",
-      capabilities: [...capabilities, "timeline.marks"],
+      capabilities: [...capabilities],
     },
   );
   await host.settle();
@@ -430,7 +419,7 @@ test("extract finds text(), error() and $vestraText sources; a spread field is r
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
+      capabilities: [],
     }),
   );
   writeFileSync(join(dir, "package.json"), '{"type":"module"}');

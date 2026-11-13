@@ -6,9 +6,10 @@
  *   npm run capabilities:sync -- <player repository> [--check]
  *
  * The player generates `src/host/capabilities.json` from its capability
- * modules (`src/host/src/capabilities/`): every manifest capability with its
- * store wording, the capabilities it requires, and the RPC methods it serves
- * with what each needs. This script writes it to src/host-capabilities.ts as
+ * modules (`src/host/src/capabilities/`): the closed list of manifest
+ * capabilities with their store wording, the names retired in 1.8.0 with
+ * their replacement, and every RPC method by the group that serves it with
+ * the capability it needs. This script writes it to src/host-capabilities.ts as
  * `HOST_CAPABILITIES`, which `CAPABILITY_INFO` and the capability checker
  * (`vestra-plugin check`, the TypeScript plugin) are built from, so the SDK
  * and the player read one rule.
@@ -57,9 +58,6 @@ const text = `/**
  * @internal
  */
 import type { HostCapabilities } from "./capability-rules.ts";
-
-// "then" is a field of the player's IfDeclared rule, not a thenable.
-/* oxlint-disable unicorn/no-thenable */
 
 /** @internal */
 export const HOST_CAPABILITIES: HostCapabilities = ${JSON.stringify(table)};

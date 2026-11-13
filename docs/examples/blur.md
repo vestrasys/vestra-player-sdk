@@ -40,14 +40,7 @@ examples/blur/
 
 {@includeCode ../../examples/blur/manifest.json}
 
-A call whose capability is missing from the manifest fails with `code: "capability"`. Blur needs five:
-
-| Capability                | Why                                                                                                                                                                                   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands`                | `plugin.commands.add`: the menu item.                                                                                                                                                 |
-| `ui.window`               | `plugin.windows.create`: the Blur window.                                                                                                                                             |
-| `processing.video`        | `plugin.video.filter`: the blur itself.                                                                                                                                               |
-| `playback.read`, `events` | A filter reads the player's state, and follows its changes, to know when there is a video to apply the blur to. Without `events` a blur set before a video starts would stay waiting. |
+Blur declares no capability: a menu item (`plugin.commands.add`), a window (`plugin.windows.create`) and a video filter (`plugin.video.filter`) need none. A filter follows the player's state by itself to know when there is a video to apply the blur to. A plugin declares a capability only when it changes the user's player settings, manages other plugins, or uses the clipboard or the keychain ([Capabilities](../reference/capabilities.md)).
 
 ## main.ts, top to bottom
 

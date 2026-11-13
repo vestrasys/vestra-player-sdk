@@ -1,6 +1,7 @@
-// Built-in-only capabilities (SDK 1.7.9, player 0.7.6): commands.run
-// (`plugin.commands.list` / `run`) and palette.lead (`plugin.palette.lead`),
-// with TestHost's model of the player's tickets, rates and confirmation.
+// `plugin.commands.list` / `run` (capability `plugins`) and
+// `plugin.palette.lead` (no capability), with TestHost's model of the
+// player's tickets, rates and confirmation. Until SDK 1.8.0 both were for
+// built-in plugins only (`commands.run`, `palette.lead`).
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -10,8 +11,9 @@ import {
 } from "../src/plugin/testing.ts";
 import type { Plugin, PluginError } from "../src/plugin/index.ts";
 import { manifestProblems } from "../src/manifest.ts";
+import { retiredCapabilities } from "../src/capability-rules.ts";
 
-const capabilities = ["commands", "commands.run", "palette.lead"];
+const capabilities = ["plugins"];
 
 /** A plugin with one lead and two commands of its own; `builtin` as asked. */
 async function started(builtin = true) {
@@ -48,19 +50,18 @@ async function started(builtin = true) {
   return { host, plugin, stop, runs, ran: () => ran };
 }
 
-test("commands.run and palette.lead are built-in only", () => {
-  for (const name of ["commands.run", "palette.lead"])
-    assert.equal(CAPABILITY_INFO[name]!.builtinOnly, true, name);
-  assert.equal(CAPABILITY_INFO["commands"]!.builtinOnly, false);
-  assert.equal(CAPABILITY_INFO["commands.run"]!.risky, true);
-  assert.deepEqual(CAPABILITY_INFO["commands.run"]!.apis, [
-    "Commands.list",
-    "Commands.run",
-  ]);
-  assert.deepEqual(CAPABILITY_INFO["palette.lead"]!.apis, ["Palette.lead"]);
+test("commands.list and run need plugins; the lead needs nothing; no built-in-only flag", () => {
+  for (const api of ["Commands.list", "Commands.run"])
+    assert.ok(CAPABILITY_INFO["plugins"]!.apis.includes(api), api);
+  for (const info of Object.values(CAPABILITY_INFO)) {
+    assert.equal("builtinOnly" in info, false);
+    assert.equal(info.apis.includes("Palette.lead"), false);
+  }
+  for (const retired of ["commands.run", "palette.lead"])
+    assert.equal(retired in CAPABILITY_INFO, false, retired);
 });
 
-test("a plugin that is not built in is refused with capability", async () => {
+test("a plugin that is not built in may use them; list and run need plugins", async () => {
   const errors: PluginError[] = [];
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(
@@ -70,23 +71,26 @@ test("a plugin that is not built in is refused with capability", async () => {
     },
     { capabilities, host },
   );
-  await assert.rejects(plugin.commands.list(), { code: "capability" });
+  const { commands } = await plugin.commands.list();
+  assert.ok(commands.some((each) => each.id === "host/mute"));
+  // Reaches the player: refused for its ticket, not for a capability.
   await assert.rejects(plugin.commands.run("host/mute", { ticket: "t" }), {
-    code: "capability",
+    code: "ticket",
   });
-  // The row's refusal reaches onError; activation went on.
-  assert.deepEqual(
-    errors.map((error) => error.code),
-    ["capability"],
-  );
-  assert.equal(host.paletteLead, null);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(host.paletteLead, { title: "Ask", icon: "ai" });
   await stop();
-  // Undeclared: refused before the player is asked.
-  const bare = await startPlugin(() => {}, { capabilities: [], builtin: true });
+  // Undeclared: list and run are refused before the player is asked; the
+  // lead needs no capability.
+  const bare = await startPlugin(() => {}, { capabilities: [] });
   await assert.rejects(bare.plugin.commands.list(), { code: "capability" });
-  assert.throws(() => bare.plugin.palette.lead({ title: "A", icon: "ai" }), {
+  await assert.rejects(bare.plugin.commands.run("host/mute", { ticket: "t" }), {
     code: "capability",
   });
+  assert.deepEqual(bare.host.sent("commands.list"), []);
+  const lead = bare.plugin.palette.lead({ title: "A", icon: "ai" });
+  await lead.ready;
+  assert.deepEqual(bare.host.paletteLead, { title: "A", icon: "ai" });
   await bare.stop();
 });
 
@@ -235,27 +239,75 @@ test("commands.list is the palette's table", async () => {
   await stop();
 });
 
-test("destructive is sent only when set; vestra-plugin check knows built-in only", async () => {
+test("destructive is sent only when set", async () => {
   const { host, stop } = await started();
   assert.equal(host.command("forget-all").declaration.destructive, true);
   assert.equal("destructive" in host.command("louder").declaration, false);
   await stop();
-  const manifest = (id: string) => ({
-    id,
-    version: "1.0.0",
-    apiVersion: "vestra/1",
-    entry: "main.js",
-    capabilities: ["commands.run"],
-  });
-  const other = manifestProblems(manifest("someone.ask"), ".");
-  assert.match(
-    other.problems.join("\n"),
-    /commands\.run: built-in plugins only/,
+});
+
+test("vestra-plugin check: a retired capability names its replacement; reserved and unknown names", () => {
+  const problems = (capabilities: string[], id = "someone.ask") =>
+    manifestProblems(
+      {
+        id,
+        version: "1.0.0",
+        apiVersion: "vestra/1",
+        entry: "main.js",
+        capabilities,
+      },
+      ".",
+    ).problems;
+  assert.deepEqual(
+    problems(["player", "plugins", "clipboard", "credentials"]),
+    [],
   );
-  const builtin = manifestProblems(manifest("vestra.ask"), ".");
-  assert.deepEqual(builtin.problems, []);
-  assert.match(
-    builtin.hints.join("\n"),
-    /commands\.run: built-in plugins only/,
+  assert.deepEqual(problems([]), []);
+  // Renamed or folded into a boundary: the name to declare instead, in the
+  // player's own words.
+  assert.deepEqual(problems(["commands.run"]), [
+    'capability "commands.run" was retired: declare "plugins" instead',
+  ]);
+  assert.deepEqual(problems(["secrets", "bindings.manage", "ui.theme"]), [
+    'capability "secrets" was retired: declare "credentials" instead',
+    'capability "bindings.manage" was retired: declare "player" instead',
+    'capability "ui.theme" was retired: declare "player" instead',
+  ]);
+  // Needs nothing now, for a built-in plugin's id too.
+  for (const id of ["someone.ask", "vestra.ask"])
+    assert.deepEqual(problems(["events", "palette.lead"], id), [
+      'capability "events" was retired: what it allowed needs no capability now, remove it',
+      'capability "palette.lead" was retired: what it allowed needs no capability now, remove it',
+    ]);
+  // `clipboard` kept its name.
+  assert.deepEqual(problems(["clipboard"]), []);
+  // Every old name is refused, and is no capability; every replacement is one.
+  const retired = retiredCapabilities();
+  for (const [old, now] of Object.entries(retired)) {
+    assert.equal(old in CAPABILITY_INFO, false, old);
+    if (now !== null) assert.equal(CAPABILITY_INFO[now]?.reserved, false, old);
+    assert.equal(problems([old]).length, 1, old);
+  }
+  assert.equal(Object.keys(retired).length, 30);
+  // A reserved name is accepted, as by the player, with a reminder.
+  const reserved = manifestProblems(
+    {
+      id: "someone.ask",
+      version: "1.0.0",
+      apiVersion: "vestra/1",
+      entry: "main.js",
+      capabilities: ["camera", "player"],
+    },
+    ".",
   );
+  assert.deepEqual(reserved.problems, []);
+  assert.deepEqual(
+    reserved.hints.filter((hint) => hint.startsWith("camera")),
+    [
+      "camera: reserved for a later player API; no member needs it yet, and the store would show it to the user: remove it",
+    ],
+  );
+  assert.deepEqual(problems(["network"]), [
+    "unknown capabilities network (the capabilities are player, plugins, clipboard, credentials, camera, microphone, screen, notifications)",
+  ]);
 });

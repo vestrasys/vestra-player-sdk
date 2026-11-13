@@ -95,9 +95,8 @@ export interface SubtitleConditional {
 }
 
 /**
- * `plugin.subtitles`: tracks, uploads and style. Reading needs
- * `subtitles.read`; changes need `subtitles.control` and also
- * `subtitles.read`, since they read the current selection first.
+ * `plugin.subtitles`: tracks, uploads and style. Changes read the current
+ * selection first.
  *
  * @example Load an SRT file as the secondary subtitle
  * An English SRT file shows as a second subtitle line next to the
@@ -129,7 +128,7 @@ export interface SubtitleConditional {
  * selection, uploaded files and the style. `state` is the SDK's snapshot of
  * the player's subtitle state (`null` until first read). The player has no
  * subtitle event: the SDK reads the state again when the source, its phase
- * or the backend changes (with `events`) and after this plugin's own
+ * or the backend changes and after this plugin's own
  * changes, so a selection the user or another plugin changed shows only
  * after `refresh()`. A change without `ifCurrent` reads the state first
  * and applies to it; pass `ifCurrent` to make it fail with `stale` when the
@@ -137,8 +136,7 @@ export interface SubtitleConditional {
  * player confirms; `select`, `remove` and `setStyle` resolve with the new
  * state, `load` with the new track.
  *
- * @capability `subtitles.read` to read; `subtitles.control` and
- * `subtitles.read` to change; `events` to re-read on source changes.
+ * @capability None.
  *
  * @see [Load subtitles from a plugin](../../../docs/guides/subtitles.md)
  * @since 1.0.0
@@ -150,7 +148,7 @@ export interface Subtitles {
   /**
    * The subtitle state changed.
    *
-   * @capability events and subtitles.read
+   * @capability None.
    *
    * @example Show the subtitle language after a new file opens
    * When a new file starts, the OSD names the language of its primary
@@ -171,14 +169,13 @@ export interface Subtitles {
   /**
    * Read the state from the player now.
    *
-   * @capability subtitles.read
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `subtitles.read`.
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example Count the subtitle tracks of the file
    * The plugin reads how many subtitle tracks the file has before building a
-   * menu. `refresh` asks the player and resolves with the current state, also
-   * without `events`; `state` holds it afterwards.
+   * menu. `refresh` asks the player and resolves with the current state;
+   * `state` holds it afterwards.
    * ```ts
    * const { tracks } = await plugin.subtitles.refresh();
    * await plugin.osd.show("{} subtitle tracks", [tracks.length]);
@@ -192,7 +189,7 @@ export interface Subtitles {
    * the primary one (`invalid` otherwise). A new source clears it.
    * `track: null` turns the role off.
    *
-   * @capability subtitles.control and subtitles.read
+   * @capability None.
    * @throws `stale` (rejects) With `ifCurrent`: the source or the subtitle
    *   selection changed since that state.
    * @throws `invalid` (rejects) An unknown track; as secondary, a bitmap
@@ -201,8 +198,6 @@ export interface Subtitles {
    * @throws `unavailable` (rejects) Nothing loaded, or the source is still
    *   loading or not yet confirmed.
    * @throws `busy` (rejects) Too many subtitle operations at once.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `subtitles.control` and `subtitles.read`.
    *
    * @example Turn on the first English subtitle
    * The first English track becomes the primary subtitle, but only in the
@@ -241,7 +236,7 @@ export interface Subtitles {
    * every plugin together at most 16 tracks; see `SUBTITLE_LIMITS` in
    * `@vestra-player/sdk/testing`.
    *
-   * @capability subtitles.control and subtitles.read
+   * @capability None.
    * @throws `invalid` (rejects) A bad `format` or `title`, or a file over the
    *   limits.
    * @throws `stale` (rejects) With `ifCurrent`: the source changed since
@@ -254,8 +249,6 @@ export interface Subtitles {
    *   limit of `SUBTITLE_LIMITS` is reached (4 tracks of this plugin, 16
    *   loads of this plugin or 16 tracks in the source, or another of its
    *   limits); nothing is loaded.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `subtitles.control` and `subtitles.read`.
    *
    * @example Load a downloaded SRT and select it
    * A subtitle file the plugin downloaded becomes a track of the current file
@@ -286,15 +279,13 @@ export interface Subtitles {
   /**
    * Remove a track this plugin loaded.
    *
-   * @capability subtitles.control and subtitles.read
+   * @capability None.
    * @throws `invalid` (rejects) The track was not loaded by this plugin.
    * @throws `stale` (rejects) With `ifCurrent`: the source changed since
    *   that state.
    * @throws `unavailable` (rejects) Nothing is loaded, or the source is
    *   still loading.
    * @throws `busy` (rejects) Too many subtitle operations at once.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `subtitles.control` and `subtitles.read`.
    *
    * @example Remove the subtitle the plugin loaded
    * The plugin's downloaded subtitle disappears from the track list. A plugin
@@ -318,7 +309,7 @@ export interface Subtitles {
    * layer, the player uses the one whose manifest id sorts last, whatever
    * the order of the calls.
    *
-   * @capability subtitles.control and subtitles.read
+   * @capability None.
    * @throws `invalid` (rejects) A field out of range.
    * @throws `unsupported` (rejects) A font that is not in `state.fonts`, or a
    *   primary subtitle that is a bitmap track.
@@ -327,8 +318,6 @@ export interface Subtitles {
    * @throws `unavailable` (rejects) Nothing is loaded, or the source is
    *   still loading.
    * @throws `busy` (rejects) Too many subtitle operations at once.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `subtitles.control` and `subtitles.read`.
    *
    * @example Take the plugin's style off again
    * The plugin removes its style layer, so the subtitles go back to the

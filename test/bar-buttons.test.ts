@@ -28,7 +28,7 @@ test("a command's bar button: listed, clicked like its menu item, refused while 
         run: () => void runs++,
       });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   const [button] = host.barButtons;
   assert.ok(button);
@@ -71,7 +71,7 @@ test("a command's bar button: listed, clicked like its menu item, refused while 
 
 test("bar buttons are checked as the player checks them", async () => {
   const { host, plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   const add = (button: unknown, path: string[] = ["Thing"]) =>
     plugin.commands.add({
@@ -120,7 +120,7 @@ test("a command without a button sends no button field (older players refuse it)
     (plugin: Plugin) => {
       plugin.commands.add({ id: "plain", path: ["Plain"], run() {} });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   assert.equal("button" in host.command("plain").declaration, false);
   assert.deepEqual(host.barButtons, []);

@@ -52,7 +52,7 @@ test("a disabled command lets its key pass to the next one bound to it", async (
       add("saving", ["S"], { reason: "Nothing to save" });
       add("quiet", ["Ctrl+Shift+F9"]);
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   // The winner is disabled: the command it shadowed takes the key.
   assert.equal(await host.press("Q"), "ran");
@@ -89,7 +89,7 @@ test("a TRANSLATORS comment on an as const table entry reaches the .pot", () => 
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["ui.osd"],
+      capabilities: [],
     }),
   );
   writeFileSync(join(dir, "package.json"), '{"type":"module"}');

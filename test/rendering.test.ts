@@ -1,5 +1,5 @@
 // plugin.rendering (SDK 1.5.35, player 0.5.13): the rendering choice, the
-// rendering.manage capability and TestHost's model of the player.
+// `player` capability and TestHost's model of the player.
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -9,7 +9,6 @@ import {
   TestHost,
 } from "../src/plugin/testing.ts";
 import type { Plugin } from "../src/plugin/index.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
 import { hostMethod } from "../src/capability-rules.ts";
 
 async function started(capabilities: string[], host = new TestHost()) {
@@ -25,33 +24,17 @@ async function started(capabilities: string[], host = new TestHost()) {
 const code = (expected: string) => (error: HostError) =>
   error.code === expected;
 
-test("rendering.manage: the player's table entry; rendering.state needs none", () => {
-  const last = HOST_CAPABILITIES.capabilities.find(
-    (capability) => capability.name === "rendering.manage",
-  )!;
-  assert.deepEqual(last, {
-    label: "Choose GPU or software rendering and restart the player",
-    methods: [
-      { name: "rendering.setPreference", needs: "rendering.manage" },
-      { name: "rendering.restart", needs: "rendering.manage" },
-    ],
-    name: "rendering.manage",
-    requires: [],
-    residency: "none",
-    risky: true,
-    builtinOnly: false,
-  });
+test("changing the rendering choice needs player; rendering.state needs none", () => {
+  for (const name of ["rendering.setPreference", "rendering.restart"])
+    assert.deepEqual(hostMethod(name), { name, needs: "player" });
   assert.deepEqual(hostMethod("rendering.state"), {
     name: "rendering.state",
     needs: null,
   });
-  assert.deepEqual(CAPABILITY_INFO["rendering.manage"], {
-    apis: ["Rendering.setPreference", "Rendering.restartPlayer"],
-    requires: [],
-    label: "Choose GPU or software rendering and restart the player",
-    risky: true,
-    builtinOnly: false,
-  });
+  const apis = CAPABILITY_INFO["player"]!.apis;
+  for (const api of ["Rendering.setPreference", "Rendering.restartPlayer"])
+    assert.ok(apis.includes(api), api);
+  assert.ok(!apis.includes("Rendering.state"));
 });
 
 test("state() needs no capability and reports the defaults of a GPU player", async () => {
@@ -98,7 +81,7 @@ test("setPreference and restartPlayer need rendering.manage", async () => {
 });
 
 test("setPreference saves the choice; restartPending follows it back and forth", async () => {
-  const { plugin, host, stop } = await started(["rendering.manage"]);
+  const { plugin, host, stop } = await started(["player"]);
   let state = await plugin.rendering.setPreference("software");
   assert.equal(state.mode, "gpu"); // the running player keeps its renderer
   assert.equal(state.preference, "software");
@@ -134,7 +117,7 @@ test("GPU unavailable: unsupported without a GPU renderer, unavailable when rule
     message: "This player has no GPU renderer on Linux",
   };
   host.rendering.gpu = { available: false, reason: host.rendering.reason };
-  const { plugin, stop } = await started(["rendering.manage"], host);
+  const { plugin, stop } = await started(["player"], host);
   let state = await plugin.rendering.state();
   assert.equal(state.mode, "software");
   assert.equal(state.nextMode, "software");
@@ -176,10 +159,7 @@ test("GPU unavailable: unsupported without a GPU renderer, unavailable when rule
 
 test("a run that fell back to software: restartPending stays false while the next start is GPU", async () => {
   const host = new TestHost();
-  const { plugin, stop } = await started(
-    ["processing.video", "playback.read", "events"],
-    host,
-  );
+  const { plugin, stop } = await started([], host);
   host.failVideoRender("unsupported", "A window could not show GPU frames");
   const state = await plugin.rendering.state();
   assert.equal(state.mode, "software");
@@ -193,7 +173,7 @@ test("a run that fell back to software: restartPending stays false while the nex
 });
 
 test("restartPlayer is recorded once; a second is busy; refusals can be injected", async () => {
-  const { plugin, host, stop } = await started(["rendering.manage"]);
+  const { plugin, host, stop } = await started(["player"]);
   host.handle("rendering.restart", () => {
     throw new HostError("failed", "the new player could not be started");
   });
@@ -235,7 +215,7 @@ async function gpuItem(plugin: Plugin) {
 test("a GPU menu item: toggling sets restartPending, toggling back clears it", async () => {
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(gpuItem, {
-    capabilities: ["commands", "rendering.manage"],
+    capabilities: ["player"],
     host,
   });
   const item = host.command("gpu-rendering");
@@ -261,7 +241,7 @@ test("a GPU menu item: disabled with the player's reason when GPU is ruled out",
     },
   };
   const { stop } = await startPlugin(gpuItem, {
-    capabilities: ["commands", "rendering.manage"],
+    capabilities: ["player"],
     host,
   });
   await host.settle();

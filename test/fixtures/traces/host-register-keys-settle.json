@@ -2,11 +2,35 @@
   "timeline": [
     [
       "request",
+      "events.subscribe"
+    ],
+    [
+      "request",
+      "source.state"
+    ],
+    [
+      "request",
       "window.state"
+    ],
+    [
+      "request",
+      "timeline.marks"
+    ],
+    [
+      "answer",
+      "events.subscribe"
+    ],
+    [
+      "answer",
+      "source.state"
     ],
     [
       "answer",
       "window.state"
+    ],
+    [
+      "answer",
+      "timeline.marks"
     ],
     [
       "request",

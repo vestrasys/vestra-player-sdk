@@ -38,7 +38,7 @@ examples/panel-menu/
 
 {@includeCode ../../examples/panel-menu/manifest.json}
 
-`commands` for the two menu commands, `ui.mount` for the panel and its menu.
+No capability: the two menu commands, the panel and its menu need none.
 
 ## The list in Slint
 
@@ -118,5 +118,5 @@ Start the player with `--plugin <path to examples/panel-menu>`, click the **Exam
 ## Try next
 
 1. **Keys that only work in the panel.** Add `focus: "panel"` and `bindings: ["Delete"]` to **Remove**: the key then works only while the list has focus, and keeps its usual meaning elsewhere.
-2. **Next and previous.** Call {@link "@vestra-player/sdk"!Player.provideSequence | plugin.player.provideSequence} with `canNext`, `canPrevious`, `next` and `previous` that move `selected` (capabilities `playback.read`, `events`, `playback.control`): the player's own next/previous controls then step through the list.
+2. **Next and previous.** Call {@link "@vestra-player/sdk"!Player.provideSequence | plugin.player.provideSequence} with `canNext`, `canPrevious`, `next` and `previous` that move `selected`: the player's own next/previous controls then step through the list.
 3. **A check mark in the menu.** Add a command with `checked: () => …` and put it in the `showMenu` list.

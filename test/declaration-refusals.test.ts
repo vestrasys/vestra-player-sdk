@@ -143,7 +143,7 @@ test("other start-up failures still fail activation in the runner", async () => 
     };
     const instance = await createPlugin(
       transport,
-      { id: "test.runner", capabilities: ["commands"] },
+      { id: "test.runner", capabilities: [] },
       process.cwd(),
       host.dataDirectory,
     );
@@ -156,7 +156,7 @@ test("other start-up failures still fail activation in the runner", async () => 
 
 test("a refusal after activation goes to onError as before", async () => {
   const host = new TestHost();
-  const instance = await runner(host, ["commands"]);
+  const instance = await runner(host, []);
   const errors: PluginError[] = [];
   instance.plugin.onError((error) => errors.push(error));
   await instance.activated();
@@ -186,7 +186,7 @@ test("TestHost's startPlugin stays strict: a refused declaration fails it", asyn
           run() {},
         });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     (error: HostError) => {
       assert.equal(error.code, "conflict");
@@ -214,7 +214,7 @@ test("a failure that is not a refusal causes no unhandled rejection while activa
     };
     const instance = await createPlugin(
       transport,
-      { id: "test.runner", capabilities: ["commands"] },
+      { id: "test.runner", capabilities: [] },
       process.cwd(),
       host.dataDirectory,
     );

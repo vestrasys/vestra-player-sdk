@@ -4,14 +4,14 @@ import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { ExportJob, JobState } from "../src/plugin/index.ts";
 import type { Json } from "../src/wire.ts";
 
-const capabilities = ["playback.read", "events", "media.read", "media.control"];
+const capabilities: string[] = [];
 
 async function started(position = 12) {
   const host = new TestHost();
   host.openElsewhere("/a.mp4");
   host.setSource({ position, duration: 60 });
   const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: [...capabilities, "subtitles.read"],
+    capabilities: [...capabilities],
     host,
   });
   return { host, plugin, stop };

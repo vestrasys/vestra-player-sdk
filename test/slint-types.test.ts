@@ -91,7 +91,7 @@ function packageWith() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "test.types",
-      capabilities: ["ui.window", "ui.mount", "ui.settings"],
+      capabilities: [],
     }),
   );
   return directory;

@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import ts from "typescript";
-import { API_REQUESTS } from "../src/api-requests.ts";
+import { API_REQUESTS, SUBSCRIBED_EVENTS } from "../src/api-requests.ts";
 import { CAPABILITY_INFO } from "../src/capabilities.ts";
 import {
   addCapabilityEdit,
@@ -33,6 +33,7 @@ import {
   memberNeeds,
   requestNeeds,
   requestsNeed,
+  retiredCapabilities,
   RULES,
 } from "../src/capability-rules.ts";
 import type { CapabilityRules } from "../src/capability-rules.ts";
@@ -40,201 +41,165 @@ import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const cli = join(root, "bin/vestra-plugin.mjs");
-const none = () => false;
 
 // ------------------------------------------------------------------ rules
 
-test("requestNeeds follows the player's rules", () => {
-  assert.equal(requestNeeds("clipboard.writeText", {}, none), "clipboard");
+test("requestNeeds follows the player's table", () => {
+  assert.equal(requestNeeds("clipboard.writeText"), "clipboard");
+  assert.equal(requestNeeds("secrets.get"), "credentials");
+  assert.equal(requestNeeds("bindings.set"), "player");
+  assert.equal(requestNeeds("rendering.restart"), "player");
+  assert.equal(requestNeeds("appearance.set"), "player");
+  assert.equal(requestNeeds("commands.run"), "plugins");
   // A prefix entry covers the prefix's other methods.
-  assert.equal(requestNeeds("packages.uninstall", {}, none), "plugins.manage");
-  assert.equal(requestNeeds("settings.register", {}, none), "ui.settings");
+  assert.equal(requestNeeds("packages.uninstall"), "plugins");
   // An exact entry wins over a prefix: packages.list needs nothing.
-  assert.equal(requestNeeds("packages.list", {}, none), null);
-  assert.equal(requestNeeds("storage.session.get", {}, none), null);
-  assert.equal(requestNeeds("no.such.method", {}, none), undefined);
+  assert.equal(requestNeeds("packages.list"), null);
+  // The plugin's own things, the playback session and every event need
+  // nothing.
+  for (const method of [
+    "commands.register",
+    "settings.register",
+    "ui.open",
+    "ui.mount",
+    "osd.show",
+    "source.submit",
+    "source.state",
+    "subtitles.select",
+    "snapshot.capture",
+    "jobs.start",
+    "media.sources.open",
+    "processing.replace",
+    "video.upscaling.set",
+    "video.motion.set",
+    "palette.lead.set",
+    "power.preventSleep",
+    "storage.session.get",
+    "events.subscribe",
+    "events.unsubscribe",
+  ])
+    assert.equal(requestNeeds(method), null, method);
+  assert.equal(requestNeeds("no.such.method"), undefined);
 });
 
-test("requestNeeds: Needs::Param by event name and by processing stage", () => {
-  const subscribe = (event: string) =>
-    requestNeeds("events.subscribe", { event }, none);
-  assert.equal(subscribe("source.state"), "events");
-  assert.equal(subscribe("bindings.changed"), "bindings.manage");
-  assert.equal(subscribe("packages.changed"), null);
-  const replace = (stage: string) =>
-    requestNeeds("processing.replace", { stage }, none);
-  assert.equal(replace("video"), "processing.video");
-  assert.equal(replace("audio"), "processing.audio");
-  // Without the parameter: the rule's `otherwise`.
-  assert.equal(requestNeeds("events.subscribe", undefined, none), "events");
-});
-
-test("requestNeeds: Needs::IfDeclared", () => {
-  const operation = (declared: string[]) =>
-    requestNeeds("source.operation", {}, (name) => declared.includes(name));
-  assert.equal(operation([]), "playback.read");
-  assert.equal(operation(["playback.read"]), "playback.read");
-  assert.equal(operation(["playback.control"]), "playback.control");
-});
-
-test("memberNeeds: direct needs, requires and the IfDeclared request", () => {
-  const names = (api: string, declared: string[] = []) =>
-    memberNeeds(api, declared)?.map((need) =>
-      need.requiredBy
-        ? `${need.capability}<${need.requiredBy}`
-        : need.capability,
+test("the table: eight capabilities, the retired names and a flat rule", () => {
+  const names = HOST_CAPABILITIES.capabilities.map((c) => c.name);
+  assert.deepEqual(names, [
+    "player",
+    "plugins",
+    "clipboard",
+    "credentials",
+    "camera",
+    "microphone",
+    "screen",
+    "notifications",
+  ]);
+  const methods = HOST_CAPABILITIES.groups.flatMap((group) => group.methods);
+  const active = names.filter(
+    (name) =>
+      !HOST_CAPABILITIES.capabilities.find((c) => c.name === name)!.reserved,
+  );
+  // Every method needs nothing or one active capability, and every active
+  // capability is needed by some method; a reserved one by none.
+  for (const method of methods)
+    assert.ok(
+      method.needs === null || active.includes(method.needs),
+      method.name,
     );
-  // source.operation is decided as if playback.control were declared.
-  assert.deepEqual(names("Player.seek"), ["playback.control"]);
-  assert.deepEqual(names("Player.openStream"), [
-    "producer.av",
-    "playback.control<producer.av",
-  ]);
-  assert.deepEqual(names("Plugin.audio.filter"), [
-    "processing.audio",
-    "playback.read<processing.audio",
-    "events<processing.audio",
-  ]);
-  assert.deepEqual(names("Plugin.video.filter"), [
-    "processing.video",
-    "playback.read<processing.video",
-    "events",
-  ]);
-  // media.read and media.control require each other: no loop.
-  assert.deepEqual(names("MediaCapture.capture"), [
-    "media.read",
-    "media.control<media.read",
-  ]);
-  assert.deepEqual(names("Bindings.onChange"), ["bindings.manage"]);
-  assert.deepEqual(names("Packages.onChange"), []);
+  assert.deepEqual(
+    [...new Set(methods.map((m) => m.needs).filter(Boolean))].sort(),
+    [...active].sort(),
+  );
+  assert.equal(new Set(methods.map((m) => m.name)).size, methods.length);
+  // The names of SDK 1.7: none is a capability now, each replacement is an
+  // active one. (clipboard kept its name and is not among them.)
+  const retired = retiredCapabilities();
+  assert.equal(Object.keys(retired).length, 30);
+  for (const [old, now] of Object.entries(retired)) {
+    assert.ok(!names.includes(old), old);
+    assert.ok(now === null || active.includes(now), old);
+  }
+  assert.deepEqual(
+    Object.entries(retired).filter(([, now]) => now !== null),
+    [
+      ["plugins.manage", "plugins"],
+      ["bindings.manage", "player"],
+      ["ui.theme", "player"],
+      ["secrets", "credentials"],
+      ["rendering.manage", "player"],
+      ["commands.run", "plugins"],
+    ],
+  );
+});
+
+test("memberNeeds: what each member needs", () => {
+  const names = (api: string) =>
+    memberNeeds(api)?.map((need) => need.capability);
+  assert.deepEqual(names("Bindings.set"), ["player"]);
+  assert.deepEqual(names("Appearance.setLanguage"), ["player"]);
+  assert.deepEqual(names("Rendering.restartPlayer"), ["player"]);
+  assert.deepEqual(names("Packages.uninstall"), ["plugins"]);
+  assert.deepEqual(names("Commands.run"), ["plugins"]);
+  assert.deepEqual(names("Clipboard.readText"), ["clipboard"]);
+  assert.deepEqual(names("Secrets.get"), ["credentials"]);
+  // In the table, needing nothing.
+  for (const api of [
+    "Player.seek",
+    "Player.openStream",
+    "Player.onChange",
+    "Plugin.audio.filter",
+    "Plugin.video.filter",
+    "MediaCapture.capture",
+    "MediaSources.open",
+    "Bindings.onChange",
+    "Packages.onChange",
+    "Palette.lead",
+    "Commands.add",
+    "Rendering.state",
+  ])
+    assert.deepEqual(names(api), [], api);
   assert.equal(names("Player.isCurrent"), undefined);
 });
 
-test("memberNeeds: a member whose only request is IfDeclared", () => {
+test("requestsNeed: each capability once, with the first request that needs it", () => {
   const rules: CapabilityRules = {
     host: HOST_CAPABILITIES,
-    apis: { "Player.query": [{ method: "source.operation" }] },
-  };
-  const names = (declared: string[]) =>
-    memberNeeds("Player.query", declared, rules)?.map((n) => n.capability);
-  assert.deepEqual(names([]), ["playback.read"]);
-  assert.deepEqual(names(["playback.control"]), ["playback.control"]);
-});
-
-test("memberNeeds: IfDeclared rules read each other's answers until they settle (MediaSources.open)", () => {
-  const names = (api: string, declared: string[]) =>
-    memberNeeds(api, declared)?.map((need) => need.capability);
-  const missing = (api: string, declared: string[]) =>
-    names(api, declared)?.filter((name) => !declared.includes(name));
-  // media.sources.open asks for playback.control until it is declared,
-  // then for media.sources; source.operation then needs playback.control,
-  // not playback.read.
-  assert.deepEqual(names("MediaSources.open", []), [
-    "media.sources",
-    "playback.control",
-  ]);
-  assert.deepEqual(missing("MediaSources.open", ["media.sources"]), [
-    "playback.control",
-  ]);
-  assert.deepEqual(missing("MediaSources.open", ["playback.control"]), [
-    "media.sources",
-  ]);
-  assert.deepEqual(
-    missing("MediaSources.open", ["media.sources", "playback.control"]),
-    [],
-  );
-  // Members that settled in one round are unchanged.
-  for (const declared of [[], ["playback.read"], ["playback.control"]]) {
-    assert.deepEqual(names("Player.seek", declared), ["playback.control"]);
-    assert.deepEqual(names("Player.open", declared), ["playback.control"]);
-  }
-  assert.deepEqual(names("MediaSources.list", []), ["media.sources"]);
-  // Each need names the request that first asked for it: playback.control
-  // is media.sources.open's, not source.operation's (which asks for it only
-  // once it counts as declared).
-  const methods = (declared: string[]) =>
-    memberNeeds("MediaSources.open", declared)?.map(
-      (need) => `${need.capability}:${need.method}`,
-    );
-  assert.deepEqual(methods([]), [
-    "media.sources:media.sources.open",
-    "playback.control:media.sources.open",
-  ]);
-  assert.deepEqual(methods(["media.sources"]), [
-    "media.sources:media.sources.open",
-    "playback.control:media.sources.open",
-  ]);
-  // Two rules that answer each other in turn: every round's needs are kept.
-  const rules: CapabilityRules = {
-    host: {
-      ...HOST_CAPABILITIES,
-      uncapable: [
-        ...HOST_CAPABILITIES.uncapable,
-        {
-          name: "test.flip",
-          needs: {
-            ifDeclared: "clipboard",
-            // oxlint-disable-next-line unicorn/no-thenable -- IfDeclared's field
-            then: "events",
-            otherwise: "clipboard",
-          },
-        },
-        {
-          name: "test.flop",
-          needs: {
-            ifDeclared: "events",
-            // oxlint-disable-next-line unicorn/no-thenable -- IfDeclared's field
-            then: "playback.read",
-            otherwise: "events",
-          },
-        },
+    apis: {
+      "Test.both": [
+        { method: "source.state" },
+        { method: "bindings.list" },
+        { method: "clipboard.readText" },
+        { method: "bindings.set" },
       ],
     },
-    apis: { "Test.both": [{ method: "test.flip" }, { method: "test.flop" }] },
   };
-  const both = memberNeeds("Test.both", [], rules)?.map((n) => n.capability);
-  assert.ok(
-    both?.includes("clipboard") && both.includes("events"),
-    String(both),
-  );
-});
-
-test("requestsNeed: a lone media.sources.open (plugin.wire.request) needs both, the rounds only adding", () => {
-  // Alone, the rule answers playback.control with nothing declared and
-  // media.sources once playback.control is: the needs keep both.
-  const requests = argumentRequests("method", "media.sources.open");
-  assert.deepEqual(requests, [{ method: "media.sources.open" }]);
-  const names = (declared: string[]) =>
-    requestsNeed(requests!, declared).map((need) => need.capability);
-  assert.deepEqual(names([]), ["media.sources", "playback.control"]);
-  assert.deepEqual(names(["media.sources"]), [
-    "media.sources",
-    "playback.control",
+  assert.deepEqual(memberNeeds("Test.both", rules), [
+    { capability: "player", method: "bindings.list" },
+    { capability: "clipboard", method: "clipboard.readText" },
   ]);
-  assert.deepEqual(names(["playback.control"]), ["media.sources"]);
-  assert.deepEqual(names(["media.sources", "playback.control"]), [
-    "media.sources",
+  // plugin.wire.request by its method name.
+  assert.deepEqual(argumentRequests("commands.run"), [
+    { method: "commands.run" },
+  ]);
+  assert.equal(argumentRequests("no.such.method"), undefined);
+  assert.deepEqual(requestsNeed(argumentRequests("commands.run")!), [
+    { capability: "plugins", method: "commands.run" },
   ]);
 });
 
-test("API_REQUESTS names methods the player knows, with the parameters its rules read", () => {
+test("API_REQUESTS names methods the player knows; a listener names a subscribed event", () => {
   for (const [api, requests] of Object.entries(API_REQUESTS))
     for (const request of requests) {
-      const entry = hostMethod(request.method);
-      assert.ok(entry, `${api}: the player knows ${request.method}`);
-      const needs = entry.needs;
-      if (typeof needs === "object" && needs !== null && "param" in needs)
-        assert.ok(
-          request.params?.[needs.param] !== undefined,
-          `${api}: ${request.method} gives "${needs.param}"`,
-        );
-      for (const key of Object.keys(request.params ?? {}))
-        assert.ok(
-          typeof needs === "object" && needs !== null && "param" in needs
-            ? needs.param === key
-            : false,
-          `${api}: ${request.method} has no rule reading "${key}"`,
-        );
+      assert.ok(
+        hostMethod(request.method),
+        `${api}: the player knows ${request.method}`,
+      );
+      // Parameters are only a listener's event name (the Events table).
+      for (const [key, value] of Object.entries(request.params ?? {})) {
+        assert.equal(request.method, "events.subscribe", api);
+        assert.equal(key, "event", api);
+        assert.ok(SUBSCRIBED_EVENTS.includes(value), `${api}: ${value}`);
+      }
     }
 });
 
@@ -250,10 +215,11 @@ test("CAPABILITY_INFO is built from the player's table and API_REQUESTS", () => 
   for (const capability of HOST_CAPABILITIES.capabilities) {
     const info = CAPABILITY_INFO[capability.name]!;
     assert.equal(info.label, capability.label);
-    assert.equal(info.risky, capability.risky);
-    assert.deepEqual(info.requires, capability.requires);
+    assert.equal(info.reserved, capability.reserved);
+    // A reserved name opens nothing yet; an active one opens something.
+    assert.equal(info.apis.length === 0, info.reserved, capability.name);
   }
-  assert.ok(Object.isFrozen(CAPABILITY_INFO["events"]!.apis));
+  assert.ok(Object.isFrozen(CAPABILITY_INFO["player"]!.apis));
 });
 
 // ------------------------------------------------------------------ checker
@@ -268,7 +234,7 @@ const MANIFEST = {
 /** A plugin project in a temporary directory, the SDK linked in. */
 function project(
   files: Record<string, string>,
-  capabilities: string[] = ["commands"],
+  capabilities: string[] = [],
   manifestText?: string,
 ) {
   const directory = mkdtempSync(join(tmpdir(), "vestra-capability-check-"));
@@ -307,7 +273,7 @@ const OPTIONS: ts.CompilerOptions = {
 
 function check(
   source: string,
-  capabilities: string[] = ["commands"],
+  capabilities: string[] = [],
   rules?: CapabilityRules,
 ) {
   const directory = project({ "main.ts": source }, capabilities);
@@ -323,13 +289,13 @@ function check(
     ...(rules ? { rules } : {}),
   }).map(
     (finding) =>
-      `${finding.line}:${finding.column} ${finding.api} ${finding.capability}${finding.requiredBy ? `<${finding.requiredBy}` : ""}`,
+      `${finding.line}:${finding.column} ${finding.api} ${finding.capability}`,
   );
 }
 
 const lines = (...body: string[]) =>
   [
-    'import type { Plugin, Player, Panel } from "@vestra-player/sdk";',
+    'import type { Plugin } from "@vestra-player/sdk";',
     "export default async function activate(plugin: Plugin) {",
     ...body.map((line) => `  ${line}`),
     "}",
@@ -340,96 +306,75 @@ test("checker: declared and undeclared", () => {
     'await plugin.clipboard.writeText("x");',
     'plugin.commands.add({ id: "a", title: "A", run() {} });',
   );
-  assert.deepEqual(check(source, ["commands"]), [
-    "3:26 Clipboard.writeText clipboard",
-  ]);
-  assert.deepEqual(check(source, ["commands", "clipboard"]), []);
+  assert.deepEqual(check(source, []), ["3:26 Clipboard.writeText clipboard"]);
+  assert.deepEqual(check(source, ["clipboard"]), []);
 });
 
 test("checker: through aliases, destructuring, parameters and element access", () => {
   const source = [
-    'import type { Plugin, Player } from "@vestra-player/sdk";',
-    "const seek = (player: Player) => player.seek(1);",
+    'import type { Plugin, Bindings } from "@vestra-player/sdk";',
+    "const reset = (bindings: Bindings) => bindings.reset();",
     "export default async function activate(plugin: Plugin) {",
-    "  const { player, secrets: vault } = plugin;",
-    "  const p = player;",
-    "  await p.setPaused(true);",
+    "  const { bindings, secrets: vault } = plugin;",
+    "  const b = bindings;",
+    "  await b.list();",
     '  await vault.get("token");',
-    "  const { setRate } = plugin.player;",
-    "  void setRate;",
+    "  const { setLanguage } = plugin.appearance;",
+    "  void setLanguage;",
     '  await plugin.clipboard["readText"]();',
-    "  await seek(plugin.player);",
+    "  await reset(plugin.bindings);",
+    "  await plugin.player.seek(1);",
     "}",
   ].join("\n");
   assert.deepEqual(check(source, []), [
-    "2:41 Player.seek playback.control",
-    "6:11 Player.setPaused playback.control",
-    "7:15 Secrets.get secrets",
-    "8:11 Player.setRate playback.control",
+    "2:48 Bindings.reset player",
+    "6:11 Bindings.list player",
+    "7:15 Secrets.get credentials",
+    "8:11 Appearance.setLanguage player",
     "10:26 Clipboard.readText clipboard",
   ]);
+  assert.deepEqual(check(source, ["player", "clipboard", "credentials"]), []);
 });
 
-test("checker: listeners by event name, filters by stage, requires", () => {
+test("checker: listeners, filters and state need nothing", () => {
   const source = lines(
     "plugin.player.onChange(() => {});",
     "plugin.bindings.onChange(() => {});",
     "plugin.packages.onChange(() => {});",
     'plugin.audio.filter("a");',
     'plugin.video.filter("v");',
+    "void plugin.player.state;",
+    'plugin.panels.mount("sidebar", "ui/a.slint").onChange(() => {});',
   );
-  assert.deepEqual(check(source, []), [
-    "3:17 Player.onChange events",
-    "4:19 Bindings.onChange bindings.manage",
-    "6:16 Plugin.audio.filter processing.audio",
-    "6:16 Plugin.audio.filter playback.read<processing.audio",
-    "6:16 Plugin.audio.filter events<processing.audio",
-    "7:16 Plugin.video.filter processing.video",
-    "7:16 Plugin.video.filter playback.read<processing.video",
-    "7:16 Plugin.video.filter events",
-  ]);
-  assert.deepEqual(
-    check(source, [
-      "events",
-      "bindings.manage",
-      "processing.audio",
-      "processing.video",
-      "playback.read",
-    ]),
-    [],
-  );
+  assert.deepEqual(check(source, []), []);
 });
 
-test("checker: Needs::IfDeclared against the manifest", () => {
+test("checker: a test's own rules", () => {
   const rules: CapabilityRules = {
     host: HOST_CAPABILITIES,
     apis: {
       ...API_REQUESTS,
-      "Player.refresh": [{ method: "source.operation" }],
+      "Player.refresh": [{ method: "clipboard.readText" }],
     },
   };
   const source = lines("await plugin.player.refresh();");
-  assert.deepEqual(check(source, [], rules), [
-    "3:23 Player.refresh playback.read",
-  ]);
-  assert.deepEqual(check(source, ["playback.read"], rules), []);
-  assert.deepEqual(check(source, ["playback.control"], rules), []);
+  assert.deepEqual(check(source, []), []);
+  assert.deepEqual(check(source, [], rules), ["3:23 Player.refresh clipboard"]);
+  assert.deepEqual(check(source, ["clipboard"], rules), []);
 });
 
-test("checker: members of returned objects, getters and what is not detected", () => {
+test("checker: members of returned objects and what is not detected", () => {
   const source = lines(
-    'const panel: Panel = plugin.panels.mount("sidebar", "ui/a.slint");',
-    "panel.onChange(() => {});",
-    "void plugin.player.state;",
-    'const name = "open" as string;',
-    "void (plugin.player as unknown as Record<string, unknown>)[name];",
-    "const loose: any = plugin.player;",
-    'loose.open("x");',
+    'const candidate = await plugin.packages.validate("x");',
+    "await candidate.install();",
+    'const name = "set" as string;',
+    "void (plugin.bindings as unknown as Record<string, unknown>)[name];",
+    "const loose: any = plugin.bindings;",
+    'loose.set({ plugin: "a", command: "b" }, []);',
   );
-  assert.deepEqual(check(source, ["ui.mount"]), [
-    "4:9 Panel.onChange events",
-    "5:22 Player.state playback.read",
-  ]);
+  // The candidate's members are not in the table: the call that returned it
+  // already needs the capability.
+  assert.deepEqual(check(source, []), ["3:43 Packages.validate plugins"]);
 });
 
 /** `checkCapabilities` on one file: findings and unchecked calls, as lines. */
@@ -447,8 +392,7 @@ function checkAll(source: string, capabilities: string[] = []) {
   });
   return {
     findings: findings.map(
-      (f) =>
-        `${f.line}:${f.column} ${f.api} ${f.method} ${f.capability}${f.requiredBy ? `<${f.requiredBy}` : ""}`,
+      (f) => `${f.line}:${f.column} ${f.api} ${f.method} ${f.capability}`,
     ),
     messages: findings.map((f) => f.message),
     unchecked: unchecked.map((u) => `${u.line}:${u.column} ${u.api}`),
@@ -461,30 +405,23 @@ test("checker: plugin.wire.request by a literal method name (SDK 1.7.0)", () => 
     'const method = "clipboard.readText";',
     "await plugin.wire.request(method);",
     'await plugin.wire.request("events.subscribe", { event: "bindings.changed", why: ["x"] });',
-    'await plugin.wire.request("producer.prepare", {});',
+    'await plugin.wire.request("packages.uninstall", { id: "x" });',
     'await plugin.wire.request("packages.list");',
+    'await plugin.wire.request("bindings.list");',
   );
   const result = checkAll(source);
   assert.deepEqual(result.findings, [
-    "3:21 Wire.request ui.setMount ui.mount",
     "5:21 Wire.request clipboard.readText clipboard",
-    "6:21 Wire.request events.subscribe bindings.manage",
-    "7:21 Wire.request producer.prepare producer.av",
-    "7:21 Wire.request producer.prepare playback.control<producer.av",
+    "7:21 Wire.request packages.uninstall plugins",
+    "9:21 Wire.request bindings.list player",
   ]);
   assert.match(
     result.messages[0]!,
-    /^Wire\.request\("ui\.setMount"\) needs the capability "ui\.mount", which manifest\.json does not declare$/,
+    /^Wire\.request\("clipboard\.readText"\) needs the capability "clipboard", which manifest\.json does not declare$/,
   );
   assert.deepEqual(result.unchecked, []);
   assert.deepEqual(
-    checkAll(source, [
-      "ui.mount",
-      "clipboard",
-      "bindings.manage",
-      "producer.av",
-      "playback.control",
-    ]).findings,
+    checkAll(source, ["clipboard", "player", "plugins"]).findings,
     [],
   );
 });
@@ -496,8 +433,6 @@ test("checker: a method name it cannot read, one of several, or the player does 
     'await plugin.wire.request("no.such.method");',
     'const either = Math.random() > 0.5 ? "osd.show" : "clipboard.readText";',
     "await plugin.wire.request(either);",
-    'const kind = Math.random() > 0.5 ? "bindings.changed" : "source.state";',
-    "plugin.player.on(kind, () => {});",
   );
   const result = checkAll(source);
   // A union could be any of its names: unchecked, not an error (review L5).
@@ -505,7 +440,6 @@ test("checker: a method name it cannot read, one of several, or the player does 
     "3:46 Wire.request",
     "5:21 Wire.request",
     "7:21 Wire.request",
-    "9:17 Player.on",
   ]);
   assert.deepEqual(result.findings, []);
 });
@@ -514,77 +448,37 @@ test("checker: a member taken other than by a direct call is unchecked", () => {
   const source = lines(
     "const { request } = plugin.wire;",
     'await request("clipboard.readText");',
-    "const on = plugin.player.on;",
-    'on("bindings.changed", () => {});',
-    "const { on: listen } = plugin.wire;",
-    'listen("source.state", () => {});',
     'await plugin.wire["request"]("clipboard.readText");',
   );
   const result = checkAll(source);
-  assert.deepEqual(result.unchecked, [
-    "3:11 Wire.request",
-    "5:28 Player.on",
-    "7:11 Wire.on",
-  ]);
+  assert.deepEqual(result.unchecked, ["3:11 Wire.request"]);
   // A direct call by element access is checked as one.
   assert.deepEqual(result.findings, [
-    "9:21 Wire.request clipboard.readText clipboard",
+    "5:21 Wire.request clipboard.readText clipboard",
   ]);
 });
 
-test("checker: player.on and wire.on by a literal event name (SDK 1.7.0)", () => {
+test("checker: a listener's event name is not read: no event needs a capability", () => {
   const source = lines(
     'plugin.player.on("source.state", () => {});',
     'plugin.player.on("bindings.changed", () => {});',
-    'plugin.player.on("packages.changed", () => {});',
     'plugin.wire.on("video.upscaling.changed", () => {});',
     'plugin.wire.on("commands.execute", () => {});',
     "const name: string = String(Date.now());",
     "plugin.wire.on(name, () => {});",
+    "const on = plugin.player.on;",
+    'on("bindings.changed", () => {});',
   );
   const result = checkAll(source);
-  assert.deepEqual(result.findings, [
-    "3:17 Player.on events.subscribe events",
-    "4:17 Player.on events.subscribe bindings.manage",
-    "6:15 Wire.on events.subscribe video.upscaling",
-  ]);
-  // `commands.execute` arrives unasked: nothing to declare.
-  assert.deepEqual(result.unchecked, ["9:15 Wire.on"]);
-  assert.deepEqual(
-    checkAll(source, ["events", "bindings.manage", "video.upscaling"]).findings,
-    [],
-  );
+  assert.deepEqual(result.findings, []);
+  assert.deepEqual(result.unchecked, []);
 });
 
-test("checker: wire.commands.register needs commands", () => {
+test("checker: wire.commands.register needs nothing", () => {
   const source = lines(
     'plugin.wire.commands.register({ id: "a", declaration: { title: "A" } });',
   );
-  assert.deepEqual(checkAll(source).findings, [
-    "3:24 WireCommands.register commands.register commands",
-  ]);
-});
-
-test("checker: media.sources.open without playback.control names media.sources.open", () => {
-  const source = lines('await plugin.media.sources.open("x");');
-  for (const declared of [[], ["media.sources"]])
-    assert.deepEqual(
-      checkAll(source, declared).findings.filter((f) =>
-        f.endsWith("playback.control"),
-      ),
-      ["3:30 MediaSources.open media.sources.open playback.control"],
-    );
-  const directory = project({ "main.ts": source }, ["media.sources"]);
-  const run = spawnSync(process.execPath, [cli, "check"], {
-    cwd: directory,
-    encoding: "utf8",
-  });
-  assert.equal(run.status, 1, run.stdout + run.stderr);
-  assert.match(
-    run.stderr,
-    /main\.ts:3:30: MediaSources\.open needs the capability "playback\.control", which manifest\.json does not declare \(request media\.sources\.open\)/,
-  );
-  assert.doesNotMatch(run.stderr, /source\.operation/);
+  assert.deepEqual(checkAll(source).findings, []);
 });
 
 test("vestra-plugin check lists unchecked calls without failing", () => {
@@ -635,7 +529,7 @@ test("isPluginSource leaves out tests, dependencies and declarations", () => {
 
 test("addCapabilityEdit keeps the array's layout", () => {
   const apply = (text: string) => {
-    const edit = addCapabilityEdit(ts, text, "events");
+    const edit = addCapabilityEdit(ts, text, "clipboard");
     assert.ok(edit);
     return (
       text.slice(0, edit.start) +
@@ -644,23 +538,23 @@ test("addCapabilityEdit keeps the array's layout", () => {
     );
   };
   assert.equal(
-    apply('{ "capabilities": ["commands"] }'),
-    '{ "capabilities": ["commands", "events"] }',
+    apply('{ "capabilities": ["player"] }'),
+    '{ "capabilities": ["player", "clipboard"] }',
   );
   assert.equal(
     apply('{ "capabilities": [] }'),
-    '{ "capabilities": ["events"] }',
+    '{ "capabilities": ["clipboard"] }',
   );
   assert.equal(
-    apply('{\n  "capabilities": [\n    "commands"\n  ]\n}'),
-    '{\n  "capabilities": [\n    "commands",\n    "events"\n  ]\n}',
+    apply('{\n  "capabilities": [\n    "player"\n  ]\n}'),
+    '{\n  "capabilities": [\n    "player",\n    "clipboard"\n  ]\n}',
   );
   // CRLF stays CRLF.
   assert.equal(
-    apply('{\r\n  "capabilities": [\r\n    "commands"\r\n  ]\r\n}'),
-    '{\r\n  "capabilities": [\r\n    "commands",\r\n    "events"\r\n  ]\r\n}',
+    apply('{\r\n  "capabilities": [\r\n    "player"\r\n  ]\r\n}'),
+    '{\r\n  "capabilities": [\r\n    "player",\r\n    "clipboard"\r\n  ]\r\n}',
   );
-  assert.equal(addCapabilityEdit(ts, '{ "id": "x" }', "events"), undefined);
+  assert.equal(addCapabilityEdit(ts, '{ "id": "x" }', "clipboard"), undefined);
 });
 
 // ------------------------------------------------------------------ CLI
@@ -724,8 +618,8 @@ test("vestra-plugin check fails on an undeclared capability, with --json", () =>
 
 test("the TypeScript plugin reports the finding and fixes the manifest", () => {
   const directory = project(
-    { "main.ts": lines("plugin.player.onChange(() => {});") },
-    ["commands"],
+    { "main.ts": lines("await plugin.bindings.list();") },
+    ["clipboard"],
   );
   const file = join(directory, "main.ts").replaceAll("\\", "/");
   const host: ts.LanguageServiceHost = {
@@ -765,12 +659,12 @@ test("the TypeScript plugin reports the finding and fixes the manifest", () => {
   assert.equal(diagnostic!.category, ts.DiagnosticCategory.Error);
   assert.equal(
     diagnostic!.messageText,
-    'Player.onChange needs the capability "events", which manifest.json does not declare',
+    'Bindings.list needs the capability "player", which manifest.json does not declare',
   );
   const text = readFileSync(file, "utf8");
   assert.equal(
     text.slice(diagnostic!.start!, diagnostic!.start! + diagnostic!.length!),
-    "onChange",
+    "list",
   );
   assert.ok(
     plugin.getSupportedCodeFixes(file).includes(String(CAPABILITY_DIAGNOSTIC)),
@@ -786,7 +680,7 @@ test("the TypeScript plugin reports the finding and fixes the manifest", () => {
   );
   const fix = fixes.find((each) => each.fixName === "vestraAddCapability");
   assert.ok(fix);
-  assert.equal(fix.description, "Add 'events' to manifest.json");
+  assert.equal(fix.description, "Add 'player' to manifest.json");
   const [change] = fix.changes;
   assert.equal(resolve(change!.fileName), resolve(directory, "manifest.json"));
   let manifest = readFileSync(change!.fileName, "utf8");
@@ -795,7 +689,7 @@ test("the TypeScript plugin reports the finding and fixes the manifest", () => {
       manifest.slice(0, edit.span.start) +
       edit.newText +
       manifest.slice(edit.span.start + edit.span.length);
-  assert.deepEqual(JSON.parse(manifest).capabilities, ["commands", "events"]);
+  assert.deepEqual(JSON.parse(manifest).capabilities, ["clipboard", "player"]);
   writeFileSync(change!.fileName, manifest);
   assert.deepEqual(
     plugin
@@ -837,7 +731,7 @@ test("the TypeScript plugin leaves files without a manifest alone", () => {
 test("the TypeScript plugin in a real tsserver: diagnostic and quick fix", async () => {
   const directory = project(
     {
-      "main.ts": lines("plugin.player.onChange(() => {});"),
+      "main.ts": lines("await plugin.bindings.list();"),
       "tsconfig.json": JSON.stringify({
         compilerOptions: {
           target: "ES2023",
@@ -852,7 +746,7 @@ test("the TypeScript plugin in a real tsserver: diagnostic and quick fix", async
         include: ["*.ts"],
       }),
     },
-    ["commands"],
+    ["clipboard"],
   );
   const file = join(directory, "main.ts").replaceAll("\\", "/");
   const server = spawn(
@@ -908,7 +802,7 @@ test("the TypeScript plugin in a real tsserver: diagnostic and quick fix", async
   ).filter((d) => d.code === CAPABILITY_DIAGNOSTIC);
   assert.equal(ours.length, 1, JSON.stringify(diagnostics.body));
   const [found] = ours;
-  assert.match(found!.text, /Player\.onChange needs the capability "events"/);
+  assert.match(found!.text, /Bindings\.list needs the capability "player"/);
   const fixes = await request("getCodeFixes", {
     file,
     startLine: found!.start.line,
@@ -926,7 +820,7 @@ test("the TypeScript plugin in a real tsserver: diagnostic and quick fix", async
     }[]
   ).find((each) => each.fixName === "vestraAddCapability");
   assert.ok(fix, JSON.stringify(fixes.body));
-  assert.equal(fix.description, "Add 'events' to manifest.json");
+  assert.equal(fix.description, "Add 'player' to manifest.json");
   assert.equal(
     resolve(fix.changes[0]!.fileName),
     resolve(directory, "manifest.json"),

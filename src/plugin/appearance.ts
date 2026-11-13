@@ -1,4 +1,4 @@
-/** The player's palette (`plugin.appearance`; `ui.theme` to change it). */
+/** The player's palette (`plugin.appearance`; `player` to change it). */
 import { failure } from "./errors.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
@@ -16,7 +16,7 @@ export const THEMES: readonly ThemeId[] = ["vestra", "vestra-light"];
 
 /**
  * One per plugin: the value comes with the `window.state` read before
- * activation; with `events`, `appearance.changed` keeps it current once
+ * activation; `appearance.changed` keeps it current once
  * the plugin uses it (or listens to that event with `player.on`).
  */
 class AppearanceService {
@@ -48,7 +48,6 @@ class AppearanceService {
         const theme = event?.theme;
         if (theme && THEMES.includes(theme)) this.accept(theme);
       },
-      "events",
       true,
     );
   }

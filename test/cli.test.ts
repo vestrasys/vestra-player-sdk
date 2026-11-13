@@ -40,7 +40,7 @@ function project(main: string) {
       version: "1.2.3",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
+      capabilities: [],
     }),
   );
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
@@ -186,7 +186,7 @@ test("display fields are checked and their files are packed", () => {
     version: "1.2.3",
     apiVersion: "vestra/1",
     entry: "main.ts",
-    capabilities: ["commands", "ui.osd"],
+    capabilities: [],
     name: "你好",
     author: "me",
     punchline: "Says hello",
@@ -278,7 +278,7 @@ test("the CLI runs from an SDK copy outside node_modules (TypeScript on NODE_PAT
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands"],
+      capabilities: [],
     }),
   );
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
@@ -316,7 +316,7 @@ test("an id without a prefix is only a hint", () => {
       version: "1.2.3",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
+      capabilities: [],
     }),
   );
   const result = vestraPlugin(directory, "check");
@@ -341,7 +341,7 @@ test("a bottom bar without BarButtons is not a warning (SDK 1.6.8: the player pl
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd", "ui.mount"],
+      capabilities: [],
     }),
   );
   mkdirSync(join(directory, "ui"));
@@ -372,7 +372,7 @@ test("a `for` over a bound array outside a ListView is a warning (SDK 1.5.46)", 
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["ui.mount"],
+      capabilities: [],
     }),
   );
   mkdirSync(join(directory, "ui"));

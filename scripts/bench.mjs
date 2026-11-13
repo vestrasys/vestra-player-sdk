@@ -79,7 +79,7 @@ function packageWith() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "bench.plugin",
-      capabilities: ["ui.window", "commands", "playback.read", "events"],
+      capabilities: [],
     }),
   );
   return directory;

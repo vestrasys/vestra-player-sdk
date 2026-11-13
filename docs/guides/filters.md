@@ -19,9 +19,9 @@ The centre is the pixel itself, the edges its four direct neighbours, the corner
 
 ## Steps
 
-### Declare the capabilities
+### Capabilities
 
-`processing.video` opens `plugin.video`, which also needs `playback.read`, and `events` for the filter chain. A processed snapshot needs `media.read`, `media.control` and `subtitles.read`.
+None: `plugin.video`, the filter chains and processed snapshots need no entry in the manifest's `capabilities`.
 
 ### Write the kernel as a shader
 
@@ -107,16 +107,7 @@ Use `gblur` for a blur, a `convolution` for a kernel of your own (sharpen, embos
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": [
-    "commands",
-    "ui.osd",
-    "processing.video",
-    "playback.read",
-    "events",
-    "media.read",
-    "media.control",
-    "subtitles.read"
-  ]
+  "capabilities": []
 }
 ```
 

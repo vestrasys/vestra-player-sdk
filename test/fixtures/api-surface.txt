@@ -1034,10 +1034,8 @@
 @vestra-player/sdk/testing InterfaceDeclaration BuiltinSubmenu :: readonly plugins: readonly string[];
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly apis: readonly string[];
-@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly builtinOnly: boolean;
 @vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly label: string;
-@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly requires: readonly string[];
-@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly risky: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration CapabilityInfo :: readonly reserved: boolean;
 @vestra-player/sdk/testing InterfaceDeclaration FakeBarButton
 @vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: click(): Promise<void>;
 @vestra-player/sdk/testing InterfaceDeclaration FakeBarButton :: readonly checked: boolean;

@@ -1,11 +1,11 @@
 /**
  * `<!-- generated:messages -->`: every request method of the player's
- * protocol, one table per capability in the player's order (then the
- * methods that need none), with:
+ * protocol, one table per group of the player's table in its order (what
+ * one part of the player serves, with its residency), with:
  *
- * - the capability it needs: the player's table (`HOST_CAPABILITIES`,
- *   src/host-capabilities.ts, synced from its capabilities.json), with the
- *   by-parameter and if-declared rules written out;
+ * - the capability it needs, or none: the player's table
+ *   (`HOST_CAPABILITIES`, src/host-capabilities.ts, synced from its
+ *   capabilities.json);
  * - its parameters and result: the SDK's typed clients, the
  *   `transport.request<Result>("method", params)` calls in src/*.ts, read
  *   with the TypeScript checker (parameters as field names, `?` when
@@ -100,7 +100,7 @@ export const WRAPPED_BY = {
   "drops.withdraw": ["Drops.provide"],
 };
 
-/** What a capability's residency (capabilities.json) means for standby. */
+/** What a group's residency (capabilities.json) means for standby. */
 const RESIDENCY = {
   live: "Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.",
   recordable:
@@ -130,30 +130,9 @@ function link(member) {
     : memberLink(member);
 }
 
-/**
- * A method's `needs` in words: `null` none, a capability, one chosen by a
- * string parameter (resolved when `params` gives it), or one that depends
- * on what the manifest declares.
- */
-export function capabilityRule(needs, params = {}) {
-  const name = (capability) =>
-    capability === null ? "none" : `\`${capability}\``;
-  if (needs === null || typeof needs === "string") return name(needs);
-  if ("param" in needs) {
-    if (params[needs.param] !== undefined)
-      return name(
-        Object.hasOwn(needs.cases, params[needs.param])
-          ? needs.cases[params[needs.param]]
-          : needs.otherwise,
-      );
-    const cases = Object.entries(needs.cases).map(
-      ([value, capability]) => `\`${value}\` → ${name(capability)}`,
-    );
-    return `by \`${needs.param}\`: ${cases.join(", ")}; any other: ${name(needs.otherwise)}`;
-  }
-  if ("ifDeclared" in needs)
-    return `${name(needs.then)} when the manifest declares ${name(needs.ifDeclared)}, otherwise ${name(needs.otherwise)}`;
-  throw new Error(`unknown needs ${JSON.stringify(needs)}`);
+/** A method's `needs` in words: `null` none, or its capability. */
+export function capabilityRule(needs) {
+  return needs === null ? "none" : `\`${needs}\``;
 }
 
 /** The TypeScript program of the SDK's top-level modules (the clients). */
@@ -341,16 +320,20 @@ export default async function messages({ root, table }) {
   }
 
   const groups = [
-    ...HOST_CAPABILITIES.capabilities.map((capability) => ({
-      title: `\`${capability.name}\``,
-      lead: `${capability.label}. ${RESIDENCY[capability.residency]}`,
-      methods: capability.methods,
-    })),
-    {
-      title: "No capability",
-      lead: "Methods every plugin may call.",
-      methods: HOST_CAPABILITIES.uncapable,
-    },
+    // One section per group of the player's table, titled by what the
+    // group is for; the Capability column says what each method needs.
+    // Two groups may share a summary (snapshots and exports: their reads
+    // and their changes): those say their residency in the title.
+    ...HOST_CAPABILITIES.groups
+      .filter((group) => group.methods.length)
+      .map((group, _, all) => ({
+        title:
+          all.filter((each) => each.summary === group.summary).length > 1
+            ? `${group.summary} (residency \`${group.residency}\`)`
+            : group.summary,
+        lead: RESIDENCY[group.residency],
+        methods: group.methods,
+      })),
   ];
   const listed = new Set(groups.flatMap((g) => g.methods.map((m) => m.name)));
   const wildcards = [...listed].filter((name) => name.endsWith(".*"));

@@ -16,7 +16,7 @@ test("the SDK's own state subscriptions are mirrors", async () => {
     (plugin) => {
       plugin.commands.add({ id: "hello", title: "Hello", run: () => {} });
     },
-    { capabilities: ["events", "playback.read", "commands"] },
+    { capabilities: [] },
   );
   try {
     await host.settle();
@@ -39,7 +39,7 @@ test("the SDK's own state subscriptions are mirrors", async () => {
 
 test("onChange listens while it exists, then the event is a mirror again", async () => {
   const { plugin, host, stop } = await startPlugin(() => {}, {
-    capabilities: ["events", "playback.read"],
+    capabilities: [],
   });
   try {
     await host.settle();
@@ -70,7 +70,7 @@ test("a command state that reads the player listens; a fixed one does not", asyn
     (plugin) => {
       plugin.commands.add({ id: "fixed", title: "Fixed", run: () => {} });
     },
-    { capabilities: ["events", "playback.read", "commands"] },
+    { capabilities: [] },
   );
   try {
     await host.settle();
@@ -98,7 +98,7 @@ test("listeners without a mirror subscribe as listeners", async () => {
       plugin.bindings.onChange(() => {});
       plugin.window.onChange(() => {});
     },
-    { capabilities: ["events", "bindings.manage"] },
+    { capabilities: ["player"] },
   );
   try {
     await host.settle();
@@ -119,7 +119,7 @@ test("a listener added during activation is marked before the plugin is ready", 
     (plugin) => {
       plugin.player.onChange(() => {});
     },
-    { capabilities: ["events", "playback.read"] },
+    { capabilities: [] },
   );
   try {
     // No settle: the player classifies the plugin at its ready.

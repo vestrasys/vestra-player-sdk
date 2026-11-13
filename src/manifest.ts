@@ -6,6 +6,7 @@
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { join, sep } from "node:path";
 import { API_VERSION, CAPABILITIES, CAPABILITY_INFO } from "./capabilities.ts";
+import { retiredCapabilities } from "./capability-rules.ts";
 
 export const MANIFEST_LIMITS = Object.freeze({
   idBytes: 128,
@@ -84,21 +85,35 @@ export function manifestProblems(
   const capabilities = manifest.capabilities;
   if (!Array.isArray(capabilities)) problem("capabilities must be an array");
   else {
-    const unknown = capabilities.filter((c) => !CAPABILITIES.includes(c));
-    if (unknown.length) problem(`unknown capabilities ${unknown.join(", ")}`);
+    // A name of SDK 1.7 and earlier (retired in 1.8.0): say what to write
+    // instead, in the words of the player's own refusal.
+    const names = retiredCapabilities();
+    const retired = (c: unknown): c is string =>
+      typeof c === "string" && Object.hasOwn(names, c);
+    for (const c of new Set(capabilities.filter(retired))) {
+      const now = names[c];
+      problem(
+        now
+          ? `capability "${c}" was retired: declare "${now}" instead`
+          : `capability "${c}" was retired: what it allowed needs no capability now, remove it`,
+      );
+    }
+    const unknown = capabilities.filter(
+      (c) => !CAPABILITIES.includes(c) && !retired(c),
+    );
+    if (unknown.length)
+      problem(
+        `unknown capabilities ${unknown.join(", ")} (the capabilities are ${CAPABILITIES.join(", ")})`,
+      );
     if (new Set(capabilities).size !== capabilities.length)
       problem("capabilities must be unique");
-    // Only a built-in plugin may declare these. Built-in plugins have a
-    // `vestra.` id, which the player refuses for any other package: any
-    // other id is an error, a `vestra.` id a reminder.
-    const builtinOnly = capabilities.filter(
-      (c) => CAPABILITY_INFO[c]?.builtinOnly,
-    );
-    if (builtinOnly.length) {
-      const text = `${builtinOnly.join(", ")}: built-in plugins only (the player refuses any other plugin that declares ${builtinOnly.length === 1 ? "it" : "them"}, and its calls fail with code capability)`;
-      if (typeof id === "string" && /^vestra\./i.test(id)) hints.push(text);
-      else problem(text);
-    }
+    // A reserved name has no API yet. The player accepts it and grants
+    // nothing by it, but the store shows the user its line: a reminder.
+    const reserved = capabilities.filter((c) => CAPABILITY_INFO[c]?.reserved);
+    if (reserved.length)
+      hints.push(
+        `${reserved.join(", ")}: reserved for a later player API; no member needs ${reserved.length === 1 ? "it" : "them"} yet, and the store would show ${reserved.length === 1 ? "it" : "them"} to the user: remove ${reserved.length === 1 ? "it" : "them"}`,
+      );
   }
   if (typeof manifest.entry !== "string" || !relative(manifest.entry))
     problem("entry must be a relative path inside the package");

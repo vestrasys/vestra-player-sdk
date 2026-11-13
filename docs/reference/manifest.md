@@ -5,7 +5,7 @@ description: Every manifest.json field with its rules.
 
 # Manifest
 
-`manifest.json` sits at the root of the plugin directory and of the package. The player and every `vestra-plugin` command check it against the same rules: an unknown field, an unknown capability, a field that breaks its rule, or a path that leaves the package (symbolic links included) is refused.
+`manifest.json` sits at the root of the plugin directory and of the package. The player and every `vestra-plugin` command check it against the same rules: an unknown field, an unknown, retired or reserved capability, a field that breaks its rule, or a path that leaves the package (symbolic links included) is refused.
 
 ```json
 {
@@ -13,7 +13,7 @@ description: Every manifest.json field with its rules.
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": ["commands", "ui.window"],
+  "capabilities": [],
   "name": "Bookmark",
   "punchline": "Mark a moment and jump back to it.",
   "minPlayerVersion": "0.4.3"

@@ -6,12 +6,7 @@ import test, { afterEach } from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Json, Stream } from "../src/plugin/index.ts";
 
-const capabilities = [
-  "playback.read",
-  "playback.control",
-  "events",
-  "producer.av",
-];
+const capabilities: string[] = [];
 /** Stereo frames of audio per 1/60 s picture. */
 const FRAME = 800;
 const LEAD = 2400;

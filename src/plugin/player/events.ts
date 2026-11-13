@@ -10,21 +10,21 @@ import type { ScopeImpl } from "../scope.ts";
 import type { Disposable, EventPayload, HostEvent } from "../types.ts";
 
 /**
- * The capability each event needs, as the player checks `events.subscribe`
- * (`HOST_CAPABILITIES`: by event, otherwise `events`); `null`: none.
+ * The events a plugin subscribes to by name: every {@link HostEvent} (the
+ * type keeps the list complete). None needs a capability.
  */
-export const EVENT_NEEDS: Readonly<Record<HostEvent, string | null>> = {
-  "source.state": "events",
-  "playback.backend": "events",
-  "window.state": "events",
-  "packages.changed": null,
-  "bindings.changed": "bindings.manage",
-  "commands.keys": "commands",
-  "timeline.changed": "events",
-  "appearance.changed": "events",
-  "resolvers.fileTypes": "events",
-  "video.upscaling.changed": "video.upscaling",
-  "video.motion.changed": "video.motion",
+export const HOST_EVENTS: Readonly<Record<HostEvent, true>> = {
+  "source.state": true,
+  "playback.backend": true,
+  "window.state": true,
+  "packages.changed": true,
+  "bindings.changed": true,
+  "commands.keys": true,
+  "timeline.changed": true,
+  "appearance.changed": true,
+  "resolvers.fileTypes": true,
+  "video.upscaling.changed": true,
+  "video.motion.changed": true,
 };
 
 /** `Player.on`'s arguments: a {@link HostEvent} name and a function. */
@@ -32,10 +32,10 @@ export function checkOn(
   event: unknown,
   listener: unknown,
 ): asserts event is HostEvent {
-  if (typeof event !== "string" || !Object.hasOwn(EVENT_NEEDS, event))
+  if (typeof event !== "string" || !Object.hasOwn(HOST_EVENTS, event))
     throw failure(
       "invalid",
-      `unknown event ${JSON.stringify(event)}; the events are ${Object.keys(EVENT_NEEDS).join(", ")}`,
+      `unknown event ${JSON.stringify(event)}; the events are ${Object.keys(HOST_EVENTS).join(", ")}`,
     );
   if (typeof listener !== "function")
     throw failure("invalid", "on takes an event name and a listener");
@@ -55,7 +55,6 @@ export function playerOn<E extends HostEvent>(
     // values; `plugin.state` writes run the passes that concern them.
     (data) =>
       scope.runQuiet(listener, structuredClone(data) as EventPayload<E>),
-    EVENT_NEEDS[event],
   );
   const handle: Disposable = {
     dispose: async () => {

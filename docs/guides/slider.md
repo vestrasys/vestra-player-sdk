@@ -93,14 +93,7 @@ A **Brightness** window with a slider from −1 to 1, a value label and a Reset 
   "apiVersion": "vestra/1",
   "entry": "main.ts",
   "minPlayerVersion": "0.3.0",
-  "capabilities": [
-    "commands",
-    "ui.window",
-    "ui.osd",
-    "processing.video",
-    "playback.read",
-    "events"
-  ]
+  "capabilities": []
 }
 ```
 

@@ -26,7 +26,7 @@
  */
 import { failure, quiet } from "./errors.ts";
 import { Latest } from "./latest.ts";
-import { EVENT_NEEDS } from "./player/events.ts";
+import { HOST_EVENTS } from "./player/events.ts";
 import { DIRECT } from "./view/writer.ts";
 import type { DirectWrites } from "./view/writer.ts";
 import type { CommandDeclaration, CommandState } from "../commands.ts";
@@ -184,7 +184,7 @@ export const wire = (scope: ScopeImpl): Wire => ({
           : undefined;
       // The player keeps one subscription per event name, with one mark:
       // the SDK's own (state copies, `player.on`, `wire.on`) for these.
-      if (typeof event === "string" && Object.hasOwn(EVENT_NEEDS, event))
+      if (typeof event === "string" && Object.hasOwn(HOST_EVENTS, event))
         throw failure(
           "invalid",
           method === "events.subscribe"
@@ -208,8 +208,8 @@ export const wire = (scope: ScopeImpl): Wire => ({
     // pass after it (`runQuiet`), as for `player.on`.
     const deliver = (data: unknown) =>
       scope.runQuiet(listener, structuredClone(data));
-    const watch: Disposable = Object.hasOwn(EVENT_NEEDS, event)
-      ? scope.runtime.on(event, deliver, EVENT_NEEDS[event as HostEvent])
+    const watch: Disposable = Object.hasOwn(HOST_EVENTS, event)
+      ? scope.runtime.on(event, deliver)
       : scope.runtime.raw(event, deliver);
     const handle: Disposable = {
       dispose: async () => {

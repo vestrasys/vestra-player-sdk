@@ -22,7 +22,7 @@ function packageWith() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "test.playback",
-      capabilities: ["ui.mount", "events", "commands"],
+      capabilities: [],
     }),
   );
   return directory;

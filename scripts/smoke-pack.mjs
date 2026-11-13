@@ -75,7 +75,7 @@ try {
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
+      capabilities: [],
     }),
   ]);
   write("main.ts", [

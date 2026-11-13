@@ -3,7 +3,7 @@ import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import type { Plugin, WindowState } from "../src/plugin/index.ts";
 
-const all = ["playback.read", "events", "window.control"];
+const all: string[] = [];
 
 async function started(host = new TestHost(), capabilities = all) {
   let plugin!: Plugin;

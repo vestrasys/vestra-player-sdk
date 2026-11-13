@@ -6,15 +6,9 @@ import {
   TestHost,
 } from "../src/plugin/testing.ts";
 import type { JobState } from "../src/plugin/index.ts";
-import { requestNeeds } from "../src/capability-rules.ts";
+import { memberNeeds, requestNeeds } from "../src/capability-rules.ts";
 
-const capabilities = [
-  "playback.read",
-  "events",
-  "media.read",
-  "media.control",
-  "media.sources",
-];
+const capabilities: string[] = [];
 
 async function started(declared = capabilities) {
   const host = new TestHost();
@@ -27,30 +21,17 @@ async function started(declared = capabilities) {
   return { host, plugin, stop };
 }
 
-test("media.sources opens the references; an export of their parts is an export", () => {
-  const info = CAPABILITY_INFO["media.sources"]!;
-  assert.deepEqual(info.requires, []);
-  assert.equal(
-    info.label,
-    "Remember videos you add and export from them later",
-  );
-  assert.equal(info.risky, false);
-  assert.deepEqual(info.apis, [
+test("media sources and exports of their parts need no capability", () => {
+  for (const info of Object.values(CAPABILITY_INFO))
+    for (const api of info.apis)
+      assert.doesNotMatch(api, /^(MediaSources|MediaCapture|Snapshot)\./);
+  for (const api of [
     "MediaSources.remember",
-    "MediaSources.get",
-    "MediaSources.locate",
-    "MediaSources.forget",
-    "MediaSources.list",
     "MediaSources.open",
-  ]);
-  // The exports are media.control's, like a snapshot's; media.sources is
-  // documented at the members and checked by the player.
-  assert.ok(
-    CAPABILITY_INFO["media.control"]!.apis.includes("MediaCapture.export"),
-  );
-  assert.ok(
-    CAPABILITY_INFO["media.control"]!.apis.includes("MediaCapture.exportCheck"),
-  );
+    "MediaCapture.export",
+    "MediaCapture.exportCheck",
+  ])
+    assert.deepEqual(memberNeeds(api), [], api);
 });
 
 test("a reference names the playing file, never its path, and the same file gets the same token", async () => {
@@ -314,20 +295,6 @@ test("open plays the remembered file from start as an ordinary open, and refuses
   await stop();
 });
 
-test("open is an open like Player.open: without playback.control it fails capability before anything opens", async () => {
-  const { host, plugin, stop } = await started();
-  const a = await plugin.media.sources.remember();
-  host.openElsewhere("/media/other.mp4");
-  host.setSource({ duration: 90 });
-  await assert.rejects(plugin.media.sources.open(a.token), {
-    code: "capability",
-    message: "playback.control must be declared in manifest",
-  });
-  assert.equal(host.source.source, "/media/other.mp4");
-  assert.deepEqual(host.sourceOpens, []);
-  await stop();
-});
-
 test("a part's thumbnail is a frame exported into the data directory, with the capabilities already declared", async () => {
   const { host, plugin, stop } = await started();
   const file = await plugin.media.sources.remember();
@@ -458,29 +425,15 @@ test("the check bounds the parts as the player does, and takes a snapshot's clip
   await stop();
 });
 
-test("without media.sources the references and parts exports fail capability; a snapshot's check does not need it", async () => {
-  const { plugin, stop } = await started(
-    capabilities.filter((name) => name !== "media.sources"),
-  );
-  await assert.rejects(plugin.media.sources.remember(), {
-    code: "capability",
-  });
-  await assert.rejects(plugin.media.sources.open("src-x"), {
-    code: "capability",
-    message: /media.sources/,
-  });
-  await assert.rejects(
-    plugin.media.export({
-      parts: [{ source: "src-x", start: 0, end: 1 }],
-      destination: "/tmp/x.mp4",
-      format: "mp4",
-    }),
-    { code: "capability" },
-  );
-  await assert.rejects(
-    plugin.media.exportCheck([{ source: "src-x", start: 0, end: 1 }]),
-    { code: "capability" },
-  );
+test("a plugin that declares nothing uses the references, opens them and exports their parts", async () => {
+  const { host, plugin, stop } = await started([]);
+  const a = await plugin.media.sources.remember();
+  await plugin.media.sources.open(a.token);
+  assert.equal(host.source.source, "/media/a.mp4");
+  const check = await plugin.media.exportCheck([
+    { source: a.token, start: 0, end: 1 },
+  ]);
+  assert.equal(typeof check.copy.ok, "boolean");
   const shot = await plugin.media.capture();
   assert.equal(
     (await plugin.media.exportCheck({ snapshot: shot, end: 20 })).copy.ok,
@@ -490,30 +443,15 @@ test("without media.sources the references and parts exports fail capability; a 
   await stop();
 });
 
-test("the player routes the references and joins to media.sources, other jobs to media.control", () => {
-  const none = () => false;
-  // Opening replaces what plays: playback.control first, then media.sources.
-  assert.equal(
-    requestNeeds("media.sources.open", undefined, none),
-    "playback.control",
-  );
-  assert.equal(
-    requestNeeds(
-      "media.sources.open",
-      undefined,
-      (name) => name === "playback.control",
-    ),
-    "media.sources",
-  );
-  assert.equal(
-    requestNeeds("media.sources.remember", undefined, none),
-    "media.sources",
-  );
-  assert.equal(
-    requestNeeds("media.sources.locate", undefined, none),
-    "media.sources",
-  );
-  assert.equal(requestNeeds("jobs.check", undefined, none), "media.control");
-  assert.equal(requestNeeds("jobs.start", undefined, none), "media.control");
-  assert.equal(requestNeeds("jobs.state", undefined, none), "media.read");
+test("the player's table asks nothing for references, opens and jobs", () => {
+  for (const method of [
+    "media.sources.open",
+    "media.sources.remember",
+    "media.sources.locate",
+    "jobs.check",
+    "jobs.start",
+    "jobs.state",
+    "source.operation",
+  ])
+    assert.equal(requestNeeds(method), null, method);
 });

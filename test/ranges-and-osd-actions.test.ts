@@ -24,7 +24,7 @@ test("timeline ranges: their own list of the layer, merged, cleared by a new sou
       p.onError((error) => errors.push(error));
     },
     {
-      capabilities: ["playback.read", "events", "timeline.marks"],
+      capabilities: [],
       host,
     },
   );
@@ -117,7 +117,7 @@ test("timeline ranges: their own list of the layer, merged, cleared by a new sou
 
 test("a layer that never sent ranges does not send setRanges", async () => {
   const { plugin, host, stop } = await startPlugin(() => {}, {
-    capabilities: ["timeline.marks"],
+    capabilities: [],
   });
   const layer = plugin.timeline.layer();
   layer.set([{ time: 1, kind: "marker" }]);
@@ -145,7 +145,7 @@ test("osd.show actions: up to two of the plugin's commands; a press runs one", a
         run: () => assert.fail("disabled"),
       });
     },
-    { capabilities: ["ui.osd", "commands"] },
+    { capabilities: [] },
   );
   await host.settle();
   saved = "C:/clips/a.mp4";
@@ -187,7 +187,7 @@ test("osd.show actions: refusals", async () => {
     (p: Plugin) => {
       p.commands.add({ id: "reveal", title: "Reveal", run() {} });
     },
-    { capabilities: ["ui.osd", "commands"] },
+    { capabilities: [] },
   );
   await host.settle();
   const action = { title: "Show", command: "reveal" };

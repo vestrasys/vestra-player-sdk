@@ -5,12 +5,7 @@ import test from "node:test";
 import { startPlugin, TestHost } from "../src/plugin/testing.ts";
 import { connectTo } from "../src/producer.ts";
 
-const capabilities = [
-  "playback.read",
-  "playback.control",
-  "events",
-  "producer.av",
-];
+const capabilities: string[] = [];
 
 test("openStream works over loopback TCP: the token goes first", async () => {
   const host = new TestHost();

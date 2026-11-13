@@ -28,7 +28,7 @@ console.log(host.keepsRunning);
 await stop();
 ```
 
-A function that reads the player's state subscribes to its events, so this reason appears only when the manifest declares `events`. The player's log says the same when it keeps an installed plugin running, and at the start of a development load (`--plugin`).
+A function that reads the player's state subscribes to its events. The player's log says the same when it keeps an installed plugin running, and at the start of a development load (`--plugin`).
 
 ### Replace the function with a condition
 
@@ -129,7 +129,7 @@ export default function activate(plugin: Plugin) {
 }
 ```
 
-`manifest.json` declares the capabilities `commands`, `playback.read`, `media.read`, `media.control`, `ui.dialog` and `ui.theme`.
+`manifest.json` declares the capability `player` (for the palette change); the commands, the playback state, the snapshot and the dialog need none.
 
 `tests/main.test.ts`:
 
@@ -141,7 +141,7 @@ import activate from "../main.ts";
 
 test("the menu follows the player and nothing keeps the plugin running", async () => {
   const { host, stop } = await startPlugin(activate, {
-    capabilities: ["commands", "playback.read", "media.read", "media.control", "ui.dialog", "ui.theme"],
+    capabilities: ["player"],
   });
   try {
     assert.deepEqual(host.keepsRunning, []);

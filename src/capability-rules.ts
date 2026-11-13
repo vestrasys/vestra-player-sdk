@@ -6,47 +6,51 @@
  * and the TypeScript language-service plugin are all built from these two
  * tables, so they and the player cannot disagree.
  *
+ * Since 1.8.0 the rule is flat: a request needs nothing or one capability of
+ * the closed list. (Until then a need could depend on a parameter or on
+ * what else the manifest declared, and a capability could require others.)
+ *
  * @internal
  */
-import { API_REQUESTS, SUBSCRIBED_EVENTS } from "./api-requests.ts";
+import { API_REQUESTS } from "./api-requests.ts";
 import type { ApiRequest } from "./api-requests.ts";
 import { HOST_CAPABILITIES } from "./host-capabilities.ts";
 
 /**
- * What a request needs, as the player's `capabilities.json` writes it:
- * `null` (nothing), a capability name, a choice by a string parameter, or a
- * choice by whether the plugin declared a capability.
- *
- * @internal
+ * @internal One RPC method of the player's table (`prefix.*` covers a
+ * prefix) and what it needs: `null` (any plugin may call it) or a
+ * capability name.
  */
-export type Needs =
-  | null
-  | string
-  | {
-      readonly param: string;
-      readonly cases: Readonly<Record<string, string | null>>;
-      readonly otherwise: string | null;
-    }
-  | {
-      readonly ifDeclared: string;
-      readonly then: string;
-      readonly otherwise: string;
-    };
-
-/** @internal One RPC method of the player's table (`prefix.*` covers a prefix). */
 export interface HostMethod {
   readonly name: string;
-  readonly needs: Needs;
+  readonly needs: string | null;
 }
 
 /** @internal One manifest capability of the player's table. */
 export interface HostCapability {
   readonly name: string;
+  /** The store's and the install confirmation's wording. */
   readonly label: string;
-  readonly risky: boolean;
-  /** Only built-in plugins may declare it (absent: `false`). */
-  readonly builtinOnly?: boolean;
-  readonly requires: readonly string[];
+  /** A name kept for a later player API (`camera`): no method needs it yet. */
+  readonly reserved: boolean;
+}
+
+/**
+ * @internal A capability name of SDK 1.7 and earlier and the name that
+ * replaced it (`null`: what it opened needs no declaration now).
+ */
+export interface HostRetired {
+  readonly name: string;
+  readonly replacedBy: string | null;
+}
+
+/**
+ * @internal The methods one part of the player serves (playback control,
+ * panels, the clipboard…), with what they mean for standby (`residency`).
+ */
+export interface HostGroup {
+  readonly name: string;
+  readonly summary: string;
   readonly residency: string;
   readonly methods: readonly HostMethod[];
 }
@@ -56,7 +60,8 @@ export interface HostCapabilities {
   readonly about: string;
   readonly apiVersion: string;
   readonly capabilities: readonly HostCapability[];
-  readonly uncapable: readonly HostMethod[];
+  readonly retired: readonly HostRetired[];
+  readonly groups: readonly HostGroup[];
 }
 
 /** @internal Both tables; tests pass their own. */
@@ -72,6 +77,23 @@ export const RULES: CapabilityRules = {
 };
 
 /**
+ * The capability names of SDK 1.7 and earlier that 1.8.0 retired, each with
+ * the name that replaced it; `null`: what it opened needs no declaration
+ * now. From the player's table. The player knows none of them as a
+ * capability: a manifest that still lists one is refused, and
+ * `vestra-plugin check` says what to write instead.
+ *
+ * @internal
+ */
+export function retiredCapabilities(
+  host: HostCapabilities = RULES.host,
+): Record<string, string | null> {
+  return Object.fromEntries(
+    host.retired.map((entry) => [entry.name, entry.replacedBy]),
+  );
+}
+
+/**
  * The player's entry for a method, as the player routes it: the exact name
  * first, then the first `prefix.*` entry whose prefix it starts with.
  * `undefined`: the player does not know the method.
@@ -82,10 +104,7 @@ export function hostMethod(
   method: string,
   host: HostCapabilities = RULES.host,
 ): HostMethod | undefined {
-  const all = [
-    ...host.capabilities.flatMap((capability) => capability.methods),
-    ...host.uncapable,
-  ];
+  const all = host.groups.flatMap((group) => group.methods);
   return (
     all.find((entry) => entry.name === method) ??
     all.find(
@@ -96,210 +115,100 @@ export function hostMethod(
 }
 
 /**
- * The capability one request needs, as the player decides it
- * (`capabilities::Route::needs`): `null` for none, `undefined` for a method
- * the player does not know.
- *
- * @param method - The wire method.
- * @param params - Its string parameters that a `Needs::Param` rule reads.
- * @param declared - Whether the plugin declared a capability.
+ * The capability one request needs, as the player decides it: `null` for
+ * none, `undefined` for a method the player does not know.
  *
  * @internal
  */
 export function requestNeeds(
   method: string,
-  params: Readonly<Record<string, string>> | undefined,
-  declared: (capability: string) => boolean,
   host: HostCapabilities = RULES.host,
 ): string | null | undefined {
   const entry = hostMethod(method, host);
-  if (!entry) return undefined;
-  const needs = entry.needs;
-  if (needs === null || typeof needs === "string") return needs;
-  if ("param" in needs) {
-    const value = params?.[needs.param];
-    return value !== undefined && Object.hasOwn(needs.cases, value)
-      ? needs.cases[value]!
-      : needs.otherwise;
-  }
-  return declared(needs.ifDeclared) ? needs.then : needs.otherwise;
+  return entry ? entry.needs : undefined;
 }
 
-/**
- * One capability a member needs: the request that needs it, and the
- * capability whose `requires` brought it in (absent when the request needs
- * it directly).
- *
- * @internal
- */
+/** @internal One capability a member needs, and the request that needs it. */
 export interface MemberNeed {
   readonly capability: string;
   readonly method: string;
-  readonly requiredBy?: string;
 }
 
 /**
- * Every capability a member of the plugin API needs with the given manifest:
- * those its requests need and, through `requires`, those they need in turn.
- * `undefined`: the member is not in the table (it needs none).
+ * Every capability a member of the plugin API needs: those its requests
+ * need. `undefined`: the member is not in the table (it needs none).
  *
- * @param api - The member as `Interface.member` (`Player.seek`).
- * @param capabilities - The manifest's capabilities.
+ * @param api - The member as `Interface.member` (`Bindings.set`).
  *
  * @internal
  */
 export function memberNeeds(
   api: string,
-  capabilities: readonly string[],
   rules: CapabilityRules = RULES,
 ): MemberNeed[] | undefined {
   const requests = rules.apis[api];
   if (!requests) return undefined;
-  return requestsNeed(requests, capabilities, rules);
+  return requestsNeed(requests, rules);
 }
 
 /**
- * The requests of a call to a member of `ARGUMENT_APIS`, given the value of its
- * first argument and the string fields of its second: a subscribed event's
- * `events.subscribe`, nothing for an event that arrives unasked, or the named
- * method. `undefined`: a method the player's table does not know (not checked).
+ * The request of a call to a member of `ARGUMENT_APIS`
+ * (`plugin.wire.request`), given its method name. `undefined`: a method the
+ * player's table does not know (not checked).
  *
- * @param kind - What the argument names (`ARGUMENT_APIS`).
- * @param name - The event or method name.
- * @param params - String fields of the second argument (`method` only).
+ * @param name - The method name.
  *
  * @internal
  */
 export function argumentRequests(
-  kind: "event" | "method",
   name: string,
-  params?: Readonly<Record<string, string>>,
   rules: CapabilityRules = RULES,
 ): ApiRequest[] | undefined {
-  if (kind === "event")
-    return SUBSCRIBED_EVENTS.includes(name)
-      ? [{ method: "events.subscribe", params: { event: name } }]
-      : [];
   if (!hostMethod(name, rules.host)) return undefined;
-  return [params ? { method: name, params } : { method: name }];
+  return [{ method: name }];
 }
 
 /**
- * Every capability a list of requests needs with the given manifest (see
- * {@link memberNeeds}).
+ * Every capability a list of requests needs, each once, with the first
+ * request that needs it (see {@link memberNeeds}).
  *
  * @internal
  */
 export function requestsNeed(
   requests: readonly ApiRequest[],
-  capabilities: readonly string[],
   rules: CapabilityRules = RULES,
 ): MemberNeed[] {
-  // An `ifDeclared` rule is decided last, as if the plugin had declared what
-  // the member's other requests need: `Player.seek` needs `playback.control`
-  // for `source.submit`, and with it `source.operation` needs nothing more.
-  // What a rule answers can change what another rule reads, so the needs are
-  // worked out again, as if the plugin had declared everything an earlier
-  // round needed, until no round adds a capability: `media.sources.open`
-  // asks for `playback.control` until it is declared, then for
-  // `media.sources` (and `source.operation` follows the first). The set
-  // only grows, so the rounds end.
-  const conditional = (request: ApiRequest) => {
-    const rule = hostMethod(request.method, rules.host)?.needs;
-    return typeof rule === "object" && rule !== null && "ifDeclared" in rule;
-  };
-  const ordered = [
-    ...requests.filter((request) => !conditional(request)),
-    ...requests.filter(conditional),
-  ];
-  const round = (previous: ReadonlySet<string>): MemberNeed[] => {
-    const needs: MemberNeed[] = [];
-    const declared = (name: string) =>
-      capabilities.includes(name) ||
-      previous.has(name) ||
-      needs.some((need) => need.capability === name);
-    const add = (need: MemberNeed) => {
-      if (needs.some((each) => each.capability === need.capability)) return;
-      needs.push(need);
-      const entry = rules.host.capabilities.find(
-        (capability) => capability.name === need.capability,
-      );
-      for (const required of entry?.requires ?? [])
-        add({
-          capability: required,
-          method: need.method,
-          requiredBy: need.capability,
-        });
-    };
-    for (const request of ordered) {
-      const capability = requestNeeds(
-        request.method,
-        request.params,
-        declared,
-        rules.host,
-      );
-      if (capability) add({ capability, method: request.method });
-    }
-    return needs;
-  };
-  // Every capability any round needed; the answer is the last round's needs
-  // (read with all of them declared) and then any earlier one it left out.
-  // Each keeps the request of the round that first needed it, the one read
-  // closest to the manifest: `MediaSources.open` needs `playback.control` for
-  // `media.sources.open`, not for `source.operation`, which asks for it only
-  // once it counts as declared.
-  const all = new Map<string, MemberNeed>();
-  for (;;) {
-    const needs = round(new Set(all.keys()));
-    const before = all.size;
-    for (const need of needs)
-      if (!all.has(need.capability)) all.set(need.capability, need);
-    if (all.size === before)
-      return [
-        ...needs.map((need) => all.get(need.capability)!),
-        ...[...all.values()].filter(
-          (need) => !needs.some((each) => each.capability === need.capability),
-        ),
-      ];
+  const needs: MemberNeed[] = [];
+  for (const request of requests) {
+    const capability = requestNeeds(request.method, rules.host);
+    if (capability && !needs.some((need) => need.capability === capability))
+      needs.push({ capability, method: request.method });
   }
+  return needs;
 }
 
 /**
- * `CAPABILITY_INFO` from the tables: the label, highlight and requirements
- * from the player's table; the members from `API_REQUESTS` (every member a
+ * `CAPABILITY_INFO` from the tables: the label and the reserved mark from
+ * the player's table; the members from `API_REQUESTS` (every member a
  * request of which needs the capability, in the table's order; requests
- * marked `also` are left out, as they are documented at the member).
+ * marked `also` are left out).
  *
  * @internal
  */
-export function capabilityInfo(rules: CapabilityRules = RULES): Record<
-  string,
-  {
-    apis: string[];
-    requires: string[];
-    label: string;
-    risky: boolean;
-    builtinOnly: boolean;
-  }
-> {
+export function capabilityInfo(
+  rules: CapabilityRules = RULES,
+): Record<string, { apis: string[]; label: string; reserved: boolean }> {
   const info: ReturnType<typeof capabilityInfo> = {};
   for (const capability of rules.host.capabilities)
     info[capability.name] = {
       apis: [],
-      requires: [...capability.requires],
       label: capability.label,
-      risky: capability.risky,
-      builtinOnly: capability.builtinOnly === true,
+      reserved: capability.reserved,
     };
   for (const [api, requests] of Object.entries(rules.apis))
     for (const request of requests) {
       if (request.also) continue;
-      const capability = requestNeeds(
-        request.method,
-        request.params,
-        () => true,
-        rules.host,
-      );
+      const capability = requestNeeds(request.method, rules.host);
       const entry = capability ? info[capability] : undefined;
       if (entry && !entry.apis.includes(api)) entry.apis.push(api);
     }

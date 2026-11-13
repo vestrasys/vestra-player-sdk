@@ -20,11 +20,11 @@ import type {
   Window,
 } from "../src/plugin/types.ts";
 import type { HostEvent as WireEvent } from "../src/wire.ts";
-import { EVENT_NEEDS } from "../src/plugin/player/events.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
+import { HOST_EVENTS } from "../src/plugin/player/events.ts";
+import { requestNeeds } from "../src/capability-rules.ts";
 
 /** A package with one panel/window file holding `rows`, `total` and `label`. */
-function packageWith(capabilities: string[] = ["ui.mount", "ui.window"]) {
+function packageWith(capabilities: string[] = []) {
   const directory = mkdtempSync(join(tmpdir(), "optional-"));
   writeFileSync(
     join(directory, "list.slint"),
@@ -205,7 +205,7 @@ test("a command with constant fields sends one commands.register and no commands
         run: () => {},
       });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     await host.settle();
@@ -245,7 +245,7 @@ test("Command.set pushes this command's state alone, without a full pass", async
         run: () => {},
       });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     await host.settle();
@@ -281,58 +281,24 @@ test("Command.set pushes this command's state alone, without a full pass", async
   }
 });
 
-test("without events nothing subscribes to the player's state", async () => {
-  // Nothing can arrive without `events`: the copy subscribes nothing.
-  const { plugin, host, stop } = await startPlugin(
-    (p: Plugin) => {
-      p.commands.add({
-        id: "half",
-        title: "Half Speed",
-        run: () => p.player.setRate(0.5),
-      });
-    },
-    { capabilities: ["playback.control", "commands"] },
-  );
+// Until 1.8.0 only a plugin that declared `events` started this way; one
+// without it subscribed nothing and its copy started on first use.
+test("the copy follows from the start for every plugin: a late first read is current", async () => {
+  const { plugin, host, stop } = await startPlugin(() => {}, {
+    capabilities: [],
+  });
   try {
-    await host.settle();
+    // Subscribed (a mirror) before the start-up read.
+    assert.deepEqual(host.calls[0]?.method, "events.subscribe");
+    assert.deepEqual(host.sent("events.subscribe"), [
+      { event: "source.state", mirror: true },
+    ]);
     host.openElsewhere("/movie.mp4");
     await host.settle();
-    await host.command("half").run();
-    void plugin.player.state;
-    await host.settle();
-    assert.equal(host.source.rate, 0.5);
-    assert.deepEqual(host.sent("events.subscribe"), []);
+    assert.equal(plugin.player.state.source, "/movie.mp4");
+    assert.equal(host.sent("source.state").length, 1, "no read again");
   } finally {
     await stop();
-  }
-});
-
-test("with events the copy follows from the start, as in 1.6.21: a late first read is current", async () => {
-  for (const capabilities of [["events"], ["events", "playback.read"]]) {
-    const { plugin, host, stop } = await startPlugin(() => {}, {
-      capabilities,
-    });
-    try {
-      // Subscribed (a mirror) before the start-up read.
-      assert.deepEqual(host.calls[0]?.method, "events.subscribe");
-      assert.deepEqual(host.sent("events.subscribe"), [
-        { event: "source.state", mirror: true },
-      ]);
-      host.openElsewhere("/movie.mp4");
-      await host.settle();
-      assert.equal(
-        plugin.player.state.source,
-        "/movie.mp4",
-        String(capabilities),
-      );
-      assert.equal(
-        host.sent("source.state").length,
-        capabilities.includes("playback.read") ? 1 : 0,
-        "no read again",
-      );
-    } finally {
-      await stop();
-    }
   }
 });
 
@@ -344,7 +310,7 @@ test("player.on: the payload is the wire event data, the listener is named, no m
       plugin = p;
       p.player.on("source.state", (state) => seen.push(state));
     },
-    { capabilities: ["events"] },
+    { capabilities: [] },
   );
   try {
     await host.settle();
@@ -386,7 +352,7 @@ test("player.on takes every HostEvent; dispose unsubscribes", async () => {
       );
       p.player.on("packages.changed", (list) => seen.push(["packages", list]));
     },
-    { capabilities: ["events", "packages.manage"] },
+    { capabilities: [] },
   );
   try {
     await host.settle();
@@ -442,7 +408,7 @@ test("plugin.state: a write re-runs exactly its readers", async () => {
     },
     {
       host,
-      directory: packageWith(["ui.mount", "ui.window", "commands"]),
+      directory: packageWith([]),
     },
   );
   try {
@@ -502,7 +468,7 @@ test("plugin.state: a write from an onChange listener re-runs the readers; plain
       panel.bind(() => (runs++, { total: String(st.seconds) }));
     },
     {
-      directory: packageWith(["ui.mount", "events", "playback.read"]),
+      directory: packageWith([]),
     },
   );
   try {
@@ -527,21 +493,11 @@ test("plugin.state: a write from an onChange listener re-runs the readers; plain
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
-test("HostEvent is the wire's list, and each event needs what the player checks", () => {
+test("HostEvent is the wire's list, and no event needs a capability", () => {
   const same: Same<HostEvent, WireEvent> = true;
   const payload: Same<EventPayload<"commands.keys">["revision"], number> = true;
   assert.ok(same && payload);
-  const subscribe = HOST_CAPABILITIES.capabilities
-    .flatMap((c) => c.methods)
-    .find((m) => m.name === "events.subscribe")!;
-  const needs = subscribe.needs as {
-    cases: Record<string, string | null>;
-    otherwise: string;
-  };
-  for (const [event, need] of Object.entries(EVENT_NEEDS))
-    assert.equal(
-      need,
-      event in needs.cases ? needs.cases[event] : needs.otherwise,
-      event,
-    );
+  assert.equal(Object.keys(HOST_EVENTS).length, 11);
+  for (const method of ["events.subscribe", "events.unsubscribe"])
+    assert.equal(requestNeeds(method), null, method);
 });

@@ -22,7 +22,7 @@ function picturePackage() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "test.keys",
-      capabilities: ["commands", "ui.window"],
+      capabilities: [],
     }),
   );
   return directory;
@@ -153,7 +153,7 @@ test("macOS writes ⌘ and ⌃; Cmd bindings show only there", async () => {
         run() {},
       });
     },
-    { capabilities: ["commands"], host },
+    { capabilities: [], host },
   );
   try {
     void plugin.commands.keys("open");
@@ -175,7 +175,7 @@ test("only `commands` is needed: one read and a mirror subscription, a listener 
         run() {},
       });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     assert.deepEqual(plugin.commands.keys("hello"), []); // before the answer
@@ -198,16 +198,16 @@ test("only `commands` is needed: one read and a mirror subscription, a listener 
   }
 });
 
-test("without `commands` every command reads [] and nothing is asked", async () => {
+// Until 1.8.0 a plugin without `commands` read [] and asked nothing.
+test("a plugin that declares nothing reads its keys: the first read asks the player", async () => {
   const { plugin, host, stop } = await startPlugin(() => {}, {
     capabilities: [],
   });
   try {
     assert.deepEqual(plugin.commands.keys("anything"), []);
-    plugin.player.on("commands.keys", () => {});
     await host.settle();
-    assert.ok(!host.calls.some((c) => c.method === "commands.keys"));
-    assert.ok(!host.subscriptions.has("commands.keys"));
+    assert.ok(host.calls.some((c) => c.method === "commands.keys"));
+    assert.ok(host.subscriptions.has("commands.keys"));
   } finally {
     await stop();
   }
@@ -224,7 +224,7 @@ test("an answer older than an event it crossed is dropped", async () => {
     (plugin: Plugin) => {
       plugin.commands.add({ id: "a", title: "A", bindings: ["A"], run() {} });
     },
-    { capabilities: ["commands"], host },
+    { capabilities: [], host },
   );
   try {
     void plugin.commands.keys("a");

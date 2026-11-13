@@ -760,7 +760,7 @@ export function createWire(transport: Transport) {
     ...mediaClients(transport),
     processing: processingClient(transport),
     commands: commandClient(transport),
-    /** The command palette's lead row (`palette.lead`). */
+    /** The command palette's lead row. */
     palette: {
       set: (options: { [key: string]: Json }) =>
         transport.request<void>("palette.lead.set", options),
@@ -809,7 +809,7 @@ export function createWire(transport: Transport) {
       set: (id: string | null) =>
         transport.request<void>("player.setAudioDevice", { id }),
     },
-    /** The binding table: list, user overlay (`bindings.manage`). */
+    /** The binding table: list, user overlay (`player`). */
     bindings: {
       list: () => transport.request<BindingTable>("bindings.list"),
       set: (plugin: string, command: string, inputs: string[]) =>
@@ -817,7 +817,7 @@ export function createWire(transport: Transport) {
       reset: (ref?: { plugin: string; command: string }) =>
         transport.request<void>("bindings.reset", ref ?? {}),
     },
-    /** File drops: providers by extension, panel listeners (`ui.drop`). */
+    /** File drops: providers by extension, panel listeners. */
     drops: {
       provide: (id: string, extensions: string[]) =>
         transport.request<void>("drops.provide", { id, extensions }),
@@ -826,7 +826,7 @@ export function createWire(transport: Transport) {
       listen: (listen: boolean) =>
         transport.request<void>("drops.listen", { listen }),
     },
-    /** The palette (`ui.theme` to change it). */
+    /** The palette (`player` to change it). */
     appearance: {
       set: (theme: string) =>
         transport.request<void>("appearance.set", { theme }),
@@ -834,7 +834,7 @@ export function createWire(transport: Transport) {
       setLanguage: (language: string) =>
         transport.request<void>("appearance.setLanguage", { language }),
     },
-    /** Settings pages in the player's options window (`ui.settings`). */
+    /** Settings pages in the player's options window. */
     settings: {
       register: (options: {
         id: string;
@@ -1006,7 +1006,7 @@ export function createWire(transport: Transport) {
       openUrl: (url: string) =>
         transport.request<void>("system.openUrl", { url }),
     },
-    /** The system's secret store, per plugin (`secrets`). */
+    /** The system's secret store, per plugin (`credentials`). */
     secrets: {
       get: (name: string) =>
         transport.request<string | null>("secrets.get", { name }),
@@ -1033,7 +1033,7 @@ export function createWire(transport: Transport) {
     },
     /**
      * The rendering choice: `state` needs no capability, `setPreference` and
-     * `restart` need `rendering.manage`.
+     * `restart` need `player`.
      */
     rendering: {
       state: () => transport.request<WireRenderingState>("rendering.state"),

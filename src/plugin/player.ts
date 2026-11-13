@@ -202,13 +202,8 @@ function sourceFailure(
  * One per plugin: the state store and the operation book client.
  *
  * The state copy (a mirror of `source.state`) follows the player's events
- * from the plugin's start when the manifest declares `events`
- * (`createPlugin` subscribes before the start-up read, as before 1.7.0, so
- * a read in any later handler is current). Without `events` no event can
- * arrive; `start` is then called by the first use of the state (a read of
- * `plugin.player.state`, `onChange`, `isCurrent`, a media handle, a
- * scrub, a stream, a filter, a shader or view request, a capture) and
- * subscribes nothing. A start on demand with `events` and `playback.read`
+ * from the plugin's start (`createPlugin` subscribes before the start-up
+ * read, so a read in any later handler is current). A start on demand
  * would read the state again; `createPlugin` makes it unreachable today.
  */
 export class PlayerService implements StreamSource {
@@ -241,7 +236,7 @@ export class PlayerService implements StreamSource {
     });
   }
   async init() {
-    if (this.runtime.can("playback.read")) await this.refresh();
+    await this.refresh();
   }
   /** Whether the mirror follows the player's events yet. */
   get started() {
@@ -250,9 +245,8 @@ export class PlayerService implements StreamSource {
   /**
    * Follow `source.state` from now on: the SDK's copy of the state (a
    * mirror; a plugin listens through `watch` and the bindings that read
-   * `state`). Then read the state once more (with `playback.read` and
-   * `events`): a change between the start-up read and the subscription
-   * sent no event to this plugin. Resolves when that read is in.
+   * `state`). Then read the state once more: a change between the start-up
+   * read and the subscription sent no event to this plugin. Resolves when that read is in.
    * `reread: false`: subscribed before the start-up read
    * (`createPlugin`), which then is that read.
    */
@@ -262,14 +256,9 @@ export class PlayerService implements StreamSource {
     this.runtime.on(
       "source.state",
       (data) => this.accept(data as SourceState),
-      "events",
       true,
     );
-    if (
-      reread &&
-      this.runtime.can("playback.read") &&
-      this.runtime.can("events")
-    )
+    if (reread)
       this.#fresh = this.refresh().then(
         () => {},
         () => {},
@@ -384,9 +373,8 @@ export class PlayerService implements StreamSource {
   }
   /** Close only if `generation` is still the player's source. */
   async closeIfCurrent(generation: number) {
-    const raw = this.runtime.can("playback.read")
-      ? (await this.refresh(), this.raw)
-      : this.raw;
+    await this.refresh();
+    const raw = this.raw;
     if (raw.stamp.generation !== generation || raw.phase === "empty") return;
     try {
       await this.submit({ kind: "close", expected: raw.stamp });
@@ -415,10 +403,8 @@ class MediaHandle implements Media {
   ready(options: { signal?: AbortSignal } = {}) {
     const service = this.#service;
     return new Promise<void>((resolve, reject) => {
-      let poll: ReturnType<typeof setInterval> | undefined;
       const finish = (error?: PluginError) => {
         watch.dispose();
-        clearInterval(poll);
         options.signal?.removeEventListener("abort", abort);
         if (error) reject(error);
         else resolve();
@@ -440,9 +426,6 @@ class MediaHandle implements Media {
       const watch = service.watch(check);
       if (options.signal?.aborted) return abort();
       options.signal?.addEventListener("abort", abort, { once: true });
-      // Without event delivery the state only moves when read.
-      if (!service.runtime.can("events"))
-        poll = setInterval(() => void service.refresh().catch(() => {}), 100);
       check();
     });
   }

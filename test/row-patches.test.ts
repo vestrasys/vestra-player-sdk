@@ -273,7 +273,7 @@ function packageWith() {
     join(directory, "manifest.json"),
     JSON.stringify({
       id: "test.patches",
-      capabilities: ["ui.mount", "ui.window", "ui.settings"],
+      capabilities: [],
     }),
   );
   return directory;

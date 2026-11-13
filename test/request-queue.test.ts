@@ -384,7 +384,7 @@ test("TestHost: disconnect with a full queue rejects every request with disabled
 });
 
 test("TestHost: an open aborted while its submit waits is never sent", async () => {
-  const run = await held(["clipboard", "playback.control"]);
+  const run = await held(["clipboard"]);
   const flood = Array.from({ length: 256 }, (_, i) =>
     run.plugin.wire.request("clipboard.writeText", { text: String(i) }),
   );

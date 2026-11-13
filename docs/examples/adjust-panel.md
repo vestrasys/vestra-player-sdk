@@ -38,7 +38,7 @@ examples/adjust-panel/
 
 {@includeCode ../../examples/adjust-panel/manifest.json}
 
-`playback.read` and `playback.control` read and set the speed; `events` keeps `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without it, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
+No capability: a panel, its command and the playback speed need none. `plugin.player.state` follows the player, so the panel enables itself when a file is opened after the plugin started.
 
 ## The panel in Slint
 
@@ -86,4 +86,4 @@ Start the player with `--plugin <path to examples/adjust-panel>` and press Alt+5
 ## Try next
 
 1. **More controls.** Add a fine step (±0.05) as two buttons and two commands with `home: "speed"`; their keys can show next to them with `KeyHint` and `plugin.commands.keys`.
-2. **Follow the user.** Listen to `plugin.panels.adjust.onChange` (with `events`) to know when the column opens or closes.
+2. **Follow the user.** Listen to `plugin.panels.adjust.onChange` to know when the column opens or closes.

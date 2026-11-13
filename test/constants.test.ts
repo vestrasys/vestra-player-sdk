@@ -51,73 +51,69 @@ async function started(capabilities: string[]) {
 test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () => {
   assert.equal(API_VERSION, "vestra/1");
   assert.deepEqual(CAPABILITIES, Object.keys(CAPABILITY_INFO));
+  // The closed list of 1.8.0: four boundaries in use, four reserved.
   assert.deepEqual(CAPABILITIES, [
-    "producer.av",
-    "playback.read",
-    "playback.control",
-    "source.resolve",
-    "events",
-    "commands",
-    "ui.window",
-    "ui.mount",
-    "ui.dialog",
-    "plugins.manage",
-    "processing.video",
-    "processing.audio",
-    "subtitles.read",
-    "subtitles.control",
-    "media.read",
-    "media.control",
-    "media.sources",
-    "ui.osd",
+    "player",
+    "plugins",
     "clipboard",
-    "window.control",
-    "bindings.manage",
-    "timeline.marks",
-    "ui.drop",
-    "ui.settings",
-    "ui.theme",
-    "secrets",
-    "rendering.manage",
-    "video.upscaling",
-    "video.motion",
-    "commands.run",
-    "palette.lead",
+    "credentials",
+    "camera",
+    "microphone",
+    "screen",
+    "notifications",
   ]);
   assert.ok(Object.isFrozen(CAPABILITY_INFO));
   assert.ok(Object.isFrozen(CAPABILITIES));
 });
 
-test("CAPABILITY_INFO: labels, highlighted ones and requirements", () => {
-  const risky = CAPABILITIES.filter((name) => CAPABILITY_INFO[name]!.risky);
-  assert.deepEqual(risky, [
-    "plugins.manage",
-    "clipboard",
-    "bindings.manage",
-    "secrets",
-    "rendering.manage",
-    "commands.run",
-  ]);
-  const builtinOnly = CAPABILITIES.filter(
-    (name) => CAPABILITY_INFO[name]!.builtinOnly,
+test("CAPABILITY_INFO: labels, reserved ones and what each opens", () => {
+  const reserved = CAPABILITIES.filter(
+    (name) => CAPABILITY_INFO[name]!.reserved,
   );
-  assert.deepEqual(builtinOnly, ["commands.run", "palette.lead"]);
+  assert.deepEqual(reserved, [
+    "camera",
+    "microphone",
+    "screen",
+    "notifications",
+  ]);
   for (const [name, info] of Object.entries(CAPABILITY_INFO)) {
     assert.match(info.label, /^[A-Z][^\n]*[^.\s]$/, name);
-    assert.ok(info.apis.length > 0, name);
+    assert.equal(info.apis.length > 0, !info.reserved, name);
     assert.equal(new Set(info.apis).size, info.apis.length, name);
-    for (const needed of info.requires) {
-      assert.ok(CAPABILITIES.includes(needed), `${name} requires ${needed}`);
-      assert.notEqual(needed, name);
-    }
+    assert.deepEqual(Object.keys(info).sort(), ["apis", "label", "reserved"]);
   }
-  // Only media.read and media.control share their wording.
   const labels = Object.values(CAPABILITY_INFO).map((info) => info.label);
-  assert.equal(new Set(labels).size, labels.length - 1);
-  assert.equal(
-    CAPABILITY_INFO["media.read"]!.label,
-    CAPABILITY_INFO["media.control"]!.label,
-  );
+  assert.equal(new Set(labels).size, labels.length);
+  // What the four boundaries open (the old names folded into each).
+  const opens = (name: string) => CAPABILITY_INFO[name]!.apis;
+  assert.deepEqual(opens("player"), [
+    "Appearance.set",
+    "Appearance.setLanguage",
+    "Bindings.list",
+    "Bindings.set",
+    "Bindings.reset",
+    "Rendering.setPreference",
+    "Rendering.restartPlayer",
+  ]);
+  assert.deepEqual(opens("plugins"), [
+    "Commands.list",
+    "Commands.run",
+    "Packages.validate",
+    "Packages.validateArchive",
+    "Packages.setEnabled",
+    "Packages.reload",
+    "Packages.uninstall",
+  ]);
+  assert.deepEqual(opens("clipboard"), [
+    "Clipboard.readText",
+    "Clipboard.writeText",
+    "Clipboard.writeImage",
+  ]);
+  assert.deepEqual(opens("credentials"), [
+    "Secrets.get",
+    "Secrets.set",
+    "Secrets.delete",
+  ]);
 });
 
 test("CAPABILITY_INFO names members that exist", () => {
@@ -162,7 +158,7 @@ test("MESSAGE_LIMIT is 1 MiB", () => {
 
 test("OSD_LIMITS bound osd.show and the information block", async () => {
   assert.ok(Object.isFrozen(OSD_LIMITS));
-  const { plugin, host, errors, stop } = await started(["ui.osd"]);
+  const { plugin, host, errors, stop } = await started([]);
   try {
     await plugin.osd.show("x".repeat(OSD_LIMITS.messageChars));
     await assert.rejects(
@@ -197,7 +193,7 @@ test("OSD_LIMITS bound osd.show and the information block", async () => {
 
 test("SECRET_LIMITS bound names and values", async () => {
   assert.ok(Object.isFrozen(SECRET_LIMITS));
-  const { plugin, host, stop } = await started(["secrets"]);
+  const { plugin, host, stop } = await started(["credentials"]);
   try {
     const name = "a".repeat(SECRET_LIMITS.nameChars);
     await plugin.secrets.set(name, "x".repeat(SECRET_LIMITS.valueBytes));

@@ -6,7 +6,7 @@ A list in the player's sidebar with its own right-click menu. Next to the player
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `ui.mount` | `panels.mount`, `Panel.bind` / `on`, `Panel.showMenu`, commands without a menu path |
+| none                   | `panels.mount`, `Panel.bind` / `on`, `Panel.showMenu`, commands without a menu path |
 
 ## Run it
 

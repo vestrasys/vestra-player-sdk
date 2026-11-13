@@ -120,13 +120,11 @@ class SubtitleService {
         this.#source = source;
         void this.refresh().catch(() => {});
       },
-      "events",
       true,
     );
     runtime.on(
       "playback.backend",
       () => void this.refresh().catch(() => {}),
-      "events",
       true,
     );
     this.style = new Latest(async ({ style, options }) => {

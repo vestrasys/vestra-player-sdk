@@ -35,7 +35,7 @@ async function manager(host = new TestHost()) {
     (p: Plugin) => {
       plugin = p;
     },
-    { capabilities: ["plugins.manage"], host },
+    { capabilities: ["plugins"], host },
   );
   return { ...result, plugin };
 }
@@ -267,7 +267,7 @@ test("ui.markdown: wire form, image downloads into the cache, failures stay quie
       plugin = p;
       p.onError((error) => errors.push(error));
     },
-    { capabilities: ["ui.window"], host },
+    { capabilities: [], host },
   );
   const text =
     "# Demo\n\n![ok](https://img.example/ok.png) ![bad](https://img.example/bad.gif) ![gone](https://img.example/gone.png)";
@@ -317,7 +317,7 @@ test("ui.markdown: sent as a property value, refused after its scope is released
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "test.md", capabilities: ["ui.window"] }),
+    JSON.stringify({ id: "test.md", capabilities: [] }),
   );
   const errors: PluginError[] = [];
   let plugin!: Plugin;
@@ -352,7 +352,7 @@ test("ui.markdown: documents at any depth of a value (chat rows), released ones 
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "test.chat", capabilities: ["ui.window"] }),
+    JSON.stringify({ id: "test.chat", capabilities: [] }),
   );
   const errors: PluginError[] = [];
   let plugin!: Plugin;
@@ -406,7 +406,7 @@ test("ui.image nests in rows (SDK 1.5.19): maxSide, released images refused at a
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "test.list", capabilities: ["ui.window"] }),
+    JSON.stringify({ id: "test.list", capabilities: [] }),
   );
   const errors: PluginError[] = [];
   let plugin!: Plugin;

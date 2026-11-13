@@ -543,7 +543,7 @@ export interface Ui {
  * binding (`value: root.level`) is broken by Slint the first time the user
  * moves the control.
  *
- * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
+ * @capability None.
  *
  * @example Wire a window's label and buttons to the plugin (examples/bookmark)
  * A Bookmark window shows the saved position and two buttons that save
@@ -585,7 +585,7 @@ export interface View {
    * makes `show` reject. **Panels and settings pages** forward every
    * callback of their bridge global, so bind whenever you like.
    *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
+   * @capability None.
    *
    * @param callback - The Slint callback's name, in camelCase
    *   (`toggleEffect`) or as written in Slint (`toggle-effect`).
@@ -650,7 +650,7 @@ export interface View {
    * (the property keeps its default) and the failure goes to the plugin's
    * `onError`.
    *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
+   * @capability None.
    *
    * @param props - Properties by name; see {@link Props}.
    *
@@ -708,7 +708,7 @@ export interface View {
    * writes directly ({@link WireView.write}) is left out of what the function
    * returns, reported once to `onError` with `invalid`: one track per property.
    *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
+   * @capability None.
    *
    * @param props - Returns the properties, by name.
    * @returns A handle that stops this binding (the values last sent stay).

@@ -68,9 +68,7 @@ interface Filter<T> extends Disposable {
 
 /**
  * This plugin's own video processing chain, re-applied for every new source.
- * From `plugin.video.filter(id)`; needs `processing.video`,
- * `playback.read` and `events`. Without `events` the SDK does not see the
- * source change: a value set before the media is ready stays `waiting`.
+ * From `plugin.video.filter(id)`.
  *
  * Members: `set(nodes)` (desired chain, last write wins, `[]` withdraws
  * this plugin's effect), `status` ({@link FilterStatus}),
@@ -104,7 +102,7 @@ interface Filter<T> extends Disposable {
  * applies the current value again; `dispose` withdraws the chain. `set`
  * never throws: a refused chain shows as `failed` in `status`.
  *
- * @capability processing.video, playback.read and events
+ * @capability None.
  * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
@@ -113,8 +111,7 @@ export type VideoFilter = Filter<VideoNode[]>;
 
 /**
  * This plugin's own audio chain plus its audio delay in 10 ms steps.
- * From `plugin.audio.filter(id)`; needs `processing.audio`,
- * `playback.read` and `events`. Same members and rules as
+ * From `plugin.audio.filter(id)`. Same members and rules as
  * {@link VideoFilter}.
  *
  * `delayMs` is −10000–10000 in multiples of 10; the positive and the
@@ -134,7 +131,7 @@ export type VideoFilter = Filter<VideoNode[]>;
  * desired value and never throws, `status` and `onStatus` report the
  * result, `retry` applies it again, `dispose` withdraws it.
  *
- * @capability processing.audio, playback.read and events
+ * @capability None.
  * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
@@ -167,7 +164,7 @@ export interface ViewSettings {
 }
 
 /**
- * The display layer, from `plugin.video.view()` (`processing.video`).
+ * The display layer, from `plugin.video.view()`.
  *
  * Single owner: the first plugin to call `view()` owns it; another plugin's
  * handle reports `failed` (`conflict`) and retries on each `set`. Values
@@ -194,8 +191,7 @@ export interface ViewSettings {
  * (`invalid`) in `status` and is reported to `onError`, without sending
  * anything.
  *
- * @capability processing.video, playback.read and events (like
- * {@link VideoFilter})
+ * @capability None.
  * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
@@ -204,7 +200,7 @@ export interface VideoView extends Disposable {
   /**
    * Merged into the current settings; last write wins.
    *
-   * @capability processing.video
+   * @capability None.
    *
    * @example Stretch a 4:3 video to fill the window
    * A 4:3 video fills a 16:9 window, distorted, as the user asked. Each
@@ -223,7 +219,7 @@ export interface VideoView extends Disposable {
   /**
    * The status changed.
    *
-   * @capability processing.video
+   * @capability None.
    *
    * @example Tell the user another plugin owns the view
    * When another plugin already controls the display layer, the OSD says
@@ -269,7 +265,7 @@ export interface RenderSettings {
 
 /**
  * The GPU renderer's options, from `plugin.video.render()`
- * (`processing.video`). Single owner, like {@link VideoView}; the two are
+ *. Single owner, like {@link VideoView}; the two are
  * independent handles.
  *
  * Platforms: macOS renders on the GPU by default; Windows does since
@@ -312,8 +308,7 @@ export interface RenderSettings {
  * the refused `shaders` included, so include `shaders: []` in the next `set` to
  * go on without them.
  *
- * @capability processing.video, playback.read and events (like
- * {@link VideoFilter})
+ * @capability None.
  * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.0.0
  * @category Processing
@@ -322,7 +317,7 @@ export interface RenderOptions extends Disposable {
   /**
    * Merged into the current settings; last write wins.
    *
-   * @capability processing.video
+   * @capability None.
    *
    * @example Turn on motion interpolation
    * Motion becomes smoother on the GPU renderer. `set` merges the field into
@@ -351,7 +346,7 @@ export interface RenderOptions extends Disposable {
   /**
    * The status changed (including later pushes such as shader compile errors).
    *
-   * @capability processing.video
+   * @capability None.
    *
    * @example Report a shader that does not compile
    * The OSD shows mpv's message when a shader the plugin set fails to
@@ -371,7 +366,7 @@ export interface RenderOptions extends Disposable {
 
 /**
  * This plugin's own GPU shaders, from `plugin.video.shaders(id)`
- * (`processing.video`): mpv user shaders (`.glsl`, `//!HOOK` …) that the GPU
+ *: mpv user shaders (`.glsl`, `//!HOOK` …) that the GPU
  * renderer runs on every frame.
  *
  * @remarks
@@ -433,7 +428,7 @@ export interface RenderOptions extends Disposable {
  * shaders.set([join(packageDirectory, "shaders", "sharpen.glsl")]);
  * ```
  *
- * @capability processing.video
+ * @capability None.
  * @player 0.5.20
  * @see [Process video with a shader or a filter](../../../docs/guides/filters.md)
  * @since 1.5.39
@@ -450,7 +445,7 @@ export interface VideoShaders extends Disposable {
    * the interface's remarks) and goes to {@link Scope.onError}, and what the
    * player held stays.
    *
-   * @capability processing.video
+   * @capability None.
    * @param paths - Absolute paths of shader files in this plugin's package
    *   or data directory, in the order they run.
    *
@@ -474,7 +469,7 @@ export interface VideoShaders extends Disposable {
   /**
    * Withdraw this handle's shaders (the same as `set([])`).
    *
-   * @capability processing.video
+   * @capability None.
    *
    * @example Turn the plugin's shaders off from a menu item
    * A Video menu item turns the plugin's shader on and off. Clearing
@@ -509,7 +504,7 @@ export interface VideoShaders extends Disposable {
    * The status changed, including later pushes (a compile failure, a
    * switch to software rendering).
    *
-   * @capability processing.video
+   * @capability None.
    *
    * @example Report a shader that does not compile
    * The OSD shows mpv's message when the plugin's shader fails to compile.
@@ -815,7 +810,7 @@ export interface UpscalingState {
 
 /**
  * `plugin.video.upscaling`: the GPU's video upscaler, NVIDIA RTX Video
- * Super Resolution on Windows (`video.upscaling`). Read whether it works
+ * Super Resolution on Windows. Read whether it works
  * here and why not; turn it on or off for this plugin.
  *
  * @remarks
@@ -872,7 +867,7 @@ export interface UpscalingState {
  * });
  * ```
  *
- * @capability video.upscaling
+ * @capability None.
  * @player 0.5.16
  * @since 1.5.37
  * @category Processing
@@ -882,11 +877,10 @@ export interface VideoUpscaling {
    * Read whether the upscaler works now and why not, whether this plugin
    * turned it on and what the player asked the GPU for.
    *
-   * @capability video.upscaling
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    * @returns The state, once the player's GPU check ran (the first call
    *   starts it and may take a moment).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `video.upscaling`.
    *
    * @example Find out whether upscaling can work here
    * The plugin reads the state the first time the user picks its upscaling
@@ -913,12 +907,10 @@ export interface VideoUpscaling {
    * whole plugin, not of a {@link Scope}: disposing a scope does not turn
    * it off.
    *
-   * @capability video.upscaling
+   * @capability None.
    * @param enabled - `true` to ask for upscaling, `false` to withdraw the
    *   request.
    * @returns The new state.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `video.upscaling`.
    * @throws `invalid` (rejects) `enabled` is not a boolean.
    * @throws `unsupported` (rejects) `true` where upscaling cannot work in
    *   this run: every {@link UpscalingReasonCode} except `decoding`, and
@@ -972,12 +964,10 @@ export interface VideoUpscaling {
    * open, and dispose of the listener when it closes. Players before 0.5.25 do not know the event: the listener
    * never fires and the SDK logs that the player refused the subscription.
    *
-   * @capability video.upscaling
+   * @capability None.
    * @param listener - Receives the new state.
    * @returns Stops listening; also when the scope that added it is
    *   disposed.
-   * @throws `capability` (synchronously) The manifest does not declare
-   *   `video.upscaling`.
    *
    * @example Show how upscaling runs while a window is open
    * The plugin's window shows the factor, the sizes and the GPU while it
@@ -1180,7 +1170,7 @@ export interface MotionState {
 
 /**
  * `plugin.video.motion(engine)`: motion smoothing, the video's frame rate doubled by
- * the GPU's frame-rate converter (AMD AMF's on Windows; `video.motion`).
+ * the GPU's frame-rate converter (AMD AMF's on Windows).
  * Read whether it works here and why not; choose a mode for this plugin.
  *
  * @remarks
@@ -1230,7 +1220,7 @@ export interface MotionState {
  *   });
  * ```
  *
- * @capability video.motion
+ * @capability None.
  * @player 0.8.1
  * @since 1.7.19
  * @category Processing
@@ -1240,11 +1230,10 @@ export interface VideoMotion {
    * Read this plugin's mode, what the player does now and why each mode
    * cannot work.
    *
-   * @capability video.motion
+   * @capability None.
+   * @throws `disabled` (rejects) The plugin is stopping.
    * @returns The state. The first call of any plugin looks for the GPU
    *   (no device is created, so no GPU is woken).
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `video.motion`.
    *
    * @example Find out whether Match Display can work here
    * The plugin reads the state when its panel shows; a reason greys the
@@ -1267,11 +1256,9 @@ export interface VideoMotion {
    * takes the converter out at once unless another plugin asks for it. The
    * mode is a request of the whole plugin, not of a {@link Scope}.
    *
-   * @capability video.motion
+   * @capability None.
    * @param mode - `off`, `double` or `display`.
    * @returns The new state.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `video.motion`.
    * @throws `invalid` (rejects) `mode` is not one of the three.
    * @throws `unsupported` (rejects) A mode that cannot work in this run:
    *   `platform`, `no-gpu`, `runtime`, `filter`, and `rendering` for
@@ -1313,12 +1300,10 @@ export interface VideoMotion {
    * {@link VideoUpscaling.onChange}'s does: listen only while a window or
    * panel shows the state.
    *
-   * @capability video.motion
+   * @capability None.
    * @param listener - Receives the new state.
    * @returns Stops listening; also when the scope that added it is
    *   disposed.
-   * @throws `capability` (synchronously) The manifest does not declare
-   *   `video.motion`.
    *
    * @example Show the rates while a panel is open
    * The plugin listens only while its panel shows, since the listener

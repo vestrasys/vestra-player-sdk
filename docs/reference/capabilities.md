@@ -1,71 +1,60 @@
 ---
 title: Capabilities
-description: Every capability a manifest can declare, with the API members it opens, the capabilities they also need and how the plugin store describes it.
+description: The eight capabilities a manifest can declare, the API members each one opens, how the plugin store describes it, and what replaced the names of SDK 1.7.
 ---
 
 # Capabilities
 
-A plugin lists what it may do in the manifest's `capabilities` ([Manifest](manifest.md)). A call to a member whose capability is missing fails with code `capability`; nothing else is checked at run time, and capabilities limit only the player API, not the file system or the network (a plugin is a Node.js process). The store shows the capabilities to the user before installing, in the words of the "Shown in the store as" column; the highlighted ones reach outside the plugin's own features.
+A capability is a boundary, not a feature. A plugin declares one in the manifest's `capabilities` ([Manifest](manifest.md)) when it touches things that are neither its own nor the playback session's:
+
+| The plugin touches | Declares |
+| --- | --- |
+| Its own things: its commands, windows, panels, settings pages, messages on the video, drops, resolvers, marks (gone when it is disabled) | nothing |
+| The playback session: playback, subtitles, filters, upscaling, motion smoothing, snapshots and exports, media sources, the main window, keeping the computer awake | nothing |
+| The user's player settings, which outlive the plugin: shortcuts, theme, language, rendering and restart | `player` |
+| Other plugins: installing, uninstalling, disabling them, running any command | `plugins` |
+| The user's system: the clipboard, the keychain | `clipboard`, `credentials` |
+
+The list is closed: a later player API takes one of these names or needs none. The four reserved names copy the operating systems' own privacy categories; no member needs them yet, and declaring one grants nothing (`vestra-plugin check` reminds you to remove it).
+
+A call to a member whose capability is missing fails with code `capability`. Capabilities limit only the player API: a plugin is a Node.js process with the user's access to files, the network and other programs, which the player neither asks about nor can stop, and the install dialog says so. The store shows the declared capabilities to the user before installing, in the words of the "Shown in the store as" column, and asks again when an update adds one.
 
 <!-- generated:capabilities -->
 
-| Capability | Opens | Also needs | Shown in the store as | Highlighted |
-| --- | --- | --- | --- | --- |
-| `producer.av` | {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} | `playback.control` | Provide audio and video it generates itself |  |
-| `playback.read` | {@linkcode "@vestra-player/sdk"!Player.state Player.state}, {@linkcode "@vestra-player/sdk"!Player.refresh Player.refresh}, {@linkcode "@vestra-player/sdk"!Player.stats Player.stats}, {@linkcode "@vestra-player/sdk"!Player.chapters Player.chapters}, {@linkcode "@vestra-player/sdk"!Player.audioDevices Player.audioDevices}, {@linkcode "@vestra-player/sdk"!Timeline.marks Timeline.marks}, {@linkcode "@vestra-player/sdk"!Timeline.ranges Timeline.ranges} | — | Read what is playing and the position |  |
-| `playback.control` | {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!Player.setOutput Player.setOutput}, {@linkcode "@vestra-player/sdk"!Player.provideSequence Player.provideSequence}, {@linkcode "@vestra-player/sdk"!Player.next Player.next}, {@linkcode "@vestra-player/sdk"!Player.previous Player.previous}, {@linkcode "@vestra-player/sdk"!Player.addAudioTrack Player.addAudioTrack}, {@linkcode "@vestra-player/sdk"!Player.selectAudioTrack Player.selectAudioTrack}, {@linkcode "@vestra-player/sdk"!Player.step Player.step}, {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek}, {@linkcode "@vestra-player/sdk"!Player.setLoop Player.setLoop}, {@linkcode "@vestra-player/sdk"!Player.setAudioDevice Player.setAudioDevice}, {@linkcode "@vestra-player/sdk"!Power.preventSleep Power.preventSleep}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} | — | Open media, control playback, keep the computer awake |  |
-| `source.resolve` | {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} | — | Resolve online video addresses |  |
-| `events` | {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} | — | Receive playback changes as they happen |  |
-| `commands` | {@linkcode "@vestra-player/sdk"!Commands.add Commands.add}, {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Host.run Host.run}, {@linkcode "@vestra-player/sdk"!WireCommands.register WireCommands.register} | — | Add menu commands and shortcuts |  |
-| `ui.window` | {@linkcode "@vestra-player/sdk"!Windows.create Windows.create} | — | Open tool windows |  |
-| `ui.mount` | {@linkcode "@vestra-player/sdk"!Panels.mount Panels.mount}, {@linkcode "@vestra-player/sdk"!Panels.bottom Panels.bottom}, {@linkcode "@vestra-player/sdk"!Panels.sidebar Panels.sidebar}, {@linkcode "@vestra-player/sdk"!Panels.backdrop Panels.backdrop}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} | — | Show panels in the bottom bar, the sidebar or behind the video |  |
-| `ui.dialog` | {@linkcode "@vestra-player/sdk"!Dialogs.confirm Dialogs.confirm}, {@linkcode "@vestra-player/sdk"!Dialogs.openFile Dialogs.openFile}, {@linkcode "@vestra-player/sdk"!Dialogs.openFiles Dialogs.openFiles}, {@linkcode "@vestra-player/sdk"!Dialogs.openDirectory Dialogs.openDirectory}, {@linkcode "@vestra-player/sdk"!Dialogs.saveFile Dialogs.saveFile} | — | Show file pickers and confirmations |  |
-| `plugins.manage` | {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive}, {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled}, {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload}, {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} | — | Install, uninstall and disable other plugins | yes |
-| `processing.video` | {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render}, {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.shaders} | `playback.read` | Process the picture (filters, shaders) |  |
-| `processing.audio` | {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} | `playback.read`, `events` | Process the sound |  |
-| `subtitles.read` | {@linkcode "@vestra-player/sdk"!Subtitles.state Subtitles.state}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.refresh Subtitles.refresh} | — | Read subtitles |  |
-| `subtitles.control` | {@linkcode "@vestra-player/sdk"!Subtitles.select Subtitles.select}, {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load}, {@linkcode "@vestra-player/sdk"!Subtitles.remove Subtitles.remove}, {@linkcode "@vestra-player/sdk"!Subtitles.setStyle Subtitles.setStyle} | — | Load and change subtitles |  |
-| `media.read` | {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture}, {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} | `media.control` | Take snapshots and export clips |  |
-| `media.control` | {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture}, {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.exportCheck MediaCapture.exportCheck} | `media.read` | Take snapshots and export clips |  |
-| `media.sources` | {@linkcode "@vestra-player/sdk"!MediaSources.remember MediaSources.remember}, {@linkcode "@vestra-player/sdk"!MediaSources.get MediaSources.get}, {@linkcode "@vestra-player/sdk"!MediaSources.locate MediaSources.locate}, {@linkcode "@vestra-player/sdk"!MediaSources.forget MediaSources.forget}, {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} | — | Remember videos you add and export from them later |  |
-| `ui.osd` | {@linkcode "@vestra-player/sdk"!Osd.show Osd.show}, {@linkcode "@vestra-player/sdk"!Osd.panel Osd.panel} | — | Show messages on the video |  |
-| `clipboard` | {@linkcode "@vestra-player/sdk"!Clipboard.readText Clipboard.readText}, {@linkcode "@vestra-player/sdk"!Clipboard.writeText Clipboard.writeText}, {@linkcode "@vestra-player/sdk"!Clipboard.writeImage Clipboard.writeImage} | — | Read and write the clipboard | yes |
-| `window.control` | {@linkcode "@vestra-player/sdk"!MainWindow.setVideoArea MainWindow.setVideoArea}, {@linkcode "@vestra-player/sdk"!MainWindow.setAlwaysOnTop MainWindow.setAlwaysOnTop}, {@linkcode "@vestra-player/sdk"!MainWindow.setCursorAutoHide MainWindow.setCursorAutoHide}, {@linkcode "@vestra-player/sdk"!MainWindow.setPictureInPicture MainWindow.setPictureInPicture} | — | Adjust the main window (size, on top, picture-in-picture) |  |
-| `bindings.manage` | {@linkcode "@vestra-player/sdk"!Bindings.list Bindings.list}, {@linkcode "@vestra-player/sdk"!Bindings.set Bindings.set}, {@linkcode "@vestra-player/sdk"!Bindings.reset Bindings.reset}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange} | — | Change all shortcuts | yes |
-| `timeline.marks` | {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} | — | Show marks on the progress bar |  |
-| `ui.drop` | {@linkcode "@vestra-player/sdk"!Drops.provide Drops.provide}, {@linkcode "@vestra-player/sdk"!Panel.onDrop Panel.onDrop} | — | Receive files dropped on the player |  |
-| `ui.settings` | {@linkcode "@vestra-player/sdk"!Settings.page Settings.page}, {@linkcode "@vestra-player/sdk"!Settings.show Settings.show} | — | Add pages to the Options window |  |
-| `ui.theme` | {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set}, {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage} | — | Change the player's palette |  |
-| `secrets` | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | — | Store sign-in details in the system keychain | yes |
-| `rendering.manage` | {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference}, {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} | — | Choose GPU or software rendering and restart the player | yes |
-| `video.upscaling` | {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | — | Upscale the video with the GPU's video upscaler |  |
-| `video.motion` | {@linkcode "@vestra-player/sdk"!VideoMotion.state VideoMotion.state}, {@linkcode "@vestra-player/sdk"!VideoMotion.set VideoMotion.set}, {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} | — | Smooth motion with the GPU's frame-rate converter |  |
-| `commands.run` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Commands.list Commands.list}, {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} | — | Run any player or plugin command | yes |
-| `palette.lead` (built-in plugins only) | {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} | — | Add the first row of the command palette |  |
+| Capability | State | Opens | Shown in the store as |
+| --- | --- | --- | --- |
+| `player` | active | {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set}, {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage}, {@linkcode "@vestra-player/sdk"!Bindings.list Bindings.list}, {@linkcode "@vestra-player/sdk"!Bindings.set Bindings.set}, {@linkcode "@vestra-player/sdk"!Bindings.reset Bindings.reset}, {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference}, {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} | Change your player settings (shortcuts, theme, language, rendering) and restart the player |
+| `plugins` | active | {@linkcode "@vestra-player/sdk"!Commands.list Commands.list}, {@linkcode "@vestra-player/sdk"!Commands.run Commands.run}, {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate}, {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive}, {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled}, {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload}, {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} | Install, uninstall and disable other plugins, and run any command, including theirs |
+| `clipboard` | active | {@linkcode "@vestra-player/sdk"!Clipboard.readText Clipboard.readText}, {@linkcode "@vestra-player/sdk"!Clipboard.writeText Clipboard.writeText}, {@linkcode "@vestra-player/sdk"!Clipboard.writeImage Clipboard.writeImage} | Read and write the clipboard |
+| `credentials` | active | {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get}, {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set}, {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} | Keep sign-in details in the system keychain |
+| `camera` | reserved | nothing yet | Use the camera |
+| `microphone` | reserved | nothing yet | Use the microphone |
+| `screen` | reserved | nothing yet | Record the screen |
+| `notifications` | reserved | nothing yet | Send system notifications |
 
 <!-- /generated -->
 
-**Also needs** applies to every member of the row: declare those capabilities as well. A few members or options need one more, documented at the member:
+`plugins` is transitive: a plugin that may run any command acts through every other plugin. A member not in the table needs no capability, and neither does any event ([Events](events.md)): `bindings.onChange` says only that the shortcuts changed, while reading them needs `player`. Tests can check a manifest against the table, {@link "@vestra-player/sdk/testing"!CAPABILITY_INFO | CAPABILITY_INFO}.
 
-- {@link "@vestra-player/sdk"!Scope.video | video.filter} also needs `events`.
-- The changes of {@link "@vestra-player/sdk"!Subtitles | Subtitles} (`select`, `load`, `remove`, `setStyle`) also need `subtitles.read`: they read the current selection first.
-- A `processed` snapshot or export ({@link "@vestra-player/sdk"!MediaCapture | MediaCapture}) also needs `playback.read` and `subtitles.read`.
-- A file resolver ({@link "@vestra-player/sdk"!Resolvers.add | Resolvers.add} with file types) also needs `producer.av`.
-- Without `events`, {@link "@vestra-player/sdk"!Player.state | Player.state} is read at start and after the plugin's own operations, and `onChange` listeners do not fire for changes made elsewhere (the test host behaves the same); the plugin's log gets one warning.
+## Names before 1.8.0
 
-## Built-in plugins only
+Until SDK 1.8.0 there were 31 capabilities, one per feature. The player and `vestra-plugin check` refuse a manifest that still lists one, and both name the replacement.
 
-`commands.run` and `palette.lead` (marked in the table) are for the player's built-in plugins. The player decides by where a plugin comes from (shipped with the player), not by its manifest: it refuses to install any other package that declares one, and every call of any other plugin fails with code `capability`, a development load of a built-in plugin's directory included. The plugin registry refuses such a package too, and `vestra-plugin check` reports the capability as an error (as a reminder for a `vestra.` id, which only built-in plugins have). In tests, {@link "@vestra-player/sdk/testing"!startPlugin | startPlugin}'s `builtin: true` runs the plugin as a built-in one.
+| Old name | Write instead |
+| --- | --- |
+| `bindings.manage`, `rendering.manage`, `ui.theme` | `player` |
+| `plugins.manage`, `commands.run` | `plugins` |
+| `secrets` | `credentials` |
+| `clipboard` | `clipboard` (unchanged) |
+| `commands`, `events`, `playback.read`, `playback.control`, `producer.av`, `source.resolve`, `ui.window`, `ui.mount`, `ui.dialog`, `ui.osd`, `ui.drop`, `ui.settings`, `processing.video`, `processing.audio`, `subtitles.read`, `subtitles.control`, `media.read`, `media.control`, `media.sources`, `window.control`, `timeline.marks`, `video.upscaling`, `video.motion`, `palette.lead` | nothing: delete the line |
 
-## Without a capability
-
-A member not in the table needs no capability: `plugin.tools`, `plugin.storage`, `plugin.system`, `plugin.app`, `plugin.ui` (images and Markdown), `plugin.i18n`, reading {@link "@vestra-player/sdk"!MainWindow.state | window.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme}, {@link "@vestra-player/sdk"!Packages.list | packages.list} and {@link "@vestra-player/sdk"!Rendering.state | rendering.state}. Tests can check a manifest against the table, {@link "@vestra-player/sdk/testing"!CAPABILITY_INFO | CAPABILITY_INFO}.
+Every plugin now behaves as one that declared `events` and `playback.read` did: {@link "@vestra-player/sdk"!Player.state | Player.state} follows the player from the plugin's start, and `onChange` listeners hear changes made elsewhere. `commands.run` and `palette.lead` are no longer for built-in plugins only.
 
 ## Catching a missing capability
 
 The player refuses a request whose capability is not declared. The SDK finds such calls earlier, from the player's table of which request needs which capability and the requests each member sends:
 
-- **In the editor**: an error at the member with the quick fix **Add 'playback.control' to manifest.json**, from the TypeScript plugin `@vestra-player/sdk/ts-plugin` listed in `tsconfig.json` (`"plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]`). In VS Code, choose **TypeScript: Select TypeScript Version** → **Use Workspace Version**. The plugin needs the editor's Node.js to be 22.12 or later.
+- **In the editor**: an error at the member with the quick fix **Add 'clipboard' to manifest.json**, from the TypeScript plugin `@vestra-player/sdk/ts-plugin` listed in `tsconfig.json` (`"plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]`). In VS Code, choose **TypeScript: Select TypeScript Version** → **Use Workspace Version**. The plugin needs the editor's Node.js to be 22.12 or later.
 - **`vestra-plugin check`** reports each use as `file:line:column` and fails; `build` and `pack` run it first ([Command line](cli.md)).
 
-Only the plugin's own code is checked, not `tests/`, `node_modules/`, `dist/` or `vendor/`; the manifest is the nearest `manifest.json` above the file. The check follows types, not names, so destructured members and members of returned objects are found. A member whose capability depends on a name (`plugin.player.on("bindings.changed", …)`, `plugin.wire.request("ui.setMount", …)`) is checked when the name is a string literal and reported as unchecked otherwise. Not found: computed names, values typed `any`, plain JavaScript and options that need more than the member. The player's check at run time stays the boundary.
+Only the plugin's own code is checked, not `tests/`, `node_modules/`, `dist/` or `vendor/`; the manifest is the nearest `manifest.json` above the file. The check follows types, not names, so destructured members and members of returned objects are found. `plugin.wire.request("clipboard.readText")`, whose capability depends on the method name, is checked when the name is a string literal and reported as unchecked otherwise. Not found: computed names, values typed `any`, plain JavaScript and options that need more than the member. The player's check at run time stays the boundary.

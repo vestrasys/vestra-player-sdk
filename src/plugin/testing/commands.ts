@@ -121,23 +121,15 @@ export function splitCommandKey(
 }
 
 /**
- * The capabilities of the plugin under test's manifest, set by
- * `startPlugin`; a host without an entry (requests sent by hand) lists
- * every command in `bindings.list`.
- */
-export const pluginCapabilities = new WeakMap<TestHost, readonly string[]>();
-
-/**
- * `bindings.list`, as the player's (binding_manager.rs `list`, player
- * 0.8.0): a `focus: "panel"` command of a plugin whose manifest declares no
- * `ui.mount` can never fire from a key, so it is left out; it stays declared
- * (its stored binding is no orphan, `bindings.set` accepts it).
+ * `bindings.list`, as the player's (binding_manager.rs `list`): a
+ * `focus: "panel"` command of a plugin that has no panel now can never fire
+ * from a key, so it is left out; it stays declared (its stored binding is
+ * no orphan, `bindings.set` accepts it). Decided by the panels the player
+ * holds: until 1.8.0 it was the manifest's `ui.mount`, which is retired.
  */
 export function bindingTable(host: TestHost, inner: Internals) {
   const all = bindingRows(host, inner);
-  const capabilities = pluginCapabilities.get(host);
-  const hidden =
-    capabilities !== undefined && !capabilities.includes("ui.mount");
+  const hidden = host.panels.size === 0;
   const declared = new Set(all.map((c) => `${c.plugin}/${c.command}`));
   const commands = all.filter(
     (c) => !(hidden && c.scope === "panel" && c.plugin === host.manifestId),
@@ -537,16 +529,7 @@ export function commandsHandlers(
   };
 }
 
-/// ---------------------------------------------------------------- built-in only: commands.run, palette.lead
-
-/** The player's refusal of a built-in-only capability to any other plugin. */
-function builtinOnly(host: TestHost) {
-  if (!host.builtin)
-    throw new HostError(
-      "capability",
-      "this capability is for built-in plugins only",
-    );
-}
+/// ---------------------------------------------------------------- commands.list, commands.run, palette.lead
 
 /** One palette row (the player's `command_palette::Item`). */
 type Row = {
@@ -656,14 +639,13 @@ const LEAD_TEXTS: Readonly<Record<string, number>> = {
 /** `palette.lead.set`'s `status.state` (absent or null: `working`). */
 const LEAD_STATES: readonly string[] = ["working", "done", "failed", "note"];
 
-/** The default handlers of `commands.run` and `palette.lead`. */
+/** The default handlers of `commands.list`, `commands.run` and `palette.lead`. */
 export function builtinHandlers(
   host: TestHost,
   inner: Internals,
 ): Record<string, Handler> {
   return {
     "commands.list": () => {
-      builtinOnly(host);
       const commands = rows(host).map((row) => listed(host, inner, row));
       // The revision changes with the table.
       const text = JSON.stringify(commands);
@@ -672,7 +654,6 @@ export function builtinHandlers(
       return { revision: inner.listed.revision, commands };
     },
     "commands.run": async (p) => {
-      builtinOnly(host);
       // The player's order: the ticket given, step and of, the command,
       // then the ticket's count and rates, then the alert.
       if (p.ticket === undefined || p.ticket === null)
@@ -775,7 +756,6 @@ export function builtinHandlers(
       return { ran: true };
     },
     "palette.lead.set": (p) => {
-      builtinOnly(host);
       for (const [name, max] of Object.entries(LEAD_TEXTS)) {
         const [first, second] = name.split(".");
         const value = second
@@ -812,11 +792,9 @@ export function builtinHandlers(
       host.paletteLead = { ...p };
     },
     "palette.lead.clear": () => {
-      builtinOnly(host);
       host.paletteLead = null;
     },
     "palette.lead.done": (p) => {
-      builtinOnly(host);
       inner.tickets.delete(String(p.ticket));
     },
   };

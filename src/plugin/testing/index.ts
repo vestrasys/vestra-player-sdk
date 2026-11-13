@@ -154,7 +154,6 @@ import {
   commandsHandlers,
   builtinHandlers,
   runPaletteLead,
-  pluginCapabilities,
 } from "./commands.ts";
 import {
   registerCoreActions,
@@ -776,7 +775,7 @@ export class TestHost implements Transport {
    * Wire-level; prefer {@link TestHost.sent} for one method.
    */
   readonly calls: Call[] = [];
-  /** The host events the plugin subscribed to (needs `events` etc.). */
+  /** The host events the plugin subscribed to. */
   readonly subscriptions = new Set<string>();
   /**
    * The subscribed events the plugin really listens to: an `onChange` and
@@ -1031,7 +1030,7 @@ export class TestHost implements Transport {
    *
    * @example Simulate the user choosing French for the next start
    * The plugin hears that the saved interface language changed. The host
-   * pushes `appearance.changed`, which a plugin with `events` sees in
+   * pushes `appearance.changed`, which the plugin sees in
    * `appearance.language` once it has read it and subscribed; this run's
    * language does not change.
    * ```ts
@@ -1360,9 +1359,8 @@ export class TestHost implements Transport {
    * @example Let another plugin publish chapters
    * The plugin under test sees two chapter marks another plugin put on the
    * timeline. `setTimelineLayer` stores that plugin's whole layer and pushes
-   * `timeline.changed`; once the plugin uses `plugin.timeline` (with
-   * `events`) the SDK keeps `marks` current from that event, and `settle()`
-   * lets it arrive.
+   * `timeline.changed`; once the plugin uses `plugin.timeline` the SDK
+   * keeps `marks` current from that event, and `settle()` lets it arrive.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
@@ -1497,13 +1495,13 @@ export class TestHost implements Transport {
    *
    * @example Simulate another plugin switching to the light palette
    * The plugin hears the palette change. The host updates `appearance` and
-   * pushes `appearance.changed` to a plugin that listens with `events`.
+   * pushes `appearance.changed` to a plugin that listens.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
    * // ---cut---
    * const themes: string[] = [];
-   * plugin.player.on("appearance.changed", ({ theme }) => themes.push(theme)); // subscribes (`events`)
+   * plugin.player.on("appearance.changed", ({ theme }) => themes.push(theme)); // subscribes
    * host.setAppearance("vestra-light");
    * await host.settle();
    * assert.deepEqual(themes, ["vestra-light"]);
@@ -2231,7 +2229,7 @@ export class TestHost implements Transport {
    * declare const host: TestHost;
    * // ---cut---
    * const heard: string[][] = [];
-   * // A listener of the event (`events`): each list the player sends.
+   * // A listener of the event: each list the player sends.
    * plugin.player.on("resolvers.fileTypes", ({ fileTypes }) => heard.push(fileTypes));
    * // Another plugin starts with a resolver for .ch8 files.
    * host.otherResolvers.push({ owner: "example.emulator", extensions: ["ch8"] });
@@ -2871,13 +2869,17 @@ export class TestHost implements Transport {
   /** Every core action run (`host.run`, a core command, a pressed core binding), newest last. */
   readonly coreRuns: string[] = [];
 
-  // ------------------------------------------------------------ built-in only
+  // ------------------------------------------------------------ commands.run, palette.lead
 
   /**
-   * The plugin is built into the player (`startPlugin`'s `builtin`). Only
-   * then does the host take the built-in-only capabilities
-   * (`commands.run`, `palette.lead`); otherwise their calls fail with
-   * `capability`, as in the player.
+   * The plugin is built into the player (`startPlugin`'s `builtin`): its
+   * commands are listed by `commands.list` as built-in ones, which
+   * `commands.run` runs without asking first unless they are destructive;
+   * another plugin's command is always confirmed. Until 1.8.0 it also
+   * decided whether `commands.list`, `commands.run` and `palette.lead`
+   * worked at all (they were for built-in plugins only); since 1.8.0 any
+   * plugin may call them, `commands.list` and `commands.run` with the
+   * capability `plugins`.
    *
    * @since 1.7.9
    */
@@ -2914,7 +2916,7 @@ export class TestHost implements Transport {
    *
    * @example Test a request that runs a destructive command
    * The user asks the plugin to stop playback and declines the
-   * confirmation. `builtin` lets the plugin hold the lead; the ticket
+   * confirmation. `builtin` makes its own commands built-in ones; the ticket
    * minted here is what its listener passes to `commands.run`, and the
    * queued answer declines the player's alert for `host/stop`. One answer
    * covers a request whose first run names the rest of its plan in `then`.
@@ -3088,7 +3090,7 @@ export class TestHost implements Transport {
    * Deliver a host event to the plugin. Like the player, subscription-based
    * events (`source.state`, `playback.backend`, `window.state`,
    * `timeline.changed`, `appearance.changed`) are delivered only when the
-   * plugin subscribed (it declared `events` and listens). Most tests use the
+   * plugin subscribed (it listens). Most tests use the
    * higher-level helpers (`setSource`, `setMainWindow`, ...) instead.
    *
    * @param event - The wire event name.
@@ -3860,12 +3862,13 @@ export class TestHost implements Transport {
  * unless `capabilities` is given; then `id` (default `"test.plugin"`) and
  * `capabilities` are used and no manifest is read. The test host does not
  * apply the player's capability table to every request: the members that
- * check a capability on the plugin's side (`plugin.media.sources` and its
- * `open`, which also needs `playback.control`, `plugin.secrets`, timeline
- * marks, video shaders and views, among others) fail with `capability` as in
- * the player, but a call the player refuses for an undeclared capability can
- * succeed here. `vestra-plugin check` (and the TypeScript plugin) reports
- * those calls from the sources.
+ * check a capability on the plugin's side (`plugin.secrets` needs
+ * `credentials`, `plugin.rendering`'s changes need `player`,
+ * `plugin.commands.list` and `run` need `plugins`) fail with `capability`
+ * as in the player, but a call the player refuses for an undeclared
+ * capability (`plugin.clipboard`, `plugin.bindings`, `plugin.packages`,
+ * `plugin.appearance.set`) can succeed here. `vestra-plugin check` (and the
+ * TypeScript plugin) reports those calls from the sources.
  *
  * Rejects when `manifest.json` cannot be read or parsed, when `activate`
  * throws, or when a registration made during activation fails (for example
@@ -3949,8 +3952,8 @@ export async function startPlugin(
     capabilities?: string[];
     /**
      * Run the plugin as one built into the player
-     * ({@link TestHost.builtin}): only then do `commands.run` and
-     * `palette.lead` work. Default `false`.
+     * ({@link TestHost.builtin}): `commands.run` then runs its own
+     * commands without asking first. Default `false`.
      *
      * @since 1.7.9
      */
@@ -3995,7 +3998,6 @@ export async function startPlugin(
     manifest = { id: read.id, capabilities: read.capabilities };
   }
   host.manifestId = manifest.id;
-  pluginCapabilities.set(host, manifest.capabilities);
   if (options.builtin) host.builtin = true;
   host.loadCatalog(directory);
   // Its Slint files: the values its views are given are checked against

@@ -11,13 +11,7 @@ description: List and select subtitle tracks, upload a subtitle file the plugin 
 
 ### Capabilities
 
-```json
-{
-  "capabilities": ["subtitles.read", "subtitles.control", "events"]
-}
-```
-
-`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` makes the SDK read `plugin.subtitles.state` again when the source or its phase changes. The player has no subtitle event: a selection the user or another plugin changes shows only after `refresh()`.
+None. The SDK reads `plugin.subtitles.state` again when the source or its phase changes. The player has no subtitle event: a selection the user or another plugin changes shows only after `refresh()`.
 
 ### Read the tracks
 
@@ -86,7 +80,7 @@ if (fonts.length)
 
 ## Complete example
 
-A **Subtitles ▸ English Subtitles** item that selects the first English track of the playing file, or loads `<file>.en.srt` next to it when there is none (`commands`, `subtitles.read`, `subtitles.control`, `playback.read`, `ui.osd`):
+A **Subtitles ▸ English Subtitles** item that selects the first English track of the playing file, or loads `<file>.en.srt` next to it when there is none:
 
 ```ts
 import { readFile } from "node:fs/promises";

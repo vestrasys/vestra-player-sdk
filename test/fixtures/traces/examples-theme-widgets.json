@@ -3,6 +3,10 @@
   "command": "level.up",
   "subscriptions": [
     {
+      "event": "source.state",
+      "mirror": true
+    },
+    {
       "event": "commands.keys",
       "mirror": true
     },
@@ -28,7 +32,7 @@
       "safetyPasses": 0
     },
     "open": {
-      "passes": 0,
+      "passes": 1,
       "fullPasses": 0,
       "evaluations": 0,
       "parts": 0,
@@ -36,7 +40,7 @@
       "safetyPasses": 0
     },
     "changes": {
-      "passes": 0,
+      "passes": 3,
       "fullPasses": 0,
       "evaluations": 0,
       "parts": 0,
@@ -63,7 +67,22 @@
   "calls": {
     "start": [
       {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
         "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
         "params": {}
       },
       {

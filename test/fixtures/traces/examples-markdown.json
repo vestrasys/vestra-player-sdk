@@ -1,7 +1,12 @@
 {
   "scenario": "examples/markdown",
   "command": "show",
-  "subscriptions": [],
+  "subscriptions": [
+    {
+      "event": "source.state",
+      "mirror": true
+    }
+  ],
   "polled": [],
   "counts": {
     "start": {
@@ -48,7 +53,22 @@
   "calls": {
     "start": [
       {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "mirror": true
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
         "method": "window.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
         "params": {}
       },
       {

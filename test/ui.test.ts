@@ -53,7 +53,7 @@ test("menu ids put a command into a built-in menu", async () => {
     (plugin: Plugin) => {
       plugin.commands.add({ id: "blur", path: ["@video", "Blur"], run() {} });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   // The declaration is what the plugin sent; the player stores the title (视频).
   assert.deepEqual(host.command("blur").declaration.path, ["@video", "Blur"]);
@@ -86,7 +86,7 @@ test("a duplicate command or window id throws conflict", async () => {
       plugin.commands.add({ id: "one", title: "One", run() {} });
       plugin.windows.create("ui/panel.slint");
     },
-    { capabilities: ["commands", "ui.window"] },
+    { capabilities: [] },
   );
   assert.throws(
     () => plugin.commands.add({ id: "one", title: "Again", run() {} }),
@@ -207,7 +207,7 @@ test("panels infer component and bridge and sync props", async () => {
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "panel.test", capabilities: ["ui.mount", "events"] }),
+    JSON.stringify({ id: "panel.test", capabilities: [] }),
   );
   let label = "未打开媒体";
   const actions: string[] = [];
@@ -242,7 +242,7 @@ test("panel interaction locks merge", async () => {
   );
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "panel.toggle", capabilities: ["ui.mount"] }),
+    JSON.stringify({ id: "panel.toggle", capabilities: [] }),
   );
   let panelHandle: ReturnType<Plugin["panels"]["mount"]> | undefined;
   const { host, stop } = await startPlugin(

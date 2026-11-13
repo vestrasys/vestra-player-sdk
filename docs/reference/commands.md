@@ -487,7 +487,7 @@ A menu item shows the first of its keyboard bindings that is in effect.
 
 ## Core actions
 
-The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run | plugin.host.run} runs by id (capability `commands`). Their bindings are stored as `host/<action>`; what each one does is on {@link "@vestra-player/sdk"!HostAction | HostAction}.
+The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run | plugin.host.run} runs by id. Their bindings are stored as `host/<action>`; what each one does is on {@link "@vestra-player/sdk"!HostAction | HostAction}.
 
 <!-- generated:core-actions -->
 
@@ -515,7 +515,7 @@ The player also owns **Toggle Fullscreen** (`host/fullscreen`, `Escape`), **Ente
 
 ## Running commands for the user
 
-**Built-in plugins only** (`commands.run` and `palette.lead`, see [Capabilities](capabilities.md#built-in-plugins-only)): any other plugin's manifest is refused at install and by `vestra-plugin check`, and the calls fail with `capability`.
+`plugin.commands.list` and `run` need the capability `plugins`: a plugin that may run any command acts through every other plugin ([Capabilities](capabilities.md)). The lead row needs none; the player gives it to one plugin.
 
 The command palette's first row can belong to a plugin: {@link "@vestra-player/sdk"!Palette.lead | plugin.palette.lead} puts it up, and Enter on it sends the typed text with a ticket ({@link "@vestra-player/sdk"!PaletteLeadRun | PaletteLeadRun}). With that ticket {@link "@vestra-player/sdk"!Commands.run | plugin.commands.run} runs any command the palette lists, as the palette runs it, and {@link "@vestra-player/sdk"!Commands.list | plugin.commands.list} reads the palette's table. Uses beyond an assistant: a calculator or unit converter answering in the first row, a search over the history that opens what it finds, a macro plugin replaying a saved list of commands, a tutorial that shows the key of a command.
 

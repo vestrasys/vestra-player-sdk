@@ -143,8 +143,6 @@ interface EventGroup {
   off?: Promise<() => Promise<void>>;
   /** What the player was last told: `true` for a real listener. */
   told?: boolean;
-  /** It needs `events`, which the manifest does not declare: nothing arrives. */
-  unheard?: boolean;
 }
 
 /**
@@ -174,8 +172,6 @@ export class Connection {
    */
   readonly requests: RequestQueue;
   readonly #events = new Map<string, EventGroup>();
-  /** The missing `events` warning was given (once per plugin). */
-  #warnedEvents = false;
   readonly views = new Map<string, (callback: string, args: Json[]) => void>();
   readonly commands = new Map<string, () => void>();
   /**
@@ -377,17 +373,10 @@ export class Connection {
   }
   /**
    * Host events with one `events.subscribe` per name, however many listeners.
-   * Without the `events` capability the listener simply never fires.
    * `mirror`: the SDK's own copy of the state (`plugin.player.state` and
    * the like), not a listener of the plugin's (see {@link EventGroup}).
    */
-  on(
-    event: string,
-    listener: Listener,
-    /** The capability the event needs; `null`: none. */
-    needs: string | null = "events",
-    mirror = false,
-  ): Disposable {
+  on(event: string, listener: Listener, mirror = false): Disposable {
     let entry = this.#events.get(event);
     const created = !entry;
     if (!entry) {
@@ -407,9 +396,7 @@ export class Connection {
       group.active++;
       group.whys.set(token, listenerWhy(this.callSite()));
     }
-    if (created && needs === "events" && !this.can(needs)) group.unheard = true;
-    if (!mirror && group.unheard) this.#warnUnheard(event);
-    if (created && (needs === null || this.can(needs))) {
+    if (created) {
       group.told = group.active > 0;
       const whys = group.told ? allWhys(group) : undefined;
       group.toldWhy = whys?.join("\n");
@@ -458,12 +445,11 @@ export class Connection {
   /**
    * Count `event` as listened to while held: a watcher of a service's
    * state, a binding that reads it. Nothing when nothing subscribed to it
-   * (no capability, or the service did not start).
+   * (the service did not start).
    */
   hold(event: string, why?: Why): Disposable {
     const group = this.#events.get(event);
     if (!group) return { dispose: async () => {} };
-    if (group.unheard) this.#warnUnheard(event);
     group.active++;
     const token = {};
     group.whys.set(token, why ?? listenerWhy(this.callSite()));
@@ -478,19 +464,6 @@ export class Connection {
         if (this.#events.get(event) === group) this.#tell(event, group);
       },
     };
-  }
-  /**
-   * A development warning, once per plugin, no behaviour change: the plugin
-   * follows `event` (an `onChange`, a `bind` that reads the state) without the
-   * `events` capability, so changes made elsewhere (the user, the player,
-   * another plugin) never reach it; the state moves only after its own calls.
-   */
-  #warnUnheard(event: string) {
-    if (this.#warnedEvents) return;
-    this.#warnedEvents = true;
-    console.warn(
-      `[${this.manifest.id}] follows ${event} (onChange, or a bind() that reads the state) without the "events" capability: changes made elsewhere will not reach it, only its own calls refresh the state. Declare "events" in manifest.json.`,
-    );
   }
   /**
    * Tell the player when `group` changes between mirror and listener, and

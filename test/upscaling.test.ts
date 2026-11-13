@@ -12,7 +12,7 @@ import {
 import type { Plugin } from "../src/plugin/index.ts";
 import type { UpscalingState } from "../src/plugin/types.ts";
 import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
-import { hostMethod } from "../src/capability-rules.ts";
+import { hostMethod, requestNeeds } from "../src/capability-rules.ts";
 
 async function started(capabilities: string[], host = new TestHost()) {
   let plugin!: Plugin;
@@ -35,52 +35,20 @@ const monitoring = (inChain: boolean) => ({
   inChain,
 });
 
-test("video.upscaling: the player's table entry; not risky, live", () => {
-  const last = HOST_CAPABILITIES.capabilities.find(
-    (capability) => capability.name === "video.upscaling",
-  )!;
-  assert.deepEqual(last, {
-    label: "Upscale the video with the GPU's video upscaler",
-    methods: [
-      { name: "video.upscaling.state", needs: "video.upscaling" },
-      { name: "video.upscaling.set", needs: "video.upscaling" },
-    ],
-    name: "video.upscaling",
-    requires: [],
-    residency: "live",
-    risky: false,
-    builtinOnly: false,
-  });
-  assert.deepEqual(hostMethod("video.upscaling.state"), {
-    name: "video.upscaling.state",
-    needs: "video.upscaling",
-  });
-  assert.deepEqual(CAPABILITY_INFO["video.upscaling"], {
-    apis: [
-      "VideoUpscaling.state",
-      "VideoUpscaling.set",
-      "VideoUpscaling.onChange",
-    ],
-    requires: [],
-    label: "Upscale the video with the GPU's video upscaler",
-    risky: false,
-    builtinOnly: false,
-  });
-});
-
-test("state and set need video.upscaling and send nothing without it", async () => {
-  const { plugin, host, stop } = await started([]);
-  await assert.rejects(plugin.video.upscaling.state(), code("capability"));
-  await assert.rejects(plugin.video.upscaling.set(true), code("capability"));
+test("the upscaler needs no capability (the player's table)", () => {
+  for (const name of ["video.upscaling.state", "video.upscaling.set"])
+    assert.deepEqual(hostMethod(name), { name, needs: null });
   assert.ok(
-    !host.calls.some((call) => call.method.startsWith("video.upscaling")),
+    !HOST_CAPABILITIES.capabilities.some((c) => c.name === "video.upscaling"),
   );
-  assert.equal(host.upscaling.checked, false);
-  await stop();
+  for (const info of Object.values(CAPABILITY_INFO))
+    assert.ok(!info.apis.some((api) => api.startsWith("VideoUpscaling.")));
+  // Its event needs nothing either.
+  assert.equal(requestNeeds("events.subscribe"), null);
 });
 
 test("the default model: available, off, nothing checked until asked", async () => {
-  const { plugin, host, stop } = await started(["video.upscaling"]);
+  const { plugin, host, stop } = await started([]);
   assert.equal(host.upscaling.checked, false, "starting checks nothing");
   assert.deepEqual(await plugin.video.upscaling.state(), {
     available: true,
@@ -121,7 +89,7 @@ test("the default model: available, off, nothing checked until asked", async () 
 });
 
 test("set refuses a non-boolean before sending it", async () => {
-  const { plugin, host, stop } = await started(["video.upscaling"]);
+  const { plugin, host, stop } = await started([]);
   await assert.rejects(
     plugin.video.upscaling.set("yes" as unknown as boolean),
     code("invalid"),
@@ -136,7 +104,7 @@ test("set(true) is unsupported where upscaling cannot work; decoding is accepted
     code: "rendering",
     message: "upscaling needs GPU rendering",
   };
-  const { plugin, stop } = await started(["video.upscaling"], host);
+  const { plugin, stop } = await started([], host);
   const state = await plugin.video.upscaling.state();
   assert.equal(state.available, false);
   assert.deepEqual(state.reason, {
@@ -166,7 +134,7 @@ test("set(true) is unsupported where upscaling cannot work; decoding is accepted
 
 test("a refusal injected with handle reaches the plugin", async () => {
   const host = new TestHost();
-  const { plugin, stop } = await started(["video.upscaling"], host);
+  const { plugin, stop } = await started([], host);
   host.handle("video.upscaling.set", () => {
     throw new HostError("backend", "playback worker stopped");
   });
@@ -175,7 +143,7 @@ test("a refusal injected with handle reaches the plugin", async () => {
 });
 
 test("set(false) checks nothing; before any check it reports unchecked", async () => {
-  const { plugin, host, stop } = await started(["video.upscaling"]);
+  const { plugin, host, stop } = await started([]);
   const state = await plugin.video.upscaling.set(false);
   assert.equal(host.upscaling.checked, false, "no GPU check");
   assert.equal(state.available, false);
@@ -194,7 +162,7 @@ test("set(true) keeps the request while GPU rendering is still starting", async 
     message: "upscaling needs GPU rendering, which is starting",
   };
   host.upscaling.renderingStarting = true;
-  const { plugin, stop } = await started(["video.upscaling"], host);
+  const { plugin, stop } = await started([], host);
   const kept = await plugin.video.upscaling.set(true);
   assert.equal(kept.enabled, true);
   assert.equal(kept.requested, false);
@@ -209,7 +177,7 @@ test("set(true) keeps the request while GPU rendering is still starting", async 
 
 test("a decoding reason says its cause; copy-back names the plugins", async () => {
   const host = new TestHost();
-  const { plugin, stop } = await started(["video.upscaling"], host);
+  const { plugin, stop } = await started([], host);
   const video = { id: "vestra.video", name: "Picture Adjustments" };
   for (const [cause, current] of [
     ["copy-back", "d3d11va-copy"],
@@ -242,23 +210,19 @@ test("a decoding reason says its cause; copy-back names the plugins", async () =
   await stop();
 });
 
-test("onChange needs video.upscaling and delivers the state with this plugin's enabled", async () => {
-  const none = await started([]);
-  assert.throws(
-    () => none.plugin.video.upscaling.onChange(() => {}),
-    code("capability"),
-  );
-  await none.stop();
-
+test("onChange delivers the state with this plugin's enabled", async () => {
   const host = new TestHost();
-  const { plugin, stop } = await started(["video.upscaling"], host);
+  const { plugin, stop } = await started([], host);
   const seen: UpscalingState[] = [];
   const watch = plugin.video.upscaling.onChange((state) => seen.push(state));
   await host.settle();
   assert.ok(host.listening.has("video.upscaling.changed"));
-  assert.deepEqual(
-    host.calls.find((c) => c.method === "events.subscribe")?.params.event,
-    "video.upscaling.changed",
+  assert.ok(
+    host.calls.some(
+      (c) =>
+        c.method === "events.subscribe" &&
+        c.params.event === "video.upscaling.changed",
+    ),
   );
   await plugin.video.upscaling.set(true);
   host.upscaling.area = { width: 2560, height: 1440 };
@@ -298,12 +262,4 @@ test("onChange needs video.upscaling and delivers the state with this plugin's e
   await host.settle();
   assert.equal(seen.length, 2, "nothing after dispose");
   await stop();
-});
-
-test("video.upscaling.changed needs video.upscaling (the player's table)", () => {
-  // The event needs video.upscaling, not events.
-  const needs = hostMethod("events.subscribe")?.needs as {
-    cases: Record<string, string | null>;
-  };
-  assert.equal(needs.cases["video.upscaling.changed"], "video.upscaling");
 });

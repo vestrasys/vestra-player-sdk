@@ -6,7 +6,7 @@ A plugin that generates its own video and audio: **Open ▸ Signal generator** p
 
 | Capabilities | API |
 | --- | --- |
-| `commands`, `producer.av`, `playback.control`, `playback.read` | `player.openStream` with a `frame()` callback, `Stream.stop` and `onStop`, a checkable command in the `@open` menu; tests with `startPlugin` |
+| none                                                           | `player.openStream` with a `frame()` callback, `Stream.stop` and `onStop`, a checkable command in the `@open` menu; tests with `startPlugin` |
 
 ## Files
 

@@ -1,6 +1,6 @@
 ---
 title: Messages
-description: Every request method of the player's protocol, by capability, with its parameters and result, the errors documented for it and the SDK member that sends it.
+description: Every request method of the player's protocol, with the capability it needs, its parameters and result, the errors documented for it and the SDK member that sends it.
 ---
 
 # Messages
@@ -9,238 +9,231 @@ Every request reaches the player as one JSON line `{"id": n, "method": name, "pa
 
 **The wire protocol is not semver**: a method can change with a player version, and this table with it. Prefer the member named in the Stability column.
 
-- **Capability**: from the player's own table. "By `event`" or "by `stage`": it depends on that parameter. `vestra-plugin check` reads a literal method name in `plugin.wire.request`.
+- **Capability**: from the player's own table: none for most methods, or one of `player`, `plugins`, `clipboard`, `credentials` ([Capabilities](capabilities.md)). `vestra-plugin check` reads a literal method name in `plugin.wire.request`.
 - **Params** and **Result**: what the SDK's client sends and expects (`?`: optional; "—": none or not read), in the SDK's internal wire types; units and meanings are at the member that sends the method.
 - **Errors (documented)**: the codes in the sending members' `@throws` ([Error codes](errors.md)). Any request can also fail with `capability` or `invalid`.
 - **Stability**: "SDK member" names the public members that send it (semver); "`plugin.wire` only" means only a direct request reaches it.
 
-A method ending in `.*` stands for the other methods with that prefix. The residency line under each capability says what its calls mean for standby ([Keep a command's state without keeping the plugin running](../guides/command-state.md)).
+A method ending in `.*` stands for the other methods with that prefix. The residency line under each heading says what those calls mean for standby ([Keep a command's state without keeping the plugin running](../guides/command-state.md)).
 
 <!-- generated:messages -->
 
-### `producer.av`
+### Provide audio and video it generates itself
 
-Provide audio and video it generates itself. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `producer.prepare` | `producer.av` | `{ width, height }` | `PreparedProducer` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
-| `producer.state` | `producer.av` | `{ producerId }` | `ProducerState` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
-| `producer.release` | `producer.av` | `{ producerId }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Stream.stop Stream.stop} |
-| `producer.ack` | `producer.av` | `{ control }` | `{ status, control }` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
-| `producer.declareInput` | `producer.av` | `{ producerId, keys }` | `ProducerInputState` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
-| `producer.ackInput` | `producer.av` | `{ notice }` | `{ status: "acknowledged"; sequence: number }` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
-
-### `playback.read`
-
-Read what is playing and the position. Residency `none`: no effect on standby.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `source.state` | `playback.read` | — | `SourceState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.state Player.state}, {@linkcode "@vestra-player/sdk"!Player.refresh Player.refresh} |
-| `processing.state` | `playback.read` | — | `ProcessingState` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} |
-| `playback.stats` | `playback.read` | — | `PlaybackStats` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.stats Player.stats} |
-| `player.chapters` | `playback.read` | — | `{ sourceId, chapters }` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.chapters Player.chapters} |
-| `player.audioDevices` | `playback.read` | — | `{ id: string; name: string }[]` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.audioDevices Player.audioDevices} |
-| `timeline.marks` | `playback.read` | — | `WireTimeline` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.marks Timeline.marks}, {@linkcode "@vestra-player/sdk"!Timeline.ranges Timeline.ranges} |
+| `producer.prepare` | none | `{ width, height }` | `PreparedProducer` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
+| `producer.state` | none | `{ producerId }` | `ProducerState` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
+| `producer.release` | none | `{ producerId }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Stream.stop Stream.stop} |
+| `producer.ack` | none | `{ control }` | `{ status, control }` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
+| `producer.declareInput` | none | `{ producerId, keys }` | `ProducerInputState` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
+| `producer.ackInput` | none | `{ notice }` | `{ status: "acknowledged"; sequence: number }` | `timeout`, `stream`, `device`, `replaced`, `invalid`, `aborted` | SDK member: {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream} |
 
-### `playback.control`
+### Read what is playing and the position
 
-Open media, control playback, keep the computer awake. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `playback.set` | `playback.control` | `{ property, value }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setOutput Player.setOutput} |
-| `source.submit` | `playback.control` | `{ operationId, intent }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub} |
-| `source.operation` | `playback.control` when the manifest declares `playback.control`, otherwise `playback.read` | `{ operationId }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
-| `audio.addTrack` | `playback.control` | `{ expected?, path, select }` | `SourceAudioTrack` | `invalid`, `unavailable`, `backend`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.addAudioTrack Player.addAudioTrack} |
-| `audio.selectTrack` | `playback.control` | `{ expected?, id }` | `void` | `invalid`, `unavailable`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.selectAudioTrack Player.selectAudioTrack} |
-| `player.setLoop` | `playback.control` | `{ expected?, loop }` | `void` | `invalid`, `unsupported`, `unavailable`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setLoop Player.setLoop} |
-| `player.setAudioDevice` | `playback.control` | `{ id }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setAudioDevice Player.setAudioDevice} |
-| `player.step` | `playback.control` | `{ expected?, unit, direction }` | `void` | `unsupported`, `busy`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.step Player.step} |
-| `player.setStepSeek` | `playback.control` | `{ seconds, keyframes? }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek} |
-| `power.preventSleep` | `playback.control` | `{ mode }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Power.preventSleep Power.preventSleep} |
-| `sequence.set` | `playback.control` | `{ flags }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Player.provideSequence Player.provideSequence} |
-| `sequence.step` | `playback.control` | `{ direction }` | `void` | `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.next Player.next}, {@linkcode "@vestra-player/sdk"!Player.previous Player.previous} |
-
-### `source.resolve`
-
-Resolve online video addresses. Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `sourceResolvers.register` | `source.resolve` | `{ id, schemes?, hosts?, extensions? }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} |
-| `sourceResolvers.unregister` | `source.resolve` | `{ id }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} |
-| `sourceResolvers.respond` | `source.resolve` | `{ requestId, error }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} |
-| `sourceResolvers.*` (any other) | `source.resolve` | — | — | — | `plugin.wire` only |
+| `source.state` | none | — | `SourceState` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.state Player.state}, {@linkcode "@vestra-player/sdk"!Player.refresh Player.refresh} |
+| `processing.state` | none | — | `ProcessingState` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} |
+| `playback.stats` | none | — | `PlaybackStats` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.stats Player.stats} |
+| `player.chapters` | none | — | `{ sourceId, chapters }` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.chapters Player.chapters} |
+| `player.audioDevices` | none | — | `{ id: string; name: string }[]` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.audioDevices Player.audioDevices} |
+| `timeline.marks` | none | — | `WireTimeline` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.marks Timeline.marks}, {@linkcode "@vestra-player/sdk"!Timeline.ranges Timeline.ranges} |
 
-### `events`
+### Open media, control playback, keep the computer awake
 
-Receive playback changes as they happen. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `events.subscribe` | by `event`: `bindings.changed` → `bindings.manage`, `commands.keys` → `commands`, `packages.changed` → none, `video.upscaling.changed` → `video.upscaling`, `video.motion.changed` → `video.motion`; any other: `events` | `{ event, mirror?, why? }` | — | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange}, {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Packages.onChange Packages.onChange}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange}, {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} |
-| `events.unsubscribe` | by `event`: `bindings.changed` → `bindings.manage`, `commands.keys` → `commands`, `packages.changed` → none, `video.upscaling.changed` → `video.upscaling`, `video.motion.changed` → `video.motion`; any other: `events` | `{ event }` | — | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.on Player.on}, {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange} |
-
-### `commands`
-
-Add menu commands and shortcuts. Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `commands.register` | `commands` | `{ when?, id, revision, declaration, state }` | `{ revision: number }` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.add Commands.add} |
-| `commands.update` | `commands` | `{ when?, id, revision, state }` | `{ revision: number }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.set Command.set} |
-| `commands.unregister` | `commands` | `{ id }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.dispose Command.dispose} |
-| `host.run` | `commands` | `{ action, seconds? }` | `void` | `unavailable`, `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Host.run Host.run} |
-| `commands.keys` | `commands` | `{}` | `CommandKeys` | — | SDK member: {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys} |
+| `playback.set` | none | `{ property, value }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setOutput Player.setOutput} |
+| `source.submit` | none | `{ operationId, intent }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub} |
+| `source.operation` | none | `{ operationId }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
+| `audio.addTrack` | none | `{ expected?, path, select }` | `SourceAudioTrack` | `invalid`, `unavailable`, `backend`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.addAudioTrack Player.addAudioTrack} |
+| `audio.selectTrack` | none | `{ expected?, id }` | `void` | `invalid`, `unavailable`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.selectAudioTrack Player.selectAudioTrack} |
+| `player.setLoop` | none | `{ expected?, loop }` | `void` | `invalid`, `unsupported`, `unavailable`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setLoop Player.setLoop} |
+| `player.setAudioDevice` | none | `{ id }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setAudioDevice Player.setAudioDevice} |
+| `player.step` | none | `{ expected?, unit, direction }` | `void` | `unsupported`, `busy`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.step Player.step} |
+| `player.setStepSeek` | none | `{ seconds, keyframes? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek} |
+| `power.preventSleep` | none | `{ mode }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Power.preventSleep Power.preventSleep} |
+| `sequence.set` | none | `{ flags }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Player.provideSequence Player.provideSequence} |
+| `sequence.step` | none | `{ direction }` | `void` | `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Player.next Player.next}, {@linkcode "@vestra-player/sdk"!Player.previous Player.previous} |
 
-### `ui.window`
+### Resolve online video addresses
 
-Open tool windows. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `ui.open` | `ui.window` | `{ id, file, properties, callbacks }` | `void` | `conflict` | SDK member: {@linkcode "@vestra-player/sdk"!Windows.create Windows.create} |
-| `ui.set` | `ui.window` | `{ value?, seq?, more?, id, property, patch? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Window.set Window.set}, {@linkcode "@vestra-player/sdk"!Window.bind Window.bind} |
-| `ui.show` | `ui.window` | `{ id, visible }` | `void` | `capability`, `unavailable`, `host`, `missing`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Window.show Window.show}, {@linkcode "@vestra-player/sdk"!Window.hide Window.hide} |
-| `ui.close` | `ui.window` | `{ id }` | `void` | `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Window.close Window.close} |
-
-### `ui.mount`
-
-Show panels in the bottom bar, the sidebar or behind the video. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `ui.mount` | `ui.mount` | `{ slot, file, component, global, title?, properties? }` | `{ status, prepareMs, shellGeneration }` | `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Panels.mount Panels.mount} |
-| `ui.setMount` | `ui.mount` | `{ slot?, value?, seq?, more?, property, patch? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Panel.set Panel.set}, {@linkcode "@vestra-player/sdk"!Panel.bind Panel.bind} |
-| `ui.unmount` | `ui.mount` | `{ slot: MountSlot; } \| undefined` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panel.dispose Panel.dispose} |
-| `ui.interaction` | `ui.mount` | `{ slot?, focused, dragging, popupOpen }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panel.setInteraction Panel.setInteraction} |
-| `ui.menu` | `ui.mount` | `{ slot?, items, x, y }` | `void` | `missing`, `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Panel.showMenu Panel.showMenu} |
-| `layout.state` | `ui.mount` | — | `{ bottom, sidebar, adjust?, backdrop? }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panels.bottom Panels.bottom}, {@linkcode "@vestra-player/sdk"!Panels.sidebar Panels.sidebar}, {@linkcode "@vestra-player/sdk"!Panels.backdrop Panels.backdrop}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} |
-| `layout.set` | `ui.mount` | `{ slot, visible?, detached?, active?, reveal? }` | `void` | `missing`, `unavailable`, `capability`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!PanelSlot.setVisible PanelSlot.setVisible}, {@linkcode "@vestra-player/sdk"!PanelSlot.toggle PanelSlot.toggle}, {@linkcode "@vestra-player/sdk"!Panel.show Panel.show}, {@linkcode "@vestra-player/sdk"!Panel.toggle Panel.toggle} |
+| `sourceResolvers.register` | none | `{ id, schemes?, hosts?, extensions? }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} |
+| `sourceResolvers.unregister` | none | `{ id }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} |
+| `sourceResolvers.respond` | none | `{ requestId, error }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Resolvers.add Resolvers.add} |
+| `sourceResolvers.*` (any other) | none | — | — | — | `plugin.wire` only |
 
-### `ui.dialog`
+### Receive playback changes as they happen
 
-Show file pickers and confirmations. Residency `none`: no effect on standby.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `dialogs.open` | `ui.dialog` | `{ kind, title?, fileName? }` | `{ cancelled: boolean; paths: string[] }` | `busy`, `unavailable`, `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Dialogs.openFile Dialogs.openFile}, {@linkcode "@vestra-player/sdk"!Dialogs.openFiles Dialogs.openFiles}, {@linkcode "@vestra-player/sdk"!Dialogs.openDirectory Dialogs.openDirectory}, {@linkcode "@vestra-player/sdk"!Dialogs.saveFile Dialogs.saveFile} |
-| `dialogs.confirm` | `ui.dialog` | `{ [key: string]: Json; }` | `{ confirmed: boolean; checked: boolean }` | `invalid`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Dialogs.confirm Dialogs.confirm} |
+| `events.subscribe` | none | `{ event, mirror?, why? }` | — | — | SDK member: {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!MainWindow.onChange MainWindow.onChange}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange}, {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys}, {@linkcode "@vestra-player/sdk"!Packages.onChange Packages.onChange}, {@linkcode "@vestra-player/sdk"!Bindings.onChange Bindings.onChange}, {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange}, {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} |
+| `events.unsubscribe` | none | `{ event }` | — | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.on Player.on}, {@linkcode "@vestra-player/sdk"!Player.onChange Player.onChange} |
 
-### `plugins.manage`
+### Add menu commands and shortcuts
 
-Install, uninstall and disable other plugins. Residency `none`: no effect on standby.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `packages.cancel` | `plugins.manage` | `{ operationId }` | `PackageOperation` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageChange.cancel PackageChange.cancel} |
-| `packages.install` | `plugins.manage` | `{ enabled?, replace?, source?, token, expectedRevision, requestId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
-| `packages.installed` | `plugins.manage` | `{ id }` | `InstalledPackage` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
-| `packages.operation` | `plugins.manage` | `{ operationId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
-| `packages.reload` | `plugins.manage` | `{ id }` | `void` | `invalid`, `missing`, `busy`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload} |
-| `packages.setEnabled` | `plugins.manage` | `{ id, enabled }` | `void` | `invalid`, `missing`, `busy`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled} |
-| `packages.uninstall` | `plugins.manage` | `{ id, removeData, expectedRevision, requestId }` | `PackageOperation` | `unsupported`, `missing`, `invalid`, `busy`, `revisionConflict`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} |
-| `packages.validate` | `plugins.manage` | `{ directory, apiVersion }` | `PackageValidation` | `host`, `invalid`, `javascript`, `slint`, `reserved`, `versionMismatch`, `disabled`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate} |
-| `packages.validateArchive` | `plugins.manage` | `{ file }` | `PackageValidation` | `invalid`, `host`, `javascript`, `slint`, `reserved`, `versionMismatch`, `disabled`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive} |
-| `packages.*` (any other) | `plugins.manage` | — | — | — | `plugin.wire` only |
-
-### `processing.video`
-
-Process the picture (filters, shaders). Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `processing.replace` | by `stage`: `video` → `processing.video`; any other: `processing.audio` | `ProcessingChange` | `ProcessingApplied` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} |
-| `processing.operation` | by `stage`: `video` → `processing.video`; any other: `processing.audio` | `{ stage, resourceId, revision }` | `ProcessingOperation` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} |
-| `video.view.set` | `processing.video` | `{ values }` | `{ state: "applied" \| "waiting" }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view} |
-| `video.view.release` | `processing.video` | — | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view} |
-| `video.render.set` | `processing.video` | `{ values }` | `{ state: "applied" \| "waiting" }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render} |
-| `video.render.release` | `processing.video` | — | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render} |
-| `video.shaders.set` | `processing.video` | `{ id, paths }` | `{ state: "applied" \| "waiting" }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.shaders} |
+| `commands.register` | none | `{ when?, id, revision, declaration, state }` | `{ revision: number }` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.add Commands.add} |
+| `commands.update` | none | `{ when?, id, revision, state }` | `{ revision: number }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.set Command.set} |
+| `commands.unregister` | none | `{ id }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.dispose Command.dispose} |
+| `host.run` | none | `{ action, seconds? }` | `void` | `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Host.run Host.run} |
+| `commands.keys` | none | `{}` | `CommandKeys` | — | SDK member: {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys} |
 
-### `processing.audio`
+### Open tool windows
 
-Process the sound. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
+| `ui.open` | none | `{ id, file, properties, callbacks }` | `void` | `conflict` | SDK member: {@linkcode "@vestra-player/sdk"!Windows.create Windows.create} |
+| `ui.set` | none | `{ value?, seq?, more?, id, property, patch? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Window.set Window.set}, {@linkcode "@vestra-player/sdk"!Window.bind Window.bind} |
+| `ui.show` | none | `{ id, visible }` | `void` | `unavailable`, `host`, `missing`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Window.show Window.show}, {@linkcode "@vestra-player/sdk"!Window.hide Window.hide} |
+| `ui.close` | none | `{ id }` | `void` | `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Window.close Window.close} |
 
-### `subtitles.read`
+### Show panels in the bottom bar, the sidebar or behind the video
 
-Read subtitles. Residency `none`: no effect on standby.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `subtitles.state` | `subtitles.read` | — | `SubtitleState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.state Subtitles.state}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.refresh Subtitles.refresh} |
-
-### `subtitles.control`
-
-Load and change subtitles. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `subtitles.commit` | `subtitles.control` | `{ operationId, uploadId, sha256, resourceId, revision, expected, inputOrigin?, format?, title?, select? }` | `SubtitleState` | `invalid`, `stale`, `unavailable`, `aborted`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
-| `subtitles.operation` | `subtitles.control` | `{ operationId }` | `{ status, result?, error? }` | `stale`, `invalid`, `missing`, `unavailable`, `busy`, `capability`, `aborted`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.select Subtitles.select}, {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load}, {@linkcode "@vestra-player/sdk"!Subtitles.remove Subtitles.remove}, {@linkcode "@vestra-player/sdk"!Subtitles.setStyle Subtitles.setStyle} |
-| `subtitles.remove` | `subtitles.control` | `{ resourceId, expected, operationId }` | `SubtitleState` | `invalid`, `stale`, `unavailable`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.remove Subtitles.remove} |
-| `subtitles.select` | `subtitles.control` | `{ role?, target, expected, operationId }` | `SubtitleState` | `stale`, `invalid`, `missing`, `unavailable`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.select Subtitles.select} |
-| `subtitles.style` | `subtitles.control` | `{ operationId, revision, expected, style }` | `SubtitleState` | `invalid`, `unsupported`, `stale`, `unavailable`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.setStyle Subtitles.setStyle} |
-| `subtitles.upload.append` | `subtitles.control` | `{ uploadId, offset, base64 }` | `SubtitleUpload` | `invalid`, `stale`, `unavailable`, `aborted`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
-| `subtitles.upload.begin` | `subtitles.control` | `{ uploadId, generation, expectedBytes }` | `SubtitleUpload` | `invalid`, `stale`, `unavailable`, `aborted`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
-| `subtitles.upload.discard` | `subtitles.control` | `{ uploadId }` | `void` | `invalid`, `stale`, `unavailable`, `aborted`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
-| `subtitles.*` (any other) | `subtitles.control` | — | — | — | `plugin.wire` only |
+| `ui.mount` | none | `{ slot, file, component, global, title?, properties? }` | `{ status, prepareMs, shellGeneration }` | `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Panels.mount Panels.mount} |
+| `ui.setMount` | none | `{ slot?, value?, seq?, more?, property, patch? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Panel.set Panel.set}, {@linkcode "@vestra-player/sdk"!Panel.bind Panel.bind} |
+| `ui.unmount` | none | `{ slot: MountSlot; } \| undefined` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panel.dispose Panel.dispose} |
+| `ui.interaction` | none | `{ slot?, focused, dragging, popupOpen }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panel.setInteraction Panel.setInteraction} |
+| `ui.menu` | none | `{ slot?, items, x, y }` | `void` | `missing`, `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Panel.showMenu Panel.showMenu} |
+| `layout.state` | none | — | `{ bottom, sidebar, adjust?, backdrop? }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panels.bottom Panels.bottom}, {@linkcode "@vestra-player/sdk"!Panels.sidebar Panels.sidebar}, {@linkcode "@vestra-player/sdk"!Panels.backdrop Panels.backdrop}, {@linkcode "@vestra-player/sdk"!PanelSlot.onChange PanelSlot.onChange}, {@linkcode "@vestra-player/sdk"!Panel.onChange Panel.onChange}, {@linkcode "@vestra-player/sdk"!BackdropSlot.onChange BackdropSlot.onChange} |
+| `layout.set` | none | `{ slot, visible?, detached?, active?, reveal? }` | `void` | `missing`, `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!PanelSlot.setVisible PanelSlot.setVisible}, {@linkcode "@vestra-player/sdk"!PanelSlot.toggle PanelSlot.toggle}, {@linkcode "@vestra-player/sdk"!Panel.show Panel.show}, {@linkcode "@vestra-player/sdk"!Panel.toggle Panel.toggle} |
 
-### `media.read`
+### Show file pickers and confirmations
 
-Take snapshots and export clips. Residency `none`: no effect on standby.
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `snapshot.state` | `media.read` | `{ snapshotId }` | `Snapshot` | `stale`, `noSource`, `invalid`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture} |
-| `jobs.state` | `media.read` | `{ jobId }` | `MediaJob` | `released`, `invalid`, `busy`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
-| `jobs.operation` | `media.read` | `{ operationId }` | `MediaOperation` | `released`, `invalid`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} |
+| `dialogs.open` | none | `{ kind, title?, fileName? }` | `{ cancelled: boolean; paths: string[] }` | `busy`, `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Dialogs.openFile Dialogs.openFile}, {@linkcode "@vestra-player/sdk"!Dialogs.openFiles Dialogs.openFiles}, {@linkcode "@vestra-player/sdk"!Dialogs.openDirectory Dialogs.openDirectory}, {@linkcode "@vestra-player/sdk"!Dialogs.saveFile Dialogs.saveFile} |
+| `dialogs.confirm` | none | `{ [key: string]: Json; }` | `{ confirmed: boolean; checked: boolean }` | `invalid`, `busy`, `unavailable`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Dialogs.confirm Dialogs.confirm} |
 
-### `media.control`
+### Install, uninstall and disable other plugins
 
-Take snapshots and export clips. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `snapshot.capture` | `media.control` | `RawCapture \| ProcessedCapture` | `Snapshot` | `stale`, `noSource`, `invalid`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture} |
-| `snapshot.release` | `media.control` | `{ snapshotId, operationId }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.dispose Snapshot.dispose} |
-| `snapshot.*` (any other) | `media.control` | — | — | — | `plugin.wire` only |
-| `jobs.cancel` | `media.control` | `{ jobId, operationId }` | `{ jobId, cancel }` | `rejected`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!ExportJob.cancel ExportJob.cancel} |
-| `jobs.check` | `media.control` | `{ parts, encoding? }` | `WireExportCheck` | `invalid`, `released`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.exportCheck MediaCapture.exportCheck} |
-| `jobs.start` | `media.control` | `{ operationId: number; snapshotId: number; destination: string; } & ({ kind: "rawPng" \| "processedPng" \| "rawBmp" \| "processedBmp"; sampleTime?: number \| undefined; } \| { kind: "rawJpeg" \| "processedJpeg"; sampleTime?: number \| undefined; quality?: number \| undefined; } \| { ...; } \| { ...; })` | `{ jobId, status, snapshotId }` | `released`, `invalid`, `busy`, `unavailable`, `capability`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
-| `jobs.*` (any other) | `media.control` | — | — | — | `plugin.wire` only |
-
-### `media.sources`
-
-Remember videos you add and export from them later. Residency `none`: no effect on standby.
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `media.sources.open` | `media.sources` when the manifest declares `playback.control`, otherwise `playback.control` | `{ token, operationId, start? }` | `SourceOperation` | `missing`, `invalid`, `replaced`, `backend`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
-| `media.sources.forget` | `media.sources` | `{ token }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.forget MediaSources.forget} |
-| `media.sources.get` | `media.sources` | `{ token }` | `WireSourceReference` | `missing`, `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.get MediaSources.get} |
-| `media.sources.list` | `media.sources` | `{}` | `WireSourceReference[]` | `busy`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list} |
-| `media.sources.locate` | `media.sources` | `{ token }` | `WireSourceReference \| null` | `missing`, `busy`, `unavailable`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.locate MediaSources.locate} |
-| `media.sources.remember` | `media.sources` | `{ expected? }` | `WireSourceReference` | `unsupported`, `stale`, `limit`, `busy`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.remember MediaSources.remember} |
-| `media.sources.*` (any other) | `media.sources` | — | — | — | `plugin.wire` only |
+| `packages.cancel` | `plugins` | `{ operationId }` | `PackageOperation` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageChange.cancel PackageChange.cancel} |
+| `packages.install` | `plugins` | `{ enabled?, replace?, source?, token, expectedRevision, requestId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
+| `packages.installed` | `plugins` | `{ id }` | `InstalledPackage` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
+| `packages.operation` | `plugins` | `{ operationId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
+| `packages.reload` | `plugins` | `{ id }` | `void` | `invalid`, `missing`, `busy`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload} |
+| `packages.setEnabled` | `plugins` | `{ id, enabled }` | `void` | `invalid`, `missing`, `busy`, `unsupported`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled} |
+| `packages.uninstall` | `plugins` | `{ id, removeData, expectedRevision, requestId }` | `PackageOperation` | `unsupported`, `missing`, `invalid`, `busy`, `revisionConflict`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} |
+| `packages.validate` | `plugins` | `{ directory, apiVersion }` | `PackageValidation` | `host`, `invalid`, `javascript`, `slint`, `reserved`, `versionMismatch`, `disabled`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate} |
+| `packages.validateArchive` | `plugins` | `{ file }` | `PackageValidation` | `invalid`, `host`, `javascript`, `slint`, `reserved`, `versionMismatch`, `disabled`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive} |
+| `packages.*` (any other) | `plugins` | — | — | — | `plugin.wire` only |
 
-### `ui.osd`
+### Process the picture and the sound (filters, shaders)
 
-Show messages on the video. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `osd.show` | `ui.osd` | `{ actions?, args?, text }` | `void` | `invalid`, `unavailable`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.show Osd.show} |
-| `osd.panel` | `ui.osd` | `{ maxColumns?, args?, text }` | `void` | `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.panel Osd.panel} |
+| `processing.replace` | none | `ProcessingChange` | `ProcessingApplied` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} |
+| `processing.operation` | none | `{ stage, resourceId, revision }` | `ProcessingOperation` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.filter}, {@linkcode "@vestra-player/sdk"!Scope.audio Plugin.audio.filter} |
+| `video.view.set` | none | `{ values }` | `{ state: "applied" \| "waiting" }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view} |
+| `video.view.release` | none | — | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.view} |
+| `video.render.set` | none | `{ values }` | `{ state: "applied" \| "waiting" }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render} |
+| `video.render.release` | none | — | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.render} |
+| `video.shaders.set` | none | `{ id, paths }` | `{ state: "applied" \| "waiting" }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Scope.video Plugin.video.shaders} |
 
-### `clipboard`
+### Read subtitles
 
-Read and write the clipboard. Residency `none`: no effect on standby.
+Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `subtitles.state` | none | — | `SubtitleState` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.state Subtitles.state}, {@linkcode "@vestra-player/sdk"!Subtitles.onChange Subtitles.onChange}, {@linkcode "@vestra-player/sdk"!Subtitles.refresh Subtitles.refresh} |
+
+### Load and change subtitles
+
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `subtitles.commit` | none | `{ operationId, uploadId, sha256, resourceId, revision, expected, inputOrigin?, format?, title?, select? }` | `SubtitleState` | `invalid`, `stale`, `unavailable`, `aborted`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
+| `subtitles.operation` | none | `{ operationId }` | `{ status, result?, error? }` | `stale`, `invalid`, `missing`, `unavailable`, `busy`, `aborted`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.select Subtitles.select}, {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load}, {@linkcode "@vestra-player/sdk"!Subtitles.remove Subtitles.remove}, {@linkcode "@vestra-player/sdk"!Subtitles.setStyle Subtitles.setStyle} |
+| `subtitles.remove` | none | `{ resourceId, expected, operationId }` | `SubtitleState` | `invalid`, `stale`, `unavailable`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.remove Subtitles.remove} |
+| `subtitles.select` | none | `{ role?, target, expected, operationId }` | `SubtitleState` | `stale`, `invalid`, `missing`, `unavailable`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.select Subtitles.select} |
+| `subtitles.style` | none | `{ operationId, revision, expected, style }` | `SubtitleState` | `invalid`, `unsupported`, `stale`, `unavailable`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.setStyle Subtitles.setStyle} |
+| `subtitles.upload.append` | none | `{ uploadId, offset, base64 }` | `SubtitleUpload` | `invalid`, `stale`, `unavailable`, `aborted`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
+| `subtitles.upload.begin` | none | `{ uploadId, generation, expectedBytes }` | `SubtitleUpload` | `invalid`, `stale`, `unavailable`, `aborted`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
+| `subtitles.upload.discard` | none | `{ uploadId }` | `void` | `invalid`, `stale`, `unavailable`, `aborted`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!Subtitles.load Subtitles.load} |
+| `subtitles.*` (any other) | none | — | — | — | `plugin.wire` only |
+
+### Take snapshots and export clips (residency `none`)
+
+Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `snapshot.state` | none | `{ snapshotId }` | `Snapshot` | `stale`, `noSource`, `invalid`, `busy`, `unavailable`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture} |
+| `jobs.state` | none | `{ jobId }` | `MediaJob` | `released`, `invalid`, `busy`, `unavailable`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
+| `jobs.operation` | none | `{ operationId }` | `MediaOperation` | `released`, `invalid`, `busy`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export} |
+
+### Take snapshots and export clips (residency `live`)
+
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `snapshot.capture` | none | `RawCapture \| ProcessedCapture` | `Snapshot` | `stale`, `noSource`, `invalid`, `busy`, `unavailable`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.capture MediaCapture.capture} |
+| `snapshot.release` | none | `{ snapshotId, operationId }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.dispose Snapshot.dispose} |
+| `snapshot.*` (any other) | none | — | — | — | `plugin.wire` only |
+| `jobs.cancel` | none | `{ jobId, operationId }` | `{ jobId, cancel }` | `rejected` | SDK member: {@linkcode "@vestra-player/sdk"!ExportJob.cancel ExportJob.cancel} |
+| `jobs.check` | none | `{ parts, encoding? }` | `WireExportCheck` | `invalid`, `released`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!MediaCapture.exportCheck MediaCapture.exportCheck} |
+| `jobs.start` | none | `{ operationId: number; snapshotId: number; destination: string; } & ({ kind: "rawPng" \| "processedPng" \| "rawBmp" \| "processedBmp"; sampleTime?: number \| undefined; } \| { kind: "rawJpeg" \| "processedJpeg"; sampleTime?: number \| undefined; quality?: number \| undefined; } \| { ...; } \| { ...; })` | `{ jobId, status, snapshotId }` | `released`, `invalid`, `busy`, `unavailable`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Snapshot.export Snapshot.export}, {@linkcode "@vestra-player/sdk"!MediaCapture.export MediaCapture.export} |
+| `jobs.*` (any other) | none | — | — | — | `plugin.wire` only |
+
+### Remember videos you add and export from them later
+
+Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `media.sources.forget` | none | `{ token }` | `void` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.forget MediaSources.forget} |
+| `media.sources.get` | none | `{ token }` | `WireSourceReference` | `missing`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.get MediaSources.get} |
+| `media.sources.list` | none | `{}` | `WireSourceReference[]` | `busy` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list} |
+| `media.sources.locate` | none | `{ token }` | `WireSourceReference \| null` | `missing`, `busy`, `unavailable`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.locate MediaSources.locate} |
+| `media.sources.open` | none | `{ token, operationId, start? }` | `SourceOperation` | `missing`, `invalid`, `replaced`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
+| `media.sources.remember` | none | `{ expected? }` | `WireSourceReference` | `unsupported`, `stale`, `limit`, `busy`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.remember MediaSources.remember} |
+| `media.sources.*` (any other) | none | — | — | — | `plugin.wire` only |
+
+### Show messages on the video
+
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `osd.show` | none | `{ actions?, args?, text }` | `void` | `invalid`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.show Osd.show} |
+| `osd.panel` | none | `{ maxColumns?, args?, text }` | `void` | `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.panel Osd.panel} |
+
+### Read and write the clipboard
+
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
@@ -248,126 +241,126 @@ Read and write the clipboard. Residency `none`: no effect on standby.
 | `clipboard.writeText` | `clipboard` | `{ text }` | `void` | `invalid`, `unavailable`, `unsupported`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Clipboard.writeText Clipboard.writeText} |
 | `clipboard.writeImage` | `clipboard` | `{ path }` | `void` | `missing`, `invalid`, `unavailable`, `unsupported`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Clipboard.writeImage Clipboard.writeImage} |
 
-### `window.control`
+### Adjust the main window (size, on top, picture-in-picture)
 
-Adjust the main window (size, on top, picture-in-picture). Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `window.setVideoArea` | `window.control` | `{ width, height }` | `{ width, height, clamped }` | `unavailable`, `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setVideoArea MainWindow.setVideoArea} |
-| `window.setAlwaysOnTop` | `window.control` | `{ onTop }` | `void` | `unavailable`, `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setAlwaysOnTop MainWindow.setAlwaysOnTop} |
-| `window.setCursorAutoHide` | `window.control` | `{ mode }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setCursorAutoHide MainWindow.setCursorAutoHide} |
-| `window.setPictureInPicture` | `window.control` | `{ on }` | `void` | `unsupported`, `unavailable`, `invalid`, `busy`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setPictureInPicture MainWindow.setPictureInPicture} |
-
-### `bindings.manage`
-
-Change all shortcuts. Residency `none`: no effect on standby.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `bindings.list` | `bindings.manage` | — | `BindingTable` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Bindings.list Bindings.list} |
-| `bindings.set` | `bindings.manage` | `{ plugin, command, inputs }` | `void` | `invalid`, `missing`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Bindings.set Bindings.set} |
-| `bindings.reset` | `bindings.manage` | `{ plugin?, command? }` | `void` | `missing`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Bindings.reset Bindings.reset} |
+| `window.setVideoArea` | none | `{ width, height }` | `{ width, height, clamped }` | `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setVideoArea MainWindow.setVideoArea} |
+| `window.setAlwaysOnTop` | none | `{ onTop }` | `void` | `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setAlwaysOnTop MainWindow.setAlwaysOnTop} |
+| `window.setCursorAutoHide` | none | `{ mode }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setCursorAutoHide MainWindow.setCursorAutoHide} |
+| `window.setPictureInPicture` | none | `{ on }` | `void` | `unsupported`, `unavailable`, `invalid`, `busy`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setPictureInPicture MainWindow.setPictureInPicture} |
 
-### `timeline.marks`
+### Read and change all shortcuts
 
-Show marks on the progress bar. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `timeline.set` | `timeline.marks` | `{ sourceId?, marks }` | `{ applied: boolean }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} |
-| `timeline.setRanges` | `timeline.marks` | `{ sourceId?, ranges }` | `{ applied: boolean }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} |
-
-### `ui.drop`
-
-Receive files dropped on the player. Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `drops.provide` | `ui.drop` | `{ id, extensions }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Drops.provide Drops.provide} |
-| `drops.withdraw` | `ui.drop` | `{ id }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Drops.provide Drops.provide} |
-| `drops.listen` | `ui.drop` | `{ listen }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panel.onDrop Panel.onDrop} |
+| `bindings.list` | `player` | — | `BindingTable` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Bindings.list Bindings.list} |
+| `bindings.set` | `player` | `{ plugin, command, inputs }` | `void` | `invalid`, `missing`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Bindings.set Bindings.set} |
+| `bindings.reset` | `player` | `{ plugin?, command? }` | `void` | `missing`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Bindings.reset Bindings.reset} |
 
-### `ui.settings`
+### Show marks on the progress bar
 
-Add pages to the Options window. Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `settings.register` | `ui.settings` | `{ id, category, title, order?, file, component, global, properties }` | `void` | `invalid`, `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Settings.page Settings.page} |
-| `settings.set` | `ui.settings` | `{ value?, seq?, more?, id, property, patch? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!SettingsPage SettingsPage.set}, {@linkcode "@vestra-player/sdk"!SettingsPage SettingsPage.bind} |
-| `settings.show` | `ui.settings` | `{ id? }` | `void` | `invalid`, `unavailable`, `ui`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Settings.show Settings.show} |
-| `settings.unregister` | `ui.settings` | `{ id }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!SettingsPage SettingsPage.dispose} |
-| `settings.*` (any other) | `ui.settings` | — | — | — | `plugin.wire` only |
-
-### `ui.theme`
-
-Change the player's palette. Residency `none`: no effect on standby.
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `appearance.set` | `ui.theme` | `{ theme }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set} |
-| `appearance.setLanguage` | `ui.theme` | `{ language }` | `void` | `invalid`, `capability`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage} |
+| `timeline.set` | none | `{ sourceId?, marks }` | `{ applied: boolean }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} |
+| `timeline.setRanges` | none | `{ sourceId?, ranges }` | `{ applied: boolean }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} |
 
-### `secrets`
+### Receive files dropped on the player
 
-Store sign-in details in the system keychain. Residency `none`: no effect on standby.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `secrets.get` | `secrets` | `{ name }` | `string \| null` | `unsupported`, `unavailable`, `failed`, `capability`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get} |
-| `secrets.set` | `secrets` | `{ name, value }` | `void` | `invalid`, `limit`, `unsupported`, `unavailable`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set} |
-| `secrets.delete` | `secrets` | `{ name }` | `void` | `invalid`, `unsupported`, `unavailable`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} |
-
-### `rendering.manage`
-
-Choose GPU or software rendering and restart the player. Residency `none`: no effect on standby.
+Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `rendering.setPreference` | `rendering.manage` | `{ preference }` | `WireRenderingState` | `invalid`, `unsupported`, `unavailable`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference} |
-| `rendering.restart` | `rendering.manage` | — | `null` | `unsupported`, `busy`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} |
+| `drops.provide` | none | `{ id, extensions }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Drops.provide Drops.provide} |
+| `drops.withdraw` | none | `{ id }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Drops.provide Drops.provide} |
+| `drops.listen` | none | `{ listen }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Panel.onDrop Panel.onDrop} |
 
-### `video.upscaling`
+### Add pages to the Options window
 
-Upscale the video with the GPU's video upscaler. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `video.upscaling.state` | `video.upscaling` | — | `WireUpscalingState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state} |
-| `video.upscaling.set` | `video.upscaling` | `{ enabled }` | `WireUpscalingState` | `capability`, `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set} |
-
-### `video.motion`
-
-Smooth motion with the GPU's frame-rate converter. Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `video.motion.state` | `video.motion` | `{ engine }` | `WireMotionState` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!VideoMotion.state VideoMotion.state} |
-| `video.motion.set` | `video.motion` | `{ engine, mode }` | `WireMotionState` | `capability`, `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoMotion.set VideoMotion.set} |
+| `settings.register` | none | `{ id, category, title, order?, file, component, global, properties }` | `void` | `invalid`, `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Settings.page Settings.page} |
+| `settings.set` | none | `{ value?, seq?, more?, id, property, patch? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!SettingsPage SettingsPage.set}, {@linkcode "@vestra-player/sdk"!SettingsPage SettingsPage.bind} |
+| `settings.show` | none | `{ id? }` | `void` | `invalid`, `unavailable`, `ui` | SDK member: {@linkcode "@vestra-player/sdk"!Settings.show Settings.show} |
+| `settings.unregister` | none | `{ id }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!SettingsPage SettingsPage.dispose} |
+| `settings.*` (any other) | none | — | — | — | `plugin.wire` only |
 
-### `commands.run`
+### Change the player's palette and interface language
 
-Run any player or plugin command. Residency `none`: no effect on standby.
-
-| Method | Capability | Params | Result | Errors (documented) | Stability |
-| --- | --- | --- | --- | --- | --- |
-| `commands.list` | `commands.run` | `{}` | `CommandList` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
-| `commands.run` | `commands.run` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `capability`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
-
-### `palette.lead`
-
-Add the first row of the command palette. Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |
-| `palette.lead.set` | `palette.lead` | `{ [key: string]: Json; }` | `void` | `capability`, `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
-| `palette.lead.clear` | `palette.lead` | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
-| `palette.lead.done` | `palette.lead` | `{ ticket }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
+| `appearance.set` | `player` | `{ theme }` | `void` | `invalid`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Appearance.set Appearance.set} |
+| `appearance.setLanguage` | `player` | `{ language }` | `void` | `invalid`, `capability`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Appearance.setLanguage Appearance.setLanguage} |
 
-### No capability
+### Store sign-in details in the system keychain
 
-Methods every plugin may call.
+Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `secrets.get` | `credentials` | `{ name }` | `string \| null` | `unsupported`, `unavailable`, `failed`, `capability`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Secrets.get Secrets.get} |
+| `secrets.set` | `credentials` | `{ name, value }` | `void` | `invalid`, `limit`, `unsupported`, `unavailable`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Secrets.set Secrets.set} |
+| `secrets.delete` | `credentials` | `{ name }` | `void` | `invalid`, `unsupported`, `unavailable`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Secrets.delete Secrets.delete} |
+
+### Choose GPU or software rendering and restart the player
+
+Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `rendering.setPreference` | `player` | `{ preference }` | `WireRenderingState` | `invalid`, `unsupported`, `unavailable`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Rendering.setPreference Rendering.setPreference} |
+| `rendering.restart` | `player` | — | `null` | `unsupported`, `busy`, `failed`, `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Rendering.restartPlayer Rendering.restartPlayer} |
+
+### Upscale the video with the GPU's video upscaler
+
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `video.upscaling.state` | none | — | `WireUpscalingState` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.state VideoUpscaling.state} |
+| `video.upscaling.set` | none | `{ enabled }` | `WireUpscalingState` | `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoUpscaling.set VideoUpscaling.set} |
+
+### Smooth motion with the GPU's frame-rate converter
+
+Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `video.motion.state` | none | `{ engine }` | `WireMotionState` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!VideoMotion.state VideoMotion.state} |
+| `video.motion.set` | none | `{ engine, mode }` | `WireMotionState` | `invalid`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!VideoMotion.set VideoMotion.set} |
+
+### Run any player or plugin command
+
+Residency `none`: no effect on standby.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `commands.list` | `plugins` | `{}` | `CommandList` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
+| `commands.run` | `plugins` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `capability`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
+
+### Add the first row of the command palette
+
+Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.
+
+| Method | Capability | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- | --- |
+| `palette.lead.set` | none | `{ [key: string]: Json; }` | `void` | `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
+| `palette.lead.clear` | none | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
+| `palette.lead.done` | none | `{ ticket }` | `void` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
+
+### Read the plugin list, the window and rendering state; open files and links with the system; keep values for this run
+
+Residency `none`: no effect on standby.
 
 | Method | Capability | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- | --- |

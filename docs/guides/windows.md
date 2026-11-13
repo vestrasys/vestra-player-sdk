@@ -11,9 +11,9 @@ A tool window keeps nothing by itself: closing it destroys the window instance, 
 
 ## Steps
 
-### Declare the capabilities
+### Capabilities
 
-Add `ui.window` to the manifest's `capabilities`, plus whatever the window's controls do (`playback.control` to seek, `processing.video` for a video filter).
+None: a window, and what its controls do to the playback (a seek, a video filter), need no entry in the manifest's `capabilities`.
 
 ### Write the window in Slint
 
@@ -37,7 +37,7 @@ Save `open: true` when your command shows the window, and `open: false` in `onCl
 
 ## Complete example
 
-A **Brightness** window under **Video ▸ Brightness…**: a slider from −1 to 1, a value label and a Reset button. It remembers the brightness and whether it was open. The manifest's `capabilities` are `commands`, `ui.window`, `processing.video`, `playback.read` and `events`.
+A **Brightness** window under **Video ▸ Brightness…**: a slider from −1 to 1, a value label and a Reset button. It remembers the brightness and whether it was open. The manifest declares no capability.
 
 `ui/brightness.slint`:
 

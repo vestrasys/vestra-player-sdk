@@ -26,7 +26,7 @@ async function refused(
       (plugin: Plugin) => {
         plugin.commands.add({ ...options, run() {} });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     (error: HostError) => {
       assert.equal(error.code, code, JSON.stringify(options));
@@ -41,7 +41,7 @@ async function accepted(options: Omit<CommandOptions, "run">) {
     (plugin: Plugin) => {
       plugin.commands.add({ ...options, run() {} });
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     assert.ok(host.commands.has(options.id));
@@ -148,7 +148,7 @@ test("a reason over 512 bytes is refused, at registration and update", async () 
       const command = plugin.commands.add({ id: "a", title: "A", run() {} });
       setTimeout(() => command.set({ enabled: false, reason: "Not now " }));
     },
-    { capabilities: ["commands"] },
+    { capabilities: [] },
   );
   try {
     await host.settle(50);
@@ -183,7 +183,7 @@ test("a path that repeats or nests in another command's conflicts", async () => 
         plugin.commands.add({ id: "a", path: ["Tools", "A"], run() {} });
         plugin.commands.add({ id: "b", path: ["Tools", "A", "B"], run() {} });
       },
-      { capabilities: ["commands"] },
+      { capabilities: [] },
     ),
     { code: "conflict", message: conflict },
   );
@@ -192,7 +192,7 @@ test("a path that repeats or nests in another command's conflicts", async () => 
 
 test("raw registrations get the player's answers", async () => {
   const { host, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   const register = (declaration: Record<string, unknown>, id = "raw") =>
     host.request("commands.register", {
@@ -262,7 +262,7 @@ test("the player's own Quit and Tools ▸ Command Palette… take part in confli
 
 test("the seek items follow setStepSeek, as the player registers them again", async () => {
   const { host, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   const register = (id: string, path: string[]) =>
     host.request("commands.register", {
@@ -297,7 +297,7 @@ test("the seek items follow setStepSeek, as the player registers them again", as
 
 test("updates get the player's answers", async () => {
   const { host, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   const state = { enabled: true, checked: null, busy: false, reason: null };
   try {
@@ -316,7 +316,7 @@ test("updates get the player's answers", async () => {
 
 test("a binding listed twice is refused as the player's binding table does, before the reason, conflicts and limits", async () => {
   const { host, stop } = await startPlugin(() => {}, {
-    capabilities: ["commands"],
+    capabilities: [],
   });
   const register = (
     id: string,
