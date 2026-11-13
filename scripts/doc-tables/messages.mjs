@@ -1,11 +1,9 @@
 /**
  * `<!-- generated:messages -->`: every request method of the player's
- * protocol, one table per capability in the player's order (then the
- * methods that need none), with:
+ * protocol that the SDK sends, one table per area (the method's first
+ * segment, `source` for `source.state`), areas and methods in name order,
+ * with:
  *
- * - the capability it needs: the player's table (`HOST_CAPABILITIES`,
- *   src/host-capabilities.ts, synced from its capabilities.json), with the
- *   by-parameter and if-declared rules written out;
  * - its parameters and result: the SDK's typed clients, the
  *   `transport.request<Result>("method", params)` calls in src/*.ts, read
  *   with the TypeScript checker (parameters as field names, `?` when
@@ -17,24 +15,18 @@
  *   sends on its own, such as `ui.set` for `Window.set`), otherwise
  *   "`plugin.wire` only".
  *
- * A method name ending in `.*` covers the prefix's other methods: the ones
- * the SDK sends get a row each, and the wildcard keeps a row of its own.
- *
- * Fails when a method the SDK sends is named by neither table, when
- * `WRAPPED_BY` names a method the player does not have or a member the API
- * does not declare, or when a client calls a method the player's table
- * does not list.
+ * Fails when a method the SDK sends is named by neither table, or when
+ * `WRAPPED_BY` names a member the API does not declare.
  */
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { memberLink } from "./capabilities.mjs";
 import { declaration, docText, tags, ts, typeFile } from "./lib/source.mjs";
 
 /**
  * The public members that send a request without being listed in
- * `API_REQUESTS` (which lists only the request that decides a member's
- * capability): the handles' own requests (a window's `set`, a command's
+ * `API_REQUESTS` (which lists the request a member sends to do its work):
+ * the handles' own requests (a window's `set`, a command's
  * `set`), clean-up on `dispose`, and the requests of the members that need
  * no capability. Keep it complete: the generator fails on a method the SDK
  * sends that neither table names.
@@ -101,13 +93,9 @@ export const WRAPPED_BY = {
   "mpv.unobserve": ["Mpv.observe"],
 };
 
-/** What a capability's residency (capabilities.json) means for standby. */
-const RESIDENCY = {
-  live: "Residency `live`: what these methods open (a view, a listener, a stream) keeps the plugin running.",
-  recordable:
-    "Residency `recordable`: the player records the registrations and keeps them while the plugin stands by.",
-  none: "Residency `none`: no effect on standby.",
-};
+/** A member as `Interface.member`, linked. `Plugin.x` is declared on Scope. */
+export const memberLink = (api) =>
+  `{@linkcode "@vestra-player/sdk"!${api.replace(/^Plugin\./, "Scope.").replace(/^(Scope\.\w+)\..*$/, "$1")} ${api}}`;
 
 /** Members as links into the API reference, comma separated. */
 export const memberLinks = (members) =>
@@ -129,32 +117,6 @@ function link(member) {
   return alias
     ? `{@linkcode "@vestra-player/sdk"!${owner} ${member}}`
     : memberLink(member);
-}
-
-/**
- * A method's `needs` in words: `null` none, a capability, one chosen by a
- * string parameter (resolved when `params` gives it), or one that depends
- * on what the manifest declares.
- */
-export function capabilityRule(needs, params = {}) {
-  const name = (capability) =>
-    capability === null ? "none" : `\`${capability}\``;
-  if (needs === null || typeof needs === "string") return name(needs);
-  if ("param" in needs) {
-    if (params[needs.param] !== undefined)
-      return name(
-        Object.hasOwn(needs.cases, params[needs.param])
-          ? needs.cases[params[needs.param]]
-          : needs.otherwise,
-      );
-    const cases = Object.entries(needs.cases).map(
-      ([value, capability]) => `\`${value}\` → ${name(capability)}`,
-    );
-    return `by \`${needs.param}\`: ${cases.join(", ")}; any other: ${name(needs.otherwise)}`;
-  }
-  if ("ifDeclared" in needs)
-    return `${name(needs.then)} when the manifest declares ${name(needs.ifDeclared)}, otherwise ${name(needs.otherwise)}`;
-  throw new Error(`unknown needs ${JSON.stringify(needs)}`);
 }
 
 /** The TypeScript program of the SDK's top-level modules (the clients). */
@@ -322,17 +284,15 @@ function documentedCodes(members) {
 
 export default async function messages({ root, table }) {
   const load = (path) => import(pathToFileURL(join(root, path)));
-  const { HOST_CAPABILITIES } = await load("src/host-capabilities.ts");
   const { API_REQUESTS } = await load("src/api-requests.ts");
   const calls = clientCalls(root);
 
   const sentBy = new Map();
   for (const [member, requests] of Object.entries(API_REQUESTS))
     for (const request of requests)
-      if (!request.also && !member.startsWith("Wire"))
+      if (!member.startsWith("Wire"))
         sentBy.set(request.method, [
-          ...(sentBy.get(request.method) ?? []),
-          member,
+          ...new Set([...(sentBy.get(request.method) ?? []), member]),
         ]);
   for (const [method, members] of Object.entries(WRAPPED_BY)) {
     for (const member of members)
@@ -340,41 +300,18 @@ export default async function messages({ root, table }) {
         throw new Error(`WRAPPED_BY["${method}"]: no API member ${member}`);
     sentBy.set(method, [...(sentBy.get(method) ?? []), ...members]);
   }
-
-  const groups = [
-    ...HOST_CAPABILITIES.capabilities.map((capability) => ({
-      title: `\`${capability.name}\``,
-      lead: `${capability.label}. ${RESIDENCY[capability.residency]}`,
-      methods: capability.methods,
-    })),
-    {
-      title: "No capability",
-      lead: "Methods every plugin may call.",
-      methods: HOST_CAPABILITIES.uncapable,
-    },
-  ];
-  const listed = new Set(groups.flatMap((g) => g.methods.map((m) => m.name)));
-  const wildcards = [...listed].filter((name) => name.endsWith(".*"));
-  const covered = (method) =>
-    wildcards.find((w) => method.startsWith(w.slice(0, -1)));
-  for (const method of [...calls.keys(), ...Object.keys(WRAPPED_BY)])
-    if (!listed.has(method) && !covered(method))
-      throw new Error(
-        `${method}: the SDK sends it, the player's capability table does not list it`,
-      );
   for (const method of calls.keys())
     if (!sentBy.has(method))
       throw new Error(
         `${method}: sent by ${calls.get(method).file}, but no public member is named for it; add it to WRAPPED_BY in scripts/doc-tables/messages.mjs`,
       );
 
-  const row = (method, needs) => {
+  const row = (method) => {
     const call = calls.get(method);
     const members = sentBy.get(method) ?? [];
     const codes = documentedCodes(members);
     return [
       `\`${method}\``,
-      capabilityRule(needs),
       call?.params ?? "—",
       call?.result ?? "—",
       codes.map((code) => `\`${code}\``).join(", ") || "—",
@@ -385,37 +322,23 @@ export default async function messages({ root, table }) {
   };
   const header = [
     "Method",
-    "Capability",
     "Params",
     "Result",
     "Errors (documented)",
     "Stability",
   ];
-  const sections = [];
-  for (const group of groups) {
-    const rows = [];
-    for (const { name, needs } of group.methods) {
-      if (!name.endsWith(".*")) {
-        rows.push(row(name, needs));
-        continue;
-      }
-      const prefix = name.slice(0, -1);
-      const known = [...new Set([...calls.keys(), ...sentBy.keys()])]
-        .filter((method) => method.startsWith(prefix) && !listed.has(method))
-        .sort();
-      for (const method of known) rows.push(row(method, needs));
-      rows.push([
-        `\`${name}\` (any other)`,
-        capabilityRule(needs),
-        "—",
-        "—",
-        "—",
-        "`plugin.wire` only",
-      ]);
-    }
-    sections.push(
-      `### ${group.title}\n\n${group.lead}\n\n${table(header, rows)}`,
-    );
+  const areas = new Map();
+  for (const method of [
+    ...new Set([...calls.keys(), ...sentBy.keys()]),
+  ].sort()) {
+    const area = method.split(".")[0];
+    areas.set(area, [...(areas.get(area) ?? []), method]);
   }
-  return sections.join("\n\n");
+  return [...areas]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([area, methods]) =>
+        `### \`${area}\`\n\n${table(header, methods.map(row))}`,
+    )
+    .join("\n\n");
 }

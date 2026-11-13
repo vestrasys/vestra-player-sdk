@@ -3,7 +3,8 @@
 // does not cap the frame rate at one frame per pump.
 import assert from "node:assert/strict";
 import test, { afterEach } from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Json, Stream } from "../src/plugin/index.ts";
 
 const capabilities = [

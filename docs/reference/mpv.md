@@ -5,7 +5,7 @@ description: The four members of the mpv pass-through, the messages behind them,
 
 # mpv
 
-{@link "@vestra-player/sdk"!Mpv | plugin.mpv} sends mpv's own commands and properties to the player's mpv as they are. It needs the capability `mpv`, a capability of its own that the store highlights before installing ([Capabilities](capabilities.md)). The channel is the SDK's contract: the members, the errors, what is refused and who owns what, all on this page. The names, the arguments and what they do are mpv's, for the mpv the player ships: [commands](https://mpv.io/manual/stable/#list-of-input-commands), [properties](https://mpv.io/manual/stable/#properties), [options](https://mpv.io/manual/stable/#options). They can change with a player version, and the SDK does not track them.
+{@link "@vestra-player/sdk"!Mpv | plugin.mpv} sends mpv's own commands and properties to the player's mpv as they are. The scan puts a command or a set in `player`, which the store shows before installing ([Capability scan](scan.md)). The channel is the SDK's contract: the members, the errors, what is refused and who owns what, all on this page. The names, the arguments and what they do are mpv's, for the mpv the player ships: [commands](https://mpv.io/manual/stable/#list-of-input-commands), [properties](https://mpv.io/manual/stable/#properties), [options](https://mpv.io/manual/stable/#options). They can change with a player version, and the SDK does not track them.
 
 Use a typed member where one exists ({@link "@vestra-player/sdk"!Player | plugin.player}, {@link "@vestra-player/sdk"!Scope.video | plugin.video}, {@link "@vestra-player/sdk"!Subtitles | plugin.subtitles}): it is checked, the test host models it, and a typed filter chain reaches snapshots and exports. A filter added through `plugin.mpv` works on live playback only.
 
@@ -22,7 +22,6 @@ A command is an array, as in mpv's own client API, and its first element is the 
 
 | Code | When |
 | --- | --- |
-| `capability` | The manifest does not declare `mpv`. |
 | `invalid` | The shape is wrong: not a command array, a bad argument type, not a property name, no value. |
 | `refused` | The command or the property is one the channel does not carry (below). The message names it and why: `mpv command "run" is refused: it starts a program (a plugin starts its own with Node)`. |
 | `conflict` | A filter label that another plugin owns. |
@@ -69,7 +68,7 @@ A plugin adds filters to mpv's chains with `["vf", "add", "@label:filter"]` (`af
 
 ## Properties and observers
 
-- **A property set stays set** after the plugin stops, until the player quits, which is what the capability `mpv` discloses. mpv does not save it for the next start. A plugin that wants it back reads the value first and sets it back.
+- **A property set stays set** after the plugin stops, until the player quits, which is what the scan's `player` discloses. mpv does not save it for the next start. A plugin that wants it back reads the value first and sets it back.
 - **Observers end with the plugin**, and with the handle `observe` returns. While one exists the player keeps the plugin running. The player sends the newest value at most every 100 ms for each property.
 
 ## Limits

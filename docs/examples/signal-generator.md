@@ -40,7 +40,7 @@ Each call returns one picture and **the audio that plays while that picture is o
 
 ```text
 examples/signal-generator/
-  manifest.json                   id and capabilities
+  manifest.json                   id
   main.ts                         the picture, the tone, frame(), start and stop, the command
   main-b.ts, main-c.ts            the command, start and stop in styles B and C
   tests/signal-generator.test.ts  tests of frame() and of the stream on the in-memory test host
@@ -51,12 +51,7 @@ examples/signal-generator/
 
 {@includeCode ../../examples/signal-generator/manifest.json}
 
-| Capability         | Why                                                                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands`         | The menu command.                                                                                                                                                             |
-| `producer.av`      | `player.openStream`: producing frames.                                                                                                                                        |
-| `playback.control` | The stream becomes the player's source, like opening a file, and Stop closes it. `openStream` needs this as well as `producer.av`.                                            |
-| `playback.read`    | When it stops, the stream reads the player's state to check that it is still the current source before closing it, so it never closes a file the user opened in the meantime. |
+`await plugin.player.read()`, first in `activate`, lets the stream read the player's state when it stops, to check that it is still the current source before closing it, so it never closes a file the user opened in the meantime.
 
 The display fields (`name`, `punchline`, `description`, …) are what the plugin manager and the store show.
 
@@ -170,7 +165,7 @@ Start the player with `--plugin <path to examples/signal-generator>`: it runs `m
 
 1. **A frequency slider.** Add a tool window with one `Slider` (see [Blur](blur.md)) and make `FREQUENCY` a variable that its callback changes. The next `frame()` uses the new value; because the phase continues, the pitch glides without a click.
 2. **Movement.** Draw a white bar whose position depends on a frame counter. A dropped or repeated frame then shows as a jump.
-3. **Show why it stopped.** Add the `ui.osd` capability and call `plugin.osd.show(error.message)` in `onStop` when `error` is not `null`.
+3. **Show why it stopped.** Call `plugin.osd.show(error.message)` in `onStop` when `error` is not `null`.
 
 ## See also
 

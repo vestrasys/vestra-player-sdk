@@ -4,9 +4,9 @@ A plugin in the player's language: **Tools → Counter…** opens a window with 
 
 ![Counter running in Vestra Player](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `ui.window`, `ui.osd` | `commands.add`, `windows.create`, `osd.show(template, args)`; Slint `@tr`; `vestra-plugin i18n extract` and `check`; tests with `startPlugin({ locale })` |
+| — | `commands.add`, `windows.create`, `osd.show(template, args)`; Slint `@tr`; `vestra-plugin i18n extract` and `check`; tests with `startPlugin({ locale })` |
 
 ## Run it
 

@@ -38,10 +38,11 @@
 //    precise pass skipped something, which adds a full pass to a phase's
 //    counts on a loaded machine; `counts.safetyPasses`) is repeated
 //    instead of compared, up to three times (`check`).
-// 8. Image `ref` numbers (`$vestraImage`) come from a counter shared by
-//    every plugin in the process (`src/plugin/view/image.ts`), so a repeated run
-//    gets other numbers: they are renumbered from 1 in order of first
-//    appearance within the scenario.
+// 8. Image and Markdown `ref` numbers (`$vestraImage`, `$vestraMarkdown`)
+//    come from counters shared by every plugin in the process
+//    (`src/plugin/view/image.ts`, `src/plugin/markdown.ts`), so a repeated
+//    run gets other numbers: each kind is renumbered from 1 in order of
+//    first appearance within the scenario.
 // 9. A command that keeps working between host calls after `run()` (the
 //    signal generator's stream start) ends its phase only once it is done
 //    (`COMMAND_DONE`, bounded at `COMMAND_DONE_MS`, failing with the calls
@@ -54,7 +55,9 @@
 // pinned to the player commit it was recorded from (`playerCommit`): when
 // `VESTRA_PLAYER`'s HEAD is another commit the test skips with a message,
 // so a player change does not pass for an SDK regression. `UPDATE_TRACES=1`
-// re-records and re-pins to the current HEAD.
+// re-records and re-pins to the current HEAD. A pinned commit from before
+// player 0.9.0 still has manifests with `capabilities`: test/explicit.ts
+// starts those built-ins with the calls the list stands for.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -70,7 +73,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { PassCounts } from "../src/plugin/passes.ts";
 import type { ScopeImpl } from "../src/plugin/scope.ts";
 import type { Plugin } from "../src/plugin/types.ts";
@@ -237,16 +241,22 @@ function hideSamples(params: Json): Json {
   return { ...params, control: { ...control, baseSample: "<samples>" } };
 }
 
-/** Rule 8: image refs renumbered in order of first appearance. */
-function renumberRefs(value: Json, refs: Map<number, number>): Json {
+/** Rule 8: image and Markdown refs renumbered in order of first appearance. */
+function renumberRefs(value: Json, refs: Map<string, number>): Json {
   if (Array.isArray(value))
     return value.map((item) => renumberRefs(item, refs));
   if (!value || typeof value !== "object") return value;
   const out: { [k: string]: Json } = {};
   for (const [key, item] of Object.entries(value)) {
-    if (key === "ref" && "$vestraImage" in value && typeof item === "number") {
-      if (!refs.has(item)) refs.set(item, refs.size + 1);
-      out[key] = refs.get(item)!;
+    const kind = ["$vestraImage", "$vestraMarkdown"].find((k) => k in value);
+    if (key === "ref" && kind && typeof item === "number") {
+      const id = `${kind}:${item}`;
+      if (!refs.has(id))
+        refs.set(
+          id,
+          [...refs.keys()].filter((k) => k.startsWith(`${kind}:`)).length + 1,
+        );
+      out[key] = refs.get(id)!;
     } else out[key] = renumberRefs(item, refs);
   }
   return out;
@@ -266,7 +276,7 @@ function normalise(
   calls: readonly { method: string; params: unknown }[],
   replacements: [string, string][],
   polled: Set<string>,
-  refs: Map<number, number>,
+  refs: Map<string, number>,
 ): Call[] {
   const out: Call[] = [];
   for (const call of calls) {
@@ -320,7 +330,7 @@ async function record(
   const calls = {} as Record<Phase, Call[]>;
   const counts = {} as Record<Phase, PassCounts>;
   const polled = new Set<string>();
-  const refs = new Map<number, number>();
+  const refs = new Map<string, number>();
   let mark = 0;
   let runtime: ScopeImpl["runtime"] | undefined;
   let before: PassCounts = {
@@ -484,8 +494,8 @@ test("golden trace: the style-B speed display runs no update pass", () => {
     assert.equal(trace.counts[phase].passes, 0, phase);
     assert.equal(trace.counts[phase].evaluations, 0, phase);
   }
-  // The state copy's mirror (the plugin declares `playback.read` and
-  // `events`), the listener's mark, named, and the mirror again once the
+  // The state copy's mirror (the plugin calls `subscribe()` and `read()`
+  // first), the listener's mark, named, and the mirror again once the
   // listener is disposed.
   assert.deepEqual(
     trace.subscriptions.map((s) => [s.event, s.mirror ?? false, !!s.why]),

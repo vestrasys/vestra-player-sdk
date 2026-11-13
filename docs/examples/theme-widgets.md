@@ -27,7 +27,7 @@ A tool window drawn with the player's own theme and controls, so it looks like p
 
 ```text
 examples/theme-widgets/
-  manifest.json                  identity and capabilities
+  manifest.json                  identity
   main.ts                        the code
   ui/theme-widgets.slint         the window
   tests/theme-widgets.test.ts    a test against the SDK's in-memory player

@@ -26,7 +26,7 @@ Several plugins can have a panel in the sidebar: each is a tab. Next to the play
 
 ```text
 examples/panel-menu/
-  manifest.json                identity and capabilities
+  manifest.json                identity
   main.ts                      the code (style A)
   main-b.ts, main-c.ts         the same plugin in styles B and C
   ui/panel.slint               the list
@@ -45,7 +45,7 @@ examples/panel-menu/
 {@includeCode ../../examples/panel-menu/ui/panel.slint}
 
 - `Theme` is the player's palette, supplied at run time as `@vestra/theme.slint`, so the list follows the player's colours.
-- **The global `ListBridge`** holds the properties and callbacks. A panel is part of the player's main window, and the player makes a new instance of the component whenever it rebuilds that window. The global stays put, so the plugin talks to it, not to the component.
+- **The global `ListBridge`** holds the properties and callbacks. A panel is part of the player's main window, and the player makes a new instance of the component whenever the panel's place is made again (the sidebar closed and opened, its fullscreen overlay, its floating window). The global stays put, so the plugin talks to it, not to the component.
   - `rows` is the list (an array in TypeScript) and `selected` the selected index.
   - `select(int)` reports a click; `context-menu(float, float)` asks for the menu at a point.
 - **The component** inherits `Rectangle`, not `Window`: the player places it. A `ListView` from `std-widgets.slint` fills it; `for row[index] in ListBridge.rows` inside it gives one 20-pixel row per item, and the selected row gets `Theme.selected-bg`. The `ListView` creates only the rows in view and scrolls the rest, so the panel stays cheap however long the list grows; a bare `for` in a layout would build every row up front (and `vestra-plugin check` warns about one over a bound array).
@@ -118,5 +118,5 @@ Start the player with `--plugin <path to examples/panel-menu>`, click the **Exam
 ## Try next
 
 1. **Keys that only work in the panel.** Add `focus: "panel"` and `bindings: ["Delete"]` to **Remove**: the key then works only while the list has focus, and keeps its usual meaning elsewhere.
-2. **Next and previous.** Call {@link "@vestra-player/sdk"!Player.provideSequence | plugin.player.provideSequence} with `canNext`, `canPrevious`, `next` and `previous` that move `selected` (capabilities `playback.read`, `events`, `playback.control`): the player's own next/previous controls then step through the list.
+2. **Next and previous.** Call {@link "@vestra-player/sdk"!Player.provideSequence | plugin.player.provideSequence} with `canNext`, `canPrevious`, `next` and `previous` that move `selected` (and call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`): the player's own next/previous controls then step through the list.
 3. **A check mark in the menu.** Add a command with `checked: () => …` and put it in the `showMenu` list.

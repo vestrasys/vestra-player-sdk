@@ -31,7 +31,7 @@ const SOURCES = {
   REQUEST_LIMITS: { file: "src/request-queue.ts" },
   VIDEO_PROCESSING_LIMITS: { file: "src/processing.ts" },
   MANIFEST_LIMITS: { file: "src/manifest.ts" },
-  MESSAGE_LIMIT: { file: "src/capabilities.ts", value: true },
+  MESSAGE_LIMIT: { file: "src/protocol.ts", value: true },
   MAX_SHADERS: {
     file: "src/plugin/view.ts",
     value: true,

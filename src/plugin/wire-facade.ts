@@ -6,8 +6,7 @@
  * out access to it, and is the only file under `src/plugin/` that sends a
  * request by a method name it was given (`scripts/check-layers.mjs`, rule 7).
  *
- * - `request`: `Connection.request`, the transport as is; the player
- *   checks capabilities. The subscriptions are guarded, refused with
+ * - `request`: `Connection.request`, the transport as is. The subscriptions are guarded, refused with
  *   `invalid`: `events.subscribe` and `events.unsubscribe` of a
  *   `HostEvent` (the SDK owns those subscriptions and their marks; `on`
  *   covers them), and `events.subscribe` of any other event without

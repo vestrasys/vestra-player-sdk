@@ -3,6 +3,8 @@ import type { Plugin, Scope } from "@vestra-player/sdk";
 
 /** Menu items: radio items, separator groups and a title that changes. */
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   const { player } = plugin;
   // #endregion setup
 

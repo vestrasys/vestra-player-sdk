@@ -33,7 +33,6 @@ export interface PluginInfo {
   id: string;
   apiVersion: string;
   entry: string;
-  capabilities: string[];
 }
 export interface PackageValidation {
   token: string;
@@ -196,7 +195,7 @@ export type PropertyWrite =
  *
  * Common codes: `stale` (the condition no longer holds; nothing was done),
  * `invalid` (bad argument), `missing` (unknown target), `capability`
- * (undeclared capability), `busy`, `conflict`, `unavailable`, `unsupported`
+ * (a built-in-only request from another plugin), `busy`, `conflict`, `unavailable`, `unsupported`
  * (refused, not executed), `backend` (load or parse failure), `failed`,
  * `timeout`, `aborted`, `limit` (a player limit such as the command count),
  * `disabled` (the plugin is stopping).
@@ -227,7 +226,6 @@ export type PropertyWrite =
  * A definite refusal, as opposed to a lost reply: the SDK does not retry
  * it, and the plugin sees an `Error` with `code`.
  *
- * @capability None.
  * @since 1.0.0
  * @category Testing
  */
@@ -268,8 +266,6 @@ export interface PackageInfo {
   state: "starting" | "running" | "disabled" | "failed" | "stopped";
   /** Why it failed, when `state` is `failed`; else `null`. */
   error: string | null;
-  /** The capabilities its manifest declares. */
-  capabilities: string[];
   /** Its directory on disk. */
   directory: string;
   /** One of the player's built-in plugins. */
@@ -459,7 +455,7 @@ export interface WireTimeline {
   /** The ranges. */
   ranges?: WireRange[];
 }
-/** A panel position (`ui.mount`'s `slot`). */
+/** A panel position (`ui.mount`'s `slot` parameter). */
 export type MountSlot = "bottom" | "sidebar" | "backdrop" | "adjust";
 /** The backdrop as `layout.state` reports it; `null` without one. */
 export interface LayoutBackdrop {
@@ -809,7 +805,7 @@ export function createWire(transport: Transport) {
       set: (id: string | null) =>
         transport.request<void>("player.setAudioDevice", { id }),
     },
-    /** The binding table: list, user overlay (`bindings.manage`). */
+    /** The binding table: list, user overlay. */
     bindings: {
       list: () => transport.request<BindingTable>("bindings.list"),
       set: (plugin: string, command: string, inputs: string[]) =>
@@ -817,7 +813,7 @@ export function createWire(transport: Transport) {
       reset: (ref?: { plugin: string; command: string }) =>
         transport.request<void>("bindings.reset", ref ?? {}),
     },
-    /** File drops: providers by extension, panel listeners (`ui.drop`). */
+    /** File drops: providers by extension, panel listeners. */
     drops: {
       provide: (id: string, extensions: string[]) =>
         transport.request<void>("drops.provide", { id, extensions }),
@@ -826,7 +822,7 @@ export function createWire(transport: Transport) {
       listen: (listen: boolean) =>
         transport.request<void>("drops.listen", { listen }),
     },
-    /** The palette (`ui.theme` to change it). */
+    /** The palette: read it, change it. */
     appearance: {
       set: (theme: string) =>
         transport.request<void>("appearance.set", { theme }),
@@ -834,7 +830,7 @@ export function createWire(transport: Transport) {
       setLanguage: (language: string) =>
         transport.request<void>("appearance.setLanguage", { language }),
     },
-    /** Settings pages in the player's options window (`ui.settings`). */
+    /** Settings pages in the player's options window. */
     settings: {
       register: (options: {
         id: string;
@@ -1048,8 +1044,7 @@ export function createWire(transport: Transport) {
       system: () => transport.request<WireSystemInfo>("app.system"),
     },
     /**
-     * The rendering choice: `state` needs no capability, `setPreference` and
-     * `restart` need `rendering.manage`.
+     * The rendering choice: `state`, `setPreference` and `restart`.
      */
     rendering: {
       state: () => transport.request<WireRenderingState>("rendering.state"),

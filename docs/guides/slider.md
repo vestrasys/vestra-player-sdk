@@ -92,15 +92,7 @@ A **Brightness** window with a slider from −1 to 1, a value label and a Reset 
   "version": "1.0.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "minPlayerVersion": "0.3.0",
-  "capabilities": [
-    "commands",
-    "ui.window",
-    "ui.osd",
-    "processing.video",
-    "playback.read",
-    "events"
-  ]
+  "minPlayerVersion": "0.9.0"
 }
 ```
 
@@ -155,6 +147,8 @@ export component BrightnessWindow inherits Window {
 import type { Plugin } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   let brightness = 0; // the model: −1–1, 0 = unchanged
 
   // A filter keeps one request in flight and sends only the newest value.

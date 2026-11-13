@@ -3,16 +3,7 @@
   "version": "1.0.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "minPlayerVersion": "0.6.0",
-  "capabilities": [
-    "commands",
-    "events",
-    "playback.read",
-    "playback.control",
-    "producer.av",
-    "ui.mount",
-    "ui.window"
-  ],
+  "minPlayerVersion": "0.9.0",
   "name": "Three Ways",
   "author": "Vestra Player SDK examples",
   "punchline": "One plugin written three ways: bind(), player.on with set(), plugin.wire",

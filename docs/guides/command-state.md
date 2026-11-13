@@ -129,8 +129,6 @@ export default function activate(plugin: Plugin) {
 }
 ```
 
-`manifest.json` declares the capabilities `commands`, `playback.read`, `media.read`, `media.control`, `ui.dialog` and `ui.theme`.
-
 `tests/main.test.ts`:
 
 ```ts
@@ -140,9 +138,7 @@ import { startPlugin } from "@vestra-player/sdk/testing";
 import activate from "../main.ts";
 
 test("the menu follows the player and nothing keeps the plugin running", async () => {
-  const { host, stop } = await startPlugin(activate, {
-    capabilities: ["commands", "playback.read", "media.read", "media.control", "ui.dialog", "ui.theme"],
-  });
+  const { host, stop } = await startPlugin(activate);
   try {
     assert.deepEqual(host.keepsRunning, []);
     assert.equal(host.command("save").state.enabled, false);

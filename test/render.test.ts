@@ -3,7 +3,8 @@ import test from "node:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { renderProblem } from "../src/plugin/view.ts";
 

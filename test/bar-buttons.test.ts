@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  BAR_BUTTON_ICONS,
-  BAR_BUTTON_LIMITS,
-  startPlugin,
-} from "../src/plugin/testing.ts";
+import { BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 
 const invalid = (run: () => unknown) =>

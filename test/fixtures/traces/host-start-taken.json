@@ -12,9 +12,9 @@
     "resolvers": 0,
     "commands": [],
     "methods": [
+      "window.state",
       "events.subscribe",
       "source.state",
-      "window.state",
       "timeline.marks",
       "sourceResolvers.register",
       "commands.register",
@@ -32,9 +32,9 @@
       "a"
     ],
     "methods": [
+      "window.state",
       "events.subscribe",
       "source.state",
-      "window.state",
       "timeline.marks",
       "sourceResolvers.register",
       "sourceResolvers.register"

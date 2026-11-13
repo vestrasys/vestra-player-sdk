@@ -40,7 +40,6 @@ function project(main: string) {
       version: "1.2.3",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
     }),
   );
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
@@ -145,7 +144,7 @@ test("build runs under the permission model with only the project, the SDK and a
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
 
-test("type errors, runtime SDK imports and unknown capabilities fail", () => {
+test("type errors, runtime SDK imports and a manifest with capabilities fail", () => {
   const typo = project(HELLO.replace("osd.show", "osd.shout"));
   const checked = vestraPlugin(typo, "check");
   assert.equal(checked.status, 1);
@@ -165,12 +164,19 @@ test("type errors, runtime SDK imports and unknown capabilities fail", () => {
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["no.such"],
+      capabilities: ["commands"],
     }),
   );
   const refused = vestraPlugin(capability, "check");
   assert.equal(refused.status, 1);
-  assert.match(refused.stderr, /unknown capabilities no\.such/);
+  assert.match(
+    refused.stderr,
+    /"capabilities", which SDK 1\.9\.0 \(player 0\.9\.0\) removed/,
+  );
+  assert.match(refused.stderr, /plugin\.player\.subscribe\(\)/);
+  const json = vestraPlugin(project(HELLO), "check", "--json");
+  assert.equal(json.status, 1);
+  assert.match(json.stderr, /--json was removed in SDK 1\.9\.0/);
 });
 
 const PNG_1x1 = Buffer.from(
@@ -186,7 +192,6 @@ test("display fields are checked and their files are packed", () => {
     version: "1.2.3",
     apiVersion: "vestra/1",
     entry: "main.ts",
-    capabilities: ["commands", "ui.osd"],
     name: "你好",
     author: "me",
     punchline: "Says hello",
@@ -278,7 +283,6 @@ test("the CLI runs from an SDK copy outside node_modules (TypeScript on NODE_PAT
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands"],
     }),
   );
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
@@ -316,7 +320,6 @@ test("an id without a prefix is only a hint", () => {
       version: "1.2.3",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd"],
     }),
   );
   const result = vestraPlugin(directory, "check");
@@ -341,7 +344,6 @@ test("a bottom bar without BarButtons is not a warning (SDK 1.6.8: the player pl
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["commands", "ui.osd", "ui.mount"],
     }),
   );
   mkdirSync(join(directory, "ui"));
@@ -372,7 +374,6 @@ test("a `for` over a bound array outside a ListView is a warning (SDK 1.5.46)", 
       version: "1.0.0",
       apiVersion: "vestra/1",
       entry: "main.ts",
-      capabilities: ["ui.mount"],
     }),
   );
   mkdirSync(join(directory, "ui"));

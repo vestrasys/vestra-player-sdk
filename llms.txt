@@ -1,12 +1,12 @@
 # Vestra Player SDK
 
-> @vestra-player/sdk 1.8.0: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
+> @vestra-player/sdk 1.9.0: write plugins for Vestra Player in TypeScript (plugin API `vestra/1`). A plugin is a folder with `manifest.json` and an entry module whose default export `activate(plugin)` the player calls. The documentation is a tree of short pages read by path, like `go doc`: the same pages and API as https://vestrasys.github.io/vestra-player-sdk/.
 
 ## Read the documentation
 
 - **Command line** (any coding agent): `npx -p @vestra-player/sdk vestra-plugin docs [path] [--page N]` prints one node of the tree; `npx -p @vestra-player/sdk vestra-plugin docs --search <words>` lists the matching paths. In a project that depends on the SDK, `npx vestra-plugin docs` is enough.
 - **In a Node.js program**: `import { docs, searchDocs } from "@vestra-player/sdk/docs"`; `docs(path, { page })` and `searchDocs(query, { page })` return the same text.
-- **Paths**: `/` lists the top level; every answer lists the paths one level down with a one-line summary. `/API/<category>/<symbol>/<member>` is one declaration with its signature, parameters, return value, errors, capability, player version and examples, for example `/API/Media/Snapshot/dispose`. `/Guides/<group>/<page>` is a page of the site, for example `/Guides/Guides/Test a plugin` (the file name works too: `/Guides/Guides/testing`). Case, spaces and punctuation do not matter, the leading `/` is optional, `.` works like `/`, a name alone finds its declaration (`TestHost`, `Snapshot.export`, `plugin.player`), and `#heading` opens the page of a long answer that has that section.
+- **Paths**: `/` lists the top level; every answer lists the paths one level down with a one-line summary. `/API/<category>/<symbol>/<member>` is one declaration with its signature, parameters, return value, errors, the SDK and player versions it needs, and examples, for example `/API/Media/Snapshot/dispose`. `/Guides/<group>/<page>` is a page of the site, for example `/Guides/Guides/Test a plugin` (the file name works too: `/Guides/Guides/testing`). Case, spaces and punctuation do not matter, the leading `/` is optional, `.` works like `/`, a name alone finds its declaration (`TestHost`, `Snapshot.export`, `plugin.player`), and `#heading` opens the page of a long answer that has that section.
 - **Size**: every answer is at most 8 KB; a longer one ends with the number of its next page (`--page 2`).
 - **Before writing code**, read `/Guides/Tutorial` and `/Guides/Guides/Design rules`, then the API of what you use. Test with `/Guides/Guides/Test a plugin`.
 
@@ -20,7 +20,7 @@
 
 - `/Guides/Tutorial`: Write a first plugin for Vestra Player: a menu item that shows the playback position, then the three styles a plugin can use, and how to test and publish it.
 - `/Guides/Guides`: One page per task, from adding a window to publishing a plugin, plus the design rules and troubleshooting.
-- `/Guides/Reference`: Lookup tables that span many symbols, from manifest fields and capabilities to the test host, mostly generated from the SDK's code.
+- `/Guides/Reference`: Lookup tables that span many symbols, from manifest fields to the test host, mostly generated from the SDK's code.
 - `/Guides/Examples`: Complete, tested example plugins with a screenshot each and a step-by-step walkthrough of their code.
 
 ## API
@@ -35,5 +35,5 @@
 - `/API/Sources`: 7 entries: ResolverOptions, WebResolverOptions, FileResolverOptions, ResolvedStream, Resolver, Resolvers, ResolvedMedia
 - `/API/Subtitles`: 5 entries: SubtitleTrack, SubtitlesState, SubtitleConditional, Subtitles, SubtitleStyle
 - `/API/UI`: 44 entries: ImageRef, ImageOptions, MarkdownRef, MarkdownOptions, PropValue, PropData, Props, Ui, View, Window, Windows, SlotState, SlotPanel, PanelState, PanelSlot, SidebarSlot, Panel,…
-- `/API/Testing`: 34 entries: CapabilityInfo, CAPABILITY_INFO, MESSAGE_LIMIT, COMMAND_LIMITS, MENU_IDS, BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, BuiltinSubmenu, BUILTIN_SUBMENUS, BuiltinCommand, BUILTIN_COMMANDS, LOCALES,…
+- `/API/Testing`: 32 entries: COMMAND_LIMITS, MENU_IDS, BAR_BUTTON_ICONS, BAR_BUTTON_LIMITS, BuiltinSubmenu, BUILTIN_SUBMENUS, BuiltinCommand, BUILTIN_COMMANDS, LOCALES, LIST_SEPARATORS, TEXT_LIMITS, THEME_PALETTES,…
 - `/API/Docs`: 4 entries: DOCS_PAGE_BYTES, DocsOptions, docs, searchDocs

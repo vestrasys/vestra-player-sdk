@@ -33,7 +33,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A panel loses its scroll position or the text in a field
 
-**Cause:** State kept only inside the panel's Slint component is lost when the main window is rebuilt (any plugin mounting or unmounting a panel) or the sidebar is detached or attached.
+**Cause:** State kept only inside the panel's Slint component is lost when the player makes a new instance of the panel: its column closed and opened, the column's fullscreen overlay, the sidebar detached or attached, or a tab the player unloaded to make room (a column keeps at most 4 panels loaded) shown again. Other plugins mounting or unmounting panels do not touch it.
 
 **Fix:** Keep anything that matters in bridge properties the plugin writes ([Open a tool window and remember its state](windows.md)).
 
@@ -57,9 +57,9 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## Panel position or palette state does not follow other plugins or the user
 
-**Cause:** The plugin lacks the `events` capability: {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and their `onChange` listeners follow outside changes only with it.
+**Cause:** The plugin never calls `plugin.player.subscribe()`: {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and their `onChange` listeners follow outside changes only after it. A warning in the log says so once.
 
-**Fix:** Declare `events` in the manifest.
+**Fix:** Call `plugin.player.subscribe()` first in `activate`.
 
 ## A value changed after an await does not appear
 
@@ -75,9 +75,15 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A call fails with `capability`
 
-**Cause:** The manifest does not declare the capability the call needs.
+**Cause:** The call is for the player's built-in plugins only (`plugin.commands.list`, `plugin.commands.run`, `plugin.palette.lead`).
 
-**Fix:** Add it to `capabilities`. `vestra-plugin check` and the SDK's TypeScript plugin in the editor point such calls out before the plugin runs ([Capabilities](../reference/capabilities.md#catching-a-missing-capability)).
+**Fix:** Leave it out of a plugin that is not built in.
+
+## A plugin fails to load: `manifest.json has "capabilities"`
+
+**Cause:** SDK 1.9.0 (player 0.9.0) removed manifest capabilities.
+
+**Fix:** Delete the field, and call `plugin.player.subscribe()` (what `events` did) and `await plugin.player.read()` (what `playback.read` did) first in `activate`.
 
 ## A key binding does not fire
 

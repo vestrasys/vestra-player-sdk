@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   OSD_LIMITS,
-  startPlugin,
   TestHost,
   TIMELINE_LIMITS,
 } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin, PluginError } from "../src/plugin/index.ts";
 
 test("timeline ranges: their own list of the layer, merged, cleared by a new source and dispose", async () => {

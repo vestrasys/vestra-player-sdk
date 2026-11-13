@@ -5,11 +5,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { CommandOptions, Plugin } from "../src/index.ts";
-import {
-  COMMAND_LIMITS,
-  HostError,
-  startPlugin,
-} from "../src/plugin/testing.ts";
+import { COMMAND_LIMITS, HostError } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 const TEXT = "requires 1..=%d bytes, no controls or surrounding whitespace";
 const rule = (label: string, limit: number) =>

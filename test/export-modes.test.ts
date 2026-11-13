@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { ExportJob, JobState } from "../src/plugin/index.ts";
 import type { Json } from "../src/wire.ts";
 

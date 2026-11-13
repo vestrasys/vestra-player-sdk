@@ -16,7 +16,7 @@
  */
 import { HostError } from "./wire.ts";
 import type { Json, Transport } from "./wire.ts";
-import { MESSAGE_LIMIT } from "./capabilities.ts";
+import { MESSAGE_LIMIT } from "./protocol.ts";
 import { abortError } from "./plugin/errors.ts";
 
 /**

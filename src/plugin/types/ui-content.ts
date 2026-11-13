@@ -272,8 +272,6 @@ export type Props = Record<string, PropValue>;
  * Both work in tool windows, panels (the backdrop and the floating sidebar
  * included) and settings pages.
  *
- * @capability None.
- *
  * @example Show a Markdown file in a window (examples/markdown)
  * A menu item opens a window with a formatted Markdown file that ships
  * with the plugin. The plugin reads the file, turns it into a document
@@ -298,7 +296,7 @@ export interface Ui {
    * @remarks
    * Returns at once without touching the file. The player checks the file each
    * time it receives the reference (a property write, a window or settings page
-   * opening, the main window being rebuilt): it must be inside this plugin's
+   * opening, a new instance of a panel): it must be inside this plugin's
    * package directory or {@link Plugin.dataDirectory} after following links, at
    * most 16 MB and 4096×4096 pixels, and PNG or JPEG by content (the extension
    * does not matter). A failed check of a whole-value image is a failed
@@ -314,8 +312,6 @@ export interface Ui {
    * files. After rewriting a file under the same path, call `image()` again
    * and write the new reference: the SDK does not send a value that did not
    * change, so the player would not look at the file again.
-   *
-   * @capability None.
    *
    * @param path - Absolute path of the image file, inside the package
    *   directory or the data directory.
@@ -354,8 +350,6 @@ export interface Ui {
    * time per plugin, into `<dataDirectory>/.vestra-cache/images/`; the cache
    * keeps 32 MB and fetches an address again after 24 hours, so a list that
    * shows the same thumbnails again reads them from disk.
-   *
-   * @capability None (the plugin process has network access).
    *
    * @param url - The image's `https:` address.
    * @param options - As for {@link Ui.image}.
@@ -427,7 +421,6 @@ export interface Ui {
    * `MarkdownBlock.links` (its link addresses) are readable in Slint. See
    * [Reference: theme › Markdown](../../../docs/reference/theme.md#markdown).
    *
-   * @capability None.
    * @player 0.2.0
    *
    * @param text - The Markdown source (CommonMark with GitHub tables, task
@@ -543,8 +536,6 @@ export interface Ui {
  * binding (`value: root.level`) is broken by Slint the first time the user
  * moves the control.
  *
- * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
- *
  * @example Wire a window's label and buttons to the plugin (examples/bookmark)
  * A Bookmark window shows the saved position and two buttons that save
  * it and jump back to it. `bind` keeps the label and the buttons' enabled
@@ -584,8 +575,6 @@ export interface View {
    * registers the names bound by then. A name the Slint file does not declare
    * makes `show` reject. **Panels and settings pages** forward every
    * callback of their bridge global, so bind whenever you like.
-   *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
    * @param callback - The Slint callback's name, in camelCase
    *   (`toggleEffect`) or as written in Slint (`toggle-effect`).
@@ -650,8 +639,6 @@ export interface View {
    * (the property keeps its default) and the failure goes to the plugin's
    * `onError`.
    *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
-   *
    * @param props - Properties by name; see {@link Props}.
    *
    * @throws `invalid` (throws) A property of `props` is written directly
@@ -707,8 +694,6 @@ export interface View {
    * value over the limits of {@link PropValue}: `limit`). A property the plugin
    * writes directly ({@link WireView.write}) is left out of what the function
    * returns, reported once to `onError` with `invalid`: one track per property.
-   *
-   * @capability That of the view: `ui.window`, `ui.mount` or `ui.settings`.
    *
    * @param props - Returns the properties, by name.
    * @returns A handle that stops this binding (the values last sent stay).

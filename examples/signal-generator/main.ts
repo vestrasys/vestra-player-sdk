@@ -69,7 +69,8 @@ export function frame(): StreamFrame {
 // #endregion frame
 
 // #region start-stop
-export default function activate(plugin: Plugin) {
+export default async function activate(plugin: Plugin) {
+  await plugin.player.read(); // the player's state and timeline, read once
   let stream: Stream | undefined; // the running stream
   let starting = false;
 

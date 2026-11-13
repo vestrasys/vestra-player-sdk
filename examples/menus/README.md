@@ -4,9 +4,9 @@ An **Examples** menu with the speeds 0.5×, 1×, 1.5× and 2× as radio items, a
 
 ![Menus running in Vestra Player](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `playback.read`, `events`, `playback.control` | `commands.add` (`radio`, `checked`, `group`, `order`, `enabled`), `scope()`, `player.setRate` |
+| `subscribe()`, `read()` | `commands.add` (`radio`, `checked`, `group`, `order`, `enabled`), `scope()`, `player.setRate` |
 
 ## Run it
 

@@ -14,7 +14,6 @@
  * - throws    methods that return a Promise have `@throws`
  * - category  top-level declarations have `@category`
  * - since     methods have `@since`
- * - capability  methods of module entry types have `@capability`
  * - example-lead  every `@example` has a task title of 3+ words, a lead
  *             (a sentence under the title: what it does and how it works)
  *             and, above 5 shown lines, a comment in the code; or it is a
@@ -26,11 +25,8 @@
  * (one that passes `example-lead`).
  *
  * It also compares the error codes of the `PluginError` table with the codes
- * the SDK itself throws (`failure("…")`), and checks every `@capability`
- * tag in src/ (enforced): each dotted name in it (`ui.mount`) and each
- * single-word name it gives (`events`) must be a capability of
- * `CAPABILITY_INFO`, and the tag must name at least one unless it starts
- * with "None" or "That of".
+ * the SDK itself throws (`failure("…")`), and that no `@capability` tag is
+ * left in src/ (enforced: manifest capabilities were removed in 1.9.0).
  *
  * Two more enforced rules (SDK 1.7.0, the three plugin styles):
  *
@@ -67,7 +63,6 @@ import {
 import { typeFile } from "./doc-tables/lib/source.mjs";
 import { hostEvents } from "./doc-tables/events.mjs";
 import { generatedBlocks } from "./doc-tables.mjs";
-import { CAPABILITY_INFO } from "../src/capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--strict");
@@ -86,15 +81,7 @@ if (!project) {
   process.exit(1);
 }
 
-const RULES = [
-  "summary",
-  "remarks",
-  "example",
-  "throws",
-  "category",
-  "since",
-  "capability",
-];
+const RULES = ["summary", "remarks", "example", "throws", "category", "since"];
 const stats = Object.fromEntries(
   RULES.map((rule) => [rule, { applies: 0, missing: [] }]),
 );
@@ -168,8 +155,6 @@ for (const module of modules ?? []) {
       check("since", memberName, hasTag(memberComment, "@since"));
       if (returnsPromise(member))
         check("throws", memberName, hasTag(memberComment, "@throws"));
-      if (entry)
-        check("capability", memberName, hasTag(memberComment, "@capability"));
     }
   }
 }
@@ -237,7 +222,6 @@ for (const [name, { category, kind }] of strictDeclarations) {
   if (kind === "full") {
     need(name, hasTag(comment, "@remarks"), "no @remarks");
     need(name, hasTag(comment, "@example"), "no @example");
-    need(name, hasTag(comment, "@capability"), "no @capability");
   }
   for (const member of ownMembers(declaration)) {
     if (member.inheritedFrom) continue;
@@ -247,7 +231,6 @@ for (const [name, { category, kind }] of strictDeclarations) {
     if (kind !== "full") continue;
     if (isMethod(member)) {
       need(memberName, hasTag(memberComment, "@example"), "no @example");
-      need(memberName, hasTag(memberComment, "@capability"), "no @capability");
       need(memberName, hasTag(memberComment, "@since"), "no @since");
       if (returnsPromise(member))
         need(memberName, hasTag(memberComment, "@throws"), "no @throws");
@@ -525,11 +508,9 @@ const undocumentedCodes = [...thrown.keys()].filter(
   (code) => !documented.has(code),
 );
 
-// @capability tags name capabilities that exist.
+// No @capability tag is left (manifest capabilities were removed in 1.9.0).
 const capabilityProblems = [];
 {
-  const known = new Set(Object.keys(CAPABILITY_INFO));
-  const bareNames = new Set([...known].filter((name) => !name.includes(".")));
   const scan = (directory) => {
     for (const item of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, item.name);
@@ -538,38 +519,14 @@ const capabilityProblems = [];
         continue;
       }
       if (!path.endsWith(".ts")) continue;
-      const text = readFileSync(path, "utf8");
-      for (const comment of text.matchAll(/\/\*\*[\s\S]*?\*\//g)) {
-        const lines = comment[0]
-          .split("\n")
-          .map((line) => line.replace(/^\s*\/?\*+\/?\s?/, ""));
-        lines.forEach((line, index) => {
-          if (!line.startsWith("@capability")) return;
-          const rest = [line.slice("@capability".length)];
-          for (const next of lines.slice(index + 1)) {
-            if (/^@\w/.test(next) || !next.trim()) break;
-            rest.push(next);
-          }
-          const tag = rest
-            .join(" ")
-            .replace(/\{@link[^}]*\}/g, "")
-            .trim();
-          const at = `${path.slice(root.length + 1)}:${text.slice(0, comment.index).split("\n").length + index}`;
-          const dotted = tag.match(/\b[a-z]+(?:\.[a-z]+)+\b/g) ?? [];
-          const words = (tag.match(/\b[a-z]+\b/g) ?? []).filter((word) =>
-            bareNames.has(word),
-          );
-          for (const name of dotted)
-            if (!known.has(name))
-              capabilityProblems.push(
-                `${at}: @capability names "${name}", which is not in CAPABILITY_INFO`,
-              );
-          if (!dotted.length && !words.length && !/^(None|That of)\b/.test(tag))
+      readFileSync(path, "utf8")
+        .split("\n")
+        .forEach((line, index) => {
+          if (/^\s*\*\s*@capability\b/.test(line))
             capabilityProblems.push(
-              `${at}: @capability "${tag}" names no capability`,
+              `${path.slice(root.length + 1)}:${index + 1}: @capability (removed in 1.9.0)`,
             );
         });
-      }
     }
   };
   scan(join(root, "src"));

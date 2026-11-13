@@ -11,12 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import {
-  HostError,
-  startPlugin,
-  SUBTITLE_LIMITS,
-  TestHost,
-} from "../src/plugin/testing.ts";
+import { HostError, SUBTITLE_LIMITS, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import { systemServices } from "../src/plugin/local.ts";
 import { canonical } from "../src/plugin/bindings.ts";

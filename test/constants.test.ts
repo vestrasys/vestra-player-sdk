@@ -1,6 +1,5 @@
 /**
- * The exported tables the documentation is generated from: capabilities,
- * limits, binding names, the built-in commands and submenus. The player's
+ * The exported tables the documentation is generated from: limits, binding names, the built-in commands and submenus. The player's
  * own tests check them against the player; these check that they are
  * consistent in themselves and that the SDK and the test host enforce them.
  */
@@ -9,20 +8,17 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
 import {
   BINDING_INPUTS,
   BUILTIN_COMMANDS,
   BUILTIN_SUBMENUS,
-  CAPABILITY_INFO,
   MENU_IDS,
   MESSAGE_LIMIT,
   OSD_LIMITS,
   SECRET_LIMITS,
-  startPlugin,
 } from "../src/plugin/testing.ts";
-import { API_VERSION, CAPABILITIES } from "../src/player-runtime.ts";
+import { startPlugin } from "./explicit.ts";
+import { API_VERSION } from "../src/player-runtime.ts";
 import { canonical } from "../src/plugin/bindings.ts";
 import { HOST_GROUPS, MENU_KEYS } from "../src/i18n.ts";
 import type { Plugin, PluginError } from "../src/plugin/index.ts";
@@ -30,11 +26,11 @@ import type { Plugin, PluginError } from "../src/plugin/index.ts";
 const code = (expected: string) => (error: unknown) =>
   (error as PluginError).code === expected;
 
-async function started(capabilities: string[]) {
+async function started() {
   const directory = mkdtempSync(join(tmpdir(), "constants-"));
   writeFileSync(
     join(directory, "manifest.json"),
-    JSON.stringify({ id: "test.constants", capabilities }),
+    JSON.stringify({ id: "test.constants" }),
   );
   const errors: unknown[] = [];
   let plugin!: Plugin;
@@ -48,114 +44,8 @@ async function started(capabilities: string[]) {
   return { ...run, plugin, errors };
 }
 
-test("CAPABILITIES are the keys of CAPABILITY_INFO, in the player's order", () => {
+test("API_VERSION is vestra/1", () => {
   assert.equal(API_VERSION, "vestra/1");
-  assert.deepEqual(CAPABILITIES, Object.keys(CAPABILITY_INFO));
-  assert.deepEqual(CAPABILITIES, [
-    "producer.av",
-    "playback.read",
-    "playback.control",
-    "source.resolve",
-    "events",
-    "commands",
-    "ui.window",
-    "ui.mount",
-    "ui.dialog",
-    "plugins.manage",
-    "processing.video",
-    "processing.audio",
-    "subtitles.read",
-    "subtitles.control",
-    "media.read",
-    "media.control",
-    "media.sources",
-    "ui.osd",
-    "clipboard",
-    "window.control",
-    "bindings.manage",
-    "timeline.marks",
-    "ui.drop",
-    "ui.settings",
-    "ui.theme",
-    "secrets",
-    "rendering.manage",
-    "video.upscaling",
-    "video.motion",
-    "commands.run",
-    "palette.lead",
-    "mpv",
-  ]);
-  assert.ok(Object.isFrozen(CAPABILITY_INFO));
-  assert.ok(Object.isFrozen(CAPABILITIES));
-});
-
-test("CAPABILITY_INFO: labels, highlighted ones and requirements", () => {
-  const risky = CAPABILITIES.filter((name) => CAPABILITY_INFO[name]!.risky);
-  assert.deepEqual(risky, [
-    "plugins.manage",
-    "clipboard",
-    "bindings.manage",
-    "secrets",
-    "rendering.manage",
-    "commands.run",
-    "mpv",
-  ]);
-  const builtinOnly = CAPABILITIES.filter(
-    (name) => CAPABILITY_INFO[name]!.builtinOnly,
-  );
-  assert.deepEqual(builtinOnly, ["commands.run", "palette.lead"]);
-  for (const [name, info] of Object.entries(CAPABILITY_INFO)) {
-    assert.match(info.label, /^[A-Z][^\n]*[^.\s]$/, name);
-    assert.ok(info.apis.length > 0, name);
-    assert.equal(new Set(info.apis).size, info.apis.length, name);
-    for (const needed of info.requires) {
-      assert.ok(CAPABILITIES.includes(needed), `${name} requires ${needed}`);
-      assert.notEqual(needed, name);
-    }
-  }
-  // Only media.read and media.control share their wording.
-  const labels = Object.values(CAPABILITY_INFO).map((info) => info.label);
-  assert.equal(new Set(labels).size, labels.length - 1);
-  assert.equal(
-    CAPABILITY_INFO["media.read"]!.label,
-    CAPABILITY_INFO["media.control"]!.label,
-  );
-});
-
-test("CAPABILITY_INFO names members that exist", () => {
-  // fileURLToPath, not URL.pathname: on Windows the pathname is "/D:/…".
-  const file = fileURLToPath(
-    new URL("../src/plugin/types.ts", import.meta.url),
-  );
-  const program = ts.createProgram([file], {
-    allowImportingTsExtensions: true,
-    noEmit: true,
-    strict: true,
-    target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.NodeNext,
-  });
-  const checker = program.getTypeChecker();
-  const source = program.getSourceFile(file);
-  assert.ok(source, `the program has ${file}`);
-  const module = checker.getSymbolAtLocation(source);
-  assert.ok(module, `${file} is a module`);
-  const exports = checker.getExportsOfModule(module);
-  const typeOf = (name: string) => {
-    const symbol = exports.find((each) => each.name === name);
-    assert.ok(symbol, `types.ts exports ${name}`);
-    return checker.getDeclaredTypeOfSymbol(symbol);
-  };
-  for (const [name, info] of Object.entries(CAPABILITY_INFO))
-    for (const api of info.apis) {
-      const [head, ...members] = api.split(".");
-      assert.ok(members.length, `${name}: ${api} names a member`);
-      let type = typeOf(head!);
-      for (const member of members) {
-        const property = type.getProperty(member);
-        assert.ok(property, `${name}: ${api} exists`);
-        type = checker.getTypeOfSymbol(property);
-      }
-    }
 });
 
 test("MESSAGE_LIMIT is 1 MiB", () => {
@@ -164,7 +54,7 @@ test("MESSAGE_LIMIT is 1 MiB", () => {
 
 test("OSD_LIMITS bound osd.show and the information block", async () => {
   assert.ok(Object.isFrozen(OSD_LIMITS));
-  const { plugin, host, errors, stop } = await started(["ui.osd"]);
+  const { plugin, host, errors, stop } = await started();
   try {
     await plugin.osd.show("x".repeat(OSD_LIMITS.messageChars));
     await assert.rejects(
@@ -199,7 +89,7 @@ test("OSD_LIMITS bound osd.show and the information block", async () => {
 
 test("SECRET_LIMITS bound names and values", async () => {
   assert.ok(Object.isFrozen(SECRET_LIMITS));
-  const { plugin, host, stop } = await started(["secrets"]);
+  const { plugin, host, stop } = await started();
   try {
     const name = "a".repeat(SECRET_LIMITS.nameChars);
     await plugin.secrets.set(name, "x".repeat(SECRET_LIMITS.valueBytes));

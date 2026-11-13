@@ -5,7 +5,7 @@ description: "Write a first plugin for Vestra Player: a menu item that shows the
 
 # Tutorial
 
-A plugin for Vestra Player is a separate Node.js process that talks to the player over one connection. It is a folder with a `manifest.json` (who the plugin is and its capabilities, the things it may do), TypeScript modules that the player runs, and optional Slint files for its windows, panels and settings pages.
+A plugin for Vestra Player is a separate Node.js process that talks to the player over one connection. It is a folder with a `manifest.json` (who the plugin is), TypeScript modules that the player runs, and optional Slint files for its windows, panels and settings pages.
 
 In this tutorial you write one: a menu item **Tools ▸ Where am I?** (also on Ctrl+Alt+W) that shows the playback position on the screen. Then you see the three styles a plugin can be written in, and how to test and publish it.
 
@@ -28,7 +28,7 @@ The package brings its own TypeScript and the `vestra-plugin` command line tool.
 
 ```text
 my-plugin/
-  manifest.json        identity and capabilities
+  manifest.json        identity
   main.ts              the entry module
   ui/*.slint           windows, panels and settings pages
   locales/*.po         translations
@@ -47,11 +47,11 @@ Add the scripts to `package.json`:
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.8.0" }
+  "devDependencies": { "@vestra-player/sdk": "^1.9.0" }
 }
 ```
 
-Add a `tsconfig.json` for your editor. Its `plugins` entry marks a call whose capability the manifest does not declare while you type:
+Add a `tsconfig.json` for your editor:
 
 ```json
 {
@@ -65,8 +65,7 @@ Add a `tsconfig.json` for your editor. Its `plugins` entry marks a call whose ca
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "skipLibCheck": true,
-    "types": ["node"],
-    "plugins": [{ "name": "@vestra-player/sdk/ts-plugin" }]
+    "types": ["node"]
   },
   "include": ["*.ts", "tests/*.ts"]
 }
@@ -83,12 +82,11 @@ Create `manifest.json`. Replace `me` with your GitHub user name:
   "id": "me.hello",
   "version": "0.1.0",
   "apiVersion": "vestra/1",
-  "entry": "main.ts",
-  "capabilities": ["commands", "ui.osd", "playback.read", "events"]
+  "entry": "main.ts"
 }
 ```
 
-The capabilities let the plugin add menu items (`commands`), show on-screen messages (`ui.osd`), read the playback state (`playback.read`) and keep it current (`events`: without it, `plugin.player.state` is read only at start and after the plugin's own calls). A call whose capability is missing fails. Every field is in [Manifest](../reference/manifest.md), every capability in [Capabilities](../reference/capabilities.md).
+Every field is in [Manifest](../reference/manifest.md). The manifest says who the plugin is, not what it may do: the plugin store shows what its code uses, from a scan of the package ([Capability scan](../reference/scan.md)).
 
 ## 3. Add a menu item
 
@@ -99,6 +97,8 @@ Create `main.ts`:
 import type { Plugin } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   plugin.commands.add({
     id: "where",
     path: ["Tools", "Where am I?"],
@@ -139,7 +139,7 @@ Open a video, then choose **Tools ▸ Where am I?** in the right-click menu, or 
 
 ## 5. Choose a style
 
-The menu item above follows the playback state through `plugin.player.state` and the SDK decides when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. It needs the capabilities `ui.mount` and `playback.control` as well.
+The menu item above follows the playback state through `plugin.player.state` and the SDK decides when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style starts with `plugin.player.subscribe()` and `await plugin.player.read()`, as above.
 
 ### A: declare with `bind()`
 
@@ -203,4 +203,4 @@ npm run pack                 # dist/, then me.hello-0.1.0.vxp
 - [Add settings and translations](../guides/i18n.md): a settings page and a second language.
 - [Design rules](../guides/design-rules.md): make the plugin feel like part of the player.
 - [Examples](../examples/index.md): complete plugins to read.
-- [Reference](../reference/index.md): manifest, capabilities, commands, events, limits.
+- [Reference](../reference/index.md): manifest, commands, events, limits.

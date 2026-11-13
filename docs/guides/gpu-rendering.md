@@ -7,15 +7,11 @@ description: Show the player's GPU or software rendering choice as a menu item, 
 
 **Goal:** a settings menu item "GPU Rendering (Experimental)" that shows whether the player will draw on the GPU, is greyed out with the player's reason where the GPU cannot be chosen, saves the user's choice, says "(Restart to Apply)" while the choice waits for a restart, and offers that restart.
 
-The player keeps the choice itself, like a browser's hardware acceleration switch: {@link "@vestra-player/sdk"!Rendering.setPreference | setPreference} saves it in the player's settings at once, the running player keeps its renderer, and the next start uses the choice **whether or not the user restarts now**. Your plugin stores nothing. Reading the state needs no capability; saving a choice and restarting need `rendering.manage`.
+The player keeps the choice itself, like a browser's hardware acceleration switch: {@link "@vestra-player/sdk"!Rendering.setPreference | setPreference} saves it in the player's settings at once, the running player keeps its renderer, and the next start uses the choice **whether or not the user restarts now**. Your plugin stores nothing.
 
 Where the switch matters: on macOS the player draws on the GPU by default. On Windows the GPU renderer (Direct3D 12 windows, libmpv drawing with Direct3D 11 into textures they share) is experimental and off by default: the player's own **GPU Rendering** switch (the Picture panel's Rendering section, or the command palette) turns it on, as does starting the player with `VESTRA_RENDER=gpu`. In software (CPU) mode, the default on Windows, render options and plugin shaders cannot run and fail with `unsupported`. Where this player has no GPU renderer at all (Linux), `gpu.available` is `false` with `no-gpu-backend`. Each system's details are in [Platforms](../reference/platforms.md).
 
 ## Steps
-
-### Declare the capability
-
-Saving a choice and restarting need `rendering.manage` in the manifest's `capabilities`; reading the state needs no capability.
 
 ### Build the item from the state
 
@@ -62,8 +58,7 @@ Set `host.rendering.gpu = { available: false, reason: { code: "denylist", messag
   "version": "1.0.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "minPlayerVersion": "0.5.13",
-  "capabilities": ["commands", "rendering.manage"]
+  "minPlayerVersion": "0.9.0"
 }
 ```
 

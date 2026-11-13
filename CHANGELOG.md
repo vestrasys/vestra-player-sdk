@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.9.0
+
+**Who must change: every plugin with a `capabilities` field, and every plugin that follows the player's state.** Manifest capabilities are gone (user rulings 2026-11-13; plan `design/sdk-1.9/PLAN.md`, C2 and the SDK half of C3). A manifest says who the plugin is; what the store shows the user comes only from the capability scan of the code ([Capability scan](docs/reference/scan.md)). The two declarations that changed how a plugin ran are now calls, and nothing else is declared or checked. Needs player 0.9.0, which removes its gate in the same release; `apiVersion` stays `vestra/1`.
+
+**Migration** (first lines of `activate`, then delete the field):
+
+```ts
+export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // was "events"
+  await plugin.player.read(); // was "playback.read"
+  // …the rest unchanged
+}
+```
+
+Keep only the lines whose declaration the manifest had; a plugin that had neither adds nothing. Set `minPlayerVersion` to `0.9.0`: an older player requires the field. Remove `@vestra-player/sdk/ts-plugin` from `tsconfig.json`, `capabilities` from `startPlugin(…)` options in tests, and `--json` from `vestra-plugin check`.
+
+**New: the explicit calls** (C2).
+
+- **`plugin.player.subscribe()`** (sync, idempotent): turns on event delivery for this run and subscribes the state copy now. Until it is called, a listener of `source.state`, `playback.backend`, `window.state`, `timeline.changed`, `appearance.changed` or `resolvers.fileTypes` never runs, as without `events` before (the one-time warning in the log now names `subscribe()`); a listener added earlier starts to hear events at the call. The other events (`packages.changed`, `bindings.changed`, `commands.keys`, `video.upscaling.changed`, `video.motion.changed`) arrive from the first listener, as they did with their own declarations.
+- **`await plugin.player.read()`** (idempotent; a failed read is tried again by the next call): reads `source.state` and `timeline.marks` and turns on the re-reads after the plugin's own actions (`host.run`, closing a `Media`, a stream's end), as `playback.read` did. Before it, `plugin.player.state` is the empty state. `subscribe()` after `read()` reads the state once more, since a change between the two sent no event.
+- **Command keys and the layout state start on first use** (`plugin.commands.keys`, `plugin.panels.*.state`), with no declaration.
+- **Wire order** (the one ruled shift): the start-up `window.state` read now comes first, because it is answered before `activate` begins; the player-state requests follow it, one round trip later. Proof: with the explicit calls first in `activate`, all 19 golden scenarios equal their declared traces after that one transformation (step 1 of this release, recorded on both paths before the declared one was removed; `test/explicit-calls.test.ts` keeps the request sequences); in this release the 14 traces it changes were regenerated (list below) and the others are byte-identical.
+
+**Removed: everything that reads declarations** (C3, SDK half; no legacy path).
+
+- **Manifest field `capabilities`**: an error everywhere the SDK reads a manifest (`vestra-plugin check`/`build`/`pack`, `startPlugin`), with a message that names the change and the two calls (`CAPABILITIES_REMOVED`). An error, not a warning, because the player refuses unknown manifest fields and an ignored list would leave a plugin that silently stops hearing events or reading the state; the message says exactly what to write instead.
+- **Early refusals with `capability`** (`media.sources`, `playback.control` for `media.sources.open`, `mpv`, `secrets`, `rendering.manage`, `video.upscaling`, `video.motion`, `processing.video`, `timeline.marks`, `commands.run`, `palette.lead`): the calls are sent and the player answers. `capability` remains the player's (and `TestHost`'s) code for the built-in-only requests (`commands.list`, `commands.run`, `palette.lead.*`) from a plugin that is not built in.
+- **`CAPABILITY_INFO` and `CapabilityInfo`** (`./testing`), **`CAPABILITIES`, `CAPABILITY_INFO`, `HOST_CAPABILITIES`** (`./runtime`), the copy of the player's capability table (`src/host-capabilities.ts`, `npm run capabilities:sync`), the capability checker and its rules, the `@capability` doc tag and the [Capabilities](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html) reference page.
+- **`vestra-plugin check`**: no capability step; `--json` (which only reported it) fails with a message.
+- **`@vestra-player/sdk/ts-plugin`**: no checker and no quick fix; the module stays as a no-op so that a `tsconfig.json` that lists it still loads (remove it; a later major removes the module).
+- **`PluginInfo.capabilities`, `PackageManifest.capabilities`** and `TestHost.packages[].capabilities`.
+- **`startPlugin`'s `capabilities` option.** `id` now means "start with this id and read no manifest".
+- **`TestHost` `bindings.list`** lists a plugin's `focus: "panel"` commands without a `ui.mount` declaration to look at (player 0.8.0 left them out). Everything else in `TestHost` is unchanged.
+
+**Player side: panels compile one by one, when first shown** (player 0.9.0; no API change). A panel shown at once (the bottom bar, the backdrop, the current tab of an open column) still compiles at the mount and rejects `ready` with `ui-prepare`; a tab mounted in the background compiles when it is first shown (an adjust tab when the column opens), and a failure then reaches `onError` as `ui-prepare`, the tab staying empty until the plugin mounts it again. Mounting or unmounting a panel no longer rebuilds the main window, so other panels keep their component state; a panel gets a new instance only when its place is made again (a column closed and opened, the fullscreen overlay, the floating sidebar) or after the player unloaded it (at most 4 loaded per column). Docs follow (`Panel`, `Panel.ready`, `ui-prepare`, the guides).
+
+**Kept**: the capability scan and `capability-scan.json` (its test now covers every method the SDK sends instead of the removed table), `API_REQUESTS` (the message and event tables), the message and event reference pages (by area; the events table says which events wait for `subscribe()`).
+
+**Golden traces regenerated** (the ruled `window.state` shift; nothing else differs): `builtins-info`, `builtins-playback`, `builtins-playlist`, `builtins-subtitles`, `builtins-video`, `examples-adjust-panel`, `examples-blur`, `examples-bookmark`, `examples-menus`, `examples-signal-generator`, `styles-speed-a`, `styles-speed-b`, `styles-speed-c`, `host-start-taken`. The 11 examples and the three style plugins were migrated (field deleted, the calls inserted, `minPlayerVersion` 0.9.0); built-ins at the pinned player commit, which still declare, start through the same calls (`test/explicit.ts`) until they are migrated and re-pinned.
+
 ## 1.8.0
 
 **Who must change: nobody.** Pure additions and a product-data sync (user rulings 2026-11-13, plan A): the 31 existing capabilities, their members, what each needs and every existing behaviour of the SDK and of `TestHost` are as in 1.7.20; the existing tests and golden traces pass unchanged. A plugin that does nothing keeps working on every player. A plugin that uses an addition needs the player released with this SDK (`minPlayerVersion`); `apiVersion` stays `vestra/1`.

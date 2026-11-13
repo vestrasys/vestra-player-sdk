@@ -9,7 +9,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { MAX_CHAINED_PASSES } from "../src/plugin/passes.ts";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { ScopeImpl } from "../src/plugin/scope.ts";
 import type { Json } from "../src/wire.ts";
 import type {

@@ -8,7 +8,9 @@ const RATES = [0.5, 1, 1.5, 2];
 const nextRate = (rate: number) =>
   RATES[(RATES.indexOf(rate) + 1) % RATES.length] ?? 1;
 
-export default function activate(plugin: Plugin) {
+export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   const bar = plugin.panels.mount("bottom", "ui/bar.slint");
   plugin.player.on("source.state", (s) =>
     bar.set({ rate: `${s.rate.toFixed(2)}×` }),

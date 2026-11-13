@@ -6,15 +6,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import {
-  CAPABILITY_INFO,
-  startPlugin,
-  TestHost,
-  VIDEO_PROCESSING_LIMITS,
-} from "../src/plugin/testing.ts";
+import { TestHost, VIDEO_PROCESSING_LIMITS } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 import type { PluginError, VideoNode } from "../src/plugin/types.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
 import { nodeProblem } from "../src/processing.ts";
 
 const capabilities = ["playback.read", "events", "processing.video"];
@@ -49,20 +44,6 @@ function cube(directory: string, name: string, size = 2) {
   writeFileSync(file, `${lines.join("\n")}\n`);
   return file;
 }
-
-test("video.shaders.set needs processing.video, like the rest of plugin.video", () => {
-  const video = HOST_CAPABILITIES.capabilities.find(
-    (c) => c.name === "processing.video",
-  )!;
-  assert.ok(
-    video.methods.some(
-      (m) => m.name === "video.shaders.set" && m.needs === "processing.video",
-    ),
-  );
-  assert.ok(
-    CAPABILITY_INFO["processing.video"]!.apis.includes("Plugin.video.shaders"),
-  );
-});
 
 test("shaders: set, clear and dispose; the player holds the real paths", async () => {
   const { plugin, host, stop } = await started();
@@ -194,15 +175,6 @@ test("shaders: software rendering refuses them; a fallback and a compile failure
   shaders.clear();
   await host.settle();
   assert.equal(failure(shaders), "applied", "clear() still succeeds");
-  await stop();
-});
-
-test("shaders: without processing.video the call throws capability", async () => {
-  const { plugin, stop } = await started(new TestHost(), [
-    "playback.read",
-    "events",
-  ]);
-  assert.throws(() => plugin.video.shaders(), { code: "capability" });
   await stop();
 });
 

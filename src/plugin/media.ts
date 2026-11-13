@@ -372,7 +372,6 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
       const service = serviceOf(runtime);
       if (typeof options !== "object" || options === null)
         throw failure("invalid", "export options must be an object");
-      needSources(scope);
       const parts = checkParts(options.parts);
       let mode: Record<string, unknown>;
       if (options.format === "copy") {
@@ -440,7 +439,6 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
           "invalid",
           "end belongs to a snapshot's check; parts carry their own end",
         );
-      needSources(scope);
       return scope.runtime.host.jobs.check(checkParts(input), encoding);
     },
   };
@@ -510,15 +508,8 @@ function checkParts(parts: ExportPart[]): ExportPart[] {
   return checked;
 }
 
-/** The parts' tokens are media.sources': refuse at once without it, as the player does. */
-function needSources(scope: ScopeImpl) {
-  if (!scope.runtime.can("media.sources"))
-    throw failure("capability", "media.sources must be declared in manifest");
-}
-
 function mediaSources(scope: ScopeImpl): MediaSources {
   const host = () => {
-    needSources(scope);
     return scope.runtime.host.mediaSources;
   };
   const token = (value: string) => {
@@ -544,13 +535,6 @@ function mediaSources(scope: ScopeImpl): MediaSources {
     forget: async (value: string) => host().forget(token(value)),
     list: async () => host().list(),
     async open(value: string, options: { start?: number } = {}) {
-      needSources(scope);
-      // An open like Player.open's: the player asks playback.control too.
-      if (!scope.runtime.can("playback.control"))
-        throw failure(
-          "capability",
-          "playback.control must be declared in manifest",
-        );
       const start = options?.start;
       if (start !== undefined && !(Number.isFinite(start) && start >= 0))
         throw failure("invalid", "start must be seconds from 0");

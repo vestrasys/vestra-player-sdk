@@ -5,7 +5,7 @@ description: The boundary categories vestra-plugin scan reports for a plugin's c
 
 # Capability scan
 
-`vestra-plugin scan` reads a plugin's source and reports which boundaries its code crosses, as one-word categories. The plugin repository runs it for every package and keeps the result in its index; the store shows it before installing and compares it between two versions of a plugin. It is a report for people: it gates nothing. What a plugin may call is still decided by the `capabilities` of its manifest ([Capabilities](capabilities.md)), and a plugin is a Node.js process, so files, the network and other programs are outside the scan.
+`vestra-plugin scan` reads a plugin's source and reports which boundaries its code crosses, as one-word categories. The plugin repository runs it for every package and keeps the result in its index; the store shows it before installing and compares it between two versions of a plugin. It is a report for people: it gates nothing, and since SDK 1.9.0 it is the only disclosure (a manifest declares nothing). A plugin is a Node.js process, so files, the network and other programs are outside the scan.
 
 ```text
 vestra-plugin scan [plugin-dir...]
@@ -36,7 +36,7 @@ A member is in a category when it changes the user's own settings or the player 
 
 The table is `capability-scan.json` in the package (`@vestra-player/sdk/capability-scan.json`): `categories` has the eight names in this order, each with `about`, `members` (API methods as `Interface.member`) and `requests` (methods of the player's protocol, as [Messages](messages.md) names them; `packages.*` covers the prefix's other methods); `none` has the same lists for everything else. Every method of the API and every method of the player's protocol is in exactly one list.
 
-Some members that need a highlighted capability only read, and are in no category: `Bindings.list`, `Bindings.onChange`, `Commands.list`, `Mpv.get`, `Mpv.observe`. `Packages.validate` and `Packages.validateArchive` are in `plugins`, since their answer is the handle that installs.
+Some members that act on sensitive things only read, and are in no category: `Bindings.list`, `Bindings.onChange`, `Commands.list`, `Mpv.get`, `Mpv.observe`. `Packages.validate` and `Packages.validateArchive` are in `plugins`, since their answer is the handle that installs.
 
 ## How files are read
 

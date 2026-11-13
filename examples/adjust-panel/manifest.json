@@ -3,14 +3,7 @@
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "minPlayerVersion": "0.7.6",
-  "capabilities": [
-    "commands",
-    "ui.mount",
-    "playback.read",
-    "playback.control",
-    "events"
-  ],
+  "minPlayerVersion": "0.9.0",
   "name": "Speed Panel",
   "author": "Vestra Player SDK examples",
   "punchline": "A speed slider in the player's adjust column",

@@ -135,7 +135,9 @@ export function keyframes(plugin: Plugin) {
 }
 
 /** All four scenarios in style B. */
-export default function activate(plugin: Plugin) {
+export default async function activate(plugin: Plugin) {
+  plugin.player.subscribe(); // the player's events from now on
+  await plugin.player.read(); // the player's state and timeline, read once
   speed(plugin);
   frames(plugin);
   list(plugin);

@@ -234,11 +234,6 @@ function owned<T extends object>(
   what: string,
 ): OwnedSettings<T> {
   const runtime = scope.runtime;
-  if (!runtime.can("processing.video"))
-    throw failure(
-      "capability",
-      "processing.video must be declared in manifest",
-    );
   if (runtime.services.has(kind.service))
     throw new Error(`a plugin has one ${what}; reuse it`);
   runtime.services.set(kind.service, true);

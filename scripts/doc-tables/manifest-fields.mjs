@@ -23,10 +23,6 @@ const RULES = {
     "required",
     "Path of the entry module inside the package: `.ts` while developing, `.js` after `build`.",
   ],
-  capabilities: [
-    "required",
-    "Capabilities from [Capabilities](capabilities.md), each at most once.",
-  ],
   name: [
     "display",
     "1–{name} characters, one line, no leading or trailing white space. English; translated with the plugin's catalog.",
@@ -72,7 +68,7 @@ export default async function manifestFields({ root, table }) {
     pathToFileURL(join(root, "src/manifest.ts"))
   );
   const { API_VERSION } = await import(
-    pathToFileURL(join(root, "src/capabilities.ts"))
+    pathToFileURL(join(root, "src/protocol.ts"))
   );
   const fields = Object.keys(RULES);
   if (

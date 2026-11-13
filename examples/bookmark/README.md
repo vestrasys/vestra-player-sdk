@@ -4,9 +4,9 @@ A small, complete plugin: **Playback → Bookmark…** opens a tool window that 
 
 ![Bookmark running in Vestra Player](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `ui.window`, `playback.read`, `events`, `playback.control` | `windows.create`, `Window.bind` / `on`, `player.state`, `player.seek` |
+| `subscribe()`, `read()` | `windows.create`, `Window.bind` / `on`, `player.state`, `player.seek` |
 
 ## Run it
 

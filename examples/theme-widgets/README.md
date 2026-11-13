@@ -4,9 +4,9 @@
 
 ![Theme widgets running in Vestra Player](screenshot.png)
 
-| Capabilities | API |
+| Follows the player | API |
 | --- | --- |
-| `commands`, `ui.window` | `windows.create`, `Window.bind` / `on`, `commands.keys`; `Theme`, `Button`, `Slider`, `ToolTipArea` (with `keys`), `KeyHint` in Slint |
+| — | `windows.create`, `Window.bind` / `on`, `commands.keys`; `Theme`, `Button`, `Slider`, `ToolTipArea` (with `keys`), `KeyHint` in Slint |
 
 ## Run it
 

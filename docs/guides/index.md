@@ -9,7 +9,7 @@ Each guide answers one practical question: "how do I do X?". A guide states its 
 
 ## How a plugin works
 
-The rules every guide assumes, on one page: the plugin process and its capabilities, handles and scopes, the update pass (`set` against `bind`, when a change shows), how values cross between TypeScript and Slint and which Slint types a plugin can write, commands, menus and keys, what keeps a plugin running and what is lost when it is stopped, the four places that change the picture and sound, the playback state, and how failures are reported.
+The rules every guide assumes, on one page: the plugin process and what it follows, handles and scopes, the update pass (`set` against `bind`, when a change shows), how values cross between TypeScript and Slint and which Slint types a plugin can write, commands, menus and keys, what keeps a plugin running and what is lost when it is stopped, the four places that change the picture and sound, the playback state, and how failures are reported.
 
 [Read the guide](how-plugins-work.md)
 
@@ -87,7 +87,7 @@ A store is any https address that serves an `index.json`; users add it to the pl
 
 ## Give a coding agent the documentation
 
-Claude Code, Cursor or the player's own Vestra Player AI read this documentation as a tree of short nodes, like `go doc`: `npx -p @vestra-player/sdk vestra-plugin docs Snapshot.dispose` prints one member's signature, errors, capability and examples, `--search` finds paths, and every answer stays under 8 KB. The guide shows what to put in the agent's instructions, the path scheme, searching, paging, and the same calls from a program with `@vestra-player/sdk/docs`.
+Claude Code, Cursor or the player's own Vestra Player AI read this documentation as a tree of short nodes, like `go doc`: `npx -p @vestra-player/sdk vestra-plugin docs Snapshot.dispose` prints one member's signature, errors, and examples, `--search` finds paths, and every answer stays under 8 KB. The guide shows what to put in the agent's instructions, the path scheme, searching, paging, and the same calls from a program with `@vestra-player/sdk/docs`.
 
 [Read the guide](agent-docs.md)
 
@@ -99,6 +99,6 @@ The rules every plugin follows: only the public SDK, no other plugins' internals
 
 ## Troubleshooting
 
-Symptoms and their causes: interface pitfalls (callbacks bound too late, one-way bindings, state lost when the main window is rebuilt, hover effects that cost frames), values that do not appear after an `await`, `stale` and `capability` failures, key bindings that do not fire, tests that fail only in CI, state lost at a restart.
+Symptoms and their causes: interface pitfalls (callbacks bound too late, one-way bindings, state lost when a panel gets a new instance, hover effects that cost frames), values that do not appear after an `await`, `stale` and `capability` failures, key bindings that do not fire, tests that fail only in CI, state lost at a restart.
 
 [Read the page](troubleshooting.md)

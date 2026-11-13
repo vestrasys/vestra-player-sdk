@@ -34,7 +34,7 @@ Picking a speed changes the playback speed, moves the radio dot and changes the 
 
 ```text
 examples/menus/
-  manifest.json          identity and capabilities
+  manifest.json          identity
   main.ts                the code
   tests/menus.test.ts    tests against the SDK's in-memory player
   package.json           the SDK as a dev dependency, and the scripts
@@ -44,7 +44,7 @@ examples/menus/
 
 {@includeCode ../../examples/menus/manifest.json}
 
-`commands` for the menu items; `playback.read` and `events` to read the current speed and keep it up to date; `playback.control` to change it.
+`plugin.player.subscribe()` and `await plugin.player.read()`, first in `activate`, read the current speed and keep it up to date.
 
 ## The code
 

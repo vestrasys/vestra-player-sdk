@@ -7,23 +7,19 @@ import test, { mock } from "node:test";
 import type { Plugin, PluginError } from "../src/index.ts";
 import type { Json } from "../src/wire.ts";
 import { createPlugin } from "../src/plugin/index.ts";
-import {
-  COMMAND_LIMITS,
-  HostError,
-  startPlugin,
-  TestHost,
-} from "../src/plugin/testing.ts";
+import { COMMAND_LIMITS, HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 const CONFLICT =
   "command conflict: menu path duplicates a command or collides with a leaf/group";
 const LONG_REASON = `invalid command: reason requires 1..=${COMMAND_LIMITS.reasonBytes} bytes, no controls or surrounding whitespace`;
 
 /** The player's runner path: `createPlugin` over a transport, not strict. */
-async function runner(host: TestHost, capabilities: string[]) {
+async function runner(host: TestHost) {
   host.manifestId = "test.runner";
   return createPlugin(
     host,
-    { id: "test.runner", capabilities },
+    { id: "test.runner" },
     process.cwd(),
     host.dataDirectory,
   );
@@ -36,7 +32,7 @@ test("a refused command declaration is skipped: the plugin activates, the others
     logged.push(args.map(String).join(" "));
   });
   try {
-    const instance = await runner(host, ["commands", "settings"]);
+    const instance = await runner(host);
     const { plugin } = instance;
     const errors: PluginError[] = [];
     const before = plugin.commands.add({
@@ -143,7 +139,7 @@ test("other start-up failures still fail activation in the runner", async () => 
     };
     const instance = await createPlugin(
       transport,
-      { id: "test.runner", capabilities: ["commands"] },
+      { id: "test.runner" },
       process.cwd(),
       host.dataDirectory,
     );
@@ -156,7 +152,7 @@ test("other start-up failures still fail activation in the runner", async () => 
 
 test("a refusal after activation goes to onError as before", async () => {
   const host = new TestHost();
-  const instance = await runner(host, ["commands"]);
+  const instance = await runner(host);
   const errors: PluginError[] = [];
   instance.plugin.onError((error) => errors.push(error));
   await instance.activated();
@@ -214,7 +210,7 @@ test("a failure that is not a refusal causes no unhandled rejection while activa
     };
     const instance = await createPlugin(
       transport,
-      { id: "test.runner", capabilities: ["commands"] },
+      { id: "test.runner" },
       process.cwd(),
       host.dataDirectory,
     );

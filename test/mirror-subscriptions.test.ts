@@ -4,7 +4,7 @@
 // plugin that only registers entries can be stopped while idle.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 const marks = (host: { calls: { method: string; params: unknown }[] }) =>
   host.calls

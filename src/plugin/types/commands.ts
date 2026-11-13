@@ -85,8 +85,6 @@ export type Bindable<T> = T | (() => T);
  * keeps working; one that reads `plugin.player.state` or another service's
  * state keeps the plugin running so the SDK can evaluate it.
  *
- * @capability commands
- *
  * @example Enable an item while a frame can be saved
  * "Save Snapshot" is greyed out with its reason unless a media file is
  * open at a frame the player can capture. The condition is sent with the
@@ -121,7 +119,6 @@ export interface Condition {
    * const playingFullscreen = when.playing.and(when.fullscreen);
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   and(...others: Condition[]): Condition;
@@ -136,7 +133,6 @@ export interface Condition {
    * const active = when.playing.or(when.paused);
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   or(...others: Condition[]): Condition;
@@ -152,7 +148,6 @@ export interface Condition {
    * const windowed = when.fullscreen.not();
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   not(): Condition;
@@ -175,8 +170,6 @@ export interface Condition {
  * State the vocabulary does not name (a plugin's own settings, an open
  * window, a track list) stays a function or a value set with
  * {@link Command.set}.
- *
- * @capability commands
  *
  * @example Check a palette item and follow the palette
  * The Appearance submenu has one radio item per palette; the player
@@ -224,7 +217,6 @@ export interface When {
    * const hasFrame = when.phase("ready", "ended");
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   phase(...phases: PlayerState["phase"][]): Condition;
@@ -241,7 +233,6 @@ export interface When {
    * const seekable = when.can("seek");
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   can(control: keyof PlayerState["can"]): Condition;
@@ -258,7 +249,6 @@ export interface When {
    * const light = when.theme("vestra-light");
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   theme(theme: ThemeId): Condition;
@@ -276,7 +266,6 @@ export interface When {
    * const followSystem = when.language("system");
    * ```
    *
-   * @capability None (the command it is given to needs `commands`).
    * @since 1.5.40
    */
   language(language: LanguagePreference): Condition;
@@ -692,8 +681,6 @@ export interface CommandOptions {
  * again. Disposing it, its scope or stopping the plugin removes the menu
  * item, its keys and its bar button.
  *
- * @capability commands
- *
  * @example Enable an item only while a file is open
  * Video ▸ Export… is greyed out until a file is open. `set` replaces the
  * `enabled` field with a function; the SDK evaluates it again after every
@@ -752,7 +739,6 @@ export interface Command extends Disposable {
    * });
    * ```
    *
-   * @capability commands
    * @since 1.0.0
    */
   set(
@@ -774,7 +760,7 @@ export interface Command extends Disposable {
    * activation completes, so a listener added anywhere in `activate` hears it.
    * `startPlugin` stays strict: there a refusal during activation fails it, so
    * tests show the bad declaration. Any other failure during activation
-   * (`capability`, no answer) fails activation.
+   * (no answer, for example) fails activation.
    *
    * Only the player's answer is skipped. What {@link Commands.add} checks
    * itself still throws from `add` (an unknown `@` menu id, more than 8
@@ -784,7 +770,6 @@ export interface Command extends Disposable {
    *
    * @throws `conflict` (rejects) Another command already has this menu path,
    *   or the path would be both a menu item and a submenu.
-   * @throws `capability` (rejects) The manifest does not declare `commands`.
    * @throws `invalid` (rejects) The player refused the declaration.
    * @throws `limit` (rejects) More than 160 commands in this plugin, or 1024 in
    *   the player.
@@ -806,8 +791,6 @@ export interface Command extends Disposable {
  * player's answer (during activation the SDK logs a refusal and skips that
  * command; `startPlugin` fails on it). What `add` checks itself throws from
  * `add`.
- *
- * @capability commands
  *
  * @example Add a menu item with a default key
  * Tools ▸ Say hello, or Ctrl+H, shows a greeting. `add` declares the item;
@@ -863,7 +846,6 @@ export interface Commands {
    * });
    * ```
    *
-   * @capability commands
    * @since 1.0.0
    */
   add(options: CommandOptions): Command;
@@ -896,9 +878,7 @@ export interface Commands {
    * {@link "@vestra-player/sdk/testing"!BUILTIN_COMMANDS | BUILTIN_COMMANDS}
    * rows owned by `host`), for a panel that shows the player's keys beside its
    * own controls; an id the plugin has not added (or another plugin's) reads
-   * `[]`. Needs nothing beyond `commands`, not `bindings.manage` (the whole
-   * binding table, every plugin's, is {@link Bindings.list}). Without the
-   * `commands` capability every command reads `[]`.
+   * `[]`. The whole binding table, every plugin's, is {@link Bindings.list}.
    *
    * @example Show a slider's keys beside it
    * The Brightness row shows its two keys, W and E by default, as key caps
@@ -916,7 +896,6 @@ export interface Commands {
    * }));
    * ```
    *
-   * @capability commands
    * @player 0.7.6
    * @since 1.6.6
    */
@@ -942,14 +921,12 @@ export interface Commands {
    *   const row = commands.find((each) => each.id === "vestra.subtitles/tuning");
    *   if (row?.keys[0]) await plugin.osd.show("Press {}", [row.keys[0]]);
    * } catch (error) {
-   *   // `capability`: not a built-in plugin, or `commands.run` not declared.
+   *   // `capability`: not a built-in plugin.
    *   if ((error as PluginError).code !== "capability") throw error;
    * }
    * ```
    *
-   * @capability commands.run (built-in plugins only)
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `commands.run`, or the plugin is not built into the player.
+   * @throws `capability` (rejects) The plugin is not built into the player.
    * @player 0.7.6
    * @since 1.7.9
    */
@@ -1021,9 +998,7 @@ export interface Commands {
    * });
    * ```
    *
-   * @capability commands.run (built-in plugins only)
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `commands.run`, or the plugin is not built into the player.
+   * @throws `capability` (rejects) The plugin is not built into the player.
    * @throws `ticket` (rejects) No ticket, or it ended or expired.
    * @throws `missing` (rejects) No listed command has this id, or one of
    *   the ids of `then`.
@@ -1192,8 +1167,6 @@ export interface CommandInfo {
  * an assistant that runs commands for a sentence. There is one lead in the
  * player, and only a built-in plugin can hold it.
  *
- * @capability palette.lead (built-in plugins only)
- *
  * @example Answer typed time stamps from the palette
  * The palette's first row reads "Go to: 12:30"; Enter seeks there. `lead`
  * puts the row up; the player sends the typed text with Enter, and the
@@ -1223,9 +1196,7 @@ export interface Palette {
    * @example See Palette
    * {@link Palette}
    *
-   * @capability palette.lead (built-in plugins only)
-   * @throws `capability` (through `ready`) The manifest does not declare
-   *   `palette.lead`, or the plugin is not built into the player.
+   * @throws `capability` (through `ready`) The plugin is not built into the player.
    * @throws `conflict` (through `ready`) Another plugin holds the lead.
    * @throws `invalid` (through `ready`) A text over its length.
    * @player 0.7.6
@@ -1346,8 +1317,6 @@ export interface PaletteLeadRun {
  * status while a request runs, a note while it cannot run); `onRun` hears
  * each activation; `done` ends the ticket of a finished request.
  *
- * @capability palette.lead (built-in plugins only)
- *
  * @example Show a status while a request runs
  * While the plugin works on a request the row shows "Working… (Enter to
  * stop)"; Enter on it stops the work. The status row replaces the lead
@@ -1376,7 +1345,7 @@ export interface PaletteLead extends Disposable {
   /**
    * Settles when the player has the row.
    *
-   * @throws `capability` (rejects) Not declared, or not a built-in plugin.
+   * @throws `capability` (rejects) The plugin is not built into the player.
    * @throws `conflict` (rejects) Another plugin holds the lead.
    * @throws `invalid` (rejects) A text over its length.
    */
@@ -1387,7 +1356,6 @@ export interface PaletteLead extends Disposable {
    * @example See PaletteLead
    * {@link PaletteLead}
    *
-   * @capability palette.lead (built-in plugins only)
    * @throws `invalid` (rejects) A text over its length.
    * @throws `capability` (rejects) The row was refused (see `ready`).
    * @since 1.7.9
@@ -1412,7 +1380,6 @@ export interface PaletteLead extends Disposable {
    * });
    * ```
    *
-   * @capability palette.lead (built-in plugins only)
    * @since 1.7.9
    */
   onRun(listener: (run: PaletteLeadRun) => void): Disposable;
@@ -1437,8 +1404,7 @@ export interface PaletteLead extends Disposable {
    * });
    * ```
    *
-   * @capability palette.lead (built-in plugins only)
-   * @throws `capability` (rejects) The manifest does not declare `palette.lead`.
+   * @throws `capability` (rejects) The plugin is not built into the player.
    * @since 1.7.9
    */
   done(ticket: string): Promise<void>;
@@ -1496,8 +1462,6 @@ export type HostAction =
  * accumulation of repeated presses and the same on-screen text, instead of
  * reimplementing them with {@link Player} calls.
  *
- * @capability commands
- *
  * @example Give a custom bar the player's own Stop and Mute
  * The plugin's bar buttons stop playback and mute exactly as the player's
  * own keys do, with the same on-screen text. Each callback runs a core
@@ -1545,11 +1509,9 @@ export interface Host {
    * });
    * ```
    *
-   * @capability commands
    * @throws `unavailable` (rejects) The action is disabled right now (nothing
    *   open, no window for `fullscreen`).
    * @throws `invalid` (rejects) An unknown action, or `seconds` out of range.
-   * @throws `capability` (rejects) The manifest does not declare `commands`.
    *
    * @since 1.0.0
    */
@@ -1581,11 +1543,9 @@ export interface Host {
    * bar.on("forward30", () => plugin.host.run("seek-forward", { seconds: 30 }));
    * ```
    *
-   * @capability commands
    * @throws `unavailable` (rejects) The action is disabled right now (nothing
    *   open, no window for `fullscreen`).
    * @throws `invalid` (rejects) An unknown action, or `seconds` out of range.
-   * @throws `capability` (rejects) The manifest does not declare `commands`.
    */
   run(
     action: "seek-backward" | "seek-forward",
@@ -1659,7 +1619,7 @@ export interface BindingInfo extends BindingRef {
 
 /**
  * `plugin.bindings`: list and override every command's bindings, including
- * the player's. Needs `bindings.manage`.
+ * the player's.
  *
  * @example Unbind the player's Mute key, then restore it
  * The player's Mute command loses its default key, and later gets it
@@ -1679,7 +1639,6 @@ export interface BindingInfo extends BindingRef {
  * plugin lists the table, writes overrides and resets them; the player
  * applies the change at once to every running plugin.
  *
- * @capability bindings.manage
  * @see [Commands, menus and bindings](../../../docs/reference/commands.md)
  * @since 1.0.0
  * @category Commands
@@ -1687,15 +1646,6 @@ export interface BindingInfo extends BindingRef {
 export interface Bindings {
   /**
    * Every declared command, and overrides whose command is gone.
-   *
-   * A `focus: "panel"` command of a plugin whose manifest does not declare
-   * `ui.mount` is left out (player 0.8.0): it has no panel, so no key can
-   * reach it. It is still declared: its stored binding is not an orphan,
-   * and `set` accepts it.
-   *
-   * @capability bindings.manage
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `bindings.manage`.
    *
    * @example Find the commands that use a key
    * A key-settings window shows which commands Ctrl+K is bound to now. `list`
@@ -1708,6 +1658,7 @@ export interface Bindings {
    * console.log(users.map((command) => `${command.plugin}/${command.command}`)); // "host" for the player
    * ```
    *
+   * @throws `disabled` (rejects) The plugin is stopping.
    * @since 1.0.0
    */
   list(): Promise<{
@@ -1727,12 +1678,9 @@ export interface Bindings {
    * no override either.
    * At most 16 inputs, syntax as {@link CommandOptions.bindings}.
    *
-   * @capability bindings.manage
    * @throws `invalid` (rejects) A malformed binding, or more than 16.
    * @throws `missing` (rejects) An unknown command that has no override
    *   either.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `bindings.manage`.
    *
    * @example Give the player's Mute command a second key
    * Mute now answers to M and to Ctrl+M. `set` replaces the command's
@@ -1748,11 +1696,8 @@ export interface Bindings {
   /**
    * Back to the defaults: one command, or every override when omitted.
    *
-   * @capability bindings.manage
    * @throws `missing` (rejects) A command that has no override and is not
    *   declared.
-   * @throws `capability` (rejects) The manifest does not declare
-   *   `bindings.manage`.
    *
    * @example Restore every default key
    * A "Restore defaults" button removes all of the user's overrides, so
@@ -1769,8 +1714,6 @@ export interface Bindings {
    * The binding list changed (read `list()` again): a declaration or an
    * override. At most every 200 ms, and only when the list itself changed,
    * not when a plugin starts again with the same commands.
-   *
-   * @capability bindings.manage
    *
    * @example Refresh a key list when bindings change
    * The plugin's key list stays current when the user changes a key in the

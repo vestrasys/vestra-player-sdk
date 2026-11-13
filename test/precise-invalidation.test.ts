@@ -9,7 +9,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inspect } from "node:util";
 import test, { mock } from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Panel, Plugin, PlayerState } from "../src/plugin/types.ts";
 import { SAFETY_PASS_MS } from "../src/plugin/passes.ts";
 
@@ -360,11 +361,9 @@ test("the player's runner path (createPlugin over a transport) skips and refresh
     for (const listener of listeners.get("source.state") ?? [])
       listener(source);
   };
-  const instance = await createPlugin(
-    transport,
-    { id: "x", capabilities: ["playback.read", "events", "commands"] },
-    process.cwd(),
-  );
+  const instance = await createPlugin(transport, { id: "x" }, process.cwd());
+  instance.plugin.player.subscribe();
+  await instance.plugin.player.read();
   const counts = { paused: 0, position: 0 };
   instance.plugin.commands.add({
     id: "paused",
@@ -537,11 +536,9 @@ test("disposing the plugin cancels a pending safety pass", async () => {
       return () => listeners.get(event)!.delete(listener);
     },
   };
-  const instance = await createPlugin(
-    transport,
-    { id: "x", capabilities: ["playback.read", "events", "commands"] },
-    process.cwd(),
-  );
+  const instance = await createPlugin(transport, { id: "x" }, process.cwd());
+  instance.plugin.player.subscribe();
+  await instance.plugin.player.read();
   let passes = 0;
   instance.plugin.commands.add({
     id: "n",

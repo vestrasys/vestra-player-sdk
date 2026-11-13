@@ -41,7 +41,7 @@ npm i -D @vestra-player/sdk   # Node.js 26 or newer
   "version": "0.1.0",
   "apiVersion": "vestra/1",
   "entry": "main.ts",
-  "capabilities": ["commands", "ui.osd"]
+  "minPlayerVersion": "0.9.0"
 }
 ```
 
@@ -81,7 +81,7 @@ The [documentation site](https://vestrasys.github.io/vestra-player-sdk/) is the 
 
 - **[Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html)**: one page: what a plugin is (a process that talks to the player), the three ways to write one with an example each, where things live, and running, testing and publishing.
 - **[Guides](https://vestrasys.github.io/vestra-player-sdk/documents/Guides.html)**: one task each (goal, steps, often a complete example): windows, settings and translations, playback, storage, window state, sliders, subtitles, video filters, the GPU switch, menu state that needs no running plugin (`plugin.when`), testing, publishing, your own store, documentation for coding agents; the design rules every plugin follows; and troubleshooting.
-- **[Reference](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html)**: capabilities, manifest fields, limits, menus and bindings, platforms, theme, error codes, events, messages, translations, the test host, and the [command line](https://vestrasys.github.io/vestra-player-sdk/documents/Command_line.html) (`vestra-plugin check`, `test`, `build`, `pack`, `i18n extract`, `i18n check`).
+- **[Reference](https://vestrasys.github.io/vestra-player-sdk/documents/Reference.html)**: manifest fields, limits, menus and bindings, platforms, theme, error codes, events, messages, translations, the test host, and the [command line](https://vestrasys.github.io/vestra-player-sdk/documents/Command_line.html) (`vestra-plugin check`, `test`, `build`, `pack`, `i18n extract`, `i18n check`).
 - **[Examples](https://vestrasys.github.io/vestra-player-sdk/documents/Examples.html)**: the walkthroughs above.
 - **[API](https://vestrasys.github.io/vestra-player-sdk/modules/_vestra-player_sdk.html)**: every type and member of `@vestra-player/sdk` and `@vestra-player/sdk/testing`.
 

@@ -263,7 +263,6 @@ export function buildTree(project) {
     "@remarks": "Remarks",
     "@returns": "Returns",
     "@throws": "Throws",
-    "@capability": "Capability",
     "@player": "Player version",
     "@since": "Since",
     "@deprecated": "Deprecated",

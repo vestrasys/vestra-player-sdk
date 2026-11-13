@@ -9,7 +9,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { HostError, startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { HostError, TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { ScopeImpl } from "../src/plugin/scope.ts";
 import type { Json } from "../src/wire.ts";
 import type {

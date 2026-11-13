@@ -8,7 +8,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 `@vestra-player/sdk/testing` runs a plugin against {@link "@vestra-player/sdk/testing"!TestHost | TestHost}, an in-memory player that speaks the real protocol, so the SDK's own logic runs as in the player. How to write tests is in [Test a plugin](../guides/testing.md).
 
 - **Simplified player side**: no decoding, no Slint rendering or compiling, no native window. A window is a record of its properties and callbacks; a source is a set of facts the test chooses. Check Slint files by running the plugin in the player (`--plugin <dir>`).
-- **The player's checks apply**: the command limits, property value limits, menu ids and processing ranges are enforced with the player's numbers, and the manifest's capabilities apply. Export jobs advance one step on every state query.
+- **The player's checks apply**: the command limits, property value limits, menu ids and processing ranges are enforced with the player's numbers. Export jobs advance one step on every state query.
 - **Property types are checked against the Slint files**: a value written to a window, panel or settings page is refused when the player would refuse it, with the player's code and message: a property the view does not declare (`nothing: no such property`), an `out` property (unless the write only repeats the value it holds, which the player ignores except when a window opens), a value of another type (`high-tint: wrong type: high-tint is a string where the declaration has a brush`; a struct field the struct does not declare), a struct field name not in Slint's spelling (`UI object field "a_b" is not in Slint canonical spelling`). Numbers fit `int`, `float` and `length` alike; no value fits `brush`, `color` or an enum; `null` fits only where an image is declared inside an array without Markdown documents; a Markdown document's rows must fit the declared row type (`[MarkdownBlock]`). What the test host cannot read is taken as declared loosely, so it never refuses what the player takes: a type name it cannot resolve (one of `std-widgets.slint`, a misspelled or undeclared name) takes any value, and a component that inherits a component of the plugin or one it imports takes undeclared names. A panel's or settings page's initial value with a field name not in Slint's spelling is left out and reported (`onError`, code `host`); a panel's initial value of a type it refuses is reported and stays stored while the panel shows its default, as in the player; a settings page's values are checked when written, where the player checks them when the Options window shows the page.
 
 ## startPlugin
@@ -22,8 +22,8 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | `dataDirectory` | An existing folder as `plugin.dataDirectory`, to test a restart; by default an empty temporary folder. |
 | `sessionStorage` | The values of `plugin.storage.session` an earlier run left (`host.sessionStorage`), to test a restart within one player session. |
 | `locale` | The interface language (`"zh-Hans"` loads `locales/zh-Hans.po`). Without it the plugin's texts show in English and the player's own texts in Simplified Chinese; `"en"` shows the player in English. |
-| `id`, `capabilities` | Start without a `manifest.json`. |
-| `builtin` | Run the plugin as one built into the player: only then do the built-in-only capabilities (`commands.run`, `palette.lead`) work; otherwise their calls fail with `capability`, as in the player. |
+| `id` | Start with this id and read no `manifest.json`. |
+| `builtin` | Run the plugin as one built into the player: only then do the built-in-only calls (`commands.list`, `commands.run`, `palette.lead`) work; otherwise their calls fail with `capability`, as in the player. |
 
 ## Acting like the user
 
@@ -66,7 +66,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | Member | What it is |
 | --- | --- |
 | {@link "@vestra-player/sdk/testing"!TestHost.calls} | Every request the plugin sent, in order: `{ method, params }`. |
-| {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to (needs `events` etc.). |
+| {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to. |
 | {@link "@vestra-player/sdk/testing"!TestHost.listening} | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
 | {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |

@@ -46,8 +46,6 @@ import type { Dialogs, Panels, Settings } from "./ui-shell.ts";
  * Testing: `host.window(id)` of `@vestra-player/sdk/testing` has the
  * window's `props`, `visible`, `emit(callback, ...args)` and `userClose()`.
  *
- * @capability ui.window
- *
  * @example Open a window from a menu command (examples/bookmark)
  * Playback ▸ Bookmark… opens the Bookmark window. `create` only makes a
  * handle; the command's `run` calls `show`, which compiles the Slint file
@@ -99,11 +97,8 @@ export interface Window extends View, Disposable {
    * `show`, `hide` and `close` of one window run one after another in call
    * order. After `dispose()`, `show` does nothing.
    *
-   * @capability ui.window
-   *
    * @returns Resolves once the player has shown the window.
    *
-   * @throws `capability` (rejects) The manifest does not declare `ui.window`.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    * @throws `host` (rejects) The Slint file is missing, outside the package
    *   directory or does not compile; it exports more than one component; or
@@ -140,8 +135,6 @@ export interface Window extends View, Disposable {
    * The instance and everything in it stay; {@link Window.opened} stays
    * `true` and {@link Window.show} brings the window back as it was. Does
    * nothing when the window is not open.
-   *
-   * @capability ui.window
    *
    * @returns Resolves once the window is hidden.
    *
@@ -181,8 +174,6 @@ export interface Window extends View, Disposable {
    * the window is not open. Unlike `dispose()`, the handle, its handlers and
    * its bindings stay.
    *
-   * @capability ui.window
-   *
    * @returns Resolves once the window is closed.
    *
    * @throws `missing` (rejects) The user closed the window just before.
@@ -219,8 +210,6 @@ export interface Window extends View, Disposable {
    *
    * Stop what the window needed here: timers, polling, a live preview.
    *
-   * @capability ui.window
-   *
    * @param listener - Called with no arguments; may be async.
    * @returns A handle that removes the listener.
    *
@@ -254,8 +243,6 @@ export interface Window extends View, Disposable {
  * question, use {@link Dialogs.confirm}. A plugin can have any number of
  * windows.
  *
- * @capability ui.window
- *
  * @example Create a window and open it from a menu (examples/bookmark)
  * A Bookmark window opens from Playback ▸ Bookmark…. `create` returns a
  * handle without opening anything; its bindings and callbacks are set up
@@ -280,8 +267,6 @@ export interface Windows {
    * makes {@link Window.show} reject.
    *
    * Bind every callback with {@link View.on} before the first `show()`.
-   *
-   * @capability ui.window (checked by {@link Window.show}).
    *
    * @param file - Path relative to the package directory, with `/` on every
    *   system, for example `"ui/picture.slint"`. It must stay inside the
@@ -389,16 +374,14 @@ export interface PanelState {
  *
  * @remarks
  * The position does not belong to the plugin that mounted the panel: any
- * plugin with `ui.mount` may read and toggle it, so a "Show playlist" command
+ * plugin may read and toggle it, so a "Show playlist" command
  * can live in a different plugin than the playlist. The player remembers
  * the sidebar's visibility, width, detached state and floating window
  * position across launches.
  *
- * `state` is read when first used. With `events` it then follows every
- * change (the user, other plugins, the window size); without `events` it
+ * `state` is read when first used. After `plugin.player.subscribe()`, it then follows every
+ * change (the user, other plugins, the window size); without `plugin.player.subscribe()`, it
  * refreshes only after this plugin's own changes.
- *
- * @capability ui.mount; `events` to follow changes made elsewhere.
  *
  * @example Add a "Show sidebar" item that works with any sidebar panel
  * Tools ▸ Show sidebar shows or hides the sidebar, whichever plugin's
@@ -424,8 +407,8 @@ export interface PanelState {
  */
 export interface PanelSlot {
   /**
-   * The current state; `null` while no plugin has a panel there (or without
-   * `ui.mount`). With sidebar tabs it is the whole position's: shown,
+   * The current state; `null` while no plugin has a panel there. With
+   * sidebar tabs it is the whole position's: shown,
    * hidden and floating apply to all tabs, which {@link PanelSlot.panels}
    * lists.
    */
@@ -443,19 +426,17 @@ export interface PanelSlot {
    * Run code when the position's state changes.
    *
    * @remarks
-   * Needs `events`: without it the listener runs only after this plugin's own
+   * Needs `plugin.player.subscribe()`: without it the listener runs only after this plugin's own
    * changes. Called with `null` when the panel there is unmounted, and also
    * when only the tabs changed ({@link PanelSlot.panels}: a panel added or
    * removed, another tab current). Errors go to {@link Scope.onError}.
-   *
-   * @capability ui.mount and events
    *
    * @param listener - Receives the new state.
    * @returns A handle that removes the listener.
    *
    * @example Tell the user when the window is too narrow for the sidebar
    * When the sidebar should show but the window has no room for it, the
-   * OSD says so. With `events`, the listener runs on every change of the
+   * OSD says so. After `plugin.player.subscribe()`, the listener runs on every change of the
    * position, whoever caused it. The player reports `reason: "space"` when
    * the preference is to show the sidebar but the window is too small.
    * ```ts
@@ -476,15 +457,12 @@ export interface PanelSlot {
    * may still leave the panel off screen (`reason: "space"`); in fullscreen,
    * `true` pops the sidebar overlay out at once.
    *
-   * @capability ui.mount
-   *
    * @param visible - The new preference.
    * @returns Resolves once the layout has the new preference, with `state`
    *   refreshed.
    *
    * @throws `missing` (rejects) No panel is mounted at this position.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
    * @example Hide the bottom bar for a clean picture
    * The control bar disappears, as if the user had hidden it from the menu,
@@ -505,23 +483,20 @@ export interface PanelSlot {
    *
    * @remarks
    * Reads the state from the player first, so it is right even without
-   * `events`. It is a switch, the same in every mode: in fullscreen a column
+   * `plugin.player.subscribe()`. It is a switch, the same in every mode: in fullscreen a column
    * switched on is revealed by the pointer at the right edge, and is not popped
    * out by the toggle (`setVisible(true)` pops it out). Switching it off while
    * it is out slides it in at once.
-   *
-   * @capability ui.mount
    *
    * @returns Resolves once the layout has the new preference.
    *
    * @throws `missing` (rejects) No panel is mounted at this position.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
    * @example Toggle the control bar from a checkable menu item
    * Screen ▸ Control bar shows or hides the bottom bar and carries a check
    * mark while it is shown. `toggle` reads the player's current preference
-   * first, so it is right even without `events`; `checked` is evaluated
+   * first, so it is right even without `plugin.player.subscribe()`; `checked` is evaluated
    * again after the command runs and follows `state`.
    * ```ts
    * plugin.commands.add({
@@ -546,8 +521,6 @@ export interface PanelSlot {
    * its tab. To show this plugin's own panel, use {@link Panel.show}. The
    * bottom bar has one panel: activating it changes nothing.
    *
-   * @capability ui.mount
-   *
    * @param plugin - The manifest id of the plugin whose panel to show, one
    *   of {@link PanelSlot.panels}.
    * @returns Resolves once the layout has the new current tab, with `state`
@@ -556,7 +529,6 @@ export interface PanelSlot {
    * @throws `missing` (rejects) No panel is mounted at this position, or
    *   none of `plugin`.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
    * @example Switch the sidebar to the playlist's tab
    * A command makes the playlist the sidebar's current tab without showing
@@ -587,8 +559,6 @@ export interface PanelSlot {
  * instance of the component. Closing the floating window (its close button
  * or the [standard close keys](../../../docs/reference/commands.md#keys-the-system-takes-first)) is the same as `setVisible(false)`.
  *
- * @capability ui.mount
- *
  * @example Add a "Detach sidebar" item
  * Tools ▸ Detach sidebar floats the sidebar in its own window and docks
  * it again, with a check mark while it floats. `setDetached` moves all
@@ -613,14 +583,11 @@ export interface SidebarSlot extends PanelSlot {
   /**
    * Float the sidebar panel in its own window, or attach it back.
    *
-   * @capability ui.mount
-   *
    * @param detached - `true` to float, `false` to dock.
    * @returns Resolves once the layout has changed, with `state` refreshed.
    *
    * @throws `missing` (rejects) No panel is mounted in the sidebar.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    *
    * @example Float the sidebar or dock it back
    * The sidebar moves into its own window, or back into the main window
@@ -645,24 +612,29 @@ export interface SidebarSlot extends PanelSlot {
  * the global, so {@link View.on} has no "bind before show" rule.
  *
  * **Life cycle.** `mount()` returns at once; in the next microtask the SDK
- * sends the mount with every property bound or set so far. The player queues
- * mounts and rebuilds its main window with the panel; {@link Panel.ready}
- * then resolves. Rebuilding happens whenever any plugin mounts or unmounts a
- * panel, and detaching the sidebar puts a new instance in a floating window.
- * The player restores the bridge properties to the values last written, but
- * state kept only inside the component (a scroll position, a property the
- * plugin never writes) starts over: keep what matters in bridge properties.
+ * sends the mount with every property bound or set so far. The player
+ * compiles each panel's file on its own, when the panel is first shown (see
+ * {@link Panel.ready}), and puts it in its position without rebuilding the
+ * main window: mounting or unmounting a panel leaves the other panels as they
+ * are. A panel keeps its component instance while its place exists, so a
+ * switch back to its tab finds it as it was. It gets a new instance when its
+ * place is made again (its column closed and opened, the column's fullscreen
+ * overlay, the sidebar moving to or from its floating window) and when the
+ * player unloaded it to make room (a column keeps at most 4 panels loaded)
+ * and shows it again. A new instance starts with the bridge properties last
+ * written, but state kept only inside the component (a scroll position, a
+ * property the plugin never writes) starts over: keep what matters in bridge
+ * properties. Each panel's file is compiled with its own globals: two panels
+ * that import the same file do not share a global.
  * `dispose()`, disposing the scope or stopping the plugin unmounts it.
  *
  * Testing: `host.mounted()` of `@vestra-player/sdk/testing` has the panel's
  * `slot`, `props` and `emit(callback, ...args)`.
  *
- * @capability ui.mount
- *
  * @example Mount a sidebar list with a right-click menu (examples/panel-menu)
  * The sidebar gets an "Example list" tab whose rows can be selected and
  * have a context menu. `mount` returns at once and the player adds the
- * panel when it rebuilds its main window; `bind` keeps the rows and the
+ * panel as a tab; `bind` keeps the rows and the
  * selection on the panel's bridge global, and the `context-menu` callback
  * opens a menu of the plugin's commands where the user clicked.
  *
@@ -678,10 +650,25 @@ export interface SidebarSlot extends PanelSlot {
  */
 export interface Panel extends View, Disposable {
   /**
-   * Resolves once the player has mounted the panel and the main window shows
-   * it; rejects when the mount failed.
+   * Resolves once the player has mounted the panel; rejects when the mount
+   * failed.
    *
    * @remarks
+   * **When the file compiles** (player 0.9.0). A panel shown at once (the
+   * bottom bar, the backdrop, the current tab of an open sidebar or adjust
+   * column) is compiled before `ready` settles: a file that does not compile
+   * rejects `ready` with `ui-prepare`. A tab mounted in the background (a
+   * sidebar tab that is not current, any tab of a closed column) compiles
+   * nothing at the mount, and `ready` resolves. Its file is compiled when the
+   * tab is first shown; the adjust column compiles its first tabs (up to 4,
+   * the current one among them) when it opens, and a tab mounted among them
+   * while it is open right after its mount. A failure then is not a
+   * rejection: it goes to {@link Scope.onError} as a `ui-prepare` error, and
+   * the tab stays empty until the plugin mounts the panel again (disposes it
+   * and mounts it anew, or restarts). So a broken file in a background tab
+   * does not fail activation; show the tab ({@link PanelSlot.activate}) to
+   * see its compile result.
+   *
    * Mounts made while `activate` runs must succeed before the plugin is
    * ready: a rejection fails activation, except `conflict` for a taken
    * position (below), which the player and `TestHost`
@@ -699,9 +686,11 @@ export interface Panel extends View, Disposable {
    * standby when idle; showing the tab starts it again (see
    * {@link Panel.state}).
    *
-   * @throws `ui-prepare` (rejects) The Slint file does not compile, or a bound
-   * property is not declared on the bridge global; `message` has the
-   * diagnostics.
+   * @throws `ui-prepare` (rejects) For a panel shown at once: the Slint file
+   * does not compile, or a bound property is not declared on the bridge
+   * global; `message` has the diagnostics. For a tab mounted in the
+   * background the same failure goes to {@link Scope.onError} when the tab is
+   * first compiled (above).
    * @throws `conflict` (rejects) Another plugin's panel holds the bottom bar or
    * the backdrop (shown, or being mounted); `message` names the position and
    * the holder (「底栏已被 vestra.playback 使用」). Not an activation failure. Never
@@ -713,7 +702,6 @@ export interface Panel extends View, Disposable {
    * @throws `host` (rejects) The file is missing or outside the package
    *   directory.
    * @throws `unavailable` (rejects) The player runs without a user interface.
-   * @throws `capability` (rejects) The manifest does not declare `ui.mount`.
    */
   readonly ready: Promise<void>;
   /**
@@ -721,8 +709,8 @@ export interface Panel extends View, Disposable {
    * one; `null` until {@link Panel.ready} resolved (and after `dispose`).
    *
    * @remarks
-   * Read when first used; with `events` it then follows every change (the
-   * user switching tabs, other plugins, the window size), without `events`
+   * Read when first used; after `plugin.player.subscribe()`, it then follows every change (the
+   * user switching tabs, other plugins, the window size), without it
    * only this plugin's own changes. A sidebar panel in a background tab
    * has `active: false`, `effective: false` and `reason: "otherTab"`.
    *
@@ -734,8 +722,9 @@ export interface Panel extends View, Disposable {
    * which takes the tab over, and {@link Panel.ready} resolves again. Anything
    * the plugin kept only in memory is gone: restore the view from storage
    * (session storage survives standby). While it is in the background, the
-   * player may also drop the panel's component and build it again from the
-   * bridge properties last written, as it does on any rebuild.
+   * player may also unload the panel's component (a column keeps at most 4
+   * panels loaded) and make a new instance from the bridge properties last
+   * written when the tab is shown again.
    *
    * @throws Never; `null` stands for "not mounted".
    *
@@ -746,18 +735,16 @@ export interface Panel extends View, Disposable {
    * Run code when this panel's state changes.
    *
    * @remarks
-   * Needs `events`: without it the listener runs only after this plugin's
+   * Needs `plugin.player.subscribe()`: without it the listener runs only after this plugin's
    * own changes. Called with `null` when the panel is unmounted. Errors go
    * to {@link Scope.onError}.
-   *
-   * @capability ui.mount and events
    *
    * @param listener - Receives the new state.
    * @returns A handle that removes the listener.
    *
    * @example Notice when the list moves to a background tab
    * The plugin logs when the user switches the sidebar to another plugin's
-   * tab, for example to pause work the list does. With `events` the
+   * tab, for example to pause work the list does. After `plugin.player.subscribe()`, the
    * listener runs on every change. `reason: "otherTab"` exists only in a
    * panel's own state: the SDK sets it when the sidebar's current tab is
    * another plugin's (the position's state never has it).
@@ -778,8 +765,6 @@ export interface Panel extends View, Disposable {
    * Sets the position's preference like {@link PanelSlot.setVisible}`(true)`
    * (remembered; in fullscreen the sidebar overlay pops out). Waits for
    * {@link Panel.ready} first.
-   *
-   * @capability ui.mount
    *
    * @returns Resolves once the layout shows the panel's tab, with `state`
    *   refreshed.
@@ -815,8 +800,6 @@ export interface Panel extends View, Disposable {
    * ({@link Panel.show} pops it out), and one switched off while out slides in
    * at once. A "Show list" command checked by `state.preferred && state.active`
    * matches it. Waits for {@link Panel.ready} first.
-   *
-   * @capability ui.mount
    *
    * @returns Resolves once the layout has changed, with `state` refreshed.
    *
@@ -860,8 +843,6 @@ export interface Panel extends View, Disposable {
    *
    * Never throws: a failed write is reported to {@link Scope.onError}.
    *
-   * @capability ui.mount
-   *
    * @param locks - The locks to change; omitted ones keep their value.
    *
    * @example Keep the bar on screen while a search field has focus
@@ -896,8 +877,6 @@ export interface Panel extends View, Disposable {
    * `null` is a separator. Commands without a menu `path` work too, which
    * makes context-only commands possible. Call it when the right button is
    * released, as the main menu does. Waits for {@link Panel.ready} first.
-   *
-   * @capability ui.mount
    *
    * @param items - At most 32 commands of this plugin, or `null` for a
    *   separator.
@@ -942,8 +921,6 @@ export interface Panel extends View, Disposable {
    * tool windows and the Options window are ignored; in fullscreen, the
    * bottom bar floats over the video and drops there count as drops on the
    * video area.
-   *
-   * @capability ui.drop
    *
    * @param listener - Receives the paths in the order the file manager gave
    *   them, the point in panel coordinates (logical pixels from the panel's
@@ -1019,8 +996,6 @@ export interface DropHandler {
  * provider gets one call with all of its paths. Files nobody takes are
  * ignored. A panel with {@link Panel.onDrop} takes drops on itself first.
  *
- * @capability ui.drop
- *
  * @example Collect dropped CHIP-8 programs
  * `.ch8` files dropped on the player are added to the plugin's list. The
  * provider claims the extension; the player calls `drop` with the dropped
@@ -1077,7 +1052,6 @@ export interface Drops {
    * });
    * ```
    *
-   * @capability ui.drop
    * @since 1.0.0
    */
   provide(handler: DropHandler): Disposable;

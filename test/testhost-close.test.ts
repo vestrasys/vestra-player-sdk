@@ -4,7 +4,8 @@ import fs, { existsSync, rmSync, writeFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { dirname, join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 /** Runs `body` with `console.warn` captured. */
 async function warnings(body: () => unknown) {

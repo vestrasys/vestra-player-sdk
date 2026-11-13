@@ -3,7 +3,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { startPlugin, TestHost } from "../src/plugin/testing.ts";
+import { TestHost } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 import type { Plugin } from "../src/plugin/index.ts";
 
 /** A package with one panel file and these capabilities. */
@@ -34,7 +35,7 @@ async function warnings(run: () => Promise<void>) {
 }
 
 for (const events of [false, true]) {
-  test(`changes made elsewhere reach a plugin only with events (events=${events})`, async () => {
+  test(`changes made elsewhere reach a plugin only after subscribe() (subscribe=${events})`, async () => {
     const host = new TestHost();
     host.openElsewhere("/movie.mp4");
     host.setSource({ duration: 600, position: 10 });
@@ -74,7 +75,7 @@ for (const events of [false, true]) {
       await stop();
     });
     const warned = seen.filter((line) =>
-      line.includes('without the "events" capability'),
+      line.includes("before plugin.player.subscribe()"),
     );
     // A development warning, once per plugin, only without `events`.
     assert.equal(warned.length, events ? 0 : 1, seen.join("\n"));

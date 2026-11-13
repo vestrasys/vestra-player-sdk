@@ -13,7 +13,7 @@ The tests live in `tests/*.test.ts`, use `node:test` and run with `vestra-plugin
 
 ### Start the plugin
 
-Call `startPlugin(activate, { directory })` with the plugin folder (from `tests/`, `new URL("..", import.meta.url)`). It reads `manifest.json`, so the declared capabilities apply, and resolves once activation is done. To find the plugin playing something at activation, prepare a host first and pass it as `host`.
+Call `startPlugin(activate, { directory })` with the plugin folder (from `tests/`, `new URL("..", import.meta.url)`). It reads the plugin's id from `manifest.json` and resolves once activation is done. To find the plugin playing something at activation, prepare a host first and pass it as `host`.
 
 ### Act like the user
 

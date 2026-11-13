@@ -50,9 +50,19 @@ function framesBy(count: number) {
   return { player, stream };
 }
 
-/** Start one scenario alone, in a test host with a file playing. */
+/**
+ * Start one scenario alone, in a test host with a file playing, behind the
+ * calls each style's `activate` makes first.
+ */
 async function start(scenario: Scenario, host = new TestHost()) {
-  const started = await startPlugin(scenario, { directory, host });
+  const started = await startPlugin(
+    async (plugin: Plugin) => {
+      plugin.player.subscribe();
+      await plugin.player.read();
+      return scenario(plugin);
+    },
+    { directory, host },
+  );
   host.openElsewhere("/movie.mp4");
   await host.settle();
   return started;

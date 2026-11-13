@@ -4,14 +4,14 @@ A live Gaussian blur over the video that is playing. **Video ▸ Blur…** opens
 
 ![The Blur window over a playing video](screenshot.png)
 
-| Capabilities                                                           | API                                                                                                                                      |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands`, `ui.window`, `processing.video`, `playback.read`, `events` | `commands.add` in the `@video` menu, `windows.create` with `bind` and `on`, `video.filter` with a `gblur` node; tests with `startPlugin` |
+| Follows the player | API |
+| --- | --- |
+| `subscribe()`, `read()` | `commands.add` in the `@video` menu, `windows.create` with `bind` and `on`, `video.filter` with a `gblur` node; tests with `startPlugin` |
 
 ## Files
 
 ```text
-manifest.json       id and capabilities
+manifest.json       id
 main.ts             the filter, the window and the menu command
 ui/blur.slint       the window: one slider
 tests/blur.test.ts  tests against the SDK's in-memory test host

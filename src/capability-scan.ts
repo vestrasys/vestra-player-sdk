@@ -5,25 +5,24 @@
  * prints the result; the plugin repository's index and the store show it.
  *
  * The table is `capability-scan.json` at the package's root, maintained by
- * hand: every method of the public API and every method of the player's
- * capability table is in one category's list or in `none`'s
- * (test/capability-scan.test.ts). Nothing here is read at run time: the
- * manifest's capabilities gate the API as before.
+ * hand: every method of the public API is in one category's list or in
+ * `none`'s, and every request the SDK sends has a category by name or
+ * prefix (test/capability-scan.test.ts). Nothing here is read at run time;
+ * since 1.9.0 the scan is the only disclosure (manifests declare nothing).
  *
- * TypeScript files are scanned by type, with the capability checker's
- * resolution (`findMemberUses`, capability-check.ts): a member counts
+ * TypeScript files are scanned by type (`findMemberUses`, member-uses.ts): a member counts
  * however its object was reached. JavaScript files have no types and are
  * scanned by name, best effort (`scanNamesInto`); the result says which
  * way each file was read.
  *
  * The TypeScript module is passed in, never imported (as in
- * capability-check.ts). Node only: it reads the table from disk.
+ * member-uses.ts). Node only: it reads the table from disk.
  *
  * @internal
  */
 import { readFileSync } from "node:fs";
 import type TS from "typescript";
-import { findMemberUses } from "./capability-check.ts";
+import { findMemberUses } from "./member-uses.ts";
 
 /** @internal The scan's categories, in the order results list them. */
 export const SCAN_CATEGORIES = [
@@ -48,7 +47,7 @@ export interface ScanList {
   readonly about: string;
   /** API members, `Interface.member` (`Clipboard.readText`, `Scope.video.filter`). */
   readonly members: readonly string[];
-  /** Methods of the player's protocol, as its capability table names them (`packages.*`). */
+  /** Methods of the player's protocol, by name or prefix (`packages.*`). */
   readonly requests: readonly string[];
 }
 
@@ -181,7 +180,7 @@ class Findings {
       this.unchecked.push({
         file: this.#relative(file),
         line,
-        message: `a request of ${JSON.stringify(method)}, which the player's capability table does not know`,
+        message: `a request of ${JSON.stringify(method)}, which capability-scan.json does not list`,
       });
     else if (category !== null)
       this.add(category, { request: method, file, line, by });

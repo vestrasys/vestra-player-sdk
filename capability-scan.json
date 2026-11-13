@@ -1,5 +1,5 @@
 {
-  "about": "The capability scan's table (docs/reference/scan.md): which API members and which requests of the player's protocol cross a boundary the user should know about, by category. Hand-maintained: every method of the public API and every method of the player's capability table is in exactly one list, a category's or none's (test/capability-scan.test.ts). `vestra-plugin scan` reports the categories a plugin uses. It changes nothing at run time: the manifest's capabilities gate the API as before.",
+  "about": "The capability scan's table (docs/reference/scan.md): which API members and which requests of the player's protocol cross a boundary the user should know about, by category. Hand-maintained: every method of the public API is in exactly one list, a category's or none's, and every request the SDK sends has a category by name or prefix (test/capability-scan.test.ts). `vestra-plugin scan` reports the categories a plugin uses. It changes nothing at run time; since SDK 1.9.0 it is the only disclosure (manifests declare nothing).",
   "version": 1,
   "categories": {
     "player": {
@@ -164,6 +164,7 @@
       "Player.openStream",
       "Player.previous",
       "Player.provideSequence",
+      "Player.read",
       "Player.refresh",
       "Player.restart",
       "Player.scrub",
@@ -177,6 +178,7 @@
       "Player.setStepSeek",
       "Player.stats",
       "Player.step",
+      "Player.subscribe",
       "Power.preventSleep",
       "RenderOptions.onStatus",
       "RenderOptions.set",

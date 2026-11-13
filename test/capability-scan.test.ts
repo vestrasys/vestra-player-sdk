@@ -1,13 +1,14 @@
 // The capability scan (SDK 1.8.0): capability-scan.json is complete (every
-// method of the public API and every method of the player's capability
-// table is in exactly one list), and `vestra-plugin scan` reports the
-// categories a plugin's code uses, by type and, for JavaScript, by name.
-// The scan is tooling: nothing here touches the capabilities or TestHost.
+// method of the public API and every request method the SDK sends is in
+// exactly one list), and `vestra-plugin scan` reports the categories a
+// plugin's code uses, by type and, for JavaScript, by name. The scan is
+// tooling: nothing here touches TestHost.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -15,13 +16,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
-import { CAPABILITY_INFO } from "../src/capabilities.ts";
 import {
   requestCategory,
   SCAN_CATEGORIES,
   scanTable,
 } from "../src/capability-scan.ts";
-import { HOST_CAPABILITIES } from "../src/host-capabilities.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const cli = join(root, "bin/vestra-plugin.mjs");
@@ -57,6 +56,29 @@ function surfaceMethods(): string[] {
     }
   }
   return [...methods];
+}
+
+/**
+ * Every request method the SDK sends by a literal name: the
+ * `request("method", …)` calls of its clients in src/ (the wire facade
+ * sends what the plugin names, so it has none).
+ */
+function sentMethods(): string[] {
+  const methods = new Set<string>();
+  const walk = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "testing") walk(path);
+      } else if (entry.name.endsWith(".ts"))
+        for (const match of readFileSync(path, "utf8").matchAll(
+          /\brequest(?:<[^()]*?(?:\([^()]*\)[^()]*?)*>)?\(\s*"([a-z][\w.]*)"/g,
+        ))
+          methods.add(match[1]!);
+    }
+  };
+  walk(join(root, "src"));
+  return [...methods].sort();
 }
 
 /** Where a name is listed: the names of the lists that have it. */
@@ -119,24 +141,26 @@ test("every method of the public API is in exactly one list, and every listed me
   assert.deepEqual(problems, []);
 });
 
-test("every method of the player's capability table is in exactly one list of requests, and every listed request exists", () => {
-  const methods = [
-    ...HOST_CAPABILITIES.capabilities.flatMap((each) => each.methods),
-    ...HOST_CAPABILITIES.uncapable,
-  ].map((each) => each.name);
+test("every request method the SDK sends has one category (by name or prefix), and every listed request is sent or a prefix", () => {
+  const methods = sentMethods();
+  assert.ok(methods.length > 100, `${methods.length} methods sent`);
+  for (const probe of ["clipboard.readText", "source.state", "ui.mount"])
+    assert.ok(methods.includes(probe), probe);
   const problems: string[] = [];
   for (const method of methods) {
     const where = listed("requests", method);
-    if (where.length !== 1)
+    if (where.length > 1)
+      problems.push(`${method} is in ${where.join(" and ")}: keep one`);
+    if (requestCategory(method) === undefined)
       problems.push(
-        `${method} is in ${where.length ? where.join(" and ") : "no list"}: one list of requests in capability-scan.json`,
+        `${method} is in no list of requests in capability-scan.json (by name or prefix): add it`,
       );
   }
   for (const { name, list } of lists)
     for (const request of list.requests)
-      if (!methods.includes(request))
+      if (!request.endsWith(".*") && !methods.includes(request))
         problems.push(
-          `${name} lists the request ${request}, which the player's table does not have: remove it`,
+          `${name} lists the request ${request}, which the SDK does not send: remove it`,
         );
   assert.deepEqual(problems, []);
 });
@@ -154,58 +178,35 @@ test("a request by name has the category of its method: exact first, then the pr
   assert.equal(requestCategory("no.such.method"), undefined);
 });
 
-test("the members of the risky capabilities: what changes or reaches is in a category, what only reads is in none", () => {
+test("what changes or reaches is in a category, what only reads is in none", () => {
   const category = (member: string) => listed("members", member)[0];
-  const risky = Object.entries(CAPABILITY_INFO).filter(
-    ([, info]) => info.risky,
-  );
-  assert.deepEqual(
-    Object.fromEntries(
-      risky.map(([name, info]) => [
-        name,
-        Object.fromEntries(info.apis.map((api) => [api, category(api)])),
-      ]),
-    ),
-    {
-      "plugins.manage": {
-        "Packages.validate": "plugins",
-        "Packages.validateArchive": "plugins",
-        "Packages.setEnabled": "plugins",
-        "Packages.reload": "plugins",
-        "Packages.uninstall": "plugins",
-      },
-      clipboard: {
-        "Clipboard.readText": "clipboard",
-        "Clipboard.writeText": "clipboard",
-        "Clipboard.writeImage": "clipboard",
-      },
-      "bindings.manage": {
-        "Bindings.list": "none",
-        "Bindings.set": "player",
-        "Bindings.reset": "player",
-        "Bindings.onChange": "none",
-      },
-      secrets: {
-        "Secrets.get": "credentials",
-        "Secrets.set": "credentials",
-        "Secrets.delete": "credentials",
-      },
-      "rendering.manage": {
-        "Rendering.setPreference": "player",
-        "Rendering.restartPlayer": "player",
-      },
-      "commands.run": {
-        "Commands.list": "none",
-        "Commands.run": "plugins",
-      },
-      mpv: {
-        "Mpv.command": "player",
-        "Mpv.get": "none",
-        "Mpv.set": "player",
-        "Mpv.observe": "none",
-      },
-    },
-  );
+  const expected: Record<string, string> = {
+    "Packages.validate": "plugins",
+    "Packages.validateArchive": "plugins",
+    "Packages.setEnabled": "plugins",
+    "Packages.reload": "plugins",
+    "Packages.uninstall": "plugins",
+    "Clipboard.readText": "clipboard",
+    "Clipboard.writeText": "clipboard",
+    "Clipboard.writeImage": "clipboard",
+    "Bindings.list": "none",
+    "Bindings.set": "player",
+    "Bindings.reset": "player",
+    "Bindings.onChange": "none",
+    "Secrets.get": "credentials",
+    "Secrets.set": "credentials",
+    "Secrets.delete": "credentials",
+    "Rendering.setPreference": "player",
+    "Rendering.restartPlayer": "player",
+    "Commands.list": "none",
+    "Commands.run": "plugins",
+    "Mpv.command": "player",
+    "Mpv.get": "none",
+    "Mpv.set": "player",
+    "Mpv.observe": "none",
+  };
+  for (const [member, wanted] of Object.entries(expected))
+    assert.equal(category(member), wanted, member);
   // The install itself is on the candidate that validate returns.
   assert.equal(category("PackageCandidate.install"), "plugins");
   // Not risky capabilities, but the user's own settings.
@@ -239,7 +240,6 @@ function project(id: string, files: Record<string, string>) {
       version: "1.2.3",
       apiVersion: "vestra/1",
       entry,
-      capabilities: [],
     }),
   );
   for (const [file, text] of Object.entries(files)) {

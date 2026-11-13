@@ -4,7 +4,7 @@
 // the reasons a plugin keeps running are reported with where they come from.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin } from "../src/plugin/testing.ts";
+import { startPlugin } from "./explicit.ts";
 
 const sent = (host: { calls: { method: string; params: unknown }[] }) =>
   host.calls
