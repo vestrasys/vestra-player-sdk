@@ -31,6 +31,10 @@ export default async function mpvRules({ root, table }) {
     ]);
   const others = [
     [
+      code(MPV_RULES.prefixes),
+      "mpv's prefix words: not a command. As the first element (with `_` or `-`) the command is `invalid`, since mpv would run what follows it; later they are ordinary arguments.",
+    ],
+    [
       code(MPV_RULES.writers),
       "Write the property their first argument names: checked as a write of it.",
     ],

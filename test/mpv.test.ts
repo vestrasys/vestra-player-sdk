@@ -331,6 +331,76 @@ test("a command's name is looked up as mpv reads it (_ for -); the refusal keeps
   await stop();
 });
 
+test("a command that starts with one of mpv's prefix words is invalid: mpv would run what follows it", async () => {
+  const { host, plugin, stop } = await started();
+  const problem =
+    "a command's first element is its name (no prefixes such as no-osd or async)";
+  // mpv 0.41 input/cmd.c cmd_flags, in its order (the player's table).
+  assert.deepEqual(
+    [...MPV_RULES.prefixes],
+    [
+      "no-osd",
+      "osd-bar",
+      "osd-msg",
+      "osd-msg-bar",
+      "osd-auto",
+      "expand-properties",
+      "raw",
+      "repeatable",
+      "nonrepeatable",
+      "nonscalable",
+      "async",
+      "sync",
+    ],
+  );
+  for (const prefix of MPV_RULES.prefixes)
+    for (const spelled of [prefix, prefix.replaceAll("-", "_")]) {
+      assert.equal(mpvCommandProblem([spelled, "quit"]), problem, spelled);
+      assert.equal(mpvCommandProblem([spelled]), problem, spelled);
+    }
+  for (const args of [
+    ["no-osd", "quit"],
+    ["osd-auto", "set", "pause", "yes"],
+    ["no-osd", "async", "quit"],
+    ["no_osd", "quit"],
+    // The shape first: before the argument types and the missing label.
+    ["raw", "vf-command"],
+  ])
+    await assert.rejects(
+      plugin.mpv.command(args),
+      (error: PluginError) =>
+        error.code === "invalid" && error.message === problem,
+      JSON.stringify(args),
+    );
+  // The player's check is the same one (a raw request).
+  await assert.rejects(
+    plugin.wire.request("mpv.command", { args: ["no-osd", "quit"] }),
+    (error: PluginError) =>
+      error.code === "invalid" && error.message === problem,
+  );
+  assert.deepEqual(host.mpv.commands, []);
+  // Only the first element: later the words are ordinary arguments, and
+  // the command is checked by its own name.
+  for (const args of [
+    ["print-text", "raw"],
+    ["set", "deband", "async"],
+    ["expand-text", "no-osd"],
+    ["cycle-values", "scale", "raw", "sync"],
+  ]) {
+    assert.equal(mpvCommandProblem(args), null, JSON.stringify(args));
+    await plugin.mpv.command(args);
+  }
+  assert.match(
+    mpvCommandRefusal(["set", "pause", "no-osd"])!,
+    /^mpv property "pause" is refused/,
+  );
+  // Not a prefix: another case, a longer word.
+  for (const name of ["RAW", "raws", "no-osd-bar"])
+    assert.equal(mpvCommandProblem([name]), null, name);
+  assert.equal(host.mpv.commands.length, 4);
+  await stop();
+});
+
 test("the label all is reserved (mpv reads it as every filter); ALL and all2 are ordinary labels", async () => {
   const { host, plugin, stop } = await started();
   assert.deepEqual([...MPV_RULES.reservedLabels], ["all"]);

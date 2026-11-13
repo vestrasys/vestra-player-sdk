@@ -1912,7 +1912,10 @@ export interface Mpv {
    * them. Resolves with the command's result (`null` for most).
    *
    * @param args - The command's name and its arguments: strings, numbers
-   *   or booleans. No prefix (`no-osd`, `async`) and no property expansion.
+   *   or booleans. The first is the command itself: mpv would take a
+   *   prefix word (`no-osd`, `async`, `raw`…) off the front and run what
+   *   follows, so the channel refuses one there (`invalid`). Arguments are
+   *   not expanded (`${property}` stays text).
    * @returns What the command returns.
    *
    * @example Add a filter of the plugin's own and remove it again

@@ -69,6 +69,13 @@ export const MPV_LIMITS = Object.freeze({
  *   `reservedLabels`: whole labels that are not a plugin's (`all`, which
  *   mpv reads as every filter of the chain).
  *
+ * - `prefixes`: mpv's command prefix words (mpv 0.41 `input/cmd.c`,
+ *   `cmd_flags`, in its order). mpv takes them off the front of a
+ *   command, in the array form too, and runs what follows: a command whose
+ *   first element is one is `invalid`, so the name the tables check is
+ *   the command mpv runs. Only the first element: later, the same words
+ *   are ordinary arguments.
+ *
  * A command's name is looked up with `_` read as `-`, as mpv reads it
  * (`cycle_values` is `cycle-values`); a refusal names it as the caller
  * wrote it. A property's name is looked up as written: mpv does not fold
@@ -90,6 +97,7 @@ export const MPV_RULES: {
   readonly filterMessages: readonly string[];
   readonly reservedLabel: string;
   readonly reservedLabels: readonly string[];
+  readonly prefixes: readonly string[];
 } = Object.freeze({
   categories: Object.freeze({
     process: "it starts a program (a plugin starts its own with Node)",
@@ -351,6 +359,20 @@ export const MPV_RULES: {
   filterMessages: Object.freeze(["vf-command", "af-command"]),
   reservedLabel: "vestra-",
   reservedLabels: Object.freeze(["all"]),
+  prefixes: Object.freeze([
+    "no-osd",
+    "osd-bar",
+    "osd-msg",
+    "osd-msg-bar",
+    "osd-auto",
+    "expand-properties",
+    "raw",
+    "repeatable",
+    "nonrepeatable",
+    "nonscalable",
+    "async",
+    "sync",
+  ]),
 });
 
 /**
@@ -423,7 +445,9 @@ export function mpvCommandProblem(args: unknown): string | null {
   if (
     typeof name !== "string" ||
     name.length > MPV_LIMITS.nameChars ||
-    !NAME.test(name)
+    !NAME.test(name) ||
+    // mpv would take the prefix off and run the next element.
+    MPV_RULES.prefixes.includes(commandKey(name))
   )
     return "a command's first element is its name (no prefixes such as no-osd or async)";
   for (const each of rest)

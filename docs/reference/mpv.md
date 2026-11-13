@@ -18,7 +18,7 @@ Use a typed member where one exists ({@link "@vestra-player/sdk"!Player | plugin
 | `set(name, value)` | `mpv.set` | `{ name, value }` | none |
 | `observe(name, listener)` | `mpv.observe`, `mpv.unobserve` | `{ name }` | none; the values arrive as the event `mpv.property` with `{ name, value }`: the current one first, then each change |
 
-A command is an array, as in mpv's own client API: no prefix (`no-osd`, `async`) and no property expansion. Values are JSON as mpv gives them: a flag is `true` or `false`, a number a number, a list an array.
+A command is an array, as in mpv's own client API, and its first element is the command's name. mpv itself takes a prefix word off the front of a command (`no-osd`, `async`, `raw` and the others listed below) and runs what follows, in the array form too, so the channel refuses a command that starts with one (`invalid`): the name it checks is then the command mpv runs. After the name the same words are ordinary arguments. Arguments are not expanded (`${property}` stays text). Values are JSON as mpv gives them: a flag is `true` or `false`, a number a number, a list an array.
 
 | Code | When |
 | --- | --- |
@@ -48,6 +48,7 @@ The rule is closed: a command or a property is refused when it would cross a bou
 
 | Command | Rule |
 | --- | --- |
+| `no-osd`, `osd-bar`, `osd-msg`, `osd-msg-bar`, `osd-auto`, `expand-properties`, `raw`, `repeatable`, `nonrepeatable`, `nonscalable`, `async`, `sync` | mpv's prefix words: not a command. As the first element (with `_` or `-`) the command is `invalid`, since mpv would run what follows it; later they are ordinary arguments. |
 | `set`, `del`, `add`, `multiply`, `cycle`, `cycle-values`, `change-list` | Write the property their first argument names: checked as a write of it. |
 | `vf` | Only `add`, `pre`, `toggle`, `remove` of one filter with a label of the plugin's own (`@label:…`, not starting with `vestra-` and not `all`); anything else is refused (`filters`). |
 | `af` | Only `add`, `pre`, `toggle`, `remove` of one filter with a label of the plugin's own (`@label:…`, not starting with `vestra-` and not `all`); anything else is refused (`filters`). |
