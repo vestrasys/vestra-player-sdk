@@ -140,7 +140,7 @@ export interface TimelineLayer extends Disposable {
    * marks. Disposing the layer, its scope or stopping the plugin removes both,
    * and a new source clears every layer.
    *
-   * At most 100 ranges (`TIMELINE_LIMITS.ranges`), `0 ≤ start < end`, `end`
+   * At most 1000 ranges (`TIMELINE_LIMITS.ranges`), `0 ≤ start < end`, `end`
    * within the media while its duration is known, titles ≤ 100 characters.
    * Ranges may overlap. Failures go to `onError`; with `ifCurrent`, a
    * write for another source is dropped silently. A title is data or a
@@ -281,6 +281,16 @@ export interface AudioTrack {
   title: string | null;
   /** Language tag, `null` when unknown. */
   language: string | null;
+  /**
+   * The container stream number (`ffmpeg -map 0:<n>`) of an embedded track,
+   * when the player can vouch for it; `null` for external tracks and when
+   * the player cannot tell, as for a subtitle track. The SDK always sets
+   * it; it is optional only so that an `AudioTrack` written out in full
+   * before 1.10.0 (a test's fixture) still type-checks.
+   *
+   * @since 1.10.0
+   */
+  streamIndex?: number | null;
 }
 
 /**
@@ -1970,8 +1980,9 @@ export type MpvValue =
 
 /**
  * `plugin.mpv`: mpv's own commands and properties, sent to the player's
- * mpv as they are. Needs the capability `mpv`, which the store shows the
- * user before installing.
+ * mpv as they are. The capability scan puts `command` and `set` in its
+ * `player` category, which the store shows the user before installing
+ * ([Capability scan](../../../docs/reference/scan.md)).
  *
  * @example Turn mpv's debanding on and show whether it took effect
  * A plugin offers mpv's `deband` option, which the plugin API has no member
@@ -2014,9 +2025,11 @@ export type MpvValue =
  * the upscaler, motion smoothing) stay in the chain beside it.
  *
  * A property a plugin set keeps its value after the plugin stops, until
- * the player quits (what the capability `mpv` discloses); a plugin that
- * wants it back sets it back. Observers end with the plugin. A filter
- * or an observer keeps the plugin running.
+ * the player quits (what the scan's `player` category discloses); a
+ * plugin that wants it back sets it back. Observers end with the plugin.
+ * A filter or an observer keeps the plugin running from the moment it is
+ * added for the rest of that run, also after it is removed: the player
+ * judges again at the plugin's next start.
  *
  * @see [mpv](../../../docs/reference/mpv.md)
  * @since 1.8.0
@@ -2105,12 +2118,15 @@ export interface Mpv {
   set(name: string, value: MpvValue): Promise<void>;
   /**
    * Hear an mpv property's value now and after each change. The player
-   * sends the newest value at most every 100 ms. While a listener exists
-   * the player keeps the plugin running.
+   * sends the newest value at most every 100 ms. From the first listener
+   * on the player keeps the plugin running for the rest of the run, also
+   * after the handle is disposed. As after every handler, an update pass
+   * follows each call of the listener.
    *
    * @param name - The property, as mpv names it.
    * @param listener - Receives the value: first the current one, then
-   *   each change.
+   *   each change. A listener added while the plugin already observes the
+   *   property gets its current value too, just after `observe` returns.
    * @returns A handle that stops listening; it is disposed with the scope.
    *
    * @example Follow the frame rate after filters

@@ -14,7 +14,9 @@
  * directory. Works in any project that depends on @vestra-player/sdk.
  *
  *   check   the manifest, then a strict type check of the plugin's .ts
- *           files and tests/*.ts
+ *           files and tests/*.ts; with slint-ui at the player's Slint
+ *           version installed, every .slint file compiled as the player
+ *           compiles it at install (errors with line and column)
  *   build   check, then write dist/: .ts → .js with types stripped, other
  *           package files copied, dist/manifest.json with `version`
  *   test    node --test on tests/*.test.{ts,mjs}
@@ -100,6 +102,9 @@ const { manifestProblems } = await import(
 const i18n = await import(pathToFileURL(join(sdkRoot, "dist/i18n.js")).href);
 const i18nTools = await import(
   pathToFileURL(join(sdkRoot, "dist/i18n-tools.js")).href
+);
+const { PLAYER_SLINT } = await import(
+  pathToFileURL(join(sdkRoot, "dist/slint-version.js")).href
 );
 const SDK = "@vestra-player/sdk";
 
@@ -312,10 +317,79 @@ function checkConfig(target, sources) {
   };
 }
 
+/**
+ * Compile every .slint file of the plugin as the player does when it
+ * installs a package (`package_validate.rs`): Slint's own compiler at the
+ * player's version, the library `@vestra` (the SDK's copy, `slint/vestra/`),
+ * the style `fluent-dark`; an error fails, except "No component found" (a
+ * file of globals or of components for others to import, compiled by its
+ * importers). The compiler is the npm package `slint-ui` (a native module,
+ * about 25 MB, under Slint's own licence), which the SDK does not install:
+ * an author or a CI adds it (`npm install -D slint-ui@<version>`). Without
+ * it, or at another version, the step says so and passes.
+ */
+async function slintStep(target, say) {
+  const { slint } = await sourceFiles(target);
+  if (!slint.length) return;
+  const manifest = resolveFrom(target.directory, "slint-ui/package.json");
+  const version = manifest
+    ? JSON.parse(await readFile(manifest, "utf8")).version
+    : null;
+  if (version !== PLAYER_SLINT) {
+    say(
+      `${target.name}: slint: ${slint.length} .slint file(s) not compiled: ${version ? `slint-ui ${version} is installed, the player uses Slint ${PLAYER_SLINT}` : "slint-ui is not installed"}; to compile them as the player does, npm install -D slint-ui@${PLAYER_SLINT}`,
+    );
+    return;
+  }
+  let compiler;
+  try {
+    // The package itself (CommonJS), by its directory.
+    compiler = createRequire(manifest)(dirname(manifest));
+  } catch (error) {
+    say(
+      `${target.name}: slint: not compiled: slint-ui ${version} does not load (${error.message})`,
+    );
+    return;
+  }
+  const errors = [];
+  for (const file of slint) {
+    const path = join(target.directory, file);
+    try {
+      compiler.loadFile(path, {
+        style: "fluent-dark",
+        libraryPaths: { vestra: join(sdkRoot, "slint", "vestra") },
+        quiet: true,
+      });
+    } catch (error) {
+      const diagnostics = error?.diagnostics;
+      if (!Array.isArray(diagnostics)) throw error;
+      for (const d of diagnostics) {
+        if (d.message === "No component found") continue;
+        const where = d.fileName
+          ? relative(target.directory, resolve(target.directory, d.fileName))
+              .split(sep)
+              .join("/")
+          : file.split(sep).join("/");
+        errors.push(`${where}:${d.lineNumber}:${d.columnNumber}: ${d.message}`);
+      }
+    }
+  }
+  for (const line of [...new Set(errors)])
+    say(`${target.name}: slint: ${line}`);
+  if (errors.length)
+    fail(
+      `${target.name}: ${slint.length} .slint file(s) compiled with Slint ${version}: ${new Set(errors).size} error(s), the player would refuse the package`,
+    );
+  say(
+    `${target.name}: slint: ${slint.length} file(s) compiled with Slint ${version}`,
+  );
+}
+
 async function check(target) {
   const say = (line) => console.log(line);
   for (const hint of target.hints ?? []) say(`${target.name}: hint: ${hint}`);
   dependencies(target);
+  await slintStep(target, say);
   const own = (await files(target.directory)).filter(
     (file) => isTypeScript(file) || file.endsWith(".mts"),
   );
@@ -457,13 +531,20 @@ async function extraction(target) {
     ts.sys,
     target.directory,
   );
-  return i18nTools.extract({
-    directory: target.directory,
-    manifest: target.manifest,
-    slint,
-    typescript: sources,
-    compilerOptions: parsed.options,
-  });
+  try {
+    return i18nTools.extract({
+      directory: target.directory,
+      manifest: target.manifest,
+      slint,
+      typescript: sources,
+      compilerOptions: parsed.options,
+    });
+  } catch (error) {
+    // A text that would be left out silently: fail and say why.
+    if (error?.code === "sdk-types")
+      fail(`${target.name}: i18n: ${error.message}`);
+    throw error;
+  }
 }
 
 async function i18nReport(target) {

@@ -21,19 +21,33 @@ type Listener = (value: MpvValue) => void;
 class Observers {
   readonly #runtime: Connection;
   readonly #names = new Map<string, Set<Listener>>();
+  /** The newest value of each observed name, once one arrived. */
+  readonly #values = new Map<string, MpvValue>();
+  /** Listeners that still wait for the kept value (see `add`). */
+  readonly #replays = new Set<Listener>();
   #started = false;
   constructor(runtime: Connection) {
     this.#runtime = runtime;
   }
-  /** One `mpv.observe` per name, however many listeners. */
+  /**
+   * One `mpv.observe` per name, however many listeners. The player sends
+   * the current value once, in answer to that request; a listener added
+   * after it arrived gets the kept value as its first, one microtask later
+   * (never inside `observe()` itself), unless a newer one reached it first.
+   */
   add(name: string, listener: Listener, report: (error: unknown) => void) {
     if (!this.#started) {
       this.#started = true;
       // Sent to the plugin that observes: no subscription of its own.
       this.#runtime.raw("mpv.property", (data) => {
         const event = data as { name: string; value: MpvValue };
-        for (const each of [...(this.#names.get(event.name) ?? [])])
+        const listeners = this.#names.get(event.name);
+        if (!listeners) return;
+        this.#values.set(event.name, event.value);
+        for (const each of [...listeners]) {
+          this.#replays.delete(each);
           each(event.value);
+        }
       });
     }
     let listeners = this.#names.get(name);
@@ -44,13 +58,26 @@ class Observers {
         this.#runtime.host.mpv.observeProperty(name),
         report,
       );
+    } else if (this.#values.has(name)) {
+      this.#replays.add(listener);
+      const added = listeners;
+      queueMicrotask(() => {
+        // Still waiting, and still listening to the same observation (not
+        // one made again after every listener had left).
+        if (!this.#replays.delete(listener)) return;
+        if (this.#names.get(name) !== added || !added.has(listener)) return;
+        listener(this.#values.get(name) as MpvValue);
+      });
     }
     listeners.add(listener);
   }
   async remove(name: string, listener: Listener) {
     const listeners = this.#names.get(name);
-    if (!listeners?.delete(listener) || listeners.size) return;
+    if (!listeners?.delete(listener)) return;
+    this.#replays.delete(listener);
+    if (listeners.size) return;
     this.#names.delete(name);
+    this.#values.delete(name);
     await this.#runtime.host.mpv.unobserveProperty(name).catch(() => {});
   }
 }
@@ -90,8 +117,10 @@ export const mpv = (scope: ScopeImpl): Mpv => {
           "invalid",
           "observe takes a property name and a listener",
         );
-      // Like `player.on`: no full update pass after it.
-      const deliver: Listener = (value) => scope.runQuiet(listener, value);
+      // A handler like the others: a full update pass follows it (unlike
+      // `player.on`, whose events can come with every position change; the
+      // player sends a property at most every 100 ms).
+      const deliver: Listener = (value) => scope.run(listener, value);
       observers().add(property, deliver, (error) => scope.report(error));
       const handle: Disposable = {
         dispose: async () => {

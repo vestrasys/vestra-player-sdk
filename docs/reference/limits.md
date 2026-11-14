@@ -119,7 +119,7 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `TIMELINE_LIMITS.marks` | 1000 | Marks in one layer (`TimelineLayer.set`). |
-| `TIMELINE_LIMITS.ranges` | 100 | Ranges in one layer (`TimelineLayer.setRanges`). |
+| `TIMELINE_LIMITS.ranges` | 1000 | Ranges in one layer (`TimelineLayer.setRanges`). |
 | `TIMELINE_LIMITS.titleChars` | 100 | Characters of a mark's or a range's title, as shown. |
 
 <!-- /generated -->

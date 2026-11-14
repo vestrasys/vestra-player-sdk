@@ -457,3 +457,46 @@ export default async function activate(plugin: Plugin) {
   assert.equal(check.status, 0, check.stderr);
   assert.doesNotMatch(check.stdout, /not English|without @tr/);
 });
+
+test("extract and i18n check fail, saying why, when a destructured text() cannot be read for want of the SDK's types (SDK 1.10.0)", () => {
+  const directory = project(`import type { Plugin } from "@vestra-player/sdk";
+
+export default async function activate(plugin: Plugin) {
+  const { text } = plugin.i18n;
+  const { error: problem } = plugin.i18n;
+  void plugin.osd.show(text("Loop on"));
+  void problem;
+  plugin.commands.add({ id: "x", title: "Shown", run: () => {} });
+}
+`);
+  writeFileSync(join(directory, "ui/page.slint"), "export component Page {}\n");
+  // With the SDK resolved: the destructured call is read.
+  let result = run(directory, "i18n", "extract");
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  const ids = entries(join(directory, "locales/messages.pot")).map((e) => e.id);
+  assert.ok(ids.includes("Loop on"), ids.join(", "));
+  // Without it (the plugin directory resolves no @vestra-player/sdk): fail.
+  rmSync(join(directory, "node_modules"), { recursive: true, force: true });
+  for (const command of ["extract", "check"]) {
+    result = run(directory, "i18n", command);
+    assert.equal(result.status, 1, `${command}: ${result.stdout}`);
+    assert.match(
+      result.stderr,
+      /does not resolve the types of @vestra-player\/sdk .* main\.ts:6 \(text, called through a name of its own\).*npm install/s,
+    );
+  }
+  // A plugin that calls plugin.i18n.text directly still extracts by name.
+  writeFileSync(
+    join(directory, "main.ts"),
+    `export default async function activate(plugin: any) {
+  void plugin.osd.show(plugin.i18n.text("Loop off"));
+}
+`,
+  );
+  result = run(directory, "i18n", "extract");
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  const after = entries(join(directory, "locales/messages.pot")).map(
+    (e) => e.id,
+  );
+  assert.ok(after.includes("Loop off"), after.join(", "));
+});

@@ -228,3 +228,38 @@ test("osd.show actions: refusals", async () => {
   assert.equal(host.osd.length, 1);
   await stop();
 });
+
+test("a layer holds 1000 ranges, the player's MAX_RANGES (SDK 1.10.0)", async () => {
+  assert.equal(TIMELINE_LIMITS.ranges, 1000);
+  const host = new TestHost();
+  const errors: PluginError[] = [];
+  const { plugin, stop } = await startPlugin(
+    (p: Plugin) => {
+      p.onError((error) => errors.push(error));
+    },
+    { capabilities: ["playback.read", "events", "timeline.marks"], host },
+  );
+  host.openElsewhere("/long.mkv");
+  host.setSource({ duration: 7200 });
+  await host.settle();
+  const ranges = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      start: i * 7,
+      end: i * 7 + 3,
+      style: "region" as const,
+    }));
+  const layer = plugin.timeline.layer();
+  layer.setRanges(ranges(1000));
+  await host.settle();
+  assert.deepEqual(errors, []);
+  assert.equal(host.timeline.ranges.length, 1000);
+  layer.setRanges(ranges(1001));
+  await host.settle();
+  assert.deepEqual(
+    // (A cast: deepEqual(errors, []) above narrowed the type to never[].)
+    (errors as PluginError[]).map((error) => [error.code, error.message]),
+    [["invalid", "a layer holds at most 1000 ranges"]],
+  );
+  assert.equal(host.timeline.ranges.length, 1000, "refused whole");
+  await stop();
+});

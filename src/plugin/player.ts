@@ -70,6 +70,7 @@ const audioTrack = (track: SourceAudioTrack): AudioTrack =>
     codec: track.codec,
     title: track.title,
     language: track.language,
+    streamIndex: track.streamIndex ?? null,
   });
 
 /**

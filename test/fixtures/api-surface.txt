@@ -19,6 +19,7 @@
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: id: number;
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: language: string | null;
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: selected: boolean;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: streamIndex?: number | null;
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: title: string | null;
 @vestra-player/sdk InterfaceDeclaration BackdropSlot
 @vestra-player/sdk InterfaceDeclaration BackdropSlot :: onChange(listener: (state: { readonly effective: boolean; } | null) => void): Disposable;
@@ -1102,6 +1103,6 @@
 @vestra-player/sdk/testing VariableDeclaration SUBTITLE_LIMITS = SUBTITLE_LIMITS: Readonly<{ readonly fileBytes: number; readonly tracksPerPlugin: 4; readonly tracks: 16; readonly totalBytes: number; readonly loadsPerPlugin: 16; readonly loads: 128; readonly uploadsPerPlugin: 2; readonly uploads: 8; }>
 @vestra-player/sdk/testing VariableDeclaration TEXT_LIMITS = TEXT_LIMITS: { readonly depth: 8; readonly nodes: 1024; readonly args: 16; readonly items: 256; readonly stringBytes: 4096; }
 @vestra-player/sdk/testing VariableDeclaration THEME_PALETTES = THEME_PALETTES: Readonly<Record<"vestra" | "vestra-light", Readonly<Record<string, string>>>>
-@vestra-player/sdk/testing VariableDeclaration TIMELINE_LIMITS = TIMELINE_LIMITS: Readonly<{ readonly marks: 1000; readonly ranges: 100; readonly titleChars: 100; }>
+@vestra-player/sdk/testing VariableDeclaration TIMELINE_LIMITS = TIMELINE_LIMITS: Readonly<{ readonly marks: 1000; readonly ranges: 1000; readonly titleChars: 100; }>
 @vestra-player/sdk/testing VariableDeclaration UI_VALUE_LIMITS = UI_VALUE_LIMITS: { readonly depth: 8; readonly values: number; readonly arrayRows: 100000; readonly stringBytes: number; readonly textBytes: number; }
 @vestra-player/sdk/testing VariableDeclaration VIDEO_PROCESSING_LIMITS = VIDEO_PROCESSING_LIMITS: Readonly<{ shaders: 16; shaderBytes: number; shaderIdBytes: 128; lutBytes: number; lutSize: 65; lutPathBytes: 4096; matrixValue: 1024; rdiv: 256; bias: 65535; }>
