@@ -412,6 +412,7 @@
 @vestra-player/sdk InterfaceDeclaration Player :: setStepSeek(options: { seconds: number; keyframes?: boolean; }): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: stats(): Promise<PlaybackStats>;
 @vestra-player/sdk InterfaceDeclaration Player :: step(unit: "frame" | "keyframe", direction: "backward" | "forward", options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: stream(listener: (state: PlayerState) => void): StateStream;
 @vestra-player/sdk InterfaceDeclaration Player :: subscribe(): void;
 @vestra-player/sdk InterfaceDeclaration PlayerState
 @vestra-player/sdk InterfaceDeclaration PlayerState :: readonly audioOutput?: { requested: string | null; active: string | null; };
@@ -586,6 +587,8 @@
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly status: "ok" | "missing" | "changed";
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly token: string;
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly video: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null;
+@vestra-player/sdk InterfaceDeclaration StateStream
+@vestra-player/sdk InterfaceDeclaration StateStream :: stop(): void;
 @vestra-player/sdk InterfaceDeclaration Storage
 @vestra-player/sdk InterfaceDeclaration Storage :: json<T>(name: string, options: { defaults: T; validate?: (value: unknown) => value is T; debounceMs?: number; }): JsonStore<T>;
 @vestra-player/sdk InterfaceDeclaration Storage :: readonly session: SessionStorage;

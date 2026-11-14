@@ -351,6 +351,22 @@ export class PlayerService implements StreamSource {
       },
     };
   }
+  /**
+   * `watch`, for `plugin.player.stream`: the copy hears `source.state` while
+   * the watcher is open, with or without `subscribe()`, and the plugin
+   * counts as listening to it (`Connection.follow`).
+   */
+  follow(watcher: (raw: SourceState) => void, why: () => string): Disposable {
+    void this.start();
+    this.#watchers.add(watcher);
+    const followed = this.runtime.follow("source.state", why);
+    return {
+      dispose: async () => {
+        this.#watchers.delete(watcher);
+        await followed.dispose();
+      },
+    };
+  }
   async refresh() {
     this.accept(await this.runtime.host.source.state());
     return this.state;
@@ -696,6 +712,45 @@ export function player(scope: ScopeImpl): Player {
           scope.forget(watch);
           await watch.dispose();
         },
+      });
+    },
+    stream(listener) {
+      if (typeof listener !== "function")
+        throw failure("invalid", "stream takes a function");
+      const copy = service();
+      const site = scope.runtime.callSite();
+      let open = true;
+      let called = false;
+      // `player.state` is updated first (`accept`), then the listener runs,
+      // then an update pass (`run`).
+      const call = () => {
+        if (!open) return;
+        called = true;
+        scope.run(listener, copy.state);
+      };
+      const followed = copy.follow(call, () => {
+        const at = site();
+        return at ? `a stream opened at ${at}` : "a stream";
+      });
+      // The current state once: read now. An event that came first was
+      // the current state already, and the read then changed nothing.
+      void copy
+        .refresh()
+        .catch(() => {})
+        .then(() => {
+          if (!called) call();
+        });
+      const handle: Disposable = {
+        dispose: async () => {
+          if (!open) return;
+          open = false;
+          scope.forget(handle);
+          await followed.dispose();
+        },
+      };
+      scope.add(handle);
+      return Object.freeze({
+        stop: () => void handle.dispose(),
       });
     },
     refresh: () => service().refresh(),
