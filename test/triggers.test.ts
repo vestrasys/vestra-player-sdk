@@ -631,3 +631,71 @@ test("a replaced list still in the same range is not entered again; another rang
     await stop();
   }
 });
+
+test("N1 (a): an enter crossing a firesOn that stays entered is not dropped", async () => {
+  const host = new TestHost();
+  host.setSource({ phase: "ready", duration: 100, position: 5 });
+  const record = recorder();
+  let trigger!: ReturnType<Plugin["trigger"]>;
+  const { plugin, stop } = await startPlugin(
+    (plugin) => {
+      trigger = plugin.trigger().enter(record.enter).leave(record.leave);
+    },
+    { host },
+  );
+  try {
+    const arm = (ranges: { start: number; end: number }[]) =>
+      trigger.firesOn(plugin.when.position.in(ranges));
+    arm([{ start: 10, end: 20 }]);
+    await host.settle();
+    const [{ seq }] = host.triggers;
+    // The plugin gives a longer list that holds the same range; before the
+    // player has it, the position reaches the range under the old list and
+    // that enter crosses the request on the pipe.
+    arm([
+      { start: 2, end: 3 },
+      { start: 10, end: 20 },
+    ]);
+    host.setSource({ position: 10 });
+    await host.settle();
+    assert.equal(host.triggers[0]!.seq, seq);
+    assert.deepEqual(record.log, ["enter 0 @10"]);
+  } finally {
+    await stop();
+  }
+});
+
+test("N1 (b): a woken plugin that gives a longer list in activate() still gets its wake enter, once", async () => {
+  const host = new TestHost();
+  host.setSource({ phase: "ready", duration: 100, position: 5 });
+  const record = recorder();
+  let runs = 0;
+  const { stop } = await startPlugin(
+    (plugin) => {
+      runs++;
+      // Each run knows more of the file (a scan going on).
+      const ranges =
+        runs === 1
+          ? [{ start: 10, end: 20 }]
+          : [
+              { start: 10, end: 20 },
+              { start: 30, end: 40 },
+            ];
+      plugin
+        .trigger()
+        .firesOn(plugin.when.position.in(ranges))
+        .enter(record.enter)
+        .leave(record.leave);
+    },
+    { host },
+  );
+  try {
+    await host.park();
+    await host.advance(5_000);
+    await host.settle();
+    assert.equal(runs, 2);
+    assert.deepEqual(record.log, ["enter 0 @10"]);
+  } finally {
+    await stop();
+  }
+});

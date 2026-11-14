@@ -538,8 +538,9 @@ export interface Trigger {
    * except a range list given again for the same source while the
    * position is still in the range it was entered with (the same start,
    * end and lead; a list that grew as a scan went on): that range stays
-   * entered, with no second `enter`. The same condition again changes
-   * nothing. A refusal (`invalid`,
+   * entered, with no second `enter`, and an `enter` of it still on its way
+   * (a plugin woken for it) reaches `enter` all the same. The same
+   * condition again changes nothing. A refusal (`invalid`,
    * `limit`) reaches the plugin's error handlers.
    *
    * @throws `TypeError` (throws) Not a condition from `plugin.when`, or

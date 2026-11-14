@@ -505,12 +505,15 @@ export function triggersHandlers(
           "limit",
           `a plugin keeps at most ${TRIGGER_LIMITS.triggers} trigger conditions`,
         );
+      // Still in the range it was entered with: entered, under the same
+      // number (its `enter` may still be on its way to the plugin).
+      const entered = carried(host, kept, when, bound);
       const fresh: Kept = {
         trigger,
         when: structuredClone(when),
-        seq: ++state.seq,
+        seq: entered && kept ? kept.seq : ++state.seq,
         bound,
-        entered: carried(host, kept, when, bound),
+        entered,
         run: state.run,
       };
       state.kept.set(id, fresh);
