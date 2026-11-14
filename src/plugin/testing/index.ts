@@ -92,6 +92,7 @@ import { CAPABILITIES_REMOVED } from "../../manifest.ts";
 import { MESSAGE_LIMIT } from "../../protocol.ts";
 import { OSD_LIMITS } from "../osd.ts";
 import { TIMELINE_LIMITS } from "../timeline.ts";
+import { PLAYER_SLINT } from "../../slint-version.ts";
 import { SECRET_LIMITS, SESSION_STORAGE_LIMITS } from "../services.ts";
 import { SUBTITLE_LIMITS } from "../subtitles.ts";
 import { BINDING_INPUTS, canonical } from "../bindings.ts";
@@ -2411,7 +2412,7 @@ export class TestHost implements Transport {
     components: {
       mpv: "mpv 0.41.0",
       libav: { ffmpeg: "7.1" },
-      slint: "1.18.1",
+      slint: PLAYER_SLINT,
     },
   };
   /**

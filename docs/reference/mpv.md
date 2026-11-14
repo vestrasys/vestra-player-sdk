@@ -51,7 +51,7 @@ The rule is closed: a command or a property is refused when it would cross a bou
 | `set`, `del`, `add`, `multiply`, `cycle`, `cycle-values`, `change-list` | Write the property their first argument names: checked as a write of it. |
 | `vf` | Only `add`, `pre`, `toggle`, `remove` of one filter with a label of the plugin's own (`@label:…`, not starting with `vestra-` and not `all`); anything else is refused (`filters`). |
 | `af` | Only `add`, `pre`, `toggle`, `remove` of one filter with a label of the plugin's own (`@label:…`, not starting with `vestra-` and not `all`); anything else is refused (`filters`). |
-| `vf-command`, `af-command` | Only to a filter label of the plugin's own (`refused` otherwise, ${code(MPV_RULES.reservedLabels)} included: mpv reads it as every filter); without a label argument the command is `invalid`. |
+| `vf-command`, `af-command` | Only to a filter label of the plugin's own (`refused` otherwise, `all` included: mpv reads it as every filter); without a label argument the command is `invalid`. |
 
 <!-- /generated -->
 
@@ -62,14 +62,15 @@ A command's name is looked up as mpv reads it, with `_` for `-` (`cycle_values` 
 A plugin adds filters to mpv's chains with `["vf", "add", "@label:filter"]` (`af` for sound), one labelled filter per command. The label is the plugin's handle on it:
 
 - **One owner.** The plugin that adds a label owns it in that chain. Another plugin's command on it fails with `conflict`; the label `all` is refused (mpv reads it as every filter of the chain; `ALL` or `all2` is an ordinary label), and a label starting with `vestra-` is the player's and is refused.
-- **Gone with the plugin.** When the plugin stops (disabled, uninstalled, crashed, the player quits), the player removes its filters. While it owns one, the player keeps it running.
+- **Gone with the plugin.** When the plugin stops (disabled, uninstalled, crashed, the player quits), the player removes its filters. From its first filter on, the player keeps it running for the rest of that run, also after the filter is removed; it judges again at the plugin's next start.
 - **Beside the player's own.** The typed chains of `plugin.video.filter` and `plugin.audio.filter`, the upscaler and motion smoothing are filters of the player's in the same chain; they stay. The order is mpv's: `add` appends, `pre` puts first. Whole-chain changes (`set`, `clr`, a write of the `vf` or `af` property) are refused.
 - **Checked by the result.** The player compares the chain before and after: if a command changed anything but the plugin's own labelled filter, it puts the chain back and answers `refused`.
 
 ## Properties and observers
 
 - **A property set stays set** after the plugin stops, until the player quits, which is what the scan's `player` discloses. mpv does not save it for the next start. A plugin that wants it back reads the value first and sets it back.
-- **Observers end with the plugin**, and with the handle `observe` returns. While one exists the player keeps the plugin running. The player sends the newest value at most every 100 ms for each property.
+- **Observers end with the plugin**, and with the handle `observe` returns. From the first observer on, the player keeps the plugin running for the rest of that run, also after the handle is disposed; it judges again at the plugin's next start. The player sends the newest value at most every 100 ms for each property.
+- **Every listener gets the current value first**, also one added while the plugin already observes the property (the SDK sends one `mpv.observe` per property and gives a later listener the value it kept, just after `observe` returns). An update pass follows each call of a listener, as after every handler.
 
 ## Limits
 
