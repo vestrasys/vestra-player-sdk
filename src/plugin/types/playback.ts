@@ -896,6 +896,24 @@ export interface PlaybackStats {
 /**
  * An open stream of the player's state ({@link Player.stream}).
  *
+ * @remarks
+ * While it is open the player keeps the plugin running. It ends with
+ * {@link StateStream.stop}, when the scope that opened it is disposed, and
+ * when the plugin stops; it is not kept through standby.
+ *
+ * @example Follow the state while a panel is shown
+ * The stream lives only as long as what shows the state: it is opened
+ * with the scope of the panel's content and ends when that scope is
+ * disposed, so the plugin may go to standby afterwards.
+ * ```ts
+ * declare function draw(state: PlayerState): void;
+ * // ---cut---
+ * const shown = plugin.scope();
+ * shown.player.stream(draw); // stops when `shown` is disposed
+ * // … later, when the panel goes away:
+ * await shown.dispose();
+ * ```
+ *
  * @since 1.10.0
  * @category Playback
  */
@@ -906,6 +924,11 @@ export interface StateStream {
    * plugin running any more.
    *
    * @throws Never.
+   *
+   * @example See Player.stream
+   * {@link Player.stream}
+   *
+   * @since 1.10.0
    */
   stop(): void;
 }
@@ -1034,13 +1057,13 @@ export interface Player {
    * ```ts
    * const view = plugin.windows.create("ui/left.slint");
    * let feed: StateStream | undefined;
-   * view.onClose(() => feed?.stop());
+   * view.onClose(() => feed?.stop()); // closed: nothing keeps the plugin running
    * plugin.commands.add({
    *   id: "left",
    *   path: ["Tools", "Time Left"],
    *   run: async () => {
    *     await view.show();
-   *     feed?.stop();
+   *     feed?.stop(); // one stream per window, also when shown again
    *     feed = plugin.player.stream((s) =>
    *       view.set({ text: `${Math.round((s.duration ?? 0) - (s.position ?? 0))} s` }),
    *     );
@@ -2023,7 +2046,10 @@ export interface SourceEventPayloads {
     /** The player's state as the source starts to open. */
     state: PlayerState;
     /** The source open before this one (`null`: nothing was open). */
-    previous: { sourceId: number } | null;
+    previous: {
+      /** The previous source's id (`PlayerState.sourceId`). */
+      sourceId: number;
+    } | null;
   };
   /**
    * The source is loaded: its duration, tracks and seekability are known.

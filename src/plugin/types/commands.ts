@@ -301,6 +301,8 @@ export interface When {
    *   number, or `min ≥ max`.
    *
    * @example Only for files longer than ten minutes
+   * The condition holds once the player knows the file lasts 600 seconds
+   * or more; with no `max` the range is open upwards.
    * ```ts
    * const { when } = plugin;
    * const long = when.duration({ min: 600 });
@@ -313,6 +315,16 @@ export interface When {
    * The volume (0–200) is within `min ≤ volume < max`.
    *
    * @throws `TypeError` (throws) As {@link When.duration}.
+   *
+   * @example Check a Boost item above full volume
+   * The item carries a check mark while the volume is above 100, whoever
+   * raised it; the player compares its own volume, so the plugin need
+   * not follow the state.
+   * ```ts
+   * const { when } = plugin;
+   * const boosted = when.volume({ min: 101 });
+   * ```
+   *
    * @since 1.10.0
    */
   volume(bounds: { min?: number; max?: number }): Condition;
@@ -320,6 +332,15 @@ export interface When {
    * The playback rate is within `min ≤ rate < max`.
    *
    * @throws `TypeError` (throws) As {@link When.duration}.
+   *
+   * @example Enable Normal Speed only when sped up
+   * The item is greyed out at normal speed or slower: the condition holds
+   * from a rate of just over 1 upwards.
+   * ```ts
+   * const { when } = plugin;
+   * const fast = when.rate({ min: 1.01 });
+   * ```
+   *
    * @since 1.10.0
    */
   rate(bounds: { min?: number; max?: number }): Condition;
@@ -331,6 +352,8 @@ export interface When {
    * @throws `TypeError` (throws) As {@link When.duration}.
    *
    * @example The clock is at or past 45 minutes from now
+   * The bound is computed once, when the condition is made, so the
+   * condition turns true 45 minutes later and stays true.
    * ```ts
    * const { when } = plugin;
    * const due = when.time({ min: Date.now() + 45 * 60_000 });
@@ -343,6 +366,22 @@ export interface When {
    * The selected audio track is `id` ({@link AudioTrack.id}).
    *
    * @throws `TypeError` (throws) `id` is not an integer.
+   *
+   * @example Check the item of each audio track
+   * One menu item per track of the file carries a check mark while that
+   * track plays, also when the user picks it in the player's own menu.
+   * ```ts
+   * const { when, player } = plugin;
+   * for (const track of player.state.audioTracks ?? [])
+   *   plugin.commands.add({
+   *     id: `audio-${track.id}`,
+   *     path: ["@audio", "Track", track.title ?? `Track ${track.id}`],
+   *     radio: true,
+   *     checked: when.audioTrack(track.id), // the player keeps the mark current
+   *     run: () => player.selectAudioTrack(track.id),
+   *   });
+   * ```
+   *
    * @since 1.10.0
    */
   audioTrack(id: number): Condition;
@@ -350,6 +389,17 @@ export interface When {
    * The primary subtitle track is `id` (`SubtitleTrack.id`).
    *
    * @throws `TypeError` (throws) `id` is not a string of 1–256 characters.
+   *
+   * @example Check the item of a subtitle track
+   * The item carries a check mark while the track with this id is the
+   * primary subtitle, whoever selected it.
+   * ```ts
+   * declare const trackId: string;
+   * // ---cut---
+   * const { when } = plugin;
+   * const shown = when.subtitleTrack(trackId);
+   * ```
+   *
    * @since 1.10.0
    */
   subtitleTrack(id: string): Condition;
@@ -357,6 +407,22 @@ export interface When {
    * The active audio output device is `id` (`PlayerState.audioOutput.active`).
    *
    * @throws `TypeError` (throws) `id` is not a string of 1–256 characters.
+   *
+   * @example Check the item of the active output device
+   * One menu item per output device carries a check mark while the
+   * player plays through it; the player compares its own active device.
+   * ```ts
+   * const { when, player } = plugin;
+   * for (const device of await player.audioDevices())
+   *   plugin.commands.add({
+   *     id: `out-${device.id}`,
+   *     path: ["@audio", "Output", device.name],
+   *     radio: true,
+   *     checked: when.audioDevice(device.id), // no state read in the plugin
+   *     run: () => player.setAudioDevice(device.id),
+   *   });
+   * ```
+   *
    * @since 1.10.0
    */
   audioDevice(id: string): Condition;
@@ -389,6 +455,7 @@ export interface When {
      * @example Be told 2 s before each silence
      * ```ts
      * declare const spans: { start: number; end: number }[];
+     * // ---cut---
      * const { when } = plugin;
      * const near = when.playing.and(when.position.in(spans, { lead: 2 }));
      * ```
@@ -407,7 +474,9 @@ export interface When {
  * @category Commands
  */
 export interface PositionRange {
+  /** Where the range starts, in media seconds (0 or more). */
   readonly start: number;
+  /** Where it ends, in media seconds, after `start`; absent or `null`: open. */
   readonly end?: number | null;
 }
 
@@ -425,8 +494,11 @@ export interface TriggerEvent {
    * in one of its ranges: that range as given, and its place in the list.
    */
   readonly range?: {
+    /** The range's start, in media seconds. */
     readonly start: number;
+    /** The range's end, in media seconds (`null`: open). */
     readonly end: number | null;
+    /** Its place in the list given to `when.position.in`, from 0. */
     readonly index: number;
   };
 }
@@ -435,15 +507,22 @@ export interface TriggerEvent {
  * A trigger (`plugin.trigger()`): a place for one condition the player
  * keeps and evaluates, also while the plugin is in standby, and the
  * functions to call when it becomes true (`enter`) and false (`leave`).
+ *
+ * @remarks
  * When it flips while the plugin has no process, the player starts the
  * plugin; `activate()` declares the same triggers again and the waiting
- * notification reaches the same trigger.
+ * notification reaches the same trigger. Every method returns the
+ * trigger, so the calls chain.
  *
  * @example On top while playing in fullscreen
+ * The window stays on top while a file plays in fullscreen and goes back
+ * when either ends. The player evaluates the condition itself, so the
+ * plugin may be in standby in between.
  * ```ts
  * const { when, window } = plugin;
  * plugin
  *   .trigger()
+ *   // The player keeps this condition and calls back when it flips.
  *   .firesOn(when.playing.and(when.fullscreen))
  *   .enter(() => window.setAlwaysOnTop(true))
  *   .leave(() => window.setAlwaysOnTop(false));
@@ -461,19 +540,85 @@ export interface Trigger {
    *
    * @throws `TypeError` (throws) Not a condition from `plugin.when`, or
    *   one with two position lists.
+   *
+   * @example Pause ten seconds before the end
+   * A command arms the trigger for the file open now: its condition holds
+   * from ten seconds before the end, and `enter` pauses. Pressing it again
+   * replaces the condition, without a `leave` for the old one.
+   * ```ts
+   * const { when, player } = plugin;
+   * const nearEnd = plugin.trigger("near-end").enter(() => player.setPaused(true));
+   * plugin.commands.add({
+   *   id: "pause-near-end",
+   *   path: ["Tools", "Pause Near the End"],
+   *   run: () => {
+   *     const duration = player.state.duration;
+   *     // Bound to the current file: another file never matches it.
+   *     if (duration !== null)
+   *       nearEnd.firesOn(when.position.in([{ start: Math.max(0, duration - 10) }]));
+   *   },
+   * });
+   * ```
+   *
+   * @since 1.10.0
    */
   firesOn(condition: Condition): Trigger;
   /**
    * `fn` runs each time the condition turns from false to true. One
    * trigger's functions run one after another: the next waits for the
-   * promise of the one before.
+   * promise of the one before. A second call replaces the function.
+   *
+   * @throws `TypeError` (throws) `fn` is not a function.
+   *
+   * @example Show a note as each marked range starts
+   * The OSD names the part of the file as playback reaches it. `range`
+   * says which of the ranges was entered: `index` is its place in the
+   * list the condition was given.
+   * ```ts
+   * declare const parts: { start: number; end: number; name: string }[];
+   * // ---cut---
+   * const { when, osd } = plugin;
+   * plugin
+   *   .trigger()
+   *   .firesOn(when.position.in(parts))
+   *   // `range` is set because the condition has a position list.
+   *   .enter(async ({ range }) => {
+   *     if (range) await osd.show("Now: {}", [parts[range.index].name]);
+   *   });
+   * ```
+   *
+   * @since 1.10.0
    */
   enter(fn: (event: TriggerEvent) => unknown): Trigger;
-  /** Optional: `fn` runs each time the condition turns from true to false. */
+  /**
+   * Optional: `fn` runs each time the condition turns from true to false.
+   * A second call replaces the function.
+   *
+   * @throws `TypeError` (throws) `fn` is not a function.
+   *
+   * @example See Trigger
+   * {@link Trigger}
+   *
+   * @since 1.10.0
+   */
   leave(fn: (event: TriggerEvent) => unknown): Trigger;
   /**
    * Removes the condition, without a `leave`. The trigger stays declared
    * and can be given a new condition.
+   *
+   * @example Cancel a sleep timer
+   * A second command disarms the timer the first one set: the player
+   * forgets the condition, so the plugin is not started for it.
+   * ```ts
+   * const sleep = plugin.trigger("sleep").enter(() => plugin.player.setPaused(true));
+   * plugin.commands.add({
+   *   id: "sleep-cancel",
+   *   path: ["Tools", "Cancel Sleep Timer"],
+   *   run: () => sleep.off(), // the trigger stays; only its condition goes
+   * });
+   * ```
+   *
+   * @since 1.10.0
    */
   off(): Trigger;
 }

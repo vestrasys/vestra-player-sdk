@@ -82,6 +82,8 @@ export const STRICT_CATEGORIES = {
       "MarkdownWire",
       "UI_VALUE_LIMITS",
       "IMAGE_LIMITS",
+      "TRIGGER_LIMITS",
+      "KeptTrigger",
     ],
   },
   UI: {
@@ -144,6 +146,7 @@ export const STRICT_CATEGORIES = {
       "Condition",
       "Palette",
       "PaletteLead",
+      "Trigger",
     ],
     data: [
       "CommandState",
@@ -161,6 +164,8 @@ export const STRICT_CATEGORIES = {
       "CommandInfo",
       "PaletteLeadOptions",
       "PaletteLeadRun",
+      "PositionRange",
+      "TriggerEvent",
     ],
   },
   Playback: {
@@ -172,6 +177,7 @@ export const STRICT_CATEGORIES = {
       "Timeline",
       "TimelineLayer",
       "Mpv",
+      "StateStream",
     ],
     data: [
       "PlayerState",
@@ -203,6 +209,8 @@ export const STRICT_CATEGORIES = {
       "WireUpscalingReason",
       "WireUpscalingState",
       "WireMotionState",
+      "SourceEvent",
+      "SourceEventPayloads",
     ],
   },
   Services: {

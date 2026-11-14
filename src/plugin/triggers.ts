@@ -32,6 +32,8 @@ import type { SourceState } from "../source.ts";
  * ranges.
  *
  * @example Stay within the limit
+ * A plugin that makes one trigger per item of a list keeps the list
+ * within the number of triggers the player allows.
  * ```ts
  * import { TRIGGER_LIMITS } from "@vestra-player/sdk/testing";
  *

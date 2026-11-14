@@ -716,10 +716,13 @@ export interface Plugin extends Scope {
    * @throws `limit` (throws) A 65th trigger.
    *
    * @example A sleep timer that survives an update
+   * A menu item pauses playback 45 minutes later. The trigger is named,
+   * so its condition stays with the player through standby and an update,
+   * and `enter` disarms it before pausing.
    * ```ts
    * const { when, player, commands } = plugin;
    * const alarm = plugin.trigger("sleep").enter(async () => {
-   *   alarm.off();
+   *   alarm.off(); // fire once: the player forgets the condition
    *   await player.setPaused(true);
    * });
    * commands.add({

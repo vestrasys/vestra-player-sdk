@@ -93,9 +93,23 @@ export const WRAPPED_BY = {
   "mpv.unobserve": ["Mpv.observe"],
 };
 
-/** A member as `Interface.member`, linked. `Plugin.x` is declared on Scope. */
+/** A member as `Interface.member`, linked where {@link declaredAs} says. */
 export const memberLink = (api) =>
-  `{@linkcode "@vestra-player/sdk"!${api.replace(/^Plugin\./, "Scope.").replace(/^(Scope\.\w+)\..*$/, "$1")} ${api}}`;
+  `{@linkcode "@vestra-player/sdk"!${declaredAs(api).replace(/^(Scope\.\w+)\..*$/, "$1")} ${api}}`;
+
+/**
+ * `Plugin.x…` as the interface that declares `x`: `Scope`, which Plugin
+ * extends, for most members; `Plugin` for Plugin's own (`Plugin.trigger`).
+ * Any other member as it is.
+ */
+function declaredAs(member) {
+  const [owner, name] = member.split(".");
+  if (owner !== "Plugin") return member;
+  const own = declaration(typeFile("Plugin"), "Plugin").members.some(
+    (m) => m.name?.getText() === name,
+  );
+  return own ? member : member.replace(/^Plugin\./, "Scope.");
+}
 
 /** Members as links into the API reference, comma separated. */
 export const memberLinks = (members) =>
@@ -226,12 +240,12 @@ export function clientCalls(root) {
 }
 
 /**
- * The declaration of `Interface.member` (`Plugin.x…` is a `Scope`
- * property), found on the interface, its `extends` parents or the parts of
+ * The declaration of `Interface.member` (`Plugin.x…` as
+ * {@link declaredAs}), found on the interface, its `extends` parents or the parts of
  * an intersection type alias; `null` when there is none.
  */
 function findMember(member) {
-  const [owner, name] = member.replace(/^Plugin\./, "Scope.").split(".");
+  const [owner, name] = declaredAs(member).split(".");
   const seen = new Set();
   const inMembers = (members) =>
     members?.find((m) => m.name?.getText() === name) ?? null;

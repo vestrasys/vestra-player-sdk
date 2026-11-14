@@ -3839,6 +3839,11 @@ export class TestHost implements Transport {
   get now(): number {
     return triggerState(this).now;
   }
+  /**
+   * Set the clock to `value` (Unix milliseconds). Only the clock moves:
+   * the kept conditions see the new time at their next evaluation, on
+   * {@link TestHost.advance} or a state the test pushes.
+   */
   set now(value: number) {
     triggerState(this).now = value;
   }
@@ -3851,6 +3856,9 @@ export class TestHost implements Transport {
    * position is then pushed as `source.state`.
    *
    * @example A silence is entered 2 s before it starts
+   * The source plays from 0, and the plugin's position condition has a
+   * lead of 2 s before a range at 10 s. Advancing 8 s of clock plays 8 s
+   * of media, so the trigger's `enter` runs on the way, at 8 s.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
@@ -3875,6 +3883,20 @@ export class TestHost implements Transport {
    *
    * @throws `Error` without a code (rejects) The plugin was not started
    *   with {@link startPlugin}.
+   *
+   * @example A trigger condition outlives standby
+   * The test puts a plugin that armed one trigger in standby, as the
+   * player does when nothing uses it, and checks that the player still
+   * keeps the condition that will start the plugin again.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * await host.park(); // stopped with reason "idle"
+   * assert.equal(host.parked, true);
+   * assert.equal(host.triggers.length, 1);
+   * ```
+   *
    * @since 1.10.0
    */
   park(): Promise<void> {
@@ -3893,6 +3915,20 @@ export class TestHost implements Transport {
    *
    * @throws `Error` without a code (rejects) The plugin was not started
    *   with {@link startPlugin}.
+   *
+   * @example A named sleep timer survives an update
+   * The test arms the plugin's sleep timer from its command, replaces the
+   * plugin with the same code as a new version, and checks that the
+   * player still keeps the condition of the trigger named `sleep`.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * await host.command("in45").run();
+   * await host.upgrade(); // the same activate, as the new version
+   * assert.ok(host.triggers.some((kept) => kept.trigger === "sleep"));
+   * ```
+   *
    * @since 1.10.0
    */
   upgrade(activate?: (plugin: Plugin) => unknown): Promise<void> {
