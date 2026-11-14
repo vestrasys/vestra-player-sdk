@@ -87,6 +87,10 @@ export class ScopeImpl implements Plugin {
   get disposed(): boolean {
     return this.#disposed || (this.#parent?.disposed ?? false);
   }
+  /** The plugin itself, not a scope made with `scope()`. */
+  get root(): boolean {
+    return this.#parent === undefined;
+  }
   /**
    * Start the SDK's copy that `event` keeps current (`plugin.commands.keys`,
    * `plugin.timeline`, `plugin.appearance`), for `player.on`; nothing for

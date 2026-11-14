@@ -122,6 +122,20 @@ test("T8: triggers are declared in the synchronous part of activate()", async ()
   } finally {
     await stop();
   }
+  // Only the plugin declares triggers, not a sub-scope (whose disposal
+  // would leave a kept condition waking the plugin for nothing).
+  let scoped: unknown;
+  const sub = await startPlugin((plugin) => {
+    const scope = plugin.scope() as unknown as Plugin;
+    try {
+      scope.trigger("in-scope");
+    } catch (error) {
+      scoped = error;
+    }
+  });
+  assert.match(String(scoped), /on the plugin, not on a scope/);
+  assert.deepEqual(sets(sub.host), []);
+  await sub.stop();
   // No trigger: nothing is sent.
   const quiet = await startPlugin(() => {});
   assert.deepEqual(sets(quiet.host), []);

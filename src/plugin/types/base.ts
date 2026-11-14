@@ -710,7 +710,8 @@ export interface Plugin extends Scope {
    *
    * @param name - Unique within the plugin, 1–64 characters.
    * @throws `Error` without a code (throws) Called after the synchronous
-   *   part of `activate()`.
+   *   part of `activate()`, or on a scope made with `plugin.scope()` (a
+   *   trigger is the plugin's: its condition outlives any scope).
    * @throws `invalid` (throws) A name used twice, or not 1–64 characters.
    * @throws `limit` (throws) A 65th trigger.
    *

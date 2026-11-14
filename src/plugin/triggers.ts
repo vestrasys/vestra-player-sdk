@@ -205,11 +205,21 @@ export class TriggerRegistry {
     }
     for (const fired of this.#early.splice(0)) this.#fired(fired);
   }
-  /** `plugin.trigger(name?)` of `scope`. */
+  /**
+   * `plugin.trigger(name?)` of `scope`. Only the plugin itself declares
+   * triggers, not a sub-scope (`plugin.scope()`): a trigger's condition is
+   * the plugin's, kept by the player beyond any one run, while a sub-scope
+   * is disposed within a run, and a kept condition whose functions went
+   * with it would go on waking the plugin for nothing.
+   */
   declare(scope: ScopeImpl, name?: string): Trigger {
     if (!this.#declaring)
       throw new Error(
         "plugin.trigger() is called only in the synchronous part of activate(), before its first await",
+      );
+    if (!scope.root)
+      throw new Error(
+        "plugin.trigger() is called on the plugin, not on a scope made with plugin.scope()",
       );
     if (this.#byId.size >= TRIGGER_LIMITS.triggers)
       throw failure(
