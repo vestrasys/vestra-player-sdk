@@ -72,6 +72,9 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Subtitles.load": [{ method: "subtitles.upload.begin" }, readsSubtitles],
     "Subtitles.remove": [{ method: "subtitles.remove" }, readsSubtitles],
     "Subtitles.setStyle": [{ method: "subtitles.style" }, readsSubtitles],
+    "Plugin.trigger": [{ method: "triggers.declare" }],
+    "Trigger.firesOn": [{ method: "triggers.set" }],
+    "Trigger.off": [{ method: "triggers.off" }],
     "Timeline.marks": [{ method: "timeline.marks" }],
     "Timeline.ranges": [{ method: "timeline.marks" }],
     "Timeline.layer": [

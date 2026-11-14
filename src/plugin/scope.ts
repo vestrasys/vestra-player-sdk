@@ -10,8 +10,10 @@ import type {
   PluginError,
   Scope,
   StopReason,
+  Trigger,
 } from "./types.ts";
 import { commands, keysOf, palette } from "./commands.ts";
+import { triggersOf } from "./triggers.ts";
 import { WHEN } from "./when.ts";
 import { dialogs } from "./services/dialogs.ts";
 import { ui } from "./view/image.ts";
@@ -137,6 +139,9 @@ export class ScopeImpl implements Plugin {
   }
   scope(): Scope {
     return this.add(new ScopeImpl(this.runtime, this));
+  }
+  trigger(name?: string): Trigger {
+    return triggersOf(this.runtime).declare(this, name);
   }
   add<T extends Disposable>(item: T): T {
     if (this.#disposed) void item.dispose().catch(() => {});

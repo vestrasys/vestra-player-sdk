@@ -196,5 +196,11 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.settle}() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
 | {@link "@vestra-player/sdk/testing"!TestHost.close}() | Close the fake stream servers and delete the host's temporary directories. |
 | {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation), one line per reason: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its panel in the bottom bar or the backdrop, its open windows (these as the player's log says them), and its sidebar tab while that is the current tab. |
+| {@link "@vestra-player/sdk/testing"!TestHost.triggers} | The trigger conditions the player keeps for this plugin (`plugin.trigger().firesOn`), in the wire form, with their sequence numbers and whether each holds now. |
+| {@link "@vestra-player/sdk/testing"!TestHost.now} | The test host's wall clock (Unix milliseconds), which `when.time` conditions read. |
+| {@link "@vestra-player/sdk/testing"!TestHost.advance}() | Move the clock by `ms` milliseconds and, while the source plays (`phase` `ready`, not paused), the position by `rate × ms`. |
+| {@link "@vestra-player/sdk/testing"!TestHost.park}() | The player puts the plugin in standby: it is stopped (reason `idle`); its trigger conditions and the wake events it listens to are kept. |
+| {@link "@vestra-player/sdk/testing"!TestHost.parked} | The plugin is in standby (`TestHost.park`) and not started again yet. |
+| {@link "@vestra-player/sdk/testing"!TestHost.upgrade}() | Another version replaces the plugin: it is stopped (reason `upgrade`), the conditions of its unnamed triggers are cleared, the named ones kept, and it starts again with `activate` (the new version's code; default: the same). |
 
 <!-- /generated -->

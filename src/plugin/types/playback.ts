@@ -894,6 +894,23 @@ export interface PlaybackStats {
 }
 
 /**
+ * An open stream of the player's state ({@link Player.stream}).
+ *
+ * @since 1.10.0
+ * @category Playback
+ */
+export interface StateStream {
+  /**
+   * Stop the stream: its listener is not called again. A second call does
+   * nothing. When no other stream is open, nothing of the streams keeps the
+   * plugin running any more.
+   *
+   * @throws Never.
+   */
+  stop(): void;
+}
+
+/**
  * `plugin.player`: playback state and controls.
  *
  * Call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`:
@@ -965,6 +982,75 @@ export interface Player {
    * @since 1.0.0
    */
   onChange(listener: (state: PlayerState) => void): Disposable;
+  /**
+   * Follow the player's state while something needs it continuously: a
+   * window or panel that shows the position, a meter.
+   *
+   * @remarks
+   * `listener` runs with the current state as soon as the SDK has it (one
+   * read of the player's state right after the call), then with every
+   * change the player sends: about ten times a second while playing, at
+   * once when the phase, pause, speed or volume changes. Before each call
+   * the SDK updates {@link Player.state}; after each call an update pass
+   * runs, so {@link View.bind} functions and command states that read
+   * `plugin.player.state` follow the stream. It needs no
+   * {@link Player.subscribe}: the stream itself makes the state follow the
+   * player while it is open.
+   *
+   * **While a stream is open the player keeps the plugin running**: it is
+   * a listener (its log names it `a stream opened at main.ts:12`). Open it
+   * when the thing that shows the state appears and stop it when that goes
+   * away; nothing of a stopped stream keeps the plugin running. A plugin
+   * that only needs to know that something happened (a file opened, ready,
+   * ended) uses {@link Player.on} with a source event instead, which lets
+   * it go to standby.
+   *
+   * Several streams may be open; each listener is called. A stream ends
+   * with {@link StateStream.stop}, when its scope is disposed, and when the
+   * plugin stops; it is not kept through standby. After the last one ends
+   * `plugin.player.state` keeps the last snapshot, and without
+   * {@link Player.subscribe} it no longer follows changes made elsewhere.
+   * {@link Player.subscribe} and {@link Player.onChange} keep working as
+   * before.
+   *
+   * The player judges what keeps a plugin running when the plugin becomes
+   * ready. A stream that is open then counts as it does today for a
+   * listener held at the ready: the plugin keeps running for that run, also
+   * after the stream stops. Open the stream after `activate`, when what
+   * shows the state appears.
+   *
+   * Errors the listener throws or rejects with go to
+   * {@link Scope.onError}, as for every handler.
+   *
+   * @param listener - Receives the state now and at every change.
+   * @returns The open stream; it is stopped with the scope.
+   *
+   * @throws `invalid` (throws) `listener` is not a function.
+   *
+   * @example Show the time left while a window is open
+   * A tool window shows how much of the file is left, updated as it plays.
+   * The stream starts when the window is shown and stops when the user
+   * closes it, so the plugin can go to standby afterwards.
+   * ```ts
+   * const view = plugin.windows.create("ui/left.slint");
+   * let feed: StateStream | undefined;
+   * view.onClose(() => feed?.stop());
+   * plugin.commands.add({
+   *   id: "left",
+   *   path: ["Tools", "Time Left"],
+   *   run: async () => {
+   *     await view.show();
+   *     feed?.stop();
+   *     feed = plugin.player.stream((s) =>
+   *       view.set({ text: `${Math.round((s.duration ?? 0) - (s.position ?? 0))} s` }),
+   *     );
+   *   },
+   * });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  stream(listener: (state: PlayerState) => void): StateStream;
   /**
    * Listen to one event of the player, with its data as the player sent
    * it: no state copy, no comparison.

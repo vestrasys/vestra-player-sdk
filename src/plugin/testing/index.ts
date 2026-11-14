@@ -196,9 +196,22 @@ import {
   servicesHandlers,
   sortedJson,
 } from "./services.ts";
+import {
+  advance,
+  keptTriggers,
+  park,
+  triggerState,
+  triggersHandlers,
+  upgrade,
+} from "./triggers.ts";
+import type { KeptTrigger } from "./triggers.ts";
+import { TRIGGER_LIMITS } from "../triggers.ts";
 
 /** Throw one of these from `host.handle(...)` to simulate a definite refusal. */
 export { HostError };
+/** The player's limits on triggers (1.10.0), which the test host enforces as well. */
+export { TRIGGER_LIMITS };
+export type { KeptTrigger };
 /** The player's command caps, which the test host enforces as well. */
 export { COMMAND_LIMITS, MENU_IDS };
 /** The icons and limits of bottom-bar buttons, which the test host checks as well. */
@@ -3803,7 +3816,91 @@ export class TestHost implements Transport {
     return keepsRunning(this, this.#inner);
   }
 
+  // ------------------------------------------------------------ triggers
+
+  /**
+   * The trigger conditions the player keeps for this plugin
+   * (`plugin.trigger().firesOn`), in the wire form, with their sequence
+   * numbers and whether each holds now. They stay through
+   * {@link TestHost.park}; {@link TestHost.upgrade} clears the unnamed ones.
+   *
+   * @since 1.10.0
+   */
+  get triggers(): readonly KeptTrigger[] {
+    return keptTriggers(this);
+  }
+  /**
+   * The test host's wall clock (Unix milliseconds), which `when.time`
+   * conditions read. It starts at the real time; it moves only with
+   * {@link TestHost.advance}, or when a test sets it.
+   *
+   * @since 1.10.0
+   */
+  get now(): number {
+    return triggerState(this).now;
+  }
+  set now(value: number) {
+    triggerState(this).now = value;
+  }
+  /**
+   * Move the clock by `ms` milliseconds and, while the source plays
+   * (`phase` `ready`, not paused), the position by `rate × ms`. Each
+   * position boundary and time bound a kept condition waits for is passed
+   * in its order: an `enter` or `leave` runs with the clock and the position
+   * where the player would call it, and the test does not wait. The new
+   * position is then pushed as `source.state`.
+   *
+   * @example A silence is entered 2 s before it starts
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.setSource({ phase: "ready", duration: 60, position: 0 });
+   * // … the plugin gave when.position.in([{ start: 10, end: 12 }], { lead: 2 })
+   * await host.advance(8_000); // its enter ran at 8 s
+   * ```
+   *
+   * @throws `TypeError` (rejects) `ms` is not a number of 0 or more.
+   * @since 1.10.0
+   */
+  advance(ms: number): Promise<void> {
+    return advance(this, this.#inner, ms);
+  }
+  /**
+   * The player puts the plugin in standby: it is stopped (reason
+   * `idle`); its trigger conditions and the wake events it listens to are
+   * kept. A condition that flips, or a wake event, starts it again
+   * (`activate()` runs anew) and delivers what waited, in order; the
+   * conditions given again by `activate()` change nothing.
+   *
+   * @throws `Error` without a code (rejects) The plugin was not started
+   *   with {@link startPlugin}.
+   * @since 1.10.0
+   */
+  park(): Promise<void> {
+    return park(this, this.#inner);
+  }
+  /** The plugin is in standby ({@link TestHost.park}) and not started again yet. */
+  get parked(): boolean {
+    return triggerState(this).parked;
+  }
+  /**
+   * Another version replaces the plugin: it is stopped (reason
+   * `upgrade`), the conditions of its unnamed triggers are cleared, the
+   * named ones kept, and it starts again with `activate` (the new
+   * version's code; default: the same). A name the new version does not
+   * declare is dropped when it starts.
+   *
+   * @throws `Error` without a code (rejects) The plugin was not started
+   *   with {@link startPlugin}.
+   * @since 1.10.0
+   */
+  upgrade(activate?: (plugin: Plugin) => unknown): Promise<void> {
+    return upgrade(this, this.#inner, activate as never);
+  }
+
   readonly #defaults: Record<string, Handler> = {
+    ...triggersHandlers(this, this.#inner),
     ...transportHandlers(this, this.#inner),
     ...commandsHandlers(this, this.#inner),
     ...builtinHandlers(this, this.#inner),
@@ -3972,29 +4069,44 @@ export async function startPlugin(
     host.sessionStorage.set(key, sortedJson(value));
   mkdirSync(data, { recursive: true });
   if (host.fileRoots.length === 0) host.fileRoots = [directory, data];
-  const instance = await createPlugin(
-    host,
-    manifest,
-    directory,
-    data,
-    // Like the player: protocol additions it takes (`app.features` set on
-    // the host replaces them, e.g. `[]` for an older player's behaviour).
-    { features: [PATCH_FEATURE], ...host.app },
-    // Unlike the player's runner, which logs a refused command declaration
-    // and activates the rest: a plugin's tests show the refusal.
-    { strictDeclarations: true },
-  );
-  await activate(instance.plugin);
-  // Like the player: a position or resolver another plugin holds is not an
-  // activation failure.
-  for (;;) {
-    try {
-      await instance.activated();
-      break;
-    } catch (error) {
-      if (!(error instanceof Error && takenErrors.has(error))) throw error;
+  // One run of the plugin; `park` and `upgrade` (1.10.0) start another.
+  const run = async (entry: (plugin: Plugin) => unknown) => {
+    const started = await createPlugin(
+      host,
+      manifest,
+      directory,
+      data,
+      // Like the player: protocol additions it takes (`app.features` set on
+      // the host replaces them, e.g. `[]` for an older player's behaviour).
+      { features: [PATCH_FEATURE], ...host.app },
+      // Unlike the player's runner, which logs a refused command declaration
+      // and activates the rest: a plugin's tests show the refusal.
+      { strictDeclarations: true },
+    );
+    await started.activate(entry);
+    // Like the player: a position or resolver another plugin holds is not an
+    // activation failure.
+    for (;;) {
+      try {
+        await started.activated();
+        break;
+      } catch (error) {
+        if (!(error instanceof Error && takenErrors.has(error))) throw error;
+      }
     }
-  }
+    return started;
+  };
+  let instance = await run(activate);
+  const triggers = triggerState(host);
+  let code = activate;
+  triggers.start = async (entry) => {
+    if (entry) code = entry as (plugin: Plugin) => unknown;
+    instance = await run(code);
+  };
+  triggers.stop = async (reason) => {
+    await instance.dispose({ reason });
+    await host.settle();
+  };
   await host.settle();
   tellResidency(host);
   // Zero declared parameters (`stop.length === 0`) and a `()` overload, so
@@ -4017,7 +4129,7 @@ export async function startPlugin(
       host.emit("source.ended", structuredClone(quit));
       await host.settle();
     }
-    await instance.dispose({ reason });
+    if (!triggers.parked) await instance.dispose({ reason });
     await host.settle();
     host.close();
   };

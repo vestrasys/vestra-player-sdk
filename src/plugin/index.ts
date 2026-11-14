@@ -13,6 +13,7 @@ import type { PluginManifest, RuntimeOptions } from "./connection.ts";
 import { ScopeImpl } from "./scope.ts";
 import { windowOf } from "./window.ts";
 import { timelineOf } from "./timeline.ts";
+import { triggersOf } from "./triggers.ts";
 import type { Plugin } from "./types.ts";
 
 export type * from "./types.ts";
@@ -20,6 +21,13 @@ export type { PluginManifest, RuntimeOptions };
 
 export interface PluginInstance {
   plugin: Plugin;
+  /**
+   * Call the plugin's `activate(plugin)` as `entry`: `plugin.trigger()`
+   * works only during its synchronous part, after which the player is told
+   * which triggers it declared (1.10.0). Returns what `entry` returned, as a
+   * promise. The runner and the test host call it instead of `entry`.
+   */
+  activate(entry: (plugin: Plugin) => unknown): Promise<unknown>;
   /**
    * Wait for registrations started during activation; rejects if one failed.
    * A command declaration the player refused is not a failure (it is
@@ -83,8 +91,19 @@ export async function createPlugin(
       root.report(failure(code ?? "ui", message ?? "user interface error"));
     }),
   );
+  const triggers = triggersOf(runtime);
   return {
     plugin: root,
+    activate(entry) {
+      triggers.begin();
+      let result: unknown;
+      try {
+        result = entry(root);
+      } finally {
+        triggers.end();
+      }
+      return Promise.resolve(result);
+    },
     activated: () => runtime.activated(),
     dispose: async (info) => {
       runtime.stopping ??= { reason: stopReason(info?.reason) };

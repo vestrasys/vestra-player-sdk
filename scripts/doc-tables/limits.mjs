@@ -24,6 +24,7 @@ const SOURCES = {
   OSD_LIMITS: { file: "src/plugin/osd.ts" },
   MPV_LIMITS: { file: "src/mpv.ts" },
   TIMELINE_LIMITS: { file: "src/plugin/timeline.ts" },
+  TRIGGER_LIMITS: { file: "src/plugin/triggers.ts" },
   SECRET_LIMITS: { file: "src/plugin/services.ts" },
   SESSION_STORAGE_LIMITS: { file: "src/plugin/services.ts" },
   SUBTITLE_LIMITS: { file: "src/plugin/subtitles.ts" },

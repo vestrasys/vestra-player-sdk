@@ -13,7 +13,7 @@ import type {
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
 import type { Scope } from "./base.ts";
-import type { Player } from "./playback.ts";
+import type { AudioTrack, Player, TimelineLayer } from "./playback.ts";
 import type { Ui, View } from "./ui-content.ts";
 /* oxlint-enable no-unused-vars */
 
@@ -269,6 +269,213 @@ export interface When {
    * @since 1.5.40
    */
   language(language: LanguagePreference): Condition;
+  /**
+   * The source is muted (`PlayerState.muted`).
+   *
+   * @since 1.10.0
+   */
+  readonly muted: Condition;
+  /**
+   * The main window is maximized (`MainWindowState.maximized`).
+   *
+   * @since 1.10.0
+   */
+  readonly maximized: Condition;
+  /**
+   * The video shows in the picture-in-picture window.
+   *
+   * @since 1.10.0
+   */
+  readonly pip: Condition;
+  /**
+   * An A-B loop is set (`PlayerState.loop` is not `null`).
+   *
+   * @since 1.10.0
+   */
+  readonly looping: Condition;
+  /**
+   * The source's duration in seconds is within `min ≤ duration < max`
+   * (at least one bound); false while it is unknown.
+   *
+   * @throws `TypeError` (throws) No bound, a bound that is not a finite
+   *   number, or `min ≥ max`.
+   *
+   * @example Only for files longer than ten minutes
+   * ```ts
+   * const { when } = plugin;
+   * const long = when.duration({ min: 600 });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  duration(bounds: { min?: number; max?: number }): Condition;
+  /**
+   * The volume (0–200) is within `min ≤ volume < max`.
+   *
+   * @throws `TypeError` (throws) As {@link When.duration}.
+   * @since 1.10.0
+   */
+  volume(bounds: { min?: number; max?: number }): Condition;
+  /**
+   * The playback rate is within `min ≤ rate < max`.
+   *
+   * @throws `TypeError` (throws) As {@link When.duration}.
+   * @since 1.10.0
+   */
+  rate(bounds: { min?: number; max?: number }): Condition;
+  /**
+   * The wall clock (Unix milliseconds, as `Date.now()`) is within
+   * `min ≤ now < max`. For a trigger only (`plugin.trigger().firesOn`): a
+   * command's state refuses it.
+   *
+   * @throws `TypeError` (throws) As {@link When.duration}.
+   *
+   * @example The clock is at or past 45 minutes from now
+   * ```ts
+   * const { when } = plugin;
+   * const due = when.time({ min: Date.now() + 45 * 60_000 });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  time(bounds: { min?: number; max?: number }): Condition;
+  /**
+   * The selected audio track is `id` ({@link AudioTrack.id}).
+   *
+   * @throws `TypeError` (throws) `id` is not an integer.
+   * @since 1.10.0
+   */
+  audioTrack(id: number): Condition;
+  /**
+   * The primary subtitle track is `id` (`SubtitleTrack.id`).
+   *
+   * @throws `TypeError` (throws) `id` is not a string of 1–256 characters.
+   * @since 1.10.0
+   */
+  subtitleTrack(id: string): Condition;
+  /**
+   * The active audio output device is `id` (`PlayerState.audioOutput.active`).
+   *
+   * @throws `TypeError` (throws) `id` is not a string of 1–256 characters.
+   * @since 1.10.0
+   */
+  audioDevice(id: string): Condition;
+  /**
+   * The playback position. For a trigger only: a command's state refuses
+   * it.
+   *
+   * @since 1.10.0
+   */
+  readonly position: {
+    /**
+     * The position is inside one of `ranges` (`start ≤ position < end`; no
+     * `end`: open), or less than `lead` media seconds before a range's
+     * start. The player binds the list to the source that is current when
+     * it receives it: for any other source this is false. When several
+     * ranges hold, the one with the earliest start is the one a trigger's
+     * `enter` gets as `range`. At most one position list per condition;
+     * it counts as one part however long it is.
+     *
+     * @param ranges - Objects with `start` and optionally `end` (media
+     *   seconds); other fields are ignored, so the list given to
+     *   {@link TimelineLayer.setRanges} fits as it is. At most 1000
+     *   (`TIMELINE_LIMITS.ranges`).
+     * @param options - `lead`: media seconds each range starts earlier,
+     *   to make up for the time a plugin in standby takes to start.
+     * @throws `TypeError` (throws) A start that is not a finite number of
+     *   0 or more, an end not after its start, a negative lead.
+     * @throws `limit` (throws) More than 1000 ranges.
+     *
+     * @example Be told 2 s before each silence
+     * ```ts
+     * declare const spans: { start: number; end: number }[];
+     * const { when } = plugin;
+     * const near = when.playing.and(when.position.in(spans, { lead: 2 }));
+     * ```
+     *
+     * @since 1.10.0
+     */
+    in(ranges: Iterable<PositionRange>, options?: { lead?: number }): Condition;
+  };
+}
+
+/**
+ * A range of media time for {@link When.position}: any object with `start`
+ * and, optionally, `end`, in seconds.
+ *
+ * @since 1.10.0
+ * @category Commands
+ */
+export interface PositionRange {
+  readonly start: number;
+  readonly end?: number | null;
+}
+
+/**
+ * What a trigger's `enter` and `leave` get.
+ *
+ * @since 1.10.0
+ * @category Commands
+ */
+export interface TriggerEvent {
+  /** The player's state at the moment the player saw the condition flip. */
+  readonly state: PlayerState;
+  /**
+   * For a condition with {@link When.position}`.in`, when the position is
+   * in one of its ranges: that range as given, and its place in the list.
+   */
+  readonly range?: {
+    readonly start: number;
+    readonly end: number | null;
+    readonly index: number;
+  };
+}
+
+/**
+ * A trigger (`plugin.trigger()`): a place for one condition the player
+ * keeps and evaluates, also while the plugin is in standby, and the
+ * functions to call when it becomes true (`enter`) and false (`leave`).
+ * When it flips while the plugin has no process, the player starts the
+ * plugin; `activate()` declares the same triggers again and the waiting
+ * notification reaches the same trigger.
+ *
+ * @example On top while playing in fullscreen
+ * ```ts
+ * const { when, window } = plugin;
+ * plugin
+ *   .trigger()
+ *   .firesOn(when.playing.and(when.fullscreen))
+ *   .enter(() => window.setAlwaysOnTop(true))
+ *   .leave(() => window.setAlwaysOnTop(false));
+ * ```
+ *
+ * @since 1.10.0
+ * @category Commands
+ */
+export interface Trigger {
+  /**
+   * Hands the player this condition, replacing the one it has (without a
+   * `leave` for the old one). A condition already true is entered at once.
+   * The same condition again changes nothing. A refusal (`invalid`,
+   * `limit`) reaches the plugin's error handlers.
+   *
+   * @throws `TypeError` (throws) Not a condition from `plugin.when`, or
+   *   one with two position lists.
+   */
+  firesOn(condition: Condition): Trigger;
+  /**
+   * `fn` runs each time the condition turns from false to true. One
+   * trigger's functions run one after another: the next waits for the
+   * promise of the one before.
+   */
+  enter(fn: (event: TriggerEvent) => unknown): Trigger;
+  /** Optional: `fn` runs each time the condition turns from true to false. */
+  leave(fn: (event: TriggerEvent) => unknown): Trigger;
+  /**
+   * Removes the condition, without a `leave`. The trigger stays declared
+   * and can be given a new condition.
+   */
+  off(): Trigger;
 }
 
 /**

@@ -11,6 +11,7 @@ import { HostError } from "../../wire.ts";
 import { WAKE_EVENTS } from "../connection.ts";
 import type { TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
+import { hearEvent } from "./triggers.ts";
 
 export const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -65,6 +66,9 @@ export function emit(
   event: string,
   data: unknown,
 ) {
+  // Trigger conditions first (the player evaluates them before it sends
+  // the state); a parked plugin hears nothing, a wake event wakes it.
+  if (hearEvent(host, inner, event, data)) return;
   if (
     [
       "source.state",
