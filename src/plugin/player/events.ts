@@ -7,14 +7,21 @@
  */
 import { failure } from "../errors.ts";
 import type { ScopeImpl } from "../scope.ts";
-import type { Disposable, EventPayload, HostEvent } from "../types.ts";
+import type {
+  Disposable,
+  EventPayload,
+  HostEvent,
+  SourceEvent,
+} from "../types.ts";
 
 /**
  * Which events need event delivery (`"events"`: they reach the plugin only
  * after `plugin.player.subscribe()`, as they needed the `events`
  * declaration before 1.9.0); `null`: they arrive from the first listener.
  */
-export const EVENT_NEEDS: Readonly<Record<HostEvent, "events" | null>> = {
+export const EVENT_NEEDS: Readonly<
+  Record<HostEvent | SourceEvent, "events" | null>
+> = {
   "source.state": "events",
   "playback.backend": "events",
   "window.state": "events",
@@ -26,13 +33,16 @@ export const EVENT_NEEDS: Readonly<Record<HostEvent, "events" | null>> = {
   "resolvers.fileTypes": "events",
   "video.upscaling.changed": null,
   "video.motion.changed": null,
+  "source.opening": null,
+  "source.ready": null,
+  "source.ended": null,
 };
 
 /** `Player.on`'s arguments: a {@link HostEvent} name and a function. */
 export function checkOn(
   event: unknown,
   listener: unknown,
-): asserts event is HostEvent {
+): asserts event is HostEvent | SourceEvent {
   if (typeof event !== "string" || !Object.hasOwn(EVENT_NEEDS, event))
     throw failure(
       "invalid",
@@ -42,11 +52,26 @@ export function checkOn(
     throw failure("invalid", "on takes an event name and a listener");
 }
 
-/** `Player.on`: `listener` hears each `event`, with a copy of its data. */
+/**
+ * The discrete source events (player 0.10.0): their `state` reaches the
+ * listener as a `PlayerState`, not in the wire shape.
+ */
+export const SOURCE_EVENTS: ReadonlySet<string> = new Set<SourceEvent>([
+  "source.opening",
+  "source.ready",
+  "source.ended",
+]);
+
+/**
+ * `Player.on`: `listener` hears each `event`, with a copy of its data;
+ * `convert` (the source events) turns the copy into what the listener
+ * gets.
+ */
 export function playerOn<E extends HostEvent>(
   scope: ScopeImpl,
-  event: E,
+  event: E | SourceEvent,
   listener: (data: EventPayload<E>) => void,
+  convert: (data: unknown) => unknown = (data) => data,
 ): Disposable {
   checkOn(event, listener);
   const watch = scope.runtime.on(
@@ -55,7 +80,10 @@ export function playerOn<E extends HostEvent>(
     // No full pass after it (`runQuiet`): the listener pushes its own
     // values; `plugin.state` writes run the passes that concern them.
     (data) =>
-      scope.runQuiet(listener, structuredClone(data) as EventPayload<E>),
+      scope.runQuiet(
+        listener,
+        convert(structuredClone(data)) as EventPayload<E>,
+      ),
     EVENT_NEEDS[event],
   );
   const handle: Disposable = {

@@ -172,6 +172,7 @@ import {
 import { osdHandlers } from "./osd.ts";
 import { mpvHandlers, setMpvProperty } from "./mpv.ts";
 import { packageDirectories } from "./slint-types.ts";
+import { quitEvent } from "./source-events.ts";
 import { failStream, jobsHandlers } from "./jobs.ts";
 import {
   motionState,
@@ -4009,6 +4010,12 @@ export async function startPlugin(
       typeof first === "object" && first !== null && "reason" in first
         ? (first as { reason?: unknown }).reason
         : undefined;
+    // Like the player: at a quit a running plugin hears its source end.
+    const quit = reason === "quit" ? quitEvent(host.source) : null;
+    if (quit) {
+      host.emit("source.ended", structuredClone(quit));
+      await host.settle();
+    }
     await instance.dispose({ reason });
     await host.settle();
     host.close();

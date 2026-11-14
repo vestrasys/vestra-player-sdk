@@ -39,7 +39,8 @@ export type Why = () => string;
 /**
  * Events the player wakes a stopped plugin for: a listener of one does not keep
  * the plugin running. They follow deliberate changes (an install, a key edit,
- * the palette, a resolver), not playback.
+ * the palette, a resolver), not playback, or report one thing that happened
+ * to a source (it opened, became ready, ended), never its stream of states.
  */
 export const WAKE_EVENTS: readonly string[] = [
   "packages.changed",
@@ -50,6 +51,11 @@ export const WAKE_EVENTS: readonly string[] = [
   "commands.keys",
   "appearance.changed",
   "resolvers.fileTypes",
+  // Player 0.10.0: the discrete source events, once per thing that
+  // happened to a source.
+  "source.opening",
+  "source.ready",
+  "source.ended",
 ];
 
 /**

@@ -7,7 +7,7 @@ description: Every player event a plugin can listen to by name, with its payload
 
 The player sends an event as one JSON line `{"event": name, "data": …}`, only to plugins that subscribed to that name. The SDK subscribes for you when a member follows the player's state (`plugin.player.state`, an `onChange` listener). {@link "@vestra-player/sdk"!Player.on | plugin.player.on(event, listener)} listens to a name directly, typed by {@link "@vestra-player/sdk"!EventPayloads | EventPayloads}; {@link "@vestra-player/sdk"!Wire.on | plugin.wire.on} does the same untyped.
 
-- **Payload**: the player's wire shape, not the SDK's view of it (`source.state` says `stamp.generation` where `PlayerState` says `sourceId`).
+- **Payload**: the player's wire shape, not the SDK's view of it (`source.state` says `stamp.generation` where `PlayerState` says `sourceId`). The three source events, `source.opening`, `source.ready` and `source.ended` ({@link "@vestra-player/sdk"!SourceEvent | SourceEvent}, typed by {@link "@vestra-player/sdk"!SourceEventPayloads | SourceEventPayloads}), are the exception: their `state` is the SDK's `PlayerState`. Each is sent once per thing that happened to a source; for one source the order is `opening`, `ready` (none when it could not be opened), `ended`, and a replaced source's `ended` comes before the next one's `opening`.
 - **SDK members that listen to it**: from the SDK's request table.
 - **Wakes a stopped plugin**: the player starts a plugin on standby for this event, so a listener of it does not keep the plugin running ([Keep a command's state without keeping the plugin running](../guides/command-state.md)); a listener of any other event does.
 - **After `subscribe()` only**: "yes": it reaches the plugin only once the plugin called {@link "@vestra-player/sdk"!Player.subscribe | plugin.player.subscribe()}; until then a listener of it never runs (a warning in the log says so once).
@@ -27,6 +27,9 @@ The player sends an event as one JSON line `{"event": name, "data": …}`, only 
 | `resolvers.fileTypes` | `{ fileTypes: string[] }`: The file extensions the plugins' file resolvers claim now. | none: `Player.on` only | yes | yes |
 | `video.upscaling.changed` | `Omit<WireUpscalingState, "enabled">`: The AI upscaling state, without this plugin's own `enabled`. | {@linkcode "@vestra-player/sdk"!VideoUpscaling.onChange VideoUpscaling.onChange} | no | no |
 | `video.motion.changed` | `Omit<WireMotionState, "mode">`: Motion smoothing's state, without this plugin's own `mode`. | {@linkcode "@vestra-player/sdk"!VideoMotion.onChange VideoMotion.onChange} | no | no |
+| `source.opening` | `{ state: PlayerState; previous: { sourceId: number } \| null }`: A new source starts to open (also the same file again, and `Player.restart`). `state` is the player's state at that moment, as a `PlayerState` (pass it as `ifCurrent` or to `Player.isCurrent`); `previous` names the source that was open before it, `null` when nothing was. | none: `Player.on` only | yes | no |
+| `source.ready` | `{ state: PlayerState }`: The source is loaded: its duration, tracks and seekability are known. Once per opening, after its `source.opening`. | none: `Player.on` only | yes | no |
+| `source.ended` | `{ state: PlayerState; reason: "natural" \| "stopped" \| "replaced" \| "error" \| "quit"; error?: string }`: A source left playback: it played to its end (`natural`), was closed (`stopped`), another source took its place (`replaced`), it could not be played (`error`, with the failure text in `error`), or the player quits (`quit`, sent only to a plugin that is running then). `state` is **that** source's last state, with its last position, not the player's current one. | none: `Player.on` only | yes | no |
 
 <!-- /generated -->
 

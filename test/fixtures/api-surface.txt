@@ -390,6 +390,7 @@
 @vestra-player/sdk InterfaceDeclaration Player :: isCurrent(state: PlayerState): boolean;
 @vestra-player/sdk InterfaceDeclaration Player :: next(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends HostEvent>(event: E, listener: (data: EventPayload<E>) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Player :: on<E extends SourceEvent>(event: E, listener: (data: SourceEventPayloads[E]) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: onChange(listener: (state: PlayerState) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; } & Conditional): Promise<Media>;
 @vestra-player/sdk InterfaceDeclaration Player :: openStream(options: StreamOptions): Promise<Stream>;
@@ -573,6 +574,10 @@
 @vestra-player/sdk InterfaceDeclaration Snapshot :: readonly source: string;
 @vestra-player/sdk InterfaceDeclaration Snapshot :: readonly time: number;
 @vestra-player/sdk InterfaceDeclaration Snapshot extends Disposable
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads :: "source.ended": { state: PlayerState; reason: "natural" | "stopped" | "replaced" | "error" | "quit"; error?: string; };
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads :: "source.opening": { state: PlayerState; previous: { sourceId: number; } | null; };
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads :: "source.ready": { state: PlayerState; };
 @vestra-player/sdk InterfaceDeclaration SourceReference
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly audio: { codec: string; sampleRate: number; channels: number; } | null;
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly duration: number;
@@ -876,6 +881,7 @@
 @vestra-player/sdk TypeAliasDeclaration RowOp = export type RowOp = { op: "set"; at: number; row: Json; } | { op: "insert"; at: number; rows: Json[]; } | { op: "remove"; at: number; count: number; } | { op: "move"; from: number; count: number; to: number; };
 @vestra-player/sdk TypeAliasDeclaration SettingsCategory = export type SettingsCategory = "general" | "playback" | "subtitles" | "video" | "audio" | "input" | "appearance" | "plugins" | "other";
 @vestra-player/sdk TypeAliasDeclaration SettingsPage = export type SettingsPage = View & Disposable & { readonly ready: Promise<void>; };
+@vestra-player/sdk TypeAliasDeclaration SourceEvent = export type SourceEvent = "source.opening" | "source.ready" | "source.ended";
 @vestra-player/sdk TypeAliasDeclaration StopReason = export type StopReason = "quit" | "disable" | "uninstall" | "reload" | "upgrade" | "idle" | "failed" | "host-lost";
 @vestra-player/sdk TypeAliasDeclaration StreamStartError = export type StreamStartError = PluginError & { stage: "prefill" | "activation"; };
 @vestra-player/sdk TypeAliasDeclaration SubtitleStyle = export type SubtitleStyle = { fontId: string; fontSize: number; color: "white" | "yellow" | "cyan"; outline: number; marginPercent: number; offsetMs: number; bold?: boolean; shadow?: number; box?: number | null; assOverride?: "keep" | "force"; secondaryPosition?: "top" | "aboveMain"; };

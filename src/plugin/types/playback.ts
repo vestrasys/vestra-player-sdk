@@ -1021,6 +1021,48 @@ export interface Player {
     listener: (data: EventPayload<E>) => void,
   ): Disposable;
   /**
+   * Listen to one of the player's discrete source events: a source starts
+   * to open, is ready, or ended.
+   *
+   * @remarks
+   * `event` is a {@link SourceEvent} name; `listener` gets that event's
+   * data, typed {@link SourceEventPayloads}, with `state` as a
+   * {@link PlayerState}. The events arrive from the first listener,
+   * without {@link Player.subscribe}, and a listener of one does not keep
+   * the plugin running: the player starts a plugin in standby to deliver
+   * them, and an event that arrives while the plugin starts waits for its
+   * activation. `source.ended` with `reason: "quit"` reaches only a
+   * plugin that is running when the player quits. As for every
+   * {@link Player.on} listener, no full update pass follows it.
+   *
+   * @param event - The event's name.
+   * @param listener - Receives each event's data.
+   * @returns A handle that stops listening; it is disposed with the scope.
+   *
+   * @throws `invalid` (throws) `event` is not an event name, or
+   *   `listener` is not a function.
+   *
+   * @example Remember where each file was left
+   * A plugin stores the position at which each file stopped playing. The
+   * ended source's last state comes with the event, also when another
+   * file replaced it.
+   * ```ts
+   * const saved = plugin.storage.json("positions", {
+   *   defaults: {} as Record<string, number>,
+   * });
+   * plugin.player.on("source.ended", ({ state, reason }) => {
+   *   if (reason === "natural" || state.source === null) return;
+   *   saved.save({ ...saved.value, [state.source]: state.position ?? 0 });
+   * });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  on<E extends SourceEvent>(
+    event: E,
+    listener: (data: SourceEventPayloads[E]) => void,
+  ): Disposable;
+  /**
    * Read the state from the player now.
    *
    * @example Read the state before deciding
@@ -1828,6 +1870,90 @@ export interface EventPayloads {
  * @category Playback
  */
 export type EventPayload<E extends HostEvent> = EventPayloads[E];
+
+/**
+ * The player's discrete source events: one event per thing that happened
+ * to a source, which {@link Player.on} listens to by name.
+ *
+ * @remarks
+ * `source.opening`: a new source starts to open. `source.ready`: it is
+ * loaded. `source.ended`: it left playback. For one source the order is
+ * `opening`, `ready`, `ended` (no `ready` when it could not be
+ * opened); when a source is replaced, the old one's `ended` comes before
+ * the new one's `opening`. Unlike `source.state` they arrive without
+ * {@link Player.subscribe}, and a listener of one does not keep the plugin
+ * running: the player starts a plugin in standby to deliver them.
+ * {@link SourceEventPayloads} says what each one carries.
+ *
+ * @example Scan each file once it is loaded
+ * A plugin looks at every file the player loads. The listener gets the
+ * state at that moment, so the plugin needs no stream of its own and the
+ * player may stop it between files.
+ * ```ts
+ * declare function scan(path: string): Promise<void>;
+ * // ---cut---
+ * plugin.player.on("source.ready", async ({ state }) => {
+ *   if (state.source !== null) await scan(state.source);
+ * });
+ * ```
+ *
+ * @since 1.10.0
+ * @category Playback
+ */
+export type SourceEvent = "source.opening" | "source.ready" | "source.ended";
+
+/**
+ * The data each {@link SourceEvent} carries, as the listener of
+ * {@link Player.on} gets it.
+ *
+ * @remarks
+ * `state` is the SDK's {@link PlayerState}, not the player's wire shape,
+ * so it can be passed as `ifCurrent` and to {@link Player.isCurrent}.
+ * The state of an opening or a ready is also taken into
+ * `plugin.player.state` when it is newer than what the plugin has.
+ *
+ * @since 1.10.0
+ * @category Playback
+ */
+export interface SourceEventPayloads {
+  /**
+   * A new source starts to open (also the same file again, and
+   * {@link Player.restart}). `state` is the player's state at that moment,
+   * as a {@link PlayerState} (pass it as `ifCurrent` or to
+   * {@link Player.isCurrent}); `previous` names the source that was open
+   * before it, `null` when nothing was.
+   */
+  "source.opening": {
+    /** The player's state as the source starts to open. */
+    state: PlayerState;
+    /** The source open before this one (`null`: nothing was open). */
+    previous: { sourceId: number } | null;
+  };
+  /**
+   * The source is loaded: its duration, tracks and seekability are known.
+   * Once per opening, after its `source.opening`.
+   */
+  "source.ready": {
+    /** The player's state as the source became ready. */
+    state: PlayerState;
+  };
+  /**
+   * A source left playback: it played to its end (`natural`), was closed
+   * (`stopped`), another source took its place (`replaced`), it could not
+   * be played (`error`, with the failure text in `error`), or the player
+   * quits (`quit`, sent only to a plugin that is running then). `state` is
+   * **that** source's last state, with its last position, not the
+   * player's current one.
+   */
+  "source.ended": {
+    /** The ended source's last state, as a {@link PlayerState}. */
+    state: PlayerState;
+    /** Why it left playback. */
+    reason: "natural" | "stopped" | "replaced" | "error" | "quit";
+    /** The failure text, when `reason` is `error` and the player has one. */
+    error?: string;
+  };
+}
 
 // ---------------------------------------------------------------- mpv pass-through (mpv)
 
