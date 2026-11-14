@@ -534,8 +534,12 @@ export interface TriggerEvent {
 export interface Trigger {
   /**
    * Hands the player this condition, replacing the one it has (without a
-   * `leave` for the old one). A condition already true is entered at once.
-   * The same condition again changes nothing. A refusal (`invalid`,
+   * `leave` for the old one). A condition already true is entered at once,
+   * except a range list given again for the same source while the
+   * position is still in the range it was entered with (the same start,
+   * end and lead; a list that grew as a scan went on): that range stays
+   * entered, with no second `enter`. The same condition again changes
+   * nothing. A refusal (`invalid`,
    * `limit`) reaches the plugin's error handlers.
    *
    * @throws `TypeError` (throws) Not a condition from `plugin.when`, or

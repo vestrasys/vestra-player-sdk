@@ -589,3 +589,45 @@ test("a command's state takes the new atoms, not position or time", async () => 
     await stop();
   }
 });
+
+test("a replaced list still in the same range is not entered again; another range is", async () => {
+  const host = new TestHost();
+  host.setSource({ phase: "ready", duration: 400, position: 37, rate: 2 });
+  const record = recorder();
+  let trigger!: ReturnType<Plugin["trigger"]>;
+  const { plugin, stop } = await startPlugin(
+    (plugin) => {
+      trigger = plugin.trigger().enter(record.enter).leave(record.leave);
+    },
+    { host },
+  );
+  try {
+    const arm = (ranges: { start: number; end: number }[]) =>
+      trigger.firesOn(
+        plugin.when.playing.and(plugin.when.position.in(ranges, { lead: 2 })),
+      );
+    // Two ranges known (a scan two windows in), entered at the lead.
+    arm([
+      { start: 40.15, end: 43.87325 },
+      { start: 110.15, end: 112.85 },
+    ]);
+    await host.settle();
+    await host.advance(600);
+    assert.deepEqual(record.log, ["enter 0 @38.15"]);
+    // The same plugin woken later knows more ranges: the position is still
+    // in the first one, so no second enter.
+    arm([
+      { start: 40.15, end: 43.87325 },
+      { start: 110.15, end: 112.85 },
+      { start: 185.15, end: 188.85 },
+    ]);
+    await host.settle();
+    assert.deepEqual(record.log, ["enter 0 @38.15"]);
+    // A list whose range around the position ends elsewhere: entered at once.
+    arm([{ start: 40.15, end: 45 }]);
+    await host.settle();
+    assert.deepEqual(record.log, ["enter 0 @38.15", "enter 0 @38.2"]);
+  } finally {
+    await stop();
+  }
+});

@@ -447,6 +447,38 @@ export async function upgrade(
   await host.settle();
 }
 
+/**
+ * What a replaced condition keeps of "entered" (the player's
+ * `Triggers::set`): a range list for the same source whose position is
+ * still in the very range it was entered with (the same start, end and
+ * lead; its place may move) stays entered, so the replacement sends no
+ * second `enter`; anything else is entered anew at once (T3, T6).
+ */
+function carried(
+  host: TestHost,
+  old: Kept | undefined,
+  when: ConditionJson,
+  bound: number | null,
+): Kept["entered"] {
+  if (!old?.entered || old.entered.range === null || bound === null)
+    return null;
+  if (old.bound !== bound) return null;
+  const before = listOf(old.when);
+  const after = listOf(when);
+  if (!before || !after || (before.lead ?? 0) !== (after.lead ?? 0))
+    return null;
+  const truth = evaluateTruth(when, { ...conditionFacts(host), bound });
+  if (!truth.holds || truth.range === null) return null;
+  const was = before.ranges[old.entered.range];
+  const now = after.ranges[truth.range];
+  return was &&
+    now &&
+    was[0] === now[0] &&
+    (was[1] ?? null) === (now[1] ?? null)
+    ? { range: truth.range }
+    : null;
+}
+
 /** The default handlers of this area's wire methods, by method name. */
 export function triggersHandlers(
   host: TestHost,
@@ -478,7 +510,7 @@ export function triggersHandlers(
         when: structuredClone(when),
         seq: ++state.seq,
         bound,
-        entered: null,
+        entered: carried(host, kept, when, bound),
         run: state.run,
       };
       state.kept.set(id, fresh);
