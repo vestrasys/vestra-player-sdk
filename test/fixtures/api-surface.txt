@@ -19,6 +19,7 @@
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: id: number;
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: language: string | null;
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: selected: boolean;
+@vestra-player/sdk InterfaceDeclaration AudioTrack :: streamIndex?: number | null;
 @vestra-player/sdk InterfaceDeclaration AudioTrack :: title: string | null;
 @vestra-player/sdk InterfaceDeclaration BackdropSlot
 @vestra-player/sdk InterfaceDeclaration BackdropSlot :: onChange(listener: (state: { readonly effective: boolean; } | null) => void): Disposable;
@@ -390,6 +391,7 @@
 @vestra-player/sdk InterfaceDeclaration Player :: isCurrent(state: PlayerState): boolean;
 @vestra-player/sdk InterfaceDeclaration Player :: next(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends HostEvent>(event: E, listener: (data: EventPayload<E>) => void): Disposable;
+@vestra-player/sdk InterfaceDeclaration Player :: on<E extends SourceEvent>(event: E, listener: (data: SourceEventPayloads[E]) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: onChange(listener: (state: PlayerState) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; } & Conditional): Promise<Media>;
 @vestra-player/sdk InterfaceDeclaration Player :: openStream(options: StreamOptions): Promise<Stream>;
@@ -410,6 +412,7 @@
 @vestra-player/sdk InterfaceDeclaration Player :: setStepSeek(options: { seconds: number; keyframes?: boolean; }): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: stats(): Promise<PlaybackStats>;
 @vestra-player/sdk InterfaceDeclaration Player :: step(unit: "frame" | "keyframe", direction: "backward" | "forward", options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: stream(listener: (state: PlayerState) => void): StateStream;
 @vestra-player/sdk InterfaceDeclaration Player :: subscribe(): void;
 @vestra-player/sdk InterfaceDeclaration PlayerState
 @vestra-player/sdk InterfaceDeclaration PlayerState :: readonly audioOutput?: { requested: string | null; active: string | null; };
@@ -431,6 +434,7 @@
 @vestra-player/sdk InterfaceDeclaration Plugin :: readonly dataDirectory: string;
 @vestra-player/sdk InterfaceDeclaration Plugin :: readonly id: string;
 @vestra-player/sdk InterfaceDeclaration Plugin :: readonly stopReason: StopReason | undefined;
+@vestra-player/sdk InterfaceDeclaration Plugin :: trigger(name?: string): Trigger;
 @vestra-player/sdk InterfaceDeclaration Plugin extends Scope
 @vestra-player/sdk InterfaceDeclaration PluginDisplay
 @vestra-player/sdk InterfaceDeclaration PluginDisplay :: readonly description: string | null;
@@ -455,6 +459,9 @@
 @vestra-player/sdk InterfaceDeclaration PluginWarning :: owner?: string;
 @vestra-player/sdk InterfaceDeclaration PluginWarning :: slot?: string;
 @vestra-player/sdk InterfaceDeclaration PluginWarning :: target?: string;
+@vestra-player/sdk InterfaceDeclaration PositionRange
+@vestra-player/sdk InterfaceDeclaration PositionRange :: readonly end?: number | null;
+@vestra-player/sdk InterfaceDeclaration PositionRange :: readonly start: number;
 @vestra-player/sdk InterfaceDeclaration Power
 @vestra-player/sdk InterfaceDeclaration Power :: preventSleep(mode: "off" | "playing"): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration RenderOptions :: onStatus(listener: (status: FilterStatus) => void): Disposable;
@@ -573,6 +580,10 @@
 @vestra-player/sdk InterfaceDeclaration Snapshot :: readonly source: string;
 @vestra-player/sdk InterfaceDeclaration Snapshot :: readonly time: number;
 @vestra-player/sdk InterfaceDeclaration Snapshot extends Disposable
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads :: "source.ended": { state: PlayerState; reason: "natural" | "stopped" | "replaced" | "error" | "quit"; error?: string; };
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads :: "source.opening": { state: PlayerState; previous: { sourceId: number; } | null; };
+@vestra-player/sdk InterfaceDeclaration SourceEventPayloads :: "source.ready": { state: PlayerState; };
 @vestra-player/sdk InterfaceDeclaration SourceReference
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly audio: { codec: string; sampleRate: number; channels: number; } | null;
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly duration: number;
@@ -580,6 +591,8 @@
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly status: "ok" | "missing" | "changed";
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly token: string;
 @vestra-player/sdk InterfaceDeclaration SourceReference :: readonly video: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null;
+@vestra-player/sdk InterfaceDeclaration StateStream
+@vestra-player/sdk InterfaceDeclaration StateStream :: stop(): void;
 @vestra-player/sdk InterfaceDeclaration Storage
 @vestra-player/sdk InterfaceDeclaration Storage :: json<T>(name: string, options: { defaults: T; validate?: (value: unknown) => value is T; debounceMs?: number; }): JsonStore<T>;
 @vestra-player/sdk InterfaceDeclaration Storage :: readonly session: SessionStorage;
@@ -674,6 +687,14 @@
 @vestra-player/sdk InterfaceDeclaration Tools
 @vestra-player/sdk InterfaceDeclaration Tools :: available(tool: "ffmpeg" | "ffprobe"): Promise<boolean>;
 @vestra-player/sdk InterfaceDeclaration Tools :: run(tool: "ffmpeg" | "ffprobe", args: string[], options: { timeoutMs: number; maxOutput?: number; signal?: AbortSignal; }): Promise<ToolResult>;
+@vestra-player/sdk InterfaceDeclaration Trigger
+@vestra-player/sdk InterfaceDeclaration Trigger :: enter(fn: (event: TriggerEvent) => unknown): Trigger;
+@vestra-player/sdk InterfaceDeclaration Trigger :: firesOn(condition: Condition): Trigger;
+@vestra-player/sdk InterfaceDeclaration Trigger :: leave(fn: (event: TriggerEvent) => unknown): Trigger;
+@vestra-player/sdk InterfaceDeclaration Trigger :: off(): Trigger;
+@vestra-player/sdk InterfaceDeclaration TriggerEvent
+@vestra-player/sdk InterfaceDeclaration TriggerEvent :: readonly range?: { readonly start: number; readonly end: number | null; readonly index: number; };
+@vestra-player/sdk InterfaceDeclaration TriggerEvent :: readonly state: PlayerState;
 @vestra-player/sdk InterfaceDeclaration Ui
 @vestra-player/sdk InterfaceDeclaration Ui :: image(path: string, options?: ImageOptions): ImageRef;
 @vestra-player/sdk InterfaceDeclaration Ui :: markdown(text: string, options?: MarkdownOptions): Promise<MarkdownRef>;
@@ -735,16 +756,28 @@
 @vestra-player/sdk InterfaceDeclaration WebResolverOptions :: resolve(url: string, signal: AbortSignal): Promise<ResolvedMedia>;
 @vestra-player/sdk InterfaceDeclaration WebResolverOptions :: schemes: ("http" | "https")[];
 @vestra-player/sdk InterfaceDeclaration When
+@vestra-player/sdk InterfaceDeclaration When :: audioDevice(id: string): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: audioTrack(id: number): Condition;
 @vestra-player/sdk InterfaceDeclaration When :: can(control: keyof PlayerState["can"]): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: duration(bounds: { min?: number; max?: number; }): Condition;
 @vestra-player/sdk InterfaceDeclaration When :: language(language: LanguagePreference): Condition;
 @vestra-player/sdk InterfaceDeclaration When :: phase(...phases: PlayerState["phase"][]): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: rate(bounds: { min?: number; max?: number; }): Condition;
 @vestra-player/sdk InterfaceDeclaration When :: readonly fullscreen: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly looping: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly maximized: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly muted: Condition;
 @vestra-player/sdk InterfaceDeclaration When :: readonly open: Condition;
 @vestra-player/sdk InterfaceDeclaration When :: readonly paused: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly pip: Condition;
 @vestra-player/sdk InterfaceDeclaration When :: readonly playing: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: readonly position: { in(ranges: Iterable<PositionRange>, options?: { lead?: number; }): Condition; };
 @vestra-player/sdk InterfaceDeclaration When :: readonly ready: Condition;
 @vestra-player/sdk InterfaceDeclaration When :: readonly stream: Condition;
+@vestra-player/sdk InterfaceDeclaration When :: subtitleTrack(id: string): Condition;
 @vestra-player/sdk InterfaceDeclaration When :: theme(theme: ThemeId): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: time(bounds: { min?: number; max?: number; }): Condition;
+@vestra-player/sdk InterfaceDeclaration When :: volume(bounds: { min?: number; max?: number; }): Condition;
 @vestra-player/sdk InterfaceDeclaration Window :: close(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Window :: hide(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Window :: onClose(listener: () => unknown): Disposable;
@@ -876,6 +909,7 @@
 @vestra-player/sdk TypeAliasDeclaration RowOp = export type RowOp = { op: "set"; at: number; row: Json; } | { op: "insert"; at: number; rows: Json[]; } | { op: "remove"; at: number; count: number; } | { op: "move"; from: number; count: number; to: number; };
 @vestra-player/sdk TypeAliasDeclaration SettingsCategory = export type SettingsCategory = "general" | "playback" | "subtitles" | "video" | "audio" | "input" | "appearance" | "plugins" | "other";
 @vestra-player/sdk TypeAliasDeclaration SettingsPage = export type SettingsPage = View & Disposable & { readonly ready: Promise<void>; };
+@vestra-player/sdk TypeAliasDeclaration SourceEvent = export type SourceEvent = "source.opening" | "source.ready" | "source.ended";
 @vestra-player/sdk TypeAliasDeclaration StopReason = export type StopReason = "quit" | "disable" | "uninstall" | "reload" | "upgrade" | "idle" | "failed" | "host-lost";
 @vestra-player/sdk TypeAliasDeclaration StreamStartError = export type StreamStartError = PluginError & { stage: "prefill" | "activation"; };
 @vestra-player/sdk TypeAliasDeclaration SubtitleStyle = export type SubtitleStyle = { fontId: string; fontSize: number; color: "white" | "yellow" | "cyan"; outline: number; marginPercent: number; offsetMs: number; bold?: boolean; shadow?: number; box?: number | null; assOverride?: "keep" | "force"; secondaryPosition?: "top" | "aboveMain"; };
@@ -891,6 +925,7 @@
 @vestra-player/sdk/testing ClassDeclaration HostError :: code: string;
 @vestra-player/sdk/testing ClassDeclaration HostError :: constructor(code: string, message: string);
 @vestra-player/sdk/testing ClassDeclaration HostError extends Error
+@vestra-player/sdk/testing ClassDeclaration TestHost :: advance(ms: number): Promise<void>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: app: { version: string; build: string | null; components: { mpv: string | null; libav: Record<string, string>; slint: string; }; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: appearance: ThemeId;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: audioDevices: { id: string; name: string; }[];
@@ -913,7 +948,10 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get conflicts(): string[][];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get keepsRunning(): string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get locale(): Locale;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get now(): number;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get panel(): FakePanel | null;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get parked(): boolean;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get triggers(): readonly KeptTrigger[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: handle(method: string, handler: Handler): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: imagePath(value: Json | undefined): string | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: installKeepsDisabled: boolean;
@@ -932,6 +970,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: packages: { id: string; version: string | null; origin: "installed" | "development"; state: "starting" | "running" | "disabled" | "failed" | "stopped"; error: string | null; directory: string; builtin?: boolean; source?: PackageSource | null; dataDirectory?: string | null; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: paletteLead: Record<string, Json> | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: panelDrops: boolean;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: park(): Promise<void>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: popSidebar(popped: boolean): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: power: "off" | "playing";
 @vestra-player/sdk/testing ClassDeclaration TestHost :: press(binding: string, options?: { panel?: boolean; }): Promise<"ran" | "reason" | "passed">;
@@ -1002,6 +1041,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: sent(method: string): Record<string, Json>[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: sequence: { canNext: boolean; canPrevious: boolean; } | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: set locale(locale: Locale);
+@vestra-player/sdk/testing ClassDeclaration TestHost :: set now(value: number);
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setAppearance(theme: ThemeId): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setBackdropEffective(effective: boolean): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: setLanguage(language: LanguagePreference): void;
@@ -1025,6 +1065,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: translate(text: TextValue, args?: TemplateArgs): string;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: unmountOther(plugin: string): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: updateFileTypes(): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: upgrade(activate?: (plugin: Plugin) => unknown): Promise<void>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: upscalingChanged(): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: upscalingDecoding(cause: UpscalingDecodingCause, plugins?: readonly UpscalingPlugin[]): UpscalingReason;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: window(id: string): FakeWindow;
@@ -1074,6 +1115,11 @@
 @vestra-player/sdk/testing InterfaceDeclaration FileDialogText :: fileName?: string;
 @vestra-player/sdk/testing InterfaceDeclaration FileDialogText :: kind: "openFile" | "openFiles" | "openDirectory" | "saveFile";
 @vestra-player/sdk/testing InterfaceDeclaration FileDialogText :: title?: string;
+@vestra-player/sdk/testing InterfaceDeclaration KeptTrigger
+@vestra-player/sdk/testing InterfaceDeclaration KeptTrigger :: readonly entered: boolean;
+@vestra-player/sdk/testing InterfaceDeclaration KeptTrigger :: readonly seq: number;
+@vestra-player/sdk/testing InterfaceDeclaration KeptTrigger :: readonly trigger: number | string;
+@vestra-player/sdk/testing InterfaceDeclaration KeptTrigger :: readonly when: Json;
 @vestra-player/sdk/testing InterfaceDeclaration MarkdownWire
 @vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: base: string | null;
 @vestra-player/sdk/testing InterfaceDeclaration MarkdownWire :: images: Record<string, string>;
@@ -1096,6 +1142,7 @@
 @vestra-player/sdk/testing VariableDeclaration SUBTITLE_LIMITS = SUBTITLE_LIMITS: Readonly<{ readonly fileBytes: number; readonly tracksPerPlugin: 4; readonly tracks: 16; readonly totalBytes: number; readonly loadsPerPlugin: 16; readonly loads: 128; readonly uploadsPerPlugin: 2; readonly uploads: 8; }>
 @vestra-player/sdk/testing VariableDeclaration TEXT_LIMITS = TEXT_LIMITS: { readonly depth: 8; readonly nodes: 1024; readonly args: 16; readonly items: 256; readonly stringBytes: 4096; }
 @vestra-player/sdk/testing VariableDeclaration THEME_PALETTES = THEME_PALETTES: Readonly<Record<"vestra" | "vestra-light", Readonly<Record<string, string>>>>
-@vestra-player/sdk/testing VariableDeclaration TIMELINE_LIMITS = TIMELINE_LIMITS: Readonly<{ readonly marks: 1000; readonly ranges: 100; readonly titleChars: 100; }>
+@vestra-player/sdk/testing VariableDeclaration TIMELINE_LIMITS = TIMELINE_LIMITS: Readonly<{ readonly marks: 1000; readonly ranges: 1000; readonly titleChars: 100; }>
+@vestra-player/sdk/testing VariableDeclaration TRIGGER_LIMITS = TRIGGER_LIMITS: Readonly<{ triggers: 64; nameChars: 64; }>
 @vestra-player/sdk/testing VariableDeclaration UI_VALUE_LIMITS = UI_VALUE_LIMITS: { readonly depth: 8; readonly values: number; readonly arrayRows: 100000; readonly stringBytes: number; readonly textBytes: number; }
 @vestra-player/sdk/testing VariableDeclaration VIDEO_PROCESSING_LIMITS = VIDEO_PROCESSING_LIMITS: Readonly<{ shaders: 16; shaderBytes: number; shaderIdBytes: 128; lutBytes: number; lutSize: 65; lutPathBytes: 4096; matrixValue: 1024; rdiv: 256; bias: 65535; }>

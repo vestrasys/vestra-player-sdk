@@ -25,7 +25,7 @@ These are the rules the built-in plugins follow. Token names, sizes, icons and w
 - **Every colour is a `Theme` token**, never a colour value, so it follows the dark and light palettes: `Theme.danger` for failures, `Theme.playing` for what plays now, `Theme.accent` for hover and selection, `Theme.accent-fill` for fills.
 - **Over the video, use the OSD's colours** (white text on a translucent dark plate, [Over the video](../reference/theme.md#over-the-video)), not `Theme.text`. A check mark on an accent background is white.
 - **Do not set a font family**: the system UI font falls back per character, CJK included. Use `Theme.font-mono` for code or aligned numbers.
-- **Use the four font sizes only** (`font-xs`, `font-body`, `font-tab`, `font-title`); times and counters use tabular digits (`font-feature: tnum`).
+- **Use the four font sizes only** (`font-xs`, `font-body`, `font-tab`, `font-title`). A time or counter whose digits must not shift while it changes uses `Theme.font-mono`: Slint has no font-feature setting, so tabular digits cannot be asked of the UI font.
 - **Do not change `Palette.color-scheme`**: the player switches it with the palette.
 
 ### Use the player's icons and controls

@@ -39,7 +39,8 @@ export type Why = () => string;
 /**
  * Events the player wakes a stopped plugin for: a listener of one does not keep
  * the plugin running. They follow deliberate changes (an install, a key edit,
- * the palette, a resolver), not playback.
+ * the palette, a resolver), not playback, or report one thing that happened
+ * to a source (it opened, became ready, ended), never its stream of states.
  */
 export const WAKE_EVENTS: readonly string[] = [
   "packages.changed",
@@ -50,6 +51,11 @@ export const WAKE_EVENTS: readonly string[] = [
   "commands.keys",
   "appearance.changed",
   "resolvers.fileTypes",
+  // Player 0.10.0: the discrete source events, once per thing that
+  // happened to a source.
+  "source.opening",
+  "source.ready",
+  "source.ended",
 ];
 
 /**
@@ -153,6 +159,13 @@ interface EventGroup {
    * yet): nothing arrives.
    */
   unheard?: boolean;
+  /** Open followers ({@link Connection.follow}). */
+  followers?: number;
+  /**
+   * A follower subscribed it while event delivery was off: it goes back to
+   * unheard when the last follower ends, unless delivery is on by then.
+   */
+  followed?: boolean;
 }
 
 /**
@@ -515,6 +528,52 @@ export class Connection {
         group.active--;
         group.whys.delete(token);
         if (this.#events.get(event) === group) this.#tell(event, group);
+      },
+    };
+  }
+  /**
+   * Hear `event` while followed, whether or not event delivery is on, and
+   * count it as listened to (`plugin.player.stream`, SDK 1.10.0): the group
+   * the caller started (a state copy's) is subscribed now if it waited for
+   * `plugin.player.subscribe()`, and only it. When the last follower ends,
+   * such a group waits again as before: its subscription at the player
+   * ends, and the copy stays as it was. Nothing when nothing started the
+   * group.
+   */
+  follow(event: string, why?: Why): Disposable {
+    const group = this.#events.get(event);
+    if (!group) return { dispose: async () => {} };
+    group.followers = (group.followers ?? 0) + 1;
+    group.active++;
+    const token = {};
+    group.whys.set(token, why ?? listenerWhy(this.callSite()));
+    if (group.unheard) {
+      group.unheard = false;
+      group.followed = true;
+      this.#open(event, group);
+    } else this.#tell(event, group);
+    let following = true;
+    return {
+      dispose: async () => {
+        if (!following) return;
+        following = false;
+        group.active--;
+        group.followers = (group.followers ?? 1) - 1;
+        group.whys.delete(token);
+        if (this.#events.get(event) !== group) return;
+        if (group.followers === 0 && group.followed && !this.#delivering) {
+          // Back to waiting for `subscribe()`, as before the first follower.
+          group.followed = false;
+          group.unheard = true;
+          const off = group.off;
+          group.off = undefined;
+          group.told = undefined;
+          group.toldWhy = undefined;
+          const unsubscribe = await off?.catch(() => undefined);
+          await unsubscribe?.().catch(() => {});
+          return;
+        }
+        this.#tell(event, group);
       },
     };
   }

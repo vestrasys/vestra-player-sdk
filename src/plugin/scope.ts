@@ -10,8 +10,10 @@ import type {
   PluginError,
   Scope,
   StopReason,
+  Trigger,
 } from "./types.ts";
 import { commands, keysOf, palette } from "./commands.ts";
+import { triggersOf } from "./triggers.ts";
 import { WHEN } from "./when.ts";
 import { dialogs } from "./services/dialogs.ts";
 import { ui } from "./view/image.ts";
@@ -85,6 +87,10 @@ export class ScopeImpl implements Plugin {
   get disposed(): boolean {
     return this.#disposed || (this.#parent?.disposed ?? false);
   }
+  /** The plugin itself, not a scope made with `scope()`. */
+  get root(): boolean {
+    return this.#parent === undefined;
+  }
   /**
    * Start the SDK's copy that `event` keeps current (`plugin.commands.keys`,
    * `plugin.timeline`, `plugin.appearance`), for `player.on`; nothing for
@@ -137,6 +143,9 @@ export class ScopeImpl implements Plugin {
   }
   scope(): Scope {
     return this.add(new ScopeImpl(this.runtime, this));
+  }
+  trigger(name?: string): Trigger {
+    return triggersOf(this.runtime).declare(this, name);
   }
   add<T extends Disposable>(item: T): T {
     if (this.#disposed) void item.dispose().catch(() => {});

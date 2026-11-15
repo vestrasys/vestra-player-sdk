@@ -119,8 +119,21 @@ One plugin's layer of seek-bar marks and ranges ({@link "@vestra-player/sdk"!Tim
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | `TIMELINE_LIMITS.marks` | 1000 | Marks in one layer (`TimelineLayer.set`). |
-| `TIMELINE_LIMITS.ranges` | 100 | Ranges in one layer (`TimelineLayer.setRanges`). |
+| `TIMELINE_LIMITS.ranges` | 1000 | Ranges in one layer (`TimelineLayer.setRanges`). |
 | `TIMELINE_LIMITS.titleChars` | 100 | Characters of a mark's or a range's title, as shown. |
+
+<!-- /generated -->
+
+## Triggers
+
+A plugin's triggers ({@link "@vestra-player/sdk"!Plugin.trigger | Plugin.trigger}) and the conditions the player keeps for them. A 65th trigger throws `limit`, a name of another length `invalid`; the player refuses a 65th kept condition, and a position list ({@link "@vestra-player/sdk"!When.position | When.position}) of more than `TIMELINE_LIMITS.ranges` ranges, with `limit`, reported to `Scope.onError`.
+
+<!-- generated:limits TRIGGER_LIMITS -->
+
+| Limit | Value | Meaning |
+| --- | --- | --- |
+| `TRIGGER_LIMITS.triggers` | 64 | Triggers a plugin declares, and conditions the player keeps for it. |
+| `TRIGGER_LIMITS.nameChars` | 64 | Characters of a trigger's name. |
 
 <!-- /generated -->
 

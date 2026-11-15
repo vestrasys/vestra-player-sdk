@@ -140,7 +140,7 @@ export interface TimelineLayer extends Disposable {
    * marks. Disposing the layer, its scope or stopping the plugin removes both,
    * and a new source clears every layer.
    *
-   * At most 100 ranges (`TIMELINE_LIMITS.ranges`), `0 ≤ start < end`, `end`
+   * At most 1000 ranges (`TIMELINE_LIMITS.ranges`), `0 ≤ start < end`, `end`
    * within the media while its duration is known, titles ≤ 100 characters.
    * Ranges may overlap. Failures go to `onError`; with `ifCurrent`, a
    * write for another source is dropped silently. A title is data or a
@@ -281,6 +281,16 @@ export interface AudioTrack {
   title: string | null;
   /** Language tag, `null` when unknown. */
   language: string | null;
+  /**
+   * The container stream number (`ffmpeg -map 0:<n>`) of an embedded track,
+   * when the player can vouch for it; `null` for external tracks and when
+   * the player cannot tell, as for a subtitle track. The SDK always sets
+   * it; it is optional only so that an `AudioTrack` written out in full
+   * before 1.10.0 (a test's fixture) still type-checks.
+   *
+   * @since 1.10.0
+   */
+  streamIndex?: number | null;
 }
 
 /**
@@ -884,6 +894,46 @@ export interface PlaybackStats {
 }
 
 /**
+ * An open stream of the player's state ({@link Player.stream}).
+ *
+ * @remarks
+ * While it is open the player keeps the plugin running. It ends with
+ * {@link StateStream.stop}, when the scope that opened it is disposed, and
+ * when the plugin stops; it is not kept through standby.
+ *
+ * @example Follow the state while a panel is shown
+ * The stream lives only as long as what shows the state: it is opened
+ * with the scope of the panel's content and ends when that scope is
+ * disposed, so the plugin may go to standby afterwards.
+ * ```ts
+ * declare function draw(state: PlayerState): void;
+ * // ---cut---
+ * const shown = plugin.scope();
+ * shown.player.stream(draw); // stops when `shown` is disposed
+ * // … later, when the panel goes away:
+ * await shown.dispose();
+ * ```
+ *
+ * @since 1.10.0
+ * @category Playback
+ */
+export interface StateStream {
+  /**
+   * Stop the stream: its listener is not called again. A second call does
+   * nothing. When no other stream is open, nothing of the streams keeps the
+   * plugin running any more.
+   *
+   * @throws Never.
+   *
+   * @example See Player.stream
+   * {@link Player.stream}
+   *
+   * @since 1.10.0
+   */
+  stop(): void;
+}
+
+/**
  * `plugin.player`: playback state and controls.
  *
  * Call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`:
@@ -956,6 +1006,75 @@ export interface Player {
    */
   onChange(listener: (state: PlayerState) => void): Disposable;
   /**
+   * Follow the player's state while something needs it continuously: a
+   * window or panel that shows the position, a meter.
+   *
+   * @remarks
+   * `listener` runs with the current state as soon as the SDK has it (one
+   * read of the player's state right after the call), then with every
+   * change the player sends: about ten times a second while playing, at
+   * once when the phase, pause, speed or volume changes. Before each call
+   * the SDK updates {@link Player.state}; after each call an update pass
+   * runs, so {@link View.bind} functions and command states that read
+   * `plugin.player.state` follow the stream. It needs no
+   * {@link Player.subscribe}: the stream itself makes the state follow the
+   * player while it is open.
+   *
+   * **While a stream is open the player keeps the plugin running**: it is
+   * a listener (its log names it `a stream opened at main.ts:12`). Open it
+   * when the thing that shows the state appears and stop it when that goes
+   * away; nothing of a stopped stream keeps the plugin running. A plugin
+   * that only needs to know that something happened (a file opened, ready,
+   * ended) uses {@link Player.on} with a source event instead, which lets
+   * it go to standby.
+   *
+   * Several streams may be open; each listener is called. A stream ends
+   * with {@link StateStream.stop}, when its scope is disposed, and when the
+   * plugin stops; it is not kept through standby. After the last one ends
+   * `plugin.player.state` keeps the last snapshot, and without
+   * {@link Player.subscribe} it no longer follows changes made elsewhere.
+   * {@link Player.subscribe} and {@link Player.onChange} keep working as
+   * before.
+   *
+   * The player judges what keeps a plugin running when the plugin becomes
+   * ready. A stream that is open then counts as it does today for a
+   * listener held at the ready: the plugin keeps running for that run, also
+   * after the stream stops. Open the stream after `activate`, when what
+   * shows the state appears.
+   *
+   * Errors the listener throws or rejects with go to
+   * {@link Scope.onError}, as for every handler.
+   *
+   * @param listener - Receives the state now and at every change.
+   * @returns The open stream; it is stopped with the scope.
+   *
+   * @throws `invalid` (throws) `listener` is not a function.
+   *
+   * @example Show the time left while a window is open
+   * A tool window shows how much of the file is left, updated as it plays.
+   * The stream starts when the window is shown and stops when the user
+   * closes it, so the plugin can go to standby afterwards.
+   * ```ts
+   * const view = plugin.windows.create("ui/left.slint");
+   * let feed: StateStream | undefined;
+   * view.onClose(() => feed?.stop()); // closed: nothing keeps the plugin running
+   * plugin.commands.add({
+   *   id: "left",
+   *   path: ["Tools", "Time Left"],
+   *   run: async () => {
+   *     await view.show();
+   *     feed?.stop(); // one stream per window, also when shown again
+   *     feed = plugin.player.stream((s) =>
+   *       view.set({ text: `${Math.round((s.duration ?? 0) - (s.position ?? 0))} s` }),
+   *     );
+   *   },
+   * });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  stream(listener: (state: PlayerState) => void): StateStream;
+  /**
    * Listen to one event of the player, with its data as the player sent
    * it: no state copy, no comparison.
    *
@@ -1019,6 +1138,48 @@ export interface Player {
   on<E extends HostEvent>(
     event: E,
     listener: (data: EventPayload<E>) => void,
+  ): Disposable;
+  /**
+   * Listen to one of the player's discrete source events: a source starts
+   * to open, is ready, or ended.
+   *
+   * @remarks
+   * `event` is a {@link SourceEvent} name; `listener` gets that event's
+   * data, typed {@link SourceEventPayloads}, with `state` as a
+   * {@link PlayerState}. The events arrive from the first listener,
+   * without {@link Player.subscribe}, and a listener of one does not keep
+   * the plugin running: the player starts a plugin in standby to deliver
+   * them, and an event that arrives while the plugin starts waits for its
+   * activation. `source.ended` with `reason: "quit"` reaches only a
+   * plugin that is running when the player quits. As for every
+   * {@link Player.on} listener, no full update pass follows it.
+   *
+   * @param event - The event's name.
+   * @param listener - Receives each event's data.
+   * @returns A handle that stops listening; it is disposed with the scope.
+   *
+   * @throws `invalid` (throws) `event` is not an event name, or
+   *   `listener` is not a function.
+   *
+   * @example Remember where each file was left
+   * A plugin stores the position at which each file stopped playing. The
+   * ended source's last state comes with the event, also when another
+   * file replaced it.
+   * ```ts
+   * const saved = plugin.storage.json("positions", {
+   *   defaults: {} as Record<string, number>,
+   * });
+   * plugin.player.on("source.ended", ({ state, reason }) => {
+   *   if (reason === "natural" || state.source === null) return;
+   *   saved.save({ ...saved.value, [state.source]: state.position ?? 0 });
+   * });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  on<E extends SourceEvent>(
+    event: E,
+    listener: (data: SourceEventPayloads[E]) => void,
   ): Disposable;
   /**
    * Read the state from the player now.
@@ -1829,6 +1990,93 @@ export interface EventPayloads {
  */
 export type EventPayload<E extends HostEvent> = EventPayloads[E];
 
+/**
+ * The player's discrete source events: one event per thing that happened
+ * to a source, which {@link Player.on} listens to by name.
+ *
+ * @remarks
+ * `source.opening`: a new source starts to open. `source.ready`: it is
+ * loaded. `source.ended`: it left playback. For one source the order is
+ * `opening`, `ready`, `ended` (no `ready` when it could not be
+ * opened); when a source is replaced, the old one's `ended` comes before
+ * the new one's `opening`. Unlike `source.state` they arrive without
+ * {@link Player.subscribe}, and a listener of one does not keep the plugin
+ * running: the player starts a plugin in standby to deliver them.
+ * {@link SourceEventPayloads} says what each one carries.
+ *
+ * @example Scan each file once it is loaded
+ * A plugin looks at every file the player loads. The listener gets the
+ * state at that moment, so the plugin needs no stream of its own and the
+ * player may stop it between files.
+ * ```ts
+ * declare function scan(path: string): Promise<void>;
+ * // ---cut---
+ * plugin.player.on("source.ready", async ({ state }) => {
+ *   if (state.source !== null) await scan(state.source);
+ * });
+ * ```
+ *
+ * @since 1.10.0
+ * @category Playback
+ */
+export type SourceEvent = "source.opening" | "source.ready" | "source.ended";
+
+/**
+ * The data each {@link SourceEvent} carries, as the listener of
+ * {@link Player.on} gets it.
+ *
+ * @remarks
+ * `state` is the SDK's {@link PlayerState}, not the player's wire shape,
+ * so it can be passed as `ifCurrent` and to {@link Player.isCurrent}.
+ * The state of an opening or a ready is also taken into
+ * `plugin.player.state` when it is newer than what the plugin has.
+ *
+ * @since 1.10.0
+ * @category Playback
+ */
+export interface SourceEventPayloads {
+  /**
+   * A new source starts to open (also the same file again, and
+   * {@link Player.restart}). `state` is the player's state at that moment,
+   * as a {@link PlayerState} (pass it as `ifCurrent` or to
+   * {@link Player.isCurrent}); `previous` names the source that was open
+   * before it, `null` when nothing was.
+   */
+  "source.opening": {
+    /** The player's state as the source starts to open. */
+    state: PlayerState;
+    /** The source open before this one (`null`: nothing was open). */
+    previous: {
+      /** The previous source's id (`PlayerState.sourceId`). */
+      sourceId: number;
+    } | null;
+  };
+  /**
+   * The source is loaded: its duration, tracks and seekability are known.
+   * Once per opening, after its `source.opening`.
+   */
+  "source.ready": {
+    /** The player's state as the source became ready. */
+    state: PlayerState;
+  };
+  /**
+   * A source left playback: it played to its end (`natural`), was closed
+   * (`stopped`), another source took its place (`replaced`), it could not
+   * be played (`error`, with the failure text in `error`), or the player
+   * quits (`quit`, sent only to a plugin that is running then). `state` is
+   * **that** source's last state, with its last position, not the
+   * player's current one.
+   */
+  "source.ended": {
+    /** The ended source's last state, as a {@link PlayerState}. */
+    state: PlayerState;
+    /** Why it left playback. */
+    reason: "natural" | "stopped" | "replaced" | "error" | "quit";
+    /** The failure text, when `reason` is `error` and the player has one. */
+    error?: string;
+  };
+}
+
 // ---------------------------------------------------------------- mpv pass-through (mpv)
 
 /**
@@ -1844,8 +2092,9 @@ export type MpvValue =
 
 /**
  * `plugin.mpv`: mpv's own commands and properties, sent to the player's
- * mpv as they are. Needs the capability `mpv`, which the store shows the
- * user before installing.
+ * mpv as they are. The capability scan puts `command` and `set` in its
+ * `player` category, which the store shows the user before installing
+ * ([Capability scan](../../../docs/reference/scan.md)).
  *
  * @example Turn mpv's debanding on and show whether it took effect
  * A plugin offers mpv's `deband` option, which the plugin API has no member
@@ -1888,9 +2137,11 @@ export type MpvValue =
  * the upscaler, motion smoothing) stay in the chain beside it.
  *
  * A property a plugin set keeps its value after the plugin stops, until
- * the player quits (what the capability `mpv` discloses); a plugin that
- * wants it back sets it back. Observers end with the plugin. A filter
- * or an observer keeps the plugin running.
+ * the player quits (what the scan's `player` category discloses); a
+ * plugin that wants it back sets it back. Observers end with the plugin.
+ * A filter or an observer keeps the plugin running from the moment it is
+ * added for the rest of that run, also after it is removed: the player
+ * judges again at the plugin's next start.
  *
  * @see [mpv](../../../docs/reference/mpv.md)
  * @since 1.8.0
@@ -1979,12 +2230,15 @@ export interface Mpv {
   set(name: string, value: MpvValue): Promise<void>;
   /**
    * Hear an mpv property's value now and after each change. The player
-   * sends the newest value at most every 100 ms. While a listener exists
-   * the player keeps the plugin running.
+   * sends the newest value at most every 100 ms. From the first listener
+   * on the player keeps the plugin running for the rest of the run, also
+   * after the handle is disposed. As after every handler, an update pass
+   * follows each call of the listener.
    *
    * @param name - The property, as mpv names it.
    * @param listener - Receives the value: first the current one, then
-   *   each change.
+   *   each change. A listener added while the plugin already observes the
+   *   property gets its current value too, just after `observe` returns.
    * @returns A handle that stops listening; it is disposed with the scope.
    *
    * @example Follow the frame rate after filters

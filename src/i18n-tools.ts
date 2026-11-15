@@ -137,6 +137,21 @@ const SITES: Record<string, Site> = {
   "I18n.resolve": { argument: 0 },
 };
 
+/** The members of `I18n` that are sites (`text`, `error`, `resolve`). */
+const I18N_MEMBERS = new Set(
+  Object.keys(SITES)
+    .filter((name) => name.startsWith("I18n."))
+    .map((name) => name.slice("I18n.".length)),
+);
+
+/**
+ * Thrown by {@link extract} when a text cannot be read for want of the SDK's
+ * types: `code` is `"sdk-types"`, `message` names each call and why.
+ */
+export class SdkTypesMissing extends Error {
+  readonly code = "sdk-types";
+}
+
 /** Without the SDK's types: the module property names in front of the method. */
 const BY_NAME: Record<string, string> = {
   "commands.add": "Commands.add",
@@ -247,9 +262,18 @@ class Extractor {
    */
   readonly tableNotes = new Map<string, string[]>();
   readonly findings: Finding[] = [];
+  /**
+   * Calls of an `I18n` member through a name of their own (`const { text }
+   * = plugin.i18n`) seen while the program has none of the SDK's types:
+   * only the types tell that such a call is the SDK's, so they would be
+   * left out silently. `extract` fails with them instead.
+   */
+  readonly detached: { file: string; line: number; member: string }[] = [];
   readonly #checker: TS.TypeChecker | undefined;
-  constructor(checker: TS.TypeChecker | undefined) {
+  readonly #sdkTypes: boolean;
+  constructor(checker: TS.TypeChecker | undefined, sdkTypes = true) {
     this.#checker = checker;
+    this.#sdkTypes = sdkTypes;
   }
 
   add(file: string, line: number, message: Omit<Message, "references">) {
@@ -432,6 +456,32 @@ class Extractor {
     else if (values.dynamic) this.finding(file, line, "dynamic", DYNAMIC(what));
   }
 
+  /**
+   * The `I18n` member a call through a bare name stands for, by how the
+   * name was bound: `const { text } = …`, `const { text: t } = …` or
+   * `const t = ….text`. Only asked without the SDK's types.
+   */
+  #detachedMember(call: TS.CallExpression): string | undefined {
+    const callee = call.expression;
+    if (!ts.isIdentifier(callee) || !this.#checker) return undefined;
+    const declaration =
+      this.#checker.getSymbolAtLocation(callee)?.declarations?.[0];
+    if (!declaration) return undefined;
+    let member: string | undefined;
+    if (ts.isBindingElement(declaration)) {
+      const key = declaration.propertyName ?? declaration.name;
+      if (ts.isIdentifier(key) || ts.isStringLiteral(key)) member = key.text;
+    } else if (
+      ts.isVariableDeclaration(declaration) &&
+      declaration.initializer &&
+      ts.isPropertyAccessExpression(declaration.initializer)
+    )
+      member = declaration.initializer.name.text;
+    return member !== undefined && I18N_MEMBERS.has(member)
+      ? member
+      : undefined;
+  }
+
   /** `Interface.method` of a call to the SDK, if it is one of `SITES`. */
   #site(call: TS.CallExpression): string | undefined {
     const callee = call.expression;
@@ -539,7 +589,18 @@ class Extractor {
     text: string,
   ) {
     const name = this.#site(call);
-    if (!name) return;
+    if (!name) {
+      const member = this.#sdkTypes ? undefined : this.#detachedMember(call);
+      if (member && !ignored(statementOf(call), text))
+        this.detached.push({
+          file,
+          line:
+            source.getLineAndCharacterOfPosition(call.getStart(source)).line +
+            1,
+          member,
+        });
+      return;
+    }
     const site = SITES[name]!;
     if (ignored(statementOf(call), text)) return;
     const statementNotes = notesOf(statementOf(call), text);
@@ -826,7 +887,12 @@ export function extract(options: ExtractOptions): {
     });
     checker = program.getTypeChecker();
   }
-  const extractor = new Extractor(checker);
+  const sdkTypes =
+    !program ||
+    program
+      .getSourceFiles()
+      .some((file) => SDK_TYPES.test(slash(file.fileName)));
+  const extractor = new Extractor(checker, sdkTypes);
   for (const file of [...options.typescript].sort()) {
     const path = join(directory, file);
     const source =
@@ -839,6 +905,17 @@ export function extract(options: ExtractOptions): {
       );
     extractor.typescript(slash(file), source);
   }
+  if (extractor.detached.length)
+    throw new SdkTypesMissing(
+      `TypeScript does not resolve the types of @vestra-player/sdk from ${directory}, so these calls cannot be told apart from any other function and their texts would be left out: ${extractor.detached
+        .map(
+          ({ file, line, member }) =>
+            `${file}:${line} (${member}, called through a name of its own)`,
+        )
+        .join(
+          ", ",
+        )}. Install the plugin's dependencies (npm install, with @vestra-player/sdk among them), or call plugin.i18n.${extractor.detached[0]!.member}(…) directly`,
+    );
   for (const file of [...options.slint].sort())
     extractor.slint(slash(file), readFileSync(join(directory, file), "utf8"));
   const manifest = options.manifest;

@@ -1,6 +1,13 @@
 // Plugin category: the plugin object and its scopes, lifecycle, errors, the app and main window.
 // Re-exported by ../types.ts (`export type *`); see that file.
-import type { Bindings, Commands, Host, Palette, When } from "./commands.ts";
+import type {
+  Bindings,
+  Commands,
+  Host,
+  Palette,
+  Trigger,
+  When,
+} from "./commands.ts";
 import type { Packages } from "./packages.ts";
 import type { Mpv, Player, Timeline } from "./playback.ts";
 import type {
@@ -692,6 +699,42 @@ export interface Plugin extends Scope {
    * {@link Scope.onDispose} cleanup runs. See {@link StopReason}.
    */
   readonly stopReason: StopReason | undefined;
+  /**
+   * Makes a trigger: a condition the player keeps and evaluates, and the
+   * functions it calls when the condition becomes true and false, also
+   * waking the plugin from standby. Called only in the synchronous part of
+   * `activate()` (before its first `await`). Without a name the trigger is
+   * known by its place among the unnamed ones, and a condition it was
+   * given is cleared when the plugin is upgraded; with a name it is known
+   * by the name and survives an upgrade. At most 64 per plugin.
+   *
+   * @param name - Unique within the plugin, 1–64 characters.
+   * @throws `Error` without a code (throws) Called after the synchronous
+   *   part of `activate()`, or on a scope made with `plugin.scope()` (a
+   *   trigger is the plugin's: its condition outlives any scope).
+   * @throws `invalid` (throws) A name used twice, or not 1–64 characters.
+   * @throws `limit` (throws) A 65th trigger.
+   *
+   * @example A sleep timer that survives an update
+   * A menu item pauses playback 45 minutes later. The trigger is named,
+   * so its condition stays with the player through standby and an update,
+   * and `enter` disarms it before pausing.
+   * ```ts
+   * const { when, player, commands } = plugin;
+   * const alarm = plugin.trigger("sleep").enter(async () => {
+   *   alarm.off(); // fire once: the player forgets the condition
+   *   await player.setPaused(true);
+   * });
+   * commands.add({
+   *   id: "in45",
+   *   path: ["Tools", "Sleep in 45 Minutes"],
+   *   run: () => alarm.firesOn(when.time({ min: Date.now() + 45 * 60_000 })),
+   * });
+   * ```
+   *
+   * @since 1.10.0
+   */
+  trigger(name?: string): Trigger;
 }
 
 /**

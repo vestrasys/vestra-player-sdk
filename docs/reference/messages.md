@@ -298,6 +298,14 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | `timeline.set` | `{ sourceId?, marks }` | `{ applied: boolean }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} |
 | `timeline.setRanges` | `{ sourceId?, ranges }` | `{ applied: boolean }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Timeline.layer Timeline.layer} |
 
+### `triggers`
+
+| Method | Params | Result | Errors (documented) | Stability |
+| --- | --- | --- | --- | --- |
+| `triggers.declare` | `{ names, unnamed }` | `null` | `Error`, `invalid`, `limit` | SDK member: {@linkcode "@vestra-player/sdk"!Plugin.trigger Plugin.trigger} |
+| `triggers.off` | `{ trigger, unhandled? }` | `{ seq: number }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Trigger.off Trigger.off} |
+| `triggers.set` | `{ trigger, when }` | `{ seq: number }` | `TypeError` | SDK member: {@linkcode "@vestra-player/sdk"!Trigger.firesOn Trigger.firesOn} |
+
 ### `ui`
 
 | Method | Params | Result | Errors (documented) | Stability |

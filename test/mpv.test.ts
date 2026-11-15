@@ -582,3 +582,80 @@ test("the table: every category is used, every name is lower case, limits are th
   });
   assert.ok(Object.isFrozen(MPV_RULES.commands) && Object.isFrozen(MPV_LIMITS));
 });
+
+test("observe: an update pass follows each listener, as after every handler (SDK 1.10.0)", async () => {
+  const host = new TestHost();
+  let fps = 0;
+  let checks = 0;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      // A plain variable, not plugin.state: only a full pass re-reads it.
+      plugin.commands.add({
+        id: "smooth",
+        title: "Smooth",
+        checked: () => (checks++, fps > 30),
+        run() {},
+      });
+      plugin.mpv.observe("estimated-vf-fps", (value) => {
+        fps = typeof value === "number" ? value : 0;
+      });
+    },
+    { capabilities: ["mpv"], host, id: "test.mpv" },
+  );
+  await host.settle();
+  assert.equal(host.command("smooth").state.checked, false);
+  const before = checks;
+  host.setMpvProperty("estimated-vf-fps", 59.94);
+  await host.settle();
+  assert.equal(checks > before, true, "the binding ran after the listener");
+  assert.equal(host.command("smooth").state.checked, true);
+  void plugin;
+  await stop();
+});
+
+test("observe: a listener added after the first value arrived gets the current value (SDK 1.10.0)", async () => {
+  const { host, plugin, stop, errors } = await started();
+  host.mpv.properties.set("estimated-vf-fps", 23.976);
+  const seen: MpvValue[] = [];
+  const late: MpvValue[] = [];
+  const first = plugin.mpv.observe("estimated-vf-fps", (value) =>
+    seen.push(value),
+  );
+  await host.settle();
+  host.setMpvProperty("estimated-vf-fps", 25);
+  await host.settle();
+  assert.deepEqual(seen, [23.976, 25]);
+  let during = 0;
+  const second = plugin.mpv.observe("estimated-vf-fps", (value) => {
+    during++;
+    late.push(value);
+  });
+  assert.equal(during, 0, "not called inside observe()");
+  await host.settle();
+  assert.deepEqual(late, [25], "the newest value, once");
+  assert.deepEqual(seen, [23.976, 25], "the first listener hears nothing new");
+  assert.deepEqual(host.sent("mpv.observe"), [{ name: "estimated-vf-fps" }]);
+  host.setMpvProperty("estimated-vf-fps", 30);
+  await host.settle();
+  assert.deepEqual(late, [25, 30]);
+  // Disposed before its microtask: nothing.
+  const gone: MpvValue[] = [];
+  const third = plugin.mpv.observe("estimated-vf-fps", (value) =>
+    gone.push(value),
+  );
+  void third.dispose();
+  await host.settle();
+  assert.deepEqual(gone, []);
+  // Every listener left, then a new one: a new request and mpv's value,
+  // not the one kept from before.
+  await first.dispose();
+  await second.dispose();
+  host.mpv.properties.set("estimated-vf-fps", 50);
+  const again: MpvValue[] = [];
+  plugin.mpv.observe("estimated-vf-fps", (value) => again.push(value));
+  await host.settle();
+  assert.deepEqual(again, [50]);
+  assert.equal(host.sent("mpv.observe").length, 2);
+  assert.deepEqual(errors, []);
+  await stop();
+});

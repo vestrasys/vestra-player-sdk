@@ -765,3 +765,46 @@ test("subtitle state of a new source is taken although its selection restarts at
   });
   await stop();
 });
+
+test("audio tracks carry streamIndex, as subtitle tracks do (SDK 1.10.0)", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/movie.mkv");
+  host.setSource({
+    audioTracks: [
+      {
+        trackId: 1,
+        streamIndex: 1,
+        selected: true,
+        external: false,
+        codec: "aac",
+        title: null,
+        language: "en",
+      },
+      {
+        trackId: 2,
+        streamIndex: null,
+        selected: false,
+        external: false,
+        codec: "opus",
+        title: null,
+        language: "de",
+      },
+    ],
+  });
+  const { plugin, stop } = await started(host);
+  const added = await plugin.player.addAudioTrack("/dub.mp3");
+  assert.equal(added.streamIndex, null, "an external track has none");
+  assert.deepEqual(
+    plugin.player.state.audioTracks!.map((t) => [
+      t.id,
+      t.streamIndex,
+      t.exportable,
+    ]),
+    [
+      [1, 1, true],
+      [2, null, false],
+      [3, null, false],
+    ],
+  );
+  await stop();
+});

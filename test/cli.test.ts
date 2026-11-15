@@ -422,3 +422,109 @@ test("a `for` over a bound array outside a ListView is a warning (SDK 1.5.46)", 
   assert.equal(clean.status, 0, clean.stdout + clean.stderr);
   assert.doesNotMatch(clean.stdout, /outside a ListView/);
 });
+
+test("check compiles every .slint file with slint-ui at the player's Slint version, as the player does at install (SDK 1.10.0)", () => {
+  const directory = project(HELLO);
+  mkdirSync(join(directory, "ui"));
+  writeFileSync(
+    join(directory, "ui/bad.slint"),
+    [
+      'import { Theme } from "@vestra/theme.slint";',
+      "export component Panel inherits Rectangle {",
+      '    Text { text: "0:42"; font-feature: "tnum"; }',
+      "}",
+    ].join("\n"),
+  );
+  // Globals only: "No component found" is no error, as in the player.
+  writeFileSync(
+    join(directory, "ui/shared.slint"),
+    "export global Shared { in-out property <int> n; }\n",
+  );
+  // Without slint-ui: said, and no failure.
+  let result = vestraPlugin(directory, "check");
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  assert.match(
+    result.stdout,
+    /slint: 2 \.slint file\(s\) not compiled: slint-ui is not installed; .*npm install -D slint-ui@1\.18\.1/,
+  );
+  // A stand-in for the compiler (the real one is a native module): it
+  // records how it was called and reports what Slint 1.18.1 reports.
+  const stub = join(directory, "node_modules/slint-ui");
+  mkdirSync(stub);
+  const manifest = (version: string) =>
+    writeFileSync(
+      join(stub, "package.json"),
+      JSON.stringify({ name: "slint-ui", version, main: "index.js" }),
+    );
+  manifest("1.17.0");
+  writeFileSync(
+    join(stub, "index.js"),
+    [
+      'const fs = require("node:fs");',
+      'const path = require("node:path");',
+      "exports.loadFile = (file, options) => {",
+      '  fs.appendFileSync(path.join(__dirname, "calls.jsonl"), JSON.stringify({ file, options }) + "\\n");',
+      '  const text = fs.readFileSync(file, "utf8");',
+      "  const diagnostics = [];",
+      '  text.split("\\n").forEach((line, i) => {',
+      '    const at = line.indexOf("font-feature");',
+      '    if (at >= 0) diagnostics.push({ level: 0, message: "Unknown property font-feature in Text", lineNumber: i + 1, columnNumber: at + 1, fileName: file });',
+      "  });",
+      '  if (!text.includes("export component")) diagnostics.push({ level: 0, message: "No component found", lineNumber: 0, columnNumber: 0 });',
+      "  if (diagnostics.length) {",
+      '    const error = new Error("Could not compile " + file);',
+      "    error.diagnostics = diagnostics;",
+      "    throw error;",
+      "  }",
+      "};",
+    ].join("\n"),
+  );
+  // Another version: not used.
+  result = vestraPlugin(directory, "check");
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  assert.match(
+    result.stdout,
+    /not compiled: slint-ui 1\.17\.0 is installed, the player uses Slint 1\.18\.1/,
+  );
+  assert.equal(existsSync(join(stub, "calls.jsonl")), false);
+  // The player's version: compiled, the error with its file, line and column.
+  manifest("1.18.1");
+  result = vestraPlugin(directory, "check");
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(
+    result.stdout,
+    /slint: ui\/bad\.slint:3:26: Unknown property font-feature in Text/,
+  );
+  assert.match(
+    result.stderr,
+    /2 \.slint file\(s\) compiled with Slint 1\.18\.1: 1 error\(s\)/,
+  );
+  const calls = readFileSync(join(stub, "calls.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.equal(call.options.style, "fluent-dark");
+    assert.equal(
+      realpathSync(call.options.libraryPaths.vestra),
+      realpathSync(join(root, "slint/vestra")),
+    );
+  }
+  // Fixed: passes.
+  writeFileSync(
+    join(directory, "ui/bad.slint"),
+    [
+      'import { Theme } from "@vestra/theme.slint";',
+      "export component Panel inherits Rectangle {",
+      '    Text { text: "0:42"; font-family: Theme.font-mono; }',
+      "}",
+    ].join("\n"),
+  );
+  result = vestraPlugin(directory, "check");
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  assert.match(
+    result.stdout,
+    /slint: 2 file\(s\) compiled with Slint 1\.18\.1/,
+  );
+});
