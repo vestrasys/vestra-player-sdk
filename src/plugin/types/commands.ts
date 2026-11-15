@@ -491,7 +491,12 @@ export interface TriggerEvent {
   readonly state: PlayerState;
   /**
    * For a condition with {@link When.position}`.in`, when the position is
-   * in one of its ranges: that range as given, and its place in the list.
+   * in one of its ranges: that range as given, and its place in the list
+   * the player evaluated. `start` and `end` name the range; `index` is its
+   * place in that list: an `enter` that was on its way while the plugin
+   * gave a new list holding the same range (the trigger stays entered)
+   * carries the place in the old list, and the later `leave` the place in
+   * the new one.
    */
   readonly range?: {
     /** The range's start, in media seconds. */
