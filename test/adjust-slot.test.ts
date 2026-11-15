@@ -87,11 +87,89 @@ test("Panel.toggle opens the column at this tab and closes it when it is shown",
   assert.equal(adjust.state?.effective, true);
   await adjust.toggle();
   assert.equal(adjust.state?.preferred, false);
-  // It never detaches (the type has no setDetached; the player refuses it).
-  const raw = adjust as unknown as {
-    setDetached(detached: boolean): Promise<void>;
-  };
-  await assert.rejects(raw.setDetached(true), { code: "invalid" });
+  await stop();
+});
+
+test("the adjust column detaches into its own window and attaches back, as the sidebar", async () => {
+  const host = new TestHost();
+  host.mountOther("adjust", "vestra.video", { title: "Picture" });
+  let wheels!: Panel;
+  const changes: unknown[] = [];
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      wheels = plugin.panels.mount("adjust", "wheels.slint");
+      plugin.panels.adjust.onChange((state) => changes.push(state));
+    },
+    { host, directory: packageWith() },
+  );
+  plugin.player.subscribe();
+  const adjust = plugin.panels.adjust;
+  await wheels.show();
+  await adjust.setDetached(true);
+  assert.deepEqual(host.sent("layout.set").at(-1), {
+    slot: "adjust",
+    detached: true,
+  });
+  assert.equal(host.layout.adjust?.detached, true);
+  assert.deepEqual(adjust.state, {
+    preferred: true,
+    effective: true,
+    reason: null,
+    detached: true,
+  });
+  assert.equal(wheels.state?.detached, true);
+  assert.equal(
+    (changes.at(-1) as { detached: boolean } | null)?.detached,
+    true,
+  );
+  // All its tabs go with it; the sidebar stays as it was.
+  assert.deepEqual(
+    adjust.panels?.map((tab) => tab.plugin),
+    ["vestra.video", "test.wheels"],
+  );
+  assert.equal(host.layout.sidebar, null);
+  // Detached, fullscreen does not collapse it to the right edge.
+  host.setMainWindow({ fullscreen: true });
+  await host.settle();
+  assert.deepEqual(
+    [adjust.state?.effective, adjust.state?.reason],
+    [true, null],
+  );
+  host.setMainWindow({ fullscreen: false });
+  await host.settle();
+  // Attached back.
+  await adjust.setDetached(false);
+  assert.deepEqual(host.sent("layout.set").at(-1), {
+    slot: "adjust",
+    detached: false,
+  });
+  assert.equal(adjust.state?.detached, false);
+  assert.equal(wheels.state?.detached, false);
+  await stop();
+});
+
+test("a player older than 0.10.2 refuses to detach the adjust column", async () => {
+  const host = new TestHost();
+  let wheels!: Panel;
+  const { plugin, stop } = await startPlugin(
+    (plugin: Plugin) => {
+      wheels = plugin.panels.mount("adjust", "wheels.slint");
+    },
+    { host, directory: packageWith() },
+  );
+  await wheels.ready;
+  // The refusal of players 0.7.6 to 0.10.1.
+  host.handle("layout.set", () => {
+    throw new HostError("invalid", "the adjust column cannot be detached");
+  });
+  await assert.rejects(plugin.panels.adjust.setDetached(true), {
+    code: "invalid",
+  });
+  assert.deepEqual(host.sent("layout.set").at(-1), {
+    slot: "adjust",
+    detached: true,
+  });
+  assert.equal(plugin.panels.adjust.state?.detached, false);
   await stop();
 });
 

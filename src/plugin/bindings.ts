@@ -101,8 +101,8 @@ export const BINDING_INPUTS = Object.freeze({
   ],
   /**
    * Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and
-   * `Mouse:X2` (forward) anywhere in the main window or the floating sidebar
-   * window, except while a menu is open. `:LeftHalf` and `:RightHalf` tell the
+   * `Mouse:X2` (forward) anywhere in the main window or a floating column's
+   * window (the sidebar's or the adjust column's), except while a menu is open. `:LeftHalf` and `:RightHalf` tell the
    * halves of the video apart for a double click.
    */
   mouse: [

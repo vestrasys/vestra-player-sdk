@@ -481,7 +481,7 @@ A menu item shows the first of its keyboard bindings that is in effect.
 | `digits` | `0`–`9` | Digit keys of the main keyboard: `0` to `9`. |
 | `functionKeys` | `F1`–`F24` | Function keys: `F1` to `F24`. |
 | `named` | `Space`, `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`, `Plus`, `Numpad0`, `Numpad1`, `Numpad2`, `Numpad3`, `Numpad4`, `Numpad5`, `Numpad6`, `Numpad7`, `Numpad8`, `Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`, `NumpadDivide`, `NumpadEnter`, `NumpadDecimal` | Other named keys, matched by the physical key. `Plus` is the `+` key however it is typed; the `Numpad…` names are the numeric keypad only, never the main keyboard. |
-| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window or the floating sidebar window, except while a menu is open. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
+| `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window or a floating column's window (the sidebar's or the adjust column's), except while a menu is open. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
 
 <!-- /generated -->
 
@@ -537,7 +537,7 @@ These keys may never reach a binding, because the system or the player takes the
 | F11, and F1–F12 on Apple keyboards (macOS) | F11 shows the desktop; on Apple keyboards the function keys are media keys unless fn is held. |
 | Ctrl+Alt+arrow keys (Windows) | Some graphics drivers, to rotate the screen. |
 | Most `Cmd+…` combinations (Windows) | The system, for the Windows logo key. `Cmd+Q` (**Quit**) does nothing there; the window's close button and Alt+F4 quit. |
-| **Standard close keys**: ⌘W (macOS); Ctrl+W, Ctrl+F4 (Windows) | The player, in a tool window, the floating sidebar and the Options window: they close that window exactly like the title-bar button (a tool window's `onClose` runs), even while a text field has focus, so neither Slint handlers nor bindings see them. In the main window they do nothing, so a binding for them fires there as usual. |
+| **Standard close keys**: ⌘W (macOS); Ctrl+W, Ctrl+F4 (Windows) | The player, in a tool window, the floating sidebar and adjust column, and the Options window: they close that window exactly like the title-bar button (a tool window's `onClose` runs), even while a text field has focus, so neither Slint handlers nor bindings see them. In the main window they do nothing, so a binding for them fires there as usual. |
 | Right button, left drag on the video | The player: the context menu; moving the window in window mode. |
 
 The defaults of the built-in commands are taken as well: a plugin default on the same input in the same scope loses to the player's own command and to plugins loaded earlier.

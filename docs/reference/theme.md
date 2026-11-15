@@ -383,7 +383,7 @@ Struct **`MarkdownBlock`**: One displayed block. Plugins only pass these through
 
 | Member | Kind | Note |
 | --- | --- | --- |
-| `release` | callback `()` | Gives the keyboard focus back to the video, at once, inside the handler: the video area in the main window (from the sidebar, the adjust column, the bottom bar or their fullscreen overlays); the window's own key scope in the floating sidebar window, so unaccepted keys reach the player's shortcuts; nothing elsewhere (the Options window, tool windows). |
+| `release` | callback `()` | Gives the keyboard focus back to the video, at once, inside the handler: the video area in the main window (from the sidebar, the adjust column, the bottom bar or their fullscreen overlays); the window's own key scope in the floating sidebar or adjust column window, so unaccepted keys reach the player's shortcuts; nothing elsewhere (the Options window, tool windows). |
 
 Call it after the user played or opened an item from the keyboard or by double click, and on Esc in a list, so the arrows control the player again. A click on an empty part of a panel gives the panel the focus; a panel needs `release()` when one of its own controls took the focus and accepts the keys the player would use.
 

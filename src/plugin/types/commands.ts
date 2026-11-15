@@ -964,8 +964,8 @@ export interface CommandOptions {
    * inputs `Mouse:LeftClick`, `Mouse:LeftDoubleClick[:LeftHalf|:RightHalf]`,
    * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
    * buttons `Mouse:X1` (back), `Mouse:X2` (forward), anywhere
-   * in the main window or the floating sidebar window, except while a menu
-   * is open.
+   * in the main window or a floating column's window (the sidebar's or the
+   * adjust column's), except while a menu is open.
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write

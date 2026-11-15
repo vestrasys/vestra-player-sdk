@@ -369,7 +369,7 @@
 @vestra-player/sdk InterfaceDeclaration PanelState :: reason: SlotState["reason"] | "otherTab";
 @vestra-player/sdk InterfaceDeclaration Panels
 @vestra-player/sdk InterfaceDeclaration Panels :: mount(slot: "bottom" | "sidebar" | "adjust" | "backdrop", file: string, options?: { component?: string; global?: string; title?: string; }): Panel;
-@vestra-player/sdk InterfaceDeclaration Panels :: readonly adjust: PanelSlot;
+@vestra-player/sdk InterfaceDeclaration Panels :: readonly adjust: SidebarSlot;
 @vestra-player/sdk InterfaceDeclaration Panels :: readonly backdrop: BackdropSlot;
 @vestra-player/sdk InterfaceDeclaration Panels :: readonly bottom: PanelSlot;
 @vestra-player/sdk InterfaceDeclaration Panels :: readonly sidebar: SidebarSlot;

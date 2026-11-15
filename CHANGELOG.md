@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+**The adjust column detaches, as the sidebar does.** Who must change: nobody. Documentation, types and `TestHost` only; no runtime or wire change. The player shows a detach button on the adjust column's strip, and `layout.set` with `{ slot: "adjust", detached: true }` floats the column in its own window with all its tabs. Needs player 0.10.2 or later; an older player refuses it (`invalid`).
+
+- **`plugin.panels.adjust` is typed `SidebarSlot`** (was `PanelSlot`): `setDetached(detached)` and `state.detached` now apply to it. The runtime has always had `setDetached` on it; only the type and the docs said it never detaches. `SidebarSlot` describes the sidebar or the adjust column, and `setDetached` documents the `invalid` refusal of an older player.
+- **Docs.** `PanelState.detached`, `Panels.mount` (the adjust column's detach button, its detached state and floating window position remembered, the floating window's `title`) and every place that named only the floating sidebar window (the side mouse buttons, drops on a panel, the palette, a panel's new instance, the standard close keys, `VestraFocus.release`, the troubleshooting guide) now include the floating adjust column.
+- **`TestHost`** accepts `layout.set` with `detached: true` for the adjust column (it refused with `invalid`, as players 0.7.6 to 0.10.1 do); fullscreen does not collapse a detached adjust column, as for the sidebar.
+
+The API surface snapshot changes one line: `Panels :: readonly adjust: SidebarSlot;`.
+
 ## 1.10.0
 
 **Events, triggers and the state stream: a plugin can learn what happens in the player without staying up for it.** Who must change: nobody. Everything below is an addition or a correction of the docs, except two behaviour changes (the update pass after an `mpv.observe` listener, and a timeline layer's range limit); `subscribe()` and `onChange()` keep working unchanged. Needs player 0.10.0 for the source events, triggers, what the player keeps through standby, and 1000 ranges; an older player sends no source events, refuses the `triggers.*` requests and more than 100 ranges, and everything else works with it.

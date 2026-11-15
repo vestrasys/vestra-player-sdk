@@ -33,7 +33,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A panel loses its scroll position or the text in a field
 
-**Cause:** State kept only inside the panel's Slint component is lost when the player makes a new instance of the panel: its column closed and opened, the column's fullscreen overlay, the sidebar detached or attached, or a tab the player unloaded to make room (a column keeps at most 4 panels loaded) shown again. Other plugins mounting or unmounting panels do not touch it.
+**Cause:** State kept only inside the panel's Slint component is lost when the player makes a new instance of the panel: its column closed and opened, the column's fullscreen overlay, the column detached or attached, or a tab the player unloaded to make room (a column keeps at most 4 panels loaded) shown again. Other plugins mounting or unmounting panels do not touch it.
 
 **Fix:** Keep anything that matters in bridge properties the plugin writes ([Open a tool window and remember its state](windows.md)).
 
@@ -87,7 +87,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## A key binding does not fire
 
-**Cause:** Command key bindings belong to the main window (and the floating sidebar): they do not fire while a tool window or the Options window has focus, while a menu, a system dialog or a confirmation drawn in the player is open, or when a focused control takes the key (Space in a text field). In a tool window, the floating sidebar or the Options window, the standard close keys (Ctrl+W and Ctrl+F4 on Windows, ⌘W on macOS) close that window before any binding sees them. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`.
+**Cause:** Command key bindings belong to the main window (and the floating sidebar and adjust column): they do not fire while a tool window or the Options window has focus, while a menu, a system dialog or a confirmation drawn in the player is open, or when a focused control takes the key (Space in a text field). In a tool window, the floating sidebar or adjust column, or the Options window, the standard close keys (Ctrl+W and Ctrl+F4 on Windows, ⌘W on macOS) close that window before any binding sees them. A disabled command lets its key go on to the next command bound to it, unless it has a `reason`.
 
 **Fix:** Choose a default key the system does not take, and give a disabled command a `reason` when its key should be eaten. See [Commands, menus and bindings](../reference/commands.md) and [Keys the system takes first](../reference/commands.md#keys-the-system-takes-first).
 

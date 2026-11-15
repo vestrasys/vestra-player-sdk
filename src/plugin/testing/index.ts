@@ -853,7 +853,8 @@ export class TestHost implements Transport {
      */
     sidebar: LayoutSlot | null;
     /**
-     * The adjust column, like the sidebar but never `detached`. It starts
+     * The adjust column, like the sidebar, `detached` included (as player
+     * 0.10.2 or later; an older player refuses to detach it). It starts
      * hidden (`preferred: false`, `reason: "userHidden"`), as the player's does
      * until the user opens it.
      */

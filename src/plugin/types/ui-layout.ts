@@ -363,7 +363,11 @@ export interface PanelState {
    * else the position's reason ({@link SlotState.reason}).
    */
   reason: SlotState["reason"] | "otherTab";
-  /** The sidebar floats in its own window (with all its tabs); always `false` in the adjust column. */
+  /**
+   * The column (the sidebar or the adjust column) floats in its own window
+   * (with all its tabs); always `false` for the bottom bar and the backdrop,
+   * and in the adjust column of a player older than 0.10.2.
+   */
   detached: boolean;
 }
 
@@ -376,8 +380,8 @@ export interface PanelState {
  * The position does not belong to the plugin that mounted the panel: any
  * plugin may read and toggle it, so a "Show playlist" command
  * can live in a different plugin than the playlist. The player remembers
- * the sidebar's visibility, width, detached state and floating window
- * position across launches.
+ * the visibility, width, detached state and floating window position of
+ * the sidebar and of the adjust column across launches.
  *
  * `state` is read when first used. After `plugin.player.subscribe()`, it then follows every
  * change (the user, other plugins, the window size); without `plugin.player.subscribe()`, it
@@ -549,14 +553,17 @@ export interface PanelSlot {
 }
 
 /**
- * The sidebar position: a {@link PanelSlot} that can also float in a window
- * of its own.
+ * The sidebar or the adjust column position: a {@link PanelSlot} that can
+ * also float in a window of its own ({@link Panels.sidebar},
+ * {@link Panels.adjust}).
  *
  * @remarks
- * Detached, the sidebar panel is shown in a separate window (300×408 by
- * default, at least 300×250) with the panel's `title`. The plugin's
- * properties and callbacks stay the same, but the window holds a new
- * instance of the component. Closing the floating window (its close button
+ * Detached, the column is shown in a separate window with all its tabs,
+ * titled with the current tab's `title` (the sidebar's window is 300×408 by
+ * default, at least 300×250). The plugin's properties and callbacks stay the
+ * same, but the window holds a new instance of the component. The adjust
+ * column detaches with player 0.10.2 or later; an older player refuses it
+ * (`invalid`). Closing the floating window (its close button
  * or the [standard close keys](../../../docs/reference/commands.md#keys-the-system-takes-first)) is the same as `setVisible(false)`.
  *
  * @example Add a "Detach sidebar" item
@@ -581,13 +588,15 @@ export interface PanelSlot {
  */
 export interface SidebarSlot extends PanelSlot {
   /**
-   * Float the sidebar panel in its own window, or attach it back.
+   * Float the column in its own window, or attach it back.
    *
    * @param detached - `true` to float, `false` to dock.
    * @returns Resolves once the layout has changed, with `state` refreshed.
    *
-   * @throws `missing` (rejects) No panel is mounted in the sidebar.
+   * @throws `missing` (rejects) No panel is mounted in the column.
    * @throws `unavailable` (rejects) The player runs without a user interface.
+   * @throws `invalid` (rejects) `true` for the adjust column on a player
+   *   older than 0.10.2.
    *
    * @example Float the sidebar or dock it back
    * The sidebar moves into its own window, or back into the main window
@@ -619,7 +628,7 @@ export interface SidebarSlot extends PanelSlot {
  * are. A panel keeps its component instance while its place exists, so a
  * switch back to its tab finds it as it was. It gets a new instance when its
  * place is made again (its column closed and opened, the column's fullscreen
- * overlay, the sidebar moving to or from its floating window) and when the
+ * overlay, the column moving to or from its floating window) and when the
  * player unloaded it to make room (a column keeps at most 4 panels loaded)
  * and shows it again. A new instance starts with the bridge properties last
  * written, but state kept only inside the component (a scroll position, a
@@ -915,7 +924,8 @@ export interface Panel extends View, Disposable {
    * Receive the files dropped on this panel.
    *
    * @remarks
-   * Covers the docked panel and the floating sidebar window. While a listener
+   * Covers the docked panel and the floating column's window (the sidebar's
+   * or the adjust column's). While a listener
    * exists, drops on the panel come here as one group (not split by
    * extension) instead of going to the {@link Drops} providers. Drops on
    * tool windows and the Options window are ignored; in fullscreen, the

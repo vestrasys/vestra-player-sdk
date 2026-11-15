@@ -146,8 +146,8 @@ export class LayoutService {
 export const layoutOf = (runtime: Runtime) =>
   runtime.service("layout", () => new LayoutService(runtime));
 
-export function slot(scope: ScopeImpl, name: "bottom" | "adjust"): PanelSlot;
-export function slot(scope: ScopeImpl, name: "sidebar"): SidebarSlot;
+export function slot(scope: ScopeImpl, name: "bottom"): PanelSlot;
+export function slot(scope: ScopeImpl, name: "sidebar" | "adjust"): SidebarSlot;
 export function slot(scope: ScopeImpl, name: LayoutName): SidebarSlot {
   const service = () => layoutOf(scope.runtime);
   return {

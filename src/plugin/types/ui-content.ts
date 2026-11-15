@@ -270,7 +270,7 @@ export type Props = Record<string, PropValue>;
  * write it to an `image` property. To show formatted text, make a
  * {@link MarkdownRef} with {@link Ui.markdown} and give it to `MarkdownView`.
  * Both work in tool windows, panels (the backdrop and the floating sidebar
- * included) and settings pages.
+ * and adjust column included) and settings pages.
  *
  * @example Show a Markdown file in a window (examples/markdown)
  * A menu item opens a window with a formatted Markdown file that ships

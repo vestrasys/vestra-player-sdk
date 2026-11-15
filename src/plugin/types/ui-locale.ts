@@ -27,7 +27,7 @@ export type ThemeId = "vestra" | "vestra-light";
  *
  * @remarks
  * The player sets the palette on every view (the main window and its panels,
- * the floating sidebar, tool windows, the Options window) before it appears
+ * the floating sidebar and adjust column, tool windows, the Options window) before it appears
  * and again when the palette changes. Slint code that reads its colours from
  * `Theme` (`import { Theme } from "@vestra/theme.slint"`) follows it with no
  * plugin code; hard-coded colours do not. Only colours change: corner radii,

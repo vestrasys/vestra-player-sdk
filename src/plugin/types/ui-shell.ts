@@ -337,7 +337,7 @@ export interface BackdropSlot {
  * component lays the panel out and reads and calls the global. The split
  * exists because the player places the component in its own windows: a new
  * instance of the component is made whenever the panel's place is made again
- * (a column closed and opened, its fullscreen overlay, the sidebar moving to
+ * (a column closed and opened, its fullscreen overlay, a column moving to
  * or from its floating window; see {@link Panel}), while the global is one
  * stable address.
  *
@@ -415,13 +415,16 @@ export interface Panels {
    * rightmost), 317 wide by default, 280 to half the window, with text tabs
    * and the key that opens each tab under its title (the key of the command
    * your other commands name as their {@link CommandOptions.home | home}). It
-   * has no close or detach button: Adjustments and Effects (`host/adjust`,
-   * a menu item and the bottom bar's sliders button), your panel's own
-   * command ({@link Panel.toggle}) and the menus open and close it. It starts closed. In a window too narrow to dock it beside a video at
-   * least 480 wide, it floats over the right of the video, 300 wide; in
-   * fullscreen it slides out from the right edge, left of the sidebar. Its
-   * width, open state, current tab and tab order are remembered across
-   * launches. Its strip is always drawn, so panel coordinates (drops) start
+   * has no close button: Adjustments and Effects (`host/adjust`, a menu
+   * item and the bottom bar's sliders button), your panel's own command
+   * ({@link Panel.toggle}) and the menus open and close it. Like the
+   * sidebar, it has a detach button that floats it in its own window with
+   * all its tabs, and attaches it back (player 0.10.2 or later). It starts
+   * closed. In a window too narrow to dock it beside a video at least 480
+   * wide, it floats over the right of the video, 300 wide; in fullscreen it
+   * slides out from the right edge, left of the sidebar; detached, it does
+   * neither. Its width, open state, detached state, floating window
+   * position, current tab and tab order are remembered across launches. Its strip is always drawn, so panel coordinates (drops) start
    * below it, and the bridge global's `tabbed` property, if declared, is
    * `true`. As in the sidebar, only the current tab's plugin is kept
    * running while the column is open. The player compiles an adjust panel
@@ -434,8 +437,8 @@ export interface Panels {
    *   `"ui/playlist.slint"`.
    * @param options - `component` and `global`: the names to mount, needed
    *   only if the file exports more than one of either. `title`: the floating
-   *   sidebar window's title (at most 128 bytes; default "Vestra Player");
-   *   not used for the other slots.
+   *   window's title of the sidebar or the adjust column (at most 128 bytes;
+   *   default "Vestra Player"); not used for the other slots.
    * @returns A {@link Panel} owned by this scope; await {@link Panel.ready}
    *   for the result.
    *
@@ -471,7 +474,7 @@ export interface Panels {
       component?: string;
       /** The exported global to use as the bridge, if the file exports several. */
       global?: string;
-      /** The tab label and the floating sidebar window's title (at most 128 bytes). */
+      /** The tab label and the floating window's title (at most 128 bytes). */
       title?: string;
     },
   ): Panel;
@@ -485,12 +488,14 @@ export interface Panels {
   /** The sidebar position, including its floating state; any plugin may read and toggle it. */
   readonly sidebar: SidebarSlot;
   /**
-   * The adjust column, whoever mounted there; any plugin may read and toggle
-   * it. The same shape as {@link Panels.sidebar} without floating: the adjust
-   * column never detaches.
+   * The adjust column, whoever mounted there, including its floating state;
+   * any plugin may read and toggle it. The same shape as
+   * {@link Panels.sidebar}.
    *
    * @remarks
-   * `state` is `null` while no plugin has a panel there. The column starts
+   * Detaching it ({@link SidebarSlot.setDetached}) needs player 0.10.2 or
+   * later; an older player refuses it (`invalid`), and there `detached` is
+   * always `false`. `state` is `null` while no plugin has a panel there. The column starts
    * hidden (`preferred: false`, `reason: "userHidden"`) until the user opens
    * it. To open the column at your own panel, call {@link Panel.show} (or
    * {@link Panel.toggle}, which closes it again when your tab is already the
@@ -522,7 +527,7 @@ export interface Panels {
    * @player 0.7.6
    * @since 1.6.11
    */
-  readonly adjust: PanelSlot;
+  readonly adjust: SidebarSlot;
 }
 
 /**

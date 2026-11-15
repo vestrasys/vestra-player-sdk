@@ -777,8 +777,8 @@ export function layoutHandlers(
       if (!state) throw new HostError("missing", "no panel at this position");
       if (p.detached !== undefined && slot === "bottom")
         throw new HostError("invalid", "the bottom bar cannot be detached");
-      if (p.detached === true && slot === "adjust")
-        throw new HostError("invalid", "the adjust column cannot be detached");
+      // The adjust column detaches as the sidebar does (player 0.10.2;
+      // older players refuse `detached: true` there with `invalid`).
       if (p.active !== undefined && p.active !== null) {
         const panel = state.panels?.find((entry) => entry.plugin === p.active);
         if (!panel)
