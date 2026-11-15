@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.10.0 (unreleased)
+## 1.10.0
 
 **Events, triggers and the state stream: a plugin can learn what happens in the player without staying up for it.** Who must change: nobody. Everything below is an addition or a correction of the docs, except two behaviour changes (the update pass after an `mpv.observe` listener, and a timeline layer's range limit); `subscribe()` and `onChange()` keep working unchanged. Needs player 0.10.0 for the source events, triggers, what the player keeps through standby, and 1000 ranges; an older player sends no source events, refuses the `triggers.*` requests and more than 100 ranges, and everything else works with it.
 
