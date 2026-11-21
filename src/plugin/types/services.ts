@@ -4,7 +4,7 @@ import type { Disposable } from "./base.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
-import type { Plugin, SystemInfo } from "./base.ts";
+import type { AppInfo, Plugin, SystemInfo } from "./base.ts";
 import type { RenderOptions } from "./processing.ts";
 /* oxlint-enable no-unused-vars */
 

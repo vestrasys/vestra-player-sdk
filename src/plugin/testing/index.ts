@@ -2922,7 +2922,12 @@ export class TestHost implements Transport {
    *
    * @since 1.10.1
    */
-  readonly openedWindows: { paths: string[]; pid: number }[] = [];
+  readonly openedWindows: {
+    /** The files, as the plugin gave them. */
+    paths: string[];
+    /** The process id answered (made up: no process starts). */
+    pid: number;
+  }[] = [];
   /**
    * Simulate the user activating the palette's lead row: Enter (`keep`:
    * Shift+Enter) with `query` typed, or Enter on the status row

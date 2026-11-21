@@ -1179,7 +1179,10 @@ export interface App extends AppInfo {
    * @player 0.10.3
    * @since 1.10.1
    */
-  openWindow(paths: readonly string[]): Promise<{ readonly pid: number }>;
+  openWindow(paths: readonly string[]): Promise<{
+    /** The new player's process id. */
+    readonly pid: number;
+  }>;
 }
 
 /**

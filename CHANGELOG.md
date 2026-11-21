@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.10.1
+
+**Temporary windows: a product-data sync and the members that go with them.** Who must change: nobody. Additions and docs only; every existing behaviour of the SDK and of `TestHost` is as in 1.10.0 (a `TestHost` behaves differently only when a test sets the new `app.temporary`). Needs player 0.10.3 for the additions; an older player sends no `temporary` and refuses `app.openWindow`.
+
+Player 0.10.3 adds temporary windows (like a browser's guest window): the playlist's Play in New Window starts a second player with a temporary profile, deleted when it closes, that reads the main window's plugin library and keychain and changes neither.
+
+- **`AppInfo.temporary`** (new, optional): `true` in a temporary window, absent otherwise. A plugin that does background work for the user's profile (an automatic update check) skips it there.
+- **`App.openWindow(paths)`** (new, **built-in plugins only**, as `commands.run`): opens 1 to 64 absolute file paths in a new temporary window and resolves with its `{ pid }`. A plugin that is not built in is refused with `capability`; `invalid` and `missing` for the paths, `unsupported` on macOS (not yet) and without windows, `failed` when the new player does not start. Message `app.openWindow` (area `app`).
+- **`unavailable` in a temporary window** (docs; existing code): `Secrets.set` and `Secrets.delete` (`Secrets.get` reads the main window's values), `PackageCandidate.install`, `Packages.uninstall` and `Packages.setEnabled`. The error-code table says so.
+- **`TestHost`**: `openedWindows` records a built-in plugin's `app.openWindow` (the paths checked as the player does; no process starts; `capability` for any other plugin, through the same check as `commands.run`), and `app.temporary` (new, optional) makes the plugin see `temporary: true` and refuses the five changes above with `unavailable`, as the player does.
+- **Product data**: `BUILTIN_COMMANDS` gains the playlist's `playlist.play-new-window` (Play in New Window, the row menu only: `focus: "panel"`, no key; playlist 0.2.10). The Slint library copy, the submenus, the test host's texts and the palette colours match the player unchanged.
+- **Dependencies** (Dependabot): `oxlint` 1.93.0, `@types/node` 26.6.6 in the lock file, and the `typos` (1.52.2) and `zizmor-action` (0.8.1) workflow actions.
+
+The API surface snapshot gains `AppInfo.temporary`, `App.openWindow` and `TestHost.openedWindows`; `TestHost.app`'s line gains `temporary?: boolean` (the one changed line, an addition); no line goes.
+
 ## 1.10.0
 
 **Events, triggers and the state stream: a plugin can learn what happens in the player without staying up for it.** Who must change: nobody. Everything below is an addition or a correction of the docs, except two behaviour changes (the update pass after an `mpv.observe` listener, and a timeline layer's range limit); `subscribe()` and `onChange()` keep working unchanged. Needs player 0.10.0 for the source events, triggers, what the player keeps through standby, and 1000 ranges; an older player sends no source events, refuses the `triggers.*` requests and more than 100 ranges, and everything else works with it.

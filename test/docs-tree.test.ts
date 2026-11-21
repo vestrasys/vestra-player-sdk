@@ -337,9 +337,23 @@ test("search ranks names first and lists paths with summaries", () => {
   // Common words are left out; a declaration's name ranks high.
   const window = searchDocs("open a window");
   assert.match(window, /common words left out: a\)/);
+  // A member named by both words first (App.openWindow, 1.10.1), then the
+  // interface named by one among the next.
   assert.match(
     window,
-    /best first[^\n]*:\n\n- \/API\/UI\/Window \(interface\)/,
+    /best first[^\n]*:\n\n- \/API\/Plugin\/App\/openWindow \(method\)/,
+  );
+  assert.ok(
+    window
+      .split("\n")
+      .filter((line) => line.startsWith("- "))
+      .slice(0, 3)
+      .includes(
+        window
+          .split("\n")
+          .find((line) => line.startsWith("- /API/UI/Window (interface)")),
+      ),
+    "Window is among the first three results",
   );
   const found = searchDocs("snapshot export");
   assert.match(
