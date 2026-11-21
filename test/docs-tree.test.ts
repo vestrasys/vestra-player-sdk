@@ -348,11 +348,7 @@ test("search ranks names first and lists paths with summaries", () => {
       .split("\n")
       .filter((line) => line.startsWith("- "))
       .slice(0, 3)
-      .includes(
-        window
-          .split("\n")
-          .find((line) => line.startsWith("- /API/UI/Window (interface)")),
-      ),
+      .some((line) => line.startsWith("- /API/UI/Window (interface)")),
     "Window is among the first three results",
   );
   const found = searchDocs("snapshot export");
