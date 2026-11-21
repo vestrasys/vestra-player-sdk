@@ -4,7 +4,7 @@ import type { Disposable } from "./base.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
-import type { Plugin } from "./base.ts";
+import type { AppInfo, Plugin } from "./base.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- packages (plugins.manage)
@@ -177,6 +177,9 @@ export interface PackageCandidate {
    *   needed).
    * @throws `stale` (rejects) The candidate is older than the 32 the player
    *   keeps.
+   * @throws `unavailable` (rejects) The player is a temporary window
+   *   ({@link AppInfo.temporary}, player 0.10.3): it runs the main window's
+   *   plugins as they are and installs or updates none.
    *
    * @example Replace a plugin installed from another source
    * The new package replaces the installed plugin even though it came from
@@ -562,6 +565,9 @@ export interface Packages {
    * @throws `missing` (rejects) An unknown id.
    * @throws `busy` (rejects) The plugin is being installed or reloaded.
    * @throws `unsupported` (rejects) A built-in plugin.
+   * @throws `unavailable` (rejects) The player is a temporary window
+   *   ({@link AppInfo.temporary}, player 0.10.3): it runs the main window's
+   *   plugins as they are and enables or disables none.
    *
    * @example Turn a third-party plugin off
    * The plugin stops another plugin and keeps it disabled across launches
@@ -621,6 +627,9 @@ export interface Packages {
    *   plugin is being installed or reloaded.
    * @throws `revisionConflict` (rejects) The installed revision of that
    *   plugin changed meanwhile; call `uninstall` again.
+   * @throws `unavailable` (rejects) The player is a temporary window
+   *   ({@link AppInfo.temporary}, player 0.10.3): it runs the main window's
+   *   plugins as they are and removes none.
    *
    * @example Uninstall a plugin together with its data
    * The other plugin is removed and its data directory deleted, so a later

@@ -1,8 +1,10 @@
+@vestra-player/sdk InterfaceDeclaration App :: openWindow(paths: readonly string[]): Promise<{ readonly pid: number; }>;
 @vestra-player/sdk InterfaceDeclaration App :: system(): Promise<SystemInfo>;
 @vestra-player/sdk InterfaceDeclaration App extends AppInfo
 @vestra-player/sdk InterfaceDeclaration AppInfo
 @vestra-player/sdk InterfaceDeclaration AppInfo :: readonly build: string | null;
 @vestra-player/sdk InterfaceDeclaration AppInfo :: readonly components: { readonly mpv: string | null; readonly libav: Readonly<Record<string, string>>; readonly slint: string; };
+@vestra-player/sdk InterfaceDeclaration AppInfo :: readonly temporary?: boolean;
 @vestra-player/sdk InterfaceDeclaration AppInfo :: readonly version: string;
 @vestra-player/sdk InterfaceDeclaration Appearance
 @vestra-player/sdk InterfaceDeclaration Appearance :: readonly language: LanguagePreference;
@@ -926,7 +928,7 @@
 @vestra-player/sdk/testing ClassDeclaration HostError :: constructor(code: string, message: string);
 @vestra-player/sdk/testing ClassDeclaration HostError extends Error
 @vestra-player/sdk/testing ClassDeclaration TestHost :: advance(ms: number): Promise<void>;
-@vestra-player/sdk/testing ClassDeclaration TestHost :: app: { version: string; build: string | null; components: { mpv: string | null; libav: Record<string, string>; slint: string; }; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: app: { version: string; build: string | null; components: { mpv: string | null; libav: Record<string, string>; slint: string; }; temporary?: boolean; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: appearance: ThemeId;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: audioDevices: { id: string; name: string; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: backdrop: { owner: string; effective: boolean; } | null;
@@ -1003,6 +1005,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly motion: { mode: MotionMode; double: MotionReason | null; display: MotionReason | null; renderingStarting: boolean; sourceFps: number | null; outputFps: number | null; performance: boolean; displayFps: number; gpu: string | null; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mpv: { commands: (string | number | boolean)[][]; properties: Map<string, Json>; labels: Map<string, string>; observed: Set<string>; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly openedWindows: { paths: string[]; pid: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly otherResolvers: { owner: string; extensions?: string[]; schemes?: string[]; hosts?: string[]; }[];

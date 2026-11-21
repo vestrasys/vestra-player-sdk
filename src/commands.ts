@@ -598,6 +598,7 @@ vestra.playback | forward-3 | (Forward 60 s) | Shift+ArrowRight
 vestra.playback | backward-4 | (Back 300 s) | Ctrl+Alt+ArrowLeft
 vestra.playback | forward-4 | (Forward 300 s) | Ctrl+Alt+ArrowRight
 vestra.playlist | playlist.play | (Play) | Enter | panel
+vestra.playlist | playlist.play-new-window | (Play in New Window) |  | panel
 vestra.playlist | playlist.list-add | (Add Files…)
 vestra.playlist | playlist.list-add-folder | (Add Folder…)
 vestra.playlist | playlist.list-link | (Add Link…)

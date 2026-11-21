@@ -4,7 +4,7 @@ import type { Disposable } from "./base.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
-import type { Plugin, SystemInfo } from "./base.ts";
+import type { AppInfo, Plugin, SystemInfo } from "./base.ts";
 import type { RenderOptions } from "./processing.ts";
 /* oxlint-enable no-unused-vars */
 
@@ -698,7 +698,9 @@ export interface System {
  * Values are stored by the player in the system's secret store under this
  * plugin's id: other plugins cannot read them. Names are 1–64 of
  * `a-z 0-9 . _ -`, values 1–1024 bytes of text, at most 256 names per
- * plugin (`SECRET_LIMITS`).
+ * plugin (`SECRET_LIMITS`). In a temporary window
+ * ({@link AppInfo.temporary}) `get` reads the main window's values and
+ * `set` and `delete` reject with `unavailable` (player 0.10.3).
  *
  * @since 1.0.0
  * @category Services
@@ -735,7 +737,9 @@ export interface Secrets {
    * @throws `limit` (rejects) A new name beyond 256.
    * @throws `unsupported` (rejects) The system has no secret store.
    * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
-   *   a read-only store, no logged-in session on Windows).
+   *   a read-only store, no logged-in session on Windows), or the player is
+   *   a temporary window ({@link AppInfo.temporary}, player 0.10.3), which
+   *   reads the main window's secrets and saves none.
    * @throws `failed` (rejects) The user denied access, or another system
    *   error.
    *
@@ -761,7 +765,9 @@ export interface Secrets {
    * @throws `invalid` (rejects) A bad name.
    * @throws `unsupported` (rejects) The system has no secret store.
    * @throws `unavailable` (rejects) The store cannot be reached (no keychain,
-   *   a read-only store, no logged-in session on Windows).
+   *   a read-only store, no logged-in session on Windows), or the player is
+   *   a temporary window ({@link AppInfo.temporary}, player 0.10.3), which
+   *   deletes none of the main window's secrets.
    * @throws `failed` (rejects) The user denied access, or another system
    *   error.
    *

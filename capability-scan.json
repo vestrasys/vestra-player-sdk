@@ -80,6 +80,7 @@
   "none": {
     "about": "Crosses no such boundary: the plugin's own contributions, the playback session, reading state.",
     "members": [
+      "App.openWindow",
       "App.system",
       "BackdropSlot.onChange",
       "Bindings.list",
@@ -279,6 +280,7 @@
       "WireView.writeRows"
     ],
     "requests": [
+      "app.openWindow",
       "app.system",
       "audio.addTrack",
       "audio.selectTrack",

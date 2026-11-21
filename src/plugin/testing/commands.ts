@@ -526,8 +526,11 @@ export function commandsHandlers(
 
 /// ---------------------------------------------------------------- built-in only: commands.run, palette.lead
 
-/** The player's refusal of a built-in-only request to any other plugin. */
-function builtinOnly(host: TestHost) {
+/**
+ * The player's refusal of a built-in-only request to any other plugin
+ * (also `app.openWindow`, ./services.ts).
+ */
+export function builtinOnly(host: TestHost) {
   if (!host.builtin)
     throw new HostError("capability", "this is for built-in plugins only");
 }

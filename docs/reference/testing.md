@@ -165,6 +165,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.coreRuns} | Every core action run (`host.run`, a core command, a pressed core binding), newest last. |
 | {@link "@vestra-player/sdk/testing"!TestHost.builtin} | The plugin is built into the player (`startPlugin`'s `builtin`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.paletteLead} | The palette's lead row as the plugin last set it (`palette.lead.set`, wire form), `null` without one. |
+| {@link "@vestra-player/sdk/testing"!TestHost.openedWindows} | Every temporary window a built-in plugin opened with `app.openWindow`, oldest first: the files and the process id answered (App.openWindow). |
 | {@link "@vestra-player/sdk/testing"!TestHost.runPaletteLead}() | Simulate the user activating the palette's lead row: Enter (`keep`: Shift+Enter) with `query` typed, or Enter on the status row (`status`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.coreAction}() | One of the 14 core actions (`play-pause`, `stop`, `seek-forward`, ...) that the test host registers like the player, as `host/<id>`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.handle}() | Replace the host's behaviour for one wire method until `TestHost.reset`. |

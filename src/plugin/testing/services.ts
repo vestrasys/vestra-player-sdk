@@ -7,6 +7,7 @@
  * Internal to the SDK; not exported from `@vestra-player/sdk/testing`.
  */
 import { statSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import { HostError } from "../../wire.ts";
 import type { PackageSource } from "../types.ts";
 import type { Json, WireSystemInfo } from "../../wire.ts";
@@ -15,6 +16,7 @@ import { validStep } from "../player/rules.ts";
 import type { FileDialogText, TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 import { runCore, windowFacts } from "./core-actions.ts";
+import { builtinOnly } from "./commands.ts";
 import { shownText, declaredText, shownValues, hostText } from "./i18n.ts";
 import {
   resetWrites,
@@ -26,6 +28,40 @@ import {
   checkType,
   inSetOrder,
 } from "./layout.ts";
+
+/** As the player in a temporary window (system.rs `GUEST_SECRETS`). */
+const GUEST_SECRETS =
+  "a temporary window cannot save or delete sign-in details; use the main window";
+/** As the player in a temporary window (package_manager.rs `GUEST_PACKAGES`). */
+const GUEST_PACKAGES =
+  "a temporary window cannot install, update, remove, enable or disable plugins; use the main window";
+
+/** The player's refusal of a change to the shared keychain or library in a temporary window. */
+function guestRefuses(host: TestHost, message: string) {
+  if (host.app.temporary === true) throw new HostError("unavailable", message);
+}
+
+/** `app.openWindow`'s files, checked as the player does (capabilities/app_windows.rs). */
+function windowPaths(paths: Json | undefined): string[] {
+  if (!Array.isArray(paths))
+    throw new HostError("invalid", "paths requires a list of file paths");
+  if (!paths.length || paths.length > 64)
+    throw new HostError("invalid", "paths takes 1 to 64 files");
+  return paths.map((path) => {
+    if (typeof path !== "string")
+      throw new HostError("invalid", "each path is a string");
+    if (!isAbsolute(path))
+      throw new HostError("invalid", `${path} is not an absolute path`);
+    let file = false;
+    try {
+      file = statSync(path).isFile();
+    } catch {
+      // Not there: `missing` below, as the player.
+    }
+    if (!file) throw new HostError("missing", `${path} is not a file`);
+    return path;
+  });
+}
 
 /** A `plugin.storage.session` key, checked as the player does. */
 export function sessionKey(key: Json | undefined): string {
@@ -166,6 +202,7 @@ export function servicesHandlers(
     "secrets.get": (p) => host.secrets.get(String(p.name)) ?? null,
     "secrets.set": (p) => {
       const name = String(p.name);
+      guestRefuses(host, GUEST_SECRETS);
       if (!host.secrets.has(name) && host.secrets.size >= 256)
         throw new HostError(
           "limit",
@@ -173,7 +210,10 @@ export function servicesHandlers(
         );
       host.secrets.set(name, String(p.value));
     },
-    "secrets.delete": (p) => void host.secrets.delete(String(p.name)),
+    "secrets.delete": (p) => {
+      guestRefuses(host, GUEST_SECRETS);
+      host.secrets.delete(String(p.name));
+    },
     // As the player (src/host/src/session_storage.rs).
     "storage.session.get": (p) => {
       const key = sessionKey(p.key);
@@ -204,6 +244,14 @@ export function servicesHandlers(
       rendering: host.videoRender.gpu ? "gpu" : "software",
       renderingReason: { ...host.rendering.reason },
     }),
+    // Built-in only; no process starts: the call is recorded.
+    "app.openWindow": (p) => {
+      builtinOnly(host);
+      const paths = windowPaths(p.paths);
+      const pid = 40000 + host.openedWindows.length;
+      host.openedWindows.push({ paths, pid });
+      return { pid };
+    },
     "clipboard.readText": () => host.clipboard.text,
     "clipboard.writeText": (p) => {
       if (typeof p.text !== "string")
@@ -457,6 +505,7 @@ export function servicesHandlers(
     },
     "packages.list": () => structuredClone(host.packages),
     "packages.setEnabled": (p) => {
+      guestRefuses(host, GUEST_PACKAGES);
       const id = String(p.id);
       if (id === host.manifestId && p.enabled === false)
         throw new HostError("invalid", "a plugin cannot disable itself");
@@ -508,6 +557,7 @@ export function servicesHandlers(
     "packages.validateArchive": (p) =>
       validatePackage(host, inner, String(p.file)),
     "packages.install": (p) => {
+      guestRefuses(host, GUEST_PACKAGES);
       const manifest = host.candidates.get(String(p.token));
       if (!manifest) throw new HostError("stale", "unknown validation token");
       const source = (p.source as PackageSource | undefined) ?? {
@@ -568,6 +618,7 @@ export function servicesHandlers(
       return { operationId: String(p.requestId), status: "committed" };
     },
     "packages.uninstall": (p) => {
+      guestRefuses(host, GUEST_PACKAGES);
       const id = String(p.id);
       const entry = host.packages.find((each) => each.id === id);
       if (!entry) throw new HostError("missing", `no plugin ${id}`);

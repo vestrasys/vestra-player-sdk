@@ -12,12 +12,12 @@ Every failure of the API is an ordinary `Error` with a stable string `code` ({@l
 | Code | Meaning |
 | --- | --- |
 | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link "@vestra-player/sdk"!Conditional}. |
-| `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`) and this plugin is not one. |
+| `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`, `app.openWindow`) and this plugin is not one. |
 | `invalid` | A bad argument (out of range, malformed, unknown id). |
 | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
 | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
 | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path, the command palette's lead row), or this plugin already uses the id (a window or command id). |
-| `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
+| `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action), or not in a temporary window (saving a secret, changing the plugin library; {@link "@vestra-player/sdk"!AppInfo.temporary}). |
 | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
 | `backend` | Loading or resolving failed, or mpv failed a command or a property of {@link "@vestra-player/sdk"!Mpv}; `message` is the backend's reason. |
 | `refused` | {@link "@vestra-player/sdk"!Mpv}: a command or a property the pass-through does not carry (it would start a program, load code, write files, end the player, or change what the player manages); `message` names it and why. |

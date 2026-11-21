@@ -1059,6 +1059,8 @@ export function createWire(transport: Transport) {
     },
     app: {
       system: () => transport.request<WireSystemInfo>("app.system"),
+      openWindow: (paths: string[]) =>
+        transport.request<{ pid: number }>("app.openWindow", { paths }),
     },
     /**
      * The rendering choice: `state`, `setPreference` and `restart`.
