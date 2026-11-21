@@ -301,6 +301,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Back 300 s (not in the menu) | `Ctrl+Alt+ArrowLeft` | `vestra.playback/backward-4` |
 | Forward 300 s (not in the menu) | `Ctrl+Alt+ArrowRight` | `vestra.playback/forward-4` |
 | Play (not in the menu) | `Enter` (panel focus) | `vestra.playlist/playlist.play` |
+| Play in New Window (not in the menu) |  | `vestra.playlist/playlist.play-new-window` |
 | Add Files… (not in the menu) |  | `vestra.playlist/playlist.list-add` |
 | Add Folder… (not in the menu) |  | `vestra.playlist/playlist.list-add-folder` |
 | Add Link… (not in the menu) |  | `vestra.playlist/playlist.list-link` |

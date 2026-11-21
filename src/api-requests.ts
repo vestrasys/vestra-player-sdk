@@ -107,6 +107,7 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Commands.keys": [{ method: "commands.keys" }, listen("commands.keys")],
     "Commands.list": [{ method: "commands.list" }],
     "Commands.run": [{ method: "commands.run" }],
+    "App.openWindow": [{ method: "app.openWindow" }],
     "Palette.lead": [{ method: "palette.lead.set" }],
     "Host.run": [{ method: "host.run" }],
     "Windows.create": [{ method: "ui.open" }],

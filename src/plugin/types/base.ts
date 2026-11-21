@@ -127,12 +127,12 @@ export interface Disposable {
  * | code | meaning |
  * | --- | --- |
  * | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link Conditional}. |
- * | `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`) and this plugin is not one. |
+ * | `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`, `app.openWindow`) and this plugin is not one. |
  * | `invalid` | A bad argument (out of range, malformed, unknown id). |
  * | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
  * | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
  * | `conflict` | Another plugin owns the resource (the sequence provider, the display layer, the backdrop, a menu path, the command palette's lead row), or this plugin already uses the id (a window or command id). |
- * | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action). |
+ * | `unavailable` | Not possible right now (no ready media, no user interface, fullscreen, a disabled core action), or not in a temporary window (saving a secret, changing the plugin library; {@link AppInfo.temporary}). |
  * | `unsupported` | Not possible on this system, build or source (a platform gap, software rendering, a source that cannot seek, a filter on a generated stream, an export the player cannot make as asked: a stream copy, a source bitrate it cannot tell). |
  * | `backend` | Loading or resolving failed, or mpv failed a command or a property of {@link Mpv}; `message` is the backend's reason. |
  * | `refused` | {@link Mpv}: a command or a property the pass-through does not carry (it would start a program, load code, write files, end the player, or change what the player manages); `message` names it and why. |
@@ -1060,6 +1060,38 @@ export interface AppInfo {
     /** The linked Slint version, e.g. `"1.18.1"`. */
     readonly slint: string;
   };
+  /**
+   * `true` when this player is a temporary window (a guest, like a
+   * browser's guest window): a second player the main one started with
+   * {@link App.openWindow} (the playlist's Play in New Window), or one the
+   * user started with `--guest`. Absent in the main player and in a player
+   * before 0.10.3.
+   *
+   * @remarks
+   * A temporary window runs with a temporary profile that is deleted when
+   * it closes: a plugin's data, settings and session storage start from a
+   * copy of the main window's and are thrown away with it, and nothing it
+   * writes reaches the main window. The plugin library and the keychain are
+   * the main window's, read-only: {@link Secrets.get} reads the main
+   * window's values, while {@link Secrets.set}, {@link Secrets.delete},
+   * {@link PackageCandidate.install}, {@link Packages.uninstall} and
+   * {@link Packages.setEnabled} reject with `unavailable`. A plugin that
+   * does background work for the user's profile (an automatic update
+   * check, a sync) skips it here; work the user starts still runs.
+   *
+   * @example Skip the automatic update check in a temporary window
+   * The main window checks for updates once a day; a temporary window
+   * leaves it to the main one. A check the user asks for still runs.
+   * ```ts
+   * declare function checkForUpdates(): Promise<void>;
+   * // ---cut---
+   * if (!plugin.app.temporary) void checkForUpdates();
+   * ```
+   *
+   * @player 0.10.3
+   * @since 1.10.1
+   */
+  readonly temporary?: boolean;
 }
 
 /**
@@ -1107,6 +1139,47 @@ export interface App extends AppInfo {
    * @since 1.0.0
    */
   system(): Promise<SystemInfo>;
+  /**
+   * Open the files in a new temporary window: a second player with a
+   * temporary profile ({@link AppInfo.temporary}) that plays the first file
+   * and lists them all. Resolves once its process started, with its
+   * process id. **Built-in plugins only.**
+   *
+   * @remarks
+   * The playlist's Play in New Window. The new window is a separate player
+   * process and keeps running after this one quits; it shares nothing with
+   * the calling plugin.
+   *
+   * @param paths 1 to 64 absolute paths of existing files, in play order.
+   *
+   * @throws `capability` (rejects) The plugin is not built into the player.
+   * @throws `invalid` (rejects) No path, more than 64, or a path that is not
+   *   an absolute path.
+   * @throws `missing` (rejects) A path that is not an existing file.
+   * @throws `unsupported` (rejects) On macOS (not yet), or a player without
+   *   windows.
+   * @throws `failed` (rejects) The new player did not start.
+   *
+   * @example Play the selected files in a new window
+   * The playlist's row menu opens the selected local files in a temporary
+   * window, which plays them without changing the main window's list or
+   * settings.
+   * ```ts
+   * declare const selected: string[];
+   * // ---cut---
+   * try {
+   *   const { pid } = await plugin.app.openWindow(selected.slice(0, 64));
+   *   console.log("temporary window", pid);
+   * } catch (error) {
+   *   // `capability`: not a built-in plugin; `unsupported`: macOS.
+   *   if ((error as PluginError).code !== "capability") throw error;
+   * }
+   * ```
+   *
+   * @player 0.10.3
+   * @since 1.10.1
+   */
+  openWindow(paths: readonly string[]): Promise<{ readonly pid: number }>;
 }
 
 /**

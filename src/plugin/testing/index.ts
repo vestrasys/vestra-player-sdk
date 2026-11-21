@@ -2420,6 +2420,16 @@ export class TestHost implements Transport {
       /** The Slint version. */
       slint: string;
     };
+    /**
+     * `true` to run as a temporary window
+     * ({@link "@vestra-player/sdk"!AppInfo.temporary | AppInfo.temporary}):
+     * the plugin sees it, and `secrets.set`, `secrets.delete`,
+     * `packages.install`, `packages.uninstall` and `packages.setEnabled`
+     * are refused with `unavailable`, as in the player.
+     *
+     * @since 1.10.1
+     */
+    temporary?: boolean;
   } = {
     version: "0.1.0",
     build: "test",
@@ -2901,6 +2911,18 @@ export class TestHost implements Transport {
    * @since 1.7.9
    */
   paletteLead: Record<string, Json> | null = null;
+  /**
+   * Every temporary window a built-in plugin opened with `app.openWindow`,
+   * oldest first: the files and the process id answered
+   * ({@link "@vestra-player/sdk"!App.openWindow | App.openWindow}). No
+   * process starts. A
+   * plugin that is not built in is refused with `capability`, as in the
+   * player; the files are checked as the player does (`invalid`,
+   * `missing`).
+   *
+   * @since 1.10.1
+   */
+  readonly openedWindows: { paths: string[]; pid: number }[] = [];
   /**
    * Simulate the user activating the palette's lead row: Enter (`keep`:
    * Shift+Enter) with `query` typed, or Enter on the status row

@@ -21,6 +21,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
+| `app.openWindow` | `{ paths }` | `{ pid: number }` | `capability`, `invalid`, `missing`, `unsupported`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!App.openWindow App.openWindow} |
 | `app.system` | — | `WireSystemInfo` | `busy` | SDK member: {@linkcode "@vestra-player/sdk"!App.system App.system} |
 
 ### `appearance`
@@ -142,13 +143,13 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `packages.cancel` | `{ operationId }` | `PackageOperation` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!PackageChange.cancel PackageChange.cancel} |
-| `packages.install` | `{ enabled?, replace?, source?, token, expectedRevision, requestId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
-| `packages.installed` | `{ id }` | `InstalledPackage` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
+| `packages.install` | `{ enabled?, replace?, source?, token, expectedRevision, requestId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
+| `packages.installed` | `{ id }` | `InstalledPackage` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
 | `packages.list` | — | `PackageInfo[]` | `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.list Packages.list} |
-| `packages.operation` | `{ operationId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
+| `packages.operation` | `{ operationId }` | `PackageOperation` | `invalid`, `conflict`, `unsupported`, `reserved`, `busy`, `revisionConflict`, `stale`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!PackageCandidate.install PackageCandidate.install} |
 | `packages.reload` | `{ id }` | `void` | `invalid`, `missing`, `busy`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.reload Packages.reload} |
-| `packages.setEnabled` | `{ id, enabled }` | `void` | `invalid`, `missing`, `busy`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled} |
-| `packages.uninstall` | `{ id, removeData, expectedRevision, requestId }` | `PackageOperation` | `unsupported`, `missing`, `invalid`, `busy`, `revisionConflict` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} |
+| `packages.setEnabled` | `{ id, enabled }` | `void` | `invalid`, `missing`, `busy`, `unsupported`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.setEnabled Packages.setEnabled} |
+| `packages.uninstall` | `{ id, removeData, expectedRevision, requestId }` | `PackageOperation` | `unsupported`, `missing`, `invalid`, `busy`, `revisionConflict`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.uninstall Packages.uninstall} |
 | `packages.validate` | `{ directory, apiVersion }` | `PackageValidation` | `host`, `invalid`, `javascript`, `slint`, `reserved`, `versionMismatch`, `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.validate Packages.validate} |
 | `packages.validateArchive` | `{ file }` | `PackageValidation` | `invalid`, `host`, `javascript`, `slint`, `reserved`, `versionMismatch`, `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Packages.validateArchive Packages.validateArchive} |
 
