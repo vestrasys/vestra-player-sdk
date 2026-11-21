@@ -1069,9 +1069,11 @@ export interface AppInfo {
    *
    * @remarks
    * A temporary window runs with a temporary profile that is deleted when
-   * it closes: a plugin's data, settings and session storage start from a
-   * copy of the main window's and are thrown away with it, and nothing it
-   * writes reaches the main window. The plugin library and the keychain are
+   * it closes. Only the player's own settings (look, language, keys,
+   * rendering, window layout) are copied from the main window. A plugin's
+   * data directory (its options, history and lists included) and its
+   * session storage start empty and are discarded when the window closes;
+   * nothing a plugin writes reaches the main window. The plugin library and the keychain are
    * the main window's, read-only: {@link Secrets.get} reads the main
    * window's values, while {@link Secrets.set}, {@link Secrets.delete},
    * {@link PackageCandidate.install}, {@link Packages.uninstall} and
