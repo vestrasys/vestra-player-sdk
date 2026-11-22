@@ -329,7 +329,6 @@ function modelOf(host: TestHost, engine: "amd" | "nvidia") {
   return engine === "amd" ? host.motion : host.nvidiaMotion;
 }
 
-/** `video.motion.state` of an engine from its model (`amd` by default). */
 /** The engine whose converter is in the chain, as the player keeps it: the first one set to a mode, while its mode is not `off`. */
 const motionHolder = new WeakMap<TestHost, "amd" | "nvidia">();
 
@@ -353,17 +352,31 @@ function otherEngine(holder: "amd" | "nvidia") {
   };
 }
 
+/**
+ * The reasons the player checks after the other engine holding the
+ * converter (playback/motion.rs `check`: the system, the filter, the
+ * renderer, AI upscaling and frame doubling come first; then
+ * `other-engine`; then these).
+ */
+const AFTER_OTHER_ENGINE = ["failed", "overload", "rate", "format", "size"];
+
+/** `video.motion.state` of an engine from its model (`amd` by default). */
 export function motionState(
   host: TestHost,
   engine: "amd" | "nvidia" = "amd",
 ): WireMotionState {
   const model = modelOf(host, engine);
   const { mode, sourceFps, displayFps, gpu } = model;
-  // The model's own reason first, then the other engine holding the converter.
+  // The model's reason and the other engine holding the converter, in the
+  // player's order.
   const holder = holderOf(host);
   const waits = holder !== null && holder !== engine ? otherEngine(holder) : null;
-  const double = model.double ?? waits;
-  const display = model.display ?? waits;
+  const first = (own: typeof model.double) =>
+    own === null || (waits !== null && AFTER_OTHER_ENGINE.includes(own.code))
+      ? (waits ?? own)
+      : own;
+  const double = first(model.double);
+  const display = first(model.display);
   const reasonOf = (wanted: MotionMode) =>
     wanted === "double" ? double : wanted === "display" ? display : null;
   const works = mode !== "off" && reasonOf(mode) === null && sourceFps !== null;

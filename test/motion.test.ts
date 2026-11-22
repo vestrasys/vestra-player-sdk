@@ -204,3 +204,23 @@ test("one converter at a time: the other engine's modes wait with other-engine u
   assert.match(String(amd.double?.message), /^NVIDIA motion smoothing is on/);
   await stop();
 });
+
+test("other-engine comes in the player's order: after the system, the renderer, upscaling and doubling; before failed, overload, rate, format and size", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  host.motion.mode = "double"; // AMD holds the converter.
+  const nvidia = () => plugin.video.motion("nvidia").state();
+  for (const code of ["failed", "overload", "rate", "format", "size"] as const) {
+    host.nvidiaMotion.double = { code, message: code };
+    assert.equal((await nvidia()).double?.code, "other-engine", code);
+  }
+  for (const code of ["runtime", "no-gpu", "rendering", "upscaling", "doubling"] as const) {
+    host.nvidiaMotion.double = { code, message: code };
+    assert.equal((await nvidia()).double?.code, code, code);
+  }
+  // Without a holder the model's own reason stands.
+  host.motion.mode = "off";
+  host.nvidiaMotion.double = { code: "rate", message: "rate" };
+  assert.equal((await nvidia()).double?.code, "rate");
+  await stop();
+});
