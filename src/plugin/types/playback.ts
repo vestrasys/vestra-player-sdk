@@ -2179,10 +2179,17 @@ export interface FactEventPayloads {
   "layout.changed": {
     /** Each position, `null` where it has no panel. */
     slots: {
+      /** The bottom bar, `null` without a panel there. */
       readonly bottom: LayoutPosition | null;
+      /** The sidebar, `null` without a panel there. */
       readonly sidebar: LayoutPosition | null;
+      /** The adjust column, `null` without a panel there. */
       readonly adjust: LayoutPosition | null;
-      readonly backdrop: { readonly effective: boolean } | null;
+      /** The backdrop panel, `null` without one. */
+      readonly backdrop: {
+        /** Whether it shows now (nothing open, loading, or audio without a picture). */
+        readonly effective: boolean;
+      } | null;
     };
   };
   /**
