@@ -69,7 +69,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## The plugin never goes to standby
 
-**Cause:** It holds something only its process can serve: `host.keepsRunning` names each listener of a frequent event (with where it was added), panel and open window. Common ones: a stream opened in `activate` (it counts for the whole run), `player.on("source.state", …)` to learn that a file opened, a watcher (`onChange`) kept for good, a filter made at start but used only later.
+**Cause:** It holds something only its process can serve: `host.keepsRunning` names each listener of a frequent event (with where it was added), panel and open window. Common ones: a stream opened in `activate` (it counts for the whole run), `player.on("source.state", …)` to learn that a file opened, a watcher (`onChange`) kept for good, a filter given its nodes at start but used only later.
 
 **Fix:** Learn the moments from events (`source.ready`, `window.changed`, `layout.changed`, …) and triggers; open a stream only while something shows the state; make a filter when it is first needed ([Learn what happens in the player](events-and-triggers.md)).
 

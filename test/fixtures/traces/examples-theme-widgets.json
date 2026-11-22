@@ -5,12 +5,6 @@
     {
       "event": "commands.keys",
       "mirror": true
-    },
-    {
-      "event": "commands.keys",
-      "why": [
-        "a view's bind reads plugin.commands.keys (main.ts)"
-      ]
     }
   ],
   "polled": [],
@@ -147,15 +141,6 @@
             "busy": false,
             "reason": null
           }
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "commands.keys",
-          "why": [
-            "a view's bind reads plugin.commands.keys (main.ts)"
-          ]
         }
       }
     ],

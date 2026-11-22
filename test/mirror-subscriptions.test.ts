@@ -136,7 +136,7 @@ test("a listener added during activation is marked before the plugin is ready", 
   }
 });
 
-test("the video view, a shader channel and a filter follow the source without counting as listeners (1.11.0-rc.4)", async () => {
+test("the video view, a shader channel and a filter follow the source without counting as listeners", async () => {
   const { plugin, host, stop } = await startPlugin(() => {}, {
     capabilities: ["playback.read", "processing.video"],
   });
@@ -188,6 +188,68 @@ test("the video view, a shader channel and a filter follow the source without co
       !host.subscriptions.has("source.state"),
       "nothing follows once they are gone",
     );
+  } finally {
+    await stop();
+  }
+});
+
+test("a binding or command field that reads the state never makes the plugin a listener, also while a handle follows the source, after a release and a re-open", async () => {
+  const { plugin, host, stop } = await startPlugin(() => {}, {
+    capabilities: ["playback.read", "processing.video", "commands"],
+  });
+  try {
+    await host.settle();
+    // A command field that reads the player, and a handle that subscribes
+    // `source.state` as the SDK's copy.
+    plugin.commands.add({
+      id: "pause",
+      title: "Pause",
+      enabled: () => plugin.player.state.phase === "ready",
+      run: () => {},
+    });
+    let view = plugin.video.view();
+    await host.settle();
+    assert.ok(host.subscriptions.has("source.state"));
+    assert.deepEqual(
+      [...host.listening],
+      [],
+      "the read and the handle claim nothing",
+    );
+    host.openElsewhere("/a.mp4");
+    await host.settle();
+    assert.deepEqual([...host.listening], []);
+    // A stream is a listener; the read's reason joins it while it lives.
+    const feed = plugin.player.stream(() => {});
+    await host.settle();
+    assert.deepEqual([...host.listening], ["source.state"]);
+    assert.equal(host.listeningWhy.get("source.state")!.length, 2);
+    feed.stop();
+    await host.settle();
+    assert.deepEqual(
+      [...host.listening],
+      [],
+      "back to the copy, still subscribed by the handle",
+    );
+    assert.ok(host.subscriptions.has("source.state"));
+    // Release: the handle goes, the group is unsubscribed; re-open: a new
+    // handle subscribes it again, and the read still claims nothing.
+    await view.dispose();
+    await host.settle();
+    assert.ok(!host.subscriptions.has("source.state"));
+    view = plugin.video.view();
+    await host.settle();
+    assert.ok(host.subscriptions.has("source.state"));
+    assert.deepEqual(
+      [...host.listening],
+      [],
+      "the re-opened group is the SDK's copy",
+    );
+    // The last word on `source.state` (the re-opened subscription) is the copy.
+    const last = marks(host)
+      .filter((m) => m.event === "source.state")
+      .at(-1);
+    assert.equal(last?.mirror, true);
+    await view.dispose();
   } finally {
     await stop();
   }

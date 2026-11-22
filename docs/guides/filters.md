@@ -143,8 +143,8 @@ export default async function activate(plugin: Plugin) {
     rdiv: 1 / 16, // normalization
     bias: 0,
   };
-  // Made when first used: a chain follows the player's source from the
-  // moment it is made, which keeps the plugin running.
+  // Made when first used: a chain keeps the plugin running once it has
+  // nodes (an empty one sends nothing and holds nothing).
   let filter: VideoFilter | undefined;
   let filterOn = false;
   plugin.commands.add({

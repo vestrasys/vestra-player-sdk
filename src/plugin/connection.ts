@@ -155,9 +155,10 @@ const SILENT: StateSignals = {
 export type Needs = "held" | null;
 
 /**
- * One host event's listeners. `active` counts the plugin's own listeners and
- * holds (an `onChange`, a binding that read the state); the SDK's own state
- * mirrors do not count. The player is told whether anything but a mirror
+ * One host event's listeners. `active` counts the plugin's own listeners,
+ * holds and streams (an `onChange`, `player.stream`); the SDK's own state
+ * mirrors, the handles that follow the source (`track`) and a binding's
+ * read do not count. The player is told whether anything but a mirror
  * listens (`events.subscribe { mirror }`): a plugin whose subscriptions are all
  * mirrors holds no listener and may be stopped while idle; its state is read
  * again when it starts.
@@ -170,7 +171,7 @@ interface EventGroup {
    */
   mirrors: Set<Listener>;
   active: number;
-  /** Why each active holder listens, in the order they came. */
+  /** Why each holder listens (a binding's read too), in the order they came. */
   whys: Map<object, Why>;
   /** The reasons the player was last told, joined (to compare). */
   toldWhy?: string;
@@ -559,7 +560,7 @@ export class Connection {
     return this.#hold(event, why, always ? "always" : "read");
   }
   /**
-   * The SDK's own follower of `event` (SDK 1.11.0-rc.4): a handle that sends
+   * The SDK's own follower of `event`: a handle that sends
    * its values again when the source changes (`plugin.video.view()`, a
    * shader channel, a processing node). It subscribes a held-only group
    * while it lives, as {@link Connection.hold} does, but counts as the SDK's
@@ -604,17 +605,19 @@ export class Connection {
     };
   }
   /**
-   * Count `event` as listened to while a binding reads its state: the
-   * binding's reason joins what the player is told while the group is
-   * subscribed, but it never subscribes a held-only group on its own (a
-   * bound value that reads `plugin.player.state` shows the newest snapshot
-   * the plugin has; a stream or an event makes it follow the player).
-   * Nothing when nothing started the group.
+   * A binding (or a command's function field) reads `event`'s state: its
+   * reason joins what the player is told while a plugin listener, hold or
+   * stream listens to the group, but the read never makes the plugin a
+   * listener on its own, whether or not the group is subscribed (by a
+   * handle that follows the source, {@link Connection.track}). It never
+   * subscribes a held-only group either: a bound value that reads
+   * `plugin.player.state` shows the newest snapshot the plugin has; a stream
+   * or an event makes it follow the player. Nothing when nothing started
+   * the group.
    */
   bindingReads(event: string, why: Why): Disposable {
     const group = this.#events.get(event);
     if (!group) return { dispose: async () => {} };
-    group.active++;
     const token = {};
     group.whys.set(token, why);
     this.#tell(event, group);
@@ -623,7 +626,6 @@ export class Connection {
       dispose: async () => {
         if (!reading) return;
         reading = false;
-        group.active--;
         group.whys.delete(token);
         if (this.#events.get(event) === group) this.#tell(event, group);
       },
