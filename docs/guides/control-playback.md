@@ -14,19 +14,18 @@ The player has one source. The user, other plugins and yours all change it, so e
 ### Follow the player
 
 ```ts
-plugin.player.subscribe(); // the player's events from now on
 await plugin.player.read(); // the player's state and timeline, read once
 ```
 
-Call both first in `activate`. `read()` fills `player.state` and the timeline once and keeps the state current after your own actions; `subscribe()` keeps it current when the change comes from elsewhere (without it, the state only moves after your own calls and `refresh()`).
+Call it first in `activate`. `read()` fills `player.state` and the timeline once and keeps the state current after your own actions. To hear what happens elsewhere, listen to an event (`plugin.player.on("source.ready", …)`), which lets the plugin go to standby, or open a stream while something shows the state (`plugin.player.stream(fn)`), which keeps it running; without either, the state only moves after your own calls and `refresh()`.
 
 ### Read the state
 
-`plugin.player.state` is a snapshot the SDK keeps current from the player's events. `onChange` runs after it changed; read the new snapshot there instead of asking the player.
+`plugin.player.state` is the newest snapshot the plugin has. While a stream is open the SDK keeps it current from the player's events and calls the stream's listener after it changed; read the new snapshot there instead of asking the player.
 
 ```ts
 const info = plugin.osd.panel();
-plugin.player.onChange((state) => {
+plugin.player.stream((state) => {
   // `position` and `duration` are seconds, null while unknown.
   if (state.phase !== "ready") return info.set(null);
   info.set("{} / {} s", [state.position?.toFixed(0) ?? "–", state.duration?.toFixed(0) ?? "–"]);
@@ -141,11 +140,11 @@ A plugin that shows the position on the OSD, offers a Pause item that greys out 
 import type { Plugin, PluginError } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
   await plugin.player.read(); // the player's state and timeline, read once
-  // A live line on the OSD while something plays.
+  // A live line on the OSD while something plays; the stream also keeps
+  // the state the commands below read current.
   const info = plugin.osd.panel();
-  plugin.player.onChange((state) => {
+  plugin.player.stream((state) => {
     if (state.phase !== "ready") return info.set(null);
     info.set("{} / {} s", [state.position?.toFixed(0) ?? "–", state.duration?.toFixed(0) ?? "–"]);
   });

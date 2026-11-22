@@ -4,17 +4,21 @@
   "subscriptions": [
     {
       "event": "source.state",
-      "mirror": true
+      "why": [
+        "a stream opened at main.ts"
+      ]
     },
     {
       "event": "source.state",
       "why": [
+        "a stream opened at main.ts",
         "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
       ]
     },
     {
       "event": "source.state",
       "why": [
+        "a stream opened at main.ts",
         "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
         "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
       ]
@@ -22,6 +26,7 @@
     {
       "event": "source.state",
       "why": [
+        "a stream opened at main.ts",
         "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
         "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
         "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
@@ -30,36 +35,12 @@
     {
       "event": "source.state",
       "why": [
+        "a stream opened at main.ts",
         "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
         "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
         "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
         "command \"2×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
       ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    },
-    {
-      "event": "source.state",
-      "mirror": true
     }
   ],
   "polled": [],
@@ -74,7 +55,7 @@
     },
     "open": {
       "passes": 1,
-      "fullPasses": 0,
+      "fullPasses": 1,
       "evaluations": 4,
       "parts": 0,
       "skippedParts": 0,
@@ -82,16 +63,16 @@
     },
     "changes": {
       "passes": 3,
-      "fullPasses": 0,
-      "evaluations": 4,
+      "fullPasses": 3,
+      "evaluations": 12,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "command": {
       "passes": 3,
-      "fullPasses": 2,
-      "evaluations": 8,
+      "fullPasses": 3,
+      "evaluations": 12,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -115,8 +96,14 @@
         "method": "events.subscribe",
         "params": {
           "event": "source.state",
-          "mirror": true
+          "why": [
+            "a stream opened at main.ts"
+          ]
         }
+      },
+      {
+        "method": "source.state",
+        "params": {}
       },
       {
         "method": "source.state",
@@ -261,6 +248,7 @@
         "params": {
           "event": "source.state",
           "why": [
+            "a stream opened at main.ts",
             "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
           ]
         }
@@ -270,6 +258,7 @@
         "params": {
           "event": "source.state",
           "why": [
+            "a stream opened at main.ts",
             "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
             "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
           ]
@@ -280,6 +269,7 @@
         "params": {
           "event": "source.state",
           "why": [
+            "a stream opened at main.ts",
             "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
             "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
             "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
@@ -291,6 +281,7 @@
         "params": {
           "event": "source.state",
           "why": [
+            "a stream opened at main.ts",
             "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
             "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
             "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
@@ -436,74 +427,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "speed"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "rate-2"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "rate-1.5"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "rate-1"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "mirror": true
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "rate-0.5"
-        }
-      }
-    ]
+    "dispose": []
   }
 }

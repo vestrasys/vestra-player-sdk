@@ -47,7 +47,7 @@ Add the scripts to `package.json`:
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.10.0" }
+  "devDependencies": { "@vestra-player/sdk": "^1.11.0" }
 }
 ```
 
@@ -97,7 +97,6 @@ Create `main.ts`:
 import type { Plugin } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
   await plugin.player.read(); // the player's state and timeline, read once
   plugin.commands.add({
     id: "where",
@@ -139,7 +138,7 @@ Open a video, then choose **Tools ▸ Where am I?** in the right-click menu, or 
 
 ## 5. Choose a style
 
-The menu item above follows the playback state through `plugin.player.state` and the SDK decides when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style starts with `plugin.player.subscribe()` and `await plugin.player.read()`, as above.
+The menu item above follows the playback state through `plugin.player.state` and the SDK decides when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style starts with `await plugin.player.read()` and a stream that keeps the state following the player while the panel shows it.
 
 ### A: declare with `bind()`
 

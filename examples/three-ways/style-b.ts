@@ -136,7 +136,9 @@ export function keyframes(plugin: Plugin) {
 
 /** All four scenarios in style B. */
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
+  // The bound values below read the player's state: a stream keeps it
+  // following the player (and the plugin running) while the plugin is up.
+  plugin.player.stream(() => {});
   await plugin.player.read(); // the player's state and timeline, read once
   speed(plugin);
   frames(plugin);

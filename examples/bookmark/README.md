@@ -6,7 +6,7 @@ A small, complete plugin: **Playback → Bookmark…** opens a tool window that 
 
 | Follows the player | API |
 | --- | --- |
-| `subscribe()`, `read()` | `windows.create`, `Window.bind` / `on`, `player.state`, `player.seek` |
+| `stream()`, `read()` | `windows.create`, `Window.bind` / `on`, `player.state`, `player.seek` |
 
 ## Run it
 

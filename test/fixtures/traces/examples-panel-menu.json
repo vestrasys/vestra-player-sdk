@@ -137,23 +137,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "remove"
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "first"
-        }
-      },
-      {
-        "method": "ui.unmount",
-        "params": {}
-      }
-    ]
+    "dispose": []
   }
 }

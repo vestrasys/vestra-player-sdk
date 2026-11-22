@@ -6,7 +6,7 @@ import type { Text } from "./ui-locale.ts";
 // Targets of {@link} in the doc comments only: imported so that typedoc
 // resolves them to these declarations (not to DOM globals such as Window).
 /* oxlint-disable no-unused-vars */
-import type { PlayerState } from "./playback.ts";
+import type { Player, PlayerState } from "./playback.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- subtitles
@@ -126,11 +126,12 @@ export interface SubtitleConditional {
  * @remarks
  * The subtitle tracks of the current source, the primary and secondary
  * selection, uploaded files and the style. `state` is the SDK's snapshot of
- * the player's subtitle state (`null` until first read). The player has no
- * subtitle event: the SDK reads the state again when the source, its phase
- * or the backend changes (after `plugin.player.subscribe()`) and after this plugin's own
- * changes, so a selection the user or another plugin changed shows only
- * after `refresh()`. A change without `ifCurrent` reads the state first
+ * the player's subtitle state (`null` until first read). While an
+ * `onChange` listener exists the SDK reads the state again when the
+ * source, its phase or the backend changes; it takes each
+ * `subtitles.changed` a {@link Player.on} listener hears; and it reads it
+ * after this plugin's own changes. Otherwise a selection the user or
+ * another plugin changed shows only after `refresh()`. A change without `ifCurrent` reads the state first
  * and applies to it; pass `ifCurrent` to make it fail with `stale` when the
  * selection changed since that state. Each change is one operation the
  * player confirms; `select`, `remove` and `setStyle` resolve with the new
@@ -167,8 +168,8 @@ export interface Subtitles {
    *
    * @example Count the subtitle tracks of the file
    * The plugin reads how many subtitle tracks the file has before building a
-   * menu. `refresh` asks the player and resolves with the current state, also
-   * without `plugin.player.subscribe()`; `state` holds it afterwards.
+   * menu. `refresh` asks the player and resolves with the current state;
+   * `state` holds it afterwards.
    * ```ts
    * const { tracks } = await plugin.subtitles.refresh();
    * await plugin.osd.show("{} subtitle tracks", [tracks.length]);

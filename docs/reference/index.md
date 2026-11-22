@@ -14,7 +14,7 @@ Tables to look things up in while you write a plugin. Each page collects facts t
 - [Theme](theme.md): `Theme` tokens and values, fonts, surface sizes and layouts, icons, `@vestra/widgets.slint`, `@vestra/markdown.slint`, `@vestra/focus.slint` and the bar buttons.
 - [Command line](cli.md): the `vestra-plugin` commands and options, what `build` puts into a package, and the `vestra` field of `package.json`.
 - [Error codes](errors.md): every `error.code` and what it means.
-- [Events](events.md): every event a plugin can listen to, its payload, its listeners, whether it wakes a stopped plugin and whether it waits for `subscribe()`.
+- [Events](events.md): every event a plugin can listen to, its payload, its listeners, whether it wakes a stopped plugin and whether the SDK's copy follows it only while something holds it.
 - [Messages](messages.md): every request method of the player's protocol the SDK sends, with its parameters, result, errors and the SDK member that sends it.
 - [Capability scan](scan.md): the boundary categories `vestra-plugin scan` reports, what each covers, and the JSON it prints.
 - [mpv](mpv.md): the mpv pass-through: members and messages, what it refuses and why, who owns filters and observers, limits.

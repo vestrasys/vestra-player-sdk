@@ -3,8 +3,10 @@
 // option, or a `capabilities` list in the manifest a test writes for its
 // temporary package. Only two of them ever changed how a plugin ran, and
 // those are now calls first in `activate`, which this wrapper makes:
-// `events` → `plugin.player.subscribe()`, `playback.read` → `await
-// plugin.player.read()`. The rest means nothing any more and is dropped.
+// `playback.read` → `await plugin.player.read()`. `events` (until SDK
+// 1.11.0 the call `plugin.player.subscribe()`) means nothing any more: an
+// event reaches a plugin from its first listener, and a test that needs a
+// copy of a state to follow the player opens a stream or listens itself. The rest means nothing any more and is dropped.
 // Such a manifest is not handed to `startPlugin` (which refuses the field,
 // as the player does): its id is passed instead. Without either list the
 // call is `startPlugin`'s own.
@@ -43,7 +45,6 @@ export function startPlugin(
   const { capabilities } = old;
   return start(
     async (plugin) => {
-      if (capabilities.includes("events")) plugin.player.subscribe();
       if (capabilities.includes("playback.read")) await plugin.player.read();
       return activate(plugin);
     },

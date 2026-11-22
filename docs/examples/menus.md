@@ -44,7 +44,7 @@ examples/menus/
 
 {@includeCode ../../examples/menus/manifest.json}
 
-`plugin.player.subscribe()` and `await plugin.player.read()`, first in `activate`, read the current speed and keep it up to date.
+`await plugin.player.read()` and a stream (`plugin.player.stream(() => {})`), first in `activate`, read the current speed and keep it up to date.
 
 ## The code
 
@@ -99,6 +99,6 @@ Start the player with `--plugin <path to examples/menus>`, open a video and pick
 
 ## Try next
 
-1. **Keep the title in step** when the speed changes elsewhere: call `showSpeed` from `plugin.player.onChange` when `state.rate` differs from the last value shown.
+1. **Keep the title in step** when the speed changes elsewhere: call `showSpeed` from the stream's listener when `state.rate` differs from the last value shown.
 2. **A check item.** Add a command with `checked: () => player.state.paused` (no `radio`) that toggles pause.
 3. **A repeating key.** Give a command `bindings: ["Ctrl+Alt+ArrowUp"]` and `repeat: true`: it runs again while the key is held, which suits small steps such as volume.

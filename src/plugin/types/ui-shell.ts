@@ -272,8 +272,9 @@ export interface Settings {
  * The player decides when the backdrop shows: while the source is empty or
  * loading, and while ready media has no video picture (audio files). The
  * plugin decides what to draw, from {@link Player.state} and
- * {@link Player.stats}. After `plugin.player.subscribe()`, `state` follows every change; without
- * it, it refreshes only when this plugin mounts.
+ * {@link Player.stats}. While an `onChange` listener exists `state`
+ * follows every change; otherwise it refreshes only when this plugin
+ * mounts.
  *
  * @example React when a video picture appears
  * The OSD says "Video is playing" when the backdrop gives way to a video
@@ -822,12 +823,12 @@ export interface Dialogs {
  *
  * @example Show live playback numbers over the video
  * A block over the video shows the position and the duration, updated
- * as playback moves. `player.onChange` runs after the SDK updated the
- * state (after `plugin.player.subscribe()`); `set` never throws and sends only the newest
- * text while one is in flight, so calling it on every change is fine.
+ * as playback moves. A stream's listener runs after the SDK updated the
+ * state; `set` never throws and sends only the newest text while one is
+ * in flight, so calling it on every change is fine.
  * ```ts
  * const info = plugin.osd.panel();
- * plugin.player.onChange((state) =>
+ * plugin.player.stream((state) =>
  *   // A template with data arguments; the player translates "{} / {} s".
  *   info.set("{} / {} s", [state.position?.toFixed(1) ?? "–", state.duration?.toFixed(1) ?? "–"]),
  * );

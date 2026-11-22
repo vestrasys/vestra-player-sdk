@@ -50,10 +50,10 @@ export const validVersion = (value: unknown): value is string =>
 
 /**
  * Why a manifest with `capabilities` is refused (SDK 1.9.0, player 0.9.0):
- * the field is gone, and what it switched on is two calls.
+ * the field is gone, and what it switched on is a call or nothing.
  */
 export const CAPABILITIES_REMOVED =
-  'manifest.json has "capabilities", which SDK 1.9.0 (player 0.9.0) removed: delete the field. What it switched on is now a call, first in activate(): plugin.player.subscribe() for "events", await plugin.player.read() for "playback.read"; everything else needs nothing (the store shows what the code uses, from its scan)';
+  'manifest.json has "capabilities", which SDK 1.9.0 (player 0.9.0) removed: delete the field. What it switched on: "events" needs nothing (an event reaches the plugin from its first listener), "playback.read" is await plugin.player.read(), first in activate(); everything else needs nothing (the store shows what the code uses, from its scan)';
 
 /** Problems with `manifest` (empty: valid) and hints that do not fail. */
 export function manifestProblems(

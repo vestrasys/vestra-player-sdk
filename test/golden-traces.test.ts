@@ -494,16 +494,11 @@ test("golden trace: the style-B speed display runs no update pass", () => {
     assert.equal(trace.counts[phase].passes, 0, phase);
     assert.equal(trace.counts[phase].evaluations, 0, phase);
   }
-  // The state copy's mirror (the plugin calls `subscribe()` and `read()`
-  // first), the listener's mark, named, and the mirror again once the
-  // listener is disposed.
+  // The listener's mark, named (SDK 1.11.0: the state copy subscribes
+  // nothing by itself, and the subscription ends with the listener).
   assert.deepEqual(
     trace.subscriptions.map((s) => [s.event, s.mirror ?? false, !!s.why]),
-    [
-      ["source.state", true, false],
-      ["source.state", false, true],
-      ["source.state", true, false],
-    ],
+    [["source.state", false, true]],
   );
 });
 
@@ -983,10 +978,10 @@ hostScenario("residency-told", async () => {
     const start = async (extra: boolean, id = "test.residency") => {
       const { host, stop } = await startPlugin(
         (p: Plugin) => {
-          p.player.onChange(() => {});
+          p.player.on("source.state", () => {});
           if (extra) p.window.onChange(() => {});
         },
-        { capabilities: ["events", "playback.read"], id },
+        { capabilities: ["playback.read"], id },
       );
       runs.push(toJson(host.keepsRunning));
       await stop();

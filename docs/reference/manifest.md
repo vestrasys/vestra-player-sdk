@@ -47,7 +47,7 @@ description: Every manifest.json field with its rules.
 
 - `name`, `punchline`, `description` and `tags` are English source text; the player shows them translated with the plugin's own catalog ([Add settings and translations](../guides/i18n.md)) through {@link "@vestra-player/sdk"!PluginInfo | PluginInfo}.
 - An `icon`, `readme` or `changelog` that is named but missing is refused. `vestra-plugin build` copies them (and a default `README.md` or `CHANGELOG.md`) into the package: the README is the plugin's page in the store, so write it for users.
-- `capabilities` is no field any more (SDK 1.9.0, player 0.9.0): a manifest that has it is refused, and the message says what to call instead (`plugin.player.subscribe()`, `await plugin.player.read()`). The store shows what the code uses from a scan ([Capability scan](scan.md)).
+- `capabilities` is no field any more (SDK 1.9.0, player 0.9.0): a manifest that has it is refused, and the message says what to do instead (`await plugin.player.read()`; `events` needs nothing). The store shows what the code uses from a scan ([Capability scan](scan.md)).
 
 ## Versions
 

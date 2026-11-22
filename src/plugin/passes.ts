@@ -353,7 +353,7 @@ export class Passes {
         }
       for (const [event, why] of reads)
         if (!held.has(event))
-          held.set(event, this.#connection.hold(event, why));
+          held.set(event, this.#connection.bindingReads(event, why));
     }
   }
   /**

@@ -21,7 +21,7 @@ The centre is the pixel itself, the edges its four direct neighbours, the corner
 
 ### Follow the player
 
-A filter chain follows the player's source: call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`, so a chain set before a video starts applies when one does.
+A filter chain follows the player's source by itself while it exists, so a chain set before a video starts applies when one does.
 
 ### Write the kernel as a shader
 
@@ -117,7 +117,6 @@ import { join } from "node:path";
 import type { ConvolutionPlane, Plugin } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
   await plugin.player.read(); // the player's state and timeline, read once
   const shaderFile = join(import.meta.dirname, "shaders", "blur.glsl");
   const shaders = plugin.video.shaders("blur");

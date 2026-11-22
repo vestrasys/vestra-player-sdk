@@ -344,18 +344,6 @@
       "settled"
     ],
     [
-      "request",
-      "events.subscribe"
-    ],
-    [
-      "request",
-      "commands.unregister"
-    ],
-    [
-      "answer",
-      "events.subscribe"
-    ],
-    [
       "event",
       "commands.keys",
       {
@@ -405,10 +393,6 @@
         },
         "revision": 5
       }
-    ],
-    [
-      "answer",
-      "commands.unregister"
     ]
   ]
 }

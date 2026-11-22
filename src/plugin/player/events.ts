@@ -6,43 +6,55 @@
  * compared.
  */
 import { failure } from "../errors.ts";
+import type { Needs } from "../connection.ts";
 import type { ScopeImpl } from "../scope.ts";
 import type {
   Disposable,
   EventPayload,
+  FactEvent,
   HostEvent,
   SourceEvent,
 } from "../types.ts";
 
 /**
- * Which events need event delivery (`"events"`: they reach the plugin only
- * after `plugin.player.subscribe()`, as they needed the `events`
- * declaration before 1.9.0); `null`: they arrive from the first listener.
+ * Every event a plugin listens to by name, and when its group is
+ * subscribed at the player (`Needs`): `"held"` only while a listener, a
+ * hold or a stream holds it (the SDK's own copy of a frequent state never
+ * subscribes on its own); `null` from its first entry, a copy included.
+ * A plugin listener subscribes its event either way.
  */
 export const EVENT_NEEDS: Readonly<
-  Record<HostEvent | SourceEvent, "events" | null>
+  Record<HostEvent | SourceEvent | FactEvent, Needs>
 > = {
-  "source.state": "events",
-  "playback.backend": "events",
-  "window.state": "events",
+  "source.state": "held",
+  "playback.backend": "held",
+  "window.state": "held",
   "packages.changed": null,
   "bindings.changed": null,
   "commands.keys": null,
-  "timeline.changed": "events",
-  "appearance.changed": "events",
-  "resolvers.fileTypes": "events",
+  "timeline.changed": "held",
+  "appearance.changed": "held",
+  "resolvers.fileTypes": "held",
   "video.upscaling.changed": null,
   "video.motion.changed": null,
   "source.opening": null,
   "source.ready": null,
   "source.ended": null,
+  "video.reconfigured": null,
+  "audio.reconfigured": null,
+  "audio.tracks.changed": null,
+  "subtitles.changed": null,
+  "window.changed": null,
+  "layout.changed": null,
+  "audio.devices.changed": null,
+  "app.started": null,
 };
 
 /** `Player.on`'s arguments: a {@link HostEvent} name and a function. */
 export function checkOn(
   event: unknown,
   listener: unknown,
-): asserts event is HostEvent | SourceEvent {
+): asserts event is HostEvent | SourceEvent | FactEvent {
   if (typeof event !== "string" || !Object.hasOwn(EVENT_NEEDS, event))
     throw failure(
       "invalid",
@@ -63,13 +75,29 @@ export const SOURCE_EVENTS: ReadonlySet<string> = new Set<SourceEvent>([
 ]);
 
 /**
+ * The second batch of events (SDK 1.11.0): a fact that changed, once per
+ * change. Some reach the listener in the SDK's shape (the scope converts
+ * them, `ScopeImpl.fact`).
+ */
+export const FACT_EVENTS: ReadonlySet<string> = new Set<FactEvent>([
+  "video.reconfigured",
+  "audio.reconfigured",
+  "audio.tracks.changed",
+  "subtitles.changed",
+  "window.changed",
+  "layout.changed",
+  "audio.devices.changed",
+  "app.started",
+]);
+
+/**
  * `Player.on`: `listener` hears each `event`, with a copy of its data;
- * `convert` (the source events) turns the copy into what the listener
- * gets.
+ * `convert` (the source and fact events) turns the copy into what the
+ * listener gets.
  */
 export function playerOn<E extends HostEvent>(
   scope: ScopeImpl,
-  event: E | SourceEvent,
+  event: E | SourceEvent | FactEvent,
   listener: (data: EventPayload<E>) => void,
   convert: (data: unknown) => unknown = (data) => data,
 ): Disposable {

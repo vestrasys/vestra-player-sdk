@@ -4,17 +4,9 @@
   "subscriptions": [
     {
       "event": "source.state",
-      "mirror": true
-    },
-    {
-      "event": "source.state",
       "why": [
         "a listener added at main.ts"
       ]
-    },
-    {
-      "event": "source.state",
-      "mirror": true
     }
   ],
   "polled": [],
@@ -67,19 +59,21 @@
         "params": {}
       },
       {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "mirror": true
-        }
-      },
-      {
         "method": "source.state",
         "params": {}
       },
       {
         "method": "timeline.marks",
         "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "source.state",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
       },
       {
         "method": "ui.mount",
@@ -89,15 +83,6 @@
           "component": "Bar",
           "global": "BarBridge",
           "properties": {}
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a listener added at main.ts"
-          ]
         }
       },
       {
@@ -208,24 +193,6 @@
         "params": {}
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "rate.cycle"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "mirror": true
-        }
-      },
-      {
-        "method": "ui.unmount",
-        "params": {}
-      }
-    ]
+    "dispose": []
   }
 }

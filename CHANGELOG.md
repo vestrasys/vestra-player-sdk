@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.11.0
+
+**The second batch of events.** Needs the player version that sends the new events (0.11).
+
+- **Fact events** (new, `FactEvent` and `FactEventPayloads`, a third overload of `player.on`): `video.reconfigured` (`{ sourceId, width, height, displayWidth, displayHeight, fps, rotation, hdr }`), `audio.reconfigured` (`{ sourceId, sampleRate, channels, format }`), `audio.tracks.changed` (`{ sourceId, audioTracks }`, as `AudioTrack`s), `subtitles.changed` (`{ state }`, a `SubtitlesState`, taken into `plugin.subtitles.state` first), `window.changed` (a `WindowState`, taken into `plugin.window.state` first; a resize once it has settled for 300 ms), `layout.changed` (`{ slots }`, each position with its panels, `LayoutPosition`), `audio.devices.changed` (`{ devices, requested, active }`) and `app.started` (`{ version, previous }`). Each is sent once per change; a listener of one does not keep the plugin running, and the player wakes a plugin in standby for it.
+- Removed `Player.subscribe()` and `Player.onChange()`.
+- **An event reaches a plugin from its first listener.** `source.state`, `playback.backend`, `window.state`, `timeline.changed`, `appearance.changed` and `resolvers.fileTypes` are subscribed while a listener, a watcher (`MainWindow.onChange`, a panel slot's `onChange`, `Subtitles.onChange`, a media handle's `ready` and `onEnd`, a scrub) or a stream holds them; the SDK's own copy and a binding's read never subscribe them on their own, so a bound value or a command state that reads `plugin.player.state` shows the newest snapshot the plugin has. `Media.ready` no longer polls the state every 100 ms.
+- **No request after `runtime.stop`**: once the player sent `runtime.stop`, every request of the plugin is refused with `disabled` and not sent, the plugin's own cleanup included (the player's runner refused them already). In `TestHost` the cleanup requests at a plugin's stop (and at `park()` and `upgrade()`) are therefore no longer sent, and the test host revokes what the run held itself, as the player does: its windows, panels, commands, settings pages, resolvers, sequence provider, streams and filter chains.
+- **`TestHost`** sends the fact events by the player's rules: `audio.tracks.changed` after a source change, `window.changed` and `layout.changed` after a `window.state`, `subtitles.changed` and `audio.devices.changed` after a request or an event changed them, and `video.reconfigured` and `audio.reconfigured` from `host.stats` when a source becomes ready. `app.started` is sent with `host.emit`.
+
 ## 1.10.1
 
 **Temporary windows: a product-data sync and the members that go with them.** Who must change: nobody. Additions and docs only; every existing behaviour of the SDK and of `TestHost` is as in 1.10.0 (a `TestHost` behaves differently only when a test sets the new `app.temporary`). Needs player 0.10.3 for the additions; an older player sends no `temporary` and refuses `app.openWindow`.

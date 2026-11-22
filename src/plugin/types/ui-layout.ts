@@ -8,6 +8,7 @@ import type { View } from "./ui-content.ts";
 /* oxlint-disable no-unused-vars */
 import type { MainWindow, Scope } from "./base.ts";
 import type { PluginInfo } from "./packages.ts";
+import type { Player } from "./playback.ts";
 import type { Ui } from "./ui-content.ts";
 import type { Dialogs, Panels, Settings } from "./ui-shell.ts";
 /* oxlint-enable no-unused-vars */
@@ -326,6 +327,18 @@ export interface SlotState {
 }
 
 /**
+ * One position of the panel layout, as `layout.changed` reports it: its
+ * state and its panels, in tab order, with the active one marked.
+ *
+ * @since 1.11.0
+ * @category UI
+ */
+export interface LayoutPosition extends SlotState {
+  /** The position's panels in tab order; `active` marks the one shown. */
+  readonly panels: readonly SlotPanel[];
+}
+
+/**
  * One panel of a position ({@link PanelSlot.panels}): a tab of the sidebar.
  *
  * @since 1.5.2
@@ -379,9 +392,10 @@ export interface PanelState {
  * the sidebar's visibility, width, detached state and floating window
  * position across launches.
  *
- * `state` is read when first used. After `plugin.player.subscribe()`, it then follows every
- * change (the user, other plugins, the window size); without `plugin.player.subscribe()`, it
- * refreshes only after this plugin's own changes.
+ * `state` is read when first used. While an `onChange` listener exists it
+ * follows every change (the user, other plugins, the window size), and it
+ * takes each `layout.changed` a {@link Player.on} listener hears;
+ * otherwise it refreshes only after this plugin's own changes.
  *
  * @example Add a "Show sidebar" item that works with any sidebar panel
  * Tools ▸ Show sidebar shows or hides the sidebar, whichever plugin's
@@ -426,8 +440,9 @@ export interface PanelSlot {
    * Run code when the position's state changes.
    *
    * @remarks
-   * Needs `plugin.player.subscribe()`: without it the listener runs only after this plugin's own
-   * changes. Called with `null` when the panel there is unmounted, and also
+   * The listener runs on every change, whoever caused it (it keeps the
+   * plugin running while it exists; `layout.changed` with {@link Player.on}
+   * does not). Called with `null` when the panel there is unmounted, and also
    * when only the tabs changed ({@link PanelSlot.panels}: a panel added or
    * removed, another tab current). Errors go to {@link Scope.onError}.
    *
@@ -436,8 +451,8 @@ export interface PanelSlot {
    *
    * @example Tell the user when the window is too narrow for the sidebar
    * When the sidebar should show but the window has no room for it, the
-   * OSD says so. After `plugin.player.subscribe()`, the listener runs on every change of the
-   * position, whoever caused it. The player reports `reason: "space"` when
+   * OSD says so. The listener runs on every change of the position,
+   * whoever caused it. The player reports `reason: "space"` when
    * the preference is to show the sidebar but the window is too small.
    * ```ts
    * plugin.panels.sidebar.onChange((state) => {
@@ -482,8 +497,8 @@ export interface PanelSlot {
    * Flip the user's preference, using the player's current value.
    *
    * @remarks
-   * Reads the state from the player first, so it is right even without
-   * `plugin.player.subscribe()`. It is a switch, the same in every mode: in fullscreen a column
+   * Reads the state from the player first, so it is right even when the
+   * copy does not follow the player. It is a switch, the same in every mode: in fullscreen a column
    * switched on is revealed by the pointer at the right edge, and is not popped
    * out by the toggle (`setVisible(true)` pops it out). Switching it off while
    * it is out slides it in at once.
@@ -496,7 +511,7 @@ export interface PanelSlot {
    * @example Toggle the control bar from a checkable menu item
    * Screen ▸ Control bar shows or hides the bottom bar and carries a check
    * mark while it is shown. `toggle` reads the player's current preference
-   * first, so it is right even without `plugin.player.subscribe()`; `checked` is evaluated
+   * first, so it is right even when nothing follows the layout; `checked` is evaluated
    * again after the command runs and follows `state`.
    * ```ts
    * plugin.commands.add({
@@ -709,9 +724,9 @@ export interface Panel extends View, Disposable {
    * one; `null` until {@link Panel.ready} resolved (and after `dispose`).
    *
    * @remarks
-   * Read when first used; after `plugin.player.subscribe()`, it then follows every change (the
-   * user switching tabs, other plugins, the window size), without it
-   * only this plugin's own changes. A sidebar panel in a background tab
+   * Read when first used; while an `onChange` listener exists it follows
+   * every change (the user switching tabs, other plugins, the window size),
+   * otherwise only this plugin's own changes. A sidebar panel in a background tab
    * has `active: false`, `effective: false` and `reason: "otherTab"`.
    *
    * A background tab does not keep the plugin running. If the panel is all that
@@ -735,8 +750,9 @@ export interface Panel extends View, Disposable {
    * Run code when this panel's state changes.
    *
    * @remarks
-   * Needs `plugin.player.subscribe()`: without it the listener runs only after this plugin's
-   * own changes. Called with `null` when the panel is unmounted. Errors go
+   * The listener runs on every change, whoever caused it (it keeps the
+   * plugin running while it exists). Called with `null` when the panel is
+   * unmounted. Errors go
    * to {@link Scope.onError}.
    *
    * @param listener - Receives the new state.
@@ -744,8 +760,8 @@ export interface Panel extends View, Disposable {
    *
    * @example Notice when the list moves to a background tab
    * The plugin logs when the user switches the sidebar to another plugin's
-   * tab, for example to pause work the list does. After `plugin.player.subscribe()`, the
-   * listener runs on every change. `reason: "otherTab"` exists only in a
+   * tab, for example to pause work the list does. The listener runs on
+   * every change. `reason: "otherTab"` exists only in a
    * panel's own state: the SDK sets it when the sidebar's current tab is
    * another plugin's (the position's state never has it).
    * ```ts

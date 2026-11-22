@@ -57,7 +57,7 @@ function framesBy(count: number) {
 async function start(scenario: Scenario, host = new TestHost()) {
   const started = await startPlugin(
     async (plugin: Plugin) => {
-      plugin.player.subscribe();
+      plugin.player.stream(() => {});
       await plugin.player.read();
       return scenario(plugin);
     },

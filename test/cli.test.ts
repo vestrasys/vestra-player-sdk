@@ -173,7 +173,7 @@ test("type errors, runtime SDK imports and a manifest with capabilities fail", (
     refused.stderr,
     /"capabilities", which SDK 1\.9\.0 \(player 0\.9\.0\) removed/,
   );
-  assert.match(refused.stderr, /plugin\.player\.subscribe\(\)/);
+  assert.match(refused.stderr, /await plugin\.player\.read\(\)/);
   const json = vestraPlugin(project(HELLO), "check", "--json");
   assert.equal(json.status, 1);
   assert.match(json.stderr, /--json was removed in SDK 1\.9\.0/);

@@ -34,6 +34,9 @@ async function started(host = new TestHost()) {
   const result = await startPlugin(
     (p: Plugin) => {
       plugin = p;
+      // Its calls are conditional on the state it saw: a stream keeps it
+      // following the player (SDK 1.11.0).
+      p.player.stream(() => {});
     },
     { capabilities: all, host },
   );

@@ -106,8 +106,7 @@ export function keyframes(plugin: Plugin) {
     video: null as { sourceId: number; video: boolean } | null,
   });
   let asking: number | null = null;
-  plugin.player.onChange(({ phase, sourceId }) => {
-    if (phase !== "ready" || sourceId === null) return;
+  plugin.player.on("source.ready", ({ state: { sourceId } }) => {
     if (st.video?.sourceId === sourceId || asking === sourceId) return;
     asking = sourceId;
     void plugin.player.stats().then(
@@ -134,8 +133,7 @@ export function keyframesManual(plugin: Plugin) {
   // #region keyframes-manual
   let video: { sourceId: number; video: boolean } | null = null;
   let asking: number | null = null;
-  plugin.player.onChange(({ phase, sourceId }) => {
-    if (phase !== "ready" || sourceId === null) return;
+  plugin.player.on("source.ready", ({ state: { sourceId } }) => {
     if (video?.sourceId === sourceId || asking === sourceId) return;
     asking = sourceId;
     void plugin.player.stats().then((stats) => {
@@ -155,7 +153,9 @@ export function keyframesManual(plugin: Plugin) {
 
 /** All four scenarios in style A. */
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
+  // The bound values below read the player's state: a stream keeps it
+  // following the player (and the plugin running) while the plugin is up.
+  plugin.player.stream(() => {});
   await plugin.player.read(); // the player's state and timeline, read once
   speed(plugin);
   frames(plugin);

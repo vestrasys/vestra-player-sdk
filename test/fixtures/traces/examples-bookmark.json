@@ -4,17 +4,16 @@
   "subscriptions": [
     {
       "event": "source.state",
-      "mirror": true
-    },
-    {
-      "event": "source.state",
       "why": [
-        "a view's bind reads plugin.player.state (main.ts)"
+        "a stream opened at main.ts"
       ]
     },
     {
       "event": "source.state",
-      "mirror": true
+      "why": [
+        "a stream opened at main.ts",
+        "a view's bind reads plugin.player.state (main.ts)"
+      ]
     }
   ],
   "polled": [],
@@ -29,17 +28,17 @@
     },
     "open": {
       "passes": 1,
-      "fullPasses": 0,
-      "evaluations": 0,
-      "parts": 0,
+      "fullPasses": 1,
+      "evaluations": 1,
+      "parts": 1,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "changes": {
       "passes": 3,
-      "fullPasses": 0,
-      "evaluations": 1,
-      "parts": 1,
+      "fullPasses": 3,
+      "evaluations": 3,
+      "parts": 3,
       "skippedParts": 0,
       "safetyPasses": 0
     },
@@ -70,8 +69,14 @@
         "method": "events.subscribe",
         "params": {
           "event": "source.state",
-          "mirror": true
+          "why": [
+            "a stream opened at main.ts"
+          ]
         }
+      },
+      {
+        "method": "source.state",
+        "params": {}
       },
       {
         "method": "source.state",
@@ -112,6 +117,7 @@
         "params": {
           "event": "source.state",
           "why": [
+            "a stream opened at main.ts",
             "a view's bind reads plugin.player.state (main.ts)"
           ]
         }
@@ -137,26 +143,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "bookmark.open"
-        }
-      },
-      {
-        "method": "ui.close",
-        "params": {
-          "id": "bookmark"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "mirror": true
-        }
-      }
-    ]
+    "dispose": []
   }
 }

@@ -57,9 +57,9 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 ## Panel position or palette state does not follow other plugins or the user
 
-**Cause:** The plugin never calls `plugin.player.subscribe()`: {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state}, {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} and their `onChange` listeners follow outside changes only after it. A warning in the log says so once.
+**Cause:** Nothing of the plugin listens: {@link "@vestra-player/sdk"!PanelSlot.state | PanelSlot.state} and {@link "@vestra-player/sdk"!Appearance.theme | appearance.theme} follow outside changes only while something listens to them; a value bound to them otherwise shows the newest one the plugin read.
 
-**Fix:** Call `plugin.player.subscribe()` first in `activate`.
+**Fix:** Listen: `plugin.player.on("layout.changed", …)` or `plugin.player.on("appearance.changed", …)` (the copy takes each event first; neither keeps the plugin running), or the slot's `onChange` (which does).
 
 ## A value changed after an await does not appear
 
@@ -83,7 +83,7 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** SDK 1.9.0 (player 0.9.0) removed manifest capabilities.
 
-**Fix:** Delete the field, and call `plugin.player.subscribe()` (what `events` did) and `await plugin.player.read()` (what `playback.read` did) first in `activate`.
+**Fix:** Delete the field, and call `await plugin.player.read()` (what `playback.read` did) first in `activate`; `events` needs nothing (an event reaches the plugin from its first listener).
 
 ## A key binding does not fire
 

@@ -20,18 +20,6 @@
       }
     ],
     [
-      "request",
-      "osd.show"
-    ],
-    [
-      "refused",
-      "osd.show",
-      {
-        "code": "disabled",
-        "message": "plugin is stopping"
-      }
-    ],
-    [
       "refused",
       "osd.show",
       {
@@ -50,18 +38,6 @@
     [
       "mark",
       "disconnected"
-    ],
-    [
-      "request",
-      "osd.show"
-    ],
-    [
-      "refused",
-      "osd.show",
-      {
-        "code": "disabled",
-        "message": "plugin is stopping"
-      }
     ]
   ],
   "slow": {
@@ -79,13 +55,13 @@
   "after": {
     "refused": {
       "code": "disabled",
-      "message": "plugin is stopping"
+      "message": "osd.show not sent: the plugin is stopping (the player sent runtime.stop)"
     }
   },
   "bye": {
     "refused": {
       "code": "disabled",
-      "message": "plugin is stopping"
+      "message": "osd.show not sent: the plugin is stopping (the player sent runtime.stop)"
     }
   },
   "stopReason": "host-lost",

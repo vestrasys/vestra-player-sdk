@@ -6,7 +6,6 @@
 import type { Plugin, VideoNode } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
   await plugin.player.read(); // the player's state and timeline, read once
   // #endregion activate
   // #region filter

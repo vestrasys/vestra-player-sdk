@@ -2,7 +2,9 @@ import type { Plugin } from "@vestra-player/sdk";
 
 /** A speed slider in the adjust column. */
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
+  // The bound values below read the player's state: a stream keeps it
+  // following the player (and the plugin running) while the plugin is up.
+  plugin.player.stream(() => {});
   await plugin.player.read(); // the player's state and timeline, read once
   // #region mount
   // "adjust": the panel changes what is playing. After the user closes it,

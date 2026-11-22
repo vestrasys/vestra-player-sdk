@@ -40,8 +40,8 @@ export type ThemeId = "vestra" | "vestra-light";
  * {@link Osd.show}).
  *
  * To run code when the palette or the language changes, listen with
- * `plugin.player.on("appearance.changed", …)` (after `plugin.player.subscribe()`): `theme` and
- * `language` already hold the event's values when the listener runs.
+ * `plugin.player.on("appearance.changed", …)`: `theme` and `language`
+ * already hold the event's values when the listener runs.
  *
  * @example Offer the light palette as a menu item
  * Settings ▸ Light colours switches every view of the player to the light
@@ -64,9 +64,9 @@ export type ThemeId = "vestra" | "vestra-light";
  */
 export interface Appearance {
   /**
-   * The palette in use. Read before activation; after `plugin.player.subscribe()`, it follows
-   * other plugins' changes from the first read on, without it only this
-   * plugin's own.
+   * The palette in use. Read before activation; while the plugin listens
+   * to `appearance.changed` it follows other plugins' changes, otherwise
+   * only this plugin's own.
    */
   readonly theme: ThemeId;
   /**
@@ -101,8 +101,8 @@ export interface Appearance {
    * @remarks
    * This is the choice for the next start. The language of this run is
    * {@link I18n.locale} and never changes while the player runs. Read before
-   * activation; after `plugin.player.subscribe()`, it follows other plugins' changes, without it
-   * only this plugin's own. Players before 0.4.3 report `"system"`.
+   * activation; while the plugin listens to `appearance.changed` it
+   * follows other plugins' changes, otherwise only this plugin's own. Players before 0.4.3 report `"system"`.
    *
    * @since 1.5.9
    */
@@ -113,8 +113,8 @@ export interface Appearance {
    * @remarks
    * The player keeps the choice in its interface state; the language
    * changes when the player starts again (tell the user, for example "Takes
-   * effect after restart"). Every plugin after `plugin.player.subscribe()`, hears the change in
-   * {@link Appearance.language}.
+   * effect after restart"). Every plugin that listens to
+   * `appearance.changed` sees the change in {@link Appearance.language}.
    *
    * @player 0.4.3
    *

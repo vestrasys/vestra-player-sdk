@@ -16,8 +16,8 @@ export const THEMES: readonly ThemeId[] = ["vestra", "vestra-light"];
 
 /**
  * One per plugin: the value comes with the `window.state` read before
- * activation; after `plugin.player.subscribe()`, `appearance.changed` keeps it current once
- * the plugin uses it (or listens to that event with `player.on`).
+ * activation; `appearance.changed` keeps it current while the plugin
+ * listens to that event (`player.on`), and this plugin's own `set` does.
  */
 class AppearanceService {
   readonly #runtime: Runtime;
@@ -48,7 +48,7 @@ class AppearanceService {
         const theme = event?.theme;
         if (theme && THEMES.includes(theme)) this.accept(theme);
       },
-      "events",
+      "held",
       true,
     );
   }

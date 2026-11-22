@@ -1,7 +1,6 @@
 /** Scopes own handles. Disposal runs newest first and never throws. */
 import type { MotionEngine } from "./types.ts";
 import { failure, toError } from "./errors.ts";
-import type { Change } from "./passes.ts";
 import type { Runtime } from "./runtime.ts";
 import type {
   Disposable,
@@ -18,22 +17,23 @@ import { WHEN } from "./when.ts";
 import { dialogs } from "./services/dialogs.ts";
 import { ui } from "./view/image.ts";
 import { panels } from "./view/panel.ts";
+import { layoutChanged } from "./view/layout.ts";
 import { windows } from "./view/window.ts";
 import { timeline, timelineOf } from "./timeline.ts";
 import { drops } from "./drops.ts";
 import { appearance, appearanceOf } from "./appearance.ts";
 import { settings } from "./settings.ts";
 import { i18n } from "./language.ts";
-import { player } from "./player.ts";
+import { audioTracksChanged, player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { videoRender, videoView } from "./view.ts";
 import { videoShaders } from "./shaders.ts";
-import { subtitles } from "./subtitles.ts";
+import { subtitles, subtitlesChanged } from "./subtitles.ts";
 import { mediaCapture } from "./media.ts";
 import { resolvers } from "./resolvers.ts";
 import { packages } from "./packages.ts";
 import { osd } from "./osd.ts";
-import { mainWindow } from "./window.ts";
+import { mainWindow, windowChanged } from "./window.ts";
 import { bindingsApi } from "./bindings.ts";
 import { trackedState } from "./state.ts";
 import { wire } from "./wire-facade.ts";
@@ -60,6 +60,20 @@ const COPIES: Readonly<Record<string, (runtime: Runtime) => void>> = {
   "commands.keys": (runtime) => keysOf(runtime).start(),
   "timeline.changed": (runtime) => timelineOf(runtime).start(),
   "appearance.changed": (runtime) => appearanceOf(runtime).start(),
+};
+
+/**
+ * The fact events (SDK 1.11.0) whose data the listener gets in the SDK's
+ * shape, each taken into the copy it concerns first; the others reach it
+ * as the player sent them.
+ */
+const FACTS: Readonly<
+  Record<string, (runtime: Runtime, data: unknown) => unknown>
+> = {
+  "audio.tracks.changed": (_, data) => audioTracksChanged(data),
+  "subtitles.changed": subtitlesChanged,
+  "window.changed": windowChanged,
+  "layout.changed": layoutChanged,
 };
 
 export class ScopeImpl implements Plugin {
@@ -98,6 +112,12 @@ export class ScopeImpl implements Plugin {
    */
   followCopy(event: string) {
     if (Object.hasOwn(COPIES, event)) COPIES[event]!(this.runtime);
+  }
+  /** A fact event's data as `player.on`'s listener gets it ({@link FACTS}). */
+  fact(event: string, data: unknown): unknown {
+    return Object.hasOwn(FACTS, event)
+      ? FACTS[event]!(this.runtime, data)
+      : data;
   }
   readonly commands = commands(this);
   readonly when = WHEN;
@@ -213,32 +233,6 @@ export class ScopeImpl implements Plugin {
       this.report(error);
     }
     this.update();
-  }
-  /**
-   * Run a listener of a state change (`player.onChange`) like `run`, except
-   * that the full pass after it is left out when it returned synchronously
-   * and read only fields of the state that `change` left alone: its result
-   * then depends on nothing new. The precise pass for the change runs
-   * anyway, and a full pass follows within `SAFETY_PASS_MS`.
-   */
-  runOn(
-    change: Change,
-    handler: (...args: never[]) => unknown,
-    ...args: unknown[]
-  ) {
-    if (this.disposed) return;
-    let full = true;
-    try {
-      const { value, deps } = this.runtime.observe(() =>
-        (handler as (...args: unknown[]) => unknown)(...args),
-      );
-      if (value instanceof Promise)
-        value.catch((error) => this.report(error)).finally(() => this.update());
-      else full = this.runtime.needsFull(deps, change);
-    } catch (error) {
-      this.report(error);
-    }
-    if (full) this.update();
   }
   /**
    * Run a listener that pushes its own values (`player.on`) like `run`, except

@@ -1,6 +1,8 @@
 // Playback category: the timeline and the player.
 // Re-exported by ../types.ts (`export type *`); see that file.
-import type { Disposable, PluginError } from "./base.ts";
+import type { Disposable, PluginError, WindowState } from "./base.ts";
+import type { SubtitlesState } from "./subtitles.ts";
+import type { LayoutPosition } from "./ui-layout.ts";
 import type { Bindable } from "./commands.ts";
 import type { Text } from "./ui-locale.ts";
 import type { CommandKeys } from "../../commands.ts";
@@ -20,7 +22,7 @@ import type { PluginInfo } from "./packages.ts";
 import type { MediaCapture } from "./snapshots.ts";
 import type { FileResolverOptions, Resolver } from "./sources.ts";
 import type { View } from "./ui-content.ts";
-import type { Scope, WindowState } from "./base.ts";
+import type { App, Scope } from "./base.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- timeline
@@ -189,8 +191,9 @@ export interface TimelineLayer extends Disposable {
  * the layers by time and shows them. A new source clears every layer, so a
  * plugin publishes again for each file. `marks` is the merged list, which
  * any plugin can read. To run code when they change, listen with
- * `plugin.player.on("timeline.changed", …)` (after `plugin.player.subscribe()`): `marks` and
- * `ranges` already hold the event's lists when the listener runs.
+ * `plugin.player.on("timeline.changed", …)`: `marks` and `ranges` already
+ * hold the event's lists when the listener runs, and follow the player
+ * while it listens.
  *
  *
  * @example Count the chapter marks other plugins published
@@ -210,8 +213,8 @@ export interface Timeline {
   readonly marks: readonly TimelineMark[];
   /**
    * Every layer's ranges merged, by start. Empty on a new
-   * source. Kept current like `marks` (after `plugin.player.subscribe()`): read it in a
-   * {@link View.bind} function and the view follows it.
+   * source. Kept current like `marks` (while a `timeline.changed` listener
+   * exists): read it in a {@link View.bind} function and the view follows it.
    *
    * @example Draw the published ranges in a seek bar of your own
    * A bottom bar draws a band for every range on the seek bar, whoever
@@ -296,8 +299,9 @@ export interface AudioTrack {
 /**
  * An immutable view of the player. Keep one to make a later call conditional on it.
  *
- * Without `plugin.player.subscribe()`, {@link Player.state} only updates at start and after
- * this plugin's own operations.
+ * Without an open {@link Player.stream}, {@link Player.state} only updates
+ * at start, after this plugin's own operations and with the state an event
+ * carries.
  *
  * @see {@link Player.state}, [Control playback](../../../docs/guides/control-playback.md)
  * @since 1.0.0
@@ -450,9 +454,9 @@ export interface Conditional {
  * @remarks
  * A source this plugin opened with {@link Player.open}. It does not own
  * the source: the user or another plugin can replace it at any time, and
- * `current` then turns false. `ready` and `onEnd` follow the player state:
- * after `plugin.player.subscribe()`, they react to the player's events, without it `ready`
- * polls the state every 100 ms. Disposing the
+ * `current` then turns false. `ready` and `onEnd` follow the player's
+ * events while they wait (each keeps the plugin running meanwhile, as a
+ * listener does). Disposing the
  * scope that opened it does not close the media; call `close` for that.
  *
  * @example Open a file and say when it ends
@@ -936,10 +940,11 @@ export interface StateStream {
 /**
  * `plugin.player`: playback state and controls.
  *
- * Call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`:
- * `read()` fills `state` once and keeps it current after this plugin's own
- * calls; `subscribe()` keeps it, and every `onChange`, current with changes
- * made elsewhere.
+ * Call `await plugin.player.read()` first in `activate` when the plugin
+ * reads `state` at start: it fills `state` once and keeps it current after
+ * this plugin's own calls. To learn that something happened, listen to an
+ * event ({@link Player.on}) or declare a trigger; to show the state as it
+ * changes, open a {@link Player.stream} while it shows.
  *
  * Controls are conditional (see {@link Conditional}): they fail with
  * `stale` and do nothing when the source changed since the state you saw.
@@ -961,9 +966,10 @@ export interface StateStream {
  *
  * @remarks
  * `plugin.player` is the player's one source: what is open, its phase and
- * position, and the controls. `state` is a snapshot the SDK keeps current
- * from the player's events (after `plugin.player.subscribe()`) and refreshes after this
- * plugin's own calls; `onChange` runs after it changed. Every control is
+ * position, and the controls. `state` is the newest snapshot the plugin
+ * has: from `read()`, `refresh()`, an event's data and this plugin's own
+ * calls, and while a {@link Player.stream} is open, every change. Every
+ * control is
  * conditional: it acts on the state the plugin last saw and fails with
  * `stale` when the source changed meanwhile: another file, a close, or any
  * pause, seek or speed change by the user or another plugin (see
@@ -981,30 +987,12 @@ export interface Player {
   /**
    * Latest state; always newer than anything delivered before.
    *
-   * After `plugin.player.subscribe()`, the SDK follows the player's events for this copy from
-   * the plugin's start; without it the copy moves only with the start-up
-   * read and the plugin's own calls.
+   * The newest snapshot this plugin has: from {@link Player.read},
+   * {@link Player.refresh}, the state a source event carries and this
+   * plugin's own calls. While a {@link Player.stream} is open it follows
+   * every change the player sends.
    */
   readonly state: PlayerState;
-  /**
-   * The state changed (outside changes after `plugin.player.subscribe()`).
-   *
-   *
-   * @example Show the position while it plays
-   * The OSD block shows the position, updated as playback moves. The SDK
-   * updates `player.state` from the player's events and then calls the
-   * listener with the new snapshot; the handler only reads it.
-   * ```ts
-   * const info = plugin.osd.panel();
-   * plugin.player.onChange((state) => {
-   *   // `position` is null while nothing is open.
-   *   info.set(state.position === null ? null : "{} s", [state.position?.toFixed(0) ?? ""]);
-   * });
-   * ```
-   *
-   * @since 1.0.0
-   */
-  onChange(listener: (state: PlayerState) => void): Disposable;
   /**
    * Follow the player's state while something needs it continuously: a
    * window or panel that shows the position, a meter.
@@ -1016,9 +1004,8 @@ export interface Player {
    * once when the phase, pause, speed or volume changes. Before each call
    * the SDK updates {@link Player.state}; after each call an update pass
    * runs, so {@link View.bind} functions and command states that read
-   * `plugin.player.state` follow the stream. It needs no
-   * {@link Player.subscribe}: the stream itself makes the state follow the
-   * player while it is open.
+   * `plugin.player.state` follow the stream: the stream is what makes the
+   * state follow the player, while it is open.
    *
    * **While a stream is open the player keeps the plugin running**: it is
    * a listener (its log names it `a stream opened at main.ts:12`). Open it
@@ -1031,10 +1018,8 @@ export interface Player {
    * Several streams may be open; each listener is called. A stream ends
    * with {@link StateStream.stop}, when its scope is disposed, and when the
    * plugin stops; it is not kept through standby. After the last one ends
-   * `plugin.player.state` keeps the last snapshot, and without
-   * {@link Player.subscribe} it no longer follows changes made elsewhere.
-   * {@link Player.subscribe} and {@link Player.onChange} keep working as
-   * before.
+   * `plugin.player.state` keeps the last snapshot and no longer follows
+   * changes made elsewhere.
    *
    * The player judges what keeps a plugin running when the plugin becomes
    * ready. A stream that is open then counts as it does today for a
@@ -1087,11 +1072,11 @@ export interface Player {
    * listener of the plugin: the player keeps the plugin running while one
    * exists (unless the event is one the player wakes a stopped plugin for),
    * and its log names where the plugin added it
-   * (`a listener added at main.ts:12`). Every name, its payload and
-   * whether it waits for `subscribe()`: [Events](../../../docs/reference/events.md).
+   * (`a listener added at main.ts:12`). Every name and its payload:
+   * [Events](../../../docs/reference/events.md).
    *
-   * Unlike {@link Player.onChange} it does not start the SDK's copy of the
-   * state: `plugin.player.state` is not kept current by it, and the
+   * Unlike {@link Player.stream} it does not keep the SDK's copy of the
+   * state current: `plugin.player.state` does not follow it, and the
    * listener runs for every event, changed or not. Three events are the
    * exception: `commands.keys`, `timeline.changed` and `appearance.changed`
    * start the copy they keep current (`plugin.commands.keys`,
@@ -1109,11 +1094,7 @@ export interface Player {
    * {@link Scope.state} field re-runs only its readers, and
    * {@link Scope.update} re-runs everything.
    *
-   * `source.state`, `playback.backend`, `window.state`,
-   * `timeline.changed`, `appearance.changed` and `resolvers.fileTypes`
-   * reach the plugin only after {@link Player.subscribe}; before it their
-   * listener never runs (a warning in the log says so once). The other
-   * events arrive from the first listener.
+   * Every event arrives from its first listener.
    *
    * @param event - The event's name.
    * @param listener - Receives each event's data.
@@ -1146,9 +1127,9 @@ export interface Player {
    * @remarks
    * `event` is a {@link SourceEvent} name; `listener` gets that event's
    * data, typed {@link SourceEventPayloads}, with `state` as a
-   * {@link PlayerState}. The events arrive from the first listener,
-   * without {@link Player.subscribe}, and a listener of one does not keep
-   * the plugin running: the player starts a plugin in standby to deliver
+   * {@link PlayerState}. The events arrive from the first listener, and a
+   * listener of one does not keep the plugin running: the player starts a
+   * plugin in standby to deliver
    * them, and an event that arrives while the plugin starts waits for its
    * activation. `source.ended` with `reason: "quit"` reaches only a
    * plugin that is running when the player quits. As for every
@@ -1182,12 +1163,53 @@ export interface Player {
     listener: (data: SourceEventPayloads[E]) => void,
   ): Disposable;
   /**
+   * Listen to one of the player's facts that changed: the video's or the
+   * audio's parameters, the audio tracks, the subtitles, the main window,
+   * the panel layout, the audio devices, or the start of the player.
+   *
+   * @remarks
+   * `event` is a {@link FactEvent} name; `listener` gets that event's data,
+   * typed {@link FactEventPayloads}. Each is sent once per change, never as
+   * a stream: `window.changed` once when a resize ends, not at every step.
+   * The events arrive from the first listener, and a listener of one does
+   * not keep the plugin running: the player starts a plugin in standby to
+   * deliver them, and an event that arrives while the plugin starts waits
+   * for its activation. Where the data carries a state the SDK keeps
+   * (`subtitles.changed`, `window.changed`), the SDK takes it first, so
+   * `plugin.subtitles.state` and `plugin.window.state` hold it when the
+   * listener runs. As for every {@link Player.on} listener, no full update
+   * pass follows it.
+   *
+   * @param event - The event's name.
+   * @param listener - Receives each event's data.
+   * @returns A handle that stops listening; it is disposed with the scope.
+   *
+   * @throws `invalid` (throws) `event` is not an event name, or
+   *   `listener` is not a function.
+   *
+   * @example Size the window to the video when its size is known
+   * The plugin learns the size the video is shown at once per change (a
+   * new file, a rotation, a crop), without following the player's state.
+   * ```ts
+   * plugin.player.on("video.reconfigured", ({ displayWidth, displayHeight }) => {
+   *   if (displayWidth > 0 && displayHeight > 0)
+   *     void plugin.window.setVideoArea({ width: displayWidth, height: displayHeight });
+   * });
+   * ```
+   *
+   * @since 1.11.0
+   */
+  on<E extends FactEvent>(
+    event: E,
+    listener: (data: FactEventPayloads[E]) => void,
+  ): Disposable;
+  /**
    * Read the state from the player now.
    *
    * @example Read the state before deciding
-   * A command reads the newest state from the player before acting, even
-   * without `plugin.player.subscribe()`. `refresh` asks the player and resolves with the new
-   * snapshot; `player.state` holds it afterwards.
+   * A command reads the newest state from the player before acting.
+   * `refresh` asks the player and resolves with the new snapshot;
+   * `player.state` holds it afterwards.
    * ```ts
    * const state = await plugin.player.refresh();
    * if (state.phase === "ready") await plugin.osd.show("{} s left", [((state.duration ?? 0) - (state.position ?? 0)).toFixed(0)]);
@@ -1198,54 +1220,11 @@ export interface Player {
    */
   refresh(): Promise<PlayerState>;
   /**
-   * Turn event delivery on for this run and follow the player's state from
-   * now on.
-   *
-   * @remarks
-   * Call it first in `activate`. From then on the player's events reach
-   * this plugin: `plugin.player.state` follows changes made elsewhere (the
-   * user, the player, another plugin), and so does every listener of
-   * {@link Player.on}, {@link Player.onChange} and the other `onChange`
-   * methods, and every {@link View.bind} function that reads a state.
-   * Without the call a plugin's states move only after its own calls, and
-   * a listener of `source.state`, `playback.backend`, `window.state`,
-   * `timeline.changed`, `appearance.changed` or `resolvers.fileTypes`
-   * never runs (a warning in the log says so once). A listener added
-   * before the call starts to hear events at the call.
-   *
-   * It sends one request (the subscription of the state copy) and returns
-   * at once; a failure of that request fails the activation. A second call
-   * does nothing. The copy is a copy, not a listener: it keeps no plugin
-   * running.
-   *
-   * @example Follow the player from the start
-   * A bottom panel shows the playback speed and follows every change, also
-   * one the user makes in the player's menus. `subscribe` turns the
-   * player's events on and `read` fetches the state once, so the bound
-   * function has the current speed at its first run and runs again
-   * whenever it changes.
-   * ```ts
-   * import type { Plugin } from "@vestra-player/sdk";
-   *
-   * export default async function activate(plugin: Plugin) {
-   *   plugin.player.subscribe(); // events from now on
-   *   await plugin.player.read(); // the state as it is now
-   *   const bar = plugin.panels.mount("bottom", "ui/bar.slint");
-   *   bar.bind(() => ({ rate: `${plugin.player.state.rate.toFixed(2)}×` }));
-   * }
-   * ```
-   *
-   * @see {@link Player.read}
-   * @since 1.9.0
-   */
-  subscribe(): void;
-  /**
    * Read the player's state and the timeline's marks and ranges once, and
    * keep the state current after this plugin's own actions.
    *
    * @remarks
-   * Call it first in `activate` (after {@link Player.subscribe}, when the
-   * plugin also follows events) and wait for it: `plugin.player.state`,
+   * Call it first in `activate` and wait for it: `plugin.player.state`,
    * `plugin.timeline.marks` and `plugin.timeline.ranges` then hold what the
    * player has. Before the call `state` is the empty state (`phase:
    * "empty"`) and the lists are empty. From the call on the SDK also reads
@@ -1264,7 +1243,7 @@ export interface Player {
    * @example Read the state before using it
    * A command shows how much of the file is left. `read` fetches the state
    * once during activation, so `state` is current when the command first
-   * runs; without `subscribe` it moves only after this plugin's own calls,
+   * runs; without a stream it moves only after this plugin's own calls,
    * so the command asks for it again with `refresh`.
    * ```ts
    * import type { Plugin } from "@vestra-player/sdk";
@@ -1284,7 +1263,7 @@ export interface Player {
    * }
    * ```
    *
-   * @see {@link Player.subscribe}
+   * @see {@link Player.refresh}
    * @since 1.9.0
    */
   read(): Promise<void>;
@@ -1999,9 +1978,9 @@ export type EventPayload<E extends HostEvent> = EventPayloads[E];
  * loaded. `source.ended`: it left playback. For one source the order is
  * `opening`, `ready`, `ended` (no `ready` when it could not be
  * opened); when a source is replaced, the old one's `ended` comes before
- * the new one's `opening`. Unlike `source.state` they arrive without
- * {@link Player.subscribe}, and a listener of one does not keep the plugin
- * running: the player starts a plugin in standby to deliver them.
+ * the new one's `opening`. Unlike `source.state` a listener of one does
+ * not keep the plugin running: the player starts a plugin in standby to
+ * deliver them.
  * {@link SourceEventPayloads} says what each one carries.
  *
  * @example Scan each file once it is loaded
@@ -2074,6 +2053,160 @@ export interface SourceEventPayloads {
     reason: "natural" | "stopped" | "replaced" | "error" | "quit";
     /** The failure text, when `reason` is `error` and the player has one. */
     error?: string;
+  };
+}
+
+/**
+ * The player's facts that changed: one event per change, which
+ * {@link Player.on} listens to by name.
+ *
+ * @remarks
+ * Each is sent once when its fact changes, never as a stream, and a
+ * listener of one does not keep the plugin running: the player starts a
+ * plugin in standby to deliver them. A fact of one source
+ * (`video.reconfigured`, `audio.reconfigured`, `audio.tracks.changed`,
+ * `subtitles.changed`) comes after that source's `source.opening`, and
+ * again for each new source. {@link FactEventPayloads} says when each one
+ * is sent and what it carries.
+ *
+ * @example Rebuild a menu when the audio tracks change
+ * A plugin lists the current file's audio tracks in a menu. The listener
+ * gets the list each time it changes (a new file, a track added, another
+ * track selected), so the plugin needs no stream of its own.
+ * ```ts
+ * declare function showTracks(names: string[]): void;
+ * // ---cut---
+ * plugin.player.on("audio.tracks.changed", ({ audioTracks }) =>
+ *   showTracks(audioTracks.map((track) => track.title ?? `Track ${track.id}`)),
+ * );
+ * ```
+ *
+ * @since 1.11.0
+ * @category Playback
+ */
+export type FactEvent =
+  | "video.reconfigured"
+  | "audio.reconfigured"
+  | "audio.tracks.changed"
+  | "subtitles.changed"
+  | "window.changed"
+  | "layout.changed"
+  | "audio.devices.changed"
+  | "app.started";
+
+/**
+ * The data each {@link FactEvent} carries, as the listener of
+ * {@link Player.on} gets it.
+ *
+ * @since 1.11.0
+ * @category Playback
+ */
+export interface FactEventPayloads {
+  /**
+   * The decoded video's parameters changed: a new source's video is known,
+   * or a rotation, a crop or another filter changed the size it is shown
+   * at. Once to a few times per file; not for a source without video.
+   */
+  "video.reconfigured": {
+    /** The source it belongs to ({@link PlayerState.sourceId}). */
+    sourceId: number;
+    /** The decoded width in pixels. */
+    width: number;
+    /** The decoded height in pixels. */
+    height: number;
+    /** The width it is shown at, after aspect, rotation and the video filters (`0` while unknown). */
+    displayWidth: number;
+    /** The height it is shown at, after aspect, rotation and the video filters (`0` while unknown). */
+    displayHeight: number;
+    /** The frame rate the file declares, `null` when it declares none. */
+    fps: number | null;
+    /** The rotation the file asks for, in degrees (0, 90, 180 or 270). */
+    rotation: number;
+    /** The video is HDR (PQ or HLG transfer). */
+    hdr: boolean;
+  };
+  /**
+   * The decoded audio's parameters changed: a new source's audio is known,
+   * another track plays, or the output was opened again. Not for a source
+   * without audio.
+   */
+  "audio.reconfigured": {
+    /** The source it belongs to ({@link PlayerState.sourceId}). */
+    sourceId: number;
+    /** The sample rate in Hz. */
+    sampleRate: number;
+    /** The number of channels, `null` while unknown. */
+    channels: number | null;
+    /** The sample format (`"floatp"`, `"s16"`…), `null` while unknown. */
+    format: string | null;
+  };
+  /**
+   * The current source's audio track list or its selected track changed:
+   * the list of a new source is known, a track was added, another was
+   * selected. Not when the list goes away (a source closes or a new one
+   * loads; `source.ended` and `source.opening` say so).
+   */
+  "audio.tracks.changed": {
+    /** The source it belongs to ({@link PlayerState.sourceId}). */
+    sourceId: number;
+    /** Its audio tracks, as {@link PlayerState.audioTracks} lists them. */
+    audioTracks: AudioTrack[];
+  };
+  /**
+   * The subtitle track list or the primary or secondary selection changed
+   * for a loaded source: its tracks are known, a track was loaded or
+   * removed, another was selected. `state` is the subtitle state then; the
+   * SDK takes it into `plugin.subtitles.state` first, so it can be passed
+   * as `ifCurrent`.
+   */
+  "subtitles.changed": {
+    /** The subtitle state as the change left it. */
+    state: SubtitlesState;
+  };
+  /**
+   * The main window's state changed: fullscreen, maximized or
+   * picture-in-picture flipped (at once), or its video area changed size
+   * (once, when the size has not changed for 300 ms, so a resize gesture
+   * sends one event at its end). The SDK takes it into
+   * `plugin.window.state` first.
+   */
+  "window.changed": WindowState;
+  /**
+   * A panel position was shown or hidden, docked or detached, another tab
+   * became active, or a panel came or went. `backdrop` is the backdrop
+   * panel's state, `null` without one.
+   */
+  "layout.changed": {
+    /** Each position, `null` where it has no panel. */
+    slots: {
+      readonly bottom: LayoutPosition | null;
+      readonly sidebar: LayoutPosition | null;
+      readonly adjust: LayoutPosition | null;
+      readonly backdrop: { readonly effective: boolean } | null;
+    };
+  };
+  /**
+   * The audio output devices changed: one was plugged in or removed, or
+   * the device in use changed (`setAudioDevice`, or the chosen one went
+   * away and the system default plays). Checked once a second.
+   */
+  "audio.devices.changed": {
+    /** The devices, as {@link Player.audioDevices} lists them. */
+    devices: AudioDevice[];
+    /** The device {@link Player.setAudioDevice} asked for this run, `null` for the system default. */
+    requested: string | null;
+    /** The device in use, `null` for the system default. */
+    active: string | null;
+  };
+  /**
+   * The player started: once per run, after its start-up settled, behind
+   * everything start-up does.
+   */
+  "app.started": {
+    /** This run's player version ({@link App.version}). */
+    version: string;
+    /** The player version of the last run with this profile, `null` on its first run. */
+    previous: string | null;
   };
 }
 

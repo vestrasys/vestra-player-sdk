@@ -36,7 +36,7 @@ examples/bookmark/
 
 {@includeCode ../../examples/bookmark/manifest.json}
 
-`await plugin.player.read()`, first in `activate`, reads the position and whether the video can seek; `plugin.player.subscribe()` keeps that state up to date while the plugin runs.
+`await plugin.player.read()`, first in `activate`, reads the position and whether the video can seek; a stream (`plugin.player.stream(() => {})`) keeps that state up to date while the plugin runs.
 
 ## The window
 

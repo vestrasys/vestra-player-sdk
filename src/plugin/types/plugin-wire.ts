@@ -122,8 +122,8 @@ export interface Wire {
    * (`events.subscribe`) as for {@link Player.on}: once per name however
    * many listeners, always marked as a listener with where it was added
    * (`why`), never as a copy of the state (`mirror`), so the player keeps
-   * the plugin running while it listens. As for `Player.on`, most of
-   * them arrive only after {@link Player.subscribe}. Any other name is listened
+   * the plugin running while it listens (unless the player wakes a
+   * stopped plugin for that event). Any other name is listened
    * to without a subscription: events the player sends unasked
    * (`commands.execute`, `ui.callback`, `ui.closed`), or an event of a newer
    * player that the plugin subscribed to itself with {@link Wire.request}.

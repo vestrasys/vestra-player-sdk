@@ -1,8 +1,10 @@
-// SDK 1.9.0: the explicit calls `plugin.player.subscribe()` and
-// `plugin.player.read()`. They stand for what the `events` and
-// `playback.read` declarations made the SDK do at start-up: called first in
-// `activate` they send the same requests, apart from the start-up
-// `window.state` read, which now comes first.
+// SDK 1.9.0: the explicit call `plugin.player.read()` stands for what the
+// `playback.read` declaration made the SDK do at start-up: called first in
+// `activate` it sends the same requests, apart from the start-up
+// `window.state` read, which now comes first. SDK 1.11.0 removed
+// `plugin.player.subscribe()` (and `Player.onChange`): an event reaches a
+// plugin from its first listener, and a binding that reads a state shows
+// the newest snapshot the plugin has.
 import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -55,76 +57,43 @@ const sent = (host: TestHost) =>
       : method;
   });
 
-/** What each combination of the calls sends, in order. */
+/** What each start sends, in order. */
 const EXPECTED: Record<string, string[]> = {
-  "subscribe=false read=false": ["window.state", "ui.mount"],
-  "subscribe=false read=true": [
-    "window.state",
-    "source.state",
-    "timeline.marks",
-    "ui.mount",
-  ],
-  "subscribe=true read=false": [
-    "window.state",
-    "events.subscribe(source.state, mirror)",
-    "ui.mount",
-    "events.subscribe(source.state, listener)",
-    "ui.setMount",
-  ],
-  "subscribe=true read=true": [
-    "window.state",
-    "events.subscribe(source.state, mirror)",
-    "source.state",
-    "timeline.marks",
-    "ui.mount",
-    "events.subscribe(source.state, listener)",
-    "ui.setMount",
-  ],
+  "read=false": ["window.state", "ui.mount"],
+  "read=true": ["window.state", "source.state", "timeline.marks", "ui.mount"],
 };
 
-for (const events of [false, true])
-  for (const read of [false, true])
-    test(`the explicit calls send what the declarations did, window.state first (subscribe=${events}, read=${read})`, async () => {
-      const host = playing();
-      let calls: string[] = [];
-      const seen = await warnings(async () => {
-        const { plugin, stop } = await startPlugin(
-          async (plugin: Plugin) => {
-            if (events) plugin.player.subscribe();
-            if (read) await plugin.player.read();
-            plugin.panels
-              .mount("bottom", "panel.slint")
-              .bind(() => ({ position: plugin.player.state.position ?? 0 }));
-          },
-          { host, directory: packageWith() },
-        );
-        // A change made elsewhere: heard only after subscribe().
-        host.setSource({ position: 99 });
-        await host.settle();
-        assert.equal(
-          plugin.player.state.position,
-          events ? 99 : read ? 10 : null,
-        );
-        calls = sent(host);
-        await stop();
-      });
-      assert.deepEqual(calls, EXPECTED[`subscribe=${events} read=${read}`]);
-      // The development warning, once, only without subscribe().
-      assert.equal(
-        seen.filter((line) => line.includes("before plugin.player.subscribe()"))
-          .length,
-        events ? 0 : 1,
-        seen.join("\n"),
+for (const read of [false, true])
+  test(`read() sends what the declaration did, window.state first; a binding's read subscribes nothing (read=${read})`, async () => {
+    const host = playing();
+    let calls: string[] = [];
+    const seen = await warnings(async () => {
+      const { plugin, stop } = await startPlugin(
+        async (plugin: Plugin) => {
+          if (read) await plugin.player.read();
+          plugin.panels
+            .mount("bottom", "panel.slint")
+            .bind(() => ({ position: plugin.player.state.position ?? 0 }));
+        },
+        { host, directory: packageWith() },
       );
+      // A change made elsewhere: the bound value shows the newest snapshot
+      // the plugin has, which nothing made follow the player.
+      host.setSource({ position: 99 });
+      await host.settle();
+      assert.equal(plugin.player.state.position, read ? 10 : null);
+      calls = sent(host);
+      await stop();
     });
+    assert.deepEqual(calls, EXPECTED[`read=${read}`]);
+    assert.deepEqual(seen, [], "no warning");
+  });
 
-test("subscribe() and read() are idempotent", async () => {
+test("read() is idempotent; subscribe() and onChange() are gone like any unknown member", async () => {
   const host = playing();
   const { plugin, stop } = await startPlugin(
     async (plugin: Plugin) => {
       assert.equal(plugin.player.state.phase, "empty");
-      assert.equal(plugin.player.subscribe(), undefined);
-      plugin.player.subscribe();
       const first = plugin.player.read();
       assert.equal(plugin.player.read(), first);
       await first;
@@ -132,15 +101,20 @@ test("subscribe() and read() are idempotent", async () => {
     },
     { host, directory: packageWith() },
   );
-  plugin.player.subscribe();
   await plugin.player.read();
   await host.settle();
   assert.deepEqual(sent(host), [
     "window.state",
-    "events.subscribe(source.state, mirror)",
     "source.state",
     "timeline.marks",
   ]);
+  const player = plugin.player as unknown as Record<string, unknown>;
+  assert.equal(player.subscribe, undefined);
+  assert.equal(player.onChange, undefined);
+  assert.throws(
+    () => (player.subscribe as () => void)(),
+    (error: unknown) => error instanceof TypeError,
+  );
   await stop();
 });
 
@@ -163,36 +137,20 @@ test("read() fetches the timeline's marks and ranges", async () => {
   await stop();
 });
 
-test("a listener added before subscribe() hears nothing, with one warning, and hears events from the call on", async () => {
+test("a listener and a watcher hear their events from the first one, without a warning", async () => {
   const host = playing();
   const heard: number[] = [];
-  const changes: number[] = [];
-  let started!: Plugin;
   const seen = await warnings(async () => {
-    const { plugin, stop } = await startPlugin(
+    const { stop } = await startPlugin(
       (plugin: Plugin) => {
-        started = plugin;
         plugin.player.on("source.state", (s) => heard.push(s.position ?? -1));
         plugin.window.onChange(() => {});
-        plugin.player.onChange((s) => changes.push(s.position ?? -1));
       },
       { host, directory: packageWith() },
     );
     host.setSource({ position: 20 });
     await host.settle();
-    assert.deepEqual(heard, []);
-    assert.deepEqual(changes, []);
-    assert.equal(
-      host.sent("events.subscribe").length,
-      0,
-      "nothing was subscribed",
-    );
-    plugin.player.subscribe();
-    await host.settle();
-    host.setSource({ position: 30 });
-    await host.settle();
-    assert.deepEqual(heard, [30]);
-    assert.deepEqual(changes, [30]);
+    assert.deepEqual(heard, [20]);
     assert.deepEqual(
       host
         .sent("events.subscribe")
@@ -202,29 +160,7 @@ test("a listener added before subscribe() hears nothing, with one warning, and h
     );
     await stop();
   });
-  assert.ok(started);
-  const warned = seen.filter((line) =>
-    line.includes("before plugin.player.subscribe()"),
-  );
-  assert.equal(warned.length, 1, seen.join("\n"));
-  assert.match(warned[0]!, /Call plugin\.player\.subscribe\(\) first/);
-});
-
-test("subscribe() after read() reads the state once more: a change between the two sent no event", async () => {
-  const host = playing();
-  const { plugin, stop } = await startPlugin(
-    async (plugin: Plugin) => {
-      await plugin.player.read();
-      // The user seeks before the plugin subscribes.
-      host.setSource({ position: 42 });
-      plugin.player.subscribe();
-    },
-    { host, directory: packageWith() },
-  );
-  await host.settle();
-  assert.equal(plugin.player.state.position, 42);
-  assert.equal(host.sent("source.state").length, 2);
-  await stop();
+  assert.deepEqual(seen, [], "no warning");
 });
 
 test("read() turns on the read after the plugin's own host.run; without it nothing is read", async () => {

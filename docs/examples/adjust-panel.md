@@ -38,7 +38,7 @@ examples/adjust-panel/
 
 {@includeCode ../../examples/adjust-panel/manifest.json}
 
-`plugin.player.subscribe()` and `await plugin.player.read()`, first in `activate`, keep `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without `subscribe()`, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
+`await plugin.player.read()` and a stream (`plugin.player.stream(() => {})`), first in `activate`, keep `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without the stream, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up). The stream keeps the plugin running, as a panel that shows the state does.
 
 ## The panel in Slint
 

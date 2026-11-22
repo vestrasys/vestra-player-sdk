@@ -147,7 +147,6 @@ export component BrightnessWindow inherits Window {
 import type { Plugin } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
   await plugin.player.read(); // the player's state and timeline, read once
   let brightness = 0; // the model: −1–1, 0 = unchanged
 

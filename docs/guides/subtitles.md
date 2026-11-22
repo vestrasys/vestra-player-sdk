@@ -12,10 +12,12 @@ description: List and select subtitle tracks, upload a subtitle file the plugin 
 ### Follow the player
 
 ```ts
-plugin.player.subscribe(); // the player's events from now on
+plugin.player.on("subtitles.changed", ({ state }) => {
+  // The tracks or the selection changed; `plugin.subtitles.state` holds it.
+});
 ```
 
-`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` makes the SDK read `plugin.subtitles.state` again when the source or its phase changes. The player has no subtitle event: a selection the user or another plugin changes shows only after `refresh()`.
+`subtitles.changed` is sent when a loaded source's subtitle tracks or its primary or secondary selection change, also by the user or another plugin; the SDK takes its state into `plugin.subtitles.state` first. A listener of it does not keep the plugin running. Without it (or a `plugin.subtitles.onChange` listener, which does), a selection made elsewhere shows only after `refresh()`.
 
 ### Read the tracks
 

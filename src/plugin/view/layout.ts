@@ -8,11 +8,61 @@ import type { Runtime } from "../runtime.ts";
 import type { ScopeImpl } from "../scope.ts";
 import type {
   BackdropSlot,
+  FactEventPayloads,
   PanelSlot,
   SidebarSlot,
   SlotPanel,
   SlotState,
 } from "../types.ts";
+
+/** `layout.state`'s reply (and `layout.changed`'s data) on the wire. */
+type WireLayout = {
+  bottom: LayoutSlot | null;
+  sidebar: LayoutSlot | null;
+  adjust?: LayoutSlot | null;
+  backdrop?: { effective?: boolean } | null;
+};
+
+/** The SDK's view of a wire layout. */
+function layoutOfWire(raw: WireLayout): Layout {
+  const view = (slot: LayoutSlot | null): SlotState | null =>
+    slot && {
+      preferred: slot.preferred,
+      effective: slot.effective,
+      reason: slot.reason,
+      detached: slot.detached,
+    };
+  const tabs = (slot: LayoutSlot | null): readonly SlotPanel[] | null =>
+    slot?.panels
+      ? Object.freeze(
+          slot.panels.map((panel) =>
+            Object.freeze({
+              plugin: panel.plugin,
+              title: panel.title,
+              active: panel.owner === slot.owner,
+            }),
+          ),
+        )
+      : null;
+  const adjust = raw.adjust ?? null;
+  return {
+    bottom: view(raw.bottom),
+    sidebar: view(raw.sidebar),
+    adjust: view(adjust),
+    tabs: {
+      bottom: tabs(raw.bottom),
+      sidebar: tabs(raw.sidebar),
+      adjust: tabs(adjust),
+    },
+    backdrop: raw.backdrop
+      ? Object.freeze({ effective: raw.backdrop.effective === true })
+      : null,
+  };
+}
+
+/** `layout.changed`'s data as the listener gets it (`ScopeImpl.fact`). */
+export const layoutChanged = (runtime: Runtime, data: unknown) =>
+  layoutOf(runtime).event(data as WireLayout);
 
 /** The positions `layout.state` reports and `layout.set` changes. */
 export type LayoutName = "bottom" | "sidebar" | "adjust";
@@ -60,7 +110,7 @@ export class LayoutService {
     if (this.#started) return;
     this.#started = true;
     // A mirror: panels listen through `watch`.
-    this.#runtime.on("window.state", () => void this.read(), "events", true);
+    this.#runtime.on("window.state", () => void this.read(), "held", true);
     void this.read();
   }
   watch(listener: (layout: Layout) => void) {
@@ -86,47 +136,37 @@ export class LayoutService {
         // "pending" until the host confirmed the layout: keep the last value.
         const raw = await this.#runtime.host.layout.state().catch(() => null);
         if (!raw) continue;
-        const view = (slot: LayoutSlot | null): SlotState | null =>
-          slot && {
-            preferred: slot.preferred,
-            effective: slot.effective,
-            reason: slot.reason,
-            detached: slot.detached,
-          };
-        const tabs = (slot: LayoutSlot | null): readonly SlotPanel[] | null =>
-          slot?.panels
-            ? Object.freeze(
-                slot.panels.map((panel) =>
-                  Object.freeze({
-                    plugin: panel.plugin,
-                    title: panel.title,
-                    active: panel.owner === slot.owner,
-                  }),
-                ),
-              )
-            : null;
-        const adjust = raw.adjust ?? null;
-        const next = {
-          bottom: view(raw.bottom),
-          sidebar: view(raw.sidebar),
-          adjust: view(adjust),
-          tabs: {
-            bottom: tabs(raw.bottom),
-            sidebar: tabs(raw.sidebar),
-            adjust: tabs(adjust),
-          },
-          backdrop: raw.backdrop
-            ? Object.freeze({ effective: raw.backdrop.effective === true })
-            : null,
-        };
-        if (JSON.stringify(next) === JSON.stringify(this.state)) continue;
-        this.state = next;
-        for (const listener of [...this.#listeners]) listener(next);
-        this.#runtime.invalidate();
+        this.#accept(layoutOfWire(raw));
       } while (this.#again);
     } finally {
       this.#reading = false;
     }
+  }
+  #accept(next: Layout) {
+    if (JSON.stringify(next) === JSON.stringify(this.state)) return;
+    this.state = next;
+    for (const listener of [...this.#listeners]) listener(next);
+    this.#runtime.invalidate();
+  }
+  /**
+   * `layout.changed`'s data (SDK 1.11.0): the copy takes it first when it
+   * is in use; the listener gets `{ slots }`.
+   */
+  event(raw: WireLayout): FactEventPayloads["layout.changed"] {
+    const next = layoutOfWire(raw);
+    if (this.#started) this.#accept(next);
+    const position = (name: LayoutName) => {
+      const slot = next[name];
+      return slot && Object.freeze({ ...slot, panels: next.tabs[name] ?? [] });
+    };
+    return {
+      slots: Object.freeze({
+        bottom: position("bottom"),
+        sidebar: position("sidebar"),
+        adjust: position("adjust"),
+        backdrop: next.backdrop,
+      }),
+    };
   }
   async set(
     slot: LayoutName,
