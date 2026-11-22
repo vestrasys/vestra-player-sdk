@@ -792,7 +792,9 @@ export class TestHost implements Transport {
    * Why the plugin listens to each event of {@link TestHost.listening}:
    * every listener and stream, as the player's log says them (`a listener
    * added at main.ts:12`, `a stream opened at main.ts:20`), in the order
-   * they came.
+   * they came. A binding's or command field's read of the event's state is
+   * listed beside them (with "— use plugin.when" where a condition exists);
+   * it is never a reason on its own.
    *
    * @since 1.5.40
    */
