@@ -232,7 +232,6 @@ test("source.state: a listener added before the player's copy starts reads the e
   // can add the listener before it, the order the dispatch must undo.
   const host = new TestHost();
   const runtime = new Runtime(host, { id: "test.order" }, tmpdir());
-  runtime.deliver();
   const rates: number[] = [];
   const listener = runtime.on("source.state", (data) =>
     rates.push(playerOf(runtime).state.rate, (data as { rate: number }).rate),
@@ -265,7 +264,7 @@ test("a state copy that throws stops neither the other copies nor the plugin's l
     () => {
       throw new Error("broken copy");
     },
-    "events",
+    "held",
     true,
   );
   const read: string[] = [];

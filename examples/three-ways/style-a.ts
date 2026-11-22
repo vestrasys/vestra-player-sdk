@@ -12,6 +12,7 @@ import {
   LIST_SIZE,
   nextRate,
   speedText,
+  whileShown,
   WIDTH,
 } from "./shared.ts";
 
@@ -21,12 +22,21 @@ export function speed(plugin: Plugin) {
   const bar = plugin.panels.mount("bottom", "ui/speed.slint");
   // Reads state.rate: runs again when the speed changes, and only then.
   bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));
+  // The speed has no event: while the bar is on screen a stream keeps
+  // state.rate following the player.
+  whileShown(bar, () => {
+    const feed = plugin.player.stream(() => {});
+    return () => feed.stop();
+  });
   plugin.commands.add({
     id: "rate.cycle",
     path: ["Playback", "Cycle Speed"],
     bindings: ["C"],
-    enabled: () => plugin.player.state.can.rate, // evaluated in the passes
-    run: () => plugin.player.setRate(nextRate(plugin.player.state.rate)),
+    enabled: plugin.when.can("rate"), // evaluated by the player itself
+    run: async () => {
+      const s = await plugin.player.refresh(); // the speed now, shown or not
+      await plugin.player.setRate(nextRate(s.rate));
+    },
   });
   // #endregion speed
 }
@@ -106,8 +116,7 @@ export function keyframes(plugin: Plugin) {
     video: null as { sourceId: number; video: boolean } | null,
   });
   let asking: number | null = null;
-  plugin.player.onChange(({ phase, sourceId }) => {
-    if (phase !== "ready" || sourceId === null) return;
+  plugin.player.on("source.ready", ({ state: { sourceId } }) => {
     if (st.video?.sourceId === sourceId || asking === sourceId) return;
     asking = sourceId;
     void plugin.player.stats().then(
@@ -134,8 +143,7 @@ export function keyframesManual(plugin: Plugin) {
   // #region keyframes-manual
   let video: { sourceId: number; video: boolean } | null = null;
   let asking: number | null = null;
-  plugin.player.onChange(({ phase, sourceId }) => {
-    if (phase !== "ready" || sourceId === null) return;
+  plugin.player.on("source.ready", ({ state: { sourceId } }) => {
     if (video?.sourceId === sourceId || asking === sourceId) return;
     asking = sourceId;
     void plugin.player.stats().then((stats) => {
@@ -155,8 +163,7 @@ export function keyframesManual(plugin: Plugin) {
 
 /** All four scenarios in style A. */
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
+  await plugin.player.read(); // the player's state, read once
   speed(plugin);
   frames(plugin);
   list(plugin);

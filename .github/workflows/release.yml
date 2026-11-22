@@ -5,7 +5,8 @@
 #     ─▶ static ─▶ build (pack · publint · attw · install smoke) ─┬─▶ test (ubuntu, windows)
 #                                                                ├─▶ docs
 #                                                                └─▶ test-macos (does not gate)
-#     ─▶ publish  [environment: vestra]  npm publish <tgz> --provenance
+#     ─▶ publish  [environment: vestra]  npm publish <tgz> --provenance --tag
+#        latest, or next for a pre-release version (one with "-": 1.11.0-rc.1)
 #        needs verify, static, build, test, docs; not test-macos
 #
 # macOS still runs on every release, but GitHub-hosted macOS runners are often
@@ -137,6 +138,15 @@ jobs:
           if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "No NPM_TOKEN: publishing through npm trusted publishing (OIDC) only."
           fi
+          # The dist-tag from the packed package's own version: a pre-release
+          # (a "-" in it, 1.11.0-rc.1) goes to "next" and never becomes
+          # "latest"; npm 11 refuses a pre-release without an explicit --tag.
+          version="$(tar -xzOf "$tgz" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')"
+          case "$version" in
+            *-*) dist_tag=next ;;
+            *) dist_tag=latest ;;
+          esac
+          echo "Publishing $version with dist-tag $dist_tag."
           # npm tries OIDC trusted publishing first and falls back to the token.
           # Provenance is generated from this run's OIDC identity.
-          npm publish "$tgz" --access public --provenance
+          npm publish "$tgz" --access public --provenance --tag "$dist_tag"

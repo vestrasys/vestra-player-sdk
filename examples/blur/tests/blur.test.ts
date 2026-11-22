@@ -59,3 +59,19 @@ test("stopping the plugin withdraws the blur", async () => {
   await stop();
   assert.equal(host.processing.resources.size, 0);
 });
+
+test("only the open window keeps the plugin running", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: new URL("..", import.meta.url),
+  });
+  const keepsRunning = () => host.keepsRunning;
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await host.command("blur").run();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), ["an open window (blur)"]);
+  host.window("blur").userClose();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await stop();
+});

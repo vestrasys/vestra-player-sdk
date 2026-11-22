@@ -16,3 +16,12 @@ test("Tools → Hello shows an on-screen message", async () => {
   assert.deepEqual(host.osd, ["Hello"]);
   await stop();
 });
+
+test("nothing keeps the plugin running while it is idle", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: new URL("..", import.meta.url),
+  });
+  await host.settle();
+  assert.deepEqual(host.keepsRunning, []);
+  await stop();
+});

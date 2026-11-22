@@ -18,6 +18,7 @@ import type { Handler, Internals } from "./internals.ts";
 import { taken } from "./transport.ts";
 import { declaredText, hostText } from "./i18n.ts";
 import { timelineChanged } from "./layout.ts";
+import { sendFacts, tracksChanged } from "./facts.ts";
 import { sourceEvents } from "./source-events.ts";
 
 /**
@@ -33,6 +34,10 @@ export function emitSource(
   host.emit("source.state", host.source);
   for (const [name, data] of sourceEvents(previous, host.source, reload))
     host.emit(name, structuredClone(data));
+  const tracks = tracksChanged(previous, host.source);
+  if (tracks) host.emit("audio.tracks.changed", structuredClone(tracks));
+  // The other facts after the source's events (`facts.ts`).
+  sendFacts(host);
 }
 
 export function initialSource(): SourceState {

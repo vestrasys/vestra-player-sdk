@@ -153,7 +153,7 @@ class OwnedSettings<T extends object> implements Disposable {
     // `status`, and the next `set` tries again.
     this.#send();
     // Only a new source or phase matters: "waiting" becomes "applied".
-    this.#watch = playerOf(scope.runtime).watch((raw) => {
+    this.#watch = playerOf(scope.runtime).track((raw) => {
       const source = `${raw.stamp.generation}:${raw.phase}`;
       if (source === this.#source) return;
       const first = this.#source === "";

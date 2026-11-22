@@ -107,19 +107,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "show"
-        }
-      },
-      {
-        "method": "ui.close",
-        "params": {
-          "id": "document"
-        }
-      }
-    ]
+    "dispose": []
   }
 }

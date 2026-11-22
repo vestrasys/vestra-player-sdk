@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startPlugin } from "@vestra-player/sdk/testing";
+import { startPlugin, TestHost } from "@vestra-player/sdk/testing";
 import activate from "../main.ts";
 import activateB from "../main-b.ts";
 import activateC from "../main-c.ts";
@@ -39,5 +39,31 @@ for (const [style, entry] of [
     await host.settle();
     assert.equal(panel.props.selected, 0);
     await stop();
+  });
+
+  test(`in a background tab nothing keeps it running, and the list outlives a stop (style ${style})`, async () => {
+    const host = new TestHost();
+    host.mountOther("sidebar", "vestra.playlist", { title: "Playlist" });
+    const first = await startPlugin(entry, { directory, host });
+    const keepsRunning = () => host.keepsRunning;
+    await host.settle();
+    host.selectTab("vestra.playlist");
+    await host.settle();
+    assert.deepEqual(keepsRunning(), []);
+    host.mounted().emit("select", 0);
+    await host.command("remove").run();
+    await host.settle();
+    await first.stop({ reason: "idle" }); // standby
+    // Showing the tab again starts it in the same player session.
+    const again = await startPlugin(entry, {
+      directory,
+      sessionStorage: host.sessionStorage,
+    });
+    await again.host.settle();
+    assert.deepEqual(again.host.mounted().props.rows, [
+      "Second item",
+      "Third item",
+    ]);
+    await again.stop();
   });
 }

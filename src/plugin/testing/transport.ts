@@ -12,6 +12,7 @@ import { WAKE_EVENTS } from "../connection.ts";
 import type { TestHost } from "./index.ts";
 import type { Handler, Internals } from "./internals.ts";
 import { hearEvent } from "./triggers.ts";
+import { sendFacts } from "./facts.ts";
 
 export const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -61,6 +62,18 @@ export function on(
 
 /** Implements `TestHost.emit`. */
 export function emit(
+  host: TestHost,
+  inner: Internals,
+  event: string,
+  data: unknown,
+) {
+  deliver(host, inner, event, data);
+  // The window's and the layout's facts follow a `window.state`, whether
+  // the plugin hears it or not (`facts.ts`).
+  if (event === "window.state") sendFacts(host, event);
+}
+
+function deliver(
   host: TestHost,
   inner: Internals,
   event: string,

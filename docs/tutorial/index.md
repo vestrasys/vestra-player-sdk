@@ -47,7 +47,7 @@ Add the scripts to `package.json`:
     "build": "vestra-plugin build",
     "pack": "vestra-plugin pack"
   },
-  "devDependencies": { "@vestra-player/sdk": "^1.10.0" }
+  "devDependencies": { "@vestra-player/sdk": "^1.11.0" }
 }
 ```
 
@@ -96,16 +96,14 @@ Create `main.ts`:
 // main.ts
 import type { Plugin } from "@vestra-player/sdk";
 
-export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
+export default function activate(plugin: Plugin) {
   plugin.commands.add({
     id: "where",
     path: ["Tools", "Where am I?"],
     bindings: ["Ctrl+Alt+W"],
     enabled: plugin.when.ready, // the player evaluates it
-    run: () => {
-      const { position, duration } = plugin.player.state;
+    run: async () => {
+      const { position, duration } = await plugin.player.refresh(); // now
       return plugin.osd.show("{} s of {} s", [
         (position ?? 0).toFixed(1),
         (duration ?? 0).toFixed(1),
@@ -117,7 +115,7 @@ export default async function activate(plugin: Plugin) {
 
 - The player calls the default export, `activate`, when it starts the plugin.
 - `path` is the menu path in English; the player translates it. To put the item into one of the player's own menus, start the path with that menu's id, such as `["@video", "Where am I?"]` ([Built-in menus](../reference/commands.md#built-in-menus)).
-- `enabled` greys the item out while nothing plays. `plugin.when.ready` is a condition the player evaluates itself, so the plugin need not run to keep the item current and the player can stop it while idle ([Keep a command's state without keeping the plugin running](../guides/command-state.md)). `run` shows the message, a template with its arguments.
+- `enabled` greys the item out while nothing plays. `plugin.when.ready` is a condition the player evaluates itself, so the plugin need not run to keep the item current and the player can stop it while idle ([Keep a command's state without keeping the plugin running](../guides/command-state.md)). `run` reads the state at the moment it runs (`refresh()` asks the player) and shows the message, a template with its arguments. Nothing follows the state in between, so the plugin holds nothing while it is idle: [Learn what happens in the player without staying up](../guides/events-and-triggers.md) shows the other ways to learn it.
 - Do not `await` a click on your own command or a callback of your own window inside `activate`: the player holds them until activation is done, so `activate` would wait until the start timeout (60 s) and the plugin would stop with `failed`.
 - The SDK is imported with `import type` only; a runtime import fails `vestra-plugin build`.
 
@@ -139,19 +137,19 @@ Open a video, then choose **Tools ▸ Where am I?** in the right-click menu, or 
 
 ## 5. Choose a style
 
-The menu item above follows the playback state through `plugin.player.state` and the SDK decides when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style starts with `plugin.player.subscribe()` and `await plugin.player.read()`, as above.
+The menu item above lets the player keep its state (`plugin.when`) and reads the playback state when it runs. For a value that is shown and changes, the SDK can decide when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style starts with `await plugin.player.read()`, and follows the speed, which has no event of its own, only while the panel is on screen: `whileShown` (in `shared.ts`) starts it when the panel shows and stops it when it goes.
 
 ### A: declare with `bind()`
 
 {@includeCode ../../examples/three-ways/style-a.ts#speed}
 
-The binding is a function of state. The SDK runs it again when the speed changes, and only then, and sends only what changed. The command's `enabled` works the same way. This is the default style, and the one the guides use: choose it for anything the SDK can see, such as the player's state, a window's state or your own `plugin.state`.
+The binding is a function of state. While the stream is open the SDK runs it again when the speed changes, and only then, and sends only what changed. The command's `enabled` is a condition the player evaluates itself. This is the default style, and the one the guides use: choose it for anything the SDK can see, such as the player's state, a window's state or your own `plugin.state`.
 
 ### B: listen with `plugin.player.on` and write with `set`
 
 {@includeCode ../../examples/three-ways/style-b.ts#speed}
 
-The listener receives every `source.state` event with a typed payload ([Events](../reference/events.md)), and `set` sends the value whole each time. Nothing compares for you, so the plugin keeps `shown` to avoid sending the same text ten times a second. Choose it when the value comes from outside the SDK (a timer, a socket, an emulator's frame) and you know exactly when it changed.
+While the bar shows, the listener receives every `source.state` event with a typed payload ([Events](../reference/events.md)), and `set` sends the value whole each time. Nothing compares for you, so the plugin keeps `shown` to avoid sending the same text ten times a second. Choose it when the value comes from outside the SDK (a timer, a socket, an emulator's frame) and you know exactly when it changed.
 
 ### C: direct messages with `plugin.wire`
 

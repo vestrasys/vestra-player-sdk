@@ -21,7 +21,7 @@ The centre is the pixel itself, the edges its four direct neighbours, the corner
 
 ### Follow the player
 
-A filter chain follows the player's source: call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`, so a chain set before a video starts applies when one does.
+A filter chain follows the player's source by itself while it exists, so a chain set before a video starts applies when one does.
 
 ### Write the kernel as a shader
 
@@ -114,11 +114,9 @@ Use `gblur` for a blur, a `convolution` for a kernel of your own (sharpen, embos
 
 ```ts
 import { join } from "node:path";
-import type { ConvolutionPlane, Plugin } from "@vestra-player/sdk";
+import type { ConvolutionPlane, Plugin, VideoFilter } from "@vestra-player/sdk";
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
   const shaderFile = join(import.meta.dirname, "shaders", "blur.glsl");
   const shaders = plugin.video.shaders("blur");
   let shaderOn = false;
@@ -145,7 +143,9 @@ export default async function activate(plugin: Plugin) {
     rdiv: 1 / 16, // normalization
     bias: 0,
   };
-  const filter = plugin.video.filter("blur");
+  // Made when first used: a chain keeps the plugin running once it has
+  // nodes (an empty one sends nothing and holds nothing).
+  let filter: VideoFilter | undefined;
   let filterOn = false;
   plugin.commands.add({
     id: "blur-filter",
@@ -154,7 +154,7 @@ export default async function activate(plugin: Plugin) {
     run: () => {
       filterOn = !filterOn;
       // One kernel for each plane: brightness and the two colour planes.
-      filter.set(
+      (filter ??= plugin.video.filter("blur")).set(
         filterOn
           ? [{ kind: "convolution", planes: [kernel3, kernel3, kernel3] }]
           : [],
@@ -167,7 +167,7 @@ export default async function activate(plugin: Plugin) {
     path: ["@video", "Save Blurred Frame"],
     run: async () => {
       const snapshot = await plugin.media.capture({
-        ifCurrent: plugin.player.state,
+        ifCurrent: await plugin.player.refresh(), // the frame shown now
         processed: true, // with this plugin's filter chain
         subtitles: false,
       });

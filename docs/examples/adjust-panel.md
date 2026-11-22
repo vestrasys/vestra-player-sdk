@@ -5,13 +5,13 @@ description: "Walkthrough of examples/adjust-panel: a speed slider in the player
 
 # Example: Adjust panel
 
-A speed slider in the player's **adjust column**, the column of controls for what is playing. It shows how to choose a slot by what a panel is for, how a key opens the column at your tab, and how `home` puts that key under the tab.
+A speed slider in the player's **adjust column**, the column of controls for what is playing. It shows how to choose a slot by what a panel is for, how a key opens the column at your tab, how `home` puts that key under the tab, and how a panel follows playback only while it is on screen, so the plugin can be stopped while the column is closed.
 
 ## What it demonstrates
 
-The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} as the panel's own key · {@link "@vestra-player/sdk"!CommandOptions.home | CommandOptions.home}.
+The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} as the panel's own key · {@link "@vestra-player/sdk"!CommandOptions.home | CommandOptions.home} · a stream only while the tab is on screen, opened and stopped on `layout.changed` · a `when` condition for the command.
 
-[Open a tool window and remember its state](../guides/windows.md) teaches the view surface panels share with tool windows; [Keep a slider responsive while dragging](../guides/slider.md) covers the slider itself.
+[Open a tool window and remember its state](../guides/windows.md) teaches the view surface panels share with tool windows; [Keep a slider responsive while dragging](../guides/slider.md) covers the slider itself; [Learn what happens in the player without staying up](../guides/events-and-triggers.md) covers the stream while shown.
 
 ## What you'll build
 
@@ -38,7 +38,7 @@ examples/adjust-panel/
 
 {@includeCode ../../examples/adjust-panel/manifest.json}
 
-`plugin.player.subscribe()` and `await plugin.player.read()`, first in `activate`, keep `plugin.player.state` following the player, so the panel enables itself when a file is opened after the plugin started (without `subscribe()`, `state` changes only after the plugin's own calls, and the panel would stay as it was at start-up).
+`minPlayerVersion` is 0.11.0, the first player that sends `layout.changed`. `await plugin.player.read()`, first in `activate`, reads the player's state once; from then on `plugin.player.state` follows the player only while the tab is shown (below).
 
 ## The panel in Slint
 
@@ -55,6 +55,19 @@ examples/adjust-panel/
 {@includeCode ../../examples/adjust-panel/main.ts#mount}
 
 - {@link "@vestra-player/sdk"!Panels.mount | plugin.panels.mount} with `"adjust"`; `title` is the tab's label.
+
+### Following the speed while the tab shows
+
+{@includeCode ../../examples/adjust-panel/main.ts#follow}
+
+- The speed has no event of its own, so the panel follows it with a stream ({@link "@vestra-player/sdk"!Player.stream | plugin.player.stream}): `player.state` is updated at every change and the binding below runs again. The stream is open only while `panel.state.effective` is true, that is while the column is open at this tab.
+- `layout.changed` says when the column opens or closes or another tab is chosen. A listener of it does not keep the plugin running: the player starts a stopped plugin to deliver it. Showing the tab starts the plugin too, and the check at `ready` opens the stream for a column that is already open then (the player then keeps the plugin running for that run).
+- With the column closed nothing of the plugin follows the player, and the player stops it after its idle time; its tab, its key and **Normal Speed**'s state stay.
+
+### Binding the panel
+
+{@includeCode ../../examples/adjust-panel/main.ts#bind}
+
 - `bind` sends the speed and whether the source can change it; the slider and the presets call `rateChanged`.
 
 ### The key and the home
@@ -62,6 +75,7 @@ examples/adjust-panel/
 {@includeCode ../../examples/adjust-panel/main.ts#commands}
 
 - `speed` calls {@link "@vestra-player/sdk"!Panel.toggle | panel.toggle}: it opens the column at this tab, or closes the column when this tab is already the one shown, the way the player's own Alt+1…4 work.
+- `speed-reset` is enabled by the condition `when.can("rate")`, which the player evaluates itself, also while the plugin is stopped.
 - `speed-reset` names `speed` as its `home`. The player then knows that `speed` opens the panel this command lives in: it shows `speed`'s key under the tab, and the command palette shows where **Normal Speed** lives.
 
 ## The tests
@@ -70,6 +84,7 @@ examples/adjust-panel/
 
 - `host.layout.adjust` is the adjust column as the player reports it; it starts hidden (`preferred: false`).
 - `host.mountOther("adjust", …)` adds another plugin's tab, and `host.selectTab` makes it current.
+- `host.keepsRunning` is what would keep the plugin running: empty while the column is closed; the current tab and the stream while it is open.
 
 ## Run it
 
@@ -86,4 +101,4 @@ Start the player with `--plugin <path to examples/adjust-panel>` and press Alt+5
 ## Try next
 
 1. **More controls.** Add a fine step (±0.05) as two buttons and two commands with `home: "speed"`; their keys can show next to them with `KeyHint` and `plugin.commands.keys`.
-2. **Follow the user.** Listen to `plugin.panels.adjust.onChange` (with `events`) to know when the column opens or closes.
+2. **Show the speed elsewhere.** A label in the bottom bar follows the speed the same way: a stream while it is on screen.

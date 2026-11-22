@@ -27,7 +27,7 @@ A settings page keeps its values in the plugin's storage. The player shows its i
 
 ## Control playback
 
-Every control of `plugin.player` is conditional: it acts on the state the plugin last saw and fails with `stale`, doing nothing, when the user or another plugin changed the source meanwhile. The guide shows how to read and follow the state, bind menu items to `state.can`, handle `stale` and pass `ifCurrent` across slow work, open a file and follow it with its `Media` handle, use the player's own core actions for buttons, provide Next and Previous, and where sliders, loops and the output fit in.
+Every control of `plugin.player` is conditional: it acts on the state the plugin last saw and fails with `stale`, doing nothing, when the user or another plugin changed the source meanwhile. The guide shows how to read the state and follow it while it shows, give menu items `when` conditions on `state.can`, handle `stale` and pass `ifCurrent` across slow work, open a file and follow it with its `Media` handle, use the player's own core actions for buttons, provide Next and Previous, and where sliders, loops and the output fit in.
 
 [Read the guide](control-playback.md)
 
@@ -61,9 +61,15 @@ The player can draw the video on the GPU or in software, and keeps the user's ch
 
 [Read the guide](gpu-rendering.md)
 
+## Learn what happens in the player without staying up
+
+A plugin learns the player's state in four ways: a read when a handler needs it, an event (a file opened, became ready, ended; the video, the audio tracks, the subtitles, the window, the layout or the audio devices changed), a trigger (a condition the player evaluates and wakes the plugin for: playing in fullscreen, a time, a position range) or a stream. Only the stream keeps the plugin running. The guide picks one for each need through four examples (on top while playing fullscreen, a sleep timer that survives an update, skipping ranges of the file, a window that shows the time left), shows the patterns for state that has no event, and tests them with the test host's clock and standby.
+
+[Read the guide](events-and-triggers.md)
+
 ## Keep a command's state without keeping the plugin running
 
-A menu item whose `enabled` or `checked` is a function that reads `plugin.player.state` keeps the plugin running, because the SDK must evaluate it on every change. The guide finds such bindings with `TestHost.keepsRunning`, replaces them with `plugin.when` conditions that the player evaluates itself (`when.can("snapshot")`, `when.theme(id)`, combined with `and`, `or`, `not`), keeps the plugin's own state as values, and tests that nothing keeps the plugin running.
+A menu item whose `enabled` or `checked` is a function is evaluated inside the plugin: the plugin must run, and what it reads of the player is only as new as the plugin's copy. A `plugin.when` condition is evaluated by the player itself, also while the plugin is stopped. The guide covers the `when` language (the source's phase and controls, pause, fullscreen, the theme and language, duration, volume, speed, tracks, the output device, the window), combining conditions with `and`, `or`, `not`, the plugin's own state as values, and a test that nothing keeps the plugin running.
 
 [Read the guide](command-state.md)
 

@@ -39,6 +39,8 @@ test("timeline ranges: their own list of the layer, merged, cleared by a new sou
     assert.equal(plugin.timeline.marks.length, lists.marks.length);
     heard.push([plugin.timeline.marks.length, plugin.timeline.ranges.length]);
   });
+  // The listener subscribes the event (SDK 1.11.0: from the first one).
+  await host.settle();
   host.openElsewhere("/a.mkv");
   host.setSource({ duration: 60 });
   await host.settle();

@@ -17,12 +17,18 @@ import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import { openStream, resolvedStream } from "./stream.ts";
 import type { StreamSource } from "./stream.ts";
-import { SOURCE_EVENTS, checkOn, playerOn } from "./player/events.ts";
+import {
+  FACT_EVENTS,
+  SOURCE_EVENTS,
+  checkOn,
+  playerOn,
+} from "./player/events.ts";
 import { validStep } from "./player/rules.ts";
 import type {
   AudioTrack,
   Conditional,
   Disposable,
+  FactEvent,
   HostEvent,
   Media,
   Player,
@@ -204,30 +210,23 @@ function sourceFailure(
 /**
  * One per plugin: the state store and the operation book client.
  *
- * The state copy (a mirror of `source.state`) follows the player's events
- * from `plugin.player.subscribe()` on (`subscribe`, first in `activate`
- * as the plugin writes it). Before that no event can arrive; `start` is
- * then called by the first use of the state (a read of
- * `plugin.player.state`, `onChange`, `isCurrent`, a media handle, a
- * scrub, a stream, a filter, a shader or view request, a capture) and
- * subscribes nothing until `subscribe()`, which subscribes it and, after
- * `read()`, reads the state once more (`#catchUp`).
+ * The state copy (a mirror of `source.state`) is started by the first use
+ * of the state (a read of `plugin.player.state`, `isCurrent`, a media
+ * handle, a scrub, a stream, a filter, a shader or view request, a
+ * capture). It follows the player's events only while something holds
+ * `source.state` (a stream, a `player.on` listener of it, a media
+ * handle's `ready` or `onEnd`, a scrub; `Connection.hold`); otherwise it
+ * is the newest snapshot the plugin has: its start-up read, its own calls
+ * and the state a source event carries.
  */
 export class PlayerService implements StreamSource {
   readonly runtime: Runtime;
   raw: SourceState = empty;
   state: PlayerState;
-  /**
-   * The fields the last accepted state changed (`onChange` listeners are
-   * told so a listener that read none of them needs no full pass).
-   */
-  change: ReadonlyMap<string, ReadonlySet<string>> = new Map();
   readonly #watchers = new Set<(raw: SourceState) => void>();
   #operation = 0;
-  /** The mirror subscribed (`start`). */
+  /** The mirror registered (`start`). */
   #started = false;
-  /** The read that followed the subscription (resolved: none was needed). */
-  #fresh: Promise<void> = Promise.resolve();
   /** `read()`'s one read, once asked for. */
   #read: Promise<void> | undefined;
   readonly output: Latest<{ volume?: number; muted?: boolean }>;
@@ -264,48 +263,27 @@ export class PlayerService implements StreamSource {
       }
     })());
   }
-  /**
-   * `plugin.player.subscribe()`: turn event delivery on and follow
-   * `source.state` now. Idempotent.
-   */
-  subscribe() {
-    if (this.runtime.delivering) return;
-    this.runtime.deliver();
-    // A copy started on demand heard nothing so far; it is subscribed now,
-    // and a change before that sent no event.
-    if (this.#started) this.#catchUp();
-    else void this.start();
-  }
-  /** Whether the mirror follows the player's events yet. */
+  /** Whether the mirror is registered yet. */
   get started() {
     return this.#started;
   }
   /**
-   * Follow `source.state` from now on: the SDK's copy of the state (a
-   * mirror; a plugin listens through `watch` and the bindings that read
-   * `state`). Then read the state once more (after `read()` and
-   * `subscribe()`): a change between that read and the subscription sent
-   * no event to this plugin. Resolves when that read is in.
+   * Register the SDK's copy of the state (a mirror of `source.state`; a
+   * plugin listens through `watch`, `follow` and `player.on`). It hears
+   * the events while something holds the event (`Connection.hold`), which
+   * also reads the state once more after `read()` when the subscription
+   * starts. Resolves at once.
    */
   start(): Promise<void> {
-    if (this.#started) return this.#fresh;
+    if (this.#started) return Promise.resolve();
     this.#started = true;
     this.runtime.on(
       "source.state",
       (data) => this.accept(data as SourceState),
-      "events",
+      "held",
       true,
     );
-    this.#catchUp();
-    return this.#fresh;
-  }
-  /** Read the state once more after a subscription, when it is read at all. */
-  #catchUp() {
-    if (this.runtime.reads && this.runtime.delivering)
-      this.#fresh = this.refresh().then(
-        () => {},
-        () => {},
-      );
+    return Promise.resolve();
   }
   /** The state as the player has it now, for a call that needs a source. */
   async current(): Promise<PlayerState> {
@@ -321,7 +299,6 @@ export class PlayerService implements StreamSource {
     this.raw = raw;
     this.state = view(raw, this.runtime);
     const changed = changes(last, lastRaw, this.state, raw);
-    this.change = new Map([[PLAYER, new Set(changed)]]);
     for (const watcher of [...this.#watchers]) watcher(raw);
     // A precise pass: only the bindings that read a changed field.
     this.runtime.changed(PLAYER, changed);
@@ -340,10 +317,33 @@ export class PlayerService implements StreamSource {
     if (event !== "source.ended") this.accept(message.state);
     return { ...message, state: view(message.state) };
   }
-  watch(watcher: (raw: SourceState) => void): Disposable {
+  /**
+   * `watcher` hears each accepted state while the handle lives; it holds
+   * `source.state` (`Connection.hold`). `always`: the state is read once
+   * more when the subscription starts, also without `read()`.
+   */
+  /**
+   * A fact event's fields of the state: taken into the copy
+   * when `belongs` holds for it, as `accept` takes a state (a precise
+   * pass for the fields that changed); its event sequence is kept, so the
+   * next `source.state` is accepted as before.
+   */
+  patch(belongs: (raw: SourceState) => boolean, fields: Partial<SourceState>) {
+    if (!belongs(this.raw)) return;
+    const raw = { ...this.raw, ...fields } as SourceState;
+    if (JSON.stringify(raw) === JSON.stringify(this.raw)) return;
+    const last = this.state;
+    const lastRaw = this.raw;
+    this.raw = raw;
+    this.state = view(raw, this.runtime);
+    const changed = changes(last, lastRaw, this.state, raw);
+    for (const watcher of [...this.#watchers]) watcher(raw);
+    this.runtime.changed(PLAYER, changed);
+  }
+  watch(watcher: (raw: SourceState) => void, always = false): Disposable {
     void this.start();
     this.#watchers.add(watcher);
-    const held = this.runtime.hold("source.state");
+    const held = this.runtime.hold("source.state", undefined, always);
     return {
       dispose: async () => {
         this.#watchers.delete(watcher);
@@ -352,9 +352,27 @@ export class PlayerService implements StreamSource {
     };
   }
   /**
+   * `watch` for the SDK's own handles that send their values again when the
+   * source changes (the video view, a shader channel, a processing node):
+   * the copy hears `source.state` while the handle lives, but the plugin is
+   * not counted as listening to it (`Connection.track`). The handle's own
+   * resource is what keeps the plugin running.
+   */
+  track(watcher: (raw: SourceState) => void): Disposable {
+    void this.start();
+    this.#watchers.add(watcher);
+    const tracked = this.runtime.track("source.state");
+    return {
+      dispose: async () => {
+        this.#watchers.delete(watcher);
+        await tracked.dispose();
+      },
+    };
+  }
+  /**
    * `watch`, for `plugin.player.stream`: the copy hears `source.state` while
-   * the watcher is open, with or without `subscribe()`, and the plugin
-   * counts as listening to it (`Connection.follow`).
+   * the watcher is open, and the plugin counts as listening to it
+   * (`Connection.follow`; the stream reads the state itself).
    */
   follow(watcher: (raw: SourceState) => void, why: () => string): Disposable {
     void this.start();
@@ -476,10 +494,8 @@ class MediaHandle implements Media {
   ready(options: { signal?: AbortSignal } = {}) {
     const service = this.#service;
     return new Promise<void>((resolve, reject) => {
-      let poll: ReturnType<typeof setInterval> | undefined;
       const finish = (error?: PluginError) => {
         watch.dispose();
-        clearInterval(poll);
         options.signal?.removeEventListener("abort", abort);
         if (error) reject(error);
         else resolve();
@@ -498,12 +514,12 @@ class MediaHandle implements Media {
         finish(abortError());
         void this.close().catch((error) => this.#scope.report(error));
       };
-      const watch = service.watch(check);
+      // The watch holds `source.state`: the copy follows the player's
+      // events until it ends. A change before its subscription is in sent
+      // no event, so the state is read once more then (`always`).
+      const watch = service.watch(check, true);
       if (options.signal?.aborted) return abort();
       options.signal?.addEventListener("abort", abort, { once: true });
-      // Without event delivery the state only moves when read.
-      if (!service.runtime.delivering)
-        poll = setInterval(() => void service.refresh().catch(() => {}), 100);
       check();
     });
   }
@@ -674,6 +690,36 @@ function provideSequence(
   return scope.add(handle);
 }
 
+/**
+ * `audio.tracks.changed`'s data as the listener gets it (`ScopeImpl.fact`,
+ * SDK 1.11.0): the tracks as {@link PlayerState.audioTracks} lists them.
+ * The copy takes them first, when they are of its source.
+ */
+export function audioTracksChanged(runtime: Runtime, data: unknown) {
+  const { sourceId, audioTracks } = data as {
+    sourceId: number;
+    audioTracks: SourceAudioTrack[];
+  };
+  playerOf(runtime).patch((raw) => raw.stamp.generation === sourceId, {
+    audioTracks,
+  });
+  return { sourceId, audioTracks: audioTracks.map(audioTrack) };
+}
+
+/**
+ * `audio.devices.changed`'s data as the listener gets it:
+ * as the player sent it; the copy takes `requested` and `active` into
+ * {@link PlayerState.audioOutput} first.
+ */
+export function audioDevicesChanged(runtime: Runtime, data: unknown) {
+  const { requested, active } = data as {
+    requested: string | null;
+    active: string | null;
+  };
+  playerOf(runtime).patch(() => true, { audioOutput: { requested, active } });
+  return data;
+}
+
 export const playerOf = (runtime: Runtime) =>
   runtime.service("player", () => new PlayerService(runtime));
 
@@ -702,17 +748,6 @@ export function player(scope: ScopeImpl): Player {
       scope.runtime.reading("source.state");
       scope.runtime.depends(PLAYER);
       return service().state;
-    },
-    onChange(listener) {
-      const watch = service().watch(() =>
-        scope.runOn(service().change, listener, service().state),
-      );
-      return scope.add({
-        dispose: async () => {
-          scope.forget(watch);
-          await watch.dispose();
-        },
-      });
     },
     stream(listener) {
       if (typeof listener !== "function")
@@ -754,9 +789,11 @@ export function player(scope: ScopeImpl): Player {
       });
     },
     refresh: () => service().refresh(),
-    subscribe: () => service().subscribe(),
     read: () => service().read(),
-    on(event: HostEvent | SourceEvent, listener: (data: never) => void) {
+    on(
+      event: HostEvent | SourceEvent | FactEvent,
+      listener: (data: never) => void,
+    ) {
       // Checked first; the copy then starts before the listener subscribes
       // (it hears each event first in any case).
       checkOn(event, listener);
@@ -764,6 +801,10 @@ export function player(scope: ScopeImpl): Player {
       if (SOURCE_EVENTS.has(event))
         return playerOn(scope, event, listener as never, (data) =>
           service().sourceEvent(event, data),
+        );
+      if (FACT_EVENTS.has(event))
+        return playerOn(scope, event, listener as never, (data) =>
+          scope.fact(event, data),
         );
       return playerOn(scope, event as HostEvent, listener as never);
     },

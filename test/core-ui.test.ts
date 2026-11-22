@@ -231,6 +231,8 @@ test("sequence provider flags follow bindings; next/previous route to it; stats"
   let index = 0;
   const { plugin, stop } = await startPlugin(
     (plugin: Plugin) => {
+      // `player.state` follows the player while a stream is open.
+      plugin.player.stream(() => {});
       plugin.player.provideSequence({
         canNext: () => index < 2,
         canPrevious: () => index > 0,

@@ -1,15 +1,15 @@
 ---
 title: "Example: Bookmark"
-description: "Walkthrough of examples/bookmark: a tool window bound to the playback state, with Mark and Jump buttons."
+description: "Walkthrough of examples/bookmark: a tool window that follows the playback state while it is open, with Mark and Jump buttons."
 ---
 
 # Example: Bookmark
 
-A tool window whose buttons follow the playback state: **Mark** remembers where playback is, **Jump** goes back there. It shows the pattern most plugins with a window use: the window's properties are _bound_ to state, and its buttons call back into the plugin.
+A tool window whose buttons follow the playback state: **Mark** remembers where playback is, **Jump** goes back there. It shows the pattern most plugins with a window use: the window's properties are _bound_ to state, its buttons call back into the plugin, and the playback state is followed only while the window is open.
 
 ## What it demonstrates
 
-A tool window whose properties are bound to the playback state · handling its buttons.
+A tool window whose properties are bound to the playback state · handling its buttons · a stream while the window is open · state kept in session storage through standby.
 
 [Open a tool window and remember its state](../guides/windows.md) teaches a window bound to the playback state; [Test a plugin](../guides/testing.md) uses its test as the complete example.
 
@@ -36,7 +36,7 @@ examples/bookmark/
 
 {@includeCode ../../examples/bookmark/manifest.json}
 
-`await plugin.player.read()`, first in `activate`, reads the position and whether the video can seek; `plugin.player.subscribe()` keeps that state up to date while the plugin runs.
+`await plugin.player.read()`, first in `activate`, reads the position and whether the video can seek once; while the window is open a stream keeps that state up to date (below).
 
 ## The window
 
@@ -57,7 +57,7 @@ Names are converted for you: Slint's `can-mark` is `canMark` in TypeScript.
 {@includeCode ../../examples/bookmark/main.ts#state}
 
 - `player` is `plugin.player`, kept in a constant because the code reads it several times.
-- `mark` is the plugin's whole state: a position in seconds, or `null` for no bookmark.
+- `mark` is the plugin's whole state: a position in seconds, or `null` for no bookmark. It is kept in {@link "@vestra-player/sdk"!Storage.session | plugin.storage.session}, because the player stops the plugin while its window is closed and nothing uses it; `activate` runs again at its next use and starts from the stored value.
 
 ### The window, bound to the state
 
@@ -73,7 +73,7 @@ Names are converted for you: Slint's `can-mark` is `canMark` in TypeScript.
 
 ### The menu command
 
-{@includeCode ../../examples/bookmark/main.ts#command}
+{@includeCode ../../examples/bookmark/main.ts#stream,command}
 
 - `path: ["@playback", "Bookmark…"]` adds the item to the player's own **Playback** menu. A first segment that starts with `@` names a built-in menu ({@link "@vestra-player/sdk"!MenuId | MenuId}).
 - `order: 270` places it among the Playback menu's items.

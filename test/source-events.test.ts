@@ -344,11 +344,10 @@ test("the player quits: a running plugin hears source.ended with reason quit, on
   assert.deepEqual(log, []);
 });
 
-test("a subscribed plugin reads the new state first, then the event", async () => {
+test("a streaming plugin reads the new state first, then the event", async () => {
   const seen: string[] = [];
   const { host, stop } = await startPlugin((plugin) => {
-    plugin.player.subscribe();
-    plugin.player.onChange((s) => seen.push(`state ${s.phase}`));
+    plugin.player.stream((s) => seen.push(`state ${s.phase}`));
     plugin.player.on("source.ready", () =>
       seen.push(`ready (state ${plugin.player.state.phase})`),
     );

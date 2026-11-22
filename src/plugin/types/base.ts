@@ -80,8 +80,8 @@ import type { Panel, Window } from "./ui-layout.ts";
  * disposing it removes just that listener, before the scope that owns it
  * ends.
  * ```ts
- * const subscription = plugin.player.onChange((state) => {
- *   if (state.phase === "ready") void subscription.dispose();
+ * const subscription = plugin.player.on("source.ready", () => {
+ *   void subscription.dispose(); // heard once
  * });
  * ```
  *
@@ -264,9 +264,8 @@ export interface Scope extends Disposable {
   /**
    * Video processing: this plugin's filter chain, the display layer, the
    * GPU render options, this plugin's shaders, the GPU's video upscaler and
-   * motion smoothing. The filter chain follows the player: call
-   * `plugin.player.subscribe()` and `plugin.player.read()` first (without `subscribe()` the SDK never sees
-   * the media become ready and the chain stays `waiting`).
+   * motion smoothing. The filter chain follows the player by itself while
+   * it exists (it applies when a video becomes ready).
    */
   readonly video: {
     /**
@@ -613,7 +612,7 @@ export interface Scope extends Disposable {
    * // ---cut---
    * const st = plugin.state({ video: null as boolean | null });
    * bar.bind(() => ({ keyframes: st.video === true })); // reads st.video
-   * plugin.player.onChange((state) => {
+   * plugin.player.on("source.ready", ({ state }) => {
    *   if (state.source === null) return;
    *   void hasVideo(state.source).then((video) => (st.video = video)); // re-runs the bind above
    * });
@@ -871,9 +870,9 @@ export interface WindowState {
 /**
  * The player's main window: read it, change it.
  *
- * After `plugin.player.subscribe()`, `state` follows the window from the first read or
- * `onChange`; without it, it updates only at start and after this plugin's
- * `setVideoArea`.
+ * `state` is read at start; it follows the window while an `onChange`
+ * listener exists, and takes each `window.changed` a `player.on` listener
+ * hears; otherwise it updates only after this plugin's `setVideoArea`.
  *
  * @example Resize the window to the video's own size
  * Screen ▸ Original size makes the video area as many logical points as
@@ -908,12 +907,13 @@ export interface MainWindow {
   /** Latest state; zero video area without a native window. */
   readonly state: WindowState;
   /**
-   * The window state changed (outside changes after `plugin.player.subscribe()`).
+   * The window state changed, here or elsewhere (the listener keeps the
+   * plugin running; `window.changed` with {@link Player.on} does not).
    *
    * @example Fit a panel to fullscreen
    * The plugin's panel uses larger text while the player is fullscreen. The
    * listener runs after the SDK updated `state` from the player's events
-   * (after `plugin.player.subscribe()`; without it only after this plugin's own changes).
+   * while it listens.
    * ```ts
    * declare const bar: Panel;
    * // ---cut---

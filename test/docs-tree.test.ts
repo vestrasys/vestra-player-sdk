@@ -65,7 +65,11 @@ test("the tree is the package's version", () => {
 
 test("/ lists Overview, Guides and API with their summaries", () => {
   const root = docs("/");
-  assert.match(root, /^\/ · Vestra Player SDK \d+\.\d+\.\d+ documentation/);
+  // A pre-release (an rc) names its suffix too.
+  assert.match(
+    root,
+    /^\/ · Vestra Player SDK \d+\.\d+\.\d+(?:-[\w.]+)? documentation/,
+  );
   for (const path of ["/Overview", "/Guides", "/API"])
     assert.ok(
       lines(root).some(
@@ -516,7 +520,7 @@ test("the three plugin styles: the tutorial, the event and the message tables", 
   );
   for (const code of [
     "bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));",
-    'plugin.player.on("source.state", (s) => {',
+    'plugin.player.on("source.state", (s) => show(s.rate))',
     "const view = plugin.wire.view(bar);",
   ])
     assert.ok(chapter.includes(code), code);

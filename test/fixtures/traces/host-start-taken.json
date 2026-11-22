@@ -13,12 +13,10 @@
     "commands": [],
     "methods": [
       "window.state",
-      "events.subscribe",
       "source.state",
       "timeline.marks",
       "sourceResolvers.register",
-      "commands.register",
-      "commands.unregister"
+      "commands.register"
     ]
   },
   "conflict": {
@@ -33,7 +31,6 @@
     ],
     "methods": [
       "window.state",
-      "events.subscribe",
       "source.state",
       "timeline.marks",
       "sourceResolvers.register",

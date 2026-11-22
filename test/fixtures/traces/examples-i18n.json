@@ -95,19 +95,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "counter"
-        }
-      },
-      {
-        "method": "ui.close",
-        "params": {
-          "id": "counter"
-        }
-      }
-    ]
+    "dispose": []
   }
 }

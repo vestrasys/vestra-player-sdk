@@ -40,7 +40,7 @@ export const WRAPPED_BY = {
   "processing.operation": ["Plugin.video.filter", "Plugin.audio.filter"],
   "sourceResolvers.respond": ["Resolvers.add"],
   "sourceResolvers.unregister": ["Resolvers.add"],
-  "events.unsubscribe": ["Player.on", "Player.onChange"],
+  "events.unsubscribe": ["Player.on", "Player.stream"],
   "commands.update": ["Command.set"],
   "commands.unregister": ["Command.dispose"],
   "palette.lead.clear": ["PaletteLead.dispose"],

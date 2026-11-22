@@ -307,30 +307,22 @@ test("without events nothing subscribes to the player's state", async () => {
   }
 });
 
-test("with subscribe() first in activate the copy follows from the start: a late first read is current", async () => {
-  for (const capabilities of [["events"], ["events", "playback.read"]]) {
+test("without a listener the copy subscribes nothing: the first read is the state then", async () => {
+  for (const capabilities of [[], ["playback.read"]]) {
     const { plugin, host, stop } = await startPlugin(() => {}, {
       capabilities,
     });
     try {
-      // The window's start-up read, then subscribed (a mirror) before the
-      // player's read (1.9.0: the calls run after the window's read).
+      // The window's start-up read; nothing subscribed (SDK 1.11.0).
       assert.deepEqual(host.calls[0]?.method, "window.state");
-      assert.deepEqual(host.calls[1]?.method, "events.subscribe");
-      assert.deepEqual(host.sent("events.subscribe"), [
-        { event: "source.state", mirror: true },
-      ]);
+      assert.deepEqual(host.sent("events.subscribe"), []);
       host.openElsewhere("/movie.mp4");
       await host.settle();
+      assert.equal(plugin.player.state.source, null, String(capabilities));
       assert.equal(
-        plugin.player.state.source,
+        (await plugin.player.refresh()).source,
         "/movie.mp4",
-        String(capabilities),
-      );
-      assert.equal(
-        host.sent("source.state").length,
-        capabilities.includes("playback.read") ? 1 : 0,
-        "no read again",
+        "a read is current",
       );
     } finally {
       await stop();
@@ -341,21 +333,16 @@ test("with subscribe() first in activate the copy follows from the start: a late
 test("player.on: the payload is the wire event data, the listener is named, no mirror", async () => {
   const seen: unknown[] = [];
   let plugin!: Plugin;
-  const { host, stop } = await startPlugin(
-    (p: Plugin) => {
-      plugin = p;
-      p.player.on("source.state", (state) => seen.push(state));
-    },
-    { capabilities: ["events"] },
-  );
+  const { host, stop } = await startPlugin((p: Plugin) => {
+    plugin = p;
+    p.player.on("source.state", (state) => seen.push(state));
+  }, {});
   try {
     await host.settle();
-    // The state copy's mirror (from the start, `events`), then the
-    // listener's own mark: a listener, named; `on` adds no copy.
+    // The listener's own mark: a listener, named; `on` adds no copy.
     const lines = host.sent("events.subscribe");
-    assert.deepEqual(lines[0], { event: "source.state", mirror: true });
-    assert.equal(lines.length, 2);
-    const subscribe = lines[1]!;
+    assert.equal(lines.length, 1);
+    const subscribe = lines[0]!;
     assert.equal(subscribe.event, "source.state");
     assert.equal(subscribe.mirror, undefined, "a listener, not a mirror");
     assert.match(
@@ -388,7 +375,7 @@ test("player.on takes every HostEvent; dispose unsubscribes", async () => {
       );
       p.player.on("packages.changed", (list) => seen.push(["packages", list]));
     },
-    { capabilities: ["events", "packages.manage"] },
+    { capabilities: ["packages.manage"] },
   );
   try {
     await host.settle();
@@ -411,9 +398,10 @@ test("player.on takes every HostEvent; dispose unsubscribes", async () => {
     assert.ok(host.listening.has("timeline.changed"));
     await scope.dispose();
     await host.settle();
-    // The listener is gone; the timeline copy it started stays, a mirror.
+    // The listener is gone; the timeline copy it started stays, and with
+    // nothing holding the event it is unsubscribed (SDK 1.11.0).
     assert.ok(!host.listening.has("timeline.changed"));
-    assert.ok(host.subscriptions.has("timeline.changed"));
+    assert.ok(!host.subscriptions.has("timeline.changed"));
   } finally {
     await stop();
   }
@@ -488,7 +476,7 @@ test("plugin.state: a write re-runs exactly its readers", async () => {
   }
 });
 
-test("plugin.state: a write from an onChange listener re-runs the readers; plain objects only", async () => {
+test("plugin.state: a write from a stream's listener re-runs the readers; plain objects only", async () => {
   let plugin!: Plugin;
   let panel!: Panel;
   let runs = 0;
@@ -496,7 +484,7 @@ test("plugin.state: a write from an onChange listener re-runs the readers; plain
     (p: Plugin) => {
       plugin = p;
       const st = p.state({ seconds: null as number | null });
-      p.player.onChange((state) => {
+      p.player.stream((state) => {
         st.seconds = state.position;
       });
       panel = p.panels.mount("sidebar", "list.slint");
@@ -529,13 +517,13 @@ test("plugin.state: a write from an onChange listener re-runs the readers; plain
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
-test("HostEvent is the wire's list, and the events that wait for subscribe() are the ones `events` covered", () => {
+test("HostEvent is the wire's list, and the held events are the ones `events` covered", () => {
   const same: Same<HostEvent, WireEvent> = true;
   const payload: Same<EventPayload<"commands.keys">["revision"], number> = true;
   assert.ok(same && payload);
   assert.deepEqual(
     Object.entries(EVENT_NEEDS)
-      .filter(([, need]) => need === "events")
+      .filter(([, need]) => need === "held")
       .map(([event]) => event),
     [
       "source.state",

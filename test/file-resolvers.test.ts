@@ -146,6 +146,9 @@ test("closing or replacing the open during resolve aborts the resolve signal", a
   );
   const opening = plugin.player.open("/roms/a.nes");
   await until(() => signals.length === 1, "resolve called");
+  // The state the close is conditional on: the plugin follows no stream
+  // (SDK 1.11.0), so it reads the loading source first.
+  await plugin.player.refresh();
   await plugin.player.close();
   assert.equal(signals[0]!.aborted, true);
   // As for a web page still resolving: the open failed, the source is closed.

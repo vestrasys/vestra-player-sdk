@@ -76,8 +76,8 @@ const viewRanges = (ranges: WireRange[]): readonly TimelineRange[] =>
 
 /**
  * One per plugin: read by `plugin.player.read()`, then kept
- * current from `timeline.changed` (after `plugin.player.subscribe()`) once the plugin uses it
- * (or listens to that event with `player.on`).
+ * current from `timeline.changed` while the plugin listens to that event
+ * (`player.on`), and after this plugin's own changes.
  */
 export class TimelineService {
   readonly #runtime: Runtime;
@@ -102,7 +102,7 @@ export class TimelineService {
         if (lists && Array.isArray(lists.marks)) this.accept(lists);
         else void this.read();
       },
-      "events",
+      "held",
       true,
     );
   }

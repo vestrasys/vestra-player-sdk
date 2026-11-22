@@ -52,6 +52,12 @@
         "params": {}
       },
       {
+        "method": "storage.session.get",
+        "params": {
+          "key": "items"
+        }
+      },
+      {
         "method": "ui.mount",
         "params": {
           "slot": "sidebar",
@@ -120,6 +126,16 @@
     "changes": [],
     "command": [
       {
+        "method": "storage.session.set",
+        "params": {
+          "key": "items",
+          "value": [
+            "Second item",
+            "Third item"
+          ]
+        }
+      },
+      {
         "method": "ui.setMount",
         "params": {
           "property": "rows",
@@ -137,23 +153,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "remove"
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "first"
-        }
-      },
-      {
-        "method": "ui.unmount",
-        "params": {}
-      }
-    ]
+    "dispose": []
   }
 }

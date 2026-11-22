@@ -105,6 +105,17 @@ function lineBytes(
   }
 }
 
+/**
+ * The refusal of a request made after the plugin received `runtime.stop`
+ * (`RequestQueue.close`).
+ */
+function stopped(method: string) {
+  return new HostError(
+    "disabled",
+    `${method} not sent: the plugin is stopping (the player sent runtime.stop)`,
+  );
+}
+
 /** The transport behind a per-plugin limit of requests in flight. */
 export class RequestQueue {
   readonly #transport: Transport;
@@ -116,7 +127,10 @@ export class RequestQueue {
   #waiting: (Waiting | undefined)[] = [];
   #head = 0;
   #count = 0;
-  /** Set by `close`: later requests go to the transport as they come. */
+  /**
+   * Set by `close` (the player sent `runtime.stop`): later requests are
+   * refused here, never sent nor queued.
+   */
   #closed = false;
   /** The most in flight at once (the SDK's own tests). */
   peak = 0;
@@ -142,7 +156,7 @@ export class RequestQueue {
     options?: RequestOptions,
   ): Promise<T> {
     const signal = options?.signal;
-    if (this.#closed) return this.#transport.request<T>(method, params);
+    if (this.#closed) return Promise.reject(stopped(method));
     if (signal?.aborted) return Promise.reject(abortError());
     const line = lineBytes(method, params);
     // Not writable, or longer than a line: the transport refuses it
@@ -177,9 +191,13 @@ export class RequestQueue {
     });
   }
   /**
-   * The plugin stops: every waiting request rejects with `error` (the one
-   * the runner gives the requests in flight), and later ones go to the
-   * transport as they come, which refuses them while stopping.
+   * The plugin stops (the player sent `runtime.stop`): every waiting
+   * request rejects with `error` (the one the runner gives the requests in
+   * flight), and every later one is refused here with `disabled`, neither
+   * sent nor queued: after `runtime.stop` the player has let go of the
+   * plugin and would drop it unanswered (it undoes what the plugin held by
+   * itself), so the plugin's cleanup and a late write (a debounced setting,
+   * a settings page's last patch) learn at once that it was not sent.
    */
   close(error: Error = new HostError("disabled", "plugin stopped")) {
     if (this.#closed) return;

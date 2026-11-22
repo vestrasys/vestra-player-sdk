@@ -9,7 +9,6 @@ const nextRate = (rate: number) =>
   RATES[(RATES.indexOf(rate) + 1) % RATES.length] ?? 1;
 
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
   await plugin.player.read(); // the player's state and timeline, read once
   const bar = plugin.panels.mount("bottom", "ui/bar.slint");
   plugin.player.on("source.state", (s) =>
