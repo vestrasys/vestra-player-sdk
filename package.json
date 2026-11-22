@@ -33,7 +33,6 @@
       "default": "./ts-plugin/index.js"
     },
     "./llms.txt": "./llms.txt",
-    "./capability-scan.json": "./capability-scan.json",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -47,8 +46,7 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "llms.txt",
-    "capability-scan.json"
+    "llms.txt"
   ],
   "scripts": {
     "api-surface": "node scripts/api-surface.mjs",

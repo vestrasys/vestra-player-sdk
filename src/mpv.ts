@@ -109,7 +109,7 @@ export const MPV_RULES: {
     quit: "it ends the player",
     input:
       "the keyboard and the mouse are the player's (plugin.commands, plugin.bindings)",
-    clipboard: "the clipboard has its own capability (plugin.clipboard)",
+    clipboard: "the clipboard has its own API (plugin.clipboard)",
     managed:
       "the player manages it and keeps its own state of it (use the plugin API's member for it)",
     filters:

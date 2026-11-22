@@ -1,5 +1,5 @@
 name: API proposal
-description: Propose a new or changed plugin API (types, methods, capabilities, error codes). Needs agreement before a pull request.
+description: Propose a new or changed plugin API (types, methods, events, error codes). Needs agreement before a pull request.
 labels: [api]
 body:
   - type: markdown
@@ -17,7 +17,7 @@ body:
     id: proposal
     attributes:
       label: Proposed API
-      description: Types and signatures, the capability it needs, how it fails (error codes), and a short usage example.
+      description: Types and signatures, how it fails (error codes), and a short usage example.
       render: ts
   - type: textarea
     id: alternatives

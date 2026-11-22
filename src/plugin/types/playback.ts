@@ -2225,9 +2225,7 @@ export type MpvValue =
 
 /**
  * `plugin.mpv`: mpv's own commands and properties, sent to the player's
- * mpv as they are. The capability scan puts `command` and `set` in its
- * `player` category, which the store shows the user before installing
- * ([Capability scan](../../../docs/reference/scan.md)).
+ * mpv as they are.
  *
  * @example Turn mpv's debanding on and show whether it took effect
  * A plugin offers mpv's `deband` option, which the plugin API has no member
@@ -2270,8 +2268,7 @@ export type MpvValue =
  * the upscaler, motion smoothing) stay in the chain beside it.
  *
  * A property a plugin set keeps its value after the plugin stops, until
- * the player quits (what the scan's `player` category discloses); a
- * plugin that wants it back sets it back. Observers end with the plugin.
+ * the player quits; a plugin that wants it back sets it back. Observers end with the plugin.
  * A filter or an observer keeps the plugin running from the moment it is
  * added for the rest of that run, also after it is removed: the player
  * judges again at the plugin's next start.

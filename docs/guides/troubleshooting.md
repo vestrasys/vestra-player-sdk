@@ -73,17 +73,17 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Fix:** Usually ignore `stale`, or read the new state and decide again. For slow work, pass the state you started from as `ifCurrent` so the call never acts on the wrong file ([Control playback](control-playback.md)).
 
-## A call fails with `capability`
+## A call fails with `builtin-only`
 
 **Cause:** The call is for the player's built-in plugins only (`plugin.commands.list`, `plugin.commands.run`, `plugin.palette.lead`).
 
 **Fix:** Leave it out of a plugin that is not built in.
 
-## A plugin fails to load: `manifest.json has "capabilities"`
+## A plugin fails to load: `unknown field`
 
-**Cause:** SDK 1.9.0 (player 0.9.0) removed manifest capabilities.
+**Cause:** The manifest has a field the player does not know: a misspelling, or a field an earlier version had.
 
-**Fix:** Delete the field, and call `await plugin.player.read()` (what `playback.read` did) first in `activate`; `events` needs nothing (an event reaches the plugin from its first listener).
+**Fix:** Delete the field; [Manifest](../reference/manifest.md) lists every field.
 
 ## A key binding does not fire
 

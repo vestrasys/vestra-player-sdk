@@ -6,9 +6,10 @@
 // `playback.read` → `await plugin.player.read()`. `events` (until SDK
 // 1.11.0 the call `plugin.player.subscribe()`) means nothing any more: an
 // event reaches a plugin from its first listener, and a test that needs a
-// copy of a state to follow the player opens a stream or listens itself. The rest means nothing any more and is dropped.
-// Such a manifest is not handed to `startPlugin` (which refuses the field,
-// as the player does): its id is passed instead. Without either list the
+// copy of a state to follow the player opens a stream or listens itself.
+// The rest means nothing any more and is dropped.
+// Such a manifest is not handed to `startPlugin` (the player refuses the
+// field as unknown): its id is passed instead. Without either list the
 // call is `startPlugin`'s own.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
