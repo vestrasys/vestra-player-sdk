@@ -195,7 +195,7 @@ The entry workflows only orchestrate; every check is written once in a reusable 
 | ------------- | ------------------------------------------------------ | -------------------------------------------------- |
 | `ci.yml`      | push to any branch except `main`, pull request, manual | checks, `ci-ok`                                    |
 | `main.yml`    | push to `main`, manual                                 | checks, Pages deploy, `ci-ok`                      |
-| `release.yml` | tag `v*`                                               | tag check, checks without npm cache, `npm publish` |
+| `release.yml` | tag `v*`                                               | tag check, checks without npm cache, `npm publish` (`--tag next` for a pre-release) |
 
 ```
 ci.yml / main.yml
@@ -221,7 +221,7 @@ release.yml (tag v*)
 
 1. Change `version` in `package.json` (and `package-lock.json`, e.g. with `npm version <x.y.z> --no-git-tag-version`), add the CHANGELOG entry, commit, push `main` and wait for `main.yml` to pass.
 2. Tag `v<version>` (annotated) and push the tag.
-3. `release.yml` checks that the tag equals `v` + `package.json` version and that the version is not on npm yet, runs every check again on the tagged commit (no npm cache), then the `publish` job (environment `vestra`) publishes the tarball the build job packed and smoke-tested, with `npm publish <tgz> --provenance`. `publish` waits for `verify`, `static`, `build`, `docs` and the Ubuntu and Windows tests and examples, not for macOS (product-owner ruling, 2026-11-02): GitHub-hosted macOS runners are often short of capacity, and runner capacity must never block a release (1.5.56 was tagged but never published because its macOS jobs got no runner). `test-macos` still runs on every release; a macOS failure marks the run as failed after the publish, so look at it and follow up with a fix release.
+3. `release.yml` checks that the tag equals `v` + `package.json` version and that the version is not on npm yet, runs every check again on the tagged commit (no npm cache), then the `publish` job (environment `vestra`) publishes the tarball the build job packed and smoke-tested, with `npm publish <tgz> --provenance --tag <dist-tag>`: `latest` for a release version, `next` for a pre-release (a version with `-`, such as `1.11.0-rc.1`; the tag is `v1.11.0-rc.1`), read from the packed `package.json`, so a pre-release never becomes `latest` (npm 11 also refuses a pre-release without an explicit `--tag`). The `verify` checks work for a pre-release as for a release (the tag equals `v` + the version; `npm view <name>@<version>` finds no such version yet). `publish` waits for `verify`, `static`, `build`, `docs` and the Ubuntu and Windows tests and examples, not for macOS (product-owner ruling, 2026-11-02): GitHub-hosted macOS runners are often short of capacity, and runner capacity must never block a release (1.5.56 was tagged but never published because its macOS jobs got no runner). `test-macos` still runs on every release; a macOS failure marks the run as failed after the publish, so look at it and follow up with a fix release.
 4. The player then updates its dependency (`npm install @vestra-player/sdk@<version>`) and runs its full checks.
 
 ### npm Trusted Publishing
