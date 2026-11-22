@@ -979,7 +979,7 @@ export interface VideoUpscaling {
  * newer GPUs, on Windows with driver 573.38 or newer; a player before it
  * reports `engine` for every mode). Each vendor's motion smoothing is its
  * own plugin. One converter runs at a time: while one engine's is on for
- * some plugin, the other engine's modes report `doubling` and wait.
+ * some plugin, the other engine's modes report `other-engine` and wait.
  *
  * @player 0.8.1
  * @since 1.7.19
@@ -1015,7 +1015,8 @@ export type MotionMode = "off" | "double" | "display";
  * | `filter` | The player's video library has no frame-rate converter (a player built without it). |
  * | `rendering` | Match Display only: the player renders in software, or GPU rendering is still starting ({@link Rendering}). |
  * | `upscaling` | AI upscaling is on ({@link VideoUpscaling}); the two cannot run together. |
- * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling), or the other engine's converter is on for another plugin (the message names it); the two cannot run together. |
+ * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling); the two cannot run together. |
+ * | `other-engine` | The other engine's converter is on for another plugin (the message names it); one converter runs at a time, so this waits until that one is off. |
  * | `failed` | The converter stopped on this video; the message has its error. The next video tries again. |
  * | `overload` | The GPU could not keep up with this video, even with the faster motion search. The next video tries again. |
  * | `rate` | The converter's input rate ({@link MotionState.sourceFps}: 25i deinterlaced by field reads 50) does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
@@ -1054,6 +1055,7 @@ export type MotionReasonCode =
   | "rendering"
   | "upscaling"
   | "doubling"
+  | "other-engine"
   | "failed"
   | "overload"
   | "rate"
@@ -1185,7 +1187,7 @@ export interface MotionState {
  * renderer is not involved; it starts on slow optical flow on a 4-pixel
  * grid, fast above 1440p). On a laptop with two GPUs the converter runs on
  * the engine's GPU, whichever GPU renders. One engine's converter at a
- * time: the other's modes wait with `doubling`.
+ * time: the other's modes wait with `other-engine`.
  * **macOS, Linux:** every mode reports `platform`.
  *
  * @example Offer the three modes as radio commands
@@ -1240,7 +1242,7 @@ export interface VideoMotion {
    *
    * @remarks
    * The mode stays this plugin's request until it changes it or stops; the
-   * player applies it whenever it can work (a `rate`, `size`, `format`, `doubling`, `upscaling`,
+   * player applies it whenever it can work (a `rate`, `size`, `format`, `doubling`, `other-engine`, `upscaling`,
    * `failed` or `overload` reason can pass with the next video). `off`
    * takes the converter out at once unless another plugin asks for it. The
    * mode is a request of the whole plugin, not of a {@link Scope}.

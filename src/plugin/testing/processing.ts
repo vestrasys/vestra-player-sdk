@@ -330,12 +330,40 @@ function modelOf(host: TestHost, engine: "amd" | "nvidia") {
 }
 
 /** `video.motion.state` of an engine from its model (`amd` by default). */
+/** The engine whose converter is in the chain, as the player keeps it: the first one set to a mode, while its mode is not `off`. */
+const motionHolder = new WeakMap<TestHost, "amd" | "nvidia">();
+
+/** Which engine holds the converter now: the one recorded while it is on, else the first that is on (`amd` first). */
+function holderOf(host: TestHost): "amd" | "nvidia" | null {
+  const on = (engine: "amd" | "nvidia") => modelOf(host, engine).mode !== "off";
+  const recorded = motionHolder.get(host);
+  if (recorded && on(recorded)) return recorded;
+  const next = on("amd") ? "amd" : on("nvidia") ? "nvidia" : null;
+  if (next) motionHolder.set(host, next);
+  else motionHolder.delete(host);
+  return next;
+}
+
+/** The player's message while the other engine holds the converter (as playback/motion.rs). */
+function otherEngine(holder: "amd" | "nvidia") {
+  const vendor = holder === "amd" ? "AMD" : "NVIDIA";
+  return {
+    code: "other-engine",
+    message: `${vendor} motion smoothing is on (another plugin); one converter runs at a time, so this waits until it is off`,
+  };
+}
+
 export function motionState(
   host: TestHost,
   engine: "amd" | "nvidia" = "amd",
 ): WireMotionState {
   const model = modelOf(host, engine);
-  const { mode, double, display, sourceFps, displayFps, gpu } = model;
+  const { mode, sourceFps, displayFps, gpu } = model;
+  // The model's own reason first, then the other engine holding the converter.
+  const holder = holderOf(host);
+  const waits = holder !== null && holder !== engine ? otherEngine(holder) : null;
+  const double = model.double ?? waits;
+  const display = model.display ?? waits;
   const reasonOf = (wanted: MotionMode) =>
     wanted === "double" ? double : wanted === "display" ? display : null;
   const works = mode !== "off" && reasonOf(mode) === null && sourceFps !== null;
@@ -450,6 +478,9 @@ export function processingHandlers(
           );
       }
       model.mode = mode;
+      // The first engine set to a mode holds the converter while it is on.
+      if (mode !== "off" && holderOf(host) === null) motionHolder.set(host, engine);
+      holderOf(host);
       return motionState(host, engine);
     },
     "video.view.set": (p) => {

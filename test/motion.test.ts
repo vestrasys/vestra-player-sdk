@@ -181,3 +181,26 @@ test("engines: amd and nvidia each have their own state, others are invalid; eve
   assert.deepEqual(heard.sort(), ["amd", "nvidia"]);
   await stop();
 });
+
+test("one converter at a time: the other engine's modes wait with other-engine until it is off", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  // Another plugin holds AMD's converter.
+  host.motion.mode = "double";
+  const waiting = await plugin.video.motion("nvidia").set("double");
+  assert.equal(waiting.active, "off");
+  assert.equal(waiting.double?.code, "other-engine");
+  assert.match(String(waiting.double?.message), /^AMD motion smoothing is on/);
+  assert.equal(host.nvidiaMotion.mode, "double", "kept: not a run-long reason");
+  // AMD's off: NVIDIA's request applies.
+  host.motion.mode = "off";
+  const running = await plugin.video.motion("nvidia").state();
+  assert.equal(running.active, "double");
+  assert.equal(running.double, null);
+  // Now NVIDIA holds it, and AMD waits.
+  host.motion.mode = "double";
+  const amd = await plugin.video.motion("amd").state();
+  assert.equal(amd.double?.code, "other-engine");
+  assert.match(String(amd.double?.message), /^NVIDIA motion smoothing is on/);
+  await stop();
+});

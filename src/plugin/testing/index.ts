@@ -2724,10 +2724,12 @@ export class TestHost implements Transport {
    * NVIDIA's engine behind `plugin.video.motion("nvidia")`: the same model
    * as {@link TestHost.motion} (AMD's), its own state, answered the same
    * way. The defaults are a player where both modes work on a 24 fps video
-   * and a 60 Hz display, converting on an RTX 4070 Laptop GPU. The two
-   * models are independent: a test that wants the player's one converter
-   * at a time sets the other engine's `double` and `display` to a
-   * `doubling` reason.
+   * and a 60 Hz display, converting on an RTX 4070 Laptop GPU. One
+   * converter at a time, as the player: the first engine set to a mode (or
+   * preset to one, `amd` first) holds it while its mode is not `off`, and
+   * the other engine's modes report `other-engine` (after its own reason,
+   * if it has one). A test of "another plugin holds AMD's converter" sets
+   * `host.motion.mode`.
    *
    * @example Test an NVIDIA plugin without an RTX 30 or newer GPU
    * ```ts
