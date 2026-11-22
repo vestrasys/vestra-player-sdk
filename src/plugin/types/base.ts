@@ -317,8 +317,9 @@ export interface Scope extends Disposable {
     readonly upscaling: VideoUpscaling;
     /**
      * Motion smoothing with one GPU vendor's frame-rate converter: whether it works here and why not, and this
-     * plugin's mode. `amd` is AMD AMF's on Windows; `nvidia` is reserved
-     * (every mode reports `engine` until a player has it).
+     * plugin's mode. `amd` is AMD AMF's on Windows; `nvidia` is NVIDIA's
+     * (FFmpeg's `fruc_vulkan`, GeForce RTX 30 and newer, on Windows; an
+     * older player reports `engine` for every mode).
      *
      * @param engine - The converter: `"amd"` or `"nvidia"`.
      * @returns A {@link VideoMotion} for that converter.

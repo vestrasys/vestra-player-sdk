@@ -1005,6 +1005,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly motion: { mode: MotionMode; double: MotionReason | null; display: MotionReason | null; renderingStarting: boolean; sourceFps: number | null; outputFps: number | null; performance: boolean; displayFps: number; gpu: string | null; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mpv: { commands: (string | number | boolean)[][]; properties: Map<string, Json>; labels: Map<string, string>; observed: Set<string>; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly nvidiaMotion: TestHost["motion"];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly openedWindows: { paths: string[]; pid: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];

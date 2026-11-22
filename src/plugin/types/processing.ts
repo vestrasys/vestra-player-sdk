@@ -974,9 +974,12 @@ export interface VideoUpscaling {
 
 /**
  * A GPU vendor's frame-rate converter for motion smoothing: `amd` (AMD
- * AMF's, on Windows with an AMD Radeon GPU); `nvidia` is reserved for
- * NVIDIA's converter, which no player has yet (every mode reports
- * `engine`). Each vendor's motion smoothing is its own plugin.
+ * AMF's, on Windows with an AMD Radeon GPU) and `nvidia` (FFmpeg's
+ * `fruc_vulkan` on the optical flow hardware of NVIDIA GeForce RTX 30 and
+ * newer GPUs, on Windows with driver 573.38 or newer; a player before it
+ * reports `engine` for every mode). Each vendor's motion smoothing is its
+ * own plugin. One converter runs at a time: while one engine's is on for
+ * some plugin, the other engine's modes report `doubling` and wait.
  *
  * @player 0.8.1
  * @since 1.7.19
@@ -1005,14 +1008,14 @@ export type MotionMode = "off" | "double" | "display";
  *
  * | Code | Meaning |
  * | --- | --- |
- * | `engine` | The player has no converter of this engine (`nvidia`, until a player has it). |
+ * | `engine` | The player has no converter of this engine on this system (`nvidia` on a player before it). |
  * | `platform` | The player has no frame-rate converter on this system (macOS, Linux). |
- * | `no-gpu` | No GPU with a frame-rate converter (Windows: no AMD Radeon GPU). |
- * | `runtime` | The GPU's runtime is missing (Windows: AMD's AMF runtime, installed with the AMD driver), or the converter failed to start the same way on two videos in this run (an older GPU AMF does not serve). |
+ * | `no-gpu` | No GPU with this engine's converter (Windows: no AMD Radeon GPU; no NVIDIA GeForce RTX 30 or newer GPU). |
+ * | `runtime` | The GPU's runtime is missing or too old (Windows: AMD's AMF runtime, installed with the AMD driver; an NVIDIA driver before 573.38), or the converter cannot start on this system (AMD: it failed to start the same way on two videos in this run, an older GPU AMF does not serve; NVIDIA: no Vulkan device or optical flow from the driver, at the first try). |
  * | `filter` | The player's video library has no frame-rate converter (a player built without it). |
  * | `rendering` | Match Display only: the player renders in software, or GPU rendering is still starting ({@link Rendering}). |
  * | `upscaling` | AI upscaling is on ({@link VideoUpscaling}); the two cannot run together. |
- * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling); the two cannot run together. |
+ * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling), or the other engine's converter is on for another plugin (the message names it); the two cannot run together. |
  * | `failed` | The converter stopped on this video; the message has its error. The next video tries again. |
  * | `overload` | The GPU could not keep up with this video, even with the faster motion search. The next video tries again. |
  * | `rate` | The converter's input rate ({@link MotionState.sourceFps}: 25i deinterlaced by field reads 50) does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
@@ -1124,9 +1127,11 @@ export interface MotionState {
   /** Why Match Display cannot work now; `null` while it can. */
   readonly display: MotionReason | null;
   /**
-   * The converter's motion search while it runs: `native` on the full
-   * frames, `performance` on downscaled ones (the first step when the GPU
-   * falls behind); `null` while off.
+   * The converter's motion search while it runs: `native`, the player's
+   * setting for this video, or `performance`, the faster one (the first
+   * step when the GPU falls behind: AMD searches downscaled frames, NVIDIA
+   * uses its fast optical flow, which it already uses above 1440p); `null`
+   * while off.
    */
   readonly searchMode: "native" | "performance" | null;
   /**
@@ -1150,7 +1155,8 @@ export interface MotionState {
 
 /**
  * `plugin.video.motion(engine)`: motion smoothing, the video's frame rate doubled by
- * the GPU's frame-rate converter (AMD AMF's on Windows).
+ * a GPU vendor's frame-rate converter (AMD AMF's or NVIDIA's
+ * `fruc_vulkan`, on Windows).
  * Read whether it works here and why not; choose a mode for this plugin.
  *
  * @remarks
@@ -1173,8 +1179,13 @@ export interface MotionState {
  * Doubling makes film look like video (the "soap-opera effect"): offer it
  * off by default.
  *
- * **Windows:** an AMD Radeon GPU with the AMD driver (AMF). On a laptop
- * with two GPUs the converter runs on the AMD one, whichever GPU renders.
+ * **Windows:** `amd`: an AMD Radeon GPU with the AMD driver (AMF);
+ * `nvidia`: an NVIDIA GeForce RTX 30 or newer GPU with driver 573.38 or
+ * newer (the converter gets a Vulkan device of its own while it runs, the
+ * renderer is not involved; it starts on slow optical flow on a 4-pixel
+ * grid, fast above 1440p). On a laptop with two GPUs the converter runs on
+ * the engine's GPU, whichever GPU renders. One engine's converter at a
+ * time: the other's modes wait with `doubling`.
  * **macOS, Linux:** every mode reports `platform`.
  *
  * @example Offer the three modes as radio commands

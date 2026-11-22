@@ -2721,10 +2721,42 @@ export class TestHost implements Transport {
     gpu: "AMD Radeon 780M Graphics",
   };
   /**
+   * NVIDIA's engine behind `plugin.video.motion("nvidia")`: the same model
+   * as {@link TestHost.motion} (AMD's), its own state, answered the same
+   * way. The defaults are a player where both modes work on a 24 fps video
+   * and a 60 Hz display, converting on an RTX 4070 Laptop GPU. The two
+   * models are independent: a test that wants the player's one converter
+   * at a time sets the other engine's `double` and `display` to a
+   * `doubling` reason.
+   *
+   * @example Test an NVIDIA plugin without an RTX 30 or newer GPU
+   * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * const reason = { code: "no-gpu", message: "no NVIDIA GPU" };
+   * host.nvidiaMotion.double = reason;
+   * host.nvidiaMotion.display = reason;
+   * ```
+   *
+   * @since 1.11.0
+   */
+  readonly nvidiaMotion: TestHost["motion"] = {
+    mode: "off",
+    double: null,
+    display: null,
+    renderingStarting: false,
+    sourceFps: 24,
+    outputFps: null,
+    performance: false,
+    displayFps: 60,
+    gpu: "NVIDIA GeForce RTX 4070 Laptop GPU",
+  };
+  /**
    * Send `video.motion.changed` with the state {@link TestHost.motion}
-   * describes now (without `mode`), as the player does when it changes; a
-   * plugin listening with `plugin.video.motion("amd").onChange` receives it.
-   * Nothing reaches a plugin that does not listen.
+   * describes now (without `mode`), and then the one of
+   * {@link TestHost.nvidiaMotion}, as the player does when they change; a
+   * plugin listening with `plugin.video.motion(engine).onChange` receives
+   * its engine's. Nothing reaches a plugin that does not listen.
    *
    * @example The GPU fell behind
    * The player turned the converter off for this video; the plugin's
@@ -2741,8 +2773,10 @@ export class TestHost implements Transport {
    */
   motionChanged() {
     if (!this.subscriptions.has("video.motion.changed")) return;
-    const { mode: _, ...state } = motionState(this);
-    this.emit("video.motion.changed", state);
+    for (const engine of ["amd", "nvidia"] as const) {
+      const { mode: _, ...state } = motionState(this, engine);
+      this.emit("video.motion.changed", state);
+    }
   }
   /** What `player.chapters()` lists while media is ready. */
   chapters: {

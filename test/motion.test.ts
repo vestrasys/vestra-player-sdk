@@ -154,26 +154,30 @@ test("onChange delivers the state with this plugin's mode", async () => {
   await stop();
 });
 
-test("engines: amd works, nvidia is reserved, others are invalid; events reach their engine only", async () => {
+test("engines: amd and nvidia each have their own state, others are invalid; events reach their engine only", async () => {
   const host = new TestHost();
   const { plugin, stop } = await started(["video.motion"], host);
   assert.throws(() => plugin.video.motion("intel" as "amd"), code("invalid"));
-  const nvidia = await plugin.video.motion("nvidia").state();
+  const nvidia = await plugin.video.motion("nvidia").set("double");
   assert.equal(nvidia.engine, "nvidia");
-  assert.equal(nvidia.double?.code, "engine");
-  assert.equal(nvidia.display?.code, "engine");
+  assert.equal(nvidia.active, "double");
+  assert.equal(nvidia.gpu, "NVIDIA GeForce RTX 4070 Laptop GPU");
+  assert.equal(host.nvidiaMotion.mode, "double");
+  assert.equal(host.motion.mode, "off", "AMD's engine is another one");
+  // A run-long reason refuses the mode, as for AMD.
+  host.nvidiaMotion.display = { code: "no-gpu", message: "no NVIDIA GPU" };
   await assert.rejects(
-    plugin.video.motion("nvidia").set("double"),
+    plugin.video.motion("nvidia").set("display"),
     code("unsupported"),
   );
   assert.equal((await plugin.video.motion("nvidia").set("off")).mode, "off");
-  // A listener of the reserved engine hears nothing of AMD's changes.
+  // Each listener hears its own engine's changes.
   const heard: string[] = [];
   plugin.video.motion("nvidia").onChange((state) => heard.push(state.engine));
   plugin.video.motion("amd").onChange((state) => heard.push(state.engine));
   await host.settle();
   host.motionChanged();
   await host.settle();
-  assert.deepEqual(heard, ["amd"]);
+  assert.deepEqual(heard.sort(), ["amd", "nvidia"]);
   await stop();
 });
