@@ -2742,7 +2742,7 @@ export class TestHost implements Transport {
    * host.nvidiaMotion.display = reason;
    * ```
    *
-   * @since 1.11.0
+   * @since 1.11.1
    */
   readonly nvidiaMotion: TestHost["motion"] = {
     mode: "off",
