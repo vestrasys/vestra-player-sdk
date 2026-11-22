@@ -52,17 +52,19 @@ export interface CommandState {
  * registered once and evaluated again only when {@link Command.set} changes it.
  *
  * @example Mix a computed state with a fixed one
- * The Loop item carries a check mark while a loop is set and is always
- * enabled. A function is evaluated again in every full update pass (after
- * each handler), and after a player state change only if it read a changed
- * field; only changes are sent, and a plain value never changes.
+ * The Shuffle item carries a check mark while the plugin's own `shuffle`
+ * is on and is always enabled. A function is evaluated again in every full
+ * update pass (after each handler); only changes are sent, and a plain
+ * value never changes. A state of the player is a `plugin.when`
+ * condition instead, which the player evaluates itself.
  * ```ts
+ * let shuffle = false;
  * plugin.commands.add({
- *   id: "loop",
- *   path: ["Playback", "Loop"],
- *   checked: () => plugin.player.state.loop != null, // re-evaluated
+ *   id: "shuffle",
+ *   path: ["Playback", "Shuffle"],
+ *   checked: () => shuffle, // re-evaluated after the handler
  *   enabled: true, // a fixed value
- *   run: () => plugin.player.setLoop(null),
+ *   run: () => void (shuffle = !shuffle),
  * });
  * ```
  *
@@ -1045,9 +1047,9 @@ export interface CommandOptions {
  *
  * @example Enable an item only while a file is open
  * Video ▸ Export… is greyed out until a file is open. `set` replaces the
- * `enabled` field with a function; the SDK evaluates it again after every
- * player state change and sends the new state when it changes, so the
- * item follows the player without further code.
+ * `enabled` field with a condition, which the player evaluates itself at
+ * every change, so the item follows the player without further code, also
+ * while the plugin is stopped.
  * ```ts
  * declare function runExport(): Promise<void>;
  * // ---cut---
@@ -1056,8 +1058,7 @@ export interface CommandOptions {
  *   path: ["@video", "Export…"],
  *   run: runExport,
  * });
- * // A function: re-evaluated in every full pass and when `phase` changes.
- * exportCommand.set({ enabled: () => plugin.player.state.phase === "ready" });
+ * exportCommand.set({ enabled: plugin.when.ready }); // evaluated by the player
  * ```
  *
  * @see {@link Commands.add}, [Commands, menus and bindings](../../../docs/reference/commands.md)
@@ -1194,17 +1195,21 @@ export interface Commands {
    * Playback ▸ Pause (and Ctrl+P) pauses and resumes, shows a check mark
    * while paused and is greyed out when nothing can be paused. The player
    * calls `run` when the user picks the item or presses its key; `enabled`
-   * and `checked` are functions the SDK evaluates again after every
-   * handler and player state change, sending only what changed.
+   * and `checked` are `plugin.when` conditions the player evaluates
+   * itself at every change, also while the plugin is stopped.
    * ```ts
+   * const { when } = plugin;
    * const toggle = plugin.commands.add({
    *   id: "toggle-pause",
    *   path: ["Playback", "Pause"],
    *   order: 210, // position among the Playback menu's items
    *   bindings: ["Ctrl+P"],
-   *   enabled: () => plugin.player.state.can.pause,
-   *   checked: () => plugin.player.state.paused,
-   *   run: () => plugin.player.setPaused(!plugin.player.state.paused),
+   *   enabled: when.can("pause"),
+   *   checked: when.paused,
+   *   run: async () => {
+   *     const now = await plugin.player.refresh(); // the state now
+   *     await plugin.player.setPaused(!now.paused);
+   *   },
    * });
    * ```
    *

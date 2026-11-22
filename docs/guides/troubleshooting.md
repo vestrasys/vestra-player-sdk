@@ -61,6 +61,24 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Fix:** Listen: `plugin.player.on("layout.changed", …)` or `plugin.player.on("appearance.changed", …)` (the copy takes each event first; neither keeps the plugin running), or the slot's `onChange` (which does).
 
+## A menu item or a bound value shows an old playback state
+
+**Cause:** A command field or a binding is a function that reads `plugin.player.state`. The SDK evaluates it in the plugin, with the newest snapshot the plugin has; that snapshot follows the player only while a stream is open, and otherwise moves only after the plugin's own calls and reads.
+
+**Fix:** Give a command's `enabled` and `checked` a `plugin.when` condition, which the player evaluates itself ([Command state](command-state.md)). For a window or panel that shows the state, open `plugin.player.stream(fn)` while it is on screen. In a handler, read the state now with `await plugin.player.refresh()`.
+
+## The plugin never goes to standby
+
+**Cause:** It holds something only its process can serve: `host.keepsRunning` names each listener of a frequent event (with where it was added), panel and open window. Common ones: a stream opened in `activate` (it counts for the whole run), `player.on("source.state", …)` to learn that a file opened, a watcher (`onChange`) kept for good, a filter made at start but used only later.
+
+**Fix:** Learn the moments from events (`source.ready`, `window.changed`, `layout.changed`, …) and triggers; open a stream only while something shows the state; make a filter when it is first needed ([Learn what happens in the player](events-and-triggers.md)).
+
+## A trigger never fires after the plugin was stopped
+
+**Cause:** The trigger is declared after an `await` in `activate`, inside an `if`, or in a loop whose length depends on data. When the player wakes the plugin for a flip, the notification goes to the trigger declared at the same place, which is not there.
+
+**Fix:** Declare every trigger unconditionally in the synchronous part of `activate`; give the condition later with `firesOn`. Name a trigger whose condition must survive an update of the plugin.
+
 ## A value changed after an await does not appear
 
 **Cause:** The SDK sends bound values in an update pass after a handler returns and again when its promise settles; a value changed after an `await` inside a longer task appears only when that task ends.
@@ -95,11 +113,11 @@ Each section starts from what you see, then gives the cause and the fix. The cau
 
 **Cause:** `host.settle()` waits only for the plugin's calls to the player. Work the plugin does on its own (reading or parsing a file, a child process, a network request) can finish later on a loaded machine; a debounce or timer needs time too.
 
-**Fix:** Poll the value you assert on ([Test a plugin](testing.md#wait-then-assert)), and use `host.settle(ms)` past a debounce or timer.
+**Fix:** Poll the value you assert on ([Test a plugin](testing.md#wait-then-assert)), and use `host.settle(ms)` past a debounce or timer. After the plugin adds a listener, `await host.settle()` before the action it should hear: the subscription is a request too.
 
 ## State is lost when the plugin restarts
 
-**Cause:** Everything in the plugin's process is gone after a reload, an upgrade or a crash.
+**Cause:** Everything in the plugin's process is gone after standby, a reload, an upgrade or a crash.
 
 **Fix:** Keep what must survive in `plugin.storage.session` (this run of the player) or `plugin.storage.json` (across runs), and build the interface from it in `activate` ([Store a plugin's data](store-data.md)).
 

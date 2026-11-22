@@ -8,7 +8,14 @@ import type { Plugin } from "@vestra-player/sdk";
  * manifest's `entry` at this file. Walkthrough: docs/examples/panel-menu.md.
  */
 export default async function activate(plugin: Plugin) {
-  const items = ["First item", "Second item", "Third item"];
+  // Session storage outlives standby: with its tab in the background the
+  // player may stop this plugin, and showing the tab starts it again.
+  const { session } = plugin.storage;
+  const items = (await session.get<string[]>("items")) ?? [
+    "First item",
+    "Second item",
+    "Third item",
+  ];
   let selected = 0;
   const panel = plugin.panels.mount("sidebar", "ui/panel.slint", {
     title: "Example list",
@@ -42,6 +49,7 @@ export default async function activate(plugin: Plugin) {
     run: () => {
       const at = selected;
       items.splice(at, 1);
+      void session.set("items", items);
       // One row operation: only the removal crosses to the player.
       direct.writeRows("rows", [{ op: "remove", at, count: 1 }]).catch(dropped);
       select(Math.max(0, Math.min(at, items.length - 1)));

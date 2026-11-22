@@ -1254,7 +1254,7 @@ export interface Player {
    *   plugin.commands.add({
    *     id: "left",
    *     path: ["Tools", "Time Left"],
-   *     enabled: () => plugin.player.state.phase === "ready",
+   *     enabled: plugin.when.ready, // evaluated by the player
    *     run: async () => {
    *       // No events: ask the player for the position now.
    *       const { duration, position } = await plugin.player.refresh();
@@ -1617,8 +1617,8 @@ export interface Player {
    * plugin.commands.add({
    *   id: "previous",
    *   title: "Previous item",
-   *   // The provider's `canPrevious`, as the player reports it.
-   *   enabled: () => plugin.player.state.can.previous,
+   *   // The provider's `canPrevious`, as the player evaluates it.
+   *   enabled: plugin.when.can("previous"),
    *   run: () => plugin.player.previous(),
    * });
    * ```
@@ -1821,7 +1821,8 @@ export interface Player {
    * @example Offer the audio output devices in a menu
    * A submenu lists the output devices present now, with a radio mark on the
    * one in use. `audioDevices` asks the player when called (devices come and
-   * go), and `state.audioOutput` tells which one is active.
+   * go; `audio.devices.changed` says when), and `when.audioDevice` checks
+   * the one in use, evaluated by the player.
    * ```ts
    * // The devices present now; build the menu again when they change.
    * for (const device of await plugin.player.audioDevices())
@@ -1829,7 +1830,7 @@ export interface Player {
    *     id: `device.${device.id}`,
    *     path: ["@audio", "Output", device.name],
    *     radio: true,
-   *     checked: () => plugin.player.state.audioOutput?.active === device.id,
+   *     checked: plugin.when.audioDevice(device.id),
    *     run: () => plugin.player.setAudioDevice(device.id),
    *   });
    * ```

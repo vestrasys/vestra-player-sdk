@@ -67,8 +67,8 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | --- | --- |
 | {@link "@vestra-player/sdk/testing"!TestHost.calls} | Every request the plugin sent, in order: `{ method, params }`. |
 | {@link "@vestra-player/sdk/testing"!TestHost.subscriptions} | The host events the plugin subscribed to. |
-| {@link "@vestra-player/sdk/testing"!TestHost.listening} | The subscribed events the plugin really listens to: an `onChange` and the like, or a binding that reads the state. |
-| {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and every binding that reads its state, as the player's log says them (`a listener added at main.ts:12`, `command "Save" enabled is a function that reads plugin.player.state (main.ts:40) — use plugin.when`), in the order they came. |
+| {@link "@vestra-player/sdk/testing"!TestHost.listening} | The subscribed events the plugin really listens to: a listener (`player.on`, an `onChange` and the like) or a stream. |
+| {@link "@vestra-player/sdk/testing"!TestHost.listeningWhy} | Why the plugin listens to each event of `TestHost.listening`: every listener and stream, as the player's log says them (`a listener added at main.ts:12`, `a stream opened at main.ts:20`), in the order they came. |
 | {@link "@vestra-player/sdk/testing"!TestHost.source} | The player's source facts (phase, position, duration, paused, rate, audio tracks, loop, ...). |
 | {@link "@vestra-player/sdk/testing"!TestHost.windows} | Tool windows by id (see `TestHost.window`). |
 | {@link "@vestra-player/sdk/testing"!TestHost.panels} | The plugin's mounted panels by slot, in mount order (one panel per slot). |

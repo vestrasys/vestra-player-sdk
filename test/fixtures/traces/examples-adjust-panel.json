@@ -3,58 +3,43 @@
   "command": "speed-reset",
   "subscriptions": [
     {
-      "event": "source.state",
+      "event": "layout.changed",
       "why": [
-        "a stream opened at main.ts"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts",
-        "a view's bind reads plugin.player.state (main.ts)"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts",
-        "a view's bind reads plugin.player.state (main.ts)",
-        "command \"Normal Speed\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
+        "a listener added at main.ts"
       ]
     }
   ],
   "polled": [],
   "counts": {
     "start": {
-      "passes": 1,
-      "fullPasses": 1,
+      "passes": 2,
+      "fullPasses": 2,
       "evaluations": 2,
-      "parts": 2,
+      "parts": 3,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "open": {
-      "passes": 1,
-      "fullPasses": 1,
-      "evaluations": 2,
-      "parts": 1,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "changes": {
-      "passes": 3,
-      "fullPasses": 3,
-      "evaluations": 6,
-      "parts": 3,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
+      "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "command": {
-      "passes": 3,
-      "fullPasses": 3,
-      "evaluations": 6,
-      "parts": 3,
+      "passes": 2,
+      "fullPasses": 2,
+      "evaluations": 2,
+      "parts": 2,
       "skippedParts": 0,
       "safetyPasses": 0
     },
@@ -74,24 +59,24 @@
         "params": {}
       },
       {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts"
-          ]
-        }
-      },
-      {
-        "method": "source.state",
-        "params": {}
-      },
-      {
         "method": "source.state",
         "params": {}
       },
       {
         "method": "timeline.marks",
+        "params": {}
+      },
+      {
+        "method": "events.subscribe",
+        "params": {
+          "event": "layout.changed",
+          "why": [
+            "a listener added at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "layout.state",
         "params": {}
       },
       {
@@ -152,68 +137,25 @@
             "home": "speed"
           },
           "state": {
-            "enabled": false,
-            "checked": null,
-            "busy": false,
-            "reason": null
-          }
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts",
-            "a view's bind reads plugin.player.state (main.ts)"
-          ]
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts",
-            "a view's bind reads plugin.player.state (main.ts)",
-            "command \"Normal Speed\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      }
-    ],
-    "open": [
-      {
-        "method": "ui.setMount",
-        "params": {
-          "property": "enabled",
-          "value": true,
-          "seq": 1
-        }
-      },
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "speed-reset",
-          "revision": 2,
-          "state": {
             "enabled": true,
             "checked": null,
             "busy": false,
             "reason": null
+          },
+          "when": {
+            "enabled": {
+              "can": "rate"
+            }
           }
         }
-      }
-    ],
-    "changes": [
+      },
       {
-        "method": "ui.setMount",
-        "params": {
-          "property": "rate",
-          "value": 1.5,
-          "seq": 2
-        }
+        "method": "layout.state",
+        "params": {}
       }
     ],
+    "open": [],
+    "changes": [],
     "command": [
       {
         "method": "source.submit",
@@ -226,23 +168,11 @@
               "rate": 1
             },
             "expected": {
-              "generation": 1,
-              "intentVersion": 1
+              "generation": 0,
+              "intentVersion": 0
             }
           }
         }
-      },
-      {
-        "method": "ui.setMount",
-        "params": {
-          "property": "rate",
-          "value": 1,
-          "seq": 3
-        }
-      },
-      {
-        "method": "source.state",
-        "params": {}
       }
     ],
     "dispose": []

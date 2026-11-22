@@ -40,7 +40,7 @@ examples/blur/
 
 {@includeCode ../../examples/blur/manifest.json}
 
-The manifest says who the plugin is. What it reads at start is one call first in `activate`: `await plugin.player.read()`. A filter follows the player's state by itself while it exists, to know when there is a video to apply the blur to, so a blur set before a video starts applies when one does.
+The manifest says who the plugin is. The plugin reads nothing of the player at start: a filter follows the player's source by itself while it exists, to know when there is a video to apply the blur to, so a blur set before a video starts applies when one does.
 
 ## main.ts, top to bottom
 

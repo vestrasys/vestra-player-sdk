@@ -14,6 +14,7 @@ import {
   LIST_SIZE,
   nextRate,
   speedText,
+  whileShown,
   WIDTH,
 } from "./shared.ts";
 
@@ -29,18 +30,26 @@ export function speed(plugin: Plugin) {
   const bar = plugin.panels.mount("bottom", "ui/speed.slint");
   const view = plugin.wire.view(bar); // raw writes for this panel
   let shown = "1.00×"; // what the panel shows: its Slint default at first
-  plugin.wire.on("source.state", (data) => {
+  const show = (data: unknown) => {
     const s = data as { rate: number }; // the plugin types the payload
     const rate = speedText(s.rate);
     if (rate === shown) return; // about ten events a second while playing
     shown = rate;
     view.write("rate", { value: rate }).catch(() => (shown = "")); // again next time
+  };
+  // While the bar is on screen: one read of the source now, then every
+  // source.state event.
+  whileShown(bar, () => {
+    plugin.wire.request("source.state").then(show, dropped);
+    const listener = plugin.wire.on("source.state", show);
+    return () => void listener.dispose();
   });
   plugin.wire.commands.register({
     id: "rate.cycle",
     declaration: declaration(["Playback", "Cycle Speed"], ["C"]),
     run: async () => {
-      const s = await plugin.wire.request<{ rate: number }>("source.state");
+      // The SDK's control acts on the state the SDK last read: read it now.
+      const s = await plugin.player.refresh();
       await plugin.player.setRate(nextRate(s.rate)); // or source.submit
     },
   });
@@ -132,13 +141,17 @@ export function keyframes(plugin: Plugin) {
       }),
   });
   let current: number | null = null; // the ready source asked about
-  plugin.wire.on("source.state", (data) => {
-    const s = data as { phase: string; stamp: { generation: number } };
-    const sourceId = s.phase === "ready" ? s.stamp.generation : null;
-    if (sourceId === current) return;
-    current = sourceId;
+  const gone = () => {
+    current = null;
     next.update({ enabled: false }).catch(dropped); // unknown until the answer
-    if (sourceId === null) return;
+  };
+  plugin.wire.on("source.opening", gone);
+  plugin.wire.on("source.ended", gone);
+  plugin.wire.on("source.ready", (data) => {
+    // The wire's shape: `stamp.generation` is PlayerState's sourceId.
+    const sourceId = (data as { state: { stamp: { generation: number } } })
+      .state.stamp.generation;
+    current = sourceId;
     void plugin.wire.request<{ video: unknown }>("playback.stats").then(
       (stats) => {
         if (current === sourceId)
@@ -152,10 +165,7 @@ export function keyframes(plugin: Plugin) {
 
 /** All four scenarios in style C. */
 export default async function activate(plugin: Plugin) {
-  // The bound values below read the player's state: a stream keeps it
-  // following the player (and the plugin running) while the plugin is up.
-  plugin.player.stream(() => {});
-  await plugin.player.read(); // the player's state and timeline, read once
+  await plugin.player.read(); // the player's state, read once
   speed(plugin);
   frames(plugin);
   list(plugin);

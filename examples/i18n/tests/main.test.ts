@@ -38,3 +38,19 @@ test("Simplified Chinese: the menu and the message from locales/zh-Hans.po", asy
   assert.deepEqual(host.osd, ["计数：1", "计数：2"]);
   await stop();
 });
+
+test("only the open window keeps the plugin running", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: directory,
+  });
+  const keepsRunning = () => host.keepsRunning;
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await host.command("counter").run();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), ["an open window (counter)"]);
+  host.window("counter").userClose();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await stop();
+});

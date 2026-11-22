@@ -52,6 +52,12 @@
         "params": {}
       },
       {
+        "method": "storage.session.get",
+        "params": {
+          "key": "items"
+        }
+      },
+      {
         "method": "ui.mount",
         "params": {
           "slot": "sidebar",
@@ -119,6 +125,16 @@
     "open": [],
     "changes": [],
     "command": [
+      {
+        "method": "storage.session.set",
+        "params": {
+          "key": "items",
+          "value": [
+            "Second item",
+            "Third item"
+          ]
+        }
+      },
       {
         "method": "ui.setMount",
         "params": {

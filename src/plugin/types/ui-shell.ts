@@ -456,10 +456,13 @@ export interface Panels {
    * `conflict` when another plugin's panel holds the bottom bar.
    * ```ts
    * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
-   * // Sent again whenever the position changes.
+   * // Sent again whenever the position changes, while a stream is open.
    * bar.bind(() => ({ position: plugin.player.state.position ?? 0 }));
    * bar.on("seek", (seconds: number) => plugin.player.seek(seconds));
    * await bar.ready;
+   * // The bar shows the position (and keeps the plugin running anyway):
+   * // a stream makes `plugin.player.state` follow the player.
+   * plugin.player.stream(() => {});
    * ```
    *
    * @since 1.0.0
@@ -823,15 +826,20 @@ export interface Dialogs {
  *
  * @example Show live playback numbers over the video
  * A block over the video shows the position and the duration, updated
- * as playback moves. A stream's listener runs after the SDK updated the
- * state; `set` never throws and sends only the newest text while one is
- * in flight, so calling it on every change is fine.
+ * as playback moves, while the user has it switched on. A stream's
+ * listener runs after the SDK updated the state; `set` never throws and
+ * sends only the newest text while one is in flight, so calling it on
+ * every change is fine. The stream lives only while the block shows, so
+ * the plugin can be stopped while it is off.
  * ```ts
- * const info = plugin.osd.panel();
- * plugin.player.stream((state) =>
+ * const shown = plugin.scope(); // the block and its stream, together
+ * const info = shown.osd.panel();
+ * shown.player.stream((state) =>
  *   // A template with data arguments; the player translates "{} / {} s".
  *   info.set("{} / {} s", [state.position?.toFixed(1) ?? "–", state.duration?.toFixed(1) ?? "–"]),
  * );
+ * // Switched off: removes the block and stops the stream.
+ * await shown.dispose();
  * ```
  *
  * @since 1.0.0

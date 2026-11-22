@@ -1,78 +1,37 @@
 {
   "scenario": "examples/menus",
   "command": "rate-1.5",
-  "subscriptions": [
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts",
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts",
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts",
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    },
-    {
-      "event": "source.state",
-      "why": [
-        "a stream opened at main.ts",
-        "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-        "command \"2×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-      ]
-    }
-  ],
+  "subscriptions": [],
   "polled": [],
   "counts": {
     "start": {
-      "passes": 1,
-      "fullPasses": 1,
-      "evaluations": 4,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "open": {
-      "passes": 1,
-      "fullPasses": 1,
-      "evaluations": 4,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "changes": {
-      "passes": 3,
-      "fullPasses": 3,
-      "evaluations": 12,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "command": {
-      "passes": 3,
-      "fullPasses": 3,
-      "evaluations": 12,
+      "passes": 0,
+      "fullPasses": 0,
+      "evaluations": 0,
       "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
@@ -90,19 +49,6 @@
     "start": [
       {
         "method": "window.state",
-        "params": {}
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts"
-          ]
-        }
-      },
-      {
-        "method": "source.state",
         "params": {}
       },
       {
@@ -158,10 +104,21 @@
             "repeat": false
           },
           "state": {
-            "enabled": false,
+            "enabled": true,
             "checked": false,
             "busy": false,
             "reason": null
+          },
+          "when": {
+            "enabled": {
+              "can": "rate"
+            },
+            "checked": {
+              "rate": {
+                "min": 0.495,
+                "max": 0.505
+              }
+            }
           }
         }
       },
@@ -184,10 +141,21 @@
             "repeat": false
           },
           "state": {
-            "enabled": false,
-            "checked": true,
+            "enabled": true,
+            "checked": false,
             "busy": false,
             "reason": null
+          },
+          "when": {
+            "enabled": {
+              "can": "rate"
+            },
+            "checked": {
+              "rate": {
+                "min": 0.995,
+                "max": 1.005
+              }
+            }
           }
         }
       },
@@ -210,10 +178,21 @@
             "repeat": false
           },
           "state": {
-            "enabled": false,
+            "enabled": true,
             "checked": false,
             "busy": false,
             "reason": null
+          },
+          "when": {
+            "enabled": {
+              "can": "rate"
+            },
+            "checked": {
+              "rate": {
+                "min": 1.495,
+                "max": 1.505
+              }
+            }
           }
         }
       },
@@ -236,142 +215,27 @@
             "repeat": false
           },
           "state": {
-            "enabled": false,
-            "checked": false,
-            "busy": false,
-            "reason": null
-          }
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts",
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts",
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts",
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a stream opened at main.ts",
-            "command \"0.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"1.5×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when",
-            "command \"2×\" enabled is a function that reads plugin.player.state (main.ts) — use plugin.when"
-          ]
-        }
-      }
-    ],
-    "open": [
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "rate-0.5",
-          "revision": 2,
-          "state": {
             "enabled": true,
             "checked": false,
             "busy": false,
             "reason": null
-          }
-        }
-      },
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "rate-1",
-          "revision": 2,
-          "state": {
-            "enabled": true,
-            "checked": true,
-            "busy": false,
-            "reason": null
-          }
-        }
-      },
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "rate-1.5",
-          "revision": 2,
-          "state": {
-            "enabled": true,
-            "checked": false,
-            "busy": false,
-            "reason": null
-          }
-        }
-      },
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "rate-2",
-          "revision": 2,
-          "state": {
-            "enabled": true,
-            "checked": false,
-            "busy": false,
-            "reason": null
+          },
+          "when": {
+            "enabled": {
+              "can": "rate"
+            },
+            "checked": {
+              "rate": {
+                "min": 1.995,
+                "max": 2.005
+              }
+            }
           }
         }
       }
     ],
-    "changes": [
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "rate-1",
-          "revision": 3,
-          "state": {
-            "enabled": true,
-            "checked": false,
-            "busy": false,
-            "reason": null
-          }
-        }
-      },
-      {
-        "method": "commands.update",
-        "params": {
-          "id": "rate-1.5",
-          "revision": 3,
-          "state": {
-            "enabled": true,
-            "checked": true,
-            "busy": false,
-            "reason": null
-          }
-        }
-      }
-    ],
+    "open": [],
+    "changes": [],
     "command": [
       {
         "method": "source.submit",
@@ -384,45 +248,9 @@
               "rate": 1.5
             },
             "expected": {
-              "generation": 1,
-              "intentVersion": 1
+              "generation": 0,
+              "intentVersion": 0
             }
-          }
-        }
-      },
-      {
-        "method": "source.state",
-        "params": {}
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "speed"
-        }
-      },
-      {
-        "method": "commands.register",
-        "params": {
-          "id": "speed",
-          "revision": 1,
-          "declaration": {
-            "title": "Speed: 1.5×",
-            "path": [
-              "Examples",
-              "Speed: 1.5×"
-            ],
-            "order": 860,
-            "group": "status",
-            "radio": false,
-            "bindings": [],
-            "focus": null,
-            "repeat": false
-          },
-          "state": {
-            "enabled": false,
-            "checked": null,
-            "busy": false,
-            "reason": null
           }
         }
       }

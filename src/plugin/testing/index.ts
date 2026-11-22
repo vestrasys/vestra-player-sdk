@@ -778,9 +778,10 @@ export class TestHost implements Transport {
   /** The host events the plugin subscribed to. */
   readonly subscriptions = new Set<string>();
   /**
-   * The subscribed events the plugin really listens to: an `onChange` and
-   * the like, or a binding that reads the state. The SDK's own copies of
-   * the state (what keeps `plugin.player.state` current) are left out.
+   * The subscribed events the plugin really listens to: a listener
+   * (`player.on`, an `onChange` and the like) or a stream. The SDK's own
+   * copies of the state are left out, and a binding that reads a state
+   * subscribes nothing.
    * Empty means the player may stop the plugin while nothing uses it
    * (unless it holds something else: a window, a panel, a filter…).
    *
@@ -789,10 +790,9 @@ export class TestHost implements Transport {
   readonly listening = new Set<string>();
   /**
    * Why the plugin listens to each event of {@link TestHost.listening}:
-   * every listener and every binding that reads its state, as the
-   * player's log says them (`a listener added at main.ts:12`,
-   * `command "Save" enabled is a function that reads plugin.player.state
-   * (main.ts:40) — use plugin.when`), in the order they came.
+   * every listener and stream, as the player's log says them (`a listener
+   * added at main.ts:12`, `a stream opened at main.ts:20`), in the order
+   * they came.
    *
    * @since 1.5.40
    */
@@ -3828,15 +3828,16 @@ export class TestHost implements Transport {
    * keeps the plugin running only while the tab is shown, and a sidebar panel
    * in a background tab is no reason at all (the plugin may go to standby;
    * showing the tab starts it again). Empty: the player may stop it while idle
-   * and start it again on its next use. Filter chains, streams, jobs and the
-   * like (which also keep a plugin running) are not listed.
+   * and start it again on its next use. A state stream (`player.stream`)
+   * shows as a listener of `source.state`; filter chains, producer streams,
+   * jobs and the like (which also keep a plugin running) are not listed.
    *
    * @since 1.5.40
    *
    * @example Check that a plugin can be stopped while idle
    * The test fails if the plugin keeps running for no reason after it
-   * starts, and names the reason (a command whose `enabled` reads
-   * `plugin.player.state`, say: give it a `plugin.when` condition). The
+   * starts, and names the reason (a stream opened in `activate`, say:
+   * open it only while something shows the state). The
    * player stops such a plugin while nothing uses it and starts it again
    * on its next use, so it costs no process meanwhile.
    * ```ts
