@@ -559,6 +559,18 @@ export class Connection {
     return this.#hold(event, why, always ? "always" : "read");
   }
   /**
+   * The SDK's own follower of `event` (SDK 1.11.0-rc.4): a handle that sends
+   * its values again when the source changes (`plugin.video.view()`, a
+   * shader channel, a processing node). It subscribes a held-only group
+   * while it lives, as {@link Connection.hold} does, but counts as the SDK's
+   * copy, not as a listener: the player is told `mirror` unless a plugin
+   * listener holds the group too. What the handle holds keeps the plugin
+   * running with its own reason; following the source is not one.
+   */
+  track(event: string, always = false): Disposable {
+    return this.#hold(event, undefined, always ? "always" : "read", false);
+  }
+  /**
    * {@link Connection.hold} for `plugin.player.stream` (SDK 1.10.0): the
    * stream reads the state itself when it opens, so the copy is not read
    * once more here.
@@ -566,20 +578,25 @@ export class Connection {
   follow(event: string, why?: Why): Disposable {
     return this.#hold(event, why, "never");
   }
-  #hold(event: string, why: Why | undefined, catchUp: CatchUp): Disposable {
+  #hold(
+    event: string,
+    why: Why | undefined,
+    catchUp: CatchUp,
+    listens = true,
+  ): Disposable {
     const group = this.#events.get(event);
     if (!group) return { dispose: async () => {} };
-    group.active++;
+    if (listens) group.active++;
     group.holders++;
     const token = {};
-    group.whys.set(token, why ?? listenerWhy(this.callSite()));
+    if (listens) group.whys.set(token, why ?? listenerWhy(this.callSite()));
     this.#heldBy(event, group, catchUp);
     let held = true;
     return {
       dispose: async () => {
         if (!held) return;
         held = false;
-        group.active--;
+        if (listens) group.active--;
         group.holders--;
         group.whys.delete(token);
         if (this.#events.get(event) === group) this.#released(event, group);

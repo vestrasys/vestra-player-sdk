@@ -65,7 +65,7 @@ class ShaderHandle implements Disposable {
       if (this.#desired === paths) this.#report({ state });
     });
     // `waiting` becomes `applied` when media becomes ready: ask again.
-    this.#watch = playerOf(scope.runtime).watch((raw) => {
+    this.#watch = playerOf(scope.runtime).track((raw) => {
       const source = `${raw.stamp.generation}:${raw.phase}`;
       if (source === this.#source) return;
       const first = this.#source === "";

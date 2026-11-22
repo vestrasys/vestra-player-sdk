@@ -49,7 +49,7 @@ class FilterHandle {
     this.#stage = stage;
     this.#id = id;
     // Only phase/source changes matter, not the 10 Hz position updates.
-    this.#watch = player.watch((raw) => {
+    this.#watch = player.track((raw) => {
       const source = `${raw.stamp.generation}:${raw.phase}:${raw.kind}`;
       if (source === this.#source) return;
       this.#source = source;

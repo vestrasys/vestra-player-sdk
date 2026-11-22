@@ -352,6 +352,24 @@ export class PlayerService implements StreamSource {
     };
   }
   /**
+   * `watch` for the SDK's own handles that send their values again when the
+   * source changes (the video view, a shader channel, a processing node):
+   * the copy hears `source.state` while the handle lives, but the plugin is
+   * not counted as listening to it (`Connection.track`). The handle's own
+   * resource is what keeps the plugin running.
+   */
+  track(watcher: (raw: SourceState) => void): Disposable {
+    void this.start();
+    this.#watchers.add(watcher);
+    const tracked = this.runtime.track("source.state");
+    return {
+      dispose: async () => {
+        this.#watchers.delete(watcher);
+        await tracked.dispose();
+      },
+    };
+  }
+  /**
    * `watch`, for `plugin.player.stream`: the copy hears `source.state` while
    * the watcher is open, and the plugin counts as listening to it
    * (`Connection.follow`; the stream reads the state itself).

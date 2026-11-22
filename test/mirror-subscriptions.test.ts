@@ -135,3 +135,60 @@ test("a listener added during activation is marked before the plugin is ready", 
     await stop();
   }
 });
+
+test("the video view, a shader channel and a filter follow the source without counting as listeners (1.11.0-rc.4)", async () => {
+  const { plugin, host, stop } = await startPlugin(() => {}, {
+    capabilities: ["playback.read", "processing.video"],
+  });
+  try {
+    await host.settle();
+    const view = plugin.video.view();
+    const shaders = plugin.video.shaders("look");
+    const filter = plugin.video.filter("picture");
+    view.set({ zoom: 1.5 });
+    filter.set([{ kind: "hue", degrees: 30 }]);
+    await host.settle();
+    // They follow the source: the copy is subscribed, as the SDK's own.
+    assert.ok(host.subscriptions.has("source.state"));
+    assert.deepEqual(
+      [...host.listening],
+      [],
+      "no listener: their resources keep the plugin up",
+    );
+    assert.ok(
+      marks(host)
+        .filter((m) => m.event === "source.state")
+        .every((m) => m.mirror === true),
+    );
+    assert.equal(view.status.state, "waiting");
+    host.openElsewhere("/a.mp4");
+    await host.settle();
+    assert.equal(
+      view.status.state,
+      "applied",
+      "the view sent its values again for the new source",
+    );
+    assert.equal(filter.status.state, "applied");
+    // A listener of the plugin's own is one, and only while it lives.
+    const listener = plugin.player.on("source.state", () => {});
+    await host.settle();
+    assert.deepEqual([...host.listening], ["source.state"]);
+    await listener.dispose();
+    await host.settle();
+    assert.deepEqual([...host.listening], []);
+    assert.ok(
+      host.subscriptions.has("source.state"),
+      "the handles still follow",
+    );
+    await view.dispose();
+    await shaders.dispose();
+    await filter.dispose();
+    await host.settle();
+    assert.ok(
+      !host.subscriptions.has("source.state"),
+      "nothing follows once they are gone",
+    );
+  } finally {
+    await stop();
+  }
+});
