@@ -288,7 +288,7 @@ function documentedCodes(members) {
     const found = findMember(member);
     if (!found) continue;
     for (const text of tags(docText(found), "throws")) {
-      const code = /^`(\w+)`/.exec(text)?.[1];
+      const code = /^`([\w-]+)`/.exec(text)?.[1];
       if (code) codes.add(code);
     }
   }

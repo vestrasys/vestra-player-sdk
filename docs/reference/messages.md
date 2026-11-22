@@ -21,7 +21,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
-| `app.openWindow` | `{ paths }` | `{ pid: number }` | `invalid`, `missing`, `unsupported`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!App.openWindow App.openWindow} |
+| `app.openWindow` | `{ paths }` | `{ pid: number }` | `builtin-only`, `invalid`, `missing`, `unsupported`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!App.openWindow App.openWindow} |
 | `app.system` | — | `WireSystemInfo` | `busy` | SDK member: {@linkcode "@vestra-player/sdk"!App.system App.system} |
 
 ### `appearance`
@@ -59,9 +59,9 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `commands.keys` | `{}` | `CommandKeys` | — | SDK member: {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys} |
-| `commands.list` | `{}` | `CommandList` | — | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
+| `commands.list` | `{}` | `CommandList` | `builtin-only` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
 | `commands.register` | `{ when?, id, revision, declaration, state }` | `{ revision: number }` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.add Commands.add} |
-| `commands.run` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
+| `commands.run` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `builtin-only`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
 | `commands.unregister` | `{ id }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.dispose Command.dispose} |
 | `commands.update` | `{ when?, id, revision, state }` | `{ revision: number }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.set Command.set} |
 
@@ -118,7 +118,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | `media.sources.get` | `{ token }` | `WireSourceReference` | `missing`, `busy` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.get MediaSources.get} |
 | `media.sources.list` | `{}` | `WireSourceReference[]` | `busy` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.list MediaSources.list} |
 | `media.sources.locate` | `{ token }` | `WireSourceReference \| null` | `missing`, `busy`, `unavailable`, `unsupported` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.locate MediaSources.locate} |
-| `media.sources.open` | `{ token, operationId, start? }` | `SourceOperation` | `missing`, `invalid`, `replaced`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
+| `media.sources.open` | `{ token, operationId, start? }` | `SourceOperation` | `source-missing`, `source-changed`, `missing`, `invalid`, `replaced`, `backend` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
 | `media.sources.remember` | `{ expected? }` | `WireSourceReference` | `unsupported`, `stale`, `limit`, `busy`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!MediaSources.remember MediaSources.remember} |
 
 ### `mpv`
@@ -158,8 +158,8 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `palette.lead.clear` | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
-| `palette.lead.done` | `{ ticket }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
-| `palette.lead.set` | `{ [key: string]: Json; }` | `void` | `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
+| `palette.lead.done` | `{ ticket }` | `void` | `builtin-only` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
+| `palette.lead.set` | `{ [key: string]: Json; }` | `void` | `builtin-only`, `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
 
 ### `playback`
 
@@ -248,7 +248,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
-| `source.operation` | `{ operationId }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
+| `source.operation` | `{ operationId }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `source-missing`, `source-changed`, `missing` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub}, {@linkcode "@vestra-player/sdk"!MediaSources.open MediaSources.open} |
 | `source.state` | — | `SourceState` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.state Player.state}, {@linkcode "@vestra-player/sdk"!Player.refresh Player.refresh} |
 | `source.submit` | `{ operationId, intent }` | `SourceOperation` | `stale`, `replaced`, `invalid`, `aborted`, `busy`, `backend`, `unsupported`, `unavailable`, `timeout`, `stream`, `device` | SDK member: {@linkcode "@vestra-player/sdk"!Player.open Player.open}, {@linkcode "@vestra-player/sdk"!Player.openStream Player.openStream}, {@linkcode "@vestra-player/sdk"!Player.setPaused Player.setPaused}, {@linkcode "@vestra-player/sdk"!Player.seek Player.seek}, {@linkcode "@vestra-player/sdk"!Player.setRate Player.setRate}, {@linkcode "@vestra-player/sdk"!Player.restart Player.restart}, {@linkcode "@vestra-player/sdk"!Player.close Player.close}, {@linkcode "@vestra-player/sdk"!Player.scrub Player.scrub} |
 

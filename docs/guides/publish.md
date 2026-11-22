@@ -83,7 +83,7 @@ The store shows the newest version's manifest fields, so what you write there is
 
 - **The list**: name and version, author and repository, the punchline. Search covers the name, id, author, punchline and tags; the list can be filtered by tag and sorted by name or by the date of the newest version. There are no download counts.
 - **The plugin's page**: the icon, name, author, punchline and the buttons (install, update, uninstall). Three tabs show the README, the changelog and the version history (version, release date, `minPlayerVersion`, and whether the version is current, incompatible or revoked). The player keeps no previous version, and the Versions tab never installs a version older than the one installed from the same repository; to go back, a user uninstalls the plugin, then installs the older version from the Versions tab while the index still lists it, or its `.vxp`. A side column shows the version, the date, the license and a link to `sourceUrl`.
-- **Before installing**, the user confirms a dialog that lists what the code uses; an update that uses more lists what is new. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
+- **Before installing**, the user confirms a dialog that names the plugin, its version and its source. A plugin whose every version needs a newer player shows "needs Vestra Player x.y.z or later" instead of an install button.
 - **The README** is rendered as Markdown; relative links and images resolve against the README's own address, and remote images are shown for the official repository.
 
 ## See also

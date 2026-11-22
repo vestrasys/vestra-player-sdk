@@ -62,7 +62,7 @@ In the store, **⚙ ▸ Repositories…** (or **Options ▸ Plugins ▸ Plugin S
 >
 > Its plugins are not reviewed by Vestra Player and may read your files or use the network. The store shows this repository's plugins but does not judge for you whether they can be trusted.
 
-A user can add up to 16 repositories besides the official one. Your plugins are then listed with "Unofficial: Someone's plugins (someone.github.io)", and their page says "Unofficial repository: not reviewed by Vestra Player; plugins may read your files or use the network". Installing asks "Install “Cool Visualizer” 1.0.0 from an unofficial repository?", above the list of permissions:
+A user can add up to 16 repositories besides the official one. Your plugins are then listed with "Unofficial: Someone's plugins (someone.github.io)", and their page says "Unofficial repository: not reviewed by Vestra Player; plugins may read your files or use the network". Installing asks "Install “Cool Visualizer” 1.0.0 from an unofficial repository?", with this text:
 
 > Repository: Someone's plugins (someone.github.io) (https://someone.github.io/my-plugins/index.json). This repository is not reviewed by Vestra Player; its plugins may read your files or use the network. Only install plugins from authors you trust.
 
