@@ -86,7 +86,7 @@ Create `manifest.json`. Replace `me` with your GitHub user name:
 }
 ```
 
-Every field is in [Manifest](../reference/manifest.md). The manifest says who the plugin is, not what it may do: the plugin store shows what its code uses, from a scan of the package ([Capability scan](../reference/scan.md)).
+Every field is in [Manifest](../reference/manifest.md). The manifest says who the plugin is, not what it may do.
 
 ## 3. Add a menu item
 

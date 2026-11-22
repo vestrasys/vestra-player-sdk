@@ -37,7 +37,7 @@ The code below is pulled from these files, so it is exactly what CI builds and t
 
 - `id` names the plugin, as `<owner>.<name>` (your GitHub user or organization). `vestra.` ids are reserved for the player's built-in plugins.
 - `entry` is the module the player loads: the TypeScript file itself during development.
-- Nothing in it says what the plugin may do: the store shows what the code uses, from a scan of the package ([Capability scan](../reference/scan.md)).
+- Nothing in it says what the plugin may do: a manifest says who the plugin is.
 
 ## The code
 

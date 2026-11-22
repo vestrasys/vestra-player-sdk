@@ -27,8 +27,7 @@ import { declaration, docText, tags, ts, typeFile } from "./lib/source.mjs";
  * The public members that send a request without being listed in
  * `API_REQUESTS` (which lists the request a member sends to do its work):
  * the handles' own requests (a window's `set`, a command's
- * `set`), clean-up on `dispose`, and the requests of the members that need
- * no capability. Keep it complete: the generator fails on a method the SDK
+ * `set`), clean-up on `dispose`, and a few more. Keep it complete: the generator fails on a method the SDK
  * sends that neither table names.
  */
 export const WRAPPED_BY = {
@@ -289,7 +288,7 @@ function documentedCodes(members) {
     const found = findMember(member);
     if (!found) continue;
     for (const text of tags(docText(found), "throws")) {
-      const code = /^`(\w+)`/.exec(text)?.[1];
+      const code = /^`([\w-]+)`/.exec(text)?.[1];
       if (code) codes.add(code);
     }
   }

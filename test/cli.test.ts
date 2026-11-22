@@ -144,7 +144,7 @@ test("build runs under the permission model with only the project, the SDK and a
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
 
-test("type errors, runtime SDK imports and a manifest with capabilities fail", () => {
+test("type errors, runtime SDK imports and a manifest with an unknown field fail", () => {
   const typo = project(HELLO.replace("osd.show", "osd.shout"));
   const checked = vestraPlugin(typo, "check");
   assert.equal(checked.status, 1);
@@ -156,9 +156,9 @@ test("type errors, runtime SDK imports and a manifest with capabilities fail", (
   assert.equal(built.status, 1);
   assert.match(built.stderr, /runtime import of @vestra-player\/sdk/);
 
-  const capability = project(HELLO);
+  const unknown = project(HELLO);
   writeFileSync(
-    join(capability, "manifest.json"),
+    join(unknown, "manifest.json"),
     JSON.stringify({
       id: "x",
       version: "1.0.0",
@@ -167,13 +167,11 @@ test("type errors, runtime SDK imports and a manifest with capabilities fail", (
       capabilities: ["commands"],
     }),
   );
-  const refused = vestraPlugin(capability, "check");
+  // An unknown field like any other (1.11.0): no message of its own.
+  const refused = vestraPlugin(unknown, "check");
   assert.equal(refused.status, 1);
-  assert.match(
-    refused.stderr,
-    /"capabilities", which SDK 1\.9\.0 \(player 0\.9\.0\) removed/,
-  );
-  assert.match(refused.stderr, /plugin\.player\.subscribe\(\)/);
+  assert.match(refused.stderr, /unknown field "capabilities"/);
+  assert.doesNotMatch(refused.stderr, /SDK 1\.9\.0|subscribe/);
   const json = vestraPlugin(project(HELLO), "check", "--json");
   assert.equal(json.status, 1);
   assert.match(json.stderr, /--json was removed in SDK 1\.9\.0/);
