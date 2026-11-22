@@ -520,7 +520,7 @@ test("the three plugin styles: the tutorial, the event and the message tables", 
   );
   for (const code of [
     "bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));",
-    'plugin.player.on("source.state", (s) => {',
+    'plugin.player.on("source.state", (s) => show(s.rate))',
     "const view = plugin.wire.view(bar);",
   ])
     assert.ok(chapter.includes(code), code);

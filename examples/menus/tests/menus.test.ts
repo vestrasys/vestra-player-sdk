@@ -37,3 +37,20 @@ test("the status item is added again with a new title", async () => {
   ]);
   await stop();
 });
+
+test("the check marks follow a speed set elsewhere; nothing keeps the plugin running", async () => {
+  const host = new TestHost();
+  host.openElsewhere("/movie.mp4");
+  const { stop } = await startPlugin(activate, { directory, host });
+  const keepsRunning = () => host.keepsRunning;
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  host.setSource({ rate: 1.5 }); // the user changed the speed
+  assert.equal(host.command("rate-1.5").state.checked, true);
+  assert.equal(host.command("rate-1").state.checked, false);
+  host.setSource({
+    capabilities: { ...host.source.capabilities, rate: false }, // a live stream
+  });
+  assert.equal(host.command("rate-2").state.enabled, false);
+  await stop();
+});

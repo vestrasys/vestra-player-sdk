@@ -44,7 +44,7 @@ examples/menus/
 
 {@includeCode ../../examples/menus/manifest.json}
 
-`await plugin.player.read()` and a stream (`plugin.player.stream(() => {})`), first in `activate`, read the current speed and keep it up to date.
+`minPlayerVersion` is 0.10.0, the first player that evaluates `when.rate`. `await plugin.player.read()`, first in `activate`, reads the current speed once, for the title.
 
 ## The code
 
@@ -73,7 +73,7 @@ A command's title and path cannot change after it is added. To change them, remo
 - The loop adds one command per speed. `entries()` gives the index for `order`, so the items appear in that order (850 to 853).
 - All four share the menu path's first segment, `"Examples"`, so they land in the same submenu; the submenu itself sits where its first item sits.
 - `group: "speeds"` keeps them in one block.
-- `radio: true` draws `checked` as a dot instead of a check mark. Which item is checked is the plugin's decision: `checked` compares the player's current speed with this item's. The SDK re-evaluates it whenever the player's state changes, so the dot also moves when the speed changes in some other way.
+- `radio: true` draws `checked` as a dot instead of a check mark. Which item is checked is a condition: `when.rate({ min, max })` holds while the speed is in that interval, and the narrow interval around each item's speed absorbs rounding. The player evaluates it itself, so the dot also moves when the speed changes in some other way, and the menu stays right while the plugin is stopped. `enabled: when.can("rate")` greys the items out where the source cannot change speed.
 - `enabled` greys the items out while the video cannot change speed, for example with nothing open.
 - `run` changes the speed with {@link "@vestra-player/sdk"!Player.setRate | player.setRate}, then rebuilds the status item.
 
@@ -99,6 +99,6 @@ Start the player with `--plugin <path to examples/menus>`, open a video and pick
 
 ## Try next
 
-1. **Keep the title in step** when the speed changes elsewhere: call `showSpeed` from the stream's listener when `state.rate` differs from the last value shown.
-2. **A check item.** Add a command with `checked: () => player.state.paused` (no `radio`) that toggles pause.
+1. **Keep the title in step** when the speed changes elsewhere: give each speed a trigger with the same `when.rate` condition and call `showSpeed` from its `enter` ([Learn what happens in the player](../guides/events-and-triggers.md)).
+2. **A check item.** Add a command with `checked: when.paused` (no `radio`) that toggles pause.
 3. **A repeating key.** Give a command `bindings: ["Ctrl+Alt+ArrowUp"]` and `repeat: true`: it runs again while the key is held, which suits small steps such as volume.

@@ -1,5 +1,5 @@
 /**
- * Style B, subscribe and write: the plugin listens to the player's events
+ * Style B, listen and write: the plugin listens to the player's events
  * by name (`plugin.player.on`) and writes values when it knows they
  * changed (`set`). No update pass runs for these views and commands.
  * Walkthrough: docs/tutorial/index.md.
@@ -12,6 +12,7 @@ import {
   LIST_SIZE,
   nextRate,
   speedText,
+  whileShown,
   WIDTH,
 } from "./shared.ts";
 
@@ -20,13 +21,22 @@ export function speed(plugin: Plugin) {
   // #region speed
   const bar = plugin.panels.mount("bottom", "ui/speed.slint");
   let shown = "1.00×"; // what the panel shows: its Slint default at first
-  // Every source.state event, about ten a second while media plays; the
-  // payload is typed (SourceState). Compare, or each one is a write.
-  plugin.player.on("source.state", (s) => {
-    const rate = speedText(s.rate);
-    if (rate === shown) return;
+  const show = (value: number) => {
+    const rate = speedText(value);
+    if (rate === shown) return; // compare, or each event is a write
     shown = rate;
     bar.set({ rate });
+  };
+  // The speed has no event of its own: while the bar is on screen, read it
+  // once, then hear every source.state event (about ten a second while
+  // media plays; the payload is typed, SourceState).
+  whileShown(bar, () => {
+    void plugin.player.refresh().then(
+      (s) => show(s.rate),
+      () => {},
+    );
+    const listener = plugin.player.on("source.state", (s) => show(s.rate));
+    return () => void listener.dispose();
   });
   plugin.commands.add({
     id: "rate.cycle",
@@ -117,13 +127,15 @@ export function keyframes(plugin: Plugin) {
     run: () => plugin.player.step("keyframe", "forward"),
   });
   let current: number | null = null; // the ready source asked about
-  plugin.player.on("source.state", (s) => {
-    // `stamp.generation` is the wire's name for PlayerState's sourceId.
-    const sourceId = s.phase === "ready" ? s.stamp.generation : null;
-    if (sourceId === current) return;
+  // Once per source; listening to them keeps no plugin running.
+  const gone = () => {
+    current = null;
+    next.set({ enabled: false }); // unknown until the next answer
+  };
+  plugin.player.on("source.opening", gone);
+  plugin.player.on("source.ended", gone);
+  plugin.player.on("source.ready", ({ state: { sourceId } }) => {
     current = sourceId;
-    next.set({ enabled: false }); // unknown until the answer
-    if (sourceId === null) return;
     void plugin.player.stats().then(
       (stats) => {
         if (current === sourceId) next.set({ enabled: stats.video !== null });
@@ -136,10 +148,7 @@ export function keyframes(plugin: Plugin) {
 
 /** All four scenarios in style B. */
 export default async function activate(plugin: Plugin) {
-  // The bound values below read the player's state: a stream keeps it
-  // following the player (and the plugin running) while the plugin is up.
-  plugin.player.stream(() => {});
-  await plugin.player.read(); // the player's state and timeline, read once
+  await plugin.player.read(); // the player's state, read once
   speed(plugin);
   frames(plugin);
   list(plugin);

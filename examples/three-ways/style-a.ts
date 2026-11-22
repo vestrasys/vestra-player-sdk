@@ -12,6 +12,7 @@ import {
   LIST_SIZE,
   nextRate,
   speedText,
+  whileShown,
   WIDTH,
 } from "./shared.ts";
 
@@ -21,12 +22,21 @@ export function speed(plugin: Plugin) {
   const bar = plugin.panels.mount("bottom", "ui/speed.slint");
   // Reads state.rate: runs again when the speed changes, and only then.
   bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));
+  // The speed has no event: while the bar is on screen a stream keeps
+  // state.rate following the player.
+  whileShown(bar, () => {
+    const feed = plugin.player.stream(() => {});
+    return () => feed.stop();
+  });
   plugin.commands.add({
     id: "rate.cycle",
     path: ["Playback", "Cycle Speed"],
     bindings: ["C"],
-    enabled: () => plugin.player.state.can.rate, // evaluated in the passes
-    run: () => plugin.player.setRate(nextRate(plugin.player.state.rate)),
+    enabled: plugin.when.can("rate"), // evaluated by the player itself
+    run: async () => {
+      const s = await plugin.player.refresh(); // the speed now, shown or not
+      await plugin.player.setRate(nextRate(s.rate));
+    },
   });
   // #endregion speed
 }
@@ -153,10 +163,7 @@ export function keyframesManual(plugin: Plugin) {
 
 /** All four scenarios in style A. */
 export default async function activate(plugin: Plugin) {
-  // The bound values below read the player's state: a stream keeps it
-  // following the player (and the plugin running) while the plugin is up.
-  plugin.player.stream(() => {});
-  await plugin.player.read(); // the player's state and timeline, read once
+  await plugin.player.read(); // the player's state, read once
   speed(plugin);
   frames(plugin);
   list(plugin);

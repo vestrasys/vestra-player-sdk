@@ -3,7 +3,14 @@ import type { Plugin } from "@vestra-player/sdk";
 /** A sidebar panel with its own right-click menu. */
 export default async function activate(plugin: Plugin) {
   // #region state
-  const items = ["First item", "Second item", "Third item"];
+  // Session storage outlives standby: with its tab in the background the
+  // player may stop this plugin, and showing the tab starts it again.
+  const { session } = plugin.storage;
+  const items = (await session.get<string[]>("items")) ?? [
+    "First item",
+    "Second item",
+    "Third item",
+  ];
   let selected = 0;
   // #endregion state
 
@@ -27,6 +34,7 @@ export default async function activate(plugin: Plugin) {
     enabled: () => items.length > 0,
     run: () => {
       items.splice(selected, 1);
+      void session.set("items", items);
       selected = Math.max(0, Math.min(selected, items.length - 1));
     },
   });

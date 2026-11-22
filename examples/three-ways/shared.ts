@@ -3,7 +3,7 @@
  * makes 60 frames a second, the list's rows and the player's form of a
  * command declaration (style C). Walkthrough: docs/tutorial/index.md.
  */
-import type { StreamFrame } from "@vestra-player/sdk";
+import type { Panel, StreamFrame } from "@vestra-player/sdk";
 
 // #region speed
 const RATES = [0.5, 1, 1.5, 2];
@@ -13,6 +13,26 @@ export const nextRate = (rate: number) =>
 /** The panel's text for a speed: "1.50×". */
 export const speedText = (rate: number) => `${rate.toFixed(2)}×`;
 // #endregion speed
+
+// #region while-shown
+/**
+ * Run what `open` starts while `panel` is on screen, and stop it (with
+ * the function `open` returns) when the panel goes. For a bottom-bar or
+ * backdrop panel, which keeps its plugin running anyway, so its `onChange`
+ * (a listener) costs nothing more; a sidebar or adjust tab listens to
+ * `layout.changed` instead (examples/adjust-panel).
+ */
+export function whileShown(panel: Panel, open: () => () => void) {
+  let close: (() => void) | undefined;
+  panel.onChange((state) => {
+    if (state?.effective) close ??= open();
+    else {
+      close?.();
+      close = undefined;
+    }
+  });
+}
+// #endregion while-shown
 
 /** The emulator's picture size and frame rate. */
 export const WIDTH = 256;

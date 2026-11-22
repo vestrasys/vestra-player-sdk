@@ -1,26 +1,50 @@
-import type { Plugin } from "@vestra-player/sdk";
+import type { Plugin, StateStream } from "@vestra-player/sdk";
 
 /** A speed slider in the adjust column. */
 export default async function activate(plugin: Plugin) {
-  // The bound values below read the player's state: a stream keeps it
-  // following the player (and the plugin running) while the plugin is up.
-  plugin.player.stream(() => {});
-  await plugin.player.read(); // the player's state and timeline, read once
+  const { player, when } = plugin;
+  await player.read(); // the player's state, read once
   // #region mount
   // "adjust": the panel changes what is playing. After the user closes it,
   // they do not keep looking at it (that would be the sidebar).
   const panel = plugin.panels.mount("adjust", "ui/speed.slint", {
     title: "Speed",
   });
-  // Sent when the panel mounts, then whenever the playback state changes:
+  // #endregion mount
+
+  // #region follow
+  // The speed has no event: while the tab is on screen a stream keeps
+  // `player.state` following the player (and runs the binding below after
+  // each change). While the column is closed nothing follows it, and the
+  // plugin can go to standby.
+  let feed: StateStream | undefined;
+  const follow = () => {
+    if (panel.state?.effective) feed ??= player.stream(() => {});
+    else {
+      feed?.stop();
+      feed = undefined;
+    }
+  };
+  // Sent once per change of the layout (the column opened or closed, another
+  // tab chosen); listening to it keeps no plugin running.
+  player.on("layout.changed", follow);
+  // And once at the mount, for a column already open when the plugin starts.
+  // `panel.state` is read on first use; touched before the mount, it is
+  // current when `ready` resolves.
+  void panel.state;
+  void panel.ready.then(follow, () => {});
+  // #endregion follow
+
+  // #region bind
+  // Sent when the panel mounts, then whenever the playback state changes.
   panel.bind(() => ({
-    rate: plugin.player.state.rate,
-    enabled: plugin.player.state.can.rate,
+    rate: player.state.rate,
+    enabled: player.state.can.rate,
   }));
   const setRate = (rate: number) =>
-    plugin.player.setRate(Math.round(rate * 100) / 100);
+    player.setRate(Math.round(rate * 100) / 100);
   panel.on("rateChanged", setRate);
-  // #endregion mount
+  // #endregion bind
 
   // #region commands
   // Opens the adjust column at this tab, and closes it when this tab is
@@ -40,7 +64,7 @@ export default async function activate(plugin: Plugin) {
     title: "Normal Speed",
     category: "Playback",
     home: "speed",
-    enabled: () => plugin.player.state.can.rate,
+    enabled: when.can("rate"), // evaluated by the player, also in standby
     run: () => setRate(1),
   });
   panel.on("reset", () => setRate(1));

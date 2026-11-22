@@ -59,6 +59,8 @@ examples/panel-menu/
 
 The list's titles and the selected index. Everything below reads and changes these two values.
 
+- The list is kept in {@link "@vestra-player/sdk"!Storage.session | plugin.storage.session}: while another tab is the current one the panel keeps nothing running, so the player may stop the plugin, and showing the tab starts it again from the stored list.
+
 ### Mounting the panel
 
 {@includeCode ../../examples/panel-menu/main.ts#mount}

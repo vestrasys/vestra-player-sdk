@@ -45,7 +45,7 @@ The smallest complete plugin, and the README's Quick start: **Tools ▸ Hello** 
 
 **Playback ▸ Bookmark…** opens a small tool window that remembers the current position and jumps back to it.
 
-**You learn:** a tool window whose properties are bound to the playback state · handling its buttons.
+**You learn:** a tool window whose properties are bound to the playback state · handling its buttons · following the state only while the window is open.
 
 [Walkthrough](bookmark.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/bookmark)
 
@@ -63,7 +63,7 @@ A list in the sidebar with its own right-click menu. Next to the player's playli
 
 A speed slider in the adjust column, the column of controls for what is playing. Alt+5 opens the column at its tab and closes it again.
 
-**You learn:** the `"adjust"` slot and when to choose it over `"sidebar"` · a panel's own key with `Panel.toggle` · `CommandOptions.home`, which puts that key under the tab.
+**You learn:** the `"adjust"` slot and when to choose it over `"sidebar"` · a panel's own key with `Panel.toggle` · `CommandOptions.home`, which puts that key under the tab · following the state only while the tab is on screen.
 
 [Walkthrough](adjust-panel.md) · [Source](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/adjust-panel)
 

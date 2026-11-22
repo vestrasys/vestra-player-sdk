@@ -60,7 +60,10 @@ for (const [style, entry] of [
       host,
     });
     const command = () => host.command("signal-generator");
+    const keepsRunning = () => host.keepsRunning;
     try {
+      await host.settle();
+      assert.deepEqual(keepsRunning(), [], "idle until the stream starts");
       const { declaration } = command();
       assert.deepEqual("path" in declaration && declaration.path, [
         "@open",
@@ -77,6 +80,7 @@ for (const [style, entry] of [
       assert.equal(producer.droppedWhileSelected, false, "source closed first");
       assert.equal(host.source.phase, "empty");
       assert.equal(command().state.checked, false);
+      assert.deepEqual(keepsRunning(), []);
     } finally {
       await stop();
     }

@@ -4,7 +4,7 @@ A speed slider in the player's adjust column, the column of controls for what is
 
 | Follows the player | API |
 | --- | --- |
-| `stream()`, `read()` | `panels.mount("adjust")`, `Panel.toggle`, `CommandOptions.home`, `player.setRate` |
+| `read()`; `stream()` while the tab shows (`layout.changed`); `when` | `panels.mount("adjust")`, `Panel.toggle`, `CommandOptions.home`, `player.setRate` |
 
 Why `"adjust"` and not `"sidebar"`: after the user closes the panel, they do not keep looking at it; it only changes what is playing. A list, chapters or search results would go in the sidebar.
 

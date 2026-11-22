@@ -96,7 +96,6 @@ function isSaved(value: unknown): value is Saved {
 }
 
 export default async function activate(plugin: Plugin) {
-  await plugin.player.read(); // the player's state and timeline, read once
   // Load: read once, synchronously; defaults if there is no valid file.
   const store = plugin.storage.json<Saved>("brightness", {
     defaults: DEFAULTS,

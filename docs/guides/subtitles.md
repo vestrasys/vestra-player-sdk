@@ -92,8 +92,7 @@ A **Subtitles ▸ English Subtitles** item that selects the first English track 
 import { readFile } from "node:fs/promises";
 import type { Plugin, PluginError } from "@vestra-player/sdk";
 
-export default async function activate(plugin: Plugin) {
-  await plugin.player.read(); // the player's state and timeline, read once
+export default function activate(plugin: Plugin) {
   plugin.commands.add({
     id: "english",
     path: ["@subtitles", "English Subtitles"],
@@ -107,7 +106,7 @@ export default async function activate(plugin: Plugin) {
         });
         return;
       }
-      const source = plugin.player.state.source;
+      const { source } = await plugin.player.refresh(); // the file open now
       if (!source) return;
       const bytes = await readFile(source.replace(/.[^.]+$/, ".en.srt")).catch(() => null);
       if (!bytes) return plugin.osd.show("No English subtitles found");

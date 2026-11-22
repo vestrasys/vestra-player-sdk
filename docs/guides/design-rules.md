@@ -99,13 +99,15 @@ Switch the palette (Appearance commands, `Ctrl+Shift+P`) with your windows open:
 A blur tool that follows the rules: it lives in Video and opens a window (`…`), is greyed out with a reason while nothing plays, confirms with an OSD template, and puts its reset under `@reset`.
 
 ```ts
-import type { Plugin } from "@vestra-player/sdk";
+import type { Plugin, VideoFilter } from "@vestra-player/sdk";
 
 export default function activate(plugin: Plugin) {
   let amount = 0;
-  const filter = plugin.video.filter("blur");
+  let filter: VideoFilter | undefined; // made on first use: it keeps the plugin running
   const apply = () =>
-    filter.set(amount ? [{ kind: "gblur", sigma: amount, steps: 3 }] : []);
+    (filter ??= plugin.video.filter("blur")).set(
+      amount ? [{ kind: "gblur", sigma: amount, steps: 3 }] : [],
+    );
   const blurWindow = plugin.windows.create("ui/blur.slint");
   blurWindow.bind(() => ({ amount }));
   blurWindow.on("amountChanged", (value: number) => {
@@ -113,12 +115,11 @@ export default function activate(plugin: Plugin) {
     apply(); // applies at once: no Apply button
   });
 
-  const playing = () => plugin.player.state.phase === "ready";
   plugin.commands.add({
     id: "blur",
     path: ["@video", "Blur…"], // by subject; … opens a window
-    enabled: playing,
-    reason: () => (playing() ? null : plugin.i18n.text("Nothing is playing")),
+    enabled: plugin.when.ready, // evaluated by the player
+    reason: plugin.i18n.text("Nothing is playing"), // shown only while disabled
     run: () => blurWindow.show(),
   });
   plugin.commands.add({
