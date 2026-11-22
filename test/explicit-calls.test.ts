@@ -270,7 +270,7 @@ test("command keys and the layout state start on first use, and nothing is refus
     "commands.keys",
     "layout.state",
   ]);
-  // The SDK's own refusals (`capability`, before any request) are gone.
+  // The SDK refuses nothing before a request.
   assert.doesNotThrow(() => plugin.timeline.layer());
   await stop();
 });

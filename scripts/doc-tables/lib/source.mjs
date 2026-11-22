@@ -62,7 +62,7 @@ export function summary(text) {
   return plain(text.split(/\n@\w/)[0]);
 }
 
-/** The text of block tags `tag` (`@player`, `@capability`) in a doc comment. */
+/** The text of block tags `tag` (`@player`, `@since`) in a doc comment. */
 export function tags(text, tag) {
   const result = [];
   const lines = text.split("\n");

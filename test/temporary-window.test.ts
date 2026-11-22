@@ -9,7 +9,7 @@ import test from "node:test";
 import { TestHost } from "../src/plugin/testing.ts";
 import { startPlugin } from "./explicit.ts";
 
-test("openWindow: refused with capability unless built in; files checked as the player does", async (t) => {
+test("openWindow: refused with builtin-only unless built in; files checked as the player does", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "vestra-window-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const file = join(dir, "a.mkv");
@@ -17,7 +17,7 @@ test("openWindow: refused with capability unless built in; files checked as the 
 
   const outside = await startPlugin(() => {}, {});
   await assert.rejects(outside.plugin.app.openWindow([file]), {
-    code: "capability",
+    code: "builtin-only",
   });
   assert.deepEqual(outside.host.openedWindows, []);
   await outside.stop();

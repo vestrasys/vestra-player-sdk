@@ -23,7 +23,7 @@ description: What startPlugin takes and returns, how TestHost simulates the user
 | `sessionStorage` | The values of `plugin.storage.session` an earlier run left (`host.sessionStorage`), to test a restart within one player session. |
 | `locale` | The interface language (`"zh-Hans"` loads `locales/zh-Hans.po`). Without it the plugin's texts show in English and the player's own texts in Simplified Chinese; `"en"` shows the player in English. |
 | `id` | Start with this id and read no `manifest.json`. |
-| `builtin` | Run the plugin as one built into the player: only then do the built-in-only calls (`commands.list`, `commands.run`, `palette.lead`) work; otherwise their calls fail with `capability`, as in the player. |
+| `builtin` | Run the plugin as one built into the player: only then do the built-in-only calls (`commands.list`, `commands.run`, `palette.lead`) work; otherwise their calls fail with `builtin-only`, as in the player. |
 
 ## Acting like the user
 

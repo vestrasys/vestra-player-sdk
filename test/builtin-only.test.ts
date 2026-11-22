@@ -43,7 +43,7 @@ async function started(builtin = true) {
   return { host, plugin, stop, runs, ran: () => ran };
 }
 
-test("a plugin that is not built in is refused with capability", async () => {
+test("a plugin that is not built in is refused with builtin-only", async () => {
   const errors: PluginError[] = [];
   const host = new TestHost();
   const { plugin, stop } = await startPlugin(
@@ -53,14 +53,14 @@ test("a plugin that is not built in is refused with capability", async () => {
     },
     { host },
   );
-  await assert.rejects(plugin.commands.list(), { code: "capability" });
+  await assert.rejects(plugin.commands.list(), { code: "builtin-only" });
   await assert.rejects(plugin.commands.run("host/mute", { ticket: "t" }), {
-    code: "capability",
+    code: "builtin-only",
   });
   // The row's refusal reaches onError; activation went on.
   assert.deepEqual(
     errors.map((error) => error.code),
-    ["capability"],
+    ["builtin-only"],
   );
   assert.equal(host.paletteLead, null);
   await stop();

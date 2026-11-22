@@ -532,7 +532,7 @@ export function commandsHandlers(
  */
 export function builtinOnly(host: TestHost) {
   if (!host.builtin)
-    throw new HostError("capability", "this is for built-in plugins only");
+    throw new HostError("builtin-only", "this is for built-in plugins only");
 }
 
 /** One palette row (the player's `command_palette::Item`). */

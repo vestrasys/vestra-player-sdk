@@ -194,7 +194,7 @@ export type PropertyWrite =
  * recovery path (asking the host about the operation again).
  *
  * Common codes: `stale` (the condition no longer holds; nothing was done),
- * `invalid` (bad argument), `missing` (unknown target), `capability`
+ * `invalid` (bad argument), `missing` (unknown target), `builtin-only`
  * (a built-in-only request from another plugin), `busy`, `conflict`, `unavailable`, `unsupported`
  * (refused, not executed), `backend` (load or parse failure), `failed`,
  * `timeout`, `aborted`, `limit` (a player limit such as the command count),

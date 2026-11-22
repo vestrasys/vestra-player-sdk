@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.11.0 (unreleased)
+
+**No capability disclosure** (user ruling 2026-11-16, option A of 2026-11-21). Plugins have no capabilities, neither as declarations (gone since 1.9.0) nor as a disclosure: the name-based scan and its table are removed, and the plugin store no longer shows what a plugin's code uses. The player's real API boundaries are unchanged (request validation, the built-in-only requests and their `capability` refusal). Who must change: a tool that runs `vestra-plugin scan` or reads `@vestra-player/sdk/capability-scan.json`; nobody else.
+
+- **Removed: `vestra-plugin scan`** and the package's `capability-scan.json` (and its `./capability-scan.json` export), with the scanner behind them (`src/capability-scan.ts`, `src/member-uses.ts`), its test, its generated docs table and the reference page `Capability scan`. The guides, the tutorial, the manifest and mpv reference pages and the maintainers' notes no longer mention a scan or a disclosure.
+- **A manifest with `capabilities` is refused as an ordinary unknown field**: `vestra-plugin check` reports `unknown field "capabilities"`, as for any other field the rules do not list, with no message of its own (`CAPABILITIES_REMOVED` is gone). `startPlugin` no longer looks at the field: like every other field but `id`, nothing in the manifest changes how the test runs. The troubleshooting entry is now the general `unknown field` one.
+- **The refusal of a built-in-only call is the error code `builtin-only`** (breaking; all plugins are the project's own, user ruling 2026-11-21, so a minor version and no alias). `commands.list`, `commands.run`, `palette.lead` and `app.openWindow` from a plugin that is not built in fail with `builtin-only` ("this is for built-in plugins only"), in the player and in `TestHost`. The error-code table, the `@throws` lines, their examples, the message table and the guides say so. Who must change: a plugin that compares `error.code` for these calls (the player's Store, Ask Vestra and the plugin repository's Clip Export change with this release).
+- **mpv**: the refusal of the `clipboard` property and command group says "the clipboard has its own API (plugin.clipboard)" (`MPV_RULES`, as the player).
+- `doc-lint` drops its check that no `@capability` tag is left in `src/`; the issue template for API proposals no longer asks for one; the deprecated `ts-plugin` stub's log line and `check --json`'s refusal no longer mention capabilities.
+
 ## 1.10.1
 
 **Temporary windows: a product-data sync and the members that go with them.** Who must change: nobody. Additions and docs only; every existing behaviour of the SDK and of `TestHost` is as in 1.10.0 (a `TestHost` behaves differently only when a test sets the new `app.temporary`). Needs player 0.10.3 for the additions; an older player sends no `temporary` and refuses `app.openWindow`.

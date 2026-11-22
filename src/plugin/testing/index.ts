@@ -88,7 +88,6 @@ import {
   MENU_IDS,
 } from "../../commands.ts";
 import type { BuiltinCommand, BuiltinSubmenu } from "../../commands.ts";
-import { CAPABILITIES_REMOVED } from "../../manifest.ts";
 import { MESSAGE_LIMIT } from "../../protocol.ts";
 import { OSD_LIMITS } from "../osd.ts";
 import { TIMELINE_LIMITS } from "../timeline.ts";
@@ -2899,7 +2898,7 @@ export class TestHost implements Transport {
    * The plugin is built into the player (`startPlugin`'s `builtin`). Only
    * then does the host answer the built-in-only requests
    * (`commands.list`, `commands.run`, `palette.lead.*`); otherwise they
-   * fail with `capability`, as in the player.
+   * fail with `builtin-only`, as in the player.
    *
    * @since 1.7.9
    */
@@ -2916,7 +2915,7 @@ export class TestHost implements Transport {
    * oldest first: the files and the process id answered
    * ({@link "@vestra-player/sdk"!App.openWindow | App.openWindow}). No
    * process starts. A
-   * plugin that is not built in is refused with `capability`, as in the
+   * plugin that is not built in is refused with `builtin-only`, as in the
    * player; the files are checked as the player does (`invalid`,
    * `missing`).
    *
@@ -3992,9 +3991,7 @@ export class TestHost implements Transport {
  * own calls (`plugin.player.subscribe()`, `plugin.player.read()`), as in
  * the player.
  *
- * Rejects when `manifest.json` cannot be read or parsed, when it still has
- * `capabilities` (removed in 1.9.0; the message says what to call
- * instead), when `activate`
+ * Rejects when `manifest.json` cannot be read or parsed, when `activate`
  * throws, or when a registration made during activation fails (for example
  * `limit`, `conflict`, `invalid`). Stricter than the player's runner for
  * commands: there the SDK logs a command declaration the player refuses during
@@ -4116,9 +4113,6 @@ export async function startPlugin(
     const read = JSON.parse(
       readFileSync(join(directory, "manifest.json"), "utf8"),
     );
-    // As `vestra-plugin check` and the player: the field is gone.
-    if (read && typeof read === "object" && "capabilities" in read)
-      throw new Error(CAPABILITIES_REMOVED);
     manifest = { id: read.id };
   }
   host.manifestId = manifest.id;

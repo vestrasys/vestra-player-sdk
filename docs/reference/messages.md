@@ -21,7 +21,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
-| `app.openWindow` | `{ paths }` | `{ pid: number }` | `capability`, `invalid`, `missing`, `unsupported`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!App.openWindow App.openWindow} |
+| `app.openWindow` | `{ paths }` | `{ pid: number }` | `invalid`, `missing`, `unsupported`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!App.openWindow App.openWindow} |
 | `app.system` | — | `WireSystemInfo` | `busy` | SDK member: {@linkcode "@vestra-player/sdk"!App.system App.system} |
 
 ### `appearance`
@@ -59,9 +59,9 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `commands.keys` | `{}` | `CommandKeys` | — | SDK member: {@linkcode "@vestra-player/sdk"!Commands.keys Commands.keys} |
-| `commands.list` | `{}` | `CommandList` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
+| `commands.list` | `{}` | `CommandList` | — | SDK member: {@linkcode "@vestra-player/sdk"!Commands.list Commands.list} |
 | `commands.register` | `{ when?, id, revision, declaration, state }` | `{ revision: number }` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.add Commands.add} |
-| `commands.run` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `capability`, `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
+| `commands.run` | `{ id, ticket, step?, of?, then? }` | `CommandRunResult` | `ticket`, `missing`, `disabled`, `busy`, `limit`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Commands.run Commands.run} |
 | `commands.unregister` | `{ id }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.dispose Command.dispose} |
 | `commands.update` | `{ when?, id, revision, state }` | `{ revision: number }` | — | SDK member: {@linkcode "@vestra-player/sdk"!Command.set Command.set} |
 
@@ -158,8 +158,8 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `palette.lead.clear` | `{}` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.dispose PaletteLead.dispose} |
-| `palette.lead.done` | `{ ticket }` | `void` | `capability` | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
-| `palette.lead.set` | `{ [key: string]: Json; }` | `void` | `capability`, `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
+| `palette.lead.done` | `{ ticket }` | `void` | — | SDK member: {@linkcode "@vestra-player/sdk"!PaletteLead.done PaletteLead.done} |
+| `palette.lead.set` | `{ [key: string]: Json; }` | `void` | `conflict`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Palette.lead Palette.lead} |
 
 ### `playback`
 

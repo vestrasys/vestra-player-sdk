@@ -25,8 +25,7 @@
  * (one that passes `example-lead`).
  *
  * It also compares the error codes of the `PluginError` table with the codes
- * the SDK itself throws (`failure("…")`), and that no `@capability` tag is
- * left in src/ (enforced: manifest capabilities were removed in 1.9.0).
+ * the SDK itself throws (`failure("…")`).
  *
  * Two more enforced rules (SDK 1.7.0, the three plugin styles):
  *
@@ -508,30 +507,6 @@ const undocumentedCodes = [...thrown.keys()].filter(
   (code) => !documented.has(code),
 );
 
-// No @capability tag is left (manifest capabilities were removed in 1.9.0).
-const capabilityProblems = [];
-{
-  const scan = (directory) => {
-    for (const item of readdirSync(directory, { withFileTypes: true })) {
-      const path = join(directory, item.name);
-      if (item.isDirectory()) {
-        scan(path);
-        continue;
-      }
-      if (!path.endsWith(".ts")) continue;
-      readFileSync(path, "utf8")
-        .split("\n")
-        .forEach((line, index) => {
-          if (/^\s*\*\s*@capability\b/.test(line))
-            capabilityProblems.push(
-              `${path.slice(root.length + 1)}:${index + 1}: @capability (removed in 1.9.0)`,
-            );
-        });
-    }
-  };
-  scan(join(root, "src"));
-}
-
 // Every HostEvent is in the event table (docs/reference/events.md).
 const eventProblems = [];
 {
@@ -653,11 +628,7 @@ for (const text of exampleReport.baselined)
 for (const text of exampleReport.problems) console.log(`::error::${text}`);
 strictFailures += exampleReport.problems.length;
 
-console.log(`\n@capability tags: ${capabilityProblems.length} problems`);
-for (const text of capabilityProblems) console.log(`::error::${text}`);
-strictFailures += capabilityProblems.length;
-
-console.log(`HostEvent in the event table: ${eventProblems.length} problems`);
+console.log(`\nHostEvent in the event table: ${eventProblems.length} problems`);
 for (const text of eventProblems) console.log(`::error::${text}`);
 strictFailures += eventProblems.length;
 

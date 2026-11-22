@@ -127,7 +127,7 @@ export interface Disposable {
  * | code | meaning |
  * | --- | --- |
  * | `stale` | A condition no longer held (the source or the subtitle selection changed); nothing was done. See {@link Conditional}. |
- * | `capability` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`, `app.openWindow`) and this plugin is not one. |
+ * | `builtin-only` | The call is for the player's built-in plugins only (`commands.list`, `commands.run`, `palette.lead`, `app.openWindow`) and this plugin is not one. |
  * | `invalid` | A bad argument (out of range, malformed, unknown id). |
  * | `missing` | The target does not exist (an empty panel position, a missing file, an unknown command). |
  * | `busy` | The player is still doing a previous call of the same kind (a dialog is open, a step is in flight). |
@@ -1154,7 +1154,7 @@ export interface App extends AppInfo {
    *
    * @param paths 1 to 64 absolute paths of existing files, in play order.
    *
-   * @throws `capability` (rejects) The plugin is not built into the player.
+   * @throws `builtin-only` (rejects) The plugin is not built into the player.
    * @throws `invalid` (rejects) No path, more than 64, or a path that is not
    *   an absolute path.
    * @throws `missing` (rejects) A path that is not an existing file.
@@ -1173,8 +1173,8 @@ export interface App extends AppInfo {
    *   const { pid } = await plugin.app.openWindow(selected.slice(0, 64));
    *   console.log("temporary window", pid);
    * } catch (error) {
-   *   // `capability`: not a built-in plugin; `unsupported`: macOS.
-   *   if ((error as PluginError).code !== "capability") throw error;
+   *   // `builtin-only`: not a built-in plugin; `unsupported`: macOS.
+   *   if ((error as PluginError).code !== "builtin-only") throw error;
    * }
    * ```
    *

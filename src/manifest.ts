@@ -48,13 +48,6 @@ export const validVersion = (value: unknown): value is string =>
   VERSION.test(value) &&
   value.split(".").every((part) => BigInt(part) <= 4294967295n);
 
-/**
- * Why a manifest with `capabilities` is refused (SDK 1.9.0, player 0.9.0):
- * the field is gone, and what it switched on is two calls.
- */
-export const CAPABILITIES_REMOVED =
-  'manifest.json has "capabilities", which SDK 1.9.0 (player 0.9.0) removed: delete the field. What it switched on is now a call, first in activate(): plugin.player.subscribe() for "events", await plugin.player.read() for "playback.read"; everything else needs nothing (the store shows what the code uses, from its scan)';
-
 /** Problems with `manifest` (empty: valid) and hints that do not fail. */
 export function manifestProblems(
   manifest: Record<string, unknown>,
@@ -70,8 +63,7 @@ export function manifestProblems(
   )
     return { problems: ["manifest.json must be an object"], hints };
   for (const key of Object.keys(manifest))
-    if (key === "capabilities") problem(CAPABILITIES_REMOVED);
-    else if (!MANIFEST_FIELDS.includes(key)) problem(`unknown field "${key}"`);
+    if (!MANIFEST_FIELDS.includes(key)) problem(`unknown field "${key}"`);
   const id = manifest.id;
   if (
     typeof id !== "string" ||
