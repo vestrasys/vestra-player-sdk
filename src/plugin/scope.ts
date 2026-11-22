@@ -24,7 +24,7 @@ import { drops } from "./drops.ts";
 import { appearance, appearanceOf } from "./appearance.ts";
 import { settings } from "./settings.ts";
 import { i18n } from "./language.ts";
-import { audioTracksChanged, player } from "./player.ts";
+import { audioDevicesChanged, audioTracksChanged, player } from "./player.ts";
 import { audioFilters, videoFilters } from "./filters.ts";
 import { videoRender, videoView } from "./view.ts";
 import { videoShaders } from "./shaders.ts";
@@ -70,7 +70,8 @@ const COPIES: Readonly<Record<string, (runtime: Runtime) => void>> = {
 const FACTS: Readonly<
   Record<string, (runtime: Runtime, data: unknown) => unknown>
 > = {
-  "audio.tracks.changed": (_, data) => audioTracksChanged(data),
+  "audio.tracks.changed": audioTracksChanged,
+  "audio.devices.changed": audioDevicesChanged,
   "subtitles.changed": subtitlesChanged,
   "window.changed": windowChanged,
   "layout.changed": layoutChanged,

@@ -233,3 +233,75 @@ test("the data: the SDK's shapes, and the copies take them first", async () => {
     await stop();
   }
 });
+
+test("audio.tracks.changed and audio.devices.changed are taken into player.state first (1.11.0-rc.2)", async () => {
+  const host = new TestHost();
+  host.audioDevices = [{ id: "wasapi/a", name: "Speakers" }];
+  const seen: string[] = [];
+  let runs = 0;
+  const { plugin, stop } = await startPlugin(
+    (p: Plugin) => {
+      // The copy follows the source through its events, no stream.
+      p.player.on("source.ready", () => {});
+      p.player.on("audio.tracks.changed", ({ audioTracks }) =>
+        seen.push(
+          `tracks ${audioTracks.map((t) => t.id)} copy ${p.player.state.audioTracks?.map((t) => t.id)}`,
+        ),
+      );
+      p.player.on("audio.devices.changed", ({ active }) =>
+        seen.push(
+          `active ${active} copy ${p.player.state.audioOutput?.active}`,
+        ),
+      );
+      p.commands.add({
+        id: "tracks",
+        title: "Tracks",
+        reason: () => (runs++, String(p.player.state.audioTracks?.length)),
+        run: () => {},
+      });
+    },
+    { host },
+  );
+  try {
+    await host.settle();
+    host.openElsewhere("/a.mkv");
+    await host.settle();
+    const before = runs;
+    host.setSource({
+      audioTracks: [
+        {
+          trackId: 4,
+          streamIndex: 1,
+          selected: true,
+          external: false,
+          codec: "aac",
+          title: null,
+          language: null,
+        },
+      ],
+    });
+    await host.settle();
+    assert.ok(seen.includes("tracks 4 copy 4"), seen.join("\n"));
+    assert.ok(runs > before, "a binding that reads the tracks ran again");
+    assert.equal(host.command("tracks").state.reason, "1");
+    // The device chosen: the copy's audioOutput follows the event.
+    await plugin.player.setAudioDevice("wasapi/a");
+    await host.settle();
+    assert.equal(plugin.player.state.audioOutput?.active, "wasapi/a");
+    host.audioDevices = [];
+    host.setMainWindow({ fullscreen: true }); // the host looks again
+    host.setSource({ audioOutput: { requested: "wasapi/a", active: null } });
+    await host.settle();
+    assert.ok(
+      seen.some((line) => line === "active null copy null"),
+      seen.join("\n"),
+    );
+    // Tracks of another source than the copy's are not taken.
+    const copy = plugin.player.state.audioTracks;
+    host.emit("audio.tracks.changed", { sourceId: 999, audioTracks: [] });
+    await host.settle();
+    assert.equal(plugin.player.state.audioTracks, copy);
+  } finally {
+    await stop();
+  }
+});
