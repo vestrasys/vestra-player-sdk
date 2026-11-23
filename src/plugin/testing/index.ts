@@ -2731,11 +2731,15 @@ export class TestHost implements Transport {
    * and a 60 Hz display, converting on an RTX 4070 Laptop GPU. One
    * converter at a time, as the player: the first engine set to a mode (or
    * preset to one, `amd` first) holds it while its mode is not `off`, and
-   * the other engine's modes report `other-engine` (after its own reason,
-   * if it has one). A test of "another plugin holds AMD's converter" sets
+   * the other engine's modes report `other-engine`, in the player's order:
+   * a model's own run-long, renderer, `upscaling` or `doubling` reason
+   * comes first, its `failed`, `overload`, `rate`, `format` or `size` after.
+   * A test of "another plugin holds AMD's converter" sets
    * `host.motion.mode`.
    *
    * @example Test an NVIDIA plugin without an RTX 30 or newer GPU
+   * The same reason on both modes is what the player answers there: the
+   * plugin shows it and keeps the mode off, since `no-gpu` holds for the run.
    * ```ts
    * declare const host: TestHost;
    * // ---cut---
