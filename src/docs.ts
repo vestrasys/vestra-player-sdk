@@ -197,7 +197,14 @@ function distance(a: string, b: string) {
 
 /** A path as typed: its segments and `#anchor`. */
 function parse(path: string): { segments: string[]; anchor?: string } {
-  let text = path.trim().replace(/^["'<]+|["'>]+$/g, "");
+  let text = path.trim();
+  // Quotes and <> around it go; a scan from each end, not a regular
+  // expression (`["'>]+$` can be quadratic on a long run of quotes).
+  let start = 0;
+  while (start < text.length && `"'<`.includes(text[start]!)) start++;
+  let end = text.length;
+  while (end > start && `"'>`.includes(text[end - 1]!)) end--;
+  text = text.slice(start, end);
   try {
     text = decodeURIComponent(text);
   } catch {
@@ -344,7 +351,9 @@ const slug = (heading: string) =>
     .replace(/\s/g, "-");
 
 const FENCE = /^\s*```/;
-const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+// No two `\s*` next to each other (`\s*\|?\s*` is quadratic on spaces).
+const TABLE_RULE =
+  /^\s*(?:\|\s*)?:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*(?:\|\s*)?$/;
 
 /**
  * Lines into pages: the first at most `first` bytes, the others `rest`.
