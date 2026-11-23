@@ -210,10 +210,12 @@ release.yml (tag v*)
                              └─▶ test-macos  macos (runs, does not gate publish)
 ```
 
-- `_static.yml`: `tsc` (src + test), Prettier, oxlint, typos; actionlint and zizmor on `.github/`.
+- `_static.yml`: `tsc` (src + test), Prettier, oxlint, typos; actionlint and zizmor on `.github/`; osv-scanner on `package-lock.json` (any known vulnerability or malicious package fails; a reviewed exception goes into `osv-scanner.toml` with a reason and an expiry date); semgrep with the plugins repository's plugin risk rules (pinned commit) on the example plugins, tests excluded.
 - `_build.yml`: `npm run build`, `npm pack`, the tarball's allow list (`scripts/check-pack.mjs`), publint, `attw --profile esm-only` (the package is ESM only, Node >= 26; the text export `llms.txt` is excluded), the install smoke test (`scripts/smoke-pack.mjs`). Uploads `dist` and `package` (the .tgz a release publishes unchanged).
 - `_test.yml`: `npm test` on the matrix above, and an `examples` job: `npm run examples` (every example: install, check, test, pack) on the same matrix. The `os` input (a JSON array of runner labels, all three by default) lets `release.yml` call it twice: Ubuntu and Windows as `test`, macOS as `test-macos`.
 - `_docs.yml`: TypeDoc with warnings as errors, `docs:check` and the `doc-lint` report; on `main` also the Pages artifact.
+- `ci.yml` also runs dependency review on pull requests (new packages with a high or critical vulnerability, or a license outside its list, fail).
+- Security scanning outside the required checks, as in the plugins repository: `codeql.yml` (CodeQL, security-extended queries, JavaScript/TypeScript and the workflows; pull requests, `main`, weekly) and `scorecard.yml` (OpenSSF Scorecard; `main`, weekly) report to the Security tab. Secret scanning, push protection and Dependabot security updates are on in the repository settings; CodeQL's default setup must stay off.
 - Make **`ci-ok`** the only required status check for `main` (branch protection or a ruleset).
 - Hardening: `permissions: {}` at the top of every workflow, the minimum per job; actions pinned by commit SHA with the version in a comment (Dependabot, `.github/dependabot.yml`, keeps them current); checkouts without persisted credentials; `npm ci --ignore-scripts`; concurrency per branch (`ci.yml` cancels superseded runs, `main.yml` and `release.yml` queue); timeouts on every job. `.github/zizmor.yml` disables only zizmor's `self-repository` hint, because actionlint does not accept `uses: $/...` yet.
 

@@ -67,3 +67,60 @@ jobs:
           version: 1.31.1
           advanced-security: false
           annotations: true
+
+  # Known vulnerabilities and malicious packages (OSV, which includes the
+  # OpenSSF malicious-packages feed) in package-lock.json, dev tooling
+  # included. Fails on any match, whatever the severity (release.yml runs
+  # this too, so nothing is released from a tree with a known one); a
+  # reviewed exception goes into osv-scanner.toml with a reason and an
+  # expiry date. The same scanner and version as the plugins repository.
+  osv-scanner:
+    name: osv-scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: osv-scanner
+        uses: docker://ghcr.io/google/osv-scanner@sha256:4f3b7e2c64b9d38a5febc5a7e4a3dfef1d1362f726dea7a2ef4762b46469fcd0 # v2.7.0
+        with:
+          args: scan source --config osv-scanner.toml --lockfile package-lock.json
+
+  # The plugins repository's plugin risk rules (.semgrep/plugin-risk.yml,
+  # read at a pinned commit) against the example plugins, which plugin
+  # authors copy: an example must not need the store's security review.
+  # Fails on any finding. The examples' tests/ are left out (as in
+  # semgrep's own defaults): they reach the plugin directory with
+  # new URL("..", import.meta.url), which the rules mark for review. The
+  # SDK's own code is analysed by CodeQL (codeql.yml).
+  semgrep:
+    name: semgrep (examples)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # semgrep CE (LGPL-2.1), the CLI only: no account, no registry rules.
+      # The same image as the plugins repository's scan.
+      SEMGREP: semgrep/semgrep:1.183.0@sha256:2e45517a85e13a9cca14a2a00df6bb48affd66b8ebfae1b0991cd57578362fb0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The rules as they are in the plugins repository; move the commit
+      # forward when .semgrep/plugin-risk.yml changes there.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: vestrasys/vestra-player-plugins
+          ref: 565d5fc08be133f60f4a91f2026e4f0d5ba8a4ba
+          path: .tmp/plugins
+          sparse-checkout: .semgrep
+          persist-credentials: false
+      - name: semgrep
+        run: >-
+          docker run --rm --network none -v "$GITHUB_WORKSPACE:/src:ro" -w /src "$SEMGREP"
+          semgrep scan --metrics=off --disable-version-check --disable-nosem --error
+          --config .tmp/plugins/.semgrep/plugin-risk.yml --exclude tests examples

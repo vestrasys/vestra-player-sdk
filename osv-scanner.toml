@@ -1,0 +1,18 @@
+# osv-scanner configuration (CI: .github/workflows/_static.yml passes it with
+# --config). osv-scanner fails CI on any known vulnerability or malicious
+# package in package-lock.json.
+#
+# A reviewed exception, when a fixed version cannot be used yet and the
+# vulnerable code is not reachable in a harmful way, goes here with a reason
+# and an expiry date (after which CI fails again). Never add a MAL-
+# (malicious package) id: remove the package instead.
+
+# minimatch 10.2.6, a dependency of typedoc 0.28.20 (^10.2.5; no newer
+# typedoc yet): denial of service through brace/glob expansion. Fixed only in
+# minimatch 11.0.1. typedoc matches the globs of this repository's own
+# typedoc.json, never untrusted input, and only in the documentation build;
+# minimatch is not in the published package.
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-02-28
+reason = "minimatch 10.2.6 via typedoc 0.28.20 (dev only, globs from our own typedoc.json). Remove when typedoc accepts minimatch >= 11.0.1."
