@@ -22,7 +22,7 @@ export default async function activate(plugin: Plugin) {
   // #region command
   plugin.commands.add({
     id: "open",
-    path: ["Examples", "Theme widgets…"],
+    path: ["@tools", "Theme widgets…"],
     run: () => themeWidgetsWindow.show(),
   });
   // #endregion command

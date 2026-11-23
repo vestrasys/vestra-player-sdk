@@ -12,7 +12,7 @@ export default async function activate(plugin: Plugin) {
   const documentWindow = plugin.windows.create("ui/document.slint");
   plugin.commands.add({
     id: "show",
-    path: ["Examples", "Markdown example…"],
+    path: ["@tools", "Markdown example…"],
     run: async () => {
       const text = readFileSync(new URL("sample.md", import.meta.url), "utf8");
       // `doc` is the window's [MarkdownBlock] property, drawn by MarkdownView.
