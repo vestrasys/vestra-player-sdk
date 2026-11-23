@@ -9,6 +9,7 @@ import { isTextValue, textProblem } from "../i18n.ts";
 import type { SourceState } from "../source.ts";
 import { Latest } from "./latest.ts";
 import { abortError, failure, sleep, uncertain } from "./errors.ts";
+import { playerOf } from "./player.ts";
 import type { Runtime } from "./runtime.ts";
 import type { ScopeImpl } from "./scope.ts";
 import type {
@@ -130,14 +131,15 @@ class SubtitleService {
       true,
     );
     this.style = new Latest(async ({ style, options }) => {
-      const expected = await this.expected(options);
-      await this.#mutate(++this.#operation, (operationId) =>
-        runtime.host.subtitles.style({
-          operationId,
-          revision: ++this.#styleRevision,
-          expected,
-          style,
-        }),
+      await this.inTurn(options, (expected) =>
+        this.#mutate(++this.#operation, (operationId) =>
+          runtime.host.subtitles.style({
+            operationId,
+            revision: ++this.#styleRevision,
+            expected,
+            style,
+          }),
+        ),
       );
     });
   }
@@ -240,10 +242,29 @@ class SubtitleService {
   }
   /** Default: the selection as it is now. `ifCurrent` pins an older one. */
   async expected(options?: SubtitleConditional): Promise<SubtitleStamp> {
-    const pinned = options?.ifCurrent && raws.get(options.ifCurrent);
-    if (pinned) return pinned.selection.stamp;
+    const pinned = this.#pinned(options);
+    if (pinned) return pinned;
     await this.refresh();
     return this.raw!.selection.stamp;
+  }
+  #pinned(options?: SubtitleConditional): SubtitleStamp | undefined {
+    const pinned = options?.ifCurrent && raws.get(options.ifCurrent);
+    return pinned ? pinned.selection.stamp : undefined;
+  }
+  /**
+   * `send` with the selection stamp ({@link expected}), in its turn among
+   * the plugin's calls on the source (`PlayerService.inTurn`): its first
+   * request goes out in the same tick, or right after a read of the source
+   * on its way for an earlier control.
+   */
+  inTurn<T>(
+    options: SubtitleConditional | undefined,
+    send: (expected: SubtitleStamp) => Promise<T>,
+  ): Promise<T> {
+    return playerOf(this.#runtime).inTurn(() => {
+      const pinned = this.#pinned(options);
+      return pinned ? send(pinned) : this.expected(options).then(send);
+    });
   }
   nextOperation() {
     return ++this.#operation;
@@ -332,10 +353,9 @@ export function subtitles(scope: ScopeImpl): Subtitles {
       const role = options?.role ?? "primary";
       if (role !== "primary" && role !== "secondary")
         throw failure("invalid", 'role must be "primary" or "secondary"');
-      const expected = await service().expected(options);
       const chosen = track && target(track);
-      return service().mutate((id) =>
-        host().select(chosen, expected, id, role),
+      return service().inTurn(options, (expected) =>
+        service().mutate((id) => host().select(chosen, expected, id, role)),
       );
     },
     async load(srt, options) {
@@ -362,7 +382,8 @@ export function subtitles(scope: ScopeImpl): Subtitles {
       )
         throw failure("invalid", "title needs 1–200 characters");
       const svc = service();
-      const current = await svc.refresh();
+      // In its turn among the plugin's calls on the source.
+      const current = await playerOf(scope.runtime).inTurn(() => svc.refresh());
       const expected = await svc.expected(options);
       const uploadId = svc.nextUpload();
       const resourceId = `external-${uploadId}`;
@@ -436,9 +457,10 @@ export function subtitles(scope: ScopeImpl): Subtitles {
       const chosen = target(track);
       if (chosen.kind !== "external" || !service().owned.has(chosen.resourceId))
         throw failure("invalid", "只能移除本插件加载的字幕");
-      const expected = await service().expected(options);
-      const state = await service().mutate((id) =>
-        host().remove(chosen.resourceId, expected, id),
+      const state = await service().inTurn(options, (expected) =>
+        service().mutate((id) =>
+          host().remove(chosen.resourceId, expected, id),
+        ),
       );
       service().owned.delete(chosen.resourceId);
       return state;

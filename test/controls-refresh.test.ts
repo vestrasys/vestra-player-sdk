@@ -189,3 +189,63 @@ test("a stream: a scrub starts from the copy, without a read", async () => {
   scrub.end();
   await stop();
 });
+
+/** The kinds of the submits sent from `mark` on, in order. */
+const submitted = (host: TestHost, mark: number) =>
+  host.calls
+    .slice(mark)
+    .filter((call) => call.method === "source.submit")
+    .map(({ params }) => {
+      const intent = params.intent as {
+        kind: string;
+        control?: { kind: string };
+      };
+      return intent.control?.kind ?? intent.kind;
+    });
+
+for (const live of [false, true]) {
+  const how = live ? "a stream" : "no stream";
+  const plugin = (activate: Plugin) => {
+    if (live) activate.player.stream(() => {});
+  };
+
+  test(`${how}: a default control and an ifCurrent one go out in issue order`, async () => {
+    const { host, plugin: p, stop } = await staleCopy(plugin);
+    const mark = host.calls.length;
+    const pinned = p.player.state;
+    await Promise.allSettled([
+      p.player.setPaused(false),
+      p.player.seek(5, { ifCurrent: pinned }),
+      p.player.setRate(2),
+    ]);
+    assert.deepEqual(submitted(host, mark), ["pause", "seek", "rate"]);
+    await stop();
+  });
+
+  test(`${how}: a default control and then open() go out in issue order`, async () => {
+    const { host, plugin: p, stop } = await staleCopy(plugin);
+    const mark = host.calls.length;
+    await Promise.allSettled([
+      p.player.setPaused(false),
+      p.player.open("/next.mp4"),
+    ]);
+    assert.deepEqual(submitted(host, mark), ["pause", "open"]);
+    assert.equal(host.source.source, "/next.mp4");
+    await stop();
+  });
+}
+
+test("no stream: a subtitle call after a default control goes out after it", async () => {
+  const { host, plugin, stop } = await staleCopy();
+  const mark = host.calls.length;
+  await Promise.allSettled([
+    plugin.player.setPaused(false),
+    plugin.subtitles.select(null),
+  ]);
+  const sent = methods(host, mark);
+  const pause = sent.indexOf("source.submit");
+  const subtitle = sent.findIndex((method) => method.startsWith("subtitles."));
+  assert.ok(pause >= 0 && subtitle >= 0, sent.join(", "));
+  assert.ok(pause < subtitle, sent.join(", "));
+  await stop();
+});

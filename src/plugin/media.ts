@@ -529,7 +529,8 @@ function mediaSources(scope: ScopeImpl): MediaSources {
                 expected?: RawCapture["expected"];
               }
             ).expected;
-      return host().remember(expected);
+      // In its turn among the plugin's calls on the source.
+      return playerOf(scope.runtime).inTurn(() => host().remember(expected));
     },
     get: async (value: string) => host().get(token(value)),
     locate: async (value: string) => host().locate(token(value)),
