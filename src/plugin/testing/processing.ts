@@ -316,7 +316,6 @@ export function upscalingDecoding(
   return reason;
 }
 
-
 /** The engine a request names, checked as the player does. */
 function engineOf(p: Record<string, unknown>): "amd" | "nvidia" {
   if (p.engine !== "amd" && p.engine !== "nvidia")
@@ -370,7 +369,8 @@ export function motionState(
   // The model's reason and the other engine holding the converter, in the
   // player's order.
   const holder = holderOf(host);
-  const waits = holder !== null && holder !== engine ? otherEngine(holder) : null;
+  const waits =
+    holder !== null && holder !== engine ? otherEngine(holder) : null;
   const first = (own: typeof model.double) =>
     own === null || (waits !== null && AFTER_OTHER_ENGINE.includes(own.code))
       ? (waits ?? own)
@@ -492,7 +492,8 @@ export function processingHandlers(
       }
       model.mode = mode;
       // The first engine set to a mode holds the converter while it is on.
-      if (mode !== "off" && holderOf(host) === null) motionHolder.set(host, engine);
+      if (mode !== "off" && holderOf(host) === null)
+        motionHolder.set(host, engine);
       holderOf(host);
       return motionState(host, engine);
     },

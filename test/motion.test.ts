@@ -210,11 +210,23 @@ test("other-engine comes in the player's order: after the system, the renderer, 
   const { plugin, stop } = await started(["video.motion"], host);
   host.motion.mode = "double"; // AMD holds the converter.
   const nvidia = () => plugin.video.motion("nvidia").state();
-  for (const code of ["failed", "overload", "rate", "format", "size"] as const) {
+  for (const code of [
+    "failed",
+    "overload",
+    "rate",
+    "format",
+    "size",
+  ] as const) {
     host.nvidiaMotion.double = { code, message: code };
     assert.equal((await nvidia()).double?.code, "other-engine", code);
   }
-  for (const code of ["runtime", "no-gpu", "rendering", "upscaling", "doubling"] as const) {
+  for (const code of [
+    "runtime",
+    "no-gpu",
+    "rendering",
+    "upscaling",
+    "doubling",
+  ] as const) {
     host.nvidiaMotion.double = { code, message: code };
     assert.equal((await nvidia()).double?.code, code, code);
   }
