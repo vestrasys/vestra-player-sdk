@@ -951,6 +951,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: coreAction(id: string): FakeCommand;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: drop(paths: string[], options?: { target?: "video" | "panel"; at?: { x: number; y: number; }; modifiers?: Partial<{ alt: boolean; shift: boolean; cmd: boolean; }>; }): Promise<void>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: emit(event: string, data: unknown): void;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: expectError(code: string): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: exportFailure: { code: string; message: string; } | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: failStream(producerId: number, message: string): void;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: failVideoRender(code: "failed" | "unsupported" | "previous-crash", message: string): void;
@@ -961,6 +962,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get conflicts(): string[][];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get keepsRunning(): string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get locale(): Locale;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: get loggedErrors(): readonly HostError[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get now(): number;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get panel(): FakePanel | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: get parked(): boolean;
@@ -1075,6 +1077,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: step(direction: "next" | "previous"): Promise<unknown>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: stepSeek: number;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: stepSeekKeyframes: boolean;
+@vestra-player/sdk/testing ClassDeclaration TestHost :: strictErrors: boolean;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: subtitles: SubtitleState;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: systemInfo: Omit<WireSystemInfo, "rendering" | "renderingReason">;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: translate(text: TextValue, args?: TemplateArgs): string;

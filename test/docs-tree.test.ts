@@ -107,7 +107,8 @@ test("a guide page by title, by file name and in any case", () => {
   const page = docs("/Guides/Guides/Test a plugin");
   assert.match(
     page,
-    /^\/Guides\/Guides\/Test a plugin · Page\n\n# Test a plugin/,
+    // Page 1 of a guide longer than `DOCS_PAGE_BYTES`, with its sections.
+    /^\/Guides\/Guides\/Test a plugin · Page(?: · page 1 of \d+\n\nSections: [^\n]*)?\n\n# Test a plugin/,
   );
   assert.match(page, /\*\*Goal:\*\*/);
   assert.equal(docs("guides/guides/testing"), page);

@@ -83,3 +83,70 @@ test("only the shown tab keeps the plugin running", async () => {
   assert.deepEqual(keepsRunning(), []);
   await stop();
 });
+
+// #region source-changes
+// The user changes the source between the plugin's read in `activate` and
+// Normal Speed. Each change advances the player's source stamp as the
+// player does: `openElsewhere` starts a new generation (also for the same
+// file), a core action is a new intent. A control the plugin makes with an
+// older copy of the state is refused with `stale`, and a host error the
+// test does not expect fails it (`host.strictErrors`).
+const changes: [string, string | null, (host: TestHost) => Promise<void>][] = [
+  [
+    "a file opened after activation",
+    null,
+    async (host) => host.openElsewhere("/movie.mp4"),
+  ],
+  [
+    "another file opened",
+    "/movie.mp4",
+    async (host) => host.openElsewhere("/other.mp4"),
+  ],
+  [
+    "the same file opened again",
+    "/movie.mp4",
+    async (host) => host.openElsewhere("/movie.mp4"),
+  ],
+  [
+    "the user paused (Space)",
+    "/movie.mp4",
+    (host) => host.coreAction("play-pause").run(),
+  ],
+];
+
+/** Start with `atStart` open at 1.5×, make the change, run Normal Speed. */
+async function normalSpeedAfter(
+  atStart: string | null,
+  act: (host: TestHost) => Promise<void>,
+  shown: boolean,
+) {
+  const host = new TestHost();
+  if (atStart) host.openElsewhere(atStart);
+  const { stop } = await startPlugin(activate, { directory, host });
+  try {
+    if (shown) await host.command("speed").run(); // a stream follows the state
+    await act(host);
+    host.setSource({ rate: 1.5 });
+    await host.settle();
+    await host.command("speed-reset").run();
+    assert.equal(host.source.rate, 1);
+  } finally {
+    await stop();
+  }
+}
+
+for (const [change, atStart, act] of changes) {
+  test(
+    `Normal Speed works after ${change}, the column closed`,
+    // TODO(stale controls): with the column closed nothing follows the
+    // state, so the plugin sets the speed with the copy it read in
+    // `activate` and the player refuses it with `stale`, as TestHost does.
+    // Drop `todo` once the pending decision on the SDK's control semantics,
+    // or a fix of this example, lands.
+    { todo: "stale: the control carries the stamp of the plugin's old copy" },
+    () => normalSpeedAfter(atStart, act, false),
+  );
+  test(`Normal Speed works after ${change}, the tab shown`, () =>
+    normalSpeedAfter(atStart, act, true));
+}
+// #endregion source-changes

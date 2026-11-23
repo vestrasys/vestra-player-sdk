@@ -196,6 +196,7 @@ test("TestHost enforces the player's command limits", async () => {
   );
   await Promise.all(added.map((c) => c.ready));
   assert.equal(host.commands.size, COMMAND_LIMITS.perPlugin);
+  host.expectError("limit"); // also in the plugin's log
   const extra = plugin.commands.add({ id: "extra", title: "Extra", run() {} });
   await assert.rejects(extra.ready, { code: "limit" });
   assert.equal(host.commands.has("extra"), false);

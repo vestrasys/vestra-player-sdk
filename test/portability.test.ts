@@ -124,6 +124,7 @@ test("plugin.app.system() reports the renderer, following TestHost.videoRender.g
   );
   assert.equal((await plugin.app.system()).rendering, "software");
   const render = plugin.video.render();
+  host.expectError("unsupported"); // also in the plugin's log
   render.set({ interpolation: true });
   await host.settle();
   assert.equal(render.status.state, "failed");
