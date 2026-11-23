@@ -16,7 +16,7 @@
  * and on the documentation site (scripts/typedoc-plugin.mjs copies it), and
  * stays at most 10 KB (10,240 bytes).
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildTree, convertProject } from "./docs-tree.mjs";
 
@@ -73,7 +73,13 @@ const lines = [
 const index = lines.join("\n");
 
 const path = join(root, "llms.txt");
-const current = existsSync(path) ? readFileSync(path, "utf8") : null;
+// Read, not looked at first: a missing file is the read's ENOENT.
+let current = null;
+try {
+  current = readFileSync(path, "utf8");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
 if (check) {
   if (current !== index) fail("llms.txt out of date: run `npm run docs:llms`");
 } else if (current !== index) writeFileSync(path, index);

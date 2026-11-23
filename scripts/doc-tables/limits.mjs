@@ -46,7 +46,11 @@ const KIB = 1024;
 /** A value with a readable unit next to it when the name says bytes or ms. */
 export function shown(name, value) {
   if (typeof value !== "number") return `\`${JSON.stringify(value)}\``;
-  if (/bytes|LIMIT$/i.test(name) && value >= KIB && value % KIB === 0) {
+  if (
+    (/bytes/i.test(name) || /LIMIT$/i.test(name)) &&
+    value >= KIB &&
+    value % KIB === 0
+  ) {
     const unit =
       value % (KIB * KIB) === 0
         ? `${value / KIB / KIB} MiB`

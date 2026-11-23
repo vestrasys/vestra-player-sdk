@@ -23,7 +23,7 @@
  *   (scripts/docs-tree.mjs) carries the same source a
  *   language model can read.
  */
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { Converter, JSX, RendererEvent } from "typedoc";
 import { GROUPS, REDIRECTS } from "./doc-structure.mjs";
@@ -121,22 +121,28 @@ export function load(app) {
     );
     for (const [from, to] of Object.entries(REDIRECTS)) {
       const file = join(event.outputDirectory, from);
-      if (existsSync(file))
-        throw new Error(`REDIRECTS: ${from} is a page of the site again`);
       const target = relative(dirname(file), join(event.outputDirectory, to))
         .split("\\")
         .join("/");
       mkdirSync(dirname(file), { recursive: true });
-      writeFileSync(
-        file,
-        `<!doctype html>
+      // "wx": created only when no page is there, in the one call.
+      try {
+        writeFileSync(
+          file,
+          `<!doctype html>
 <meta charset="utf-8">
 <title>Moved</title>
 <link rel="canonical" href="${target}">
 <meta http-equiv="refresh" content="0; url=${target}">
 <p>This page moved to <a href="${target}">${target}</a>.</p>
 `,
-      );
+          { flag: "wx" },
+        );
+      } catch (error) {
+        if (error.code === "EEXIST")
+          throw new Error(`REDIRECTS: ${from} is a page of the site again`);
+        throw error;
+      }
     }
   });
 }
