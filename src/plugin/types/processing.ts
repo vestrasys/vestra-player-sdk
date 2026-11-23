@@ -1017,7 +1017,7 @@ export type MotionMode = "off" | "double" | "display";
  * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling); the two cannot run together. |
  * | `other-engine` | The other engine's converter is on for another plugin (the message names it); one converter runs at a time, so this waits until that one is off. |
  * | `failed` | The converter stopped on this video; the message has its error. The next video tries again. |
- * | `overload` | The GPU could not keep up with this video, even with the faster motion search. The next video tries again. |
+ * | `overload` | The output could not keep up with this video: the GPU, even with the faster motion search, or, with software rendering, the CPU drawing the doubled frames (the message says which, and that GPU Rendering helps then). The next video tries again. |
  * | `rate` | The converter's input rate ({@link MotionState.sourceFps}: 25i deinterlaced by field reads 50) does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
  * | `format` | The video's format was not measured: 10-bit or deeper, or HDR. |
  * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). The next video may fit. |
