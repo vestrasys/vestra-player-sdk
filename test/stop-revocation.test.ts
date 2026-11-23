@@ -1,4 +1,4 @@
-// SDK 1.11.0-rc.3: what TestHost revokes at a plugin's stop is what the
+// SDK 1.11.0: what TestHost revokes at a plugin's stop is what the
 // player revokes (host/lifecycle.rs `stop_run`, `keeps_shown_state`; the
 // playback worker's `owner.parked` / `owner.disabled`). The plugin's own
 // cleanup requests are not sent after `runtime.stop` (1.11.0).

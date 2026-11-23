@@ -234,7 +234,7 @@ test("the data: the SDK's shapes, and the copies take them first", async () => {
   }
 });
 
-test("audio.tracks.changed and audio.devices.changed are taken into player.state first (1.11.0-rc.2)", async () => {
+test("audio.tracks.changed and audio.devices.changed are taken into player.state first", async () => {
   const host = new TestHost();
   host.audioDevices = [{ id: "wasapi/a", name: "Speakers" }];
   const seen: string[] = [];
