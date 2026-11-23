@@ -169,19 +169,8 @@ const EXAMPLES: Record<string, string | null> = {
  * Host errors a scenario is known to log (`TestHost.expectError`); any
  * other fails the trace (`TestHost.strictErrors`, SDK 1.12.0). An expected
  * error that no longer comes fails it too, so the entry goes once fixed.
- *
- * TODO(stale controls): `menus` and `adjust-panel` read the player's state
- * once in `activate`, then the script opens a file and runs a command that
- * sets the speed: the control carries the stamp of the old copy
- * (`expected`, src/plugin/player.ts `PlayerService.control`) and the
- * player refuses it with `stale`, as in the real player. Remove these
- * once the pending decision on the SDK's control semantics (or a fix of
- * the examples) lands, and record the traces again.
  */
-const KNOWN_ERRORS: Record<string, readonly string[]> = {
-  "examples/adjust-panel": ["stale"],
-  "examples/menus": ["stale"],
-};
+const KNOWN_ERRORS: Record<string, readonly string[]> = {};
 
 /** The six built-ins the plan names, and the command the script runs. */
 const BUILTINS: Record<string, string | null> = {

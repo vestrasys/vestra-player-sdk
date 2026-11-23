@@ -247,41 +247,25 @@ for (const [name, style] of Object.entries(styles))
       }
     });
 
-    // TODO(stale controls): styles A and B learn a new source from
-    // `source.ready`, but a pause is no new source: the step carries the
-    // stamp of the copy from before it and the player refuses it with
-    // `stale`, as TestHost does (style C sends no `expected`). Drop `todo`
-    // once the pending decision on the SDK's control semantics, or a fix of
-    // this example, lands.
-    const stale = name !== "c" && change === "the user paused (Space)";
-    const todo = stale
-      ? "stale: the step carries the stamp of the plugin's old copy"
-      : undefined;
-    test(
-      `style ${name}: Next Keyframe steps after ${change}`,
-      { todo },
-      async () => {
-        const host = new TestHost();
-        host.stats = {
-          ...host.stats,
-          video: { codec: "h264", width: 1920, height: 1080 },
-        } as typeof host.stats;
-        const { stop } = await start(style.keyframes, host);
-        try {
-          await act(host);
-          await host.settle();
-          await until(
-            () => host.command("keyframe.next").state.enabled === true,
-          );
-          await host.command("keyframe.next").run();
-          assert.deepEqual(host.steps.at(-1), {
-            unit: "keyframe",
-            direction: "forward",
-          });
-        } finally {
-          await stop();
-        }
-      },
-    );
+    test(`style ${name}: Next Keyframe steps after ${change}`, async () => {
+      const host = new TestHost();
+      host.stats = {
+        ...host.stats,
+        video: { codec: "h264", width: 1920, height: 1080 },
+      } as typeof host.stats;
+      const { stop } = await start(style.keyframes, host);
+      try {
+        await act(host);
+        await host.settle();
+        await until(() => host.command("keyframe.next").state.enabled === true);
+        await host.command("keyframe.next").run();
+        assert.deepEqual(host.steps.at(-1), {
+          unit: "keyframe",
+          direction: "forward",
+        });
+      } finally {
+        await stop();
+      }
+    });
   }
 // #endregion source-changes

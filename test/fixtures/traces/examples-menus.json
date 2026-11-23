@@ -238,6 +238,10 @@
     "changes": [],
     "command": [
       {
+        "method": "source.state",
+        "params": {}
+      },
+      {
         "method": "source.submit",
         "params": {
           "operationId": 1,
@@ -248,9 +252,45 @@
               "rate": 1.5
             },
             "expected": {
-              "generation": 0,
-              "intentVersion": 0
+              "generation": 1,
+              "intentVersion": 1
             }
+          }
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "commands.unregister",
+        "params": {
+          "id": "speed"
+        }
+      },
+      {
+        "method": "commands.register",
+        "params": {
+          "id": "speed",
+          "revision": 1,
+          "declaration": {
+            "title": "Speed: 1.5×",
+            "path": [
+              "Examples",
+              "Speed: 1.5×"
+            ],
+            "order": 860,
+            "group": "status",
+            "radio": false,
+            "bindings": [],
+            "focus": null,
+            "repeat": false
+          },
+          "state": {
+            "enabled": false,
+            "checked": null,
+            "busy": false,
+            "reason": null
           }
         }
       }

@@ -136,16 +136,8 @@ async function normalSpeedAfter(
 }
 
 for (const [change, atStart, act] of changes) {
-  test(
-    `Normal Speed works after ${change}, the column closed`,
-    // TODO(stale controls): with the column closed nothing follows the
-    // state, so the plugin sets the speed with the copy it read in
-    // `activate` and the player refuses it with `stale`, as TestHost does.
-    // Drop `todo` once the pending decision on the SDK's control semantics,
-    // or a fix of this example, lands.
-    { todo: "stale: the control carries the stamp of the plugin's old copy" },
-    () => normalSpeedAfter(atStart, act, false),
-  );
+  test(`Normal Speed works after ${change}, the column closed`, () =>
+    normalSpeedAfter(atStart, act, false));
   test(`Normal Speed works after ${change}, the tab shown`, () =>
     normalSpeedAfter(atStart, act, true));
 }

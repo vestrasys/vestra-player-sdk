@@ -411,10 +411,14 @@ export interface Chapter {
 }
 
 /**
- * Controls act on the state you are looking at: by default `player.state`.
- * If another plugin or the user changed the source in between, the call fails
- * with code `stale` and nothing happens. Pass `ifCurrent` to bind the call to
- * an older snapshot instead (for example the state when a drag started).
+ * Controls act on the current state by default. While a
+ * {@link Player.stream} (or anything else that follows the source) keeps
+ * `player.state` current, that is the state they act on; otherwise the SDK
+ * reads the state first (calls made together share one read). If another
+ * plugin or the user changed the source in between, the call fails with
+ * code `stale` and nothing happens. Pass `ifCurrent` to pin the call to an
+ * older snapshot instead (for example the state when a dialog opened); it
+ * is sent as given.
  *
  * The SDK refreshes `player.state` after its own operations, so a plugin's
  * consecutive calls do not make each other stale. {@link Player.open} is
@@ -444,7 +448,7 @@ export interface Chapter {
  * @category Playback
  */
 export interface Conditional {
-  /** The state the call is conditional on; default: the current `player.state`. */
+  /** The state the call is conditional on; default: the current state (read first when no stream keeps `player.state` current). */
   ifCurrent?: PlayerState;
 }
 
@@ -970,8 +974,9 @@ export interface StateStream {
  * has: from `read()`, `refresh()`, an event's data and this plugin's own
  * calls, and while a {@link Player.stream} is open, every change. Every
  * control is
- * conditional: it acts on the state the plugin last saw and fails with
- * `stale` when the source changed meanwhile: another file, a close, or any
+ * conditional: it acts on the current state (read first when no stream
+ * keeps `state` current) or on the one given as `ifCurrent`, and fails
+ * with `stale` when the source changed meanwhile: another file, a close, or any
  * pause, seek or speed change by the user or another plugin (see
  * {@link Conditional}). The player keeps the source when a plugin stops;
  * only the plugin's own handles (a stream, its sequence provider, its
@@ -1386,8 +1391,8 @@ export interface Player {
    *
    * @example Pause, but only the file the user was watching
    * A "pause on lock" helper pauses the current file and does nothing when
-   * another file was opened in between. The call is conditional on
-   * `player.state` by default; `stale` means the source changed and the
+   * another file was opened in between. The call acts on the current state
+   * by default; `stale` means the source changed and the
    * pause was not applied, which is the intended outcome here.
    * ```ts
    * try {
@@ -1417,13 +1422,13 @@ export interface Player {
    *
    * @example Jump back ten seconds
    * Playback jumps ten seconds back, never before the start. The target is
-   * computed from the snapshot the call is conditional on, so if the user
-   * opened another file meanwhile the seek fails with `stale` instead of
-   * landing in the wrong file.
+   * computed from the state read now, and the seek is pinned to it
+   * (`ifCurrent`), so if the user opened another file meanwhile the seek
+   * fails with `stale` instead of landing in the wrong file.
    * ```ts
-   * const { position } = plugin.player.state;
-   * if (position !== null && plugin.player.state.can.seek)
-   *   await plugin.player.seek(Math.max(0, position - 10)); // seconds
+   * const now = await plugin.player.refresh();
+   * if (now.position !== null && now.can.seek)
+   *   await plugin.player.seek(Math.max(0, now.position - 10), { ifCurrent: now }); // seconds
    * ```
    *
    * @since 1.0.0
