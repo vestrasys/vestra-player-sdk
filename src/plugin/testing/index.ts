@@ -3913,6 +3913,9 @@ export class TestHost implements Transport {
    * errors with a code that nothing in the plugin handled.
    *
    * @example Check that nothing was refused
+   * The test asserts that the plugin left no refusal to its log. The list
+   * keeps every host error the plugin did not handle, also those the test
+   * expected with `expectError`, so it is empty only when none came.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
