@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.11.1 (unreleased)
+## 1.11.1
 
-**NVIDIA motion smoothing** (T8; needs the player release that ships the NVIDIA engine, a 0.11.x after 0.11.0). Additions only; nobody must change anything.
+**NVIDIA motion smoothing** (T8; needs player 0.11.1, which ships the NVIDIA engine). Additions only; nobody must change anything.
 
 - `plugin.video.motion("nvidia")` is no longer reserved. The player's NVIDIA engine is FFmpeg's `fruc_vulkan` on the optical flow hardware of GeForce RTX 30 and newer GPUs (Windows, driver 573.38 or newer); an older player still answers `engine` for every mode. Docs: `MotionEngine`, `plugin.video.motion`, `VideoMotion`, `MotionState.searchMode` and the `MotionReasonCode` table (`engine`, `no-gpu` and `runtime` name NVIDIA's cases). **`other-engine`** (new reason code, user ruling T8): the other engine's converter is on for another plugin; one converter runs at a time, so the mode waits (not run-long; the message names the engine). It ships together with the player that reports it. **`TestHost.nvidiaMotion`** (new): NVIDIA's engine with the same model as `TestHost.motion`, its own state (defaults: both modes work, converting on an RTX 4070 Laptop GPU); one converter at a time as the player (the first engine set to a mode holds it, the other's modes report `other-engine`); `motionChanged()` sends each engine's state. `MotionReasonCode` gains `other-engine` (an addition); no other type changes; the reserved engine's model (`engine` for every mode) is gone from `TestHost`: **`TestHost`'s `nvidia` engine no longer answers `engine` by default** (both modes work, as `TestHost.motion`); a test that relied on `engine` sets `host.nvidiaMotion.double` / `.display` to an `engine` reason. Like the player, `TestHost` puts `other-engine` after the system, filter, renderer, AI upscaling and frame doubling reasons and before `failed`, `overload`, `rate`, `format` and `size`. The API surface snapshot gains `TestHost.nvidiaMotion`. Docs: the `overload` row of the `MotionReasonCode` table says that with software rendering the player's message names the CPU drawing the doubled frames (no type change).
 
