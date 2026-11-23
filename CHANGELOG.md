@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.3
+
+Nobody must change anything. A control without `ifCurrent` (pause, seek, speed, restart, close, a step, a loop, an audio track), a capture and a scrub now act on the current state: while a stream (or anything else that holds `source.state`) keeps `player.state` current, nothing changes; otherwise the SDK reads the state first, so a plugin that read the state once and keeps no stream is no longer refused with `stale` after any pause, seek or new file by someone else. Calls made together share one read and go out in the order they were made; `stale` still comes when the source changes between that read and the call, and an explicit `ifCurrent` is sent as given. The `stale` todos of the `menus`, `adjust-panel` and `three-ways` examples pass, and the golden traces of `examples/menus` and `examples/adjust-panel` gain that read (with the speed now applied) instead of listing `stale`.
+
 ## 1.11.2
 
 Additions and fixes only; nobody must change anything except a plugin test that relies on a host error the plugin does not handle (below).

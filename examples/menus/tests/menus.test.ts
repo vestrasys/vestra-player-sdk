@@ -86,27 +86,19 @@ const changes: [string, string | null, (host: TestHost) => Promise<void>][] = [
 ];
 
 for (const [change, atStart, act] of changes)
-  test(
-    `the speeds work after ${change}`,
-    // TODO(stale controls): the plugin sets the speed with the copy it read
-    // in `activate`, so the player refuses it with `stale`, as TestHost does.
-    // Drop `todo` once the pending decision on the SDK's control semantics,
-    // or a fix of this example, lands.
-    { todo: "stale: the control carries the stamp of the plugin's old copy" },
-    async () => {
-      const host = new TestHost();
-      if (atStart) host.openElsewhere(atStart);
-      const { stop } = await startPlugin(activate, { directory, host });
-      try {
-        await act(host);
-        await host.settle();
-        for (const rate of [0.5, 1, 1.5, 2]) {
-          await host.command(`rate-${rate}`).run();
-          assert.equal(host.source.rate, rate);
-        }
-      } finally {
-        await stop();
+  test(`the speeds work after ${change}`, async () => {
+    const host = new TestHost();
+    if (atStart) host.openElsewhere(atStart);
+    const { stop } = await startPlugin(activate, { directory, host });
+    try {
+      await act(host);
+      await host.settle();
+      for (const rate of [0.5, 1, 1.5, 2]) {
+        await host.command(`rate-${rate}`).run();
+        assert.equal(host.source.rate, rate);
       }
-    },
-  );
+    } finally {
+      await stop();
+    }
+  });
 // #endregion source-changes

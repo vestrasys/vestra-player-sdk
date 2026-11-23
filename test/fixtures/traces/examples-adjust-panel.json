@@ -36,10 +36,10 @@
       "safetyPasses": 0
     },
     "command": {
-      "passes": 2,
+      "passes": 4,
       "fullPasses": 2,
-      "evaluations": 2,
-      "parts": 2,
+      "evaluations": 4,
+      "parts": 4,
       "skippedParts": 0,
       "safetyPasses": 0
     },
@@ -158,6 +158,18 @@
     "changes": [],
     "command": [
       {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": 1.5,
+          "seq": 1
+        }
+      },
+      {
         "method": "source.submit",
         "params": {
           "operationId": 1,
@@ -168,10 +180,30 @@
               "rate": 1
             },
             "expected": {
-              "generation": 0,
-              "intentVersion": 0
+              "generation": 1,
+              "intentVersion": 1
             }
           }
+        }
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "enabled",
+          "value": true,
+          "seq": 2
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "ui.setMount",
+        "params": {
+          "property": "rate",
+          "value": 1,
+          "seq": 3
         }
       }
     ],

@@ -7,7 +7,7 @@ description: Open files, pause, seek and change speed from a plugin without figh
 
 **Goal:** your plugin opens files and controls playback (pause, seek, speed, next and previous), shows what is playing, and never acts on a file the user has already left.
 
-The player has one source. The user, other plugins and yours all change it, so every control in `plugin.player` is **conditional**: it acts on the state your plugin last saw and fails with `stale` (doing nothing) when someone else changed the source in between. Most of this guide is about using that well.
+The player has one source. The user, other plugins and yours all change it, so every control in `plugin.player` is **conditional**: it acts on the current state (the SDK reads it first when needed), or on an older state you pin with `ifCurrent`, and fails with `stale` (doing nothing) when someone else changed the source in between. Most of this guide is about using that well.
 
 ## Steps
 
@@ -55,10 +55,9 @@ plugin.commands.add({
 
 ### Control it, and handle `stale`
 
-A control without options is conditional on `player.state` as it is when you call, so read the state first (`refresh()`) unless a stream keeps it current. `stale` means the source changed after that: another file, a close, or any pause, seek or speed change by the user or another plugin. Nothing happened, and usually that is the right outcome:
+A control without options acts on the source as it is now: while a stream keeps `player.state` current, on that state; otherwise the SDK reads the state first (controls made together share one read). `stale` means the source changed in between: another file, a close, or any pause, seek or speed change by the user or another plugin. Nothing happened, and usually that is the right outcome:
 
 ```ts
-await plugin.player.refresh(); // the state the control acts on
 try {
   await plugin.player.seek(30);
 } catch (error) {
@@ -66,7 +65,7 @@ try {
 }
 ```
 
-For work that takes time (a timer, a dialog, a network request), keep the snapshot from when it started and pass it as `ifCurrent`, so the call applies only to that source:
+For work that takes time (a timer, a dialog, a network request), or a value computed from a state you read (a position to jump back from), keep that snapshot and pass it as `ifCurrent`: the call is pinned to it and applies only to that source:
 
 ```ts
 const seen = await plugin.player.refresh(); // the source the user sees now
@@ -188,7 +187,6 @@ export default function activate(plugin: Plugin) {
     path: ["@playback", "Back to the Start"],
     enabled: when.can("seek"),
     run: async () => {
-      await plugin.player.refresh(); // act on the source as it is now
       try {
         await plugin.player.seek(0);
       } catch (error) {

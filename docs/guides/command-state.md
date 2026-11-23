@@ -94,7 +94,7 @@ A function that reads only the plugin's own variables (`checked: () => skip`) is
 
 ### Read the state in the handler
 
-`run` is called only when the item is enabled, so the condition already said yes. When the handler needs a value of the player (the position, the speed), it reads it then: `await plugin.player.refresh()` returns the state now, which the controls then act on.
+`run` is called only when the item is enabled, so the condition already said yes. When the handler needs a value of the player (the position, the speed), it reads it then: `await plugin.player.refresh()` returns the state now. The controls act on the current state on their own (the SDK reads it first when no stream keeps it current); to act only on the state the handler read, pass it as `ifCurrent`.
 
 ### Test it
 

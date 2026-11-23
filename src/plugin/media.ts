@@ -302,7 +302,8 @@ export function mediaCapture(scope: ScopeImpl): MediaCapture {
       const service = serviceOf(runtime);
       const player = playerOf(runtime);
       // The source now: a capture needs one, even from a plugin that never
-      // read the state (its copy then starts following the player).
+      // read the state; read first when the copy does not follow the
+      // player (`PlayerService.current`).
       const at = options.ifCurrent ?? (await player.current());
       const { expected } = player.expected(at) as {
         expected?: RawCapture["expected"];

@@ -229,6 +229,8 @@ export class PlayerService implements StreamSource {
   #started = false;
   /** `read()`'s one read, once asked for. */
   #read: Promise<void> | undefined;
+  /** The read that calls acting on the current state wait for (`fresh`). */
+  #fresh: Promise<void> | undefined;
   readonly output: Latest<{ volume?: number; muted?: boolean }>;
   constructor(runtime: Runtime) {
     this.runtime = runtime;
@@ -263,10 +265,6 @@ export class PlayerService implements StreamSource {
       }
     })());
   }
-  /** Whether the mirror is registered yet. */
-  get started() {
-    return this.#started;
-  }
   /**
    * Register the SDK's copy of the state (a mirror of `source.state`; a
    * plugin listens through `watch`, `follow` and `player.on`). It hears
@@ -285,10 +283,41 @@ export class PlayerService implements StreamSource {
     );
     return Promise.resolve();
   }
-  /** The state as the player has it now, for a call that needs a source. */
+  /**
+   * The state as the player has it now, for a call that acts on the
+   * current state (a capture): the copy as it is while it follows the
+   * player's events, else read first ({@link fresh}).
+   */
   async current(): Promise<PlayerState> {
     await this.start();
+    await this.fresh();
     return this.state;
+  }
+  /**
+   * Wait until the copy is the player's current state, for a call that
+   * acts on it (a control, a step, a capture, a scrub). While something
+   * holds `source.state` the copy follows the player's events: nothing to
+   * wait for. Otherwise it is the newest snapshot the plugin has, which an
+   * admitted intent since (a pause, a seek, a new file, by anyone) made
+   * stale: it is read first. Calls in a burst share one read and go on in
+   * the order they were made: a call made while a read is on its way waits
+   * for that read, also when the copy follows the events by then. A read
+   * that fails leaves the copy as it was; the call goes on with it.
+   */
+  fresh(): Promise<void> | undefined {
+    if (this.#fresh) return this.#fresh;
+    if (this.runtime.following("source.state")) return undefined;
+    const fresh = this.refresh().then(
+      () => {},
+      () => {},
+    );
+    this.#fresh = fresh;
+    // The read's first reaction: cleared before the waiting calls go on,
+    // so a call after them starts a read of its own.
+    void fresh.then(() => {
+      if (this.#fresh === fresh) this.#fresh = undefined;
+    });
+    return fresh;
   }
   /** Drop anything older than what was already delivered. */
   accept(raw: SourceState) {
@@ -455,10 +484,24 @@ export class PlayerService implements StreamSource {
     const raw = raws.get(state ?? this.state);
     return raw && raw.eventSequence >= 0 ? { expected: raw.stamp } : {};
   }
+  /**
+   * The stamp a call sends: `ifCurrent`'s when given (as it is), else the
+   * current state's, read first when the copy does not follow the player
+   * ({@link fresh}).
+   */
+  async stamp(ifCurrent?: PlayerState): Promise<{ expected?: SourceStamp }> {
+    if (ifCurrent) {
+      // In its turn: after a read on its way, the stamp as given.
+      if (this.#fresh) await this.#fresh;
+      return this.expected(ifCurrent);
+    }
+    await this.fresh();
+    return this.expected(undefined);
+  }
   async control(intent: SourceIntent, options?: Conditional) {
     await this.submit({
       ...intent,
-      ...this.expected(options?.ifCurrent),
+      ...(await this.stamp(options?.ifCurrent)),
     } as SourceIntent);
   }
   /** Close only if `generation` is still the player's source. */
@@ -558,14 +601,14 @@ class ScrubHandle implements Scrub {
   readonly #service: PlayerService;
   constructor(service: PlayerService) {
     this.#service = service;
-    // A scrub follows the source. When it is the first thing to need the
-    // state (the mirror starts now), the gesture starts from the state read
-    // right after subscribing, not from the copy of start-up.
-    const late = !service.started;
-    const fresh = service.start();
-    let ready = !late;
+    // A scrub follows the source. When the copy did not follow it yet (the
+    // mirror starts now, or nothing held `source.state`), the gesture
+    // starts from the state read now, not from the plugin's old copy.
+    void service.start();
+    const fresh = service.fresh();
+    let ready = !fresh;
     this.#allowed = { ...service.raw.stamp };
-    if (late)
+    if (fresh)
       void fresh.then(() => {
         ready = true;
         if (this.#active && !this.#pending)
@@ -580,7 +623,7 @@ class ScrubHandle implements Scrub {
         this.end();
     });
     this.#queue = new Latest(async ({ seconds, keyframes }) => {
-      if (late) await fresh;
+      if (fresh) await fresh;
       if (!this.#active) throw superseded;
       const started = Date.now();
       const expected = { ...this.#allowed };
@@ -906,7 +949,7 @@ export function player(scope: ScopeImpl): Player {
       };
     },
     async addAudioTrack(path, options = {}) {
-      const { expected } = service().expected(options.ifCurrent);
+      const { expected } = await service().stamp(options.ifCurrent);
       const added = await scope.runtime.host.audio.add(
         path,
         options.select ?? true,
@@ -922,7 +965,7 @@ export function player(scope: ScopeImpl): Player {
         throw failure("invalid", "unit is frame or keyframe");
       if (direction !== "backward" && direction !== "forward")
         throw failure("invalid", "direction is backward or forward");
-      const { expected } = service().expected(options.ifCurrent);
+      const { expected } = await service().stamp(options.ifCurrent);
       await scope.runtime.host.step.step(unit, direction, expected);
       await service()
         .refresh()
@@ -965,7 +1008,7 @@ export function player(scope: ScopeImpl): Player {
         )
           throw failure("invalid", "count must be an integer 1–1000000");
       }
-      const { expected } = service().expected(options.ifCurrent);
+      const { expected } = await service().stamp(options.ifCurrent);
       await scope.runtime.host.marks.setLoop(
         loop && {
           a: loop.a,
@@ -979,7 +1022,7 @@ export function player(scope: ScopeImpl): Player {
         .catch(() => {});
     },
     async selectAudioTrack(id, options = {}) {
-      const { expected } = service().expected(options.ifCurrent);
+      const { expected } = await service().stamp(options.ifCurrent);
       await scope.runtime.host.audio.select(id, expected);
       return service().refresh();
     },
