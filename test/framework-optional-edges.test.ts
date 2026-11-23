@@ -260,7 +260,7 @@ test("Command.set no longer refreshes other bindings (SDK 1.7.0): update() does"
   }
 });
 
-test("events without playback.read: a handler's first read is current", async () => {
+test("without playback.read a handler reads what the plugin has; refresh() reads the player", async () => {
   const host = new TestHost();
   host.setSource({ phase: "ready", duration: 60, position: 5, paused: false });
   const read: unknown[] = [];
@@ -269,11 +269,14 @@ test("events without playback.read: a handler's first read is current", async ()
       p.commands.add({
         id: "t.read",
         path: ["Tools", "Read"],
-        run: () =>
-          void read.push([p.player.state.phase, p.player.state.paused]),
+        run: async () => {
+          read.push([p.player.state.phase, p.player.state.paused]);
+          const now = await p.player.refresh();
+          read.push([now.phase, now.paused]);
+        },
       });
     },
-    { host, directory: packageWith(["commands", "events"]) },
+    { host, directory: packageWith(["commands"]) },
   );
   try {
     await host.settle();
@@ -281,10 +284,13 @@ test("events without playback.read: a handler's first read is current", async ()
     await host.settle(20);
     await host.command("t.read").run();
     await host.settle(20);
-    assert.deepEqual(read, [["ready", true]]);
-    assert.deepEqual(host.sent("events.subscribe"), [
-      { event: "source.state", mirror: true },
+    // Nothing follows the player (SDK 1.11.0): the empty snapshot, then
+    // the read.
+    assert.deepEqual(read, [
+      ["empty", false],
+      ["ready", true],
     ]);
+    assert.deepEqual(host.sent("events.subscribe"), []);
   } finally {
     await stop();
   }
@@ -449,8 +455,8 @@ test("player.on: refusals, and a child scope's listener stops with it", async ()
     host.setSource({ paused: false });
     await host.settle();
     assert.deepEqual(got, [true]);
-    // The state copy keeps its subscription (a mirror again).
-    assert.ok(host.subscriptions.has("source.state"));
+    // Nothing holds the event any more: unsubscribed, the copy kept.
+    assert.ok(!host.subscriptions.has("source.state"));
     assert.deepEqual([...host.listening], []);
   } finally {
     await stop();

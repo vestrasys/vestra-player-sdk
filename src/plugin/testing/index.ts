@@ -134,6 +134,8 @@ import {
   TEXT_LIMITS,
 } from "../../i18n.ts";
 import { Internals } from "./internals.ts";
+import { sendFacts } from "./facts.ts";
+import { revokeRun, revokers } from "./revoke.ts";
 import {
   on,
   emit,
@@ -776,9 +778,10 @@ export class TestHost implements Transport {
   /** The host events the plugin subscribed to. */
   readonly subscriptions = new Set<string>();
   /**
-   * The subscribed events the plugin really listens to: an `onChange` and
-   * the like, or a binding that reads the state. The SDK's own copies of
-   * the state (what keeps `plugin.player.state` current) are left out.
+   * The subscribed events the plugin really listens to: a listener
+   * (`player.on`, an `onChange` and the like) or a stream. The SDK's own
+   * copies of the state are left out, and a binding that reads a state
+   * subscribes nothing.
    * Empty means the player may stop the plugin while nothing uses it
    * (unless it holds something else: a window, a panel, a filter…).
    *
@@ -787,10 +790,11 @@ export class TestHost implements Transport {
   readonly listening = new Set<string>();
   /**
    * Why the plugin listens to each event of {@link TestHost.listening}:
-   * every listener and every binding that reads its state, as the
-   * player's log says them (`a listener added at main.ts:12`,
-   * `command "Save" enabled is a function that reads plugin.player.state
-   * (main.ts:40) — use plugin.when`), in the order they came.
+   * every listener and stream, as the player's log says them (`a listener
+   * added at main.ts:12`, `a stream opened at main.ts:20`), in the order
+   * they came. A binding's or command field's read of the event's state is
+   * listed beside them (with "— use plugin.when" where a condition exists);
+   * it is never a reason on its own.
    *
    * @since 1.5.40
    */
@@ -1021,8 +1025,8 @@ export class TestHost implements Transport {
    *
    * @example Simulate the user choosing French for the next start
    * The plugin hears that the saved interface language changed. The host
-   * pushes `appearance.changed`, which a plugin sees (after `plugin.player.subscribe()`) in
-   * `appearance.language` once it has read it and subscribed; this run's
+   * pushes `appearance.changed`, which a plugin that listens to it sees in
+   * `appearance.language`; this run's
    * language does not change.
    * ```ts
    * import assert from "node:assert/strict";
@@ -1349,8 +1353,8 @@ export class TestHost implements Transport {
    * @example Let another plugin publish chapters
    * The plugin under test sees two chapter marks another plugin put on the
    * timeline. `setTimelineLayer` stores that plugin's whole layer and pushes
-   * `timeline.changed`; once the plugin uses `plugin.timeline` (after
-   * `plugin.player.subscribe()`) the SDK keeps `marks` current from that event, and `settle()`
+   * `timeline.changed`; while the plugin listens to it the SDK keeps
+   * `marks` current from that event, and `settle()`
    * lets it arrive.
    * ```ts
    * import assert from "node:assert/strict";
@@ -1481,7 +1485,7 @@ export class TestHost implements Transport {
    *
    * @example Simulate another plugin switching to the light palette
    * The plugin hears the palette change. The host updates `appearance` and
-   * pushes `appearance.changed` to a plugin that listens (after `plugin.player.subscribe()`).
+   * pushes `appearance.changed` to a plugin that listens.
    * ```ts
    * import assert from "node:assert/strict";
    * declare const host: TestHost;
@@ -2779,6 +2783,7 @@ export class TestHost implements Transport {
    * pass it to {@link startPlugin} as `host`.
    */
   constructor() {
+    revokers.set(this, (reason) => this.#revoke(reason));
     this.subtitles = {
       presentation: {
         revision: 1,
@@ -3043,6 +3048,11 @@ export class TestHost implements Transport {
       const work = Promise.resolve(handler(record));
       // `disconnect()` fails the requests still waiting, as the runner does.
       work.catch(() => {});
+      // The facts the request changed go out once it is handled (`facts.ts`).
+      void work.then(
+        () => sendFacts(this),
+        () => {},
+      );
       return (await Promise.race([work, this.#inner.gone])) as T;
     } finally {
       this.#inner.inFlight--;
@@ -3121,7 +3131,7 @@ export class TestHost implements Transport {
    * Deliver a host event to the plugin. Like the player, subscription-based
    * events (`source.state`, `playback.backend`, `window.state`,
    * `timeline.changed`, `appearance.changed`) are delivered only when the
-   * plugin subscribed (it called `plugin.player.subscribe()` and listens). Most tests use the
+   * plugin subscribed (something of it listens). Most tests use the
    * higher-level helpers (`setSource`, `setMainWindow`, ...) instead.
    *
    * @param event - The wire event name.
@@ -3820,15 +3830,16 @@ export class TestHost implements Transport {
    * keeps the plugin running only while the tab is shown, and a sidebar panel
    * in a background tab is no reason at all (the plugin may go to standby;
    * showing the tab starts it again). Empty: the player may stop it while idle
-   * and start it again on its next use. Filter chains, streams, jobs and the
-   * like (which also keep a plugin running) are not listed.
+   * and start it again on its next use. A state stream (`player.stream`)
+   * shows as a listener of `source.state`; filter chains, producer streams,
+   * jobs and the like (which also keep a plugin running) are not listed.
    *
    * @since 1.5.40
    *
    * @example Check that a plugin can be stopped while idle
    * The test fails if the plugin keeps running for no reason after it
-   * starts, and names the reason (a command whose `enabled` reads
-   * `plugin.player.state`, say: give it a `plugin.when` condition). The
+   * starts, and names the reason (a stream opened in `activate`, say:
+   * open it only while something shows the state). The
    * player stops such a plugin while nothing uses it and starts it again
    * on its next use, so it costs no process meanwhile.
    * ```ts
@@ -3961,6 +3972,48 @@ export class TestHost implements Transport {
     return upgrade(this, this.#inner, activate as never);
   }
 
+  /** See {@link revokeRun}: each through the host's own handler. */
+  #revoke(reason?: string) {
+    const run = (method: string, params: Record<string, Json>) => {
+      try {
+        void Promise.resolve(this.#defaults[method]?.(params)).catch(() => {});
+      } catch {
+        // Already gone.
+      }
+    };
+    for (const id of [...this.windows.keys()]) run("ui.close", { id });
+    if (this.panels.size) run("ui.unmount", {});
+    for (const id of [...this.commands.keys()])
+      run("commands.unregister", { id });
+    for (const id of [...this.settings.pages.keys()])
+      run("settings.unregister", { id });
+    for (const id of [...this.resolvers.keys()])
+      run("sourceResolvers.unregister", { id });
+    if (this.sequence !== null) run("sequence.set", { flags: null });
+    for (const [producerId, producer] of this.producers)
+      if (!producer.released) run("producer.release", { producerId });
+    // The playback worker's part (`owner.parked` and `owner.disabled`
+    // alike): its filter chains, display layer, render options, shaders.
+    this.processing.resources.clear();
+    if (this.videoView.owner === this.manifestId) run("video.view.release", {});
+    if (this.videoRender.owner === this.manifestId)
+      run("video.render.release", {});
+    this.videoShaders.handles.clear();
+    // Kept through a standby, removed at every other stop (the player's
+    // `keeps_shown_state`: an idle stop only).
+    if (reason === "idle") return;
+    const id = this.manifestId;
+    const marks = this.timeline.layers.delete(id);
+    const ranges = this.timeline.rangeLayers.delete(id);
+    if (marks || ranges)
+      this.emit("timeline.changed", {
+        marks: this.timeline.marks,
+        ranges: this.timeline.ranges,
+      });
+    this.mainWindow.onTop = false;
+    this.mainWindow.cursorAutoHide = "fullscreen";
+  }
+
   readonly #defaults: Record<string, Handler> = {
     ...triggersHandlers(this, this.#inner),
     ...transportHandlers(this, this.#inner),
@@ -3987,9 +4040,9 @@ export class TestHost implements Transport {
  * The manifest id comes from `directory/manifest.json` unless `id` is
  * given; then no manifest is read (and without `directory` none is read
  * either: the id is `"test.plugin"`). Nothing in the manifest changes how
- * the plugin runs: event delivery and the start-up reads are the plugin's
- * own calls (`plugin.player.subscribe()`, `plugin.player.read()`), as in
- * the player.
+ * the plugin runs: the start-up read is the plugin's own call
+ * (`plugin.player.read()`), and an event reaches it from its first
+ * listener, as in the player.
  *
  * Rejects when `manifest.json` cannot be read or parsed, when `activate`
  * throws, or when a registration made during activation fails (for example
@@ -4163,6 +4216,9 @@ export async function startPlugin(
   triggers.stop = async (reason) => {
     await instance.dispose({ reason });
     await host.settle();
+    // Standby and an upgrade stop the run: the player revokes what it held.
+    revokeRun(host, reason);
+    await host.settle();
   };
   await host.settle();
   tellResidency(host);
@@ -4187,6 +4243,8 @@ export async function startPlugin(
       await host.settle();
     }
     if (!triggers.parked) await instance.dispose({ reason });
+    await host.settle();
+    revokeRun(host, typeof reason === "string" ? reason : undefined);
     await host.settle();
     host.close();
   };
@@ -4213,6 +4271,8 @@ export async function startPlugin(
     async disconnect() {
       host.loseConnection();
       await instance.dispose({ reason: "host-lost" });
+      await host.settle();
+      revokeRun(host, "host-lost");
       await host.settle();
       host.close();
     },

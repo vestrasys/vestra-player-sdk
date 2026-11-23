@@ -191,6 +191,15 @@
 @vestra-player/sdk InterfaceDeclaration ExportPart :: end: number;
 @vestra-player/sdk InterfaceDeclaration ExportPart :: source: string;
 @vestra-player/sdk InterfaceDeclaration ExportPart :: start: number;
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "app.started": { version: string; previous: string | null; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "audio.devices.changed": { devices: AudioDevice[]; requested: string | null; active: string | null; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "audio.reconfigured": { sourceId: number; sampleRate: number; channels: number | null; format: string | null; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "audio.tracks.changed": { sourceId: number; audioTracks: AudioTrack[]; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "layout.changed": { slots: { readonly bottom: LayoutPosition | null; readonly sidebar: LayoutPosition | null; readonly adjust: LayoutPosition | null; readonly backdrop: { readonly effective: boolean; } | null; }; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "subtitles.changed": { state: SubtitlesState; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "video.reconfigured": { sourceId: number; width: number; height: number; displayWidth: number; displayHeight: number; fps: number | null; rotation: number; hdr: boolean; };
+@vestra-player/sdk InterfaceDeclaration FactEventPayloads :: "window.changed": WindowState;
 @vestra-player/sdk InterfaceDeclaration FileResolverOptions
 @vestra-player/sdk InterfaceDeclaration FileResolverOptions :: extensions: string[];
 @vestra-player/sdk InterfaceDeclaration FileResolverOptions :: id: string;
@@ -217,6 +226,8 @@
 @vestra-player/sdk InterfaceDeclaration JsonStore :: readonly value: T;
 @vestra-player/sdk InterfaceDeclaration JsonStore :: save(next: T): void;
 @vestra-player/sdk InterfaceDeclaration JsonStore<T> extends Disposable
+@vestra-player/sdk InterfaceDeclaration LayoutPosition :: readonly panels: readonly SlotPanel[];
+@vestra-player/sdk InterfaceDeclaration LayoutPosition extends SlotState
 @vestra-player/sdk InterfaceDeclaration MainWindow
 @vestra-player/sdk InterfaceDeclaration MainWindow :: onChange(listener: (state: WindowState) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration MainWindow :: readonly state: WindowState;
@@ -392,9 +403,9 @@
 @vestra-player/sdk InterfaceDeclaration Player :: close(options?: Conditional): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: isCurrent(state: PlayerState): boolean;
 @vestra-player/sdk InterfaceDeclaration Player :: next(): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: on<E extends FactEvent>(event: E, listener: (data: FactEventPayloads[E]) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends HostEvent>(event: E, listener: (data: EventPayload<E>) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends SourceEvent>(event: E, listener: (data: SourceEventPayloads[E]) => void): Disposable;
-@vestra-player/sdk InterfaceDeclaration Player :: onChange(listener: (state: PlayerState) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; } & Conditional): Promise<Media>;
 @vestra-player/sdk InterfaceDeclaration Player :: openStream(options: StreamOptions): Promise<Stream>;
 @vestra-player/sdk InterfaceDeclaration Player :: previous(): Promise<void>;
@@ -415,7 +426,6 @@
 @vestra-player/sdk InterfaceDeclaration Player :: stats(): Promise<PlaybackStats>;
 @vestra-player/sdk InterfaceDeclaration Player :: step(unit: "frame" | "keyframe", direction: "backward" | "forward", options?: Conditional): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: stream(listener: (state: PlayerState) => void): StateStream;
-@vestra-player/sdk InterfaceDeclaration Player :: subscribe(): void;
 @vestra-player/sdk InterfaceDeclaration PlayerState
 @vestra-player/sdk InterfaceDeclaration PlayerState :: readonly audioOutput?: { requested: string | null; active: string | null; };
 @vestra-player/sdk InterfaceDeclaration PlayerState :: readonly audioTracks: AudioTrack[] | null;
@@ -880,6 +890,7 @@
 @vestra-player/sdk TypeAliasDeclaration EventPayload = export type EventPayload<E extends HostEvent> = EventPayloads[E];
 @vestra-player/sdk TypeAliasDeclaration ExportCheck = export type ExportCheck = WireExportCheck;
 @vestra-player/sdk TypeAliasDeclaration ExportOptions = export type ExportOptions = { format: "png" | "bmp"; destination: string; sampleTime?: number; } | { format: "jpeg"; destination: string; sampleTime?: number; quality?: number; } | { format: "mp4"; destination: string; end: number; encoding?: ExportEncoding; } | { format: "copy"; destination: string; end: number; container?: "auto" | "mp4" | "mkv"; };
+@vestra-player/sdk TypeAliasDeclaration FactEvent = export type FactEvent = "video.reconfigured" | "audio.reconfigured" | "audio.tracks.changed" | "subtitles.changed" | "window.changed" | "layout.changed" | "audio.devices.changed" | "app.started";
 @vestra-player/sdk TypeAliasDeclaration FilterStatus = export type FilterStatus = { state: "waiting"; } | { state: "applying"; } | { state: "applied"; } | { state: "failed"; error: PluginError; };
 @vestra-player/sdk TypeAliasDeclaration HostAction = export type HostAction = "play-pause" | "stop" | "previous" | "next" | "frame-back" | "frame-forward" | "seek-backward" | "seek-forward" | "rate-down" | "rate-up" | "rate-normal" | "volume-up" | "volume-down" | "mute" | "fullscreen";
 @vestra-player/sdk TypeAliasDeclaration HostEvent = export type HostEvent = "source.state" | "playback.backend" | "window.state" | "packages.changed" | "bindings.changed" | "commands.keys" | "timeline.changed" | "appearance.changed" | "resolvers.fileTypes" | "video.upscaling.changed" | "video.motion.changed";

@@ -18,3 +18,19 @@ test("the window shows sample.md, with the package as its base", async () => {
   assert.equal(doc.base, fileURLToPath(directory));
   await stop();
 });
+
+test("only the open window keeps the plugin running", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: directory,
+  });
+  const keepsRunning = () => host.keepsRunning;
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await host.command("show").run();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), ["an open window (document)"]);
+  host.window("document").userClose();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await stop();
+});

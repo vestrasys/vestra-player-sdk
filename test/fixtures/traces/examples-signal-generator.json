@@ -39,7 +39,7 @@
       "safetyPasses": 0
     },
     "dispose": {
-      "passes": 1,
+      "passes": 0,
       "fullPasses": 0,
       "evaluations": 0,
       "parts": 0,
@@ -138,40 +138,6 @@
         }
       }
     ],
-    "dispose": [
-      {
-        "method": "source.state",
-        "params": {}
-      },
-      {
-        "method": "source.submit",
-        "params": {
-          "operationId": 2,
-          "intent": {
-            "kind": "close",
-            "expected": {
-              "generation": 2,
-              "intentVersion": 2
-            }
-          }
-        }
-      },
-      {
-        "method": "source.state",
-        "params": {}
-      },
-      {
-        "method": "producer.release",
-        "params": {
-          "producerId": 1
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "signal-generator"
-        }
-      }
-    ]
+    "dispose": []
   }
 }

@@ -118,6 +118,7 @@ export const STRICT_CATEGORIES = {
       "SettingsCategory",
       "SlotState",
       "SlotPanel",
+      "LayoutPosition",
       "PanelState",
       "ConfirmOptions",
       "Locale",
@@ -211,6 +212,8 @@ export const STRICT_CATEGORIES = {
       "WireMotionState",
       "SourceEvent",
       "SourceEventPayloads",
+      "FactEvent",
+      "FactEventPayloads",
     ],
   },
   Services: {

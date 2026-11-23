@@ -11,45 +11,54 @@ The player has one source. The user, other plugins and yours all change it, so e
 
 ## Steps
 
-### Follow the player
-
-```ts
-plugin.player.subscribe(); // the player's events from now on
-await plugin.player.read(); // the player's state and timeline, read once
-```
-
-Call both first in `activate`. `read()` fills `player.state` and the timeline once and keeps the state current after your own actions; `subscribe()` keeps it current when the change comes from elsewhere (without it, the state only moves after your own calls and `refresh()`).
-
 ### Read the state
 
-`plugin.player.state` is a snapshot the SDK keeps current from the player's events. `onChange` runs after it changed; read the new snapshot there instead of asking the player.
+`plugin.player.state` is the newest snapshot the plugin has: from `read()`, `refresh()`, the state a source event carries and the plugin's own calls. Read it in the way that fits the need ([Learn what happens in the player](events-and-triggers.md)):
 
 ```ts
-const info = plugin.osd.panel();
-plugin.player.onChange((state) => {
+await plugin.player.read(); // first in activate: the state, read once
+// In a handler: the state now, and the snapshot the controls act on.
+const now = await plugin.player.refresh();
+// Once per file, also while the plugin is stopped: the player wakes it.
+plugin.player.on("source.ready", ({ state }) => console.log("ready", state.source));
+```
+
+The position, the pause and the speed have no event of their own. Something that shows them continuously (a position line, a speed label) opens a stream while it is on screen and stops it when it goes; the SDK keeps `player.state` current while a stream is open:
+
+```ts
+const info = plugin.osd.panel(); // shown now: follow the state
+const feed = plugin.player.stream((state) => {
   // `position` and `duration` are seconds, null while unknown.
   if (state.phase !== "ready") return info.set(null);
   info.set("{} / {} s", [state.position?.toFixed(0) ?? "–", state.duration?.toFixed(0) ?? "–"]);
 });
+// … and when the line goes away:
+feed.stop();
+await info.set(null);
 ```
 
-`state.can` says which controls the current source allows (`pause`, `seek`, `rate`, `restart`, `close`, `next`, `previous`). Bind menu items to it so they grey out by themselves:
+`state.can` says which controls the current source allows (`pause`, `seek`, `rate`, `restart`, `close`, `next`, `previous`). Give menu items `plugin.when` conditions on it, so they grey out by themselves; the player evaluates them, also while the plugin is stopped ([Command state](command-state.md)):
 
 ```ts
+const { when } = plugin;
 plugin.commands.add({
   id: "pause",
   path: ["@playback", "Pause"],
-  enabled: () => plugin.player.state.can.pause, // re-evaluated after every change
-  checked: () => plugin.player.state.paused,
-  run: () => plugin.player.setPaused(!plugin.player.state.paused),
+  enabled: when.can("pause"),
+  checked: when.paused,
+  run: async () => {
+    const now = await plugin.player.refresh();
+    await plugin.player.setPaused(!now.paused);
+  },
 });
 ```
 
 ### Control it, and handle `stale`
 
-A control without options is conditional on `player.state` as it is when you call. `stale` means the source changed after that: another file, a close, or any pause, seek or speed change by the user or another plugin. Nothing happened, and usually that is the right outcome:
+A control without options is conditional on `player.state` as it is when you call, so read the state first (`refresh()`) unless a stream keeps it current. `stale` means the source changed after that: another file, a close, or any pause, seek or speed change by the user or another plugin. Nothing happened, and usually that is the right outcome:
 
 ```ts
+await plugin.player.refresh(); // the state the control acts on
 try {
   await plugin.player.seek(30);
 } catch (error) {
@@ -60,7 +69,7 @@ try {
 For work that takes time (a timer, a dialog, a network request), keep the snapshot from when it started and pass it as `ifCurrent`, so the call applies only to that source:
 
 ```ts
-const seen = plugin.player.state;
+const seen = await plugin.player.refresh(); // the source the user sees now
 const answer = await plugin.dialogs.confirm({ message: "Close this file?", confirm: "Close" }); // ui.dialog
 if (answer.confirmed)
   await plugin.player.close({ ifCurrent: seen }).catch((error: PluginError) => {
@@ -135,34 +144,51 @@ A second provider is refused with `conflict` (`sequence-taken`). During activati
 
 ## Complete example
 
-A plugin that shows the position on the OSD, offers a Pause item that greys out by itself, and a "Back to the Start" item that does nothing when the user changed the source meanwhile:
+A plugin with a "Show Position" item that puts a live position line on the OSD while it is checked, a Pause item that greys out by itself, and a "Back to the Start" item that does nothing when the user changed the source meanwhile. Nothing keeps it running while the line is off:
 
 ```ts
-import type { Plugin, PluginError } from "@vestra-player/sdk";
+import type { Plugin, PluginError, StateStream } from "@vestra-player/sdk";
 
-export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
-  // A live line on the OSD while something plays.
+export default function activate(plugin: Plugin) {
+  const { when } = plugin;
+  // The position has no event: a stream while the line shows, none otherwise.
   const info = plugin.osd.panel();
-  plugin.player.onChange((state) => {
-    if (state.phase !== "ready") return info.set(null);
-    info.set("{} / {} s", [state.position?.toFixed(0) ?? "–", state.duration?.toFixed(0) ?? "–"]);
+  let feed: StateStream | undefined;
+  const line = plugin.commands.add({
+    id: "position",
+    path: ["@playback", "Show Position"],
+    checked: false, // the plugin's own state: a value
+    run: () => {
+      if (feed) {
+        feed.stop();
+        feed = undefined;
+        void info.set(null);
+      } else
+        feed = plugin.player.stream((state) => {
+          if (state.phase !== "ready") return info.set(null);
+          info.set("{} / {} s", [state.position?.toFixed(0) ?? "–", state.duration?.toFixed(0) ?? "–"]);
+        });
+      line.set({ checked: feed !== undefined });
+    },
   });
 
   plugin.commands.add({
     id: "pause",
     path: ["@playback", "Pause"],
-    enabled: () => plugin.player.state.can.pause, // re-evaluated after every change
-    checked: () => plugin.player.state.paused,
-    run: () => plugin.player.setPaused(!plugin.player.state.paused),
+    enabled: when.can("pause"), // evaluated by the player
+    checked: when.paused,
+    run: async () => {
+      const now = await plugin.player.refresh();
+      await plugin.player.setPaused(!now.paused);
+    },
   });
 
   plugin.commands.add({
     id: "start",
     path: ["@playback", "Back to the Start"],
-    enabled: () => plugin.player.state.can.seek,
+    enabled: when.can("seek"),
     run: async () => {
+      await plugin.player.refresh(); // act on the source as it is now
       try {
         await plugin.player.seek(0);
       } catch (error) {

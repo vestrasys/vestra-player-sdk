@@ -190,10 +190,11 @@ test("the player's own texts follow the locale; without one they stay Chinese", 
 test("appearance.language is the saved choice; setLanguage saves it for the next start", async () => {
   const host = new TestHost();
   host.locale = "fr";
-  const { plugin, stop } = await startPlugin(() => {}, {
-    capabilities: ["ui.theme", "events"],
-    host,
-  });
+  const { plugin, stop } = await startPlugin(
+    // The copy follows other plugins' changes while the plugin listens.
+    (plugin: Plugin) => void plugin.player.on("appearance.changed", () => {}),
+    { capabilities: ["ui.theme"], host },
+  );
   assert.equal(plugin.i18n.locale, "fr");
   assert.equal(plugin.appearance.language, "system");
   await plugin.appearance.setLanguage("ja");

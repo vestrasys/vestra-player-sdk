@@ -4,17 +4,10 @@
   "subscriptions": [
     {
       "event": "source.state",
-      "mirror": true
-    },
-    {
-      "event": "source.state",
       "why": [
-        "a view's bind reads plugin.player.state (main.ts)"
+        "a view's bind reads plugin.player.state (main.ts)",
+        "a stream opened at main.ts"
       ]
-    },
-    {
-      "event": "source.state",
-      "mirror": true
     }
   ],
   "polled": [],
@@ -28,7 +21,7 @@
       "safetyPasses": 0
     },
     "open": {
-      "passes": 1,
+      "passes": 0,
       "fullPasses": 0,
       "evaluations": 0,
       "parts": 0,
@@ -36,18 +29,18 @@
       "safetyPasses": 0
     },
     "changes": {
-      "passes": 3,
+      "passes": 0,
       "fullPasses": 0,
-      "evaluations": 1,
-      "parts": 1,
+      "evaluations": 0,
+      "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     },
     "command": {
-      "passes": 2,
-      "fullPasses": 2,
-      "evaluations": 2,
-      "parts": 3,
+      "passes": 3,
+      "fullPasses": 3,
+      "evaluations": 3,
+      "parts": 4,
       "skippedParts": 0,
       "safetyPasses": 0
     },
@@ -67,19 +60,18 @@
         "params": {}
       },
       {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "mirror": true
-        }
-      },
-      {
         "method": "source.state",
         "params": {}
       },
       {
         "method": "timeline.marks",
         "params": {}
+      },
+      {
+        "method": "storage.session.get",
+        "params": {
+          "key": "mark"
+        }
       },
       {
         "method": "commands.register",
@@ -106,15 +98,6 @@
             "reason": null
           }
         }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "source.state",
-          "why": [
-            "a view's bind reads plugin.player.state (main.ts)"
-          ]
-        }
       }
     ],
     "open": [],
@@ -127,7 +110,7 @@
           "file": "ui/bookmark.slint",
           "properties": {
             "label": "No bookmark",
-            "can-mark": true,
+            "can-mark": false,
             "can-jump": false
           },
           "callbacks": [
@@ -135,28 +118,31 @@
             "jump"
           ]
         }
-      }
-    ],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "bookmark.open"
-        }
-      },
-      {
-        "method": "ui.close",
-        "params": {
-          "id": "bookmark"
-        }
       },
       {
         "method": "events.subscribe",
         "params": {
           "event": "source.state",
-          "mirror": true
+          "why": [
+            "a view's bind reads plugin.player.state (main.ts)",
+            "a stream opened at main.ts"
+          ]
+        }
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "ui.set",
+        "params": {
+          "id": "bookmark",
+          "property": "can-mark",
+          "value": true,
+          "seq": 1
         }
       }
-    ]
+    ],
+    "dispose": []
   }
 }

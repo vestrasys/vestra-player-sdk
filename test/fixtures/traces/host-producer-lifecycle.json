@@ -16,7 +16,6 @@
   "listeningAfterClose": false,
   "scratchExistsAfterClose": false,
   "methods": [
-    "events.subscribe",
     "producer.ack",
     "producer.prepare",
     "producer.release",

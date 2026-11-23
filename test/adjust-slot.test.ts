@@ -142,6 +142,9 @@ test("in fullscreen toggle switches a column as in a window; only show() pops it
   const { plugin, stop } = await startPlugin(
     (plugin: Plugin) => {
       wheels = plugin.panels.mount("adjust", "wheels.slint");
+      // The state follows changes made elsewhere while a listener exists
+      // (SDK 1.11.0).
+      wheels.onChange(() => {});
     },
     { host, directory: packageWith() },
   );

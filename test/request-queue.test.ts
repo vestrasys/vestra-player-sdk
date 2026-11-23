@@ -209,7 +209,7 @@ test("request queue: aborting a waiting request drops it unsent; the rest keep t
   assert.equal(await running, "done");
 });
 
-test("request queue: close rejects every waiting request as the runner rejects those in flight", async () => {
+test("request queue: close rejects every waiting request as the runner rejects those in flight, and refuses every later one", async () => {
   const wire = manual();
   const queue = new RequestQueue(wire.transport);
   const all = Array.from({ length: 1000 }, (_, i) =>
@@ -226,9 +226,21 @@ test("request queue: close rejects every waiting request as the runner rejects t
   const outcomes = await Promise.all(all);
   assert.ok(outcomes.every((line) => line === "disabled: plugin stopped"));
   assert.equal(wire.sent.length, 256, "nothing that waited went out");
-  // A cleanup's request goes to the transport as it comes.
-  void queue.request("clipboard.writeText", { text: "cleanup" });
-  assert.equal(wire.sent.length, 257);
+  // SDK 1.11.0: a request after the close (the plugin received
+  // `runtime.stop`; a cleanup's or a late write) is refused here, never
+  // sent nor queued.
+  const late = await queue
+    .request("settings.set", { id: "store.repos", property: "repos" })
+    .then(
+      () => "sent",
+      (error: HostError) => `${error.code}: ${error.message}`,
+    );
+  assert.equal(
+    late,
+    "disabled: settings.set not sent: the plugin is stopping (the player sent runtime.stop)",
+  );
+  assert.equal(wire.sent.length, 256, "nothing went out after the close");
+  assert.equal(queue.waiting, 0, "nor waits");
 });
 
 test("request queue: replies to the player's own calls never wait", async () => {

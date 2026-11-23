@@ -12,10 +12,12 @@ description: List and select subtitle tracks, upload a subtitle file the plugin 
 ### Follow the player
 
 ```ts
-plugin.player.subscribe(); // the player's events from now on
+plugin.player.on("subtitles.changed", ({ state }) => {
+  // The tracks or the selection changed; `plugin.subtitles.state` holds it.
+});
 ```
 
-`subtitles.read` reads the tracks and the selection; `subtitles.control` changes them (and needs `subtitles.read` too, because every change reads the current selection first); `events` makes the SDK read `plugin.subtitles.state` again when the source or its phase changes. The player has no subtitle event: a selection the user or another plugin changes shows only after `refresh()`.
+`subtitles.changed` is sent when a loaded source's subtitle tracks or its primary or secondary selection change, also by the user or another plugin; the SDK takes its state into `plugin.subtitles.state` first. A listener of it does not keep the plugin running. Without it (or a `plugin.subtitles.onChange` listener, which does), a selection made elsewhere shows only after `refresh()`.
 
 ### Read the tracks
 
@@ -90,8 +92,7 @@ A **Subtitles ▸ English Subtitles** item that selects the first English track 
 import { readFile } from "node:fs/promises";
 import type { Plugin, PluginError } from "@vestra-player/sdk";
 
-export default async function activate(plugin: Plugin) {
-  await plugin.player.read(); // the player's state and timeline, read once
+export default function activate(plugin: Plugin) {
   plugin.commands.add({
     id: "english",
     path: ["@subtitles", "English Subtitles"],
@@ -105,7 +106,7 @@ export default async function activate(plugin: Plugin) {
         });
         return;
       }
-      const source = plugin.player.state.source;
+      const { source } = await plugin.player.refresh(); // the file open now
       if (!source) return;
       const bytes = await readFile(source.replace(/.[^.]+$/, ".en.srt")).catch(() => null);
       if (!bytes) return plugin.osd.show("No English subtitles found");

@@ -140,51 +140,24 @@ test("an open stream keeps the plugin running; after the last stop nothing of it
   }
 });
 
-test("with subscribe(), the copy stays a mirror after the stream stops", async () => {
-  const { plugin, host, stop } = await startPlugin((plugin) => {
-    plugin.player.subscribe();
-  });
+test("a listener beside a stream keeps the copy following after the stream stops", async () => {
+  const { plugin, host, stop } = await startPlugin(() => {});
   try {
-    await host.settle();
-    assert.deepEqual([...host.listening], []);
+    let heard = 0;
+    plugin.player.on("source.state", () => heard++);
     const feed = plugin.player.stream(() => {});
     await host.settle();
     assert.deepEqual([...host.listening], ["source.state"]);
     feed.stop();
     await host.settle();
-    assert.deepEqual([...host.listening], []);
+    // The listener still holds the event: still subscribed, the copy follows.
+    assert.deepEqual([...host.listening], ["source.state"]);
     assert.ok(host.subscriptions.has("source.state"));
-    assert.deepEqual(marks(host).at(-1), {
-      method: "events.subscribe",
-      event: "source.state",
-      mirror: true,
-    });
-    // `subscribe()` still keeps the state current.
+    heard = 0;
     host.setSource({ phase: "ready", position: 2 });
     await host.settle();
+    assert.equal(heard, 1);
     assert.equal(plugin.player.state.position, 2);
-  } finally {
-    await stop();
-  }
-});
-
-test("onChange beside a stream is unchanged, and outlives it", async () => {
-  const { plugin, host, stop } = await startPlugin((plugin) => {
-    plugin.player.subscribe();
-  });
-  try {
-    let changes = 0;
-    plugin.player.onChange(() => changes++);
-    const feed = plugin.player.stream(() => {});
-    await host.settle();
-    feed.stop();
-    await host.settle();
-    // (The stream's first read may have changed the copy: counted from here.)
-    changes = 0;
-    host.setSource({ phase: "ready", position: 5 });
-    await host.settle();
-    assert.equal(changes, 1);
-    assert.deepEqual([...host.listening], ["source.state"], "onChange listens");
   } finally {
     await stop();
   }

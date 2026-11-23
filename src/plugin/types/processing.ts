@@ -68,9 +68,8 @@ interface Filter<T> extends Disposable {
 
 /**
  * This plugin's own video processing chain, re-applied for every new source.
- * From `plugin.video.filter(id)`; call `plugin.player.subscribe()` and
- * `await plugin.player.read()` first. Without `subscribe()` the SDK does not see the
- * source change: a value set before the media is ready stays `waiting`.
+ * From `plugin.video.filter(id)`. It follows the player's source while it
+ * exists: a value set before the media is ready applies when it is.
  *
  * Members: `set(nodes)` (desired chain, last write wins, `[]` withdraws
  * this plugin's effect), `status` ({@link FilterStatus}),

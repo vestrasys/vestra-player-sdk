@@ -1,4 +1,4 @@
-import type { Plugin } from "@vestra-player/sdk";
+import type { Plugin, StateStream } from "@vestra-player/sdk";
 
 /**
  * Remembers the current playback position and jumps back to it: a command,
@@ -6,10 +6,11 @@ import type { Plugin } from "@vestra-player/sdk";
  */
 // #region state
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
-  const { player } = plugin;
-  let mark: number | null = null;
+  const { player, storage } = plugin;
+  await player.read(); // the player's state, read once
+  // Session storage outlives standby: the player may stop this plugin while
+  // the window is closed, and `activate` runs again at its next use.
+  let mark = (await storage.session.get<number>("mark")) ?? null;
   // #endregion state
 
   // #region window
@@ -21,16 +22,33 @@ export default async function activate(plugin: Plugin) {
     canJump: mark !== null && player.state.can.seek,
   }));
   // The Slint callbacks `mark` and `jump` of ui/bookmark.slint.
-  bookmarkWindow.on("mark", () => (mark = player.state.position));
+  bookmarkWindow.on("mark", () => {
+    mark = player.state.position;
+    return storage.session.set("mark", mark);
+  });
   bookmarkWindow.on("jump", () => player.seek(mark!));
   // #endregion window
+
+  // #region stream
+  // The position has no event: while the window is open a stream keeps
+  // `player.state` following the player and runs the binding above after
+  // each change. Closed, nothing follows it and the plugin can go to standby.
+  let feed: StateStream | undefined;
+  bookmarkWindow.onClose(() => {
+    feed?.stop();
+    feed = undefined;
+  });
+  // #endregion stream
 
   // #region command
   plugin.commands.add({
     id: "bookmark.open",
     path: ["@playback", "Bookmark…"],
     order: 270,
-    run: () => bookmarkWindow.show(), // opens it, or brings back the open one
+    run: async () => {
+      await bookmarkWindow.show(); // opens it, or brings back the open one
+      feed ??= player.stream(() => {});
+    },
   });
   // #endregion command
 }

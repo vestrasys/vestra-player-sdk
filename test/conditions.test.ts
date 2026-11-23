@@ -59,6 +59,8 @@ test("conditions are sent as `when` and evaluated by the host", async () => {
     assert.equal(save.display.reason, "No frame to capture");
     await assert.rejects(save.run(), { code: "command" });
     host.setSource({ phase: "ready" });
+    // The host evaluates conditions; the plugin's own copy does not follow
+    // (no stream, SDK 1.11.0).
     assert.equal(save.state.enabled, true);
     // With an enabled condition the reason shows only while disabled.
     assert.equal(save.state.reason, null);
@@ -73,7 +75,7 @@ test("conditions are sent as `when` and evaluated by the host", async () => {
     host.setSource({ phase: "ended" });
     await host.settle();
     assert.equal(sent(host).length, updates);
-    assert.equal(plugin.player.state.phase, "ended");
+    assert.equal(plugin.player.state.phase, "empty");
   } finally {
     await stop();
   }
@@ -96,7 +98,9 @@ test("set switches between a condition and a function", async () => {
     command.set({ enabled: () => plugin.player.state.phase === "ready" });
     await host.settle();
     assert.equal(sent(host).at(-1)!.when, undefined);
-    assert.deepEqual([...host.listening], ["source.state"]);
+    // A function's read subscribes nothing (SDK 1.11.0): it shows the
+    // newest snapshot the plugin has.
+    assert.deepEqual([...host.listening], []);
     command.set({ enabled: when.paused });
     await host.settle();
     assert.deepEqual(sent(host).at(-1)!.when, {
@@ -146,30 +150,33 @@ test("keepsRunning says why, with where the plugin added it", async () => {
         run: () => {},
       });
     },
-    { capabilities: ["events", "playback.read", "commands"] },
+    { capabilities: ["playback.read", "commands"] },
   );
   try {
+    // A function that reads the state alone subscribes nothing (SDK
+    // 1.11.0); while a stream holds the state its read counts too.
+    assert.equal(host.keepsRunning.length, 0);
+    const feed = plugin.player.stream(() => {});
+    await host.settle();
     // packages.changed wakes a stopped plugin: it keeps nothing running.
     assert.ok(host.listening.has("packages.changed"));
-    assert.equal(host.keepsRunning.length, 1);
+    assert.equal(host.keepsRunning.length, 2);
     assert.match(
       host.keepsRunning[0]!,
       /^listens to source\.state: command "Snapshot" enabled is a function that reads plugin\.player\.state \(test\/conditions\.test\.ts:\d+\) — use plugin\.when$/,
     );
-    const listener = plugin.player.onChange(() => {});
-    await host.settle();
     // Every reason, in the order they came: the player is told again.
     const reasons = host.listeningWhy.get("source.state")!;
     assert.equal(reasons.length, 2);
     assert.match(reasons[0]!, /^command "Snapshot"/);
     assert.match(
       reasons[1]!,
-      /^a listener added at test\/conditions\.test\.ts:\d+$/,
+      /^a stream opened at test\/conditions\.test\.ts:\d+$/,
     );
     assert.equal(host.keepsRunning.length, 2);
-    await listener.dispose();
+    feed.stop();
     await host.settle();
-    assert.equal(host.listeningWhy.get("source.state")!.length, 1);
+    assert.ok(!host.listeningWhy.has("source.state"));
     const watcher = plugin.window.onChange(() => {});
     await host.settle();
     assert.deepEqual(host.listeningWhy.get("window.state")!.length, 1);

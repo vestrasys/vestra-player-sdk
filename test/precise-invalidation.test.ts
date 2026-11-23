@@ -61,6 +61,9 @@ async function setup(
   let panel!: Panel;
   const started = await startPlugin(
     (plugin: Plugin) => {
+      // The copy follows the player while something holds `source.state`;
+      // a `player.on` listener runs no full pass (SDK 1.11.0).
+      plugin.player.on("source.state", () => {});
       panel = plugin.panels.mount("bottom", "bar.slint");
       panel.bind(() => {
         counts.paused++;
@@ -185,42 +188,6 @@ test("a full pass follows a command's run and plugin.update()", async () => {
   await host.settle();
   assert.equal(counts.paused, 1, "and after update()");
   assert.equal(counts.position, 1);
-  await stop();
-});
-
-test("an onChange listener that read a changed field gets a full pass; one that did not, does not", async () => {
-  let reads: "position" | "paused" = "paused";
-  let seen = 0;
-  const { host, counts, reset, stop } = await setup((plugin) => {
-    plugin.player.onChange((state) => {
-      seen =
-        reads === "position" ? (state.position ?? 0) : Number(state.paused);
-    });
-  });
-  void seen;
-  reset();
-  host.setSource({ position: 1 });
-  await host.settle();
-  assert.equal(counts.paused, 0, "the listener read only paused (unchanged)");
-  reads = "position";
-  host.setSource({ position: 2 });
-  await host.settle();
-  assert.equal(counts.paused, 1, "it read position (changed): full pass");
-  await stop();
-});
-
-test("a listener that reads no field (or returns a promise) gets a full pass", async () => {
-  let ticks = 0;
-  const { host, counts, reset, stop } = await setup((plugin) => {
-    plugin.player.onChange(() => {
-      ticks++;
-    });
-  });
-  reset();
-  host.setSource({ position: 1 });
-  await host.settle();
-  assert.equal(ticks > 0, true);
-  assert.equal(counts.paused, 1);
   await stop();
 });
 
@@ -362,7 +329,7 @@ test("the player's runner path (createPlugin over a transport) skips and refresh
       listener(source);
   };
   const instance = await createPlugin(transport, { id: "x" }, process.cwd());
-  instance.plugin.player.subscribe();
+  instance.plugin.player.on("source.state", () => {});
   await instance.plugin.player.read();
   const counts = { paused: 0, position: 0 };
   instance.plugin.commands.add({
@@ -397,30 +364,6 @@ test("the player's runner path (createPlugin over a transport) skips and refresh
   await drain();
   assert.deepEqual(counts, { paused: 2, position: 4 }, "full pass after run");
   await instance.dispose();
-});
-
-test("a promise-returning onChange listener: a full pass now and when it settles", async () => {
-  let release!: () => void;
-  let note = "a";
-  const { host, counts, reset, stop } = await setup(
-    (plugin, _counts, panel) => {
-      panel.bind(() => ({ note }));
-      plugin.player.onChange(async (state) => {
-        void state.paused; // reads only an unchanged field, but is async
-        await new Promise<void>((resolve) => (release = resolve));
-        note = "b";
-      });
-    },
-  );
-  reset();
-  host.setSource({ position: 1 });
-  await host.settle();
-  assert.equal(counts.paused, 1, "full pass right after the listener");
-  release();
-  await host.settle();
-  assert.equal(counts.paused, 2, "and again when its promise settles");
-  assert.equal(host.mounted().props.note, "b");
-  await stop();
 });
 
 test("a full pass after a view callback", async () => {
@@ -477,6 +420,9 @@ test("precise passes and row patches: a position tick patches one row of a bound
   let panel!: Panel;
   const { stop } = await startPlugin(
     (plugin: Plugin) => {
+      // The copy follows the player while something holds `source.state`;
+      // a `player.on` listener runs no full pass (SDK 1.11.0).
+      plugin.player.on("source.state", () => {});
       panel = plugin.panels.mount("bottom", "bar.slint");
       panel.bind(() => {
         builds++;
@@ -537,7 +483,7 @@ test("disposing the plugin cancels a pending safety pass", async () => {
     },
   };
   const instance = await createPlugin(transport, { id: "x" }, process.cwd());
-  instance.plugin.player.subscribe();
+  instance.plugin.player.on("source.state", () => {});
   await instance.plugin.player.read();
   let passes = 0;
   instance.plugin.commands.add({

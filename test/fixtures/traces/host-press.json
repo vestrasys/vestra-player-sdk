@@ -134,30 +134,6 @@
           "message": "test host: nothing is bound to Ctrl+Alt+K"
         }
       }
-    ],
-    [
-      "request",
-      "commands.unregister"
-    ],
-    [
-      "answer",
-      "commands.unregister"
-    ],
-    [
-      "request",
-      "commands.unregister"
-    ],
-    [
-      "answer",
-      "commands.unregister"
-    ],
-    [
-      "request",
-      "commands.unregister"
-    ],
-    [
-      "answer",
-      "commands.unregister"
     ]
   ],
   "osd": [

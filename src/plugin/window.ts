@@ -22,7 +22,9 @@ const view = (facts: WindowFacts): WindowState =>
 
 /**
  * One per plugin: read before activation, then kept current from
- * `window.state` events (after `plugin.player.subscribe()`) and after this plugin's own changes.
+ * `window.state` events while something holds them (`onChange`, a
+ * `window.state` listener), from `window.changed`, and after this
+ * plugin's own changes.
  */
 export class WindowService {
   readonly #runtime: Runtime;
@@ -58,7 +60,7 @@ export class WindowService {
           this.accept(facts as WindowFacts);
         else void this.read();
       },
-      "events",
+      "held",
       true,
     );
     void this.read();
@@ -102,6 +104,17 @@ export class WindowService {
       },
     };
   }
+}
+
+/**
+ * `window.changed`'s data as the listener gets it (`ScopeImpl.fact`,
+ * SDK 1.11.0): the copy takes the facts first, so `plugin.window.state`
+ * holds them when the listener runs.
+ */
+export function windowChanged(runtime: Runtime, data: unknown): WindowState {
+  const facts = data as WindowFacts;
+  windowOf(runtime).accept(facts);
+  return view(facts);
 }
 
 export const windowOf = (runtime: Runtime) =>

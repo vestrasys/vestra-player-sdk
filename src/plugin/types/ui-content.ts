@@ -702,14 +702,19 @@ export interface View {
    * The status window always shows the current file and enables its seek
    * controls only for seekable sources. The SDK calls the function right
    * away, again in every full update pass (after each handler) and after
-   * each change of `source` or `can`, and sends only the values that
-   * changed.
+   * each change of `source` or `can` while a stream keeps
+   * `plugin.player.state` following the player, and sends only the values
+   * that changed. The stream is opened with the window and stopped when it
+   * closes.
    * ```ts
    * const status = plugin.windows.create("ui/status.slint");
    * status.bind(() => ({
    *   title: plugin.player.state.source ?? "Nothing playing",
    *   canSeek: plugin.player.state.can.seek,
    * }));
+   * await status.show();
+   * const feed = plugin.player.stream(() => {}); // while it is open
+   * status.onClose(() => feed.stop());
    * ```
    *
    * @see [Keep a slider responsive while dragging](../../../docs/guides/slider.md)

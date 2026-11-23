@@ -18,8 +18,8 @@ import type { Transport } from "./wire.ts";
  * The video plays a little brighter and more saturated, slightly sharper
  * and turned a quarter clockwise. The nodes run in array order; `set` sends
  * the whole chain as this plugin's desired value (last write wins), and the
- * player applies it to every source until it changes, needing
- * `plugin.player.subscribe()` and `plugin.player.read()`.
+ * player applies it to every source until it changes (the chain follows
+ * the source by itself while it is set).
  * ```ts
  * const chain: VideoNode[] = [
  *   // Live fields: moving them later changes the picture in place.

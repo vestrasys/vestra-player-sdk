@@ -92,7 +92,7 @@ test("goes on with the queue after a restart", async () => {
 
 The test of the [Bookmark example](../examples/bookmark.md): it prepares the source before the plugin starts, opens the window from its command, fires two Slint callbacks and checks the window and the playback position.
 
-{@includeCode ../../examples/bookmark/tests/bookmark.test.ts}
+{@includeCode ../../examples/bookmark/tests/bookmark.test.ts#mark-jump}
 
 A key that does nothing while no video is open, and a refused change that is shown and can be retried:
 
@@ -139,6 +139,7 @@ test("a refused change is shown and can be retried", async () => {
 
 ## See also
 
+- [Learn what happens in the player](events-and-triggers.md#test-it): `keepsRunning`, standby, triggers and the clock.
 - [Reference: test host](../reference/testing.md): `startPlugin` options, every way to act and simulate, what the host records, every member.
 - [Add settings and translations](i18n.md#test-in-another-language): tests in another language.
 - {@link "@vestra-player/sdk/testing" | @vestra-player/sdk/testing}: the API reference of `TestHost` and `startPlugin`.

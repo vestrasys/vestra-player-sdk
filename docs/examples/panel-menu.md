@@ -59,6 +59,8 @@ examples/panel-menu/
 
 The list's titles and the selected index. Everything below reads and changes these two values.
 
+- The list is kept in {@link "@vestra-player/sdk"!Storage.session | plugin.storage.session}: while another tab is the current one the panel keeps nothing running, so the player may stop the plugin, and showing the tab starts it again from the stored list.
+
 ### Mounting the panel
 
 {@includeCode ../../examples/panel-menu/main.ts#mount}
@@ -118,5 +120,5 @@ Start the player with `--plugin <path to examples/panel-menu>`, click the **Exam
 ## Try next
 
 1. **Keys that only work in the panel.** Add `focus: "panel"` and `bindings: ["Delete"]` to **Remove**: the key then works only while the list has focus, and keeps its usual meaning elsewhere.
-2. **Next and previous.** Call {@link "@vestra-player/sdk"!Player.provideSequence | plugin.player.provideSequence} with `canNext`, `canPrevious`, `next` and `previous` that move `selected` (and call `plugin.player.subscribe()` and `await plugin.player.read()` first in `activate`): the player's own next/previous controls then step through the list.
+2. **Next and previous.** Call {@link "@vestra-player/sdk"!Player.provideSequence | plugin.player.provideSequence} with `canNext`, `canPrevious`, `next` and `previous` that move `selected` (and call `await plugin.player.read()` first in `activate`): the player's own next/previous controls then step through the list.
 3. **A check mark in the menu.** Add a command with `checked: () => …` and put it in the `showMenu` list.

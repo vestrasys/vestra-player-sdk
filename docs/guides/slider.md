@@ -144,17 +144,16 @@ export component BrightnessWindow inherits Window {
 `main.ts`:
 
 ```ts
-import type { Plugin } from "@vestra-player/sdk";
+import type { Plugin, VideoFilter } from "@vestra-player/sdk";
 
-export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
+export default function activate(plugin: Plugin) {
   let brightness = 0; // the model: −1–1, 0 = unchanged
 
   // A filter keeps one request in flight and sends only the newest value.
-  const filter = plugin.video.filter("brightness");
+  // Made on first use: a chain keeps the plugin running from then on.
+  let filter: VideoFilter | undefined;
   const apply = () =>
-    filter.set([
+    (filter ??= plugin.video.filter("brightness")).set([
       { kind: "eq", brightness, contrast: 1, saturation: 1, gamma: 1 },
     ]);
 

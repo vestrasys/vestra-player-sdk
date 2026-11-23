@@ -37,7 +37,6 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Player.stats": [{ method: "playback.stats" }],
     "Player.chapters": [{ method: "player.chapters" }],
     "Player.audioDevices": [{ method: "player.audioDevices" }],
-    "Player.onChange": [listen("source.state")],
     "Player.open": submit,
     "Player.openStream": [
       { method: "producer.prepare" },
@@ -182,7 +181,7 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
 
 /**
  * The events whose listener subscribes (`events.subscribe` with the event
- * name): the plugin API's `HostEvent` and `SourceEvent`. Other names a
+ * name): the plugin API's `HostEvent`, `SourceEvent` and `FactEvent`. Other names a
  * plugin listens to (`commands.execute`, `ui.callback`) arrive unasked and
  * need nothing.
  * test/wire-facade.test.ts keeps it equal to `EVENT_NEEDS`.
@@ -204,4 +203,12 @@ export const SUBSCRIBED_EVENTS: readonly string[] = Object.freeze([
   "source.opening",
   "source.ready",
   "source.ended",
+  "video.reconfigured",
+  "audio.reconfigured",
+  "audio.tracks.changed",
+  "subtitles.changed",
+  "window.changed",
+  "layout.changed",
+  "audio.devices.changed",
+  "app.started",
 ]);

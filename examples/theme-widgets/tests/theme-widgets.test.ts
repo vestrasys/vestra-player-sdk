@@ -42,3 +42,19 @@ test("the key caps show the current keys and follow the user's changes", async (
   assert.equal(themeWidgetsWindow.props["level-down"], ""); // no cap
   await stop();
 });
+
+test("only the open window keeps the plugin running", async () => {
+  const { host, stop } = await startPlugin(activate, {
+    directory: new URL("..", import.meta.url),
+  });
+  const keepsRunning = () => host.keepsRunning;
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await host.command("open").run();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), ["an open window (theme-widgets)"]);
+  host.window("theme-widgets").userClose();
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
+  await stop();
+});

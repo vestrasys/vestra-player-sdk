@@ -66,9 +66,9 @@ export async function createPlugin(
   );
   // The window state is synchronous for plugins: read it first. The
   // player's state and the timeline are the plugin's explicit calls, first
-  // in `activate`: `plugin.player.subscribe()` (event delivery, the copy
-  // of the player's state follows from then on) and
-  // `await plugin.player.read()` (state and timeline read once). Window and
+  // in `activate`: `await plugin.player.read()` (state and timeline read
+  // once); the copies follow the player's events while something holds
+  // them (a listener, a watcher, a stream; `Connection.hold`). Window and
   // timeline subscribe on their first use. The timeline's copy exists from
   // the start: it tells the connection how `read()` reads the lists.
   timelineOf(runtime);
@@ -107,9 +107,11 @@ export async function createPlugin(
     activated: () => runtime.activated(),
     dispose: async (info) => {
       runtime.stopping ??= { reason: stopReason(info?.reason) };
-      // Before the cleanup runs: what still waits to be sent rejects as the
-      // requests in flight do when the runner stops (`disabled`); the
-      // cleanup's own requests go to the transport as before.
+      // Before the cleanup runs (the player sent `runtime.stop`): what
+      // still waits to be sent rejects as the requests in flight do when the
+      // runner stops (`disabled`), and every later request, the cleanup's
+      // own included, is refused without being sent (`RequestQueue.close`):
+      // the player has let go of the plugin and undoes what it held itself.
       runtime.requests.close();
       await root.dispose();
       runtime.stop();

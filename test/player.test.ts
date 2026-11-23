@@ -442,7 +442,12 @@ for (const how of ["stop", "dispose", "deactivate"] as const)
     await stop();
     await new Promise((resolve) => setTimeout(resolve, 20)); // the close event
     assert.equal(producer.released, true);
-    assert.equal(producer.droppedWhileSelected, false);
+    // SDK 1.11.0: after `runtime.stop` the stream's own close is not sent
+    // (the player closes a stopped plugin's source itself), so at a
+    // deactivate the frame connection may end while the source is still
+    // selected; a stream stopped or disposed before closes it first.
+    if (how !== "deactivate")
+      assert.equal(producer.droppedWhileSelected, false);
   });
 
 /** The next open is accepted but stays pending (a URL still resolving) until `finish`. */

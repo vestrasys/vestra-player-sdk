@@ -3,9 +3,8 @@ import type { Plugin, Scope } from "@vestra-player/sdk";
 
 /** Menu items: radio items, separator groups and a title that changes. */
 export default async function activate(plugin: Plugin) {
-  plugin.player.subscribe(); // the player's events from now on
-  await plugin.player.read(); // the player's state and timeline, read once
-  const { player } = plugin;
+  const { player, when } = plugin;
+  await player.read(); // the player's state, read once
   // #endregion setup
 
   // #region title
@@ -26,6 +25,9 @@ export default async function activate(plugin: Plugin) {
   // #endregion title
 
   // #region radio
+  // The check marks and the enabled state are conditions: the player
+  // evaluates them itself, also when the speed changes elsewhere and while
+  // this plugin is in standby. `when.rate` takes an interval, min ≤ rate < max.
   for (const [index, rate] of [0.5, 1, 1.5, 2].entries())
     plugin.commands.add({
       id: `rate-${rate}`,
@@ -33,8 +35,8 @@ export default async function activate(plugin: Plugin) {
       order: 850 + index,
       group: "speeds",
       radio: true,
-      checked: () => player.state.rate === rate,
-      enabled: () => player.state.can.rate,
+      checked: when.rate({ min: rate - 0.005, max: rate + 0.005 }),
+      enabled: when.can("rate"),
       run: async () => {
         await player.setRate(rate);
         await showSpeed(rate);

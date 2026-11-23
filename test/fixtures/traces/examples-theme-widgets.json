@@ -5,16 +5,6 @@
     {
       "event": "commands.keys",
       "mirror": true
-    },
-    {
-      "event": "commands.keys",
-      "why": [
-        "a view's bind reads plugin.commands.keys (main.ts)"
-      ]
-    },
-    {
-      "event": "commands.keys",
-      "mirror": true
     }
   ],
   "polled": [],
@@ -52,10 +42,10 @@
       "safetyPasses": 0
     },
     "dispose": {
-      "passes": 2,
+      "passes": 0,
       "fullPasses": 0,
-      "evaluations": 2,
-      "parts": 2,
+      "evaluations": 0,
+      "parts": 0,
       "skippedParts": 0,
       "safetyPasses": 0
     }
@@ -152,46 +142,11 @@
             "reason": null
           }
         }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "commands.keys",
-          "why": [
-            "a view's bind reads plugin.commands.keys (main.ts)"
-          ]
-        }
       }
     ],
     "open": [],
     "changes": [],
     "command": [],
-    "dispose": [
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "level.up"
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "level.down"
-        }
-      },
-      {
-        "method": "commands.unregister",
-        "params": {
-          "id": "open"
-        }
-      },
-      {
-        "method": "events.subscribe",
-        "params": {
-          "event": "commands.keys",
-          "mirror": true
-        }
-      }
-    ]
+    "dispose": []
   }
 }

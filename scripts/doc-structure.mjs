@@ -122,6 +122,10 @@ export const GROUPS = [
         why: "One task: offer the player's GPU or software rendering choice and its restart.",
       },
       {
+        file: "events-and-triggers.md",
+        why: "One task: learn what happens in the player through reads, events, triggers and a stream while shown, so an idle plugin can be stopped; four examples of the design, more than the command-state page holds, and not commands.",
+      },
+      {
         file: "command-state.md",
         why: "One task: give menu items that follow playback plugin.when conditions so an idle plugin can be stopped.",
       },

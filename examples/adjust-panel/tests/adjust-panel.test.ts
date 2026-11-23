@@ -30,9 +30,10 @@ test("Alt+5 opens the column at this tab, and closes it again", async () => {
   await stop();
 });
 
-test("activated before a file is open, the panel follows the file opened later", async () => {
+test("while the tab is shown, the panel follows a file opened elsewhere", async () => {
   const { host, stop } = await startPlugin(activate, { directory });
   const panel = host.mounted();
+  await host.command("speed").run(); // the column opens at this tab
   await host.settle();
   assert.equal(panel.props.enabled, false, "nothing to change the speed of");
   host.openElsewhere("/movie.mp4");
@@ -57,5 +58,28 @@ test("the slider and the reset change the speed", async () => {
   await host.settle();
   assert.equal(host.source.rate, 1);
   assert.equal(host.command("speed-reset").declaration.home, "speed");
+  await stop();
+});
+
+test("Normal Speed follows the player with no stream open", async () => {
+  const { host, stop } = await startPlugin(activate, { directory });
+  assert.equal(host.command("speed-reset").state.enabled, false);
+  host.openElsewhere("/movie.mp4"); // the player evaluates when.can("rate")
+  assert.equal(host.command("speed-reset").state.enabled, true);
+  await stop();
+});
+
+test("only the shown tab keeps the plugin running", async () => {
+  const { host, stop } = await startPlugin(activate, { directory });
+  const keepsRunning = () => host.keepsRunning;
+  await host.settle();
+  assert.deepEqual(keepsRunning(), [], "the column is closed");
+  await host.command("speed").run(); // opens the column at this tab
+  await host.settle();
+  assert.ok(keepsRunning().includes("its adjust tab is the current tab"));
+  assert.ok(keepsRunning().some((why) => why.includes("a stream")));
+  await host.command("speed").run(); // closes it
+  await host.settle();
+  assert.deepEqual(keepsRunning(), []);
   await stop();
 });

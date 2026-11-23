@@ -52,12 +52,11 @@ function framesBy(count: number) {
 
 /**
  * Start one scenario alone, in a test host with a file playing, behind the
- * calls each style's `activate` makes first.
+ * call each style's `activate` makes first.
  */
 async function start(scenario: Scenario, host = new TestHost()) {
   const started = await startPlugin(
     async (plugin: Plugin) => {
-      plugin.player.subscribe();
       await plugin.player.read();
       return scenario(plugin);
     },
@@ -79,6 +78,31 @@ for (const [name, style] of Object.entries(styles)) {
       await host.settle();
       assert.equal(host.source.rate, 2);
       assert.equal(host.mounted("bottom").props.rate, "2.00×");
+    } finally {
+      await stop();
+    }
+  });
+
+  test(`style ${name}: the speed is followed only while the bar shows`, async () => {
+    const { host, stop } = await start(style.speed);
+    const keepsRunning = () => host.keepsRunning;
+    try {
+      assert.ok(keepsRunning().includes("a mounted panel"));
+      assert.ok(
+        keepsRunning().some((why) => why.startsWith("listens to source.state")),
+      );
+      host.setSource({ rate: 0.5 });
+      await host.settle();
+      assert.equal(host.mounted("bottom").props.rate, "0.50×");
+    } finally {
+      await stop();
+    }
+  });
+
+  test(`style ${name}: Next Keyframe keeps nothing running`, async () => {
+    const { host, stop } = await start(style.keyframes);
+    try {
+      assert.deepEqual(host.keepsRunning, []);
     } finally {
       await stop();
     }
