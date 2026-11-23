@@ -32,6 +32,32 @@ Every way to act is in [Reference: test host](../reference/testing.md#acting-lik
 
 Decide what the player is doing: `host.openElsewhere(path)` when the user or another plugin opens a source (the plugin's calls against the old one fail with `stale`), `host.setSource({ … })` when the state changes, preset data such as `host.stats` or `host.chapters` for what the player would return.
 
+### Change the source in your tests
+
+A user opens other files while your plugin runs. A test that opens one file before `startPlugin` and never changes it misses a whole kind of bug: a plugin that read the state once (`await plugin.player.read()`) and later pauses, seeks or sets the speed with that old copy. Every control is conditional on the copy it was made with, so after the user changed the source the player refuses it with `stale`. Between activation and the command, change the source the way the user does:
+
+| The user                       | In the test                                                 | The player's source stamp       |
+| ------------------------------ | ----------------------------------------------------------- | ------------------------------- |
+| opens a file after activation  | `startPlugin` with nothing open, then `host.openElsewhere(path)` | a new generation           |
+| opens another file             | `host.openElsewhere("/other.mp4")`                          | a new generation                |
+| opens the same file again      | `host.openElsewhere(samePath)`                              | a new generation                |
+| pauses, seeks, changes speed   | `await host.coreAction("play-pause").run()` (or `seek-forward`, …) | a new intent             |
+
+Each advances the stamp exactly as the player does, so a control made with an older copy is refused as in the player. `host.setSource({ … })` is different: it changes what the player reports (playback reached 30 s, the file finished loading) without a new intent, as the player's own observations do.
+
+```ts nocheck
+const host = new TestHost();
+host.openElsewhere("/movie.mp4");
+const { stop } = await startPlugin(activate, { directory, host });
+host.openElsewhere("/other.mp4"); // the user opens another file
+await host.settle();
+await host.command("rate-2").run(); // rejects if the player refused the control
+assert.equal(host.source.rate, 2);
+await stop();
+```
+
+A host error that nothing in the plugin handles (no `try`/`catch`, no `plugin.onError`) only reaches the player's log, so the user sees a command that does nothing. In `TestHost` it fails the test: the next `host.settle()` (also `host.command(id).run()`) rejects with it, or else `stop()`, and the message names the error. When the test means it, say so first with `host.expectError("stale")`; an expected error that never comes fails `stop()`. `host.loggedErrors` lists every such error, and `host.strictErrors = false` only logs them, as before SDK 1.12.0. The tests of the [menus](../examples/menus.md), [adjust-panel](../examples/adjust-panel.md), [three-ways](../tutorial/index.md) and [bookmark](../examples/bookmark.md) examples run their commands after each of these changes.
+
 ### Inject a failure
 
 `host.handle(method, fn)` replaces the player's answer to one protocol method until `host.reset(method)`. Throw a `HostError` for a refusal, a plain `Error` for a lost reply:

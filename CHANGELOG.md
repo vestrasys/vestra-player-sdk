@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+**Tests catch a control made with an old state** (the SDK's control semantics are unchanged). Since 1.11.0 a plugin that read the state once (`await player.read()`) and later pauses, seeks, steps or sets the speed sends the stamp of that copy (`expected`), and the player refuses it with `stale` once the user changed the source. Tests did not see it: no test changed the source between activation and a command, and a refusal the plugin left to its log passed. Who must change: a plugin test that relies on a host error the plugin does not handle (below).
+
+- **`TestHost.strictErrors`** (new, default `true`): a host error the plugin logged because nothing handled it (no `try`/`catch`, no `plugin.onError`; also a failure the SDK reports beside a status, such as a shader or render failure) fails the test: the next `host.settle()` (and so `command(id).run()`) rejects with it, or else `stop()`, after its cleanup. The message names the error and says to call `host.expectError(code)`, or to set `strictErrors = false` to only log host errors as before. Errors logged while the plugin stops (`stop`, `park`, `disconnect`) only go to the log.
+- **`TestHost.expectError(code)`** (new): expect one such error; one that never comes fails `stop()`. **`TestHost.loggedErrors`** (new) lists them all.
+- The runtime tells `TestHost` of an error that reaches the plugin's log (`Connection.logged`, internal); the player's runner does not set it and logs as before.
+- `TestHost.openElsewhere` says that it advances the source stamp as the player does, also for the path already open, and that a core action (`coreAction("play-pause").run()`) is a new intent.
+- **Docs**: the testing guide's new section [Change the source in your tests](docs/guides/testing.md#change-the-source-in-your-tests) (the guide is now two pages; `docs-tree.test.ts` takes the page header), and the test host reference.
+- **Golden traces** fail on a host error a scenario does not list (`KNOWN_ERRORS`): `examples/menus` and `examples/adjust-panel` list their `stale` (TODO: until the pending decision on the control semantics or a fix of the examples). The SDK's own tests of refusals expect theirs (`portability`, `round4a`, `video-primitives`).
+- **Examples**: `menus`, `adjust-panel`, `three-ways` and `bookmark` run their controls after a file opened after activation, another file, the same file again and a pause. The ones the player refuses today are `todo` with a TODO: every speed of `menus`, `adjust-panel`'s Normal Speed with the column closed, and `three-ways`' Next Keyframe in styles A and B after a pause.
+
 ## 1.11.1
 
 **NVIDIA motion smoothing** (T8; needs player 0.11.1, which ships the NVIDIA engine). Additions only; nobody must change anything.

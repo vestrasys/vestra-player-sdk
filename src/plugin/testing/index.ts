@@ -116,7 +116,7 @@ import type {
   ViewSettings,
 } from "../types.ts";
 import type { MediaJob } from "../../media.ts";
-import { createPlugin } from "../index.ts";
+import { createPlugin, type PluginInstance } from "../index.ts";
 import { PATCH_FEATURE } from "../patch.ts";
 import type {
   LanguagePreference,
@@ -136,6 +136,14 @@ import {
 import { Internals } from "./internals.ts";
 import { sendFacts } from "./facts.ts";
 import { revokeRun, revokers } from "./revoke.ts";
+import {
+  checkErrors,
+  checkErrorsAtStop,
+  ErrorBook,
+  errorBooks,
+  noteLogged,
+} from "./errors.ts";
+import type { ScopeImpl } from "../scope.ts";
 import {
   on,
   emit,
@@ -2824,6 +2832,7 @@ export class TestHost implements Transport {
    */
   constructor() {
     revokers.set(this, (reason) => this.#revoke(reason));
+    errorBooks.set(this, new ErrorBook());
     this.subtitles = {
       presentation: {
         revision: 1,
@@ -3305,6 +3314,17 @@ export class TestHost implements Transport {
    * Simulate another plugin (or the user) opening a source: a new
    * `sourceId`, then the given phase. Calls the plugin made against the old
    * state now fail with `stale`.
+   *
+   * The source stamp advances exactly as in the player: a new generation
+   * and a new intent, also when `source` is the path already open (the
+   * user opened the same file again). Call it after `startPlugin` to test
+   * what the user does while the plugin runs: a file opened after
+   * activation, another file, the same one again. A control the plugin
+   * then makes with the state it read before (`player.setRate`,
+   * `seek`, `step`, …) is refused with `stale`, as in the player. The
+   * user's own pause, seek or speed change is a core action
+   * (`coreAction("play-pause").run()`): a new intent, which makes an older
+   * state stale too. `setSource` changes the facts only.
    *
    * @param source - The path or URL.
    * @param phase - The phase to end in (default `"ready"`).
@@ -3826,11 +3846,84 @@ export class TestHost implements Transport {
    * assert.equal(importWindow.props["status-text"], expected);
    * ```
    *
-   * @throws Never.
+   * @throws `Error` (rejects) The plugin logged a host error the test did
+   *   not expect ({@link TestHost.strictErrors}, SDK 1.12.0); the message
+   *   names it and says how to expect it ({@link TestHost.expectError}).
    * @since 1.0.0
    */
-  settle(ms = 0) {
-    return settle(this, this.#inner, ms);
+  async settle(ms = 0) {
+    await settle(this, this.#inner, ms);
+    checkErrors(this);
+  }
+  /**
+   * Whether a host error the plugin logged fails the test (default `true`).
+   * A host error is a refusal or failure with a code (`stale`, `invalid`,
+   * `disabled`, …) that nothing in the plugin handled: no `try`/`catch`
+   * around the call and no `plugin.onError` listener, so the player would
+   * only write it to its log. The next {@link TestHost.settle} (so also
+   * `command(…).run()`) rejects with it, or else `stop()`; the message
+   * names the error and how to expect it. A test that means it calls
+   * {@link TestHost.expectError} first. Set `false` to only log host
+   * errors, as before SDK 1.12.0. {@link TestHost.loggedErrors} lists them
+   * either way.
+   *
+   * @example Expect a refusal the plugin does not handle
+   * The user opens another file, then runs a command that controls the
+   * old one with a state the plugin read before: the player refuses it with
+   * `stale`, and the plugin leaves the refusal to its log. The test says so
+   * before it runs the command; without `expectError` the run rejects.
+   * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.openElsewhere("/media/other.mp4");
+   * host.expectError("stale");
+   * await host.command("rate-2").run();
+   * ```
+   *
+   * @since 1.12.0
+   */
+  strictErrors = true;
+  /**
+   * Expect the plugin to log one host error with `code` (each call
+   * expects one more). An expected error does not fail the test; one that
+   * never comes fails `stop()` (under {@link TestHost.strictErrors}).
+   *
+   * @param code - The error's code, e.g. `"stale"`.
+   *
+   * @example A control after the user changed the source
+   * The plugin read the state once and sets the speed with its old copy;
+   * after the user opened another file the player refuses the control.
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * host.openElsewhere("/media/other.mp4");
+   * host.expectError("stale");
+   * await host.command("rate-2").run();
+   * assert.equal(host.loggedErrors.at(-1)?.code, "stale");
+   * ```
+   *
+   * @since 1.12.0
+   */
+  expectError(code: string) {
+    errorBooks.get(this)!.expected.push(code);
+  }
+  /**
+   * Every host error the plugin logged (expected or not), oldest first:
+   * errors with a code that nothing in the plugin handled.
+   *
+   * @example Check that nothing was refused
+   * ```ts
+   * import assert from "node:assert/strict";
+   * declare const host: TestHost;
+   * // ---cut---
+   * assert.deepEqual(host.loggedErrors.map((error) => error.code), []);
+   * ```
+   *
+   * @since 1.12.0
+   */
+  get loggedErrors(): readonly HostError[] {
+    return errorBooks.get(this)!.logged;
   }
   /**
    * Close the fake stream servers and delete the host's temporary
@@ -4233,6 +4326,9 @@ export async function startPlugin(
       // and activates the rest: a plugin's tests show the refusal.
       { strictDeclarations: true },
     );
+    // Host errors nothing in the plugin handled (`TestHost.strictErrors`).
+    (started.plugin as unknown as ScopeImpl).runtime.logged = (error) =>
+      noteLogged(host, error);
     await started.activate(entry);
     // Like the player: a position or resolver another plugin holds is not an
     // activation failure.
@@ -4246,21 +4342,44 @@ export async function startPlugin(
     }
     return started;
   };
-  let instance = await run(activate);
+  // Its own waits never throw a logged host error: activation's surfaces
+  // at the test's next `settle()`; one logged while the run stops (a
+  // request refused with `disabled` once `runtime.stop` went out) is the
+  // stop's own and only logged.
+  const book = errorBooks.get(host)!;
+  const quietly = async (work: () => Promise<void>) => {
+    book.suspended++;
+    try {
+      await work();
+    } finally {
+      book.suspended--;
+    }
+  };
+  const stopping = async (work: () => Promise<void>) => {
+    const before = book.unexpected.length;
+    await quietly(work);
+    book.unexpected.splice(before);
+  };
+  let instance!: PluginInstance;
+  await quietly(async () => {
+    instance = await run(activate);
+  });
   const triggers = triggerState(host);
   let code = activate;
-  triggers.start = async (entry) => {
-    if (entry) code = entry as (plugin: Plugin) => unknown;
-    instance = await run(code);
-  };
-  triggers.stop = async (reason) => {
-    await instance.dispose({ reason });
-    await host.settle();
-    // Standby and an upgrade stop the run: the player revokes what it held.
-    revokeRun(host, reason);
-    await host.settle();
-  };
-  await host.settle();
+  triggers.start = (entry) =>
+    quietly(async () => {
+      if (entry) code = entry as (plugin: Plugin) => unknown;
+      instance = await run(code);
+    });
+  triggers.stop = (reason) =>
+    stopping(async () => {
+      await instance.dispose({ reason });
+      await host.settle();
+      // Standby and an upgrade stop the run: the player revokes what it held.
+      revokeRun(host, reason);
+      await host.settle();
+    });
+  await quietly(() => host.settle());
   tellResidency(host);
   // Zero declared parameters (`stop.length === 0`) and a `()` overload, so
   // `t.after(stop)`, `promise.then(stop)` and done-callback test runners
@@ -4280,13 +4399,18 @@ export async function startPlugin(
     const quit = reason === "quit" ? quitEvent(host.source) : null;
     if (quit) {
       host.emit("source.ended", structuredClone(quit));
-      await host.settle();
+      await quietly(() => host.settle());
     }
-    if (!triggers.parked) await instance.dispose({ reason });
-    await host.settle();
-    revokeRun(host, typeof reason === "string" ? reason : undefined);
-    await host.settle();
+    await stopping(async () => {
+      if (!triggers.parked) await instance.dispose({ reason });
+      await host.settle();
+      revokeRun(host, typeof reason === "string" ? reason : undefined);
+      await host.settle();
+    });
     host.close();
+    // After the cleanup: a host error the test did not expect, or one it
+    // expected that never came, fails the test here.
+    checkErrorsAtStop(host);
   };
   return {
     /** The test host the plugin talks to. */
@@ -4310,11 +4434,14 @@ export async function startPlugin(
      */
     async disconnect() {
       host.loseConnection();
-      await instance.dispose({ reason: "host-lost" });
-      await host.settle();
-      revokeRun(host, "host-lost");
-      await host.settle();
+      await stopping(async () => {
+        await instance.dispose({ reason: "host-lost" });
+        await host.settle();
+        revokeRun(host, "host-lost");
+        await host.settle();
+      });
       host.close();
+      checkErrorsAtStop(host);
     },
   };
 }

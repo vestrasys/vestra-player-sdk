@@ -215,3 +215,73 @@ test("style A before plugin.state: the same command with a manual update()", asy
     await stop();
   }
 });
+
+// #region source-changes
+// The user changes the source after the plugin read the state, then runs
+// a command that controls playback. Each change advances the player's
+// source stamp as the player does: `openElsewhere` starts a new generation
+// (also for the same file), a core action is a new intent. A control the
+// plugin makes with an older copy of the state is refused with `stale`,
+// and a host error the test does not expect fails it (`host.strictErrors`).
+const changes: [string, (host: TestHost) => Promise<void>][] = [
+  ["another file opened", async (host) => host.openElsewhere("/other.mp4")],
+  [
+    "the same file opened again",
+    async (host) => host.openElsewhere("/movie.mp4"),
+  ],
+  ["the user paused (Space)", (host) => host.coreAction("play-pause").run()],
+];
+
+for (const [name, style] of Object.entries(styles))
+  for (const [change, act] of changes) {
+    test(`style ${name}: S cycles the speed after ${change}`, async () => {
+      // `start` opens /movie.mp4 after activation: a file opened after it.
+      const { host, stop } = await start(style.speed);
+      try {
+        await act(host);
+        await host.settle();
+        await host.command("rate.cycle").run(); // reads the state first
+        assert.equal(host.source.rate, 1.5);
+      } finally {
+        await stop();
+      }
+    });
+
+    // TODO(stale controls): styles A and B learn a new source from
+    // `source.ready`, but a pause is no new source: the step carries the
+    // stamp of the copy from before it and the player refuses it with
+    // `stale`, as TestHost does (style C sends no `expected`). Drop `todo`
+    // once the pending decision on the SDK's control semantics, or a fix of
+    // this example, lands.
+    const stale = name !== "c" && change === "the user paused (Space)";
+    const todo = stale
+      ? "stale: the step carries the stamp of the plugin's old copy"
+      : undefined;
+    test(
+      `style ${name}: Next Keyframe steps after ${change}`,
+      { todo },
+      async () => {
+        const host = new TestHost();
+        host.stats = {
+          ...host.stats,
+          video: { codec: "h264", width: 1920, height: 1080 },
+        } as typeof host.stats;
+        const { stop } = await start(style.keyframes, host);
+        try {
+          await act(host);
+          await host.settle();
+          await until(
+            () => host.command("keyframe.next").state.enabled === true,
+          );
+          await host.command("keyframe.next").run();
+          assert.deepEqual(host.steps.at(-1), {
+            unit: "keyframe",
+            direction: "forward",
+          });
+        } finally {
+          await stop();
+        }
+      },
+    );
+  }
+// #endregion source-changes

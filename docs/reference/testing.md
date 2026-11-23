@@ -50,7 +50,7 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 
 ## Simulating the player
 
-- `host.openElsewhere(path, phase?)`: the user or another plugin opened a source; the plugin's calls against the old state now fail with `stale`.
+- `host.openElsewhere(path, phase?)`: the user or another plugin opened a source, a new one or the same path again: a new source generation, as in the player, so the plugin's calls against the old state now fail with `stale`. `host.coreAction(id).run()` is the user's pause, seek or speed change: a new intent, which makes an older state stale too. See [Change the source in your tests](../guides/testing.md#change-the-source-in-your-tests).
 - `host.setSource({ … })`, `host.setMainWindow({ … })`, `host.setAppearance(theme)`, `host.setPackages(list)`: the state changed; before `startPlugin`, a preset.
 - Preset answers: `host.stats`, `host.chapters`, `host.clipboard.text`, `host.secrets`, `host.systemInfo`, `host.rendering`, `host.upscaling`, `host.tools.handle(name, fn)`.
 - `host.handle(method, fn)` replaces the player's answer to one protocol method until `host.reset(method)`. `throw new HostError(code, message)` in it is a refusal with that [code](errors.md); `throw new Error(…)` is a lost reply. `host.calls` lists every request in order, `host.sent(method)` one method's parameters.
@@ -58,6 +58,8 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 ## Waiting
 
 `await host.settle(ms?)` waits until no request is in flight and the SDK's update passes ran; with `ms` it also lets timers due by then fire (`host.settle(400)` is past `storage.json`'s 300 ms debounce). `command(id).run()` and `press` already wait. It does not wait for the plugin's own file, process or network work.
+
+`settle()` (so also `command(id).run()`) rejects when the plugin logged a host error the test did not expect: one that nothing in the plugin handled (`host.strictErrors`, default `true`); `stop()` checks once more after its cleanup. `host.expectError(code)` expects one such error; one that never comes fails `stop()`. `host.loggedErrors` lists them all.
 
 ## Every member
 
@@ -196,6 +198,9 @@ It rejects when nothing is bound to the key or its command is busy. Overrides pr
 | {@link "@vestra-player/sdk/testing"!TestHost.mounted}() | The plugin's mounted panel (bottom bar, sidebar, adjust column or backdrop): the one in `slot`, or without it the only one (a plugin mounts one panel per slot; with several, name the slot). |
 | {@link "@vestra-player/sdk/testing"!TestHost.sent}() | The parameters of every request of one wire method, oldest first. |
 | {@link "@vestra-player/sdk/testing"!TestHost.settle}() | Wait until no request is in flight (and the SDK's follow-up passes ran), and at least `ms` milliseconds have passed so that timers due by then fired. |
+| {@link "@vestra-player/sdk/testing"!TestHost.strictErrors} | Whether a host error the plugin logged fails the test (default `true`). |
+| {@link "@vestra-player/sdk/testing"!TestHost.expectError}() | Expect the plugin to log one host error with `code` (each call expects one more). |
+| {@link "@vestra-player/sdk/testing"!TestHost.loggedErrors} | Every host error the plugin logged (expected or not), oldest first: errors with a code that nothing in the plugin handled. |
 | {@link "@vestra-player/sdk/testing"!TestHost.close}() | Close the fake stream servers and delete the host's temporary directories. |
 | {@link "@vestra-player/sdk/testing"!TestHost.keepsRunning} | Why the player would keep this plugin running while nothing uses it (lazy activation), one line per reason: an event it listens to that is not one the player wakes it for (with what listens and where it was added), its panel in the bottom bar or the backdrop, its open windows (these as the player's log says them), and its sidebar tab while that is the current tab. |
 | {@link "@vestra-player/sdk/testing"!TestHost.triggers} | The trigger conditions the player keeps for this plugin (`plugin.trigger().firesOn`), in the wire form, with their sequence numbers and whether each holds now. |

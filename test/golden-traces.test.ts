@@ -8,6 +8,9 @@
 // every trace identical; a change that alters a trace rewrites the fixture
 // on purpose (`UPDATE_TRACES=1 npm test`) and says why in the CHANGELOG.
 //
+// A host error the plugin logs and the scenario does not list in
+// `KNOWN_ERRORS` fails the trace (`TestHost.strictErrors`).
+//
 // The script: start (activation and the initial fetches) → open a source
 // (`openElsewhere("/movie.mp4")`, phase `ready`) → three state changes
 // (`rate` 1.5, `paused`, `position` 30) → one command run → dispose. Each
@@ -160,6 +163,24 @@ const EXAMPLES: Record<string, string | null> = {
   "panel-menu": "remove",
   "signal-generator": "signal-generator",
   "theme-widgets": "level.up",
+};
+
+/**
+ * Host errors a scenario is known to log (`TestHost.expectError`); any
+ * other fails the trace (`TestHost.strictErrors`, SDK 1.12.0). An expected
+ * error that no longer comes fails it too, so the entry goes once fixed.
+ *
+ * TODO(stale controls): `menus` and `adjust-panel` read the player's state
+ * once in `activate`, then the script opens a file and runs a command that
+ * sets the speed: the control carries the stamp of the old copy
+ * (`expected`, src/plugin/player.ts `PlayerService.control`) and the
+ * player refuses it with `stale`, as in the real player. Remove these
+ * once the pending decision on the SDK's control semantics (or a fix of
+ * the examples) lands, and record the traces again.
+ */
+const KNOWN_ERRORS: Record<string, readonly string[]> = {
+  "examples/adjust-panel": ["stale"],
+  "examples/menus": ["stale"],
 };
 
 /** The six built-ins the plan names, and the command the script runs. */
@@ -319,6 +340,7 @@ async function record(
   scenario: Scenario,
 ): Promise<{ trace: Trace; safetyPasses: number }> {
   const host = new TestHost();
+  for (const code of KNOWN_ERRORS[scenario.name] ?? []) host.expectError(code);
   const module = (await import(
     pathToFileURL(join(scenario.directory, "main.ts")).href
   )) as { default: (plugin: Plugin) => unknown };

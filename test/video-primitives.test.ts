@@ -80,6 +80,9 @@ test("shaders: files must be the plugin's own, absolute and present", async () =
   try {
     const { plugin, host, stop } = await started();
     const shaders = plugin.video.shaders();
+    // Each refusal is also in the plugin's log.
+    for (const code of ["invalid", "invalid", "missing", "invalid"])
+      host.expectError(code);
     shaders.set(["relative.glsl"]);
     await host.settle();
     assert.equal(failure(shaders), "invalid");
@@ -108,6 +111,8 @@ test("shaders: at most 16 across every plugin, limit beyond, nothing changes", a
     shader(plugin.dataDirectory, `s${i}.glsl`),
   );
   const a = plugin.video.shaders("a");
+  // Each refusal is also in the plugin's log.
+  for (let i = 0; i < 3; i++) host.expectError("limit");
   a.set(files);
   await host.settle();
   assert.equal(failure(a), "limit");
