@@ -165,9 +165,11 @@ export function keyframes(plugin: Plugin) {
 
 /** All four scenarios in style C. */
 export default async function activate(plugin: Plugin) {
-  await plugin.player.read(); // the player's state, read once
+  // Listeners and triggers first, in the synchronous part: they are what
+  // wakes the plugin again after standby. Then the state, read once.
   speed(plugin);
   frames(plugin);
   list(plugin);
   keyframes(plugin);
+  await plugin.player.read();
 }

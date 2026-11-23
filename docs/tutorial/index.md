@@ -137,7 +137,7 @@ Open a video, then choose **Tools ▸ Where am I?** in the right-click menu, or 
 
 ## 5. Choose a style
 
-The menu item above lets the player keep its state (`plugin.when`) and reads the playback state when it runs. For a value that is shown and changes, the SDK can decide when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style starts with `await plugin.player.read()`, and follows the speed, which has no event of its own, only while the panel is on screen: `whileShown` (in `shared.ts`) starts it when the panel shows and stops it when it goes.
+The menu item above lets the player keep its state (`plugin.when`) and reads the playback state when it runs. For a value that is shown and changes, the SDK can decide when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style declares its listeners first and then reads the state once with `await plugin.player.read()`, and follows the speed, which has no event of its own, only while the panel is on screen: `whileShown` (in `shared.ts`) starts it when the panel shows and stops it when it goes.
 
 ### A: declare with `bind()`
 

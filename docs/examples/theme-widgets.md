@@ -17,7 +17,7 @@ A tool window drawn with the player's own theme and controls, so it looks like p
 
 ![Theme widgets in Vestra Player](../../examples/theme-widgets/screenshot.png)
 
-**Examples ▸ Theme widgets…** opens a small window with:
+**Tools ▸ Theme widgets…** opens a small window with:
 
 - a label "Level 50" with a tooltip that names the keys ("Level  F7 −  F8 +  · Default resets it"), a slider in the panel style, the key caps `F7` `F8` and a small **Default** button;
 - a second slider in the bar style, moving together with the first;
@@ -96,7 +96,7 @@ npm run check && npm test
 npm run pack              # examples.theme-widgets-0.1.0.vxp
 ```
 
-Start the player with `--plugin <path to examples/theme-widgets>` and choose **Examples ▸ Theme widgets…**.
+Start the player with `--plugin <path to examples/theme-widgets>` and choose **Tools ▸ Theme widgets…**.
 
 ## Try next
 

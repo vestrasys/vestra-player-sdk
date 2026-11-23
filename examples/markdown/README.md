@@ -1,6 +1,6 @@
 # Markdown
 
-**Examples → Markdown example…** opens a window that shows `sample.md` with the player's `MarkdownView` component: headings, lists, code, quotes, a table and an image from the package. The manifest also has the display fields the plugin manager shows (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `license`).
+**Tools → Markdown example…** opens a window that shows `sample.md` with the player's `MarkdownView` component: headings, lists, code, quotes, a table and an image from the package. The manifest also has the display fields the plugin manager shows (`name`, `author`, `punchline`, `description`, `tags`, `icon`, `license`).
 
 ![Markdown running in Vestra Player](screenshot.png)
 

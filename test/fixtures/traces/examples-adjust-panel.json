@@ -12,7 +12,7 @@
   "polled": [],
   "counts": {
     "start": {
-      "passes": 2,
+      "passes": 3,
       "fullPasses": 2,
       "evaluations": 2,
       "parts": 3,
@@ -59,14 +59,6 @@
         "params": {}
       },
       {
-        "method": "source.state",
-        "params": {}
-      },
-      {
-        "method": "timeline.marks",
-        "params": {}
-      },
-      {
         "method": "events.subscribe",
         "params": {
           "event": "layout.changed",
@@ -77,6 +69,14 @@
       },
       {
         "method": "layout.state",
+        "params": {}
+      },
+      {
+        "method": "source.state",
+        "params": {}
+      },
+      {
+        "method": "timeline.marks",
         "params": {}
       },
       {

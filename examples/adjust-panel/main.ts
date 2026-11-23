@@ -3,7 +3,6 @@ import type { Plugin, StateStream } from "@vestra-player/sdk";
 /** A speed slider in the adjust column. */
 export default async function activate(plugin: Plugin) {
   const { player, when } = plugin;
-  await player.read(); // the player's state, read once
   // #region mount
   // "adjust": the panel changes what is playing. After the user closes it,
   // they do not keep looking at it (that would be the sidebar).
@@ -69,4 +68,8 @@ export default async function activate(plugin: Plugin) {
   });
   panel.on("reset", () => setRate(1));
   // #endregion commands
+
+  // Listeners first (above, in the synchronous part: they wake the plugin
+  // after standby), then the player's state, read once.
+  await player.read();
 }

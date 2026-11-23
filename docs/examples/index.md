@@ -5,9 +5,7 @@ description: Complete, tested example plugins with a screenshot each and a step-
 
 # Examples
 
-Complete plugins from the [`examples/`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples) folder. CI checks, tests and packs every one of them against the current SDK, so they always compile. Each walkthrough explains an example step by step, with the code taken from the example itself.
-
-To run one, see [Running an example](#running-an-example) at the end of this page.
+Complete plugins from the [`examples/`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples) folder. CI checks, tests and packs every one of them against the current SDK, so they always compile. Each walkthrough explains an example step by step, with the code taken from the example itself. To run one, see [Running an example](#running-an-example) at the end of this page.
 
 ## Hello
 
@@ -61,6 +59,8 @@ A list in the sidebar with its own right-click menu. Next to the player's playli
 
 ## Adjust panel
 
+![Adjust panel in Vestra Player](../../examples/adjust-panel/screenshot.png)
+
 A speed slider in the adjust column, the column of controls for what is playing. Alt+5 opens the column at its tab and closes it again.
 
 **You learn:** the `"adjust"` slot and when to choose it over `"sidebar"` · a panel's own key with `Panel.toggle` · `CommandOptions.home`, which puts that key under the tab · following the state only while the tab is on screen.
@@ -91,7 +91,7 @@ A tool window drawn with the player's own theme and controls: sliders, buttons, 
 
 ![Markdown in Vestra Player](../../examples/markdown/screenshot.png)
 
-**Examples ▸ Markdown example…** shows a Markdown document in a window.
+**Tools ▸ Markdown example…** shows a Markdown document in a window.
 
 **You learn:** `plugin.ui.markdown` and `MarkdownView` · images relative to the package · packing a non-code file.
 

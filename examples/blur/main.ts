@@ -8,10 +8,10 @@ import type { Plugin, VideoFilter, VideoNode } from "@vestra-player/sdk";
 export default function activate(plugin: Plugin) {
   // #endregion activate
   // #region filter
-  // This plugin's video filter chain, made on first use: a chain follows the
-  // player's source from the moment it is made, which keeps the plugin
-  // running, so a plugin that never blurs never makes one. It belongs to a
-  // scope made first, so at a stop it goes after the window that shows it.
+  // This plugin's video filter chain, made on first use. A chain keeps the
+  // plugin running once it has nodes (a blur is on); with none it holds
+  // nothing. It belongs to a scope made first, so at a stop it goes after
+  // the window that shows it.
   const effects = plugin.scope();
   let blur: VideoFilter | undefined;
   let strength = 0; // the Gaussian sigma, 0–10; 0 means off

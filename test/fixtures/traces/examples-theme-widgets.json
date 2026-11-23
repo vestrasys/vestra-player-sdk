@@ -75,7 +75,7 @@
           "declaration": {
             "title": "Theme widgets…",
             "path": [
-              "Examples",
+              "@tools",
               "Theme widgets…"
             ],
             "order": 0,

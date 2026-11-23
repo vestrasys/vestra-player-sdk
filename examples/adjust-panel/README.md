@@ -2,6 +2,8 @@
 
 A speed slider in the player's adjust column, the column of controls for what is playing, between the video and the sidebar. Alt+5 opens the column at this tab and closes it again; the key shows under the tab.
 
+![Adjust panel running in Vestra Player](screenshot.png)
+
 | Follows the player | API |
 | --- | --- |
 | `read()`; `stream()` while the tab shows (`layout.changed`); `when` | `panels.mount("adjust")`, `Panel.toggle`, `CommandOptions.home`, `player.setRate` |

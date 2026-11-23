@@ -15,6 +15,8 @@ The `"adjust"` slot · {@link "@vestra-player/sdk"!Panel.toggle | Panel.toggle} 
 
 ## What you'll build
 
+![The Speed tab in the adjust column](../../examples/adjust-panel/screenshot.png)
+
 - A **Speed** tab in the adjust column: the speed, a slider from 0.25× to 4×, four presets and **Normal Speed**.
 - **Alt+5** opens the adjust column at this tab; pressing it again while the tab is shown closes the column. The player shows `Alt+5` under the tab's title.
 - **Normal Speed** is also a command (in the command palette and Keyboard Shortcuts) that lives in this panel.

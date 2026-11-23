@@ -17,7 +17,7 @@ A window that shows a formatted Markdown document with the player's `MarkdownVie
 
 ![Markdown in Vestra Player](../../examples/markdown/screenshot.png)
 
-**Examples ▸ Markdown example…** opens a window that shows `sample.md`: headings, lists, a code block, a quote, a table and an image from the package.
+**Tools ▸ Markdown example…** opens a window that shows `sample.md`: headings, lists, a code block, a quote, a table and an image from the package.
 
 ## Files
 
@@ -88,7 +88,7 @@ npm run check && npm test
 npm run pack              # examples.markdown-0.1.0.vxp
 ```
 
-Start the player with `--plugin <path to examples/markdown>` and choose **Examples ▸ Markdown example…**. Edit `sample.md` and choose it again to see the change.
+Start the player with `--plugin <path to examples/markdown>` and choose **Tools ▸ Markdown example…**. Edit `sample.md` and choose it again to see the change.
 
 ## Try next
 

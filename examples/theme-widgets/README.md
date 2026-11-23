@@ -1,6 +1,6 @@
 # Theme widgets
 
-**Examples → Theme widgets…** opens a tool window drawn with the player's own theme and widgets (`@vestra/theme.slint`, `@vestra/widgets.slint`): two sliders, a small button, icon buttons and tooltips, and the keys of the slider's two commands (F7, F8) as key caps beside it and in its tooltip.
+**Tools → Theme widgets…** opens a tool window drawn with the player's own theme and widgets (`@vestra/theme.slint`, `@vestra/widgets.slint`): two sliders, a small button, icon buttons and tooltips, and the keys of the slider's two commands (F7, F8) as key caps beside it and in its tooltip.
 
 ![Theme widgets running in Vestra Player](screenshot.png)
 
