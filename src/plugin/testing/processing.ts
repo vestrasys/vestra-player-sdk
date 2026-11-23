@@ -316,31 +316,6 @@ export function upscalingDecoding(
   return reason;
 }
 
-/** `video.motion.state` from {@link TestHost.motion}. */
-/** The player's message for the reserved engine (as playback/motion.rs). */
-const NO_NVIDIA = {
-  code: "engine",
-  message:
-    "this player has no NVIDIA frame-rate converter; motion smoothing works with AMD's (engine amd)",
-};
-
-/** `video.motion.state` of the reserved `nvidia` engine: every mode `engine`. */
-function nvidiaState(host: TestHost): WireMotionState {
-  return {
-    engine: "nvidia",
-    mode: "off",
-    active: "off",
-    double: { ...NO_NVIDIA },
-    display: { ...NO_NVIDIA },
-    searchMode: null,
-    sourceFps: host.motion.sourceFps,
-    outputFps: null,
-    displayFps: host.motion.displayFps,
-    gpu: null,
-    inChain: false,
-  };
-}
-
 /** The engine a request names, checked as the player does. */
 function engineOf(p: Record<string, unknown>): "amd" | "nvidia" {
   if (p.engine !== "amd" && p.engine !== "nvidia")
@@ -348,8 +323,60 @@ function engineOf(p: Record<string, unknown>): "amd" | "nvidia" {
   return p.engine;
 }
 
-export function motionState(host: TestHost): WireMotionState {
-  const { mode, double, display, sourceFps, displayFps, gpu } = host.motion;
+/** The model of an engine: {@link TestHost.motion} (`amd`) or {@link TestHost.nvidiaMotion}. */
+function modelOf(host: TestHost, engine: "amd" | "nvidia") {
+  return engine === "amd" ? host.motion : host.nvidiaMotion;
+}
+
+/** The engine whose converter is in the chain, as the player keeps it: the first one set to a mode, while its mode is not `off`. */
+const motionHolder = new WeakMap<TestHost, "amd" | "nvidia">();
+
+/** Which engine holds the converter now: the one recorded while it is on, else the first that is on (`amd` first). */
+function holderOf(host: TestHost): "amd" | "nvidia" | null {
+  const on = (engine: "amd" | "nvidia") => modelOf(host, engine).mode !== "off";
+  const recorded = motionHolder.get(host);
+  if (recorded && on(recorded)) return recorded;
+  const next = on("amd") ? "amd" : on("nvidia") ? "nvidia" : null;
+  if (next) motionHolder.set(host, next);
+  else motionHolder.delete(host);
+  return next;
+}
+
+/** The player's message while the other engine holds the converter (as playback/motion.rs). */
+function otherEngine(holder: "amd" | "nvidia") {
+  const vendor = holder === "amd" ? "AMD" : "NVIDIA";
+  return {
+    code: "other-engine",
+    message: `${vendor} motion smoothing is on (another plugin); one converter runs at a time, so this waits until it is off`,
+  };
+}
+
+/**
+ * The reasons the player checks after the other engine holding the
+ * converter (playback/motion.rs `check`: the system, the filter, the
+ * renderer, AI upscaling and frame doubling come first; then
+ * `other-engine`; then these).
+ */
+const AFTER_OTHER_ENGINE = ["failed", "overload", "rate", "format", "size"];
+
+/** `video.motion.state` of an engine from its model (`amd` by default). */
+export function motionState(
+  host: TestHost,
+  engine: "amd" | "nvidia" = "amd",
+): WireMotionState {
+  const model = modelOf(host, engine);
+  const { mode, sourceFps, displayFps, gpu } = model;
+  // The model's reason and the other engine holding the converter, in the
+  // player's order.
+  const holder = holderOf(host);
+  const waits =
+    holder !== null && holder !== engine ? otherEngine(holder) : null;
+  const first = (own: typeof model.double) =>
+    own === null || (waits !== null && AFTER_OTHER_ENGINE.includes(own.code))
+      ? (waits ?? own)
+      : own;
+  const double = first(model.double);
+  const display = first(model.display);
   const reasonOf = (wanted: MotionMode) =>
     wanted === "double" ? double : wanted === "display" ? display : null;
   const works = mode !== "off" && reasonOf(mode) === null && sourceFps !== null;
@@ -357,19 +384,15 @@ export function motionState(host: TestHost): WireMotionState {
   const copy = (reason: typeof double) =>
     reason ? (structuredClone(reason) as WireMotionState["double"]) : null;
   return {
-    engine: "amd",
+    engine,
     mode,
     active,
     double: copy(double),
     display: copy(display),
-    searchMode: works
-      ? host.motion.performance
-        ? "performance"
-        : "native"
-      : null,
+    searchMode: works ? (model.performance ? "performance" : "native") : null,
     sourceFps,
     outputFps: works
-      ? (host.motion.outputFps ?? Math.round(sourceFps * 20) / 10)
+      ? (model.outputFps ?? Math.round(sourceFps * 20) / 10)
       : null,
     displayFps,
     gpu,
@@ -448,8 +471,7 @@ export function processingHandlers(
       return upscalingState(host, inner);
     },
     // As the player 0.8.1 (see TestHost.motion for the model).
-    "video.motion.state": (p) =>
-      engineOf(p) === "amd" ? motionState(host) : nvidiaState(host),
+    "video.motion.state": (p) => motionState(host, engineOf(p)),
     "video.motion.set": (p) => {
       const engine = engineOf(p);
       const mode = p.mode;
@@ -458,26 +480,22 @@ export function processingHandlers(
           "invalid",
           'mode must be "off", "double" or "display"',
         );
-      if (engine === "nvidia") {
-        if (mode !== "off")
-          throw new HostError(
-            "unsupported",
-            `motion smoothing cannot work here: ${NO_NVIDIA.message}`,
-          );
-        return nvidiaState(host);
-      }
+      const model = modelOf(host, engine);
       if (mode !== "off") {
-        const reason = host.motion[mode];
-        const passes =
-          reason?.code === "rendering" && host.motion.renderingStarting;
+        const reason = model[mode];
+        const passes = reason?.code === "rendering" && model.renderingStarting;
         if (reason && MOTION_FIXED.includes(reason.code) && !passes)
           throw new HostError(
             "unsupported",
             `motion smoothing cannot work here: ${reason.message}`,
           );
       }
-      host.motion.mode = mode;
-      return motionState(host);
+      model.mode = mode;
+      // The first engine set to a mode holds the converter while it is on.
+      if (mode !== "off" && holderOf(host) === null)
+        motionHolder.set(host, engine);
+      holderOf(host);
+      return motionState(host, engine);
     },
     "video.view.set": (p) => {
       const owner = host.videoView.owner;

@@ -2725,10 +2725,48 @@ export class TestHost implements Transport {
     gpu: "AMD Radeon 780M Graphics",
   };
   /**
+   * NVIDIA's engine behind `plugin.video.motion("nvidia")`: the same model
+   * as {@link TestHost.motion} (AMD's), its own state, answered the same
+   * way. The defaults are a player where both modes work on a 24 fps video
+   * and a 60 Hz display, converting on an RTX 4070 Laptop GPU. One
+   * converter at a time, as the player: the first engine set to a mode (or
+   * preset to one, `amd` first) holds it while its mode is not `off`, and
+   * the other engine's modes report `other-engine`, in the player's order:
+   * a model's own run-long, renderer, `upscaling` or `doubling` reason
+   * comes first, its `failed`, `overload`, `rate`, `format` or `size` after.
+   * A test of "another plugin holds AMD's converter" sets
+   * `host.motion.mode`.
+   *
+   * @example Test an NVIDIA plugin without an RTX 30 or newer GPU
+   * The same reason on both modes is what the player answers there: the
+   * plugin shows it and keeps the mode off, since `no-gpu` holds for the run.
+   * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * const reason = { code: "no-gpu", message: "no NVIDIA GPU" };
+   * host.nvidiaMotion.double = reason;
+   * host.nvidiaMotion.display = reason;
+   * ```
+   *
+   * @since 1.11.1
+   */
+  readonly nvidiaMotion: TestHost["motion"] = {
+    mode: "off",
+    double: null,
+    display: null,
+    renderingStarting: false,
+    sourceFps: 24,
+    outputFps: null,
+    performance: false,
+    displayFps: 60,
+    gpu: "NVIDIA GeForce RTX 4070 Laptop GPU",
+  };
+  /**
    * Send `video.motion.changed` with the state {@link TestHost.motion}
-   * describes now (without `mode`), as the player does when it changes; a
-   * plugin listening with `plugin.video.motion("amd").onChange` receives it.
-   * Nothing reaches a plugin that does not listen.
+   * describes now (without `mode`), and then the one of
+   * {@link TestHost.nvidiaMotion}, as the player does when they change; a
+   * plugin listening with `plugin.video.motion(engine).onChange` receives
+   * its engine's. Nothing reaches a plugin that does not listen.
    *
    * @example The GPU fell behind
    * The player turned the converter off for this video; the plugin's
@@ -2745,8 +2783,10 @@ export class TestHost implements Transport {
    */
   motionChanged() {
     if (!this.subscriptions.has("video.motion.changed")) return;
-    const { mode: _, ...state } = motionState(this);
-    this.emit("video.motion.changed", state);
+    for (const engine of ["amd", "nvidia"] as const) {
+      const { mode: _, ...state } = motionState(this, engine);
+      this.emit("video.motion.changed", state);
+    }
   }
   /** What `player.chapters()` lists while media is ready. */
   chapters: {

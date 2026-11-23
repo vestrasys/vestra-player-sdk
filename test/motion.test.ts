@@ -154,26 +154,85 @@ test("onChange delivers the state with this plugin's mode", async () => {
   await stop();
 });
 
-test("engines: amd works, nvidia is reserved, others are invalid; events reach their engine only", async () => {
+test("engines: amd and nvidia each have their own state, others are invalid; events reach their engine only", async () => {
   const host = new TestHost();
   const { plugin, stop } = await started(["video.motion"], host);
   assert.throws(() => plugin.video.motion("intel" as "amd"), code("invalid"));
-  const nvidia = await plugin.video.motion("nvidia").state();
+  const nvidia = await plugin.video.motion("nvidia").set("double");
   assert.equal(nvidia.engine, "nvidia");
-  assert.equal(nvidia.double?.code, "engine");
-  assert.equal(nvidia.display?.code, "engine");
+  assert.equal(nvidia.active, "double");
+  assert.equal(nvidia.gpu, "NVIDIA GeForce RTX 4070 Laptop GPU");
+  assert.equal(host.nvidiaMotion.mode, "double");
+  assert.equal(host.motion.mode, "off", "AMD's engine is another one");
+  // A run-long reason refuses the mode, as for AMD.
+  host.nvidiaMotion.display = { code: "no-gpu", message: "no NVIDIA GPU" };
   await assert.rejects(
-    plugin.video.motion("nvidia").set("double"),
+    plugin.video.motion("nvidia").set("display"),
     code("unsupported"),
   );
   assert.equal((await plugin.video.motion("nvidia").set("off")).mode, "off");
-  // A listener of the reserved engine hears nothing of AMD's changes.
+  // Each listener hears its own engine's changes.
   const heard: string[] = [];
   plugin.video.motion("nvidia").onChange((state) => heard.push(state.engine));
   plugin.video.motion("amd").onChange((state) => heard.push(state.engine));
   await host.settle();
   host.motionChanged();
   await host.settle();
-  assert.deepEqual(heard, ["amd"]);
+  assert.deepEqual(heard.sort(), ["amd", "nvidia"]);
+  await stop();
+});
+
+test("one converter at a time: the other engine's modes wait with other-engine until it is off", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  // Another plugin holds AMD's converter.
+  host.motion.mode = "double";
+  const waiting = await plugin.video.motion("nvidia").set("double");
+  assert.equal(waiting.active, "off");
+  assert.equal(waiting.double?.code, "other-engine");
+  assert.match(String(waiting.double?.message), /^AMD motion smoothing is on/);
+  assert.equal(host.nvidiaMotion.mode, "double", "kept: not a run-long reason");
+  // AMD's off: NVIDIA's request applies.
+  host.motion.mode = "off";
+  const running = await plugin.video.motion("nvidia").state();
+  assert.equal(running.active, "double");
+  assert.equal(running.double, null);
+  // Now NVIDIA holds it, and AMD waits.
+  host.motion.mode = "double";
+  const amd = await plugin.video.motion("amd").state();
+  assert.equal(amd.double?.code, "other-engine");
+  assert.match(String(amd.double?.message), /^NVIDIA motion smoothing is on/);
+  await stop();
+});
+
+test("other-engine comes in the player's order: after the system, the renderer, upscaling and doubling; before failed, overload, rate, format and size", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  host.motion.mode = "double"; // AMD holds the converter.
+  const nvidia = () => plugin.video.motion("nvidia").state();
+  for (const code of [
+    "failed",
+    "overload",
+    "rate",
+    "format",
+    "size",
+  ] as const) {
+    host.nvidiaMotion.double = { code, message: code };
+    assert.equal((await nvidia()).double?.code, "other-engine", code);
+  }
+  for (const code of [
+    "runtime",
+    "no-gpu",
+    "rendering",
+    "upscaling",
+    "doubling",
+  ] as const) {
+    host.nvidiaMotion.double = { code, message: code };
+    assert.equal((await nvidia()).double?.code, code, code);
+  }
+  // Without a holder the model's own reason stands.
+  host.motion.mode = "off";
+  host.nvidiaMotion.double = { code: "rate", message: "rate" };
+  assert.equal((await nvidia()).double?.code, "rate");
   await stop();
 });

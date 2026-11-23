@@ -903,7 +903,7 @@
 @vestra-player/sdk TypeAliasDeclaration MenuId = export type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings" | "reset" | "tools";
 @vestra-player/sdk TypeAliasDeclaration MotionEngine = export type MotionEngine = "amd" | "nvidia";
 @vestra-player/sdk TypeAliasDeclaration MotionMode = export type MotionMode = "off" | "double" | "display";
-@vestra-player/sdk TypeAliasDeclaration MotionReasonCode = export type MotionReasonCode = "engine" | "platform" | "no-gpu" | "runtime" | "filter" | "rendering" | "upscaling" | "doubling" | "failed" | "overload" | "rate" | "format" | "size" | (string & {});
+@vestra-player/sdk TypeAliasDeclaration MotionReasonCode = export type MotionReasonCode = "engine" | "platform" | "no-gpu" | "runtime" | "filter" | "rendering" | "upscaling" | "doubling" | "other-engine" | "failed" | "overload" | "rate" | "format" | "size" | (string & {});
 @vestra-player/sdk TypeAliasDeclaration MpvValue = export type MpvValue = null | boolean | number | string | MpvValue[] | { [key: string]: MpvValue; };
 @vestra-player/sdk TypeAliasDeclaration PackageChangeStatus = export type PackageChangeStatus = "preparing" | "activating" | "restoring" | "committed" | "cancelled" | "failed" | "failedDegraded" | "tooLate";
 @vestra-player/sdk TypeAliasDeclaration PackageSource = export type PackageSource = { kind: "repository"; url: string; } | { kind: "link"; url: string; } | { kind: "file"; } | { kind: "workshop"; } | { kind: "bundled"; };
@@ -1016,6 +1016,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly motion: { mode: MotionMode; double: MotionReason | null; display: MotionReason | null; renderingStarting: boolean; sourceFps: number | null; outputFps: number | null; performance: boolean; displayFps: number; gpu: string | null; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mpv: { commands: (string | number | boolean)[][]; properties: Map<string, Json>; labels: Map<string, string>; observed: Set<string>; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly nvidiaMotion: TestHost["motion"];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly openedWindows: { paths: string[]; pid: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osd: string[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly osdActions: { title: string; command: string; }[][];
