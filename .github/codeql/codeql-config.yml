@@ -1,0 +1,16 @@
+# CodeQL configuration (.github/workflows/codeql.yml).
+name: vestra-player-sdk
+
+# The default queries plus the extended security suite (more queries, a few
+# more false positives).
+queries:
+  - uses: security-extended
+
+# Everything in the repository (src, bin, ts-plugin, scripts, examples,
+# test, and the workflows for the actions analysis) except installed and
+# generated files.
+paths-ignore:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - docs-site
+  - .tmp

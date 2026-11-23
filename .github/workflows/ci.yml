@@ -3,6 +3,7 @@
 #
 #   static ─▶ build ─┬─▶ test, examples (ubuntu, windows, macos × node 26)
 #                    └─▶ docs
+#   dependency-review (pull requests only)
 #   ci-ok  (needs all; skipped counts as passed, failure/cancelled fails)
 name: CI
 
@@ -39,9 +40,31 @@ jobs:
     permissions:
       contents: read
 
+  # New or updated npm packages in a pull request (package.json,
+  # package-lock.json): fails on a known vulnerability of high or critical
+  # severity and on a license outside the list below (GitHub's license
+  # data). Needs the dependency graph (on by default for public
+  # repositories). The summary is in the job summary, not a comment (fork
+  # pull requests get a read-only token). The same action, version and
+  # settings as the plugins repository.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          # The plugins repository's list, plus Python-2.0 (argparse, through
+          # typedoc's markdown-it; dev tooling only).
+          allow-licenses: MIT, MIT-0, ISC, 0BSD, BSD-2-Clause, BSD-3-Clause, Apache-2.0, Zlib, BlueOak-1.0.0, BSL-1.0, CC0-1.0, Unlicense, Python-2.0
+          comment-summary-in-pr: never
+
   ci-ok:
     if: always()
-    needs: [static, build, test, docs]
+    needs: [static, build, test, docs, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
