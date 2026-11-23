@@ -56,7 +56,7 @@ assert.equal(host.source.rate, 2);
 await stop();
 ```
 
-A host error that nothing in the plugin handles (no `try`/`catch`, no `plugin.onError`) only reaches the player's log, so the user sees a command that does nothing. In `TestHost` it fails the test: the next `host.settle()` (also `host.command(id).run()`) rejects with it, or else `stop()`, and the message names the error. When the test means it, say so first with `host.expectError("stale")`; an expected error that never comes fails `stop()`. `host.loggedErrors` lists every such error, and `host.strictErrors = false` only logs them, as before SDK 1.12.0. The tests of the [menus](../examples/menus.md), [adjust-panel](../examples/adjust-panel.md), [three-ways](../tutorial/index.md) and [bookmark](../examples/bookmark.md) examples run their commands after each of these changes.
+A host error that nothing in the plugin handles (no `try`/`catch`, no `plugin.onError`) only reaches the player's log, so the user sees a command that does nothing. In `TestHost` it fails the test: the next `host.settle()` (also `host.command(id).run()`) rejects with it, or else `stop()`, and the message names the error. When the test means it, say so first with `host.expectError("stale")`; an expected error that never comes fails `stop()`. `host.loggedErrors` lists every such error, and `host.strictErrors = false` only logs them, as before SDK 1.11.2. The tests of the [menus](../examples/menus.md), [adjust-panel](../examples/adjust-panel.md), [three-ways](../tutorial/index.md) and [bookmark](../examples/bookmark.md) examples run their commands after each of these changes.
 
 ### Inject a failure
 

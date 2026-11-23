@@ -3847,7 +3847,7 @@ export class TestHost implements Transport {
    * ```
    *
    * @throws `Error` (rejects) The plugin logged a host error the test did
-   *   not expect ({@link TestHost.strictErrors}, SDK 1.12.0); the message
+   *   not expect ({@link TestHost.strictErrors}, SDK 1.11.2); the message
    *   names it and says how to expect it ({@link TestHost.expectError}).
    * @since 1.0.0
    */
@@ -3864,7 +3864,7 @@ export class TestHost implements Transport {
    * `command(…).run()`) rejects with it, or else `stop()`; the message
    * names the error and how to expect it. A test that means it calls
    * {@link TestHost.expectError} first. Set `false` to only log host
-   * errors, as before SDK 1.12.0. {@link TestHost.loggedErrors} lists them
+   * errors, as before SDK 1.11.2. {@link TestHost.loggedErrors} lists them
    * either way.
    *
    * @example Expect a refusal the plugin does not handle
@@ -3880,7 +3880,7 @@ export class TestHost implements Transport {
    * await host.command("rate-2").run();
    * ```
    *
-   * @since 1.12.0
+   * @since 1.11.2
    */
   strictErrors = true;
   /**
@@ -3903,7 +3903,7 @@ export class TestHost implements Transport {
    * assert.equal(host.loggedErrors.at(-1)?.code, "stale");
    * ```
    *
-   * @since 1.12.0
+   * @since 1.11.2
    */
   expectError(code: string) {
     errorBooks.get(this)!.expected.push(code);
@@ -3923,7 +3923,7 @@ export class TestHost implements Transport {
    * assert.deepEqual(host.loggedErrors.map((error) => error.code), []);
    * ```
    *
-   * @since 1.12.0
+   * @since 1.11.2
    */
   get loggedErrors(): readonly HostError[] {
     return errorBooks.get(this)!.logged;
