@@ -347,7 +347,10 @@ export interface BackdropSlot {
  * `"adjust"`. Each {@link Panel} has its own bridge, state, `toggle()` and
  * `setInteraction()`; disposing one leaves the others, and stopping the plugin
  * unmounts them all. The bottom bar and the backdrop hold one panel for all
- * plugins; the sidebar and the adjust column one tab per plugin.
+ * plugins; the sidebar and the adjust column one tab per plugin. The bottom
+ * bar is the player's control bar, a panel of the built-in `vestra.playback`:
+ * another plugin's mount there is refused, so do not plan on it; use
+ * `"adjust"`, `"sidebar"` or a window.
  * {@link Panels.bottom}, {@link Panels.sidebar} and {@link Panels.adjust}
  * describe the positions, whoever mounted there.
  *
@@ -377,7 +380,11 @@ export interface Panels {
    * resolves. Handlers and bindings made right after `mount()` (in the same
    * synchronous code) are part of the first values.
    *
-   * - `"bottom"`: under the video, as wide as the video column, as tall as the
+   * - `"bottom"`: **held by the player's control bar** (the built-in
+   *   `vestra.playback`), so another plugin's mount there rejects `ready` with
+   *   `conflict` and shows nothing (the plugin keeps running, with the warning
+   *   `slot-occupied`); a plugin does not plan on it. The bar itself sits
+   *   under the video, as wide as the video column, as tall as the
    *   component's preferred height. It may draw above its slot into the video
    *   area (negative `y`); the player does not clip it. In fullscreen it
    *   floats over the video and shows only while the pointer is in its band
@@ -453,7 +460,9 @@ export interface Panels {
    * following the playback position and seeking when dragged. Bindings and
    * handlers made right after `mount` are part of the first values;
    * `ready` resolves once the main window shows the bar, and rejects with
-   * `conflict` when another plugin's panel holds the bottom bar.
+   * `conflict` when another plugin's panel holds the bottom bar. This is
+   * the built-in `vestra.playback`'s case: on a player with its control
+   * bar, any other plugin gets `conflict` here.
    * ```ts
    * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
    * // Sent again whenever the position changes, while a stream is open.

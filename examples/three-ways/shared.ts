@@ -3,7 +3,7 @@
  * makes 60 frames a second, the list's rows and the player's form of a
  * command declaration (style C). Walkthrough: docs/tutorial/index.md.
  */
-import type { Panel, StreamFrame } from "@vestra-player/sdk";
+import type { Panel, Plugin, StreamFrame } from "@vestra-player/sdk";
 
 // #region speed
 const RATES = [0.5, 1, 1.5, 2];
@@ -16,21 +16,30 @@ export const speedText = (rate: number) => `${rate.toFixed(2)}×`;
 
 // #region while-shown
 /**
- * Run what `open` starts while `panel` is on screen, and stop it (with
- * the function `open` returns) when the panel goes. For a bottom-bar or
- * backdrop panel, which keeps its plugin running anyway, so its `onChange`
- * (a listener) costs nothing more; a sidebar or adjust tab listens to
- * `layout.changed` instead (examples/adjust-panel).
+ * Run what `open` starts while `panel` is on screen (the adjust column is
+ * open at its tab), and stop it (with the function `open` returns) when it
+ * goes. `layout.changed` says when the column opens or closes or another
+ * tab is chosen; listening to it keeps no plugin running, so with the
+ * column closed the plugin can go to standby (as examples/adjust-panel).
  */
-export function whileShown(panel: Panel, open: () => () => void) {
+export function whileShown(
+  plugin: Plugin,
+  panel: Panel,
+  open: () => () => void,
+) {
   let close: (() => void) | undefined;
-  panel.onChange((state) => {
-    if (state?.effective) close ??= open();
+  const follow = () => {
+    if (panel.state?.effective) close ??= open();
     else {
       close?.();
       close = undefined;
     }
-  });
+  };
+  plugin.player.on("layout.changed", follow);
+  // And once at the mount, for a column already open when the plugin
+  // starts: `panel.state`, touched now, is current when `ready` resolves.
+  void panel.state;
+  void panel.ready.then(follow, () => {});
 }
 // #endregion while-shown
 

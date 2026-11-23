@@ -24,11 +24,13 @@ import {
  */
 const dropped = () => {};
 
-/** Scenario 1: the bottom panel shows the speed; C cycles it. */
+/** Scenario 1: a tab in the adjust column shows the speed; S cycles it. */
 export function speed(plugin: Plugin) {
   // #region speed
-  const bar = plugin.panels.mount("bottom", "ui/speed.slint");
-  const view = plugin.wire.view(bar); // raw writes for this panel
+  const panel = plugin.panels.mount("adjust", "ui/speed.slint", {
+    title: "Speed",
+  });
+  const view = plugin.wire.view(panel); // raw writes for this panel
   let shown = "1.00×"; // what the panel shows: its Slint default at first
   const show = (data: unknown) => {
     const s = data as { rate: number }; // the plugin types the payload
@@ -37,16 +39,16 @@ export function speed(plugin: Plugin) {
     shown = rate;
     view.write("rate", { value: rate }).catch(() => (shown = "")); // again next time
   };
-  // While the bar is on screen: one read of the source now, then every
+  // While the tab is on screen: one read of the source now, then every
   // source.state event.
-  whileShown(bar, () => {
+  whileShown(plugin, panel, () => {
     plugin.wire.request("source.state").then(show, dropped);
     const listener = plugin.wire.on("source.state", show);
     return () => void listener.dispose();
   });
   plugin.wire.commands.register({
     id: "rate.cycle",
-    declaration: declaration(["Playback", "Cycle Speed"], ["C"]),
+    declaration: declaration(["Playback", "Cycle Speed"], ["S"]),
     run: async () => {
       // The SDK's control acts on the state the SDK last read: read it now.
       const s = await plugin.player.refresh();

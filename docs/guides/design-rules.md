@@ -19,6 +19,7 @@ These are the rules the built-in plugins follow. Token names, sizes, icons and w
 - **A dialog only for a real question** before something destructive, or for a path (the system file dialogs).
 - **A settings page** for preferences that rarely change; a **tool window** for a tool the user opens, uses and closes.
 - **A panel only when living there is the plugin's main purpose** (a playlist, chapters; the `backdrop` slot for cover art while nothing plays). A one-click entry point is a bottom-bar button (`button` in the command's options).
+- **Not the bottom bar.** It is the player's control bar, a panel of the built-in `vestra.playback`, so another plugin's mount there is refused with `conflict` (the plugin's warning `slot-occupied`) and never shows. Do not plan on it: controls for what is playing go in the `adjust` column, content in the `sidebar`, a tool in a window.
 
 ### Use the theme
 
@@ -50,7 +51,7 @@ These are the rules the built-in plugins follow. Token names, sizes, icons and w
 - **Lists are plain**: single-line rows on `Theme.bg-list`, no cards, stripes or rounded rows. A list whose length the user decides is a `ListView` from `std-widgets.slint`; keep a bare `for` for a short fixed list.
 - **A panel's commands go into its right-click menu** ({@link "@vestra-player/sdk"!Panel.showMenu | panel.showMenu}); keys that act on its content are bindings with `focus: "panel"`.
 - **Give the keys back after a list action.** After the user plays or opens an item (Enter, a double click), and on Escape, call `VestraFocus.release()` from `@vestra/focus.slint` ([Focus](../reference/theme.md#focus)).
-- **The bottom bar is icons only.** The player draws the command-button strip, sidebar toggle and palette button at its right end; draw none of your own. Report your controls' least width in `content-min-width` (and their full width in `content-full-width` if the bar drops controls when narrow), and lay your row out in the width `BarButtonsHost.width` leaves ([Bar buttons](../reference/theme.md#bar-buttons)).
+- **The bottom bar is icons only** (the rules for the control bar itself). The player draws the command-button strip, sidebar toggle and palette button at its right end; draw none of your own. Report your controls' least width in `content-min-width` (and their full width in `content-full-width` if the bar drops controls when narrow), and lay your row out in the width `BarButtonsHost.width` leaves ([Bar buttons](../reference/theme.md#bar-buttons)).
 
 ### Put commands where users look
 

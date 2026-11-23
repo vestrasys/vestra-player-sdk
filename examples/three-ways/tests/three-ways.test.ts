@@ -67,33 +67,54 @@ async function start(scenario: Scenario, host = new TestHost()) {
   return started;
 }
 
+/**
+ * The user opens the adjust column (Adjustments and Effects) at the
+ * plugin's tab, or closes it: the player sends `layout.changed`.
+ */
+async function showColumn(host: TestHost, visible: boolean) {
+  const column = host.layout.adjust!;
+  column.preferred = column.effective = visible;
+  column.reason = visible ? null : "userHidden";
+  host.selectTab(host.manifestId); // pushes the change as window.state
+  await host.settle();
+}
+
 for (const [name, style] of Object.entries(styles)) {
-  test(`style ${name}: the speed panel follows the speed and C cycles it`, async () => {
+  test(`style ${name}: the speed tab follows the speed and S cycles it`, async () => {
     const { host, stop } = await start(style.speed);
     try {
+      const panel = host.mounted("adjust");
+      assert.equal(host.layout.adjust?.panels?.[0]?.title, "Speed");
+      await showColumn(host, true);
       host.setSource({ rate: 1.5 });
       await host.settle();
-      assert.equal(host.mounted("bottom").props.rate, "1.50×");
+      assert.equal(panel.props.rate, "1.50×");
       await host.command("rate.cycle").run(); // 1.5 → 2
       await host.settle();
       assert.equal(host.source.rate, 2);
-      assert.equal(host.mounted("bottom").props.rate, "2.00×");
+      assert.equal(panel.props.rate, "2.00×");
+      assert.deepEqual(host.command("rate.cycle").declaration.bindings, ["S"]);
+      assert.deepEqual(host.conflicts, []);
     } finally {
       await stop();
     }
   });
 
-  test(`style ${name}: the speed is followed only while the bar shows`, async () => {
+  test(`style ${name}: the speed is followed only while the tab shows`, async () => {
     const { host, stop } = await start(style.speed);
     const keepsRunning = () => host.keepsRunning;
     try {
-      assert.ok(keepsRunning().includes("a mounted panel"));
+      assert.deepEqual(keepsRunning(), [], "the column starts closed");
+      await showColumn(host, true);
+      assert.ok(keepsRunning().includes("its adjust tab is the current tab"));
       assert.ok(
         keepsRunning().some((why) => why.startsWith("listens to source.state")),
       );
       host.setSource({ rate: 0.5 });
       await host.settle();
-      assert.equal(host.mounted("bottom").props.rate, "0.50×");
+      assert.equal(host.mounted("adjust").props.rate, "0.50×");
+      await showColumn(host, false);
+      assert.deepEqual(keepsRunning(), []);
     } finally {
       await stop();
     }

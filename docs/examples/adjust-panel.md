@@ -103,4 +103,4 @@ Start the player with `--plugin <path to examples/adjust-panel>` and press Alt+5
 ## Try next
 
 1. **More controls.** Add a fine step (±0.05) as two buttons and two commands with `home: "speed"`; their keys can show next to them with `KeyHint` and `plugin.commands.keys`.
-2. **Show the speed elsewhere.** A label in the bottom bar follows the speed the same way: a stream while it is on screen.
+2. **Show the speed elsewhere.** A label in a tool window follows the speed the same way: a stream while it is open. (Not in the bottom bar: the player's control bar holds it.)

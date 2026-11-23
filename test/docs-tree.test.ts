@@ -519,9 +519,9 @@ test("the three plugin styles: the tutorial, the event and the message tables", 
     "\n",
   );
   for (const code of [
-    "bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));",
+    "panel.bind(() => ({ rate: speedText(plugin.player.state.rate) }));",
     'plugin.player.on("source.state", (s) => show(s.rate))',
-    "const view = plugin.wire.view(bar);",
+    "const view = plugin.wire.view(panel);",
   ])
     assert.ok(chapter.includes(code), code);
   // Every event a plugin can listen to by name has a row.
