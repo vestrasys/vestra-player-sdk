@@ -1,5 +1,5 @@
 /**
- * Host errors the plugin logged (SDK 1.12.0): a refusal or failure with a
+ * Host errors the plugin logged (SDK 1.11.2): a refusal or failure with a
  * code (`HostError`, e.g. `stale`, `invalid`, `disabled`) that nothing in
  * the plugin handled, so it reached the plugin's log, as the player's log
  * would show it. Under `TestHost.strictErrors` (the default) such an error

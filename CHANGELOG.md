@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.11.2
+
+Additions and fixes only; nobody must change anything except a plugin test that relies on a host error the plugin does not handle (below).
+
+- **Security fixes (CodeQL):** `vestra-plugin docs` path handling and the table rule parser no longer backtrack polynomially on long input; the manifest check opens each icon, readme and changelog file once and reads through that handle. Behaviour is unchanged.
+- **Examples:** new screenshots (player 0.11.1); `three-ways` shows its speed as an adjust-column tab and cycles on S (the bottom bar belongs to the player's control bar; design rule "Not the bottom bar"); listeners before the first await in `adjust-panel` and `three-ways`; window items under `@tools`.
+- **Repository:** CodeQL, Scorecard, osv-scanner, semgrep (examples) and dependency review in CI; SECURITY.md.
+
 
 **Tests catch a control made with an old state** (the SDK's control semantics are unchanged). Since 1.11.0 a plugin that read the state once (`await player.read()`) and later pauses, seeks, steps or sets the speed sends the stamp of that copy (`expected`), and the player refuses it with `stale` once the user changed the source. Tests did not see it: no test changed the source between activation and a command, and a refusal the plugin left to its log passed. Who must change: a plugin test that relies on a host error the plugin does not handle (below).
 
