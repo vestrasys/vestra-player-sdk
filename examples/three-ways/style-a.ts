@@ -16,22 +16,24 @@ import {
   WIDTH,
 } from "./shared.ts";
 
-/** Scenario 1: the bottom panel shows the speed; C cycles it. */
+/** Scenario 1: a tab in the adjust column shows the speed; S cycles it. */
 export function speed(plugin: Plugin) {
   // #region speed
-  const bar = plugin.panels.mount("bottom", "ui/speed.slint");
+  const panel = plugin.panels.mount("adjust", "ui/speed.slint", {
+    title: "Speed",
+  });
   // Reads state.rate: runs again when the speed changes, and only then.
-  bar.bind(() => ({ rate: speedText(plugin.player.state.rate) }));
-  // The speed has no event: while the bar is on screen a stream keeps
+  panel.bind(() => ({ rate: speedText(plugin.player.state.rate) }));
+  // The speed has no event: while the tab is on screen a stream keeps
   // state.rate following the player.
-  whileShown(bar, () => {
+  whileShown(plugin, panel, () => {
     const feed = plugin.player.stream(() => {});
     return () => feed.stop();
   });
   plugin.commands.add({
     id: "rate.cycle",
     path: ["Playback", "Cycle Speed"],
-    bindings: ["C"],
+    bindings: ["S"],
     enabled: plugin.when.can("rate"), // evaluated by the player itself
     run: async () => {
       const s = await plugin.player.refresh(); // the speed now, shown or not

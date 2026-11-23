@@ -137,7 +137,7 @@ Open a video, then choose **Tools ▸ Where am I?** in the right-click menu, or 
 
 ## 5. Choose a style
 
-The menu item above lets the player keep its state (`plugin.when`) and reads the playback state when it runs. For a value that is shown and changes, the SDK can decide when to tell the player. That is one of three styles. Here is the same job in each: a panel at the bottom shows the playback speed, and **C** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style declares its listeners first and then reads the state once with `await plugin.player.read()`, and follows the speed, which has no event of its own, only while the panel is on screen: `whileShown` (in `shared.ts`) starts it when the panel shows and stops it when it goes.
+The menu item above lets the player keep its state (`plugin.when`) and reads the playback state when it runs. For a value that is shown and changes, the SDK can decide when to tell the player. That is one of three styles. Here is the same job in each: a **Speed** tab in the adjust column (the column of controls for what is playing, opened by the bottom bar's Adjustments and Effects button) shows the playback speed, and **S** cycles it. The code comes from the example plugin [`examples/three-ways`](https://github.com/vestrasys/vestra-player-sdk/tree/main/examples/three-ways), where `speedText` and `nextRate` are two small helpers in `shared.ts`. Each style declares its listeners first and then reads the state once with `await plugin.player.read()`, and follows the speed, which has no event of its own, only while the tab is on screen: `whileShown` (in `shared.ts`) starts it when `layout.changed` says the tab shows and stops it when it goes.
 
 ### A: declare with `bind()`
 
@@ -149,7 +149,7 @@ The binding is a function of state. While the stream is open the SDK runs it aga
 
 {@includeCode ../../examples/three-ways/style-b.ts#speed}
 
-While the bar shows, the listener receives every `source.state` event with a typed payload ([Events](../reference/events.md)), and `set` sends the value whole each time. Nothing compares for you, so the plugin keeps `shown` to avoid sending the same text ten times a second. Choose it when the value comes from outside the SDK (a timer, a socket, an emulator's frame) and you know exactly when it changed.
+While the tab shows, the listener receives every `source.state` event with a typed payload ([Events](../reference/events.md)), and `set` sends the value whole each time. Nothing compares for you, so the plugin keeps `shown` to avoid sending the same text ten times a second. Choose it when the value comes from outside the SDK (a timer, a socket, an emulator's frame) and you know exactly when it changed.
 
 ### C: direct messages with `plugin.wire`
 

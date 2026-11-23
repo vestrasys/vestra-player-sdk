@@ -1105,12 +1105,12 @@ export interface Player {
    *
    *
    * @example Push the speed to a panel as it changes
-   * A bottom panel shows the playback speed. The listener gets each
+   * A tab in the adjust column shows the playback speed. The listener gets each
    * `source.state` event's data and writes the text with `set`; no update
    * pass runs and the SDK keeps no copy of the state for this.
    * ```ts
-   * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
-   * plugin.player.on("source.state", (s) => bar.set({ rate: `${s.rate.toFixed(2)}×` }));
+   * const panel = plugin.panels.mount("adjust", "ui/speed.slint", { title: "Speed" });
+   * plugin.player.on("source.state", (s) => panel.set({ rate: `${s.rate.toFixed(2)}×` }));
    * ```
    *
    * @see [Tutorial](../../../docs/tutorial/index.md)

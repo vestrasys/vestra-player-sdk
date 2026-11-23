@@ -1,6 +1,6 @@
 # Three ways
 
-One plugin written in the three styles of the SDK: four scenarios side by side. The [Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html) shows the first one, the speed panel, in each style; the other three are in the files below, marked `#region frames`, `#region list` and `#region keyframes`.
+One plugin written in the three styles of the SDK: four scenarios side by side. The [Tutorial](https://vestrasys.github.io/vestra-player-sdk/documents/Tutorial.html) shows the first one, the speed tab, in each style; the other three are in the files below, marked `#region frames`, `#region list` and `#region keyframes`.
 
 | File         | Style                                                        |
 | ------------ | ------------------------------------------------------------ |
@@ -8,7 +8,7 @@ One plugin written in the three styles of the SDK: four scenarios side by side. 
 | `style-b.ts` | B: `plugin.player.on(event)` and `set()`                     |
 | `style-c.ts` | C: `plugin.wire` (experimental, changes with versions)       |
 
-The scenarios: a bottom panel with the playback speed (C cycles it), an emulator's status line in a window that changes on every frame (Open ▸ Demo emulator), a sidebar list of 20,000 entries where a double click marks one played, and Playback ▸ Next Keyframe, enabled once an asynchronous check says the source has video.
+The scenarios: a Speed tab in the adjust column with the playback speed (S cycles it; open the column with the bottom bar's Adjustments and Effects button), an emulator's status line in a window that changes on every frame (Open ▸ Demo emulator), a sidebar list of 20,000 entries where a double click marks one played, and Playback ▸ Next Keyframe, enabled once an asynchronous check says the source has video.
 
 `main.ts` runs style A; change `entry` in `manifest.json` to `style-b.ts` or `style-c.ts` to run another. The tests run all three.
 

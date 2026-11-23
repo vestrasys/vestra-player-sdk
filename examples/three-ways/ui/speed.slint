@@ -1,9 +1,30 @@
+import { Theme } from "@vestra/theme.slint";
+
 export global SpeedBridge {
     // Shown until the plugin writes the first value.
     in property <string> rate: "1.00×";
 }
 
-export component SpeedBar inherits Text {
-    text: SpeedBridge.rate;
-    vertical-alignment: center;
+// A tab of the adjust column (about 317 px wide): the speed, one row.
+export component SpeedPanel inherits Rectangle {
+    background: Theme.bg-list;
+    VerticalLayout {
+        padding: 12px;
+        alignment: start;
+        HorizontalLayout {
+            Text {
+                text: @tr("Speed");
+                color: Theme.text;
+                font-size: Theme.font-body;
+                vertical-alignment: center;
+            }
+            Text {
+                text: SpeedBridge.rate;
+                color: Theme.text-dim;
+                font-size: Theme.font-body;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+    }
 }

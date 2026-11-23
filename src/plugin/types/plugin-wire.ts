@@ -44,13 +44,13 @@ import type { SettingsPage } from "./ui-shell.ts";
  * [Events](../../../docs/reference/events.md).
  *
  * @example Show the speed with direct messages
- * A bottom panel shows the playback speed, written by the plugin itself
+ * A tab in the adjust column shows the playback speed, written by the plugin itself
  * from the raw `source.state` event. The listener types the payload, which
- * is `unknown` here, and `view(bar).write` sends the text as a property
+ * is `unknown` here, and `view(panel).write` sends the text as a property
  * write; the SDK keeps no copy of the state and compares nothing.
  * ```ts
- * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
- * const view = plugin.wire.view(bar);
+ * const panel = plugin.panels.mount("adjust", "ui/speed.slint", { title: "Speed" });
+ * const view = plugin.wire.view(panel);
  * plugin.wire.on("source.state", (data) => {
  *   const s = data as { rate: number }; // the plugin types the payload
  *   void view.write("rate", { value: `${s.rate.toFixed(2)}×` });
@@ -99,12 +99,12 @@ export interface Wire {
    * @throws `disabled` (rejects) The plugin is stopping.
    *
    * @example Write a panel property without the SDK
-   * The plugin's bottom panel shows "1.00×" in its `rate` property, written
+   * The plugin's adjust tab shows "1.00×" in its `rate` property, written
    * with the player's own request. The parameters are the protocol's
    * (`property`, `value`); the player checks the value.
    * ```ts
-   * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
-   * await bar.ready;
+   * const panel = plugin.panels.mount("adjust", "ui/speed.slint", { title: "Speed" });
+   * await panel.ready;
    * await plugin.wire.request("ui.setMount", { property: "rate", value: "1.00×" });
    * ```
    *
@@ -278,9 +278,9 @@ export interface WireView {
    * plugin's own loop. The write goes out at once; if the player is still
    * busy with the previous one, only the newest count waits.
    * ```ts
-   * const bar = plugin.panels.mount("bottom", "ui/bar.slint");
-   * await bar.ready;
-   * const view = plugin.wire.view(bar);
+   * const panel = plugin.panels.mount("sidebar", "ui/counter.slint", { title: "Frames" });
+   * await panel.ready;
+   * const view = plugin.wire.view(panel);
    * let frames = 0;
    * const tick = setInterval(() => void view.write("frames", { value: ++frames }), 100); // newest waits
    * plugin.onDispose(() => clearInterval(tick));
