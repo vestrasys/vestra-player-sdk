@@ -901,7 +901,7 @@
 @vestra-player/sdk TypeAliasDeclaration Locale = export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
 @vestra-player/sdk TypeAliasDeclaration MarkKind = export type MarkKind = "chapter" | "bookmark" | "marker";
 @vestra-player/sdk TypeAliasDeclaration MenuId = export type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings" | "reset" | "tools";
-@vestra-player/sdk TypeAliasDeclaration MotionEngine = export type MotionEngine = "amd" | "nvidia";
+@vestra-player/sdk TypeAliasDeclaration MotionEngine = export type MotionEngine = "amd" | "nvidia" | "apple";
 @vestra-player/sdk TypeAliasDeclaration MotionMode = export type MotionMode = "off" | "double" | "display";
 @vestra-player/sdk TypeAliasDeclaration MotionReasonCode = export type MotionReasonCode = "engine" | "platform" | "no-gpu" | "runtime" | "filter" | "rendering" | "upscaling" | "doubling" | "other-engine" | "failed" | "overload" | "rate" | "format" | "size" | (string & {});
 @vestra-player/sdk TypeAliasDeclaration MpvValue = export type MpvValue = null | boolean | number | string | MpvValue[] | { [key: string]: MpvValue; };
@@ -992,6 +992,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: pressOsdAction(index: number): Promise<void>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: previousCrash: string | null;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: producerTransport: "unix" | "tcp";
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly appleMotion: TestHost["motion"];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly bindings: { overlay: Map<string, string[]>; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly calls: Call[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly candidates: Map<string, PackageManifest>;
