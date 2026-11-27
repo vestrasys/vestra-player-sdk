@@ -121,6 +121,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Open ▸ Recently Played ▸ Record Playback History |  | `vestra.history/recent.enabled` |
 | Close | `F4` | `host/stop` |
 | Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
+| Tools ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Tools ▸ Audio Track ▸ No Audio Tracks |  | `vestra.audio/audio.track.none` |
 | Tools ▸ Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
 | Tools ▸ Snapshot ▸ Save Current Frame | `Ctrl+E` | `vestra.capture/capture.save` |
@@ -182,7 +183,6 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | 5 Times (not in the menu) |  | `vestra.playback/ab.count.5` |
 | 10 Times (not in the menu) |  | `vestra.playback/ab.count.10` |
 | Hide Pointer While Playing (not in the menu) |  | `vestra.window/hide-cursor` |
-| Picture-in-Picture (not in the menu) |  | `vestra.window/pip` |
 | Mini Size (not in the menu) | ``` | `vestra.window/mini` |
 | 0.5× (not in the menu) | `1` | `vestra.window/size.0.5` |
 | 1× (not in the menu) | `2` | `vestra.window/size.1` |
