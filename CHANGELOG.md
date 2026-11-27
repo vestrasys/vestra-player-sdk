@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.4
+
+Nobody must change anything. **Product data**: `BUILTIN_COMMANDS` lists `vestra.window/pip` as Tools ▸ Picture-in-Picture (player 0.11.8, user ruling 2026-11-27; it was palette only), and so does the built-in command table in [Commands](docs/reference/commands.md). It is registered only where the system has picture-in-picture (macOS 14+). No API change.
+
 ## 1.11.3
 
 Nobody must change anything. A control without `ifCurrent` (pause, seek, speed, restart, close, a step, a loop, an audio track), a capture and a scrub now act on the current state: while a stream (or anything else that holds `source.state`) keeps `player.state` current, nothing changes; otherwise the SDK reads the state first, so a plugin that read the state once and keeps no stream is no longer refused with `stale` after any pause, seek or new file by someone else. Calls made together share one read and go out in the order they were made; `stale` still comes when the source changes between that read and the call, and an explicit `ifCurrent` is sent as given. The `stale` todos of the `menus`, `adjust-panel` and `three-ways` examples pass, and the golden traces of `examples/menus` and `examples/adjust-panel` gain that read (with the speed now applied) instead of listing `stale`.

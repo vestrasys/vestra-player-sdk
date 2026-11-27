@@ -418,6 +418,7 @@ vestra.history | recent.clear | Open ▸ Recently Played ▸ Clear Entries
 vestra.history | recent.enabled | Open ▸ Recently Played ▸ Record Playback History
 host | stop | Close | F4
 host | play-pause | Play/Pause | Space, Mouse:LeftClick
+vestra.window | pip | Tools ▸ Picture-in-Picture
 vestra.audio | audio.track.none | Tools ▸ Audio Track ▸ No Audio Tracks
 vestra.subtitles | track-off | Tools ▸ Subtitle Track ▸ Off
 vestra.capture | capture.save | Tools ▸ Snapshot ▸ Save Current Frame | Ctrl+E
@@ -479,7 +480,6 @@ vestra.playback | ab.count.3 | (3 Times)
 vestra.playback | ab.count.5 | (5 Times)
 vestra.playback | ab.count.10 | (10 Times)
 vestra.window | hide-cursor | (Hide Pointer While Playing)
-vestra.window | pip | (Picture-in-Picture)
 vestra.window | mini | (Mini Size) | \`
 vestra.window | size.0.5 | (0.5×) | 1
 vestra.window | size.1 | (1×) | 2
