@@ -320,7 +320,8 @@ export interface Scope extends Disposable {
      * (FFmpeg's `fruc_vulkan`, GeForce RTX 30 and newer, on Windows; an
      * older player reports `engine` for every mode); `apple` is Apple's
      * frame interpolation in VideoToolbox (Apple silicon, macOS 15.4 and
-     * newer; since SDK 1.11.5). An engine reports `platform` on a system
+     * newer; since SDK 1.11.5 and the first player release with the Apple
+     * engine, 0.11.12 or later). An engine reports `platform` on a system
      * that does not have it.
      *
      * @param engine - The converter: `"amd"`, `"nvidia"` or `"apple"`.

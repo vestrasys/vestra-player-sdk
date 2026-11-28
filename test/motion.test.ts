@@ -325,3 +325,18 @@ test("engine names: a fourth is invalid with the three listed", async () => {
   );
   await stop();
 });
+
+test("a preset engine holds the converter: NVIDIA preset on (another plugin), the plugin sets AMD, AMD waits with other-engine (1.11.5 fix)", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  // No state read before: the preset must still count first.
+  host.nvidiaMotion.mode = "double";
+  const amd = await plugin.video.motion("amd").set("double");
+  assert.equal(amd.active, "off");
+  assert.equal(amd.double?.code, "other-engine");
+  assert.match(String(amd.double?.message), /^NVIDIA motion smoothing is on/);
+  assert.equal(host.motion.mode, "double", "kept: not a run-long reason");
+  const nvidia = await plugin.video.motion("nvidia").state();
+  assert.equal(nvidia.active, "double", "NVIDIA keeps it");
+  await stop();
+});
