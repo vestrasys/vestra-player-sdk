@@ -416,8 +416,8 @@ vestra.history | recent.empty | Open ▸ Recently Played ▸ (No Entries)
 vestra.history | recent.prune | Open ▸ Recently Played ▸ Remove Invalid Entries
 vestra.history | recent.clear | Open ▸ Recently Played ▸ Clear Entries
 vestra.history | recent.enabled | Open ▸ Recently Played ▸ Record Playback History
-host | stop | Close | F4
-host | play-pause | Play/Pause | Space, Mouse:LeftClick
+host | stop | Close | F4, MediaStop
+host | play-pause | Play/Pause | Space, Mouse:LeftClick, MediaPlayPause
 vestra.window | pip | Tools ▸ Picture-in-Picture
 vestra.audio | audio.track.none | Tools ▸ Audio Track ▸ No Audio Tracks
 vestra.subtitles | track-off | Tools ▸ Subtitle Track ▸ Off
@@ -434,8 +434,8 @@ host | quit | Quit | Cmd+Q
 host | adjust | (Adjustments and Effects)
 host | sidebar | (Sidebar)
 host | fullscreen | (Toggle Fullscreen) | Escape
-host | previous | (Previous) | PageUp, Mouse:X2
-host | next | (Next) | PageDown, Mouse:X1
+host | previous | (Previous) | PageUp, Mouse:X2, MediaPrevious
+host | next | (Next) | PageDown, Mouse:X1, MediaNext
 host | enter-fullscreen | (Enter Fullscreen)
 host | exit-fullscreen | (Leave Fullscreen)
 host | ask-again | (Ask Again Before Plugin Commands)

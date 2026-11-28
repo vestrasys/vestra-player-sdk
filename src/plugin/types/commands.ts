@@ -967,7 +967,10 @@ export interface CommandOptions {
    * `Mouse:MiddleClick`, `Mouse:WheelUp`/`Down`/`Left`/`Right`, and the side
    * buttons `Mouse:X1` (back), `Mouse:X2` (forward), anywhere
    * in the main window or the floating sidebar window, except while a menu
-   * is open.
+   * is open. Since 1.12.0 also the media keys `MediaPlayPause`,
+   * `MediaNext`, `MediaPrevious`, `MediaStop` and the gamepad inputs
+   * `Gamepad:A`… (`BINDING_INPUTS.gamepad`), which take no modifiers and
+   * fire while a player window has the focus.
    *
    * Platforms: on macOS `Ctrl+X` fires for both ⌃X and ⌘X while `Cmd+X`
    * means ⌘X only; on Windows `Cmd` is the Windows logo key, so write
@@ -1783,9 +1786,9 @@ export interface PaletteLead extends Disposable {
  *
  * | action | default bindings | behaviour |
  * | --- | --- | --- |
- * | `stop` | F4 | close the source |
- * | `play-pause` | Space, a left click on the video | pause / resume, replay after the end |
- * | `previous` / `next` | PageUp, Mouse:X2 / PageDown, Mouse:X1 | ask the sequence provider |
+ * | `stop` | F4, MediaStop | close the source |
+ * | `play-pause` | Space, a left click on the video, MediaPlayPause | pause / resume, replay after the end |
+ * | `previous` / `next` | PageUp, Mouse:X2, MediaPrevious / PageDown, Mouse:X1, MediaNext | ask the sequence provider |
  * | `frame-back` / `frame-forward` | D / F | `player.step("frame", …)` |
  * | `seek-backward` / `seek-forward` | ← / → | relative seek by `setStepSeek` seconds (or `host.run`'s `seconds`), exact or to keyframes as `setStepSeek` says; after the end an exact seek that plays on |
  * | `rate-normal`, `rate-down`, `rate-up` | Z, X, C | 1×, ±0.1 within 0.25–4 |
@@ -1980,7 +1983,11 @@ export interface BindingInfo extends BindingRef {
     /** The command that holds it. */
     by: BindingRef;
   }[];
-  /** Menu text of each of `current` (`Ctrl+←`, `Num5`). */
+  /**
+   * Menu text of each of `current`, in its order (`Ctrl+←`, `Num5`). A
+   * media key or gamepad input (1.12.0) is its name (`Gamepad:A`): menus
+   * do not show those.
+   */
   labels: string[];
 }
 

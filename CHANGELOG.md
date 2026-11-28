@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0 (unreleased)
+
+Additions only; nobody must change anything. A plugin whose own test copies the player's default keys sees the media keys added to four core actions.
+
+- **Media keys and gamepad inputs as bindings** (needs the player release that reads them). `BINDING_INPUTS` gains `media` (`MediaPlayPause`, `MediaNext`, `MediaPrevious`, `MediaStop`) and `gamepad` (24 names, `Gamepad:A`, `Gamepad:DpadUp`, `Gamepad:LeftShoulder`, `Gamepad:LeftTrigger`, `Gamepad:LeftStickUp`…: Xbox names by position, as SDL and mpv). `commands.add`, `bindings.set` and `TestHost.press` accept them; they take no modifiers (`Ctrl+Gamepad:A` fails with `invalid`, `… takes no modifiers`). They fire while a player window has the focus, except while a menu is open; a held gamepad input repeats like a held key. Menus and `commands.keys` show none of them (nor does `TestHost`'s `commands.keys`); `BindingInfo.labels` stays parallel to `current` and gives such an input its name. In the options window, where keys reach no command, they arrive at the focused element as a Slint key event whose text is U+F7FF followed by the name, so a settings page can record them. On macOS the system keeps media keys for its Now Playing session: the player receives none there.
+- **Player default keys** (`BUILTIN_COMMANDS`, the generated key tables, `TestHost`'s core actions, `HostAction`): `play-pause` adds `MediaPlayPause`, `next` `MediaNext`, `previous` `MediaPrevious`, `stop` (Close) `MediaStop`. No gamepad defaults.
+- **Docs**: Commands reference (binding syntax, binding names, the built-in tables), `CommandOptions.bindings`, `BINDING_INPUTS`. The API surface snapshot gains the two fields.
+
 ## 1.11.5
 
 **Apple motion smoothing** (request R1; needs the first player release with the Apple engine, 0.11.12 or later). An addition only: **nobody must change anything**; a plugin that does not use `"apple"` behaves as before. Used by Apple Motion Smoothing (`zysilm.applemotion`); also for any plugin that offers motion smoothing on macOS (a picture panel's smoothing switch, a per-file profile plugin that turns smoothing on for low-rate video).

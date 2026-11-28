@@ -119,8 +119,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Open ▸ Recently Played ▸ Remove Invalid Entries |  | `vestra.history/recent.prune` |
 | Open ▸ Recently Played ▸ Clear Entries |  | `vestra.history/recent.clear` |
 | Open ▸ Recently Played ▸ Record Playback History |  | `vestra.history/recent.enabled` |
-| Close | `F4` | `host/stop` |
-| Play/Pause | `Space`, `Mouse:LeftClick` | `host/play-pause` |
+| Close | `F4`, `MediaStop` | `host/stop` |
+| Play/Pause | `Space`, `Mouse:LeftClick`, `MediaPlayPause` | `host/play-pause` |
 | Tools ▸ Picture-in-Picture |  | `vestra.window/pip` |
 | Tools ▸ Audio Track ▸ No Audio Tracks |  | `vestra.audio/audio.track.none` |
 | Tools ▸ Subtitle Track ▸ Off |  | `vestra.subtitles/track-off` |
@@ -137,8 +137,8 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Adjustments and Effects (not in the menu) |  | `host/adjust` |
 | Sidebar (not in the menu) |  | `host/sidebar` |
 | Toggle Fullscreen (not in the menu) | `Escape` | `host/fullscreen` |
-| Previous (not in the menu) | `PageUp`, `Mouse:X2` | `host/previous` |
-| Next (not in the menu) | `PageDown`, `Mouse:X1` | `host/next` |
+| Previous (not in the menu) | `PageUp`, `Mouse:X2`, `MediaPrevious` | `host/previous` |
+| Next (not in the menu) | `PageDown`, `Mouse:X1`, `MediaNext` | `host/next` |
 | Enter Fullscreen (not in the menu) |  | `host/enter-fullscreen` |
 | Leave Fullscreen (not in the menu) |  | `host/exit-fullscreen` |
 | Ask Again Before Plugin Commands (not in the menu) |  | `host/ask-again` |
@@ -458,7 +458,7 @@ Every command the player (`host`) and its built-in plugins register when the pla
 
 ```text
 binding  = { modifier "+" } input      modifiers in the order Ctrl, Alt, Shift, Cmd, each at most once
-input    = key name | one printable symbol | mouse input
+input    = key name | one printable symbol | mouse input | media key | gamepad input
 ```
 
 - A letter is its key name in capitals, whatever the case typed: `Shift+E`.
@@ -467,6 +467,7 @@ input    = key name | one printable symbol | mouse input
 - `Delete` is the forward-delete key ⌦ (fn+⌫ on a Mac laptop), `Backspace` is ⌫.
 - On macOS `Ctrl` also matches ⌘ and `Cmd` only ⌘; on Windows `Cmd` is the Windows logo key. Write `Ctrl+…` for a binding that works on both.
 - Mouse inputs apply over the video area only. The right button is not bindable (it opens the context menu).
+- Media keys (`MediaPlayPause`…) and gamepad inputs (`Gamepad:A`…) take no modifiers and fire while a player window has the focus (since 1.12.0). Menus do not show them; in the options window they reach the focused element as a key event whose text is U+F7FF followed by the name, so a settings page can record them.
 - Anything else fails with code `invalid` when the command is added.
 
 A menu item shows the first of its keyboard bindings that is in effect.
@@ -483,6 +484,8 @@ A menu item shows the first of its keyboard bindings that is in effect.
 | `functionKeys` | `F1`–`F24` | Function keys: `F1` to `F24`. |
 | `named` | `Space`, `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`, `Plus`, `Numpad0`, `Numpad1`, `Numpad2`, `Numpad3`, `Numpad4`, `Numpad5`, `Numpad6`, `Numpad7`, `Numpad8`, `Numpad9`, `NumpadPlus`, `NumpadMinus`, `NumpadMultiply`, `NumpadDivide`, `NumpadEnter`, `NumpadDecimal` | Other named keys, matched by the physical key. `Plus` is the `+` key however it is typed; the `Numpad…` names are the numeric keypad only, never the main keyboard. |
 | `mouse` | `Mouse:LeftClick`, `Mouse:LeftDoubleClick`, `Mouse:LeftDoubleClick:LeftHalf`, `Mouse:LeftDoubleClick:RightHalf`, `Mouse:MiddleClick`, `Mouse:X1`, `Mouse:X2`, `Mouse:WheelUp`, `Mouse:WheelDown`, `Mouse:WheelLeft`, `Mouse:WheelRight` | Mouse inputs on the video area; the side buttons `Mouse:X1` (back) and `Mouse:X2` (forward) anywhere in the main window or the floating sidebar window, except while a menu is open. `:LeftHalf` and `:RightHalf` tell the halves of the video apart for a double click. |
+| `media` | `MediaPlayPause`, `MediaNext`, `MediaPrevious`, `MediaStop` | Media keys, while a player window has the focus: wherever the focus is in the window, except while a menu is open. No modifiers. On macOS the system gives media keys to its Now Playing session, so the player receives none there today. |
+| `gamepad` | `Gamepad:A`, `Gamepad:B`, `Gamepad:X`, `Gamepad:Y`, `Gamepad:DpadUp`, `Gamepad:DpadDown`, `Gamepad:DpadLeft`, `Gamepad:DpadRight`, `Gamepad:LeftShoulder`, `Gamepad:RightShoulder`, `Gamepad:LeftTrigger`, `Gamepad:RightTrigger`, `Gamepad:Start`, `Gamepad:Back`, `Gamepad:LeftStick`, `Gamepad:RightStick`, `Gamepad:LeftStickUp`, `Gamepad:LeftStickDown`, `Gamepad:LeftStickLeft`, `Gamepad:LeftStickRight`, `Gamepad:RightStickUp`, `Gamepad:RightStickDown`, `Gamepad:RightStickLeft`, `Gamepad:RightStickRight` | Gamepad inputs, from any connected controller while a player window has the focus, except while a menu is open. By position with Xbox names, as SDL and mpv name them: `A` is the bottom face button, `Back` the left centre button (View, Select, Share), `LeftShoulder` the upper and `LeftTrigger` the lower left button, `LeftStick` a press of the stick; a stick direction fires past half its travel. A held input repeats like a held key (for commands with `repeat`). No modifiers. |
 
 <!-- /generated -->
 
@@ -494,11 +497,11 @@ The player's own playback commands, which {@link "@vestra-player/sdk"!Host.run |
 
 | Action | Menu item | Default bindings |
 | --- | --- | --- |
-| `stop` | Close | `F4` |
-| `play-pause` | Play/Pause | `Space`, `Mouse:LeftClick` |
+| `stop` | Close | `F4`, `MediaStop` |
+| `play-pause` | Play/Pause | `Space`, `Mouse:LeftClick`, `MediaPlayPause` |
 | `fullscreen` |  | `Escape` |
-| `previous` |  | `PageUp`, `Mouse:X2` |
-| `next` |  | `PageDown`, `Mouse:X1` |
+| `previous` |  | `PageUp`, `Mouse:X2`, `MediaPrevious` |
+| `next` |  | `PageDown`, `Mouse:X1`, `MediaNext` |
 | `volume-up` |  | `ArrowUp`, `Mouse:WheelUp` |
 | `volume-down` |  | `ArrowDown`, `Mouse:WheelDown` |
 | `mute` |  | `M` |

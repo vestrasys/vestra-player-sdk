@@ -19,7 +19,7 @@ import {
 } from "../src/plugin/testing.ts";
 import { startPlugin } from "./explicit.ts";
 import { API_VERSION } from "../src/player-runtime.ts";
-import { canonical } from "../src/plugin/bindings.ts";
+import { canonical, keyLabel } from "../src/plugin/bindings.ts";
 import { HOST_GROUPS, MENU_KEYS } from "../src/i18n.ts";
 import type { Plugin, PluginError } from "../src/plugin/index.ts";
 
@@ -140,6 +140,42 @@ test("BINDING_INPUTS are exactly the inputs a binding accepts", () => {
     "Ctrl+Ctrl+A",
   ];
   for (const binding of refused)
+    assert.throws(() => canonical(binding), code("invalid"), binding);
+});
+
+test("BINDING_INPUTS media and gamepad inputs stand alone (SDK 1.12.0)", () => {
+  const { media, gamepad, mouse, named } = BINDING_INPUTS;
+  assert.deepEqual(media, [
+    "MediaPlayPause",
+    "MediaNext",
+    "MediaPrevious",
+    "MediaStop",
+  ]);
+  assert.equal(gamepad.length, 24);
+  const devices = [...media, ...gamepad];
+  const all = [...devices, ...mouse, ...named];
+  assert.equal(new Set(all).size, all.length);
+  for (const input of devices) {
+    assert.equal(canonical(input), input);
+    assert.equal(keyLabel(input, true), null);
+    assert.equal(keyLabel(input, false), null);
+    for (const modifier of BINDING_INPUTS.modifiers)
+      assert.throws(
+        () => canonical(`${modifier}+${input}`),
+        (error: Error & { code?: string }) =>
+          error.code === "invalid" &&
+          error.message.includes(`${input} takes no modifiers`),
+        `${modifier}+${input}`,
+      );
+  }
+  for (const input of gamepad) assert.match(input, /^Gamepad:[A-Z]\w*$/);
+  for (const binding of [
+    "Gamepad:Guide",
+    "Gamepad:a",
+    "Gamepad:",
+    "MediaPlay",
+    "Gamepad:MediaStop",
+  ])
     assert.throws(() => canonical(binding), code("invalid"), binding);
 });
 
