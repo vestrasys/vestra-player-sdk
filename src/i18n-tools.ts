@@ -85,7 +85,7 @@ export interface ExtractOptions {
 }
 
 /** Locales whose plural has one form (`n == 1` and other are the same). */
-const ONE_FORM = new Set(["zh-Hans", "ja", "ko"]);
+const ONE_FORM = new Set(["zh-Hans", "zh-Hant", "ja", "ko"]);
 
 export const pluralForms = (language: string) =>
   ONE_FORM.has(language)

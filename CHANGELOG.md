@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.12.0 (unreleased)
+## 1.12.0
 
 Additions only; nobody must change anything. A plugin whose own test copies the player's default keys sees the media keys added to four core actions.
 
@@ -18,6 +18,15 @@ Additions only; nobody must change anything. A plugin whose own test copies the 
 - **`MainWindow.setMaximized(boolean)`**, **`MainWindow.setMinimized(boolean)`** (`window.setMaximized`, `window.setMinimized`): maximize or restore (`unavailable` in fullscreen), minimize or bring back. No `minimized` field in `WindowState` (not reported by the player yet).
 - **`Subtitles.load(bytes, { format: "vtt" })`**: WebVTT is turned into SRT by the SDK and loaded through the SRT path, so the player's SRT checks and limits apply unchanged (works with any player). Cue settings, `STYLE`/`REGION`/`NOTE` blocks and markup tags are dropped, entities decoded (a line-break entity becomes a space; the player shows SRT text literally, so a decoded `<i>` or a `{\an8}` shows as written); a malformed cue is skipped, not the whole file; the SRT is slightly larger and must fit 2 MiB too. `format: "vtt"` was `invalid` before.
 - **TestHost**: answers the new requests with the player's checks and codes; `mainWindow.title` and `mainWindow.minimized` record the window calls (`maximized` follows `setMaximized`); `osd.show` checks `durationMs`; an open checks `start`.
+
+**Three new interface languages** (needs the player release that has them): Traditional Chinese (`zh-Hant`), Brazilian Portuguese (`pt-BR`) and Russian (`ru`). An addition only: **nobody must change anything**; a plugin without these catalogs shows its English texts in them, as in any language it does not ship. A plugin that switches exhaustively over `Locale` sees new cases at compile time (no plugin in either repository does).
+
+- **`LOCALES`** is `en, zh-Hans, zh-Hant, ja, ko, de, fr, es, pt-BR, ru`, the player's order; **`Locale`** gains the three. `i18n check` accepts `locales/zh-Hant.po`, `pt-BR.po` and `ru.po`; `TestHost.locale` and `plugin.appearance.setLanguage` accept the three codes.
+- **System languages** (`matchLocale`, as the player's `match_tag`): Chinese in the Traditional script, or Taiwan, Hong Kong, Macao without a script, is now `zh-Hant` (it was English); Portuguese of any region is `pt-BR`; Russian by its primary subtag.
+- **List separators** (`LIST_SEPARATORS`): `zh-Hant` joins like `zh-Hans` (、，；。); `pt-BR` and `ru` like English.
+- **Plural forms**: `zh-Hant` has one (`nplurals=1`), as `zh-Hans`, `ja` and `ko`; `pt-BR` and `ru` have the player's two (one, other).
+- **Product data**: `BUILTIN_COMMANDS` lists `vestra.preferences/language.zh-Hant` (繁體中文), `language.pt-BR` (Português (Brasil)) and `language.ru` (Русский), palette only like the other Language commands; so do the tables in [Commands](docs/reference/commands.md) and [Translations](docs/reference/i18n.md).
+- **Docs**: the `Locale` remark no longer says Traditional Chinese shows English. The API surface snapshot changes in `Locale` and `LOCALES` only.
 
 ## 1.11.5
 

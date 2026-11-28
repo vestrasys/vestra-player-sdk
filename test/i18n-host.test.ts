@@ -182,9 +182,20 @@ test("the player's own texts follow the locale; without one they stay Chinese", 
   // The player has no German of its own yet: English.
   assert.deepEqual((await run(german)).osd, ["Paused", "Mute: On"]);
   assert.throws(() => {
-    new TestHost().locale = "zh-Hant" as never;
+    new TestHost().locale = "pt" as never;
   });
-  assert.deepEqual(LOCALES, ["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]);
+  assert.deepEqual(LOCALES, [
+    "en",
+    "zh-Hans",
+    "zh-Hant",
+    "ja",
+    "ko",
+    "de",
+    "fr",
+    "es",
+    "pt-BR",
+    "ru",
+  ]);
 });
 
 test("appearance.language is the saved choice; setLanguage saves it for the next start", async () => {

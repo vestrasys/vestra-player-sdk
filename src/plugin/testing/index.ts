@@ -266,7 +266,8 @@ export { TEXT_LIMITS };
 export { LIST_SEPARATORS };
 /**
  * The player's interface languages, English (the source) first, as the
- * player's own table: `["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]`.
+ * player's own table: `["en", "zh-Hans", "zh-Hant", "ja", "ko", "de", "fr",
+ * "es", "pt-BR", "ru"]`.
  *
  * @example Check that every language translates a menu item
  * The test fails for each interface language in which the "Open…" item

@@ -146,13 +146,24 @@ export interface Appearance {
  * `@vestra-player/sdk/testing`.
  *
  * @remarks
- * Simplified Chinese is `zh-Hans`. There is no Traditional Chinese: a
- * system set to Traditional Chinese (Taiwan, Hong Kong, Macao) gets English.
+ * Chinese has two: Simplified (`zh-Hans`) and Traditional (`zh-Hant`; a
+ * system set to Taiwan, Hong Kong or Macao gets it). Portuguese is
+ * Brazilian Portuguese (`pt-BR`) for a system in any Portuguese region.
  *
  * @since 1.5.9
  * @category UI
  */
-export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
+export type Locale =
+  | "en"
+  | "zh-Hans"
+  | "zh-Hant"
+  | "ja"
+  | "ko"
+  | "de"
+  | "fr"
+  | "es"
+  | "pt-BR"
+  | "ru";
 
 /**
  * The saved interface language ({@link Appearance.language}): follow the

@@ -20,7 +20,18 @@ import type { ListStyle, Locale } from "./plugin/types.ts";
  * @since 1.5.9
  * @category Testing
  */
-export const LOCALES = ["en", "zh-Hans", "ja", "ko", "de", "fr", "es"] as const;
+export const LOCALES = [
+  "en",
+  "zh-Hans",
+  "zh-Hant",
+  "ja",
+  "ko",
+  "de",
+  "fr",
+  "es",
+  "pt-BR",
+  "ru",
+] as const;
 
 /** One message of a `.po` file (the header `msgid ""` is not one). */
 export interface PoEntry {
@@ -412,6 +423,13 @@ export const LIST_SEPARATORS: Readonly<
     sentences: "。",
     lines: "\n",
   },
+  "zh-Hant": {
+    list: "、",
+    clauses: "，",
+    semicolons: "；",
+    sentences: "。",
+    lines: "\n",
+  },
   ja: {
     list: "、",
     clauses: "、",
@@ -441,6 +459,20 @@ export const LIST_SEPARATORS: Readonly<
     lines: "\n",
   },
   es: {
+    list: ", ",
+    clauses: ", ",
+    semicolons: "; ",
+    sentences: ". ",
+    lines: "\n",
+  },
+  "pt-BR": {
+    list: ", ",
+    clauses: ", ",
+    semicolons: "; ",
+    sentences: ". ",
+    lines: "\n",
+  },
+  ru: {
     list: ", ",
     clauses: ", ",
     semicolons: "; ",
@@ -873,9 +905,11 @@ export function rewriteSlint(source: string, catalog: Catalog): string {
 
 /**
  * The supported locale for a BCP 47 tag, as the player maps the system's
- * languages: Simplified Chinese is `zh-Hans`; Traditional Chinese (`zh-Hant`,
- * or Taiwan, Hong Kong, Macao) is English; other languages by their primary
- * subtag; `undefined` for a language the player does not have.
+ * languages: Chinese in the Simplified script is `zh-Hans`; in the
+ * Traditional script, or Taiwan, Hong Kong, Macao without a script,
+ * `zh-Hant`; Portuguese of any region is `pt-BR` (the one Portuguese
+ * catalog); other languages by their primary subtag; `undefined` for a
+ * language the player does not have.
  */
 export function matchLocale(tag: string): (typeof LOCALES)[number] | undefined {
   const parts = tag
@@ -886,9 +920,17 @@ export function matchLocale(tag: string): (typeof LOCALES)[number] | undefined {
   const [language, ...rest] = parts;
   if (language === "zh") {
     const script = rest.find((part) => part.length === 4);
-    if (script) return script === "hans" ? "zh-Hans" : "en";
-    return rest.some((r) => ["tw", "hk", "mo"].includes(r)) ? "en" : "zh-Hans";
+    if (script)
+      return script === "hans"
+        ? "zh-Hans"
+        : script === "hant"
+          ? "zh-Hant"
+          : "en";
+    return rest.some((r) => ["tw", "hk", "mo"].includes(r))
+      ? "zh-Hant"
+      : "zh-Hans";
   }
+  if (language === "pt") return "pt-BR";
   return LOCALES.find((locale) => !locale.includes("-") && locale === language);
 }
 

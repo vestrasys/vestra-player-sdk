@@ -241,11 +241,14 @@ Every command the player (`host`) and its built-in plugins register when the pla
 | Follow System (not in the menu) |  | `vestra.preferences/language.system` |
 | English (not in the menu) |  | `vestra.preferences/language.en` |
 | 简体中文 (not in the menu) |  | `vestra.preferences/language.zh-Hans` |
+| 繁體中文 (not in the menu) |  | `vestra.preferences/language.zh-Hant` |
 | 日本語 (not in the menu) |  | `vestra.preferences/language.ja` |
 | 한국어 (not in the menu) |  | `vestra.preferences/language.ko` |
 | Deutsch (not in the menu) |  | `vestra.preferences/language.de` |
 | Français (not in the menu) |  | `vestra.preferences/language.fr` |
 | Español (not in the menu) |  | `vestra.preferences/language.es` |
+| Português (Brasil) (not in the menu) |  | `vestra.preferences/language.pt-BR` |
+| Русский (not in the menu) |  | `vestra.preferences/language.ru` |
 | Playback Info (not in the menu) | `Tab` | `vestra.info/info.toggle` |
 | Playback Properties… (not in the menu) | `Ctrl+F1` | `vestra.info/info.properties` |
 | Check for Updates… (not in the menu) |  | `vestra.info/info.update` |

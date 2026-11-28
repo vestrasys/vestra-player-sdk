@@ -13,6 +13,7 @@ import {
   scanSlint,
   writePo,
 } from "../src/i18n.ts";
+import { pluralForms } from "../src/i18n-tools.ts";
 
 type Case = {
   name: string;
@@ -115,16 +116,45 @@ test("templates format like Slint and the player", () => {
   assert.deepEqual(placeholders("{} of {name} {{x}} {0}"), ["", "0", "name"]);
 });
 
+test("plural forms per language", () => {
+  for (const one of ["zh-Hans", "zh-Hant", "ja", "ko"])
+    assert.equal(pluralForms(one), "nplurals=1; plural=0;", one);
+  for (const two of ["de", "fr", "es", "pt-BR", "ru"])
+    assert.equal(pluralForms(two), "nplurals=2; plural=(n != 1);", two);
+});
+
 test("system languages map like the player", () => {
-  assert.deepEqual(LOCALES, ["en", "zh-Hans", "ja", "ko", "de", "fr", "es"]);
+  assert.deepEqual(LOCALES, [
+    "en",
+    "zh-Hans",
+    "zh-Hant",
+    "ja",
+    "ko",
+    "de",
+    "fr",
+    "es",
+    "pt-BR",
+    "ru",
+  ]);
   for (const [tag, locale] of [
     ["zh-Hans-CN", "zh-Hans"],
     ["zh-CN", "zh-Hans"],
-    ["zh-TW", "en"],
-    ["zh-Hant-HK", "en"],
+    ["zh-TW", "zh-Hant"],
+    ["zh_HK.UTF-8", "zh-Hant"],
+    ["zh-MO", "zh-Hant"],
+    ["zh-Hant", "zh-Hant"],
+    ["zh-Hant-HK", "zh-Hant"],
+    ["zh-Hans-HK", "zh-Hans"],
+    ["zh-Latn", "en"],
+    ["zh", "zh-Hans"],
     ["de-AT", "de"],
     ["en_US.UTF-8", "en"],
-    ["pt-BR", undefined],
+    ["pt-BR", "pt-BR"],
+    ["pt-PT", "pt-BR"],
+    ["pt", "pt-BR"],
+    ["ru-RU", "ru"],
+    ["ru_UA.UTF-8", "ru"],
+    ["it-IT", undefined],
   ] as const)
     assert.equal(matchLocale(tag), locale, tag);
 });
