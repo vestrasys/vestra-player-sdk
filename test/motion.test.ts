@@ -236,3 +236,107 @@ test("other-engine comes in the player's order: after the system, the renderer, 
   assert.equal((await nvidia()).double?.code, "rate");
   await stop();
 });
+
+test("apple (SDK 1.11.5): its own state and model; run-long reasons refuse; listeners hear their engine", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  const apple = await plugin.video.motion("apple").set("double");
+  assert.equal(apple.engine, "apple");
+  assert.equal(apple.active, "double");
+  assert.equal(apple.gpu, "Apple M2");
+  assert.equal(apple.searchMode, "native");
+  assert.equal(apple.outputFps, 48);
+  assert.equal(host.appleMotion.mode, "double");
+  assert.equal(host.motion.mode, "off", "AMD's engine is another one");
+  assert.equal(host.nvidiaMotion.mode, "off", "NVIDIA's engine is another one");
+  host.appleMotion.performance = true;
+  assert.equal(
+    (await plugin.video.motion("apple").state()).searchMode,
+    "performance",
+  );
+  // Software rendering: Match Display is refused for the run, Double stays.
+  host.appleMotion.display = { code: "rendering", message: "software" };
+  await assert.rejects(
+    plugin.video.motion("apple").set("display"),
+    code("unsupported"),
+  );
+  assert.equal(host.appleMotion.mode, "double", "nothing changed");
+  // A Mac without the system's interpolation: both modes, for the run.
+  const reason = { code: "no-gpu", message: "no frame interpolation" };
+  host.appleMotion.double = reason;
+  host.appleMotion.display = reason;
+  await assert.rejects(
+    plugin.video.motion("apple").set("double"),
+    code("unsupported"),
+  );
+  assert.equal((await plugin.video.motion("apple").set("off")).mode, "off");
+  // Each listener hears its own engine's changes.
+  const heard: string[] = [];
+  for (const engine of ["amd", "nvidia", "apple"] as const)
+    plugin.video.motion(engine).onChange((state) => heard.push(state.engine));
+  await host.settle();
+  host.motionChanged();
+  await host.settle();
+  assert.deepEqual(heard.sort(), ["amd", "apple", "nvidia"]);
+  await stop();
+});
+
+test("apple: one converter at a time across the three engines (other-engine names the holder)", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  // Another plugin holds Apple's converter.
+  host.appleMotion.mode = "double";
+  for (const engine of ["amd", "nvidia"] as const) {
+    const waiting = await plugin.video.motion(engine).set("double");
+    assert.equal(waiting.active, "off", engine);
+    assert.equal(waiting.double?.code, "other-engine", engine);
+    assert.match(
+      String(waiting.double?.message),
+      /^Apple motion smoothing is on/,
+    );
+  }
+  host.appleMotion.mode = "off";
+  // AMD comes first among the engines that are on now.
+  const amd = await plugin.video.motion("amd").state();
+  assert.equal(amd.active, "double");
+  const apple = await plugin.video.motion("apple").set("double");
+  assert.equal(apple.active, "off");
+  assert.equal(apple.double?.code, "other-engine");
+  assert.match(String(apple.double?.message), /^AMD motion smoothing is on/);
+  assert.equal(host.appleMotion.mode, "double", "kept: not a run-long reason");
+  // AMD off: NVIDIA (on since above) holds it; Apple still waits.
+  await plugin.video.motion("amd").set("off");
+  const later = await plugin.video.motion("apple").state();
+  assert.equal(later.double?.code, "other-engine");
+  assert.match(String(later.double?.message), /^NVIDIA motion smoothing is on/);
+  // NVIDIA off: Apple's request applies.
+  await plugin.video.motion("nvidia").set("off");
+  assert.equal((await plugin.video.motion("apple").state()).active, "double");
+  await stop();
+});
+
+test("engine names: a fourth is invalid with the three listed", async () => {
+  const { plugin, stop } = await started(["video.motion"]);
+  assert.throws(
+    () => plugin.video.motion("intel" as "apple"),
+    (error: HostError) =>
+      error.code === "invalid" &&
+      /"amd", "nvidia" or "apple"/.test(error.message),
+  );
+  await stop();
+});
+
+test("a preset engine holds the converter: NVIDIA preset on (another plugin), the plugin sets AMD, AMD waits with other-engine (1.11.5 fix)", async () => {
+  const host = new TestHost();
+  const { plugin, stop } = await started(["video.motion"], host);
+  // No state read before: the preset must still count first.
+  host.nvidiaMotion.mode = "double";
+  const amd = await plugin.video.motion("amd").set("double");
+  assert.equal(amd.active, "off");
+  assert.equal(amd.double?.code, "other-engine");
+  assert.match(String(amd.double?.message), /^NVIDIA motion smoothing is on/);
+  assert.equal(host.motion.mode, "double", "kept: not a run-long reason");
+  const nvidia = await plugin.video.motion("nvidia").state();
+  assert.equal(nvidia.active, "double", "NVIDIA keeps it");
+  await stop();
+});

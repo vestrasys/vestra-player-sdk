@@ -315,14 +315,19 @@ export interface Scope extends Disposable {
      */
     readonly upscaling: VideoUpscaling;
     /**
-     * Motion smoothing with one GPU vendor's frame-rate converter: whether it works here and why not, and this
+     * Motion smoothing with one vendor's frame-rate converter: whether it works here and why not, and this
      * plugin's mode. `amd` is AMD AMF's on Windows; `nvidia` is NVIDIA's
      * (FFmpeg's `fruc_vulkan`, GeForce RTX 30 and newer, on Windows; an
-     * older player reports `engine` for every mode).
+     * older player reports `engine` for every mode); `apple` is Apple's
+     * frame interpolation in VideoToolbox (Apple silicon, macOS 15.4 and
+     * newer; since SDK 1.11.5 and the first player release with the Apple
+     * engine, 0.11.12 or later). An engine reports `platform` on a system
+     * that does not have it.
      *
-     * @param engine - The converter: `"amd"` or `"nvidia"`.
+     * @param engine - The converter: `"amd"`, `"nvidia"` or `"apple"`.
      * @returns A {@link VideoMotion} for that converter.
-     * @throws `invalid` (throws) `engine` is not one of the two.
+     * @throws `invalid` (throws) `engine` is not one of the three (also
+     *   `apple` on a player before SDK 1.11.5).
      * @player 0.8.1
      * @since 1.7.19
      */

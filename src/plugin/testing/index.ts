@@ -2739,7 +2739,7 @@ export class TestHost implements Transport {
    * and a 60 Hz display, converting on an RTX 4070 Laptop GPU. One
    * converter at a time, as the player: the first engine set to a mode (or
    * preset to one, `amd` first) holds it while its mode is not `off`, and
-   * the other engine's modes report `other-engine`, in the player's order:
+   * the other engines' modes report `other-engine`, in the player's order:
    * a model's own run-long, renderer, `upscaling` or `doubling` reason
    * comes first, its `failed`, `overload`, `rate`, `format` or `size` after.
    * A test of "another plugin holds AMD's converter" sets
@@ -2770,11 +2770,49 @@ export class TestHost implements Transport {
     gpu: "NVIDIA GeForce RTX 4070 Laptop GPU",
   };
   /**
+   * Apple's engine behind `plugin.video.motion("apple")`: the same model
+   * as {@link TestHost.motion} (AMD's), its own state, answered the same
+   * way. The defaults are a player where both modes work on a 24 fps video
+   * and a 60 Hz display, converting on an Apple M2. One converter at a
+   * time across the three engines, as the player: the first engine set to
+   * a mode (or preset to one: `amd`, then `nvidia`, then `apple`) holds it
+   * while its mode is not `off`, and the other engines' modes report
+   * `other-engine` in the player's order (as {@link TestHost.nvidiaMotion}
+   * says).
+   *
+   * @example Test an Apple plugin on a Mac it cannot run on
+   * The same reason on both modes is what the player answers on a Mac
+   * without Apple silicon: the plugin shows it and keeps the mode off,
+   * since `no-gpu` holds for the run. A test of "the player renders in
+   * software" sets only `display` to a `rendering` reason.
+   * ```ts
+   * declare const host: TestHost;
+   * // ---cut---
+   * const reason = { code: "no-gpu", message: "this Mac has no frame interpolation" };
+   * host.appleMotion.double = reason;
+   * host.appleMotion.display = reason;
+   * ```
+   *
+   * @since 1.11.5
+   */
+  readonly appleMotion: TestHost["motion"] = {
+    mode: "off",
+    double: null,
+    display: null,
+    renderingStarting: false,
+    sourceFps: 24,
+    outputFps: null,
+    performance: false,
+    displayFps: 60,
+    gpu: "Apple M2",
+  };
+  /**
    * Send `video.motion.changed` with the state {@link TestHost.motion}
-   * describes now (without `mode`), and then the one of
-   * {@link TestHost.nvidiaMotion}, as the player does when they change; a
-   * plugin listening with `plugin.video.motion(engine).onChange` receives
-   * its engine's. Nothing reaches a plugin that does not listen.
+   * describes now (without `mode`), and then the ones of
+   * {@link TestHost.nvidiaMotion} and {@link TestHost.appleMotion}, as the
+   * player does when they change; a plugin listening with
+   * `plugin.video.motion(engine).onChange` receives its engine's. Nothing
+   * reaches a plugin that does not listen.
    *
    * @example The GPU fell behind
    * The player turned the converter off for this video; the plugin's
@@ -2791,7 +2829,7 @@ export class TestHost implements Transport {
    */
   motionChanged() {
     if (!this.subscriptions.has("video.motion.changed")) return;
-    for (const engine of ["amd", "nvidia"] as const) {
+    for (const engine of ["amd", "nvidia", "apple"] as const) {
       const { mode: _, ...state } = motionState(this, engine);
       this.emit("video.motion.changed", state);
     }

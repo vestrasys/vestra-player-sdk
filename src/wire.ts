@@ -675,7 +675,7 @@ export interface WireUpscalingState {
  * @category Playback
  */
 export interface WireMotionState {
-  /** The converter this state is of (`amd`; `nvidia` is reserved). */
+  /** The converter this state is of (`amd`, `nvidia` or `apple`). */
   engine: string;
   /** This plugin's own mode (`off`, `double` or `display`). */
   mode: "off" | "double" | "display";

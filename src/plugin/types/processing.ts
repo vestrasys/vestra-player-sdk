@@ -972,19 +972,28 @@ export interface VideoUpscaling {
 // ---------------------------------------------------------------- motion smoothing
 
 /**
- * A GPU vendor's frame-rate converter for motion smoothing: `amd` (AMD
- * AMF's, on Windows with an AMD Radeon GPU) and `nvidia` (FFmpeg's
+ * A vendor's frame-rate converter for motion smoothing: `amd` (AMD
+ * AMF's, on Windows with an AMD Radeon GPU), `nvidia` (FFmpeg's
  * `fruc_vulkan` on the optical flow hardware of NVIDIA GeForce RTX 30 and
  * newer GPUs, on Windows with driver 573.38 or newer; a player before it
- * reports `engine` for every mode). Each vendor's motion smoothing is its
- * own plugin. One converter runs at a time: while one engine's is on for
- * some plugin, the other engine's modes report `other-engine` and wait.
+ * reports `engine` for every mode) and `apple` (Apple's frame interpolation
+ * in VideoToolbox, on a Mac with Apple silicon and macOS 15.4 or newer;
+ * since SDK 1.11.5). Each vendor's motion smoothing is its own plugin. An
+ * engine that does not exist on the system reports `platform` for every
+ * mode (`apple` on Windows and Linux, `amd` and `nvidia` on macOS and
+ * Linux). One converter runs at a time: while one engine's is on for some
+ * plugin, the other engines' modes report `other-engine` and wait.
+ *
+ * A player whose SDK is older than the engine refuses its name: on a
+ * player before SDK 1.11.5, `plugin.video.motion("apple")` throws
+ * `invalid`. A plugin that uses `apple` declares the first player release
+ * with the Apple engine (0.11.12 or later) in `minPlayerVersion`.
  *
  * @player 0.8.1
  * @since 1.7.19
  * @category Processing
  */
-export type MotionEngine = "amd" | "nvidia";
+export type MotionEngine = "amd" | "nvidia" | "apple";
 
 /**
  * What motion smoothing does: `off`; `double`, twice the video's frame rate
@@ -1008,19 +1017,19 @@ export type MotionMode = "off" | "double" | "display";
  * | Code | Meaning |
  * | --- | --- |
  * | `engine` | The player has no converter of this engine on this system (`nvidia` on a player before it). |
- * | `platform` | The player has no frame-rate converter on this system (macOS, Linux). |
- * | `no-gpu` | No GPU with this engine's converter (Windows: no AMD Radeon GPU; no NVIDIA GeForce RTX 30 or newer GPU). |
- * | `runtime` | The GPU's runtime is missing or too old (Windows: AMD's AMF runtime, installed with the AMD driver; an NVIDIA driver before 573.38), or the converter cannot start on this system (AMD: it failed to start the same way on two videos in this run, an older GPU AMF does not serve; NVIDIA: no Vulkan device or optical flow from the driver, at the first try). |
- * | `filter` | The player's video library has no frame-rate converter (a player built without it). |
+ * | `platform` | This engine's converter does not exist on this operating system: `amd` and `nvidia` on macOS and Linux, `apple` on Windows and Linux. |
+ * | `no-gpu` | No GPU with this engine's converter (Windows: no AMD Radeon GPU; no NVIDIA GeForce RTX 30 or newer GPU. macOS: a Mac without Apple silicon, where the system offers no frame interpolation). |
+ * | `runtime` | The GPU's runtime is missing or too old (Windows: AMD's AMF runtime, installed with the AMD driver; an NVIDIA driver before 573.38. macOS: a version before 15.4, which has no frame interpolation in VideoToolbox), or the converter cannot start on this system (AMD: it failed to start the same way on two videos in this run, an older GPU AMF does not serve; NVIDIA: no Vulkan device or optical flow from the driver, at the first try; Apple: the system says its frame interpolation is not available on this Mac, at the first try). |
+ * | `filter` | The player's video library has no frame-rate converter of this engine (a player built without it). |
  * | `rendering` | Match Display only: the player renders in software, or GPU rendering is still starting ({@link Rendering}). |
  * | `upscaling` | AI upscaling is on ({@link VideoUpscaling}); the two cannot run together. |
  * | `doubling` | A plugin's video filter already raises the frame rate (a `frameBlend` node, such as Frame Doubling); the two cannot run together. |
- * | `other-engine` | The other engine's converter is on for another plugin (the message names it); one converter runs at a time, so this waits until that one is off. |
- * | `failed` | The converter stopped on this video; the message has its error. The next video tries again. |
- * | `overload` | The output could not keep up with this video: the GPU, even with the faster motion search, or, with software rendering, the CPU drawing the doubled frames (the message says which, and that GPU Rendering helps then). The next video tries again. |
+ * | `other-engine` | Another engine's converter is on for another plugin (the message names it); one converter runs at a time, so this waits until that one is off. |
+ * | `failed` | The converter stopped on this video; the message has its error (Apple: for example a size the system cannot interpolate). The next video tries again. |
+ * | `overload` | The output could not keep up with this video: the GPU, even with the faster motion search (Apple: the Mac's frame interpolation, which has no faster setting), or, with software rendering, the CPU drawing the doubled frames (the message says which, and that GPU Rendering helps then). The next video tries again. |
  * | `rate` | The converter's input rate ({@link MotionState.sourceFps}: 25i deinterlaced by field reads 50) does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
- * | `format` | The video's format was not measured: 10-bit or deeper, or HDR. |
- * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). The next video may fit. |
+ * | `format` | The video's format was not measured or is not taken: 10-bit or deeper, or HDR (Apple: HDR only; it takes 10-bit SDR). |
+ * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). Apple has no such table, since its speed depends on the Mac: with GPU rendering, a size it fell far behind on (`overload`, about a quarter of the frames lost, in a window without a stall of the system's interpolation) on two playbacks of about that size in this run is `size` for that size and larger, for that mode, until a plugin sets the mode again or the player restarts; smaller videos are still tried (on an Apple M2, 1080p at 24 fps keeps up and 4K falls behind). The next video may fit. |
  *
  * `engine`, `platform`, `no-gpu`, `runtime`, `filter` and `rendering` (once GPU
  * rendering is not just starting) hold until the player restarts, and
@@ -1132,7 +1141,8 @@ export interface MotionState {
    * setting for this video, or `performance`, the faster one (the first
    * step when the GPU falls behind: AMD searches downscaled frames, NVIDIA
    * uses its fast optical flow, which it already uses above 1440p); `null`
-   * while off.
+   * while off. Apple's converter has no faster setting: it falls back
+   * straight to `overload`, and `searchMode` stays `native`.
    */
   readonly searchMode: "native" | "performance" | null;
   /**
@@ -1156,27 +1166,30 @@ export interface MotionState {
 
 /**
  * `plugin.video.motion(engine)`: motion smoothing, the video's frame rate doubled by
- * a GPU vendor's frame-rate converter (AMD AMF's or NVIDIA's
- * `fruc_vulkan`, on Windows).
+ * a vendor's frame-rate converter (AMD AMF's or NVIDIA's `fruc_vulkan` on
+ * Windows, Apple's VideoToolbox frame interpolation on macOS).
  * Read whether it works here and why not; choose a mode for this plugin.
  *
  * @remarks
  * The converter makes real in-between frames (motion estimation, not
  * blending). While some plugin asks for a mode that can work, the player
- * puts the converter last in the video filter chain, decodes with copy-back
- * (the converter needs the frames in memory) and, for `display`, has the
- * GPU renderer interpolate the doubled frames to the display. The strongest
+ * puts the converter last in the video filter chain, decodes the way the
+ * converter takes its frames (AMD and NVIDIA: copy-back, the frames in
+ * memory; Apple: as decoded, VideoToolbox frames included) and, for
+ * `display`, has the GPU renderer interpolate the doubled frames to the
+ * display. The strongest
  * mode any plugin asked for applies; a stopped plugin's request is revoked.
  *
  * The player watches the converter while the video plays: when its output
  * falls behind the doubled rate or many frames are dropped, it first
- * switches to a faster motion search on downscaled frames, then turns the
- * converter off for this video with an `overload` reason. The next video
+ * switches to a faster motion search ({@link MotionState.searchMode}) where
+ * the engine has one, then turns the converter off for this video with an
+ * `overload` reason. The next video
  * starts afresh.
  *
  * Motion smoothing and {@link VideoUpscaling | AI upscaling} exclude each
- * other (the upscaler needs the frames on the GPU, the converter in
- * memory): while upscaling is on, every mode waits with `upscaling`.
+ * other (on Windows the upscaler needs the frames on the GPU, the converter
+ * in memory): while upscaling is on, every mode waits with `upscaling`.
  * Doubling makes film look like video (the "soap-opera effect"): offer it
  * off by default.
  *
@@ -1185,9 +1198,26 @@ export interface MotionState {
  * newer (the converter gets a Vulkan device of its own while it runs, the
  * renderer is not involved; it starts on slow optical flow on a 4-pixel
  * grid, fast above 1440p). On a laptop with two GPUs the converter runs on
- * the engine's GPU, whichever GPU renders. One engine's converter at a
- * time: the other's modes wait with `other-engine`.
- * **macOS, Linux:** every mode reports `platform`.
+ * the engine's GPU, whichever GPU renders. `apple` reports `platform`.
+ * **macOS:** `apple`: a Mac with Apple silicon and macOS 15.4 or newer;
+ * the converter is the system's frame interpolation (VideoToolbox) on the
+ * Mac's own chip, and {@link MotionState.gpu} names the chip (for example
+ * `Apple M2`). `display` needs GPU rendering, the player's default on
+ * macOS (`rendering` after a fallback to software rendering). How large a
+ * video each mode keeps up with depends on the Mac: one too large falls
+ * behind and reports `overload` for that video; once two playbacks of
+ * about that size fell far behind with GPU rendering, that size and
+ * larger report `size` until a plugin sets the mode again or the player
+ * restarts (on an Apple M2, 1080p at 24 fps
+ * keeps up, 4K does not). It takes 10-bit SDR video; HDR reports
+ * `format`. Until the system's interpolation is ready (under a second on
+ * an M2; the first time after the Mac starts it can take longer; again
+ * for a new video or size) the frames pass through undoubled, and the
+ * player judges the output only from then. `amd` and `nvidia` report `platform`.
+ * **Linux:** every engine reports `platform`.
+ *
+ * One engine's converter at a time, on every system: the other engines'
+ * modes wait with `other-engine`.
  *
  * @example Offer the three modes as radio commands
  * Each command chooses one mode; one the player cannot run here is
