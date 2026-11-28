@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased (1.12.0)
+
+**Three new interface languages** (needs the player release that has them): Traditional Chinese (`zh-Hant`), Brazilian Portuguese (`pt-BR`) and Russian (`ru`). An addition only: **nobody must change anything**; a plugin without these catalogs shows its English texts in them, as in any language it does not ship. A plugin that switches exhaustively over `Locale` sees new cases at compile time (no plugin in either repository does).
+
+- **`LOCALES`** is `en, zh-Hans, zh-Hant, ja, ko, de, fr, es, pt-BR, ru`, the player's order; **`Locale`** gains the three. `i18n check` accepts `locales/zh-Hant.po`, `pt-BR.po` and `ru.po`; `TestHost.locale` and `plugin.appearance.setLanguage` accept the three codes.
+- **System languages** (`matchLocale`, as the player's `match_tag`): Chinese in the Traditional script, or Taiwan, Hong Kong, Macao without a script, is now `zh-Hant` (it was English); Portuguese of any region is `pt-BR`; Russian by its primary subtag.
+- **List separators** (`LIST_SEPARATORS`): `zh-Hant` joins like `zh-Hans` (、，；。); `pt-BR` and `ru` like English.
+- **Plural forms**: `zh-Hant` has one (`nplurals=1`), as `zh-Hans`, `ja` and `ko`; `pt-BR` and `ru` have the player's two (one, other).
+- **Product data**: `BUILTIN_COMMANDS` lists `vestra.preferences/language.zh-Hant` (繁體中文), `language.pt-BR` (Português (Brasil)) and `language.ru` (Русский), palette only like the other Language commands; so do the tables in [Commands](docs/reference/commands.md) and [Translations](docs/reference/i18n.md).
+- **Docs**: the `Locale` remark no longer says Traditional Chinese shows English. The API surface snapshot changes in `Locale` and `LOCALES` only.
+
 ## 1.11.5
 
 **Apple motion smoothing** (request R1; needs the first player release with the Apple engine, 0.11.12 or later). An addition only: **nobody must change anything**; a plugin that does not use `"apple"` behaves as before. Used by Apple Motion Smoothing (`zysilm.applemotion`); also for any plugin that offers motion smoothing on macOS (a picture panel's smoothing switch, a per-file profile plugin that turns smoothing on for low-rate video).

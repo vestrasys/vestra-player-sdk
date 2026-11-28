@@ -160,6 +160,13 @@ test("text and list values are plain, frozen data and refuse malformed input", (
     renderText(list(["a", "b"]) as never, new Catalog(), locale);
   assert.equal(shown("en"), "a, b");
   assert.equal(shown("zh-Hans"), "a、b");
+  assert.equal(shown("zh-Hant"), "a、b");
+  assert.equal(shown("pt-BR"), "a, b");
+  assert.equal(shown("ru"), "a, b");
+  const sentences = (locale: string) =>
+    renderText(list(["a", "b"], "sentences") as never, new Catalog(), locale);
+  assert.equal(sentences("zh-Hant"), "a。b");
+  assert.equal(sentences("ru"), "a. b");
 });
 
 test("OSD messages built from translated parts and lists", async () => {

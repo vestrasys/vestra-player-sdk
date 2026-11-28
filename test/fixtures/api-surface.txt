@@ -898,7 +898,7 @@
 @vestra-player/sdk TypeAliasDeclaration Json = export type Json = null | boolean | number | string | Json[] | { [key: string]: Json; };
 @vestra-player/sdk TypeAliasDeclaration LanguagePreference = export type LanguagePreference = "system" | Locale;
 @vestra-player/sdk TypeAliasDeclaration ListStyle = export type ListStyle = "list" | "clauses" | "semicolons" | "sentences" | "lines";
-@vestra-player/sdk TypeAliasDeclaration Locale = export type Locale = "en" | "zh-Hans" | "ja" | "ko" | "de" | "fr" | "es";
+@vestra-player/sdk TypeAliasDeclaration Locale = export type Locale = "en" | "zh-Hans" | "zh-Hant" | "ja" | "ko" | "de" | "fr" | "es" | "pt-BR" | "ru";
 @vestra-player/sdk TypeAliasDeclaration MarkKind = export type MarkKind = "chapter" | "bookmark" | "marker";
 @vestra-player/sdk TypeAliasDeclaration MenuId = export type MenuId = "open" | "playback" | "subtitles" | "video" | "audio" | "screen" | "settings" | "reset" | "tools";
 @vestra-player/sdk TypeAliasDeclaration MotionEngine = export type MotionEngine = "amd" | "nvidia" | "apple";
@@ -1152,7 +1152,7 @@
 @vestra-player/sdk/testing VariableDeclaration COMMAND_LIMITS = COMMAND_LIMITS: { readonly perPlugin: 160; readonly total: 1024; readonly depth: 8; readonly idBytes: 128; readonly titleBytes: 128; readonly segmentBytes: 80; readonly groupBytes: 80; readonly categoryBytes: 80; readonly reasonBytes: 512; readonly order: 1000000; }
 @vestra-player/sdk/testing VariableDeclaration IMAGE_LIMITS = IMAGE_LIMITS: Readonly<{ fileBytes: number; side: 4096; pluginBytes: number; viewBytes: number; }>
 @vestra-player/sdk/testing VariableDeclaration LIST_SEPARATORS = LIST_SEPARATORS: Readonly<Record<Locale, Readonly<Record<ListStyle, string>>>>
-@vestra-player/sdk/testing VariableDeclaration LOCALES = LOCALES: readonly [ "en", "zh-Hans", "ja", "ko", "de", "fr", "es" ]
+@vestra-player/sdk/testing VariableDeclaration LOCALES = LOCALES: readonly [ "en", "zh-Hans", "zh-Hant", "ja", "ko", "de", "fr", "es", "pt-BR", "ru" ]
 @vestra-player/sdk/testing VariableDeclaration MENU_IDS = MENU_IDS: readonly [ "open", "playback", "subtitles", "video", "audio", "screen", "settings", "reset", "tools" ]
 @vestra-player/sdk/testing VariableDeclaration MESSAGE_LIMIT = MESSAGE_LIMIT: number
 @vestra-player/sdk/testing VariableDeclaration OSD_LIMITS = OSD_LIMITS: Readonly<{ readonly messageChars: 200; readonly panelLines: 32; readonly panelBytes: 4096; readonly minColumns: 8; readonly maxColumns: 1000; readonly actions: 2; readonly actionChars: 40; }>
