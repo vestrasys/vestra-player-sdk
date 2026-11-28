@@ -23,6 +23,7 @@ import type { MediaCapture } from "./snapshots.ts";
 import type { FileResolverOptions, Resolver } from "./sources.ts";
 import type { View } from "./ui-content.ts";
 import type { App, Scope } from "./base.ts";
+import type { Subtitles } from "./subtitles.ts";
 /* oxlint-enable no-unused-vars */
 
 // ---------------------------------------------------------------- timeline
@@ -1317,6 +1318,7 @@ export interface Player {
    *   returned (for example split streams with different headers).
    * @throws `unavailable` (rejects) The stream a file resolver prepared was
    *   not ready to play.
+   * @throws `invalid` (rejects) `start` is negative or not finite.
    *
    * @example Open a file paused
    * The file opens at its start without playing. `open` resolves once the
@@ -1328,11 +1330,36 @@ export interface Player {
    * await media.ready(); // rejects `failed` when the file cannot be loaded
    * ```
    *
+   * @example Resume a file where the user left it
+   * The file opens at 12:34 and plays from there, with no frame of its
+   * start shown first. `start` is mpv's per-file `start` option: the player
+   * loads the file at that time instead of seeking once it has loaded.
+   * ```ts
+   * const media = await plugin.player.open("/Movies/film.mkv", { start: 754 }); // seconds
+   * await media.ready();
+   * ```
+   *
    * @since 1.0.0
    */
   open(
     source: string,
-    options?: { paused?: boolean; signal?: AbortSignal } & Conditional,
+    options?: {
+      paused?: boolean;
+      signal?: AbortSignal;
+      /**
+       * Start here, in seconds from the media's start (0 or more; `0` or
+       * omitted: the beginning). The player loads the file at this time, so
+       * no frame of its start shows first (mpv's per-file `start`); a time
+       * past the end opens it at its end. Also for an address a
+       * {@link Resolver} resolves; a stream a file resolver generates
+       * ({@link FileResolverOptions}) starts at its beginning. Players
+       * before 0.11.13 ignore it.
+       *
+       * @player 0.11.13
+       * @since 1.12.0
+       */
+      start?: number;
+    } & Conditional,
   ): Promise<Media>;
   /**
    * Start a source whose frames this plugin generates (the stream becomes
@@ -1699,6 +1726,90 @@ export interface Player {
    * @since 1.0.0
    */
   selectAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
+  /**
+   * Remove an audio track this plugin added to the current media with
+   * {@link Player.addAudioTrack}; mpv's `audio-remove`. Removing the playing
+   * track switches to another one, as mpv does. Resolves with the new state.
+   * Tracks inside the file, files the player loaded beside it, a resolver's
+   * separate audio stream and other plugins' tracks cannot be removed.
+   *
+   * @throws `invalid` (rejects) No track with this id that this plugin added
+   *   to the current source.
+   * @throws `unavailable` (rejects) No ready media.
+   * @throws `backend` (rejects) The player could not remove it.
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
+   *
+   * @example Take back a dub the plugin added
+   * The plugin added a dubbed audio file earlier; its "Remove dub" item takes
+   * it off the file again. `addAudioTrack` returned the track, whose `id`
+   * names it until the source changes (a new source drops added tracks
+   * anyway, hence the `invalid` catch).
+   * ```ts
+   * declare const added: AudioTrack;
+   * // ---cut---
+   * try {
+   *   await plugin.player.removeAudioTrack(added.id);
+   * } catch (error) {
+   *   // `invalid`: already gone (another file opened meanwhile).
+   *   if ((error as PluginError).code !== "invalid") throw error;
+   * }
+   * ```
+   *
+   * @player 0.11.13
+   * @since 1.12.0
+   */
+  removeAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
+  /**
+   * Jump to the start of the next or previous subtitle line, or of the line
+   * on screen (`"current"`), of the selected primary subtitle track; mpv's
+   * `sub-seek`. Resolves once the player asked for the seek;
+   * `state.position` follows when it has landed. Where there is no such line
+   * (after the last one, or before the first) nothing moves.
+   *
+   * @remarks
+   * The player knows the lines it has read: all of a subtitle file (loaded
+   * with {@link Subtitles.load} or beside the video), but of a track inside
+   * the video only the lines up to what was played or buffered, so a jump
+   * forward in an embedded track can find nothing yet.
+   *
+   * @throws `invalid` (rejects) `direction` is not `"next"`, `"previous"` or
+   *   `"current"`.
+   * @throws `unavailable` (rejects) No ready media, or no subtitle track is
+   *   selected.
+   * @throws `unsupported` (rejects) The source cannot seek, or is a
+   *   generated stream.
+   * @throws `stale` (rejects) The source changed since the state the call is
+   *   based on (another file, a close, or any pause, seek
+   *   or speed change by the user or another plugin).
+   *
+   * @example Repeat the line on screen
+   * A language-learning plugin's key plays the subtitle line on screen again
+   * from its start, and another goes to the next line. `seekSubtitle` uses
+   * the selected subtitle's own timing, so the plugin needs no cue list.
+   * ```ts
+   * plugin.commands.add({
+   *   id: "repeat-line",
+   *   title: "Repeat Subtitle Line",
+   *   bindings: ["Ctrl+R"],
+   *   run: () => plugin.player.seekSubtitle("current"), // the line on screen, from its start
+   * });
+   * plugin.commands.add({
+   *   id: "next-line",
+   *   title: "Next Subtitle Line",
+   *   bindings: ["Ctrl+Right"],
+   *   run: () => plugin.player.seekSubtitle("next"), // nothing moves after the last line
+   * });
+   * ```
+   *
+   * @player 0.11.13
+   * @since 1.12.0
+   */
+  seekSubtitle(
+    direction: "next" | "previous" | "current",
+    options?: Conditional,
+  ): Promise<void>;
   /**
    * One frame or to the next / previous keyframe (pauses for frames). Rejects
    * `unsupported` without moving video (audio only, cover art, a generated

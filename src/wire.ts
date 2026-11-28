@@ -781,7 +781,7 @@ export function createWire(transport: Transport) {
           options,
         ),
     },
-    /** The main window: its state, size, level, pointer hiding and picture-in-picture. */
+    /** The main window: its state, size, level, pointer hiding, picture-in-picture, title, maximized and minimized. */
     window: {
       state: () => transport.request<WindowFacts>("window.state"),
       setVideoArea: (width: number, height: number) =>
@@ -795,6 +795,13 @@ export function createWire(transport: Transport) {
         transport.request<void>("window.setCursorAutoHide", { mode }),
       setPictureInPicture: (on: boolean) =>
         transport.request<void>("window.setPictureInPicture", { on }),
+      /** `null`: the player's own title again. */
+      setTitle: (title: string | null) =>
+        transport.request<void>("window.setTitle", { title }),
+      setMaximized: (maximized: boolean) =>
+        transport.request<void>("window.setMaximized", { maximized }),
+      setMinimized: (minimized: boolean) =>
+        transport.request<void>("window.setMinimized", { minimized }),
     },
     /** Output devices (mpv ids) and the one to play on. */
     audioOutput: {
@@ -964,6 +971,11 @@ export function createWire(transport: Transport) {
           id,
           ...(expected ? { expected } : {}),
         }),
+      remove: (id: number, expected?: SourceStamp) =>
+        transport.request<void>("audio.removeTrack", {
+          id,
+          ...(expected ? { expected } : {}),
+        }),
     },
     /** The core's own playback actions; resolves when the action finished. */
     host: {
@@ -985,6 +997,12 @@ export function createWire(transport: Transport) {
           "player.setStepSeek",
           keyframes === undefined ? { seconds } : { seconds, keyframes },
         ),
+      /** mpv's `sub-seek`: `next`, `previous` or `current` line. */
+      seekSubtitle: (direction: string, expected?: SourceStamp) =>
+        transport.request<void>("player.seekSubtitle", {
+          direction,
+          ...(expected ? { expected } : {}),
+        }),
     },
     clipboard: {
       readText: () => transport.request<string | null>("clipboard.readText"),
@@ -1090,12 +1108,14 @@ export function createWire(transport: Transport) {
         text: TextValueJson,
         args?: TemplateArgsJson,
         actions?: { title: TextValueJson; command: string }[],
+        durationMs?: number,
       ) =>
         transport.request<void>("osd.show", {
           text,
           ...(args === undefined ? {} : { args }),
           // Sent only when given.
           ...(actions === undefined ? {} : { actions }),
+          ...(durationMs === undefined ? {} : { durationMs }),
         }),
       panel: (
         text: TextValueJson | null,

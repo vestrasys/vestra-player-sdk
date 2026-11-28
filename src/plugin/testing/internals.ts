@@ -115,6 +115,8 @@ export class Internals {
   stepped = false;
   /** The next source intent is a frame step back from the end: it stays paused. */
   holdPause = false;
+  /** The audio track ids `audio.addTrack` added to this source (`audio.removeTrack`). */
+  readonly addedAudio = new Set<number>();
   /**
    * The resources this plugin loaded into the current source (resource id →
    * bytes), removed ones included: like the player, a removed track frees

@@ -184,7 +184,7 @@ test("subtitle load takes format, title and select; tracks carry codec, text and
   );
   await rejects(plugin.subtitles.load(ass, { title: "" }), "invalid");
   await rejects(
-    plugin.subtitles.load(ass, { format: "vtt" as "srt" }),
+    plugin.subtitles.load(ass, { format: "sami" as "srt" }),
     "invalid",
   );
   await stop();

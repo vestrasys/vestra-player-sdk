@@ -54,6 +54,8 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "Player.previous": [{ method: "sequence.step" }],
     "Player.addAudioTrack": [{ method: "audio.addTrack" }],
     "Player.selectAudioTrack": [{ method: "audio.selectTrack" }],
+    "Player.removeAudioTrack": [{ method: "audio.removeTrack" }],
+    "Player.seekSubtitle": [{ method: "player.seekSubtitle" }],
     "Player.step": [{ method: "player.step" }],
     "Player.setStepSeek": [{ method: "player.setStepSeek" }],
     "Player.setLoop": [{ method: "player.setLoop" }],
@@ -87,6 +89,9 @@ export const API_REQUESTS: Readonly<Record<string, readonly ApiRequest[]>> =
     "MainWindow.setPictureInPicture": [
       { method: "window.setPictureInPicture" },
     ],
+    "MainWindow.setTitle": [{ method: "window.setTitle" }],
+    "MainWindow.setMaximized": [{ method: "window.setMaximized" }],
+    "MainWindow.setMinimized": [{ method: "window.setMinimized" }],
     "Appearance.set": [{ method: "appearance.set" }],
     "Appearance.setLanguage": [{ method: "appearance.setLanguage" }],
     "Drops.provide": [{ method: "drops.provide" }],

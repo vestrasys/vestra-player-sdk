@@ -80,6 +80,131 @@ export const SUBTITLE_LIMITS = Object.freeze({
   uploads: 8,
 } as const);
 
+const VTT_TIME = /^(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})$/;
+const VTT_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  lrm: "‎",
+  rlm: "‏",
+};
+/** A cue line longer than this (characters) leaves its cue out. */
+const VTT_LINE_CHARS = 4096;
+
+/**
+ * WebVTT (`format: "vtt"`) as the SRT the player loads, so it passes the
+ * player's SRT checks unchanged. Cue identifiers, settings (position,
+ * alignment), `NOTE`, `STYLE` and `REGION` blocks are dropped; markup tags
+ * (`<b>`, `<c.yellow>`, `<v Speaker>`, timestamps) are removed and entities
+ * decoded, so the text shows as written: the player shows SRT text
+ * literally (`<`, `>`, `{…}` included). An entity that stands for a control
+ * character (a line break) becomes a space, so it cannot split a cue. A cue
+ * with a bad timing line or an over-long line, one that ends before it
+ * starts, or one whose text is empty once its tags are removed, is left out;
+ * the rest are ordered by start time.
+ */
+export function webvttToSrt(bytes: Uint8Array): Uint8Array {
+  if (bytes.length > SUBTITLE_LIMITS.fileBytes)
+    throw failure("invalid", "WebVTT must contain at most 2097152 bytes");
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw failure("invalid", "WebVTT must be UTF-8");
+  }
+  const lines = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n").split("\n");
+  if (!/^WEBVTT(?:[ \t].*)?$/.test(lines[0] ?? ""))
+    throw failure("invalid", "WebVTT must start with a WEBVTT line");
+  const millis = (time: string) => {
+    const m = VTT_TIME.exec(time);
+    if (!m || Number(m[2]) > 59 || Number(m[3]) > 59) return null;
+    return (
+      ((Number(m[1] ?? 0) * 60 + Number(m[2])) * 60 + Number(m[3])) * 1000 +
+      Number(m[4])
+    );
+  };
+  // A control character (from an entity, or raw): a space, so no entity
+  // makes a line break that would end the SRT cue.
+  const visible = (char: string) => {
+    const code = char.codePointAt(0)!;
+    return code < 0x20 || (code >= 0x7f && code < 0xa0) ? " " : char;
+  };
+  const shown = (line: string) =>
+    line
+      // No `<` inside: linear on a line of `<` without `>`.
+      .replace(/<[^<>]*>/g, "")
+      .replace(
+        /&(#x[0-9a-f]{1,6}|#\d{1,7}|[a-z]{2,8});/gi,
+        (entity, name: string) => {
+          if (name[0] !== "#") return VTT_ENTITIES[name] ?? entity;
+          const code =
+            name[1] === "x" || name[1] === "X"
+              ? parseInt(name.slice(2), 16)
+              : Number(name.slice(1));
+          return code > 0 &&
+            code <= 0x10ffff &&
+            (code < 0xd800 || code > 0xdfff)
+            ? String.fromCodePoint(code)
+            : entity;
+        },
+      )
+      .replace(/[\u0000-\u001f\u007f-\u009f]/g, visible)
+      .trimEnd();
+  const cues: { start: number; end: number; text: string[] }[] = [];
+  let block: string[] = [];
+  const flush = () => {
+    const [first = "", second] = block;
+    const at = first.includes("-->") ? 0 : second?.includes("-->") ? 1 : -1;
+    // NOTE, STYLE, REGION and anything else without a timing line.
+    if (at >= 0 && !/^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(first)) {
+      const [from = "", rest = ""] = block[at]!.split("-->");
+      const start = millis(from.trim());
+      const end = millis(rest.trim().split(/[ \t]/)[0] ?? "");
+      const raw = block.slice(at + 1);
+      // A malformed cue is left out, not the whole file.
+      if (
+        start !== null &&
+        end !== null &&
+        end > start &&
+        raw.every((line) => line.length <= VTT_LINE_CHARS)
+      ) {
+        const text = raw.map(shown).filter((line) => line.trim() !== "");
+        if (text.length) cues.push({ start, end, text });
+      }
+    }
+    block = [];
+  };
+  // Blocks are separated by blank lines; the first is the header, which a
+  // cue may follow at once (a timing line ends it, as players accept).
+  let header = true;
+  for (const line of lines.slice(1)) {
+    if (header && line.includes("-->")) header = false;
+    if (line.trim() === "") {
+      if (header) header = false;
+      else if (block.length) flush();
+      continue;
+    }
+    if (!header) block.push(line);
+  }
+  if (block.length) flush();
+  if (!cues.length)
+    throw failure("invalid", "WebVTT has no valid cue with text");
+  cues.sort((a, b) => a.start - b.start);
+  const two = (n: number) => String(n).padStart(2, "0");
+  const stamp = (ms: number) =>
+    `${two(Math.floor(ms / 3_600_000))}:${two(Math.floor(ms / 60_000) % 60)}:${two(Math.floor(ms / 1000) % 60)},${String(ms % 1000).padStart(3, "0")}`;
+  const srt = cues
+    .map(
+      (cue, i) =>
+        `${i + 1}\n${stamp(cue.start)} --> ${stamp(cue.end)}\n${cue.text.join("\n")}\n`,
+    )
+    .join("\n");
+  return new TextEncoder().encode(srt);
+}
+
 /** The events the subtitle state follows (it has none of its own). */
 const EVENTS = ["source.state", "playback.backend"];
 const raws = new WeakMap<SubtitlesState, SubtitleState>();
@@ -358,10 +483,13 @@ export function subtitles(scope: ScopeImpl): Subtitles {
         service().mutate((id) => host().select(chosen, expected, id, role)),
       );
     },
-    async load(srt, options) {
-      const format = options?.format ?? "srt";
-      if (format !== "srt" && format !== "ass")
-        throw failure("invalid", "format must be srt or ass");
+    async load(bytes, options) {
+      const asked = options?.format ?? "srt";
+      if (asked !== "srt" && asked !== "ass" && asked !== "vtt")
+        throw failure("invalid", "format must be srt, ass or vtt");
+      // WebVTT goes to the player as SRT (its checks apply unchanged).
+      const srt = asked === "vtt" ? webvttToSrt(bytes) : bytes;
+      const format = asked === "vtt" ? "srt" : asked;
       const select = options?.select ?? "primary";
       if (select !== "primary" && select !== "secondary" && select !== "none")
         throw failure(

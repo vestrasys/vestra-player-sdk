@@ -60,6 +60,20 @@ export function osdHandlers(
           );
         return { title, command };
       });
+      // Player 0.11.13: how long it stays, an integer of milliseconds.
+      const ms = p.durationMs;
+      if (
+        ms !== undefined &&
+        !(
+          Number.isInteger(ms) &&
+          Number(ms) >= OSD_LIMITS.minDurationMs &&
+          Number(ms) <= OSD_LIMITS.maxDurationMs
+        )
+      )
+        throw new HostError(
+          "invalid",
+          `durationMs is an integer from ${OSD_LIMITS.minDurationMs} to ${OSD_LIMITS.maxDurationMs}`,
+        );
       host.osd.push(text);
       host.osdActions.push(actions);
     },

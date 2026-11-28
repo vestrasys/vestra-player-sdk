@@ -216,7 +216,8 @@ export interface Subtitles {
     options?: SubtitleConditional & { role?: "primary" | "secondary" },
   ): Promise<SubtitlesState>;
   /**
-   * Upload a subtitle file's bytes (UTF-8 SRT, or ASS/SSA with `format: "ass"`)
+   * Upload a subtitle file's bytes (UTF-8 SRT, ASS/SSA with `format: "ass"`,
+   * or WebVTT with `format: "vtt"`)
    * for the current source; select it unless `select: "none"`. `title` (1–200
    * characters) names the track: data, or a {@link Text} the player translates
    * (`text("{} · {}", [text("Simplified Chinese"), file])`). Aborting `signal`
@@ -224,14 +225,22 @@ export interface Subtitles {
    * commit was sent it completes.
    *
    * Limits: SRT ≤ 2 MiB and ≤ 10,000 cues; ASS ≤ 2 MiB with `[Script Info]`
-   * and `[Events]` and 1–20,000 `Dialogue:` lines. Convert other formats
-   * (VTT, SAMI) to SRT first. Per source, a plugin has at most 4 loaded
+   * and `[Events]` and 1–20,000 `Dialogue:` lines. WebVTT (≤ 2 MiB, UTF-8,
+   * starting with `WEBVTT`) is turned into SRT by the SDK and loaded as SRT,
+   * so the SRT limits and checks apply and the text shows as written: cue
+   * settings (position, alignment), `STYLE`, `REGION` and `NOTE` blocks
+   * are dropped, markup tags removed and entities decoded (an entity for a
+   * line break becomes a space); a cue with a bad timing line, a line over
+   * 4,096 characters or no text left is skipped. The SRT is a little larger
+   * than the WebVTT (cue numbers, hours in every time), and it must fit the
+   * 2 MiB too. Convert other formats (SAMI) to SRT first. Per source, a plugin has at most 4 loaded
    * tracks at once and loads at most 16 files (removed ones count), and
    * every plugin together at most 16 tracks; see `SUBTITLE_LIMITS` in
    * `@vestra-player/sdk/testing`.
    *
-   * @throws `invalid` (rejects) A bad `format` or `title`, or a file over the
-   *   limits.
+   * @throws `invalid` (rejects) A bad `format` or `title`, a file over the
+   *   limits, or WebVTT that is not UTF-8, lacks its `WEBVTT` line or has
+   *   no valid cue with text.
    * @throws `stale` (rejects) With `ifCurrent`: the source changed since
    *   that state.
    * @throws `unavailable` (rejects) Nothing loaded, or the source is still
@@ -258,12 +267,29 @@ export interface Subtitles {
    * await plugin.osd.show("Loaded {}", [track.title]);
    * ```
    *
+   * @example Load a WebVTT file from the internet
+   * Online videos often come with WebVTT subtitles. With `format: "vtt"`
+   * the SDK turns the file into SRT before the upload, so the player's SRT
+   * checks and limits apply; positions and styling in the file are dropped.
+   * ```ts
+   * declare const vttUrl: string;
+   * // ---cut---
+   * const response = await fetch(vttUrl);
+   * if (!response.ok) throw new Error(`subtitles: HTTP ${response.status}`);
+   * const bytes = new Uint8Array(await response.arrayBuffer());
+   * await plugin.subtitles.load(bytes, { format: "vtt", title: "English (web)" });
+   * ```
+   *
    * @since 1.0.0
    */
   load(
     bytes: Uint8Array,
     options?: SubtitleConditional & {
-      format?: "srt" | "ass";
+      /**
+       * `"srt"` (default), `"ass"` (ASS/SSA) or `"vtt"` (WebVTT, loaded as
+       * SRT; since 1.12.0).
+       */
+      format?: "srt" | "ass" | "vtt";
       title?: string | Text;
       select?: "primary" | "secondary" | "none";
       signal?: AbortSignal;

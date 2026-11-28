@@ -103,6 +103,16 @@ export function sourceIntent(
     eventSequence: host.source.eventSequence + 1,
   };
   if (intent.kind === "open" || intent.kind === "openProvider") {
+    // Player 0.11.13: mpv's per-file `start`, seconds.
+    if (
+      intent.start !== undefined &&
+      !(
+        typeof intent.start === "number" &&
+        Number.isFinite(intent.start) &&
+        intent.start >= 0
+      )
+    )
+      throw new HostError("invalid", "start must be a finite number >= 0");
     next.stamp.generation++;
     next.cycle++;
     next.kind = intent.kind === "open" ? "media" : "producer";
@@ -117,6 +127,8 @@ export function sourceIntent(
     next.terminalReason = null;
     next.capabilities = { ...readyCapabilities };
     next.loop = null; // a new source clears the A-B loop
+    host.mainWindow.title = null; // and a plugin's window title
+    inner.addedAudio.clear(); // and the audio tracks it added
     if (host.timeline.layers.size || host.timeline.rangeLayers.size) {
       host.timeline.layers.clear(); // and every timeline layer
       host.timeline.rangeLayers.clear();
@@ -124,6 +136,7 @@ export function sourceIntent(
     }
   } else if (intent.kind === "close") {
     if (!host.source.source) throw new HostError("invalid", "noSource");
+    host.mainWindow.title = null; // a closed source has no plugin title
     Object.assign(next, {
       phase: "empty",
       source: null,
@@ -570,7 +583,29 @@ export function mediaHandlers(
           track,
         ],
       });
+      inner.addedAudio.add(track.trackId);
       return track;
+    },
+    // Player 0.11.13: mpv's `audio-remove`, external tracks only.
+    "audio.removeTrack": (p) => {
+      audioCondition(host, inner, p.expected);
+      const tracks = host.source.audioTracks ?? [];
+      const track = tracks.find((t) => t.trackId === p.id);
+      // Like the player: only a track this plugin added to this source.
+      if (!track || !inner.addedAudio.has(track.trackId))
+        throw new HostError(
+          "invalid",
+          "not an audio track this plugin added to this source",
+        );
+      inner.addedAudio.delete(track.trackId);
+      const rest = tracks.filter((t) => t !== track);
+      // Like mpv: removing the playing track selects the first one left.
+      host.setSource({
+        audioTracks:
+          track.selected && rest.length
+            ? rest.map((t, i) => ({ ...t, selected: i === 0 }))
+            : rest,
+      });
     },
     "audio.selectTrack": (p) => {
       audioCondition(host, inner, p.expected);

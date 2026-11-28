@@ -171,5 +171,25 @@ export function mainWindow(scope: ScopeImpl): MainWindow {
       await host().setPictureInPicture(on);
       await service().read();
     },
+    async setTitle(title) {
+      if (title !== null) {
+        if (typeof title !== "string")
+          throw failure("invalid", "title is a string or null");
+        const shown = title.replace(/[\n\r]/g, " ");
+        if (!shown.trim() || [...shown].length > 200)
+          throw failure("invalid", "title needs 1..200 characters");
+      }
+      await host().setTitle(title);
+    },
+    async setMaximized(maximized) {
+      if (typeof maximized !== "boolean")
+        throw failure("invalid", "maximized must be a boolean");
+      await host().setMaximized(maximized);
+    },
+    async setMinimized(minimized) {
+      if (typeof minimized !== "boolean")
+        throw failure("invalid", "minimized must be a boolean");
+      await host().setMinimized(minimized);
+    },
   };
 }

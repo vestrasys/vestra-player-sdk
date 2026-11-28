@@ -444,6 +444,33 @@ export function servicesHandlers(
     },
     "window.setAlwaysOnTop": (p) =>
       void (host.mainWindow.onTop = p.onTop === true),
+    // Player 0.11.13: a plugin's title until a new source or its stop.
+    "window.setTitle": (p) => {
+      if (p.title === null) return void (host.mainWindow.title = null);
+      if (typeof p.title !== "string")
+        throw new HostError("invalid", "title requires a string or null");
+      const title = p.title.replace(/[\n\r]/g, " ");
+      if (!title.trim() || [...title].length > 200)
+        throw new HostError("invalid", "title needs 1..=200 characters");
+      if (!host.source.source || host.source.phase === "empty")
+        throw new HostError("unavailable", "no source is open");
+      host.mainWindow.title = title;
+    },
+    "window.setMaximized": (p) => {
+      if (typeof p.maximized !== "boolean")
+        throw new HostError("invalid", "maximized requires a boolean");
+      if (host.mainWindow.fullscreen)
+        throw new HostError(
+          "unavailable",
+          hostText(host, inner, "Not available in fullscreen"),
+        );
+      host.setMainWindow({ maximized: p.maximized });
+    },
+    "window.setMinimized": (p) => {
+      if (typeof p.minimized !== "boolean")
+        throw new HostError("invalid", "minimized requires a boolean");
+      host.mainWindow.minimized = p.minimized;
+    },
     "window.setCursorAutoHide": (p) => {
       if (p.mode !== "fullscreen" && p.mode !== "playing")
         throw new HostError("invalid", "mode is fullscreen or playing");

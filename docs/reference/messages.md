@@ -36,6 +36,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `audio.addTrack` | `{ expected?, path, select }` | `SourceAudioTrack` | `invalid`, `unavailable`, `backend`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.addAudioTrack Player.addAudioTrack} |
+| `audio.removeTrack` | `{ expected?, id }` | `void` | `invalid`, `unavailable`, `backend`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.removeAudioTrack Player.removeAudioTrack} |
 | `audio.selectTrack` | `{ expected?, id }` | `void` | `invalid`, `unavailable`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.selectAudioTrack Player.selectAudioTrack} |
 
 ### `bindings`
@@ -136,7 +137,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | Method | Params | Result | Errors (documented) | Stability |
 | --- | --- | --- | --- | --- |
 | `osd.panel` | `{ maxColumns?, args?, text }` | `void` | `Error` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.panel Osd.panel} |
-| `osd.show` | `{ actions?, args?, text }` | `void` | `invalid`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.show Osd.show} |
+| `osd.show` | `{ durationMs?, actions?, args?, text }` | `void` | `invalid`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!Osd.show Osd.show} |
 
 ### `packages`
 
@@ -174,6 +175,7 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | --- | --- | --- | --- | --- |
 | `player.audioDevices` | — | `{ id: string; name: string }[]` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.audioDevices Player.audioDevices} |
 | `player.chapters` | — | `{ sourceId, chapters }` | `disabled` | SDK member: {@linkcode "@vestra-player/sdk"!Player.chapters Player.chapters} |
+| `player.seekSubtitle` | `{ expected?, direction }` | `void` | `invalid`, `unavailable`, `unsupported`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.seekSubtitle Player.seekSubtitle} |
 | `player.setAudioDevice` | `{ id }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setAudioDevice Player.setAudioDevice} |
 | `player.setLoop` | `{ expected?, loop }` | `void` | `invalid`, `unsupported`, `unavailable`, `stale` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setLoop Player.setLoop} |
 | `player.setStepSeek` | `{ seconds, keyframes? }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!Player.setStepSeek Player.setStepSeek} |
@@ -342,7 +344,10 @@ What a method's calls mean for standby is in [Keep a command's state without kee
 | --- | --- | --- | --- | --- |
 | `window.setAlwaysOnTop` | `{ onTop }` | `void` | `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setAlwaysOnTop MainWindow.setAlwaysOnTop} |
 | `window.setCursorAutoHide` | `{ mode }` | `void` | `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setCursorAutoHide MainWindow.setCursorAutoHide} |
+| `window.setMaximized` | `{ maximized }` | `void` | `invalid`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setMaximized MainWindow.setMaximized} |
+| `window.setMinimized` | `{ minimized }` | `void` | `invalid`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setMinimized MainWindow.setMinimized} |
 | `window.setPictureInPicture` | `{ on }` | `void` | `unsupported`, `unavailable`, `invalid`, `busy`, `failed` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setPictureInPicture MainWindow.setPictureInPicture} |
+| `window.setTitle` | `{ title }` | `void` | `invalid`, `unavailable` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setTitle MainWindow.setTitle} |
 | `window.setVideoArea` | `{ width, height }` | `{ width, height, clamped }` | `unavailable`, `invalid` | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.setVideoArea MainWindow.setVideoArea} |
 | `window.state` | — | `WindowFacts` | — | SDK member: {@linkcode "@vestra-player/sdk"!MainWindow.state MainWindow.state} |
 
