@@ -1029,7 +1029,7 @@ export type MotionMode = "off" | "double" | "display";
  * | `overload` | The output could not keep up with this video: the GPU, even with the faster motion search (Apple: the Mac's frame interpolation, which has no faster setting), or, with software rendering, the CPU drawing the doubled frames (the message says which, and that GPU Rendering helps then). The next video tries again. |
  * | `rate` | The converter's input rate ({@link MotionState.sourceFps}: 25i deinterlaced by field reads 50) does not fit: outside 10–30 fps (the rates measured), doubled above the display's refresh rate, or (software rendering, Double) twice it is not the display's rate. |
  * | `format` | The video's format was not measured or is not taken: 10-bit or deeper, or HDR (Apple: HDR only; it takes 10-bit SDR). |
- * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). Apple has no such table, since its speed depends on the Mac: a size it fell far behind on (`overload`) in this run is `size` for that size and larger, for that renderer and mode, until the player restarts; smaller videos are still tried (on an Apple M2, 1080p at 24 fps keeps up and 4K falls behind). The next video may fit. |
+ * | `size` | The video is too large for this mode on this renderer: its width × height × the doubled rate is more than the player measured it keeps up with (on the reference laptop: software rendering up to 1080p at 30 fps, GPU rendering's Double up to 4K at 24 fps, Match Display up to 1080p on a 60 Hz display, counted at the display's refresh rate). Apple has no such table, since its speed depends on the Mac: with GPU rendering, a size it fell far behind on (`overload`, about a quarter of the frames lost, in a window without a stall of the system's interpolation) on two playbacks of about that size in this run is `size` for that size and larger, for that mode, until a plugin sets the mode again or the player restarts; smaller videos are still tried (on an Apple M2, 1080p at 24 fps keeps up and 4K falls behind). The next video may fit. |
  *
  * `engine`, `platform`, `no-gpu`, `runtime`, `filter` and `rendering` (once GPU
  * rendering is not just starting) hold until the player restarts, and
@@ -1204,14 +1204,16 @@ export interface MotionState {
  * Mac's own chip, and {@link MotionState.gpu} names the chip (for example
  * `Apple M2`). `display` needs GPU rendering, the player's default on
  * macOS (`rendering` after a fallback to software rendering). How large a
- * video each mode keeps up with depends on the Mac: the first one too
- * large falls behind and reports `overload`, and from then on that size
- * and larger report `size` in this run (on an Apple M2, 1080p at 24 fps
+ * video each mode keeps up with depends on the Mac: one too large falls
+ * behind and reports `overload` for that video; once two playbacks of
+ * about that size fell far behind with GPU rendering, that size and
+ * larger report `size` until a plugin sets the mode again or the player
+ * restarts (on an Apple M2, 1080p at 24 fps
  * keeps up, 4K does not). It takes 10-bit SDR video; HDR reports
  * `format`. Until the system's interpolation is ready (under a second on
- * an M2; the first time after the Mac starts it can take longer) the
- * frames pass through undoubled, and the player judges the output only
- * from then. `amd` and `nvidia` report `platform`.
+ * an M2; the first time after the Mac starts it can take longer; again
+ * for a new video or size) the frames pass through undoubled, and the
+ * player judges the output only from then. `amd` and `nvidia` report `platform`.
  * **Linux:** every engine reports `platform`.
  *
  * One engine's converter at a time, on every system: the other engines'
