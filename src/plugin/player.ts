@@ -877,8 +877,13 @@ export function player(scope: ScopeImpl): Player {
       return !!raw && sameStamp(raw.stamp, service().raw.stamp);
     },
     async open(source, options = {}) {
-      const { signal } = options;
+      const { signal, start } = options;
       if (signal?.aborted) throw abortError();
+      if (start !== undefined && !(Number.isFinite(start) && start >= 0))
+        throw failure(
+          "invalid",
+          "start must be a finite number of seconds, 0 or more",
+        );
       let ticket: SourceTicket | undefined;
       try {
         // In its turn: after a read on its way for earlier controls.
@@ -888,6 +893,7 @@ export function player(scope: ScopeImpl): Player {
               kind: "open",
               source,
               startPaused: options.paused ?? false,
+              ...(start ? { start } : {}),
               ...(options.ifCurrent
                 ? service().expected(options.ifCurrent)
                 : {}),
@@ -1051,6 +1057,24 @@ export function player(scope: ScopeImpl): Player {
         scope.runtime.host.audio.select(id, expected),
       );
       return service().refresh();
+    },
+    async removeAudioTrack(id, options = {}) {
+      if (!Number.isInteger(id))
+        throw failure("invalid", "id requires an integer");
+      await service().withStamp(options.ifCurrent, ({ expected }) =>
+        scope.runtime.host.audio.remove(id, expected),
+      );
+      return service().refresh();
+    },
+    async seekSubtitle(direction, options = {}) {
+      if (!["next", "previous", "current"].includes(direction))
+        throw failure(
+          "invalid",
+          'direction is "next", "previous" or "current"',
+        );
+      await service().withStamp(options.ifCurrent, ({ expected }) =>
+        scope.runtime.host.step.seekSubtitle(direction, expected),
+      );
     },
   };
 }

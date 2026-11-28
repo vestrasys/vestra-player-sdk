@@ -62,7 +62,30 @@ export const OSD_LIMITS = Object.freeze({
   actions: 2,
   /** Characters of an action's title, as shown (40; at least 1 that is not white space). */
   actionChars: 40,
+  /** The shortest `OsdShowOptions.durationMs`, milliseconds (500). */
+  minDurationMs: 500,
+  /** The longest `OsdShowOptions.durationMs`, milliseconds (30,000). */
+  maxDurationMs: 30_000,
 } as const);
+
+/** Check `OsdShowOptions.durationMs`: an integer of milliseconds within `OSD_LIMITS`. */
+function osdDuration(options: unknown): number | undefined {
+  if (options === undefined || options === null || typeof options !== "object")
+    return undefined;
+  const ms = (options as { durationMs?: unknown }).durationMs;
+  if (ms === undefined) return undefined;
+  if (
+    typeof ms !== "number" ||
+    !Number.isInteger(ms) ||
+    ms < OSD_LIMITS.minDurationMs ||
+    ms > OSD_LIMITS.maxDurationMs
+  )
+    throw failure(
+      "invalid",
+      `durationMs is an integer from ${OSD_LIMITS.minDurationMs} to ${OSD_LIMITS.maxDurationMs}`,
+    );
+  return ms;
+}
 
 /** Copy and check `OsdShowOptions.actions`: what the SDK can check before the player does. */
 function osdActions(
@@ -204,6 +227,7 @@ export const osd = (scope: ScopeImpl): Osd => ({
       shownText(text, args),
       templateArgs(args),
       osdActions(options),
+      osdDuration(options),
     ),
   panel: () => new PanelHandle(scope),
 });

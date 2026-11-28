@@ -1039,6 +1039,86 @@ export interface MainWindow {
    * @since 1.0.0
    */
   setPictureInPicture(on: boolean): Promise<void>;
+  /**
+   * Show `title` in the main window's title bar (and the taskbar or Dock
+   * menu) instead of the file name, as "<title> - Vestra Player"; `null`
+   * withdraws this plugin's title (the player's own shows again). It lasts
+   * until the source closes or another opens, another plugin sets one (the
+   * newest call wins), this plugin withdraws it, or this plugin stops; mpv's `title`
+   * property. Set it once the source is ready (`source.ready`), so it
+   * belongs to that source.
+   *
+   * @param title - 1–200 characters, shown as it is (data, not translated:
+   *   an episode or stream title); line breaks become spaces.
+   *
+   * @throws `invalid` (rejects) `title` is empty, only white space, longer
+   *   than 200 characters, or neither a string nor `null`.
+   * @throws `unavailable` (rejects) No user interface, or a title while no
+   *   source is open (it belongs to a source; a close ends it too).
+   *
+   * @example Show the episode title from a stream's page
+   * A plugin that opens a video page shows the episode's name instead of
+   * the address while it plays. It sets the title once the source is ready,
+   * because a new source restores the player's own title.
+   * ```ts
+   * declare const episode: string;
+   * // ---cut---
+   * plugin.player.on("source.ready", async () => {
+   *   await plugin.window.setTitle(episode); // "<episode> - Vestra Player"
+   * });
+   * ```
+   *
+   * @player 0.11.13
+   * @since 1.12.0
+   */
+  setTitle(title: string | null): Promise<void>;
+  /**
+   * Maximize the main window (`true`) or restore it (`false`), as its title
+   * bar's button does; `state.maximized` follows. Resolves once the player
+   * asked the system.
+   *
+   * @throws `invalid` (rejects) `maximized` is not a boolean.
+   * @throws `unavailable` (rejects) Fullscreen, or no user interface.
+   *
+   * @example Maximize the window for a wide video
+   * A plugin maximizes the window when a cinema-wide video starts, unless the
+   * user is in fullscreen (where it is refused) or it is maximized already.
+   * ```ts
+   * const { fullscreen, maximized } = plugin.window.state;
+   * if (!fullscreen && !maximized) await plugin.window.setMaximized(true);
+   * ```
+   *
+   * @player 0.11.13
+   * @since 1.12.0
+   */
+  setMaximized(maximized: boolean): Promise<void>;
+  /**
+   * Minimize the main window to the taskbar or Dock (`true`), or bring it
+   * back (`false`). Resolves once the player asked the system. Minimizing
+   * does not pause; a plugin that wants that pauses itself.
+   *
+   * @throws `invalid` (rejects) `minimized` is not a boolean.
+   * @throws `unavailable` (rejects) No user interface.
+   *
+   * @example Hide the player with a boss key
+   * One key pauses playback and minimizes the window. The pause goes first,
+   * so nothing plays while the window is out of sight.
+   * ```ts
+   * plugin.commands.add({
+   *   id: "boss-key",
+   *   title: "Pause and Minimize",
+   *   bindings: ["Ctrl+Shift+B"],
+   *   run: async () => {
+   *     await plugin.player.setPaused(true); // first: nothing plays unseen
+   *     await plugin.window.setMinimized(true); // to the taskbar or Dock
+   *   },
+   * });
+   * ```
+   *
+   * @player 0.11.13
+   * @since 1.12.0
+   */
+  setMinimized(minimized: boolean): Promise<void>;
 }
 
 /**

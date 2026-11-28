@@ -107,6 +107,8 @@ Counted on the text as shown, after translation and with its arguments filled in
 | `OSD_LIMITS.maxColumns` | 1000 | The largest `OsdPanelOptions.maxColumns`. |
 | `OSD_LIMITS.actions` | 2 | Action buttons of one `osd.show` message (`OsdShowOptions.actions`). |
 | `OSD_LIMITS.actionChars` | 40 | Characters of an action's title, as shown. |
+| `OSD_LIMITS.minDurationMs` | 500 | The shortest `OsdShowOptions.durationMs`, milliseconds. |
+| `OSD_LIMITS.maxDurationMs` | 30000 (30 s) | The longest `OsdShowOptions.durationMs`, milliseconds. |
 
 <!-- /generated -->
 

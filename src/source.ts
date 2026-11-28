@@ -20,6 +20,8 @@ export type SourceIntent =
       kind: "open";
       source: string;
       startPaused: boolean;
+      /** mpv's per-file `start`, seconds (player 0.11.13); sent only when above 0. */
+      start?: number;
       expected?: SourceStamp;
     }
   | { kind: "restart" | "close"; expected?: SourceStamp }

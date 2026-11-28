@@ -233,7 +233,10 @@
 @vestra-player/sdk InterfaceDeclaration MainWindow :: readonly state: WindowState;
 @vestra-player/sdk InterfaceDeclaration MainWindow :: setAlwaysOnTop(onTop: boolean): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration MainWindow :: setCursorAutoHide(mode: "fullscreen" | "playing"): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setMaximized(maximized: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setMinimized(minimized: boolean): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration MainWindow :: setPictureInPicture(on: boolean): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration MainWindow :: setTitle(title: string | null): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration MainWindow :: setVideoArea(size: { width: number; height: number; }): Promise<{ width: number; height: number; clamped: boolean; }>;
 @vestra-player/sdk InterfaceDeclaration MarkdownOptions
 @vestra-player/sdk InterfaceDeclaration MarkdownOptions :: base?: string;
@@ -290,6 +293,7 @@
 @vestra-player/sdk InterfaceDeclaration OsdPanelOptions :: maxColumns?: number;
 @vestra-player/sdk InterfaceDeclaration OsdShowOptions
 @vestra-player/sdk InterfaceDeclaration OsdShowOptions :: actions?: readonly OsdAction[];
+@vestra-player/sdk InterfaceDeclaration OsdShowOptions :: durationMs?: number;
 @vestra-player/sdk InterfaceDeclaration PackageCandidate
 @vestra-player/sdk InterfaceDeclaration PackageCandidate :: install(options?: InstallOptions): Promise<PackageChange>;
 @vestra-player/sdk InterfaceDeclaration PackageCandidate :: readonly checks: string[];
@@ -406,16 +410,18 @@
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends FactEvent>(event: E, listener: (data: FactEventPayloads[E]) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends HostEvent>(event: E, listener: (data: EventPayload<E>) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: on<E extends SourceEvent>(event: E, listener: (data: SourceEventPayloads[E]) => void): Disposable;
-@vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; } & Conditional): Promise<Media>;
+@vestra-player/sdk InterfaceDeclaration Player :: open(source: string, options?: { paused?: boolean; signal?: AbortSignal; start?: number; } & Conditional): Promise<Media>;
 @vestra-player/sdk InterfaceDeclaration Player :: openStream(options: StreamOptions): Promise<Stream>;
 @vestra-player/sdk InterfaceDeclaration Player :: previous(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: provideSequence(provider: SequenceProvider): Disposable;
 @vestra-player/sdk InterfaceDeclaration Player :: read(): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: readonly state: PlayerState;
 @vestra-player/sdk InterfaceDeclaration Player :: refresh(): Promise<PlayerState>;
+@vestra-player/sdk InterfaceDeclaration Player :: removeAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
 @vestra-player/sdk InterfaceDeclaration Player :: restart(options?: Conditional): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: scrub(): Scrub;
 @vestra-player/sdk InterfaceDeclaration Player :: seek(seconds: number, options?: Conditional): Promise<void>;
+@vestra-player/sdk InterfaceDeclaration Player :: seekSubtitle(direction: "next" | "previous" | "current", options?: Conditional): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: selectAudioTrack(id: number, options?: Conditional): Promise<PlayerState>;
 @vestra-player/sdk InterfaceDeclaration Player :: setAudioDevice(id: string | null): Promise<void>;
 @vestra-player/sdk InterfaceDeclaration Player :: setLoop(loop: { a: number; b: number; count?: number; } | null, options?: Conditional): Promise<void>;
@@ -635,7 +641,7 @@
 @vestra-player/sdk InterfaceDeclaration SubtitleTrack :: text: boolean;
 @vestra-player/sdk InterfaceDeclaration SubtitleTrack :: title: string;
 @vestra-player/sdk InterfaceDeclaration Subtitles
-@vestra-player/sdk InterfaceDeclaration Subtitles :: load(bytes: Uint8Array, options?: SubtitleConditional & { format?: "srt" | "ass"; title?: string | Text; select?: "primary" | "secondary" | "none"; signal?: AbortSignal; }): Promise<SubtitleTrack>;
+@vestra-player/sdk InterfaceDeclaration Subtitles :: load(bytes: Uint8Array, options?: SubtitleConditional & { format?: "srt" | "ass" | "vtt"; title?: string | Text; select?: "primary" | "secondary" | "none"; signal?: AbortSignal; }): Promise<SubtitleTrack>;
 @vestra-player/sdk InterfaceDeclaration Subtitles :: onChange(listener: (state: SubtitlesState) => void): Disposable;
 @vestra-player/sdk InterfaceDeclaration Subtitles :: readonly state: SubtitlesState | null;
 @vestra-player/sdk InterfaceDeclaration Subtitles :: refresh(): Promise<SubtitlesState>;
@@ -1014,7 +1020,7 @@
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly listening: Set<string>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly listeningWhy: Map<string, string[]>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly local: LocalServices;
-@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mainWindow: { fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; onTop: boolean; cursorAutoHide: "fullscreen" | "playing"; pictureInPicture: { supported: boolean; active: boolean; }; };
+@vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mainWindow: { fullscreen: boolean; maximized: boolean; videoArea: { width: number; height: number; }; onTop: boolean; cursorAutoHide: "fullscreen" | "playing"; title: string | null; minimized: boolean; pictureInPicture: { supported: boolean; active: boolean; }; };
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly mediaFiles: Map<string, { duration?: number; status?: "ok" | "missing" | "changed"; version?: number; video?: { codec: string; width: number; height: number; fps: number; pixelFormat: string | null; } | null; audio?: { codec: string; sampleRate: number; channels: number; } | null; }>;
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly menus: { items: (string | null)[]; x: number; y: number; }[];
 @vestra-player/sdk/testing ClassDeclaration TestHost :: readonly motion: { mode: MotionMode; double: MotionReason | null; display: MotionReason | null; renderingStarting: boolean; sourceFps: number | null; outputFps: number | null; performance: boolean; displayFps: number; gpu: string | null; };
@@ -1155,7 +1161,7 @@
 @vestra-player/sdk/testing VariableDeclaration LOCALES = LOCALES: readonly [ "en", "zh-Hans", "ja", "ko", "de", "fr", "es" ]
 @vestra-player/sdk/testing VariableDeclaration MENU_IDS = MENU_IDS: readonly [ "open", "playback", "subtitles", "video", "audio", "screen", "settings", "reset", "tools" ]
 @vestra-player/sdk/testing VariableDeclaration MESSAGE_LIMIT = MESSAGE_LIMIT: number
-@vestra-player/sdk/testing VariableDeclaration OSD_LIMITS = OSD_LIMITS: Readonly<{ readonly messageChars: 200; readonly panelLines: 32; readonly panelBytes: 4096; readonly minColumns: 8; readonly maxColumns: 1000; readonly actions: 2; readonly actionChars: 40; }>
+@vestra-player/sdk/testing VariableDeclaration OSD_LIMITS = OSD_LIMITS: Readonly<{ readonly messageChars: 200; readonly panelLines: 32; readonly panelBytes: 4096; readonly minColumns: 8; readonly maxColumns: 1000; readonly actions: 2; readonly actionChars: 40; readonly minDurationMs: 500; readonly maxDurationMs: 30000; }>
 @vestra-player/sdk/testing VariableDeclaration SECRET_LIMITS = SECRET_LIMITS: Readonly<{ readonly nameChars: 64; readonly valueBytes: 1024; readonly names: 256; }>
 @vestra-player/sdk/testing VariableDeclaration SESSION_STORAGE_LIMITS = SESSION_STORAGE_LIMITS: Readonly<{ readonly keyBytes: 1024; readonly bytes: number; readonly entryBytes: 128; }>
 @vestra-player/sdk/testing VariableDeclaration SUBTITLE_LIMITS = SUBTITLE_LIMITS: Readonly<{ readonly fileBytes: number; readonly tracksPerPlugin: 4; readonly tracks: 16; readonly totalBytes: number; readonly loadsPerPlugin: 16; readonly loads: 128; readonly uploadsPerPlugin: 2; readonly uploads: 8; }>

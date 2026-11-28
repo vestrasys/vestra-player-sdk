@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (1.12.0)
+
+**Small player and window members** (needs the player release that answers them, 0.11.13 or later where marked; the version is the coordinator's to confirm). Additions only: **nobody must change anything**; a plugin that does not use them behaves as before. On an older player the new requests fail with the player's unknown-method error, and the new options are ignored, so a plugin that relies on them declares that player release in `minPlayerVersion`.
+
+- **`OsdShowOptions.durationMs`**: how long an `osd.show` message stays, an integer of 500–30,000 ms (`OSD_LIMITS.minDurationMs`, `maxDurationMs`; mpv's `show-text` duration). Omitted: 2 seconds, about 4 with actions, as before. A message with actions is still held under the pointer (at most 30 seconds).
+- **`Player.seekSubtitle("next" | "previous" | "current")`** (`player.seekSubtitle`): mpv's `sub-seek` on the selected primary subtitle; `unavailable` without one.
+- **`Player.open(source, { start })`**: open at a time without showing the first frame (mpv's per-file `start`, the same load option the player uses to resume after a renderer restart). Also for resolved addresses; a file resolver's generated stream starts at its beginning. `invalid` for a negative or non-finite time; sent only when above 0.
+- **`Player.removeAudioTrack(id)`** (`audio.removeTrack`): removes a track this plugin added with `addAudioTrack` to the current source (mpv's `audio-remove`); any other track (inside the file, loaded beside it, a resolver's audio stream, another plugin's) is `invalid`. Resolves with the new state, like `selectAudioTrack`.
+- **`MainWindow.setTitle(title | null)`** (`window.setTitle`): "<title> - Vestra Player" instead of the file name, 1–200 characters of data; cleared when the source closes or another opens, by the plugin's `null` and when the plugin stops; the newest call of any plugin wins; `unavailable` while no source is open.
+- **`MainWindow.setMaximized(boolean)`**, **`MainWindow.setMinimized(boolean)`** (`window.setMaximized`, `window.setMinimized`): maximize or restore (`unavailable` in fullscreen), minimize or bring back. No `minimized` field in `WindowState` (not reported by the player yet).
+- **`Subtitles.load(bytes, { format: "vtt" })`**: WebVTT is turned into SRT by the SDK and loaded through the SRT path, so the player's SRT checks and limits apply unchanged (works with any player). Cue settings, `STYLE`/`REGION`/`NOTE` blocks and markup tags are dropped, entities decoded (a line-break entity becomes a space; the player shows SRT text literally, so a decoded `<i>` or a `{\an8}` shows as written); a malformed cue is skipped, not the whole file; the SRT is slightly larger and must fit 2 MiB too. `format: "vtt"` was `invalid` before.
+- **TestHost**: answers the new requests with the player's checks and codes; `mainWindow.title` and `mainWindow.minimized` record the window calls (`maximized` follows `setMaximized`); `osd.show` checks `durationMs`; an open checks `start`.
+
 ## 1.11.5
 
 **Apple motion smoothing** (request R1; needs the first player release with the Apple engine, 0.11.12 or later). An addition only: **nobody must change anything**; a plugin that does not use `"apple"` behaves as before. Used by Apple Motion Smoothing (`zysilm.applemotion`); also for any plugin that offers motion smoothing on macOS (a picture panel's smoothing switch, a per-file profile plugin that turns smoothing on for low-rate video).

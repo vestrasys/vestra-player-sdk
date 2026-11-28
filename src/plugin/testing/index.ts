@@ -2285,8 +2285,9 @@ export class TestHost implements Transport {
   /**
    * The main window as the player would show it. Change it with
    * `setMainWindow` (the user resized or maximized it, entered fullscreen,
-   * closed the picture-in-picture window); `onTop`, `cursorAutoHide` and
-   * `pictureInPicture.active` record the plugin's `window.set…` calls.
+   * closed the picture-in-picture window); `onTop`, `cursorAutoHide`,
+   * `pictureInPicture.active`, `title`, `maximized` and `minimized` record
+   * the plugin's `window.set…` calls.
    * `pictureInPicture.supported: false` stands for Windows and Linux.
    */
   readonly mainWindow = {
@@ -2311,6 +2312,20 @@ export class TestHost implements Transport {
     onTop: false,
     /** The effective `window.setCursorAutoHide` mode. */
     cursorAutoHide: "fullscreen" as "fullscreen" | "playing",
+    /**
+     * The title `window.setTitle` set (`null`: the player's own). Like the
+     * player, a new source and the plugin's stop clear it.
+     *
+     * @since 1.12.0
+     */
+    title: null as string | null,
+    /**
+     * Whether `window.setMinimized` minimized the main window (default
+     * `false`).
+     *
+     * @since 1.12.0
+     */
+    minimized: false,
     /** Picture-in-picture: `supported` (preset) and `active`. */
     pictureInPicture: {
       /** Set to `false` to simulate Windows or Linux. */
@@ -4186,6 +4201,7 @@ export class TestHost implements Transport {
       });
     this.mainWindow.onTop = false;
     this.mainWindow.cursorAutoHide = "fullscreen";
+    this.mainWindow.title = null;
   }
 
   readonly #defaults: Record<string, Handler> = {

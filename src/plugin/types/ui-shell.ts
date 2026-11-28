@@ -953,7 +953,8 @@ export interface OsdPanelOptions {
  */
 export interface Osd {
   /**
-   * Show a one-line message at the top left of the video for 2 seconds.
+   * Show a one-line message at the top left of the video for 2 seconds (or
+   * `options.durationMs`).
    *
    * @remarks
    * Replaces the message on screen, whichever plugin showed it. A message
@@ -976,13 +977,14 @@ export interface Osd {
    *
    * @param args - Values for its placeholders. Pass `null` with a `Text` and
    * options.
-   * @param options - Action buttons after the text.
+   * @param options - Action buttons after the text, and how long it stays.
    * @returns Resolves once the message is on screen.
    *
    * @throws `invalid` (rejects) The shown text is empty, only white space,
    *   or longer than 200 characters, or `args` is not a {@link TemplateArgs};
    *   or there are more than 2 actions, a title is empty or longer than 40
-   *   characters once translated, or a command is not one of the plugin's.
+   *   characters once translated, or a command is not one of the plugin's;
+   *   or `durationMs` is not an integer from 500 to 30,000.
    * @throws `unavailable` (rejects) The player runs without a user interface.
    *
    * @example Confirm an action and show a value
@@ -1011,6 +1013,16 @@ export interface Osd {
    * });
    * await plugin.osd.show("Saved {}", [saved.split(/[\\/]/).pop() ?? saved], {
    *   actions: [{ title: "Show in Folder", command: "reveal" }], // one button
+   * });
+   * ```
+   *
+   * @example Keep a long message on screen longer
+   * A message the user needs time to read stays 6 seconds instead of 2.
+   * `durationMs` sets how long the player shows it; a newer message, from
+   * any plugin, still replaces it at once.
+   * ```ts
+   * await plugin.osd.show("Subtitles shifted by {} ms to match the audio", [250], {
+   *   durationMs: 6000, // milliseconds, 500–30,000
    * });
    * ```
    *
@@ -1094,4 +1106,16 @@ export interface OsdAction {
 export interface OsdShowOptions {
   /** At most 2 buttons (`OSD_LIMITS.actions`), in order after the text. */
   actions?: readonly OsdAction[];
+  /**
+   * How long the message stays, in milliseconds: an integer from 500 to
+   * 30,000 (`OSD_LIMITS.minDurationMs`, `maxDurationMs`); omitted: 2
+   * seconds, or about 4 with actions (mpv's `show-text` duration). A message
+   * with actions is still held while the pointer is on it, at most 30
+   * seconds after it showed. A newer message replaces it earlier. Players
+   * before 0.11.13 ignore it.
+   *
+   * @player 0.11.13
+   * @since 1.12.0
+   */
+  durationMs?: number;
 }

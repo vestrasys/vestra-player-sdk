@@ -426,6 +426,23 @@ export function coreActionsHandlers(
       host.stepSeek = p.seconds;
       host.stepSeekKeyframes = p.keyframes === true;
     },
+    // Player 0.11.13: mpv's `sub-seek`. The test host has no cues: it
+    // checks what the player checks and records the request (`sent`).
+    "player.seekSubtitle": (p) => {
+      if (!["next", "previous", "current"].includes(String(p.direction)))
+        throw new HostError(
+          "invalid",
+          "direction is next, previous or current",
+        );
+      audioCondition(host, inner, p.expected);
+      if (!host.source.capabilities.seek)
+        throw new HostError(
+          "unsupported",
+          hostText(host, inner, "Not supported by the current source"),
+        );
+      if (!host.subtitles.selection.target)
+        throw new HostError("unavailable", "no subtitle track is selected");
+    },
     "player.step": (p) => {
       audioCondition(host, inner, p.expected);
       const s = host.source;
